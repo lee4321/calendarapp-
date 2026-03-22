@@ -20,12 +20,13 @@ class TextMiniCalendarVisualizer(BaseVisualizer):
 
     @property
     def supported_options(self) -> list[str]:
-        return super().supported_options + [
+        return [
             "mini_columns",
             "mini_rows",
             "weekends",
-            "mini_week_numbers",
-            "mini_week1_start",
+            "weeknumbers",
+            "week_number_mode",
+            "week1_start",
         ]
 
     def _create_layout(self) -> BaseLayout:

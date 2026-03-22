@@ -20,6 +20,11 @@ from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.date_utils import get_week_number
 from shared.data_models import Event
+from shared.fiscal_renderer import (
+    get_fiscal_period_color,
+    format_fiscal_period_label,
+    format_fiscal_period_end_label,
+)
 from config.config import (
     FONT_REGISTRY,
     FederalHolidayColor,
@@ -34,7 +39,6 @@ from config.config import (
     specialdaycolor,
     hashlinecolor,
     Resource_Group_colors,
-    fiscalperiodcolors,
     resolve_page_margins,
 )
 
@@ -741,11 +745,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             fill_alpha = config.theme_company_holiday_alpha
             fill_opacity = fill_alpha if fill_alpha is not None else CompanyHolidayAlpha
         elif config.fiscal_use_period_colors and config.fiscal_lookup:
-            _fiscalcolors = config.theme_fiscalperiodcolors or fiscalperiodcolors
             fiscal_info = config.fiscal_lookup.get(oneday_str)
             if fiscal_info:
-                period_key = str(fiscal_info.fiscal_period).zfill(2)
-                fill_color = _fiscalcolors.get(period_key, "lightgrey")
+                fill_color = get_fiscal_period_color(fiscal_info, config)
             else:
                 fill_color = _monthcolors[month]
             fill_opacity = 0.50
@@ -771,14 +773,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """Build the day number string with optional month indicator prefix."""
         boxdate = oneday.format("D")
         monthname = oneday.format("MMM")
-        monthnum = oneday.format("MM")
         dayoftheweek = oneday.format("ddd")
 
         month_indicator = ""
         if config.include_month_name:
             month_indicator = monthname + " "
-        if config.include_month_number:
-            month_indicator = monthnum + "-"
 
         if boxdate == "1":
             boxdate = month_indicator + boxdate
@@ -836,55 +835,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 or next_info.fiscal_period != fiscal_info.fiscal_period
             )
 
-        # Apply fiscal_year_offset: None → auto (0 for NRF start-year convention).
-        _fy_offset = (
-            config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
-        )
-
         label_parts = []
         if fiscal_info and fiscal_info.is_period_start:
-            period_short = fiscal_info.period_short_name
-            effective_year = fiscal_info.fiscal_year + _fy_offset
-            quarter_label = (
-                f"Q{fiscal_info.fiscal_quarter}"
-                if config.fiscal_show_quarter_labels and fiscal_info.is_quarter_start
-                else ""
-            )
-            year_label = (
-                f"FY{effective_year % 100}" if fiscal_info.is_fiscal_year_start else ""
-            )
-            prefix = quarter_label + (" " if quarter_label else "")
-            if year_label:
-                prefix = f"{year_label} {prefix}".strip() + " "
-
-            try:
-                fiscal_label = config.fiscal_period_label_format.format(
-                    prefix=prefix,
-                    period_short=period_short,
-                    period=fiscal_info.fiscal_period,
-                    quarter=fiscal_info.fiscal_quarter,
-                    year=effective_year,
-                    fy=effective_year % 100,
-                    quarter_label=quarter_label,
-                    year_label=year_label,
-                )
-            except (KeyError, ValueError):
-                fiscal_label = f"{prefix}{period_short}".strip()
-            label_parts.append(fiscal_label)
+            label_parts.append(format_fiscal_period_label(fiscal_info, config))
 
         if fiscal_info and is_period_end:
-            effective_year = fiscal_info.fiscal_year + _fy_offset
-            try:
-                end_label = config.fiscal_period_end_label_format.format(
-                    period_short=fiscal_info.period_short_name,
-                    period=fiscal_info.fiscal_period,
-                    quarter=fiscal_info.fiscal_quarter,
-                    year=effective_year,
-                    fy=effective_year % 100,
-                )
-            except (KeyError, ValueError):
-                end_label = f"{fiscal_info.period_short_name} End"
-            label_parts.append(end_label)
+            label_parts.append(format_fiscal_period_end_label(fiscal_info, config))
 
         if not label_parts:
             return 0.0

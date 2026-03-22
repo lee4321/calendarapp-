@@ -249,7 +249,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                               --milestones, --rollups, --WBS, --empty
     - Mini Calendar Options   --mini-columns, --mini-rows, --mini-no-adjacent, …
     - Timeline Options        --today-line-length, --today-line-direction, …
-    - Fiscal Options          --fiscal, --fiscal-colors, --fiscal-year-offset
+    - Fiscal Options          --fiscal, --fiscal-colors, --fiscal-year-offset,
+                              --fiscal-show-periods, --fiscal-show-quarters (timeline)
     - Week Number Options     --weeknumbers, --week-number-mode, --week1-start
     - Theme                   --theme
     - Logging                 --verbose, --quiet
@@ -524,8 +525,11 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Path to SQLite database file (default: calendar.db)",
         )
 
-    # Output options
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan):
+    # SVG-producing views (text-mini is excluded — it produces plain text, not SVG)
+    _svg_views = (weekly, mini, mini_icon, timeline, blockplan, compactplan)
+
+    # Output options (SVG views: all options; text-mini: outputfile only)
+    for view_parser in _svg_views:
         output_group = view_parser.add_argument_group("Output Options")
         output_group.add_argument(
             "--outputfile",
@@ -547,17 +551,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "--papersize",
             "-ps",
             type=str,
-            default="Tabloid",
+            default="Widescreen",
             metavar="SIZE",
-            help="Paper size (default: Tabloid).",
+            help="Paper size (default: Widescreen).",
         )
         output_group.add_argument(
             "--orientation",
             "-o",
             type=str,
-            default="portrait",
+            default="landscape",
             choices=["portrait", "landscape"],
-            help="Page orientation (default: portrait)",
+            help="Page orientation (default: landscape)",
         )
         output_group.add_argument(
             "--shrink",
@@ -567,9 +571,19 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "rendered content, removing blank page whitespace."
             ),
         )
+    # text-mini: output file path only (no SVG layout args)
+    _tm_output = text_mini.add_argument_group("Output Options")
+    _tm_output.add_argument(
+        "--outputfile",
+        "-of",
+        type=str,
+        default=default_output,
+        metavar="PATH",
+        help="Output filename (always written under output/)",
+    )
 
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan):
-        # Layout options
+    for view_parser in _svg_views:
+        # Layout options (SVG-specific: margin, header, footer, monthnames)
         layout_group = view_parser.add_argument_group("Layout Options")
         layout_group.add_argument(
             "--weekends",
@@ -610,13 +624,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Show month names on calendar",
         )
-        layout_group.add_argument(
-            "--monthnumbers",
-            "-mu",
-            action="store_true",
-            help="Show month numbers on calendar",
-        )
-
         # Header/Footer text
         text_group = view_parser.add_argument_group("Header/Footer Text")
         text_group.add_argument(
@@ -654,7 +661,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "--imagemark", "-wi", type=str, default="", help="Watermark image file"
         )
 
-        # Content filtering
+        # Content filtering (SVG views include --shade and --overflow)
         content_group = view_parser.add_argument_group("Content Filtering")
         content_group.add_argument(
             "--empty",
@@ -734,29 +741,87 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             ),
         )
 
-    # Weekly-specific options
-    weekly.add_argument(
-        "--weeknumbers",
-        "-wn",
+    # text-mini: weekends + content filtering only (no SVG layout, header/footer, watermark, shade, overflow)
+    _tm_layout = text_mini.add_argument_group("Layout Options")
+    _tm_layout.add_argument(
+        "--weekends",
+        "-we",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3, 4],
+        help=(
+            "Weekend style: "
+            "0=work week only, "
+            "1=full week Sunday start, "
+            "2=half weekends Sunday start, "
+            "3=full week Monday start, "
+            "4=half weekends Monday start"
+        ),
+    )
+    _tm_content = text_mini.add_argument_group("Content Filtering")
+    _tm_content.add_argument(
+        "--empty",
+        "-e",
         action="store_true",
-        help="Show week numbers in weekly view",
+        help="Create blank calendar (no events)",
     )
-    weekly.add_argument(
-        "--week-number-mode",
-        "-wnm",
-        type=str,
-        default="iso",
-        choices=["iso", "custom"],
-        help="Week number mode for weekly view (iso or custom)",
+    _tm_content.add_argument(
+        "--noevents",
+        "-ne",
+        action="store_true",
+        help="Exclude single-day events",
     )
-    weekly.add_argument(
-        "--week1-start",
+    _tm_content.add_argument(
+        "--nodurations",
+        "-nd",
+        action="store_true",
+        help="Exclude multi-day durations",
+    )
+    _tm_content.add_argument(
+        "--ignorecomplete",
+        "-ic",
+        action="store_true",
+        help="Exclude 100%% complete items",
+    )
+    _tm_content.add_argument(
+        "--milestones",
+        "-mo",
+        action="store_true",
+        help="Show only milestones",
+    )
+    _tm_content.add_argument(
+        "--rollups",
+        "-ro",
+        action="store_true",
+        help="Show only rollup entries",
+    )
+    _tm_content.add_argument(
+        "--includenotes",
+        "-notes",
+        action="store_true",
+        help="Show notes with event names",
+    )
+    _tm_content.add_argument(
+        "--WBS",
         type=str,
         default="",
-        metavar="YYYYMMDD",
         help=(
-            "Anchor date for weekly week 1 numbering (YYYYMMDD). "
-            "Implies --weeknumbers and custom week numbering mode."
+            "WBS filter expression. Comma-separated tokens; '!' excludes. "
+            "Segments are dot-separated. '*' matches a segment, '**' matches "
+            "any remaining segments (implicit if omitted)."
+        ),
+    )
+    _tm_content.add_argument(
+        "--country",
+        "-cc",
+        type=str,
+        default=None,
+        metavar="CODE",
+        help=(
+            "ISO 3166-1 alpha-2 country code(s) for government holidays. "
+            "Accepts a single code (e.g. US) or a comma-separated list "
+            "(e.g. US,CA,GB) to include holidays from multiple countries. "
+            "If omitted, US and CA holidays are loaded by default."
         ),
     )
 
@@ -794,22 +859,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Hide leading/trailing days from adjacent months",
         )
-        g.add_argument(
-            "--mini-week-numbers",
-            "-mwn",
-            action="store_true",
-            help="Show week number column (W#) on left side of each month",
-        )
-        g.add_argument(
-            "--mini-week1-start",
-            type=str,
-            default="",
-            metavar="YYYYMMDD",
-            help=(
-                "Custom anchor date for week 1 numbering (YYYYMMDD). "
-                "Implies --mini-week-numbers and custom week numbering mode."
-            ),
-        )
     mini_group.add_argument(
         "--mini-grid-lines",
         action="store_true",
@@ -845,6 +894,31 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "default: squares)"
         ),
     )
+
+    # Week number options (weekly, mini, mini-icon, text-mini)
+    for view_parser in (weekly, mini, mini_icon, text_mini):
+        wn_group = view_parser.add_argument_group("Week Number Options")
+        wn_group.add_argument(
+            "--weeknumbers",
+            "-wn",
+            action="store_true",
+            help="Show week numbers",
+        )
+        wn_group.add_argument(
+            "--week-number-mode",
+            "-wnm",
+            type=str,
+            default="iso",
+            choices=["iso", "custom"],
+            help="Week number mode (iso or custom)",
+        )
+        wn_group.add_argument(
+            "--week1-start",
+            type=str,
+            default="",
+            metavar="YYYYMMDD",
+            help="Anchor date for week 1 (YYYYMMDD). Implies --weeknumbers and custom mode.",
+        )
 
     # Timeline-specific options
     timeline_group = timeline.add_argument_group("Timeline Options")
@@ -887,32 +961,62 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Fill opacity for duration bar rectangles (default: 0.25).",
     )
 
-    # Fiscal calendar options (weekly view only)
-    fiscal_group = weekly.add_argument_group("Fiscal Calendar Options")
-    fiscal_group.add_argument(
-        "--fiscal",
-        type=str,
-        default=None,
-        choices=["nrf-454", "nrf-445", "nrf-544", "13-period"],
-        metavar="TYPE",
-        help="Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period)",
+    # Fiscal calendar options — all calendar views
+    _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan)
+    for _vp in _fiscal_views:
+        _fg = _vp.add_argument_group("Fiscal Calendar Options")
+        _fg.add_argument(
+            "--fiscal",
+            type=str,
+            default=None,
+            choices=["nrf-454", "nrf-445", "nrf-544", "13-period"],
+            metavar="TYPE",
+            help=(
+                "Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). "
+                "weekly/mini: period labels and day-box colors. "
+                "text-mini: period start markers. "
+                "timeline: fiscal period/quarter bands (see --fiscal-show-periods/quarters). "
+                "blockplan/compactplan: NRF-aware fiscal_quarter bands."
+            ),
+        )
+        _fg.add_argument(
+            "--fiscal-year-offset",
+            type=int,
+            default=None,
+            metavar="N",
+            help=(
+                "Offset added to the fiscal period start year to produce the displayed fiscal year "
+                "number. 0 = start year (e.g. FY starting Feb 2026 → FY2026), "
+                "1 = start year + 1 (e.g. FY starting Oct 2025 → FY2026, US federal default), "
+                "-1 = start year − 1. Default: auto (0 for NRF)."
+            ),
+        )
+
+    # --fiscal-colors: day-box period fill (weekly and mini)
+    for _vp in (weekly, mini, mini_icon):
+        _vp._option_string_actions.get("--fiscal") and None  # guard: group already added above
+        _fiscal_color_group = next(
+            g for g in _vp._action_groups if g.title == "Fiscal Calendar Options"
+        )
+        _fiscal_color_group.add_argument(
+            "--fiscal-colors",
+            action="store_true",
+            help="Use fiscal period colors instead of Gregorian month colors for day box backgrounds",
+        )
+
+    # --fiscal-show-periods / --fiscal-show-quarters: timeline band rows
+    _timeline_fiscal_group = next(
+        g for g in timeline._action_groups if g.title == "Fiscal Calendar Options"
     )
-    fiscal_group.add_argument(
-        "--fiscal-colors",
+    _timeline_fiscal_group.add_argument(
+        "--fiscal-show-periods",
         action="store_true",
-        help="Use fiscal period colors instead of Gregorian month colors for day box backgrounds",
+        help="Show a fiscal period band row above the timeline axis (requires --fiscal)",
     )
-    fiscal_group.add_argument(
-        "--fiscal-year-offset",
-        type=int,
-        default=None,
-        metavar="N",
-        help=(
-            "Offset added to the fiscal period start year to produce the displayed fiscal year "
-            "number. 0 = start year (e.g. FY starting Feb 2026 → FY2026), "
-            "1 = start year + 1 (e.g. FY starting Oct 2025 → FY2026, US federal default), "
-            "-1 = start year − 1. Default: auto (blockplan +1 for non-Jan, 0 for NRF)."
-        ),
+    _timeline_fiscal_group.add_argument(
+        "--fiscal-show-quarters",
+        action="store_true",
+        help="Show a fiscal quarter band row above the timeline axis (requires --fiscal)",
     )
 
     # Logging options
@@ -1048,13 +1152,20 @@ def _apply_args_to_config(
     if getattr(args, "monthnames", False):
         config.include_month_name = True
         config.include_month_number = False
-    if getattr(args, "monthnumbers", False):
-        config.include_month_name = False
-        config.include_month_number = True
-
-    # Week numbers
+    # Week numbers (weekly, mini, mini-icon, text-mini)
     if getattr(args, "weeknumbers", False):
         config.include_week_numbers = True
+        config.mini_show_week_numbers = True
+    if getattr(args, "week_number_mode", None):
+        config.week_number_mode = args.week_number_mode
+        config.mini_week_number_mode = args.week_number_mode
+    if getattr(args, "week1_start", ""):
+        config.week1_start = args.week1_start
+        config.mini_week1_start = args.week1_start
+        config.week_number_mode = "custom"
+        config.mini_week_number_mode = "custom"
+        config.include_week_numbers = True
+        config.mini_show_week_numbers = True
 
     # Layout options
     config.include_header = getattr(args, "header", False)
@@ -1115,12 +1226,6 @@ def _apply_args_to_config(
         config.mini_show_adjacent = False
     if getattr(args, "mini_grid_lines", False):
         config.mini_grid_lines = True
-    if getattr(args, "mini_week_numbers", False):
-        config.mini_show_week_numbers = True
-    if getattr(args, "mini_week1_start", ""):
-        config.mini_week1_start = args.mini_week1_start
-        config.mini_week_number_mode = "custom"
-        config.mini_show_week_numbers = True  # implied
     if getattr(args, "mini_details", False):
         config.include_mini_details = True
     if getattr(args, "mini_icon_set", None) is not None:
@@ -1142,13 +1247,11 @@ def _apply_args_to_config(
         config.fiscal_use_period_colors = getattr(args, "fiscal_colors", False)
     if getattr(args, "fiscal_year_offset", None) is not None:
         config.fiscal_year_offset = args.fiscal_year_offset
+    if getattr(args, "fiscal_show_periods", False):
+        config.timeline_show_fiscal_periods = True
+    if getattr(args, "fiscal_show_quarters", False):
+        config.timeline_show_fiscal_quarters = True
 
-    if getattr(args, "week_number_mode", None):
-        config.week_number_mode = args.week_number_mode
-    if getattr(args, "week1_start", ""):
-        config.week1_start = args.week1_start
-        config.week_number_mode = "custom"
-        config.include_week_numbers = True
 
 
 def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
@@ -1199,7 +1302,7 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
 
     if getattr(args, "watermark_rotation_angle", None) is not None:
         config.watermark_rotation_angle = float(args.watermark_rotation_angle)
-    if args.imagemark:
+    if getattr(args, "imagemark", ""):
         config.imagemark = replace_template_vars(config, args.imagemark)
 
 
@@ -1308,7 +1411,10 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         Weekend styles, paper sizes, orientation, themes, icons, template vars
 
     weekly only:
-        SVG day-box patterns, fiscal calendar types, week number modes
+        SVG day-box patterns, week number modes
+
+    all calendar views:
+        fiscal calendar types and per-visualizer fiscal features
 
     mini / mini-icon / text-mini:
         Mini calendar column/row option guidance
@@ -1342,16 +1448,19 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
 
     # Sections that apply to specific subcommands
     calendar_subcommands = {"weekly", "mini", "mini-icon", "text-mini", "timeline", "blockplan", "compactplan"}
+    # SVG-producing views only (text-mini produces plain text, not SVG)
+    svg_calendar_subcommands = {"weekly", "mini", "mini-icon", "timeline", "blockplan", "compactplan"}
     weekly_only = {"weekly"}
     mini_subcommands = {"mini", "mini-icon", "text-mini"}
     timeline_only = {"timeline"}
     blockplan_only = {"blockplan"}
+    week_number_views = {"weekly", "mini", "mini-icon", "text-mini"}
 
     print("\n" + "=" * 60)
     print("VALID CONFIGURABLE VALUES")
     print("=" * 60)
 
-    # --- Weekend styles (all calendar views) ---
+    # --- Weekend styles (all calendar views — text-mini uses weekends for column layout) ---
     if subcommand in calendar_subcommands:
         print("\nWeekend styles (--weekends):")
         from config.config import WEEKEND_STYLES
@@ -1360,20 +1469,20 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
             day_list = ", ".join(d[:3] for d in info["day_order"])
             print(f"  {num}  {info['name']:<25}  ({day_list})")
 
-    # --- Paper sizes ---
-    if subcommand in calendar_subcommands:
+    # --- Paper sizes (SVG views only) ---
+    if subcommand in svg_calendar_subcommands:
         print("\nPaper sizes (--papersize):")
         print("  (Use 'ecalendar.py papersizes' for a full list with dimensions.)")
         print("  Common sizes: Letter, Tabloid, A4, A3, Legal, Executive")
 
-    # --- Orientation ---
-    if subcommand in calendar_subcommands:
+    # --- Orientation (SVG views only) ---
+    if subcommand in svg_calendar_subcommands:
         print("\nOrientation (--orientation):")
         print("  portrait")
         print("  landscape")
 
-    # --- Themes ---
-    if subcommand in calendar_subcommands:
+    # --- Themes (SVG views only) ---
+    if subcommand in svg_calendar_subcommands:
         print("\nThemes (--theme):")
         try:
             from config.theme_engine import ThemeEngine
@@ -1393,16 +1502,24 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
             "  Example names: diagonal-stripes, polka-dots, brick-wall, circuit-board"
         )
 
-    # --- Fiscal types (weekly only) ---
-    if subcommand in weekly_only:
+    # --- Fiscal calendar types (all views) ---
+    if subcommand in calendar_subcommands:
         print("\nFiscal calendar types (--fiscal):")
         print("  nrf-454    NRF 4-5-4 retail calendar")
         print("  nrf-445    NRF 4-4-5 retail calendar")
         print("  nrf-544    NRF 5-4-4 retail calendar")
         print("  13-period  13 equal 4-week periods")
+        print("\nFiscal features by visualizer:")
+        print("  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds")
+        print("  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds")
+        print("  text-mini   Period short name (e.g. P1) as day symbol on period-start days")
+        print("  timeline    --fiscal-show-periods: period band row above axis")
+        print("              --fiscal-show-quarters: quarter band row above axis")
+        print("  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set")
+        print("  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available")
 
-    # --- Week number modes (weekly only) ---
-    if subcommand in weekly_only:
+    # --- Week number modes (weekly, mini, mini-icon, text-mini) ---
+    if subcommand in week_number_views:
         print("\nWeek number modes (--week-number-mode):")
         print("  iso     ISO 8601 week numbers (default)")
         print("  custom  Custom week 1 anchor date (requires --week1-start YYYYMMDD)")
@@ -1420,14 +1537,14 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  below  Extend today line below the axis only")
         print("  both   Extend today line above and below the axis (default)")
 
-    # --- Icons (all calendar views) ---
-    if subcommand in calendar_subcommands:
+    # --- Icons (SVG views only — icons are SVG elements) ---
+    if subcommand in svg_calendar_subcommands:
         print("\nAvailable icons (for event icon fields):")
         print("  (Use 'ecalendar.py icons --database <PATH>' for a full list.)")
         print("  Example names: rocket, calendar, star")
 
-    # --- Template variables (header/footer text) ---
-    if subcommand in calendar_subcommands:
+    # --- Template variables (SVG header/footer text — not applicable to text-mini) ---
+    if subcommand in svg_calendar_subcommands:
         print("\nTemplate variables (for --headerleft, --headercenter, etc.):")
         print("  [now]        Current date and time")
         print("  [date]       Current date")
@@ -1435,14 +1552,15 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  [enddate]    Last date on the calendar")
         print("  [events]     Data source description")
 
-    # --- Fonts and colors guidance (all subcommands) ---
-    print("\nAvailable fonts (for theme/config font fields):")
-    print("  (Use 'ecalendar.py fonts' for a full list.)")
-    print("  Example names: Roboto-Regular, NotoSans-Condensed, JuliaMono-Regular")
+    # --- Fonts and colors guidance (SVG views only — not applicable to plain-text output) ---
+    if subcommand in svg_calendar_subcommands:
+        print("\nAvailable fonts (for theme/config font fields):")
+        print("  (Use 'ecalendar.py fonts' for a full list.)")
+        print("  Example names: Roboto-Regular, NotoSans-Condensed, JuliaMono-Regular")
 
-    print("\nAvailable colors (for theme/config color fields):")
-    print("  (Use 'ecalendar.py colors' for a full list.)")
-    print("  Example names: DarkSlateGrey, Tomato, LightSteelBlue")
+        print("\nAvailable colors (for theme/config color fields):")
+        print("  (Use 'ecalendar.py colors' for a full list.)")
+        print("  Example names: DarkSlateGrey, Tomato, LightSteelBlue")
 
 
 # =============================================================================
@@ -2489,7 +2607,7 @@ def run(argv: list[str] | None = None) -> int:
         _eh_db.load_python_holidays(
             _eh_config.country, _eh_config.adjustedstart, _eh_config.adjustedend
         )
-        if args.theme:
+        if getattr(args, "theme", None):
             from config.theme_engine import ThemeEngine
 
             _eh_te = ThemeEngine()
@@ -2545,7 +2663,7 @@ def run(argv: list[str] | None = None) -> int:
             logger.info(f"Fiscal calendar enabled: {fiscal_cal.name}")
 
         theme_engine = None
-        if args.theme:
+        if getattr(args, "theme", None):
             from config.theme_engine import ThemeEngine
 
             theme_engine = ThemeEngine()
@@ -2606,6 +2724,35 @@ def run(argv: list[str] | None = None) -> int:
         warnings = visualizer.validate_config(config)
         for warning in warnings:
             logger.warning(warning)
+
+        if config.include_overflow and "overflow" not in visualizer.supported_options:
+            logger.warning(
+                f"--overflow is not supported for '{view_type}' visualization and will be ignored"
+            )
+
+        # Warn about SVG layout options not applicable to text-only output
+        _svg_layout_checks = [
+            ("margin",                   getattr(args, "margin", False),                              "--margin"),
+            ("header",                   getattr(args, "header", False),                              "--header"),
+            ("footer",                   getattr(args, "footer", False),                              "--footer"),
+            ("headerleft",               bool(getattr(args, "headerleft", "")),                       "--headerleft"),
+            ("headercenter",             bool(getattr(args, "headercenter", "")),                     "--headercenter"),
+            ("headerright",              bool(getattr(args, "headerright", "")),                      "--headerright"),
+            ("footerleft",               bool(getattr(args, "footerleft", "")),                       "--footerleft"),
+            ("footercenter",             bool(getattr(args, "footercenter", "")),                     "--footercenter"),
+            ("footerright",              bool(getattr(args, "footerright", "")),                      "--footerright"),
+            ("watermark",                bool(getattr(args, "watermark", "")),                        "--watermark"),
+            ("watermark_rotation_angle", getattr(args, "watermark_rotation_angle", None) is not None, "--watermark-rotation-angle"),
+            ("imagemark",                bool(getattr(args, "imagemark", "")),                        "--imagemark"),
+            ("shrink",                   getattr(args, "shrink", False),                              "--shrink"),
+            ("shade",                    getattr(args, "shade", False),                               "--shade"),
+            ("monthnames",               getattr(args, "monthnames", False),                          "--monthnames"),
+        ]
+        for opt_name, was_set, flag in _svg_layout_checks:
+            if was_set and opt_name not in visualizer.supported_options:
+                logger.warning(
+                    f"{flag} is not supported for '{view_type}' visualization and will be ignored"
+                )
 
         # Generate the visualization
         result = visualizer.generate(config, db)

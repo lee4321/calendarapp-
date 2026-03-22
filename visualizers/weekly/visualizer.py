@@ -36,8 +36,10 @@ class WeeklyCalendarVisualizer(BaseVisualizer):
         return super().supported_options + [
             "weekends",
             "monthnames",
-            "monthnumbers",
             "weeknumbers",
+            "week_number_mode",
+            "week1_start",
+            "overflow",
             "shade",
             "noevents",
             "nodurations",

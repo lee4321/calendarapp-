@@ -17,7 +17,6 @@ class BlockPlanVisualizer(BaseVisualizer):
     @property
     def supported_options(self) -> list[str]:
         return super().supported_options + [
-            "shade",
             "noevents",
             "nodurations",
             "ignorecomplete",

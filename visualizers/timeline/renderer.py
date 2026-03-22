@@ -196,6 +196,10 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
+        if config.fiscal_lookup and (
+            config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters
+        ):
+            self._draw_fiscal_bands(config, start, end, axis_left, axis_right, axis_y)
         self._draw_today_marker(
             config,
             start,
@@ -1369,6 +1373,77 @@ class TimelineRenderer(BaseSVGRenderer):
                     fill=config.timeline_tick_color,
                     fill_opacity=0.8,
                     anchor="middle",
+                )
+
+    def _draw_fiscal_bands(
+        self,
+        config: "CalendarConfig",
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_left: float,
+        axis_right: float,
+        axis_y: float,
+    ) -> None:
+        """Draw fiscal period and/or quarter band rows above the timeline axis.
+
+        Each band row is a sequence of colored rectangles with centered labels,
+        positioned just above the month tick labels.
+        """
+        from shared.fiscal_renderer import (
+            build_fiscal_period_segments,
+            build_fiscal_quarter_segments,
+        )
+
+        tick_h = max(6.0, config.timeline_axis_width * 2.5)
+        label_size = max(7.0, config.event_text_font_size * 0.8)
+        band_h = label_size * 1.8
+        band_gap = 2.0
+
+        # y position: start just above the month tick label area
+        # month tick labels are at axis_y - (tick_h + label_size * 1.5)
+        top_of_month_labels = axis_y - (tick_h + label_size * 1.5 + label_size)
+        band_bottom = top_of_month_labels - band_gap
+
+        start_date = start.date()
+        end_date = end.date()
+
+        rows: list[list] = []
+        if config.timeline_show_fiscal_quarters:
+            rows.append(build_fiscal_quarter_segments(start_date, end_date, config))
+        if config.timeline_show_fiscal_periods:
+            rows.append(build_fiscal_period_segments(start_date, end_date, config))
+
+        alt_colors = ["#e8eaf0", "#d4d8e8"]
+        label_color = config.timeline_tick_color
+
+        for row_idx, segments in enumerate(rows):
+            row_top = band_bottom - (row_idx + 1) * (band_h + band_gap)
+            row_bottom = row_top + band_h
+            for seg_idx, seg in enumerate(segments):
+                seg_start_arrow = arrow.get(seg.start)
+                seg_end_arrow = arrow.get(seg.end_exclusive)
+                x1 = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
+                x2 = self._x_for_day(seg_end_arrow, start, end, axis_left, axis_right)
+                x1 = max(x1, axis_left)
+                x2 = min(x2, axis_right)
+                if x2 <= x1:
+                    continue
+                fill = alt_colors[seg_idx % 2]
+                self._draw_rect(
+                    x1, row_top, x2 - x1, band_h,
+                    fill=fill, fill_opacity=0.6,
+                    stroke="#aaaaaa", stroke_width=0.5,
+                )
+                cx = (x1 + x2) / 2.0
+                cy = row_top + band_h / 2.0 + label_size * 0.35
+                self._draw_text(
+                    cx, cy, seg.label,
+                    config.timeline_date_font,
+                    label_size,
+                    fill=label_color,
+                    fill_opacity=0.9,
+                    anchor="middle",
+                    max_width=x2 - x1 - 4.0,
                 )
 
     def _draw_today_marker(

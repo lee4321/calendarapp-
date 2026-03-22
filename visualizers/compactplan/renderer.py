@@ -19,6 +19,10 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.fiscal_renderer import (
+    build_fiscal_period_segments,
+    build_fiscal_quarter_segments,
+)
 from shared.icon_band import compute_icon_band_days
 
 if TYPE_CHECKING:
@@ -466,25 +470,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
             return segments
 
         if unit == "fiscal_quarter":
-            fiscal_start = int(
-                band.get("fiscal_year_start_month", 10)
-            )
-            cursor = self._fiscal_quarter_start(start, fiscal_start)
-            while cursor <= end:
-                next_cursor = self._shift_months(cursor, 3)
-                if next_cursor > start:
-                    q_num = (((cursor.month - fiscal_start) % 12) // 3) + 1
-                    fy = cursor.year if fiscal_start == 1 else cursor.year + 1
-                    label = str(band.get("label_format", "FY{fy} Q{q}")).format(
-                        fy=fy, fy2=fy % 100, q=q_num
-                    )
-                    seg_start = max(cursor, start)
-                    seg_end = min(next_cursor, end + one_day)
-                    if seg_start < seg_end:
-                        segments.append(
-                            _BandSegment(start=seg_start, end_exclusive=seg_end, label=label)
-                        )
-                cursor = next_cursor
+            fiscal_start = int(band.get("fiscal_year_start_month", 10))
+            lbl_fmt = str(band.get("label_format", "FY{fy} Q{q}"))
+            for seg in build_fiscal_quarter_segments(
+                start, end, config,
+                fiscal_start_month=fiscal_start,
+                label_format=lbl_fmt,
+            ):
+                segments.append(
+                    _BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
+                )
+            return segments
+
+        if unit == "fiscal_period":
+            for seg in build_fiscal_period_segments(start, end, config):
+                segments.append(
+                    _BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
+                )
             return segments
 
         if unit == "interval":
@@ -1174,15 +1176,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         month = (month_index % 12) + 1
         return date(year, month, 1)
 
-    @staticmethod
-    def _fiscal_quarter_start(day: date, fiscal_start_month: int) -> date:
-        fy_start_year = day.year if day.month >= fiscal_start_month else day.year - 1
-        offset = (day.month - fiscal_start_month) % 12
-        q_index = offset // 3
-        month_index = (fiscal_start_month - 1) + (q_index * 3)
-        year = fy_start_year + (month_index // 12)
-        month = (month_index % 12) + 1
-        return date(year, month, 1)
 
     @staticmethod
     def _resolve_font(

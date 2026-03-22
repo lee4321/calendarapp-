@@ -446,6 +446,24 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 anchor="middle",
             )
 
+        # 7b. Fiscal period start label (small text at bottom of cell)
+        if style.fiscal_period_label:
+            label_font_size = max(
+                4.0,
+                (config.fiscal_period_label_font_size or config.mini_cell_font_size * 0.6),
+            )
+            label_y = y + h - label_font_size * 0.3
+            self._draw_text(
+                cx,
+                label_y,
+                style.fiscal_period_label,
+                config.fiscal_period_label_font,
+                label_font_size,
+                fill=config.fiscal_period_label_color,
+                fill_opacity=0.85,
+                anchor="middle",
+            )
+
         # 7. Strikethrough
         if style.strikethrough:
             from renderers.text_utils import string_width

@@ -22,6 +22,7 @@ from visualizers.weekly.renderer import (
     HashDecoration,
     WeeklyCalendarRenderer,
 )
+from shared.fiscal_renderer import get_fiscal_period_color
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -73,6 +74,9 @@ class DayStyle:
     # Priority for stacking (higher = rendered last / on top)
     priority: int = 0
 
+    # Fiscal period start label (e.g. "P1", "Q1 FY26 P1") — None if not a period start
+    fiscal_period_label: str | None = None
+
 
 class DayStyleResolver:
     """
@@ -118,6 +122,17 @@ class DayStyleResolver:
 
         holidays = self._db.get_holidays_for_date(daykey, self._config.country)
         special_days = self._db.get_special_days_for_date(daykey)
+
+        # Layer 0: Fiscal period coloring and labels (holidays override color in Layer 1)
+        if self._config.fiscal_lookup:
+            fiscal_info = self._config.fiscal_lookup.get(daykey)
+            if fiscal_info:
+                if self._config.fiscal_use_period_colors:
+                    style.shade_color = get_fiscal_period_color(fiscal_info, self._config)
+                    style.shade_opacity = 0.50
+                if self._config.fiscal_show_period_labels and fiscal_info.is_period_start:
+                    from shared.fiscal_renderer import format_fiscal_period_label
+                    style.fiscal_period_label = format_fiscal_period_label(fiscal_info, self._config)
 
         # Layer 1: Government holidays
         self._apply_holidays(style, holidays)

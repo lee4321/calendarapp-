@@ -112,6 +112,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ): "timeline_duration_bar_stroke_dasharray",
     ("timeline", "top_colors"): "timeline_top_colors",
     ("timeline", "bottom_colors"): "timeline_bottom_colors",
+    ("timeline", "show_fiscal_periods"): "timeline_show_fiscal_periods",
+    ("timeline", "show_fiscal_quarters"): "timeline_show_fiscal_quarters",
     ("timeline", "palette"): "theme_timeline_palette",
     ("timeline.title", "font_family"): "timeline_title_font",
     ("timeline.title", "font_color"): "timeline_title_color",

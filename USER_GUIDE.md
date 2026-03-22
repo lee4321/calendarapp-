@@ -65,19 +65,19 @@ PYTHONPATH=. uv run python ecalendar.py palettes
 | `--filter`, `-f` | `TEXT` | `colorsheet`, `iconsheet` | `colorsheet`: Filter colors by name substring (case-insensitive) `iconsheet`: Filter icons by name substring (case-insensitive) |  |
 | `--fiscal` | `TYPE` | `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period) | `weekly`: choices `nrf-454, nrf-445, nrf-544, 13-period` |
 | `--fiscal-colors` |  | `weekly` | Use fiscal period colors instead of Gregorian month colors for day box backgrounds | `weekly`: default `False` |
-| `--footercenter`, `-fc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Center footer text |  |
-| `--footerleft`, `-fl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Left footer text |  |
-| `--footerright`, `-fr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Right footer text |  |
-| `--footer`, `-ft` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include page footer | `blockplan`: default `False` |
-| `--headercenter`, `-hc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Center header text |  |
-| `--headerleft`, `-hl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Left header text |  |
-| `--headerright`, `-hr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Right header text |  |
-| `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
+| `--footercenter`, `-fc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Center footer text |  |
+| `--footerleft`, `-fl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Left footer text |  |
+| `--footerright`, `-fr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right footer text |  |
+| `--footer`, `-ft` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page footer | `blockplan`: default `False` |
+| `--headercenter`, `-hc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Center header text |  |
+| `--headerleft`, `-hl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Left header text |  |
+| `--headerright`, `-hr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right header text |  |
+| `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
 | `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
-| `--imagemark`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Watermark image file |  |
+| `--imagemark`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
-| `--margin`, `-m` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Add page margins | `blockplan`: default `False` |
+| `--margin`, `-m` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Add page margins | `blockplan`: default `False` |
 | `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
 | `--mini-columns`, `-mc` | `N` | `mini`, `mini-icon`, `text-mini` | Number of months per row in mini calendar (default: 3) |  |
 | `--mini-details` |  | `mini`, `mini-icon` | Generate a second SVG with mini calendar event details | `mini`: default `False` |
@@ -86,30 +86,27 @@ PYTHONPATH=. uv run python ecalendar.py palettes
 | `--mini-no-adjacent` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | `mini`: default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
 | `--mini-title-format` | `FMT` | `mini`, `mini-icon`, `text-mini` | Arrow format string for month title (default: MMM YY) |  |
-| `--mini-week-numbers`, `-mwn` |  | `mini`, `mini-icon`, `text-mini` | Show week number column (W#) on left side of each month | `mini`: default `False` |
-| `--mini-week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini` | Custom anchor date for week 1 numbering (YYYYMMDD). Implies --mini-week-numbers and custom week numbering mode. |  |
-| `--monthnames`, `-mn` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show month names on calendar | `blockplan`: default `False` |
-| `--monthnumbers`, `-mu` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show month numbers on calendar | `blockplan`: default `False` |
+| `--monthnames`, `-mn` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Show month names on calendar | `blockplan`: default `False` |
 | `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
-| `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
+| `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
 | `--outputfile`, `-of` | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `iconsheet`, `mini`, `mini-icon`, `palette`, `text-mini`, `timeline`, `weekly` | `blockplan`: Output filename (always written under output/) `colorsheet`: Output SVG path (default: output/colorsheet.svg) `compactplan`: Output filename (always written under output/) `iconsheet`: Output SVG path (default: output/iconsheet.svg) `mini`: Output filename (always written under output/) `mini-icon`: Output filename (always written under output/) `palette`: Output SVG path (default: output/<NAME>.svg) `text-mini`: Output filename (always written under output/) `timeline`: Output filename (always written under output/) `weekly`: Output filename (always written under output/) | `blockplan`: default `calendar.svg` |
-| `--overflow`, `-x` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Create overflow page showing items | `blockplan`: default `False` |
-| `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
+| `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
+| `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
 | `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `fonts`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palette`, `palettes`, `papersizes`, `patterns`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
 | `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
-| `--shade`, `-sh` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Shade current date | `blockplan`: default `False` |
-| `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
-| `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
+| `--shade`, `-sh` |  | `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
+| `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
+| `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
 | `--verbose`, `-v` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `fonts`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palette`, `palettes`, `papersizes`, `patterns`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | `blockplan`: default `0` |
-| `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise in SVG coordinates) |  |
-| `--watermark`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Watermark text |  |
-| `--week-number-mode` |  | `weekly` | Week number mode for weekly view (iso or custom) | `weekly`: default `iso`; choices `iso, custom` |
-| `--week1-start` | `YYYYMMDD` | `weekly` | Custom anchor date for weekly week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom week numbering mode. |  |
+| `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise in SVG coordinates) |  |
+| `--watermark`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
+| `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
+| `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
 | `--weekends`, `-we` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start | `blockplan`: default `0`; choices `0, 1, 2, 3, 4` |
-| `--weeknumbers`, `-wn` |  | `weekly` | Show week numbers in weekly view | `weekly`: default `False` |
+| `--weeknumbers`, `-wn` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Show week numbers | default `False` |
 
 ## Positional Arguments by Command
 

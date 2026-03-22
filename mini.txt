@@ -11,7 +11,6 @@
 --header
 # --footer
 --monthnames
---monthnumbers
 # --headerleft=Left Header
 --headercenter=2026
 # --headerright=Right Header
@@ -39,8 +38,8 @@
 --mini-rows=4
 --mini-title-format=MMMM
 --mini-no-adjacent
---mini-week-numbers
---mini-week1-start=
+--weeknumbers
+--week1-start=
 --mini-grid-lines
 # --mini-details
 

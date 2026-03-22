@@ -1,0 +1,60 @@
+Here is the complete analysis:
+
+CLI Options Defined but Never Used (or Silently Ignored)
+1. --monthnames / -mn and --monthnumbers / -mu
+Added to: all 7 calendar views (weekly, mini, mini-icon, text-mini, timeline, blockplan, compactplan)
+Actually used by: weekly only (renderer.py:778-780)
+Ignored by: mini, mini-icon, text-mini, timeline, blockplan, compactplan — none of their renderers read config.include_month_name or config.include_month_number. The mini views control their header via --mini-title-format instead.
+
+2. --weeknumbers / -wn
+Added to: all 7 calendar views
+Actually used by: weekly only (renderer.py:922, sets config.include_week_numbers)
+Ignored by: blockplan, compactplan, timeline — their renderers never read config.include_week_numbers
+Note: mini/mini-icon/text-mini have their own week-number system (--mini-week-numbers → config.mini_show_week_numbers), completely separate from --weeknumbers. So --weeknumbers does nothing for those views either.
+
+3. --shade / -sh
+Added to: all 7 calendar views
+Actually used by: weekly (renderer.py:757) and mini (day_styles.py:139)
+Ignored by: blockplan, compactplan, timeline, text-mini — none of these renderers read config.shade_current_day
+Aggravating factor: blockplan, compactplan, and timeline all declare "shade" in their supported_options list, falsely advertising support.
+
+4. --overflow / -x
+Added to: all 7 calendar views
+Actually used by: weekly only (it's the only renderer that generates overflow_entries)
+Nominally accepted but does nothing for:
+
+mini — _render_content() is documented "always (0, [])"
+blockplan, compactplan — never produce overflow entries
+timeline — explicitly documented: "Timeline view does not use overflow pages"
+text-mini — doesn't inherit BaseSVGRenderer at all, so the svg_base.py overflow check is never even reached
+5. Virtually all output/layout/text options silently ignored by text-mini
+text-mini is included in the output and layout argument loops (lines 528, 571) but its renderer produces plain-text output and ignores every SVG rendering flag:
+
+CLI option	Config field	Used by text-mini?
+--papersize / -ps	pageX, pageY	No
+--orientation / -o	orientation	No
+--shrink	shrink_to_content	No
+--header / -ht	include_header	No
+--footer / -ft	include_footer	No
+--margin / -m	include_margin	No
+--watermark / -wt	watermark	No
+--watermark-rotation-angle	watermark_rotation_angle	No
+--imagemark / -wi	imagemark	No
+--headerleft/center/right	header_*_text	No
+--footerleft/center/right	footer_*_text	No
+6. supported_options — dead code infrastructure
+Every visualizer defines a supported_options: list[str] property, but nothing in validate_config() (or anywhere else at runtime) ever reads it. It provides no enforcement, no warnings, and no dispatch. The declared lists are also inaccurate (e.g., shade is claimed by compactplan/timeline but their renderers don't honor it).
+
+Summary by visualizer
+Option	weekly	mini	mini-icon	text-mini	timeline	blockplan	compactplan
+--shade	✓	✓	?	✗	✗	✗	✗
+--monthnames/numbers	✓	✗	✗	✗	✗	✗	✗
+--weeknumbers	✓	✗	✗	✗	✗	✗	✗
+--overflow	✓	✗	✗	✗	✗	✗	✗
+--papersize/orientation/shrink/header/footer/margin/watermark/imagemark	✓	✓	✓	✗	✓	✓	✓
+The most significant gap is text-mini accepting the entire SVG output/layout option group while silently doing nothing with any of it. The second most significant is --monthnames/--monthnumbers/--weeknumbers being falsely advertised as available on all calendar views when only weekly implements them.
+
+
+
+
+

@@ -299,6 +299,15 @@ class TextMiniCalendarRenderer:
                         )
                     )
 
+        # Fiscal period start indicators (lower priority than events/holidays)
+        if config.fiscal_show_period_labels and config.fiscal_lookup:
+            from shared.fiscal_renderer import format_fiscal_period_label
+            for daykey in self._iter_daykeys(config):
+                fiscal_info = config.fiscal_lookup.get(daykey)
+                if fiscal_info and fiscal_info.is_period_start:
+                    label = format_fiscal_period_label(fiscal_info, config)
+                    self._set_symbol(symbol_map, daykey, label, 20)
+
         return symbol_map, details
 
     def _duration_name_for(self, events: list[dict], start: str, end: str) -> str:

@@ -243,7 +243,7 @@ dataclass, performing any necessary validation or transformation along the way.
 **Sections handled:**
 1. **Database source** — sets `config.events` description string.
 2. **Weekend style** — writes `config.weekend_style`.
-3. **Month display** — resolves `--monthnames` / `--monthnumbers` mutual exclusivity.
+3. **Month display** — sets `--monthnames` config field.
 4. **Week numbers** — sets `config.include_week_numbers`.
 5. **Layout toggles** — header, footer, margin, overflow, shrink flags.
 6. **Paper size & orientation** — case-insensitive lookup with clear error on unknown name; sets `config.pageX/pageY`.

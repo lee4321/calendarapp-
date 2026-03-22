@@ -83,8 +83,8 @@ class CalendarConfig:
     # Page dimensions (set from papersize lookup)
     pageX: float = 0.0
     pageY: float = 0.0
-    papersize: str = "tabloid"
-    orientation: str = "portrait"
+    papersize: str = "Widescreen"
+    orientation: str = "landscape"
     desired_font_size: float | None = None  # Theme-selected target base size
 
     # Output file
@@ -401,7 +401,6 @@ class CalendarConfig:
     # Display options
     shade_current_day: bool = True
     include_month_name: bool = True
-    include_month_number: bool = False
     include_margin: bool = True
     include_overflow: bool = False
     include_color_key: bool = False
@@ -575,6 +574,9 @@ class CalendarConfig:
             "tomato",
         ]
     )
+    # Fiscal period/quarter bands in timeline header (requires --fiscal)
+    timeline_show_fiscal_periods: bool = False
+    timeline_show_fiscal_quarters: bool = False
 
     # Blockplan styling and behavior
     blockplan_background_color: str = "none"
