@@ -1,0 +1,887 @@
+# =============================================================================
+# SAMPLE.yaml — Complete Calendar Theme Reference
+#
+# Every configurable theme key is documented here with its purpose, type,
+# and available options. Keys are sorted alphabetically within each section.
+# Set any key to null to use the built-in default.
+#
+# ─── Available Fonts ─────────────────────────────────────────────────────────
+#   Roboto-Black, Roboto-BlackItalic
+#   Roboto-Bold,  Roboto-BoldItalic
+#   Roboto-Italic
+#   Roboto-Light, Roboto-LightItalic
+#   Roboto-Regular
+#   RobotoCondensed-Bold,  RobotoCondensed-BoldItalic
+#   RobotoCondensed-Italic
+#   RobotoCondensed-Light, RobotoCondensed-LightItalic
+#   RobotoCondensed-Regular
+#   JuliaMono-Regular, JuliaMono-RegularItalic
+#   ClearSans-Thin
+#   mplus-1m-light
+#   AndroidEmoji
+#   linearicons            (icon/symbol font)
+#
+# ─── Color Values ────────────────────────────────────────────────────────────
+#   CSS named color   : "navy", "tomato", "lightgrey", "whitesmoke", …
+#   Hex color         : "#1a2b3c"
+#   Palette reference : "palette:NAME:INDEX"  e.g. "palette:Blues:3"
+#   Transparent       : "none"
+#
+# ─── Available SVG Patterns (35 total) ───────────────────────────────────────
+#   diagonal-stripes, horizontal-stripes, vertical-stripes, cross-hatch,
+#   brick-wall, circuit-board, polka-dots, wiggle, bamboo, temple,
+#   hexagons, triangles, wavy-lines, zigzag, dots-grid, (and more)
+#
+# ─── Palette Names (matplotlib / DB) ─────────────────────────────────────────
+#   Greys, Pastel1, Pastel2, Set1, Set2, Set3, Dark2, Accent,
+#   Blues, Greens, Reds, Oranges, Purples, PuBuGn, YlOrRd, (and more)
+# =============================================================================
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THEME METADATA
+# ─────────────────────────────────────────────────────────────────────────────
+theme:
+  description: "Complete reference theme — copy and customise"  # free text
+  name: "SAMPLE"                                                 # display name
+  version: "1.0"                                                 # free text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BASE — Global defaults that cascade into every section unless overridden
+# ─────────────────────────────────────────────────────────────────────────────
+base:
+  default_missing_icon: null        # (str) icon name used when an event icon is not found in the DB
+  font_color: "black"               # (str) fallback text color for all sections
+  font_family: "RobotoCondensed-Light"  # (str) fallback font for all sections
+
+  # size_rule: papersize-conditional font sizes; evaluated before section overrides
+  # Each entry specifies font_size when the output papersize matches any listed value.
+  # Recognised papersize values: letter, ledger, legal, a4, a3, a2, tabloid, …
+  size_rule:
+    - font_size: 10
+      when:
+        papersize: ["letter", "a4"]
+    - font_size: 11
+      when:
+        papersize: ["ledger", "a3", "tabloid"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYOUT — Page margin overrides
+# Units: "0.5in" | "12mm" | numeric (points)
+# ─────────────────────────────────────────────────────────────────────────────
+layout:
+  margin:
+    bottom: null   # (str|float) bottom margin; setting any side enables include_margin
+    left:   null   # (str|float) left margin
+    right:  null   # (str|float) right margin
+    top:    null   # (str|float) top margin
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HEADER — Three-cell page header (top of every page)
+# Subsections: left | center | right
+# Each subsection inherits base defaults; any key overrides only that cell.
+# ─────────────────────────────────────────────────────────────────────────────
+header:
+  center:
+    font_color:  "black"                # (str) text color for center header cell
+    font_family: "Roboto-Bold"          # (str) font for center header cell
+    font_size:   null                   # (float|null) pt; null = auto from base size_rule
+  left:
+    font_color:  "black"                # (str) text color for left header cell
+    font_family: "RobotoCondensed-Light"
+    font_size:   null
+  right:
+    font_color:  "grey"                 # (str) text color for right header cell
+    font_family: "RobotoCondensed-Light"
+    font_size:   null
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FOOTER — Three-cell page footer (bottom of every page)
+# Same structure as header.
+# ─────────────────────────────────────────────────────────────────────────────
+footer:
+  center:
+    font_color:  "grey"
+    font_family: "RobotoCondensed-Light"
+    font_size:   null
+  left:
+    font_color:  "grey"
+    font_family: "RobotoCondensed-Light"
+    font_size:   null
+  right:
+    font_color:  "grey"
+    font_family: "RobotoCondensed-Light"
+    font_size:   null
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EVENTS — Single-day event text rendering (weekly, mini, blockplan, timeline)
+# ─────────────────────────────────────────────────────────────────────────────
+events:
+  font_color:          "navy"                    # (str) event name text color
+  font_family:         "RobotoCondensed-Light"   # (str) event name font
+  font_size:           null                      # (float|null) pt; null = auto-scaled
+  icon_color:          "navy"                    # (str) event icon color
+  item_placement_order: ["events", "durations"]  # (list) rendering order; first item appears
+                                                 #   in upper half of day box
+                                                 #   options: events | milestones | durations
+  notes_color:         "dimgrey"                 # (str) notes text color
+  notes_font:          "RobotoCondensed-LightItalic"  # (str) notes text font
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DURATIONS — Multi-day duration bar text (weekly and mini views)
+# Blockplan-specific duration styling is under the blockplan: section below.
+# ─────────────────────────────────────────────────────────────────────────────
+durations:
+  font_color:      "navy"                         # (str) duration name text color
+  font_family:     "RobotoCondensed-Light"        # (str) duration name font
+  icon_color:      "navy"                         # (str) duration icon color
+  notes_color:     "dimgrey"                      # (str) notes text color
+  notes_font:      "RobotoCondensed-LightItalic"  # (str) notes text font
+  stroke_dasharray: null                          # (str|null) e.g. "6,3"; null = solid
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WATERMARK — Diagonal text or image overlay on every page
+# ─────────────────────────────────────────────────────────────────────────────
+watermark:
+  alpha:                    0.15       # (float 0–1) text opacity
+  color:                    "grey"     # (str) text color
+  font_family:              "Roboto-Black"  # (str) watermark font
+  font_size:                null       # (float|null) pt; null = auto-fit to page
+  imagemark_rotation_angle: 0.0        # (float) image watermark rotation in degrees
+  resize_mode:              "fit"      # (str) fit | stretch  — how image fills the page
+  rotation_angle:           45.0       # (float) text watermark rotation in degrees (clockwise)
+  text:                     null       # (str|null) watermark text; null = no watermark
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FISCAL — Fiscal period label formatting (weekly sidebar labels)
+# Available placeholders: {period} {year} {fy} {fy2}
+# ─────────────────────────────────────────────────────────────────────────────
+fiscal:
+  end_label_format: null   # (str|null) label shown on last day of a period; null = no label
+  label_format:     null   # (str|null) label on first day of each period; e.g. "P{period}"
+  year_offset:      null   # (int|null) added to calendar year to get fiscal year
+                           #   null = auto (+1 for non-January start, 0 for NRF)
+                           #   0 = same year, 1 = year+1, -1 = year-1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COLORS — Semantic color assignments applied across all visualizers
+# ─────────────────────────────────────────────────────────────────────────────
+colors:
+
+  # ── Palette references (bulk) ───────────────────────────────────────────
+  # When set, the named palette fills the entire month/fiscal/group color list,
+  # overriding any individual entries in months: / fiscal_periods: / group_colors:
+  fiscal_palette: null   # (str|null) palette name for fiscal period colors; e.g. "Set1"
+  group_palette:  null   # (str|null) palette name for resource group colors; e.g. "Set2"
+  month_palette:  null   # (str|null) palette name for month colors; e.g. "Pastel1"
+
+  # ── Individual month colors ─────────────────────────────────────────────
+  # Keys are zero-padded month numbers "01"–"12"; values are CSS colors.
+  months:
+    "01": null   # January
+    "02": null   # February
+    "03": null   # March
+    "04": null   # April
+    "05": null   # May
+    "06": null   # June
+    "07": null   # July
+    "08": null   # August
+    "09": null   # September
+    "10": null   # October
+    "11": null   # November
+    "12": null   # December
+
+  # ── Individual fiscal period colors ────────────────────────────────────
+  # Keys are period numbers "1"–"13"; values are CSS colors.
+  fiscal_periods:
+    "1": null
+    "2": null
+    "3": null
+    "4": null
+
+  # ── Holiday colors (applied in both weekly and mini renderers) ──────────
+  company_holiday:
+    alpha: 0.25     # (float 0–1) fill opacity for company non-workday highlight
+    color: "gold"   # (str) fill color for company non-workday day boxes
+  federal_holiday:
+    alpha: 0.10     # (float 0–1) fill opacity for federal holiday highlight
+    color: "tomato" # (str) fill color for federal holiday day boxes
+
+  # ── Group color cycling list ────────────────────────────────────────────
+  # Ordered list of colors cycled over resource groups in the order they appear.
+  group_colors: []   # (list[str]) e.g. ["steelblue", "tomato", "goldenrod"]
+
+  # ── Hash line color (weekly view decorative lines inside day boxes) ─────
+  hash_lines: null   # (str|null) color for hash lines drawn across day boxes
+
+  # ── Resource group colors ───────────────────────────────────────────────
+  # Map of resource group name (case-insensitive) → CSS color.
+  resource_groups: {}   # e.g. {"Engineering": "steelblue", "Design": "tomato"}
+
+  # ── Special day color (company-defined highlighted days) ───────────────
+  special_day: null   # (str|null) fill color for special/highlighted days
+
+  # ── Special day type colors ─────────────────────────────────────────────
+  # Map of special-day type name → CSS color.
+  special_day_types: {}   # e.g. {"Holiday": "tomato", "Training": "gold"}
+
+  # ── Mini calendar color overrides ──────────────────────────────────────
+  # These override the equivalent mini_calendar: section values.
+  # Useful when you want one color setting to apply to all visualizers
+  # but a different one specifically in the mini calendar.
+  mini_calendar:
+    adjacent_month_color: null   # (str|null) color for days outside the current month
+    current_day_color:    null   # (str|null) highlight color for today's date cell
+    day_color:            null   # (str|null) default day number color
+    header_color:         null   # (str|null) day-of-week header row text color
+    holiday_color:        null   # (str|null) federal holiday text/cell color
+    milestone_color:      null   # (str|null) milestone dot color
+    nonworkday_shade:     null   # (str|null) fill shade for company non-workdays
+    title_color:          null   # (str|null) month title text color
+    week_number_color:    null   # (str|null) week number column text color
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WEEKLY — Weekly calendar view
+# ─────────────────────────────────────────────────────────────────────────────
+weekly:
+
+  # ── Day names row (Mon, Tue, Wed … column headers) ──────────────────────
+  day_names:
+    font_color:  "black"                  # (str) day-name header text color
+    font_family: "RobotoCondensed-Light"  # (str) day-name header font
+    font_size:   null                     # (float|null) pt; null = auto-scaled
+
+  # ── Week number column (left edge of grid) ──────────────────────────────
+  week_numbers:
+    font_color:         "grey"                    # (str) week number text color
+    font_family:        "RobotoCondensed-Light"   # (str) week number font
+    font_size:          null                      # (float|null) pt; null = auto-scaled
+    label_format:       "W{num}"                  # (str) format string; {num} = week number
+
+  # ── Individual day cells ─────────────────────────────────────────────────
+  day_box:
+    fill_color:           "none"    # (str) day box background fill; "none" = transparent
+    fill_opacity:         1.0       # (float 0–1) day box fill opacity
+    font_color:           "black"   # (str) special day title text color
+    icon_color:           "navy"    # (str) special day icon color
+    number_color:         "black"   # (str) day number digit color
+    number_font:          "Roboto-Bold"  # (str) day number font
+    stroke_color:         "grey"    # (str) day box border color
+    stroke_dasharray:     null      # (str|null) border dash pattern; e.g. "4,2"; null = solid
+    stroke_opacity:       0.5       # (float 0–1) border opacity
+    stroke_width:         0.5       # (float) border line width in points
+
+    # hash_pattern: name of SVG pattern drawn over day boxes (from DB patterns table)
+    # See available patterns list at top of file. null = no pattern overlay.
+    hash_pattern:         null      # (str|null) e.g. "diagonal-stripes"
+    hash_pattern_opacity: 0.15      # (float 0–1) pattern overlay opacity
+
+    # hash_rules: conditional pattern/color rules applied per day box.
+    # Rules are evaluated in order; the first matching rule wins.
+    # Each rule:
+    #   pattern (str)   — SVG pattern name
+    #   color   (str)   — pattern colorization color
+    #   opacity (float) — pattern opacity 0–1
+    #   when    (dict)  — conditions (all must be true):
+    #     federal_holiday   (bool)      — is a federal holiday
+    #     company_holiday   (bool)      — is a company non-workday
+    #     milestone         (bool)      — has a milestone event
+    #     nonworkday        (bool)      — is a non-work day
+    #     percent_complete  (int)       — event/duration completion % (e.g. 100)
+    #     duration_names    (list[str]) — substring match on duration name
+    #     event_names       (list[str]) — substring match on event name
+    #     notes             (list[str]) — substring match on notes
+    #     resource_group    (list[str]) — case-insensitive resource group match
+    #     resource_names    (list[str]) — substring match on resource name
+    #     wbs               (list[str]) — WBS prefix match
+    hash_rules: []
+    # Example:
+    # hash_rules:
+    #   - pattern: "diagonal-stripes"
+    #     color:   "steelblue"
+    #     opacity: 0.10
+    #     when:
+    #       duration_names: ["Sprint"]
+    #   - pattern: "polka-dots"
+    #     color:   "tomato"
+    #     opacity: 0.12
+    #     when:
+    #       percent_complete: 100
+
+  # ── Overflow indicator (shown when a day has more events than can fit) ───
+  overflow:
+    color: "grey"          # (str) overflow indicator color
+    icon:  "chevron-down"  # (str) icon name from the linearicons font
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIMELINE — Timeline / Gantt-strip view
+# ─────────────────────────────────────────────────────────────────────────────
+timeline:
+  axis_color:                       "lightgrey"   # (str) horizontal axis line color
+  axis_opacity:                     1.0           # (float 0–1) axis opacity
+  axis_stroke_dasharray:            null          # (str|null) axis dash pattern
+  axis_width:                       1.0           # (float) axis line width in points
+  background_color:                 "none"        # (str) timeline area background
+  bottom_colors:                    []            # (list[str]) colors cycling below axis
+  callout_offset_y:                 null          # (float|null) vertical offset for event callout lines
+  date_format:                      "MMM D YYYY"  # (str) Arrow format for axis date labels
+  duration_bar_fill_opacity:        0.5           # (float 0–1) duration bar fill opacity
+  duration_bar_stroke_dasharray:    null          # (str|null) duration bar border dash pattern
+  duration_bracket_stroke_dasharray: null         # (str|null) duration bracket dash pattern
+  duration_lane_gap_y:              null          # (float|null) vertical gap between duration lanes
+  duration_offset_y:                null          # (float|null) vertical offset of duration bars from axis
+  icon_size:                        null          # (float|null) event icon size in points
+  label_fill_opacity:               0.85          # (float 0–1) event label background opacity
+  label_stroke_dasharray:           null          # (str|null) label border dash pattern
+  label_stroke_width:               0.5           # (float) label border width
+  marker_radius:                    4.0           # (float) milestone/event marker circle radius
+  marker_stroke_color:              "white"       # (str) marker border color
+  marker_stroke_width:              1.0           # (float) marker border width
+  palette:                          null          # (str|null) palette name for event colors
+  tick_color:                       "grey"        # (str) tick mark color
+  tick_label_format:                null          # (str|null) Arrow format for tick labels; null = date_format
+  tick_stroke_dasharray:            null          # (str|null) tick line dash pattern
+  today_date:                       null          # (str|null) "YYYY-MM-DD" override; null = system date
+  today_label_color:                "tomato"      # (str) "Today" label text color
+  today_label_offset_y:             null          # (float|null) vertical offset for today label
+  today_label_text:                 "Today"       # (str) label text shown on the today line
+  today_line_color:                 "tomato"      # (str) today vertical line color
+  today_line_stroke_dasharray:      "6,3"         # (str|null) today line dash pattern
+  top_colors:                       []            # (list[str]) colors cycling above axis
+
+  # ── Timeline title text ────────────────────────────────────────────────
+  title:
+    font_color:  "black"        # (str) title text color
+    font_family: "Roboto-Bold"  # (str) title font
+
+  # ── Timeline date labels (axis tick text) ─────────────────────────────
+  date:
+    font_color:  "grey"                   # (str) date label text color
+    font_family: "RobotoCondensed-Light"  # (str) date label font
+
+  # ── Notes text (event notes rendered below name) ──────────────────────
+  notes:
+    font_color:  "dimgrey"                       # (str) notes text color
+    font_family: "RobotoCondensed-LightItalic"   # (str) notes font
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIMELINE_EVENTS — Event boxes in the timeline view
+# ─────────────────────────────────────────────────────────────────────────────
+timeline_events:
+  box_height:     null   # (float|null) event box height in points; null = auto
+  box_width:      null   # (float|null) event box width in points; null = auto
+  name_font_size:  null  # (float|null) event name font size; null = auto
+  notes_font_size: null  # (float|null) notes font size; null = auto
+  text_color:     null   # (str|null) event text color; null = inherits timeline default
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIMELINE_DURATIONS — Duration bar boxes in the timeline view
+# ─────────────────────────────────────────────────────────────────────────────
+timeline_durations:
+  box_height:      24      # (float|null) duration bar height in points; null = auto
+  box_width:       null    # (float|null) duration box width; null = auto
+  date_color:      "grey"  # (str) start/end date label color
+  date_font:       "RobotoCondensed-Italic"  # (str) date label font
+  date_font_size:  9       # (float|null) date label font size; null = auto
+  name_font_size:  null    # (float|null) duration name font size; null = auto
+  notes_font_size: null    # (float|null) notes font size; null = auto
+  text_color:      "white" # (str|null) duration name text color
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BLOCKPLAN — Swimlane / block-plan view
+# ─────────────────────────────────────────────────────────────────────────────
+blockplan:
+
+  # ── Layout & grid ────────────────────────────────────────────────────────
+  background_color:     "none"   # (str) overall blockplan area background; "none" = transparent
+  band_row_height:      25.0     # (float) default height in points for all time-band rows;
+                                 #   individual bands can override with row_height:
+  fiscal_year_start_month: 10    # (int 1–12) month number when fiscal year begins
+  grid_color:           "grey"   # (str) swimlane border and separator line color
+  grid_dasharray:       null     # (str|null) swimlane border dash pattern; e.g. "4,2"
+  grid_line_width:      1.0      # (float) swimlane border line width in points
+  grid_opacity:         0.6      # (float 0–1) swimlane border opacity
+  label_column_ratio:   0.10     # (float 0–1) fraction of total width used for the label column
+  lane_split_ratio:     0.5      # (float 0–1) fraction of lane height for events vs durations;
+                                 #   0.0 = no divider line
+  week_start:           0        # (int 0–6) first day of week: 0=Mon … 6=Sun
+
+  # ── Time-band line style (overrides grid for time-band cells only) ───────
+  # null on any field → falls back to the corresponding grid_* value
+  timeband_line_color:     null  # (str|null) time-band cell border color
+  timeband_line_dasharray: null  # (str|null) time-band border dash pattern
+  timeband_line_opacity:   null  # (float|null 0–1) time-band border opacity
+  timeband_line_width:     null  # (float|null) time-band border line width
+
+  # ── Time-band fill ──────────────────────────────────────────────────────
+  timeband_fill_color:    "none"  # (str|list|null) default fill for all time-band segments;
+                                  #   list cycles colors across segments
+  timeband_fill_opacity:  1.0     # (float 0–1) time-band segment fill opacity
+  timeband_fill_palette:  []      # (list[str]) palette name(s) for time-band fill cycling
+
+  # ── Header column (leftmost label cell of each time-band row) ────────────
+  header_font:              "RobotoCondensed-Bold"  # (str) heading cell font
+  header_font_size:         null                    # (float|null) pt; null = auto-scaled
+  header_heading_fill_color: "none"                 # (str) heading cell background fill
+  header_label_align_h:     "left"                  # (str) left | center | right
+  header_label_color:       "black"                 # (str) heading cell label text color
+  header_label_opacity:     1.0                     # (float 0–1) heading label text opacity
+
+  # ── Segment label cells (the time-period cells in each time-band row) ────
+  band_font:              "RobotoCondensed-Bold"  # (str) segment label font
+  band_font_size:         null                    # (float|null) pt; null = auto from row_height
+  timeband_label_color:   "black"                 # (str) segment label text color
+  timeband_label_opacity: 1.0                     # (float 0–1) segment label text opacity
+
+  # ── Swimlane headings (leftmost column of each lane row) ─────────────────
+  lane_heading_fill_color: "none"                  # (str) lane heading cell background
+  lane_label_align_h:      "center"                # (str) left | center | right
+  lane_label_align_v:      "middle"                # (str) top | middle | bottom
+  lane_label_color:        "black"                 # (str) lane label text color
+  lane_label_font:         "RobotoCondensed-Bold"  # (str) lane label font
+  lane_label_font_size:    null                    # (float|null) pt; null = auto-scaled
+  lane_label_rotation:     0                       # (float) clockwise degrees;
+                                                   #   0=horizontal, -90=bottom-to-top,
+                                                   #   90=top-to-bottom
+  lane_match_mode:         "first"                 # (str) first = each event assigned to first
+                                                   #   matching lane; all = assigned to every match
+  show_unmatched_lane:     true                    # (bool) show a catch-all lane for unmatched events
+  unmatched_lane_name:     "Other"                 # (str) label for the unmatched catch-all lane
+
+  # ── Event markers (single-day events in blockplan) ───────────────────────
+  event_color:       "darkgrey"                  # (str) default event marker color
+  event_date_color:  "grey"                      # (str) event date label text color
+  event_date_font:   "RobotoCondensed-Light"     # (str) event date label font
+  event_date_format: "M/D"                       # (str) Arrow date format for event labels
+  event_date_font_size: null                     # (float|null) pt; null = auto-scaled
+  event_font:        "RobotoCondensed-Light"     # (str) event name font
+  event_font_size:   null                        # (float|null) pt; null = auto-scaled
+  event_notes_font:  null                        # (str|null) event notes font; null = falls back to
+                                                 #   events.notes_font from the events: section
+  event_notes_color: null                        # (str|null) event notes text color; null = falls back to
+                                                 #   events.notes_color from the events: section
+  event_show_date:   false                       # (bool) show start date below event name
+  marker_radius:     3.0                         # (float) event dot marker radius in points
+
+  # ── Duration bars ────────────────────────────────────────────────────────
+  duration_bar_height:     20.0    # (float) bar height in points; respected as configured
+                                   #   (no longer overridden by font size)
+  duration_color:          "navy"  # (str) bar fill color when event.color is not set in DB
+  duration_date_color:     null    # (str|null) start/end date label color; null = duration_color
+  duration_date_font:      "RobotoCondensed-LightItalic"  # (str) date label font
+  duration_date_font_size: null    # (float|null) pt; null = auto-scaled
+  duration_date_format:    "M/D"   # (str) Arrow date format for start/end labels
+  duration_fill_opacity:   0.75    # (float 0–1) bar fill opacity
+  duration_font:           "RobotoCondensed-Bold"  # (str) bar label font
+  duration_font_size:      null    # (float|null) pt; null = auto-scaled
+  duration_icon_visible:   false   # (bool) show event icon inside duration bar when available
+  duration_notes_font:     null    # (str|null) notes text font; null = falls back to
+                                   #   durations.notes_font from the durations: section
+  duration_notes_color:    null    # (str|null) notes text color; null = falls back to
+                                   #   durations.notes_color from the durations: section
+  duration_show_end_date:  false   # (bool) show end date below the right edge of the bar
+  duration_show_start_date: false  # (bool) show start date below the left edge of the bar
+  duration_stroke_color:   null    # (str|null) bar border color; null = no border
+  duration_stroke_dasharray: null  # (str|null) bar border dash pattern
+  duration_stroke_opacity: 1.0     # (float 0–1) bar border opacity
+  duration_stroke_width:   1.0     # (float) bar border width in points
+  duration_text_color:     null    # (str|null) bar label text color; null = falls back to
+                                   #   durations.font_color from the durations: section
+
+  # ── Color palette for duration bars (cycles by event priority) ───────────
+  palette:      []     # (list[str]) explicit color list; overrides palette_name
+  palette_name: null   # (str|null) DB palette name; e.g. "Set2"
+
+  # ── Vertical marker lines ─────────────────────────────────────────────────
+  # Global style defaults; each entry in vertical_lines: can override per line.
+  vertical_line_color:        "red"    # (str) default vertical line color
+  vertical_line_dasharray:    null     # (str|null) default dash pattern; e.g. "6,3"
+  vertical_line_fill_color:   "none"   # (str|null) default column fill; "none" = no fill
+  vertical_line_fill_opacity: 0.15     # (float 0–1) default fill opacity
+  vertical_line_opacity:      0.85     # (float 0–1) default line opacity
+  vertical_line_width:        1.5      # (float) default line width in points
+
+  # ── Configured vertical lines ────────────────────────────────────────────
+  # List of vertical marker lines drawn through the swimlane area.
+  # Each entry:
+  #   band        (str)         — time-band label to anchor to (case-insensitive)
+  #   align       (str)         — start | center | end  (which edge of the segment)
+  #   repeat      (bool)        — true = draw at every segment boundary in the band
+  #   value       (str)         — segment label to match when repeat is absent/false
+  #   color       (str)         — per-line color (overrides vertical_line_color)
+  #   width       (float)       — per-line width (overrides vertical_line_width)
+  #   opacity     (float)       — per-line opacity (overrides vertical_line_opacity)
+  #   dash_array  (str)         — per-line dash pattern (overrides vertical_line_dasharray)
+  #   fill_color  (str|list)    — column fill color or cycling list
+  #   fill_opacity (float)      — fill opacity (overrides vertical_line_fill_opacity)
+  vertical_lines: []
+  # Example:
+  # vertical_lines:
+  #   - band:    "Month"
+  #     repeat:  true
+  #     align:   "end"
+  #     color:   "grey"
+  #     width:   1.0
+  #     opacity: 0.4
+  #     dash_array: "4,4"
+  #   - band:    "Fiscal Quarter"
+  #     align:   "end"
+  #     color:   "navy"
+  #     width:   1.5
+
+  # ── Top time-band rows (above swimlanes) ─────────────────────────────────
+  # List of time-band row definitions drawn above the swimlane area.
+  # Each entry (keys sorted alphabetically):
+  #   anchor_date  (str YYYY-MM-DD)  — alignment anchor for interval unit
+  #   date_format  (str)             — Arrow format string for month/date/dow labels
+  #                                    common: MMM (Jan), MMMM (January), D, ddd, YYYY
+  #   fill_color   (str|list)        — segment fill; list cycles across segments
+  #   fill_palette (list[str])       — palette name(s) cycling across segments
+  #   font         (str)             — segment label font (overrides band_font)
+  #   font_color   (str)             — segment label color (overrides timeband_label_color)
+  #   font_opacity (float)           — segment label opacity (overrides timeband_label_opacity)
+  #   font_size    (float)           — segment label size (overrides band_font_size)
+  #   interval_days (int)            — segment length in days (interval unit only)
+  #   label        (str)             — text shown in the heading column cell
+  #   label_align_h (str)            — left | center | right  (heading cell alignment)
+  #   label_color  (str)             — heading cell label color (overrides header_label_color)
+  #   label_fill_color (str)         — heading cell fill (overrides header_heading_fill_color)
+  #   label_font   (str)             — heading cell font (overrides header_font)
+  #   label_font_size (float)        — heading cell font size
+  #   label_format (str)             — format string for week/fiscal_quarter segments
+  #                                    placeholders: {week} {fy} {fy2} {q}
+  #   label_opacity (float)          — heading cell label opacity (overrides header_label_opacity)
+  #   label_values (list[str|null])  — override displayed segment text; null = auto; "" = blank
+  #   max_index    (int)             — counter resets to start_index after this (interval unit)
+  #   prefix       (str)             — label prefix (interval unit); e.g. "Sprint "
+  #   row_height   (float)           — override band_row_height for this row only (pt)
+  #   show_every   (int)             — merge N consecutive segments into one cell
+  #   start_index  (int)             — first counter value (interval unit)
+  #   stroke_color (str)             — cell border color (overrides timeband_line_color)
+  #   target_date  (str YYYY-MM-DD)  — required for countdown: the date to count down to
+  #   start_date   (str YYYY-MM-DD)  — required for countup: the date to count up from (day 0)
+  #   skip_weekends (bool)           — countdown/countup: exclude Sat/Sun from day count (default false)
+  #   skip_nonworkdays (bool)        — countdown/countup: exclude holidays & company non-workdays (default false)
+  #   unit         (str)             — fiscal_quarter | month | week | interval | date | dow | countdown | countup
+  top_time_bands:
+    - label:       "Fiscal Quarter"
+      unit:        "fiscal_quarter"   # fiscal_quarter | month | week | interval | date | dow | countdown | countup
+      label_format: "FY{fy2} Q{q}"   # {fy}=4-digit year, {fy2}=2-digit year, {q}=quarter
+      row_height:  25
+      fill_color:  ["steelblue"]      # single color or list cycling across segments
+      font_color:  "white"
+      label_color: "dimgrey"
+
+    - label:       "Month"
+      unit:        "month"
+      date_format: "MMM"              # Arrow format; MMM=Jan, MMMM=January, M/YYYY, etc.
+      row_height:  20
+      fill_color:  ["lightblue", "lightyellow"]
+      font_color:  "navy"
+      label_color: "dimgrey"
+      show_every:  1                  # merge every N segments (e.g. 2 = bimonthly cells)
+
+    # Countdown example — one cell per visible day showing days remaining to a target:
+    # - label:         "Days to Launch"
+    #   unit:          "countdown"         # one segment per visible day, labelled with remaining count
+    #   target_date:   "2026-06-30"        # required: the target date (YYYY-MM-DD)
+    #   skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
+    #   skip_nonworkdays: false           # set true to also skip holidays & company non-workdays
+    #   label_format:  "{n}d"            # {n} = count; positive = before target, 0 = target day, negative = after
+    #   row_height:    14
+
+    # Countup example — one cell per visible day showing days elapsed since a start date:
+    # - label:         "Day"
+    #   unit:          "countup"           # one segment per visible day, labelled with elapsed count
+    #   start_date:    "2026-01-01"        # required: the origin date to count up from (day 0)
+    #   skip_weekends: false              # set true to count Mon-Fri only
+    #   skip_nonworkdays: false           # set true to also skip holidays & company non-workdays
+    #   label_format:  "{n}"             # {n} = count; 0 = start day, positive = after, negative = before
+    #   row_height:    14
+
+  # ── Bottom time-band rows (below swimlanes) ───────────────────────────────
+  # Same structure as top_time_bands. Leave empty list for no bottom bands.
+  bottom_time_bands: []
+
+  # ── Swimlane definitions ─────────────────────────────────────────────────
+  # Ordered list of swimlane lane definitions.
+  # Each entry (keys sorted alphabetically):
+  #   fill_color          (str|null)   — heading cell background (overrides lane_heading_fill_color)
+  #   label_align_h       (str)        — left | center | right
+  #   label_align_v       (str)        — top | middle | bottom
+  #   label_color         (str|null)   — label text color (overrides lane_label_color)
+  #   label_rotation      (float)      — clockwise degrees for this lane's label
+  #   match               (dict)       — event selection criteria (see below)
+  #   name                (str)        — label text; use \n for line breaks
+  #   split_ratio         (float)      — per-lane divider position (overrides lane_split_ratio)
+  #   timeline_fill_color (str|null)   — content area background tint ("none" = transparent)
+  #
+  #   match criteria (all are optional; multiple criteria are AND-ed together):
+  #     duration_names_contains (list[str])  — substring match on duration name
+  #     event_type              (str)        — event | duration | any
+  #     groups                  (list[str])  — alias for resource_groups
+  #     milestone               (bool)       — match milestone flag
+  #     notes_contains          (list[str])  — substring match on notes
+  #     priority                (int|list)   — exact priority value(s)
+  #     priority_max            (int)        — maximum priority (inclusive)
+  #     priority_min            (int)        — minimum priority (inclusive)
+  #     resource_groups         (list[str])  — case-insensitive resource group match
+  #     resource_names_contains (list[str])  — substring match on resource names
+  #     rollup                  (bool)       — match rollup flag
+  #     task_contains           (list[str])  — substring match on task name
+  #     wbs_prefixes            (list[str])  — WBS prefix match
+  swimlanes:
+    - name: "Engineering"
+      match:
+        resource_groups: ["Engineering", "Dev"]
+      fill_color:          null   # heading cell fill; null = use lane_heading_fill_color
+      label_color:         null   # label text color; null = use lane_label_color
+      timeline_fill_color: "none" # content area tint
+      split_ratio:         0.5    # events in upper half, durations in lower half
+
+    - name: "Design"
+      match:
+        resource_groups: ["Design", "UX"]
+
+    - name: "Milestones"
+      match:
+        milestone: true
+      split_ratio: 0.0            # no divider — single content area
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MINI_CALENDAR — Mini monthly grid view
+# ─────────────────────────────────────────────────────────────────────────────
+mini_calendar:
+
+  # ── Cell content ─────────────────────────────────────────────────────────
+  adjacent_month_color:  "lightgrey"              # (str) day number color for days outside current month
+  cell_bold_font:        "Roboto-Bold"            # (str) font for bold/highlighted day numbers
+  cell_font:             "RobotoCondensed-Light"  # (str) default day number font
+  cell_font_size:        null                     # (float|null) pt; null = auto-scaled
+  circle_milestones:     false                    # (bool) draw a circle around milestone day numbers
+  current_day_color:     "tomato"                 # (str) today's date highlight color
+  day_color:             "black"                  # (str) default day number color
+  day_number_digits:     2                        # (int) minimum digits for day numbers (1 or 2)
+  day_number_glyphs:     true                     # (bool) render day numbers as glyph paths (true)
+                                                  #   vs. SVG <text> (false); true is recommended
+
+  # ── Column header row (Mon, Tue, … ) ─────────────────────────────────────
+  header_color:          "grey"                   # (str) day-name header text color
+  header_font:           "RobotoCondensed-Light"  # (str) day-name header font
+  header_font_size:      null                     # (float|null) pt; null = auto-scaled
+
+  # ── Holidays & special days ───────────────────────────────────────────────
+  holiday_color:         "tomato"     # (str) federal holiday day number color
+  milestone_color:       "navy"       # (str) milestone marker dot color
+  nonworkday_shade:      "gold"       # (str) fill shade for company non-workday cells
+  show_adjacent:         true         # (bool) render days from adjacent months in empty cells
+
+  # ── Month title ───────────────────────────────────────────────────────────
+  title_color:           "black"              # (str) month title text color
+  title_font:            "Roboto-Bold"        # (str) month title font
+  title_font_size:       null                 # (float|null) pt; null = auto-scaled
+  title_format:          "MMMM YYYY"          # (str) Arrow format for the month title
+                                              #   common: "MMMM YYYY", "MMM YY", "YYYY-MM"
+
+  # ── Week numbers column ───────────────────────────────────────────────────
+  week_number_color:     "grey"               # (str) week number text color
+  week_number_font:      "RobotoCondensed-Light"  # (str) week number font
+  week_number_font_size: null                 # (float|null) pt; null = auto-scaled
+  week_number_label_format: "W{num}"          # (str) format string; {num} = ISO week number
+
+  # ── Grid & stroke styles ──────────────────────────────────────────────────
+  cell_box_stroke_dasharray:       null   # (str|null) day cell border dash; null = solid
+  duration_bar_stroke_dasharray:   null   # (str|null) duration bar border dash
+  duration_bar_stroke_opacity:     0.8    # (float 0–1) duration bar border opacity
+  grid_line_stroke_color:          "grey" # (str) grid line color
+  grid_line_stroke_dasharray:      null   # (str|null) grid line dash pattern
+  grid_line_stroke_opacity:        0.4    # (float 0–1) grid line opacity
+  grid_line_stroke_width:          0.5    # (float) grid line width in points
+  hash_line_stroke_dasharray:      null   # (str|null) hash decoration line dash
+  milestone_stroke_color:          "navy" # (str) milestone circle border color
+  milestone_stroke_opacity:        0.8    # (float 0–1) milestone circle border opacity
+  milestone_stroke_width:          1.0    # (float) milestone circle border width
+  strikethrough_stroke_dasharray:  null   # (str|null) completed-event strikethrough dash
+
+  # ── Day box hash rules (same structure as weekly.day_box.hash_rules) ──────
+  day_box:
+    hash_rules: []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MINI_DETAILS — Supplementary event details page rendered alongside the mini
+# ─────────────────────────────────────────────────────────────────────────────
+mini_details:
+
+  # ── Column definitions ────────────────────────────────────────────────────
+  column_widths: []       # (list[float]) explicit column widths in points; [] = auto
+  headers:       []       # (list[str]) column header labels; [] = default headers
+  output_suffix: "_details"  # (str) appended to filename for the details page
+
+  # ── Header row text ───────────────────────────────────────────────────────
+  header_color:    "black"              # (str) column header text color
+  header_font:     "Roboto-Bold"        # (str) column header font
+  header_font_size: null                # (float|null) pt; null = auto-scaled
+
+  # ── Notes text ────────────────────────────────────────────────────────────
+  notes_color:    "dimgrey"                      # (str) notes text color
+  notes_font:     "RobotoCondensed-LightItalic"  # (str) notes font
+  notes_font_size: null                          # (float|null) pt; null = auto-scaled
+
+  # ── Data row text ────────────────────────────────────────────────────────
+  row_color:    "black"                  # (str) data row text color
+  row_font:     "RobotoCondensed-Light"  # (str) data row font
+  row_font_size: null                    # (float|null) pt; null = auto-scaled
+
+  # ── Separator line style ─────────────────────────────────────────────────
+  separator_stroke_dasharray: null   # (str|null) row separator dash pattern
+
+  # ── Section title ─────────────────────────────────────────────────────────
+  title_color:    "black"         # (str) page title text color
+  title_font:     "Roboto-Bold"   # (str) page title font
+  title_font_size: null           # (float|null) pt; null = auto-scaled
+  title_text:     null            # (str|null) page title; null = default
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEXT_MINI — Plain-text mini calendar (ASCII / monospace output)
+# ─────────────────────────────────────────────────────────────────────────────
+text_mini:
+  cell_width:          3     # (int) character width of each day cell
+  day_number_digits:   2     # (int) minimum digits for day numbers (1 or 2)
+  duration_fill:       "-"   # (str) character used to fill duration spans
+  duration_symbols:    ["[", "]"]  # (list[str, str]) characters wrapping duration start/end
+  event_symbols:       ["*"]       # (list[str]) symbols marking days with events
+  holiday_symbols:     ["H"]       # (list[str]) symbols marking federal holidays
+  milestone_symbols:   ["M"]       # (list[str]) symbols marking milestone days
+  month_gap:           2           # (int) blank columns between months
+  nonworkday_symbols:  ["X"]       # (list[str]) symbols marking company non-workdays
+  week_number_digits:  2           # (int) digits for week number column
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXCELHEADER — Excel workbook timeband header generator
+# Produces a .xlsx file with blockplan-style timeband rows at the top,
+# followed by a column-header row and 100 empty data rows.
+# Timeband and vertical_lines configuration is shared with the blockplan section.
+# ─────────────────────────────────────────────────────────────────────────────
+excelheader:
+  font_name: "Calibri"   # (str) System-installed Excel font for all cells
+  font_size: 9           # (int) Default font size in points
+
+  # Per-band Excel font overrides — add these keys directly inside any band dict
+  # under blockplan.top_time_bands:
+  #   excel_font_name: "Arial Narrow"   # font name for this band only
+  #   excel_font_size: 8                # font size for this band only
+
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPACT_PLAN — Compressed activities / duration-line view
+#
+# Renders durations as colored horizontal lines above and below a central
+# dashed axis, with milestone flag markers and an optional legend.
+# Duration line color is assigned per resource_group cycling through palette[].
+# An individual event's Color DB field overrides the group palette color.
+# ─────────────────────────────────────────────────────────────────────────────
+compact_plan:
+
+  # ── Layout ────────────────────────────────────────────────────────────────
+  background_color:  "none"  # (str) area background; "none" = transparent
+  legend_area_ratio: 0.28    # (float 0–1) fraction of content height reserved for legend
+
+  # ── Column header time bands ────────────────────────────────────────────
+  # Same schema as blockplan.top_time_bands.  Supported units:
+  #   week          — one column per week
+  #                   Format tokens: {n}=sequential week#, {week}=ISO week#,
+  #                                  {start}/{end}=M/D date strings
+  #   month         — one column per calendar month
+  #                   Format tokens: Arrow format strings (e.g. "MMM YYYY")
+  #   fiscal_quarter — one column per fiscal quarter
+  #                   Format tokens: {fy}, {fy2}, {q}
+  #   interval      — fixed-day-count intervals; use interval_days: N
+  #
+  # alt_fill_color alternates with fill_color on every other column segment.
+  band_row_height: 22.0  # (float) height in points of each header band row
+  time_bands:
+    - label:          "Date Range"
+      unit:           "week"
+      label_format:   "{start} – {end}"   # {start}/{end} = M/D date strings
+      fill_color:     "none"
+      alt_fill_color: "#f2f2f2"           # alternating column shading
+    - label:          "Week"
+      unit:           "week"
+      label_format:   "Week {n}"          # {n} = sequential week from range start
+      fill_color:     "none"
+      alt_fill_color: "none"
+
+  # ── Time-band text ─────────────────────────────────────────────────────
+  band_font:         null     # (str|null) band label font; null = base font
+  band_font_size:    null     # (float|null) pt; null = auto from band_row_height
+  band_text_color:   "black"  # (str) band label text color
+  band_text_opacity: 1.0      # (float 0–1) band label text opacity
+
+  # ── Timeline axis ──────────────────────────────────────────────────────
+  axis_color:     "#7f7f7f"    # (str) axis line color
+  axis_dasharray: "1.75,7.0"  # (str|null) SVG dash pattern; null = solid line
+  axis_opacity:   1.0          # (float 0–1) axis opacity
+  axis_padding:   4.0          # (float) gap in points from axis to nearest duration row
+  axis_width:     1.75         # (float) axis line width in points
+
+  # ── Duration lines ─────────────────────────────────────────────────────
+  # Lines are placed using greedy row assignment: row 0 = just above axis,
+  # row 1 = just below, row 2 = further above, row 3 = further below, etc.
+  # Non-overlapping durations share rows; overlapping ones get separate rows.
+  duration_line_width:       5.0   # (float) line thickness in points
+  duration_opacity:          1.0   # (float 0–1) line opacity
+  duration_stroke_dasharray: null  # (str|null) dash pattern; null = solid
+  lane_spacing:              6.0   # (float) vertical distance between stacked rows
+
+  # ── Duration color palette (cycled by resource group) ─────────────────
+  # palette cycles through groups in sorted order; palette_name fetches from DB.
+  # Individual event Color (from DB) overrides the group palette color.
+  palette:      null  # (list[str]|null) explicit color list; null = built-in defaults
+  palette_name: null  # (str|null) DB palette name; overrides palette list if set
+
+  # ── Milestone markers ──────────────────────────────────────────────────
+  # Priority for milestone appearance: event.icon > milestone_icon > built-in flag shape
+  milestone_color:       "black"  # (str) marker color when event has no Color field
+  milestone_flag_height: 9.0      # (float) stem height above axis in points
+  milestone_flag_width:  7.0      # (float) pennant width in points
+  milestone_icon:        null     # (str|null) icon name from fonticon table;
+                                  #   null = draw built-in flag shape
+  show_milestone_labels: true     # (bool) render task name beside milestone marker
+
+  # ── Milestone label text ───────────────────────────────────────────────
+  milestone_label_color:     "#595959"  # (str) label text color
+  milestone_label_font:      null       # (str|null) font; null = italic base font
+  milestone_label_font_size: null       # (float|null) pt; null = auto (8 pt)
+  milestone_label_opacity:   1.0        # (float 0–1) label opacity
+
+  # ── Legend ─────────────────────────────────────────────────────────────
+  # Shows one row per resource group: a colored swatch + italic label
+  # "Group Name: Duration 1, Duration 2, …"
+  # Set show_legend: false to suppress the legend area entirely.
+  show_legend:          true      # (bool) render the legend below the timeline
+  legend_font:          null      # (str|null) font; null = italic base font
+  legend_font_size:     null      # (float|null) pt; null = auto (8 pt)
+  legend_label_color:   "#595959" # (str) legend text color
+  legend_label_opacity: 1.0       # (float 0–1) legend text opacity
+  legend_row_height:    10.0      # (float) height per legend row in points
+  legend_swatch_width:  18.0      # (float) width of the colored swatch line in points

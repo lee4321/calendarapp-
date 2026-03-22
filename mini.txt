@@ -1,0 +1,48 @@
+20260101
+20261231
+--database=calendar.db
+--outputfile=
+--theme=
+--papersize=Letter
+--orientation=landscape
+--shrink
+--weekends=0
+--margin
+--header
+# --footer
+--monthnames
+--monthnumbers
+# --headerleft=Left Header
+--headercenter=2026
+# --headerright=Right Header
+--footerleft=Left Footer
+--footercenter=Center Footer
+--footerright=Right Footer
+--watermark=DRAFT
+--watermark-rotation-angle=0.0
+--imagemark=
+
+# Pass empty to generate a calendar without events and durations 
+# --empty
+
+--shade
+# --noevents
+# --nodurations
+# --ignorecomplete
+--milestones
+# --rollups
+# --includenotes
+# --WBS=
+# --overflow
+--country=US
+--mini-columns=3
+--mini-rows=4
+--mini-title-format=MMMM
+--mini-no-adjacent
+--mini-week-numbers
+--mini-week1-start=
+--mini-grid-lines
+# --mini-details
+
+# --verbose
+# --quiet

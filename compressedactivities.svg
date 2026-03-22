@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="96.5625 309.5299 469.8282 149.8774" width="469.8282" height="149.8774">
+  <defs/>
+  <g id="MultiTeamActivityTimeline" fill="none" stroke-opacity="1" fill-opacity="1" stroke-dasharray="none" stroke="none">
+    <title>MultiTeamActivityTimeline</title>
+    <g id="MultiTeamActivityTimeline_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_3">
+        <rect x="130.5" y="327.5299" width="49.5" height="51.75" fill="#f2f2f2"/>
+        <text transform="translate(134.5 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="2.9570312" y="8" xml:space="preserve">3/9 – 3/13</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_76">
+        <rect x="180" y="327.5299" width="49.5" height="51.75" fill="white"/>
+        <text transform="translate(184 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x=".7324219" y="8" xml:space="preserve">3/16 – 3/20</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 2</tspan>
+        </text>
+      </g>
+      <g id="Graphic_77">
+        <rect x="229.5" y="327.5299" width="49.5" height="51.75" fill="#f2f2f2"/>
+        <text transform="translate(233.5 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x=".7324219" y="8" xml:space="preserve">3/23 – 3/27</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 3</tspan>
+        </text>
+      </g>
+      <g id="Graphic_78">
+        <rect x="279" y="327.5299" width="49.5" height="51.75" fill="white"/>
+        <text transform="translate(283 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="2.9570312" y="8" xml:space="preserve">3/30 – 4/3</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 4</tspan>
+        </text>
+      </g>
+      <g id="Graphic_79">
+        <rect x="328.5" y="327.5299" width="49.5" height="51.75" fill="#f2f2f2"/>
+        <text transform="translate(332.5 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="2.9570312" y="8" xml:space="preserve">4/6 – 4/10</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 5</tspan>
+        </text>
+      </g>
+      <g id="Graphic_80">
+        <rect x="378" y="327.5299" width="49.5" height="51.75" fill="white"/>
+        <text transform="translate(382 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x=".7324219" y="8" xml:space="preserve">4/13 – 4/17</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 6</tspan>
+        </text>
+      </g>
+      <g id="Graphic_81">
+        <rect x="427.5" y="327.5299" width="49.5" height="51.75" fill="#f2f2f2"/>
+        <text transform="translate(431.5 331.5299)" fill="black">
+          <tspan font-family="Helvetica" font-size="8" fill="black" x=".7324219" y="8" xml:space="preserve">4/20 – 4/24</tspan>
+          <tspan font-family="Helvetica" font-size="8" fill="black" x="7.259766" y="18" xml:space="preserve">Week 7</tspan>
+        </text>
+      </g>
+      <g id="Line_88">
+        <line x1="131.0625" y1="370.6875" x2="476.71875" y2="370.6875" stroke="#7f7f7f" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.75,7.0" stroke-width="1.75"/>
+      </g>
+      <g id="Line_92">
+        <line x1="180.63269" y1="366.01867" x2="346.5077" y2="366.01867" stroke="#92d050" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Line_94">
+        <line x1="280.5401" y1="375.29617" x2="414.4151" y2="375.29617" stroke="yellow" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Line_104">
+        <line x1="157.2951" y1="375.3072" x2="246.2901" y2="375.3072" stroke="#6b9bc7" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Line_145">
+        <line x1="380.64544" y1="365.9299" x2="469.64044" y2="365.9299" stroke="#6b9bc7" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Line_146">
+        <line x1="131.0625" y1="405.9073" x2="149.0625" y2="405.9073" stroke="#92d050" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Graphic_147">
+        <text transform="translate(154.16254 401.4073)" fill="#595959">
+          <tspan font-family="Helvetica" font-style="italic" font-size="8" fill="#595959" x="0" y="8" xml:space="preserve">Team 1: Duration name 2</tspan>
+        </text>
+      </g>
+      <g id="Line_148">
+        <line x1="131.62879" y1="415.4073" x2="149.62879" y2="415.4073" stroke="#6b9bc7" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Graphic_149">
+        <text transform="translate(154.16254 410.9073)" fill="#595959">
+          <tspan font-family="Helvetica" font-style="italic" font-size="8" fill="#595959" x="0" y="8" xml:space="preserve">Team 2: Duration name 1, Duration Name 4</tspan>
+        </text>
+      </g>
+      <g id="Line_150">
+        <line x1="131.0625" y1="423.9073" x2="149.0625" y2="423.9073" stroke="yellow" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="5"/>
+      </g>
+      <g id="Graphic_151">
+        <text transform="translate(154.16254 419.4073)" fill="#595959">
+          <tspan font-family="Helvetica" font-style="italic" font-size="8" fill="#595959" x="0" y="8" xml:space="preserve">Team 3: Duration Name 3</tspan>
+        </text>
+      </g>
+      <g id="Group_152">
+        <g id="Graphic_155">
+          <line x1="469.97395" y1="351.34655" x2="469.97395" y2="365.08813" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+        <g id="Graphic_154">
+          <path d="M 469.97395 352.4917 L 473.2528 352.4917 L 474.8922 353.6368 L 476.5316 353.6368 C 476.7903 353.6368 477 353.9786 477 354.40023 L 477 360.8893 C 477 361.31094 476.7903 361.65273 476.5316 361.65273 L 474.8922 361.65273 L 473.2528 360.5076 L 469.97395 360.5076 Z" stroke="black" stroke-linecap="butt" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+        <g id="Graphic_153">
+          <line x1="469.03714" y1="365.08813" x2="470.91075" y2="365.08813" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+      </g>
+      <g id="Group_156">
+        <g id="Graphic_159">
+          <line x1="362.47895" y1="399.34564" x2="362.47895" y2="413.0872" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+        <g id="Graphic_158">
+          <path d="M 362.47895 400.49078 L 365.75777 400.49078 L 367.3972 401.6359 L 369.0366 401.6359 C 369.2953 401.6359 369.505 401.9777 369.505 402.39933 L 369.505 408.8884 C 369.505 409.31003 369.2953 409.65183 369.0366 409.65183 L 367.3972 409.65183 L 365.75777 408.5067 L 362.47895 408.5067 Z" stroke="black" stroke-linecap="butt" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+        <g id="Graphic_157">
+          <line x1="361.54214" y1="413.0872" x2="363.41576" y2="413.0872" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        </g>
+      </g>
+      <g id="Graphic_160">
+        <text transform="translate(372.9455 401.4073)" fill="#595959">
+          <tspan font-family="Helvetica" font-style="italic" font-size="8" fill="#595959" x="0" y="8" xml:space="preserve">Milestone name 1</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

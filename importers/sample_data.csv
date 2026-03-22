@@ -1,0 +1,31 @@
+Task_Name,Start_Date,Finish_Date,Priority,WBS,Rollup,Milestone,Percent_Complete,Resource_Group,Notes,Icon,Highlight_Color,Marks
+PI-7 Release Cycle,3/2/2026,4/3/2026,0,PI.7,TRUE,FALSE,0.0,A,,,,
+Sprint 10,3/2/2026,3/13/2026,1,PI.7.S10,TRUE,FALSE,0.0,,,,,Sprint1
+Sprint 11,3/16/2026,3/27/2026,1,PI.7.S11,TRUE,FALSE,0.0,,,,,Sprint3
+Sprint 12,3/30/2026,4/3/2026,1,PI.7.S12,TRUE,FALSE,0.0,,,,,Sprint5
+Architecture Review,3/2/2026,3/6/2026,2,PI.7.S10.1,FALSE,FALSE,0.0,B,Covers system design and ADR updates,,steelblue,Sprint1
+API Design Phase,3/4/2026,3/12/2026,2,PI.7.S10.2,FALSE,FALSE,0.0,C,REST and GraphQL endpoint contracts,ruler,coral,Sprint1
+Kickoff Meeting,3/2/2026,3/2/2026,1,PI.7.S10,FALSE,FALSE,0.0,A,All-hands sprint planning session,calendar,,Sprint1
+Design Sync,3/5/2026,3/5/2026,3,PI.7.S10.1,FALSE,FALSE,0.0,B,,thought,,
+Code Review Blitz,3/6/2026,3/6/2026,2,PI.7.S10.1,FALSE,FALSE,0.0,A,,analysis,,Sprint1
+API Milestone,3/12/2026,3/12/2026,0,PI.7.S10.2,FALSE,TRUE,0.0,C,,rocket,,
+Sprint 10 Review,3/13/2026,3/13/2026,1,PI.7.S10,FALSE,TRUE,0.0,A,,flag,,
+Backend Integration,3/9/2026,3/20/2026,2,PI.7.S10.3,FALSE,FALSE,0.0,D,Connects services to new API surface,pushpin,lightcoral,Sprint1
+Frontend Build,3/11/2026,3/25/2026,2,PI.7.S11.1,FALSE,FALSE,0.0,B,React component library updates,folder,,Sprint3
+Mid-Sprint Demo,3/13/2026,3/13/2026,2,PI.7.S10.3,FALSE,FALSE,0.0,D,Stakeholder preview - keep to 30 min,note,,Sprint1
+Architecture Sign-off,3/13/2026,3/13/2026,1,PI.7.S11,FALSE,TRUE,0.0,A,,star,,
+Sprint 11 Planning,3/16/2026,3/16/2026,1,PI.7.S11,FALSE,FALSE,0.0,A,Backlog refinement and story pointing,calendar,,Sprint3
+Security Audit,3/16/2026,3/20/2026,1,PI.7.S11.2,FALSE,FALSE,0.0,C,Pen test covers auth and data layer,bomb,orange,Sprint3
+DB Migration,3/18/2026,3/18/2026,3,PI.7.S11.2,FALSE,FALSE,0.0,D,,hourglass,,Sprint3
+Load Testing,3/19/2026,3/19/2026,2,PI.7.S11.2,FALSE,FALSE,0.0,C,,analysis,,Sprint3
+Performance Baseline,3/20/2026,3/20/2026,2,PI.7.S10.3,FALSE,FALSE,0.0,D,Final backend measurement before freeze,report,,
+Docs Sprint,3/23/2026,4/1/2026,3,PI.7.S11.3,FALSE,FALSE,0.0,B,API reference and onboarding guides,book,,Sprint3
+Sprint 11 Review,3/27/2026,3/27/2026,1,PI.7.S11,FALSE,TRUE,0.0,A,,flag,,
+Legacy Cleanup,3/25/2026,4/1/2026,3,PI.7.S12.1,FALSE,FALSE,0.5,D,Remove deprecated v1 endpoints,,,Sprint5
+Regression Suite,3/25/2026,3/27/2026,2,PI.7.S11.4,FALSE,FALSE,1.0,C,,pencil,,Sprint3
+Completed Epic Alpha,3/9/2026,3/13/2026,4,PI.7.OLD,FALSE,FALSE,1.0,B,All items delivered in previous PI,,,plum
+Sprint 12 Planning,3/30/2026,3/30/2026,1,PI.7.S12,FALSE,FALSE,0.0,A,Final sprint - hardening and release prep,calendar,,Sprint5
+UAT Sign-off,4/1/2026,4/1/2026,0,PI.7.S12,FALSE,TRUE,0.0,A,,thumbsup,,
+Release Candidate Build,3/31/2026,4/2/2026,1,PI.7.S12.2,FALSE,FALSE,0.0,C,RC1 build and smoke test window,rocket,lightgreen,Sprint5
+Go-Live Event,4/3/2026,4/3/2026,0,PI.7.S12,FALSE,TRUE,0.0,A,,flag,,
+Hotfix Standby,4/3/2026,4/3/2026,2,PI.7.S12.3,FALSE,FALSE,0.0,D,On-call rotation active during go-live,clock,,

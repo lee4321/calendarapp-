@@ -1,0 +1,698 @@
+# Default Theme
+# The original CalendarApp styling expressed as a theme file.
+# Use this as a reference when creating custom themes.
+
+theme:
+  name: "Default"
+  version: "1.0"
+  description: "The original CalendarApp styling"
+
+# ── General Settings ──────────────────────────────────────────────────────────
+base:
+  font_family: "RobotoCondensed-Light"
+  font_color: "grey"
+  default_missing_icon: applet-closed
+  size_rule:
+    - font_size: 10
+      when:
+        papersize: ["letter", "ledger", "tabloid"]
+    - font_size: 8
+      when:
+        papersize: ["3x5", "5x8"]
+
+header:
+  font_family: "Roboto-BlackItalic"
+  font_color: "grey"
+
+footer:
+  font_family: "RobotoCondensed-Light"
+  font_color: "grey"
+
+events:
+  font_family: "RobotoCondensed-Light"
+  font_color: "navy"
+  icon_color: "navy"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_color: "darkgrey"
+  # Controls which item types claim the topmost rows in each day box.
+  # Ordered list of tokens; first token's type is placed first.
+  # Type tokens: milestones | events | durations
+  # Special tokens: priority (sort by priority field) | alphabetical (sort by name)
+  # Example: [milestones, events, durations]
+  item_placement_order: ["priority"]
+
+durations:
+  font_family: "RobotoCondensed-Light"
+  font_color: "navy"
+  icon_color: "navy"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_color: "darkgrey"
+  stroke_dasharray: null
+
+watermark:
+  text: null
+  color: "blue"
+  font_family: "Roboto-Black"
+  alpha: 0.5
+  font_size: null
+  resize_mode: "fit"
+  rotation_angle: 45.0
+  imagemark_rotation_angle: 45.0
+
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  # How to number fiscal years relative to the start calendar year:
+  #   null (default): auto — blockplan uses +1 for non-Jan starts, 0 for Jan;
+  #                   weekly/NRF uses 0 (start year).
+  #   0: start year (FY starting Feb 2026 → FY2026)
+  #   1: start year + 1 (FY starting Oct 2025 → FY2026, US federal default)
+  #  -1: start year − 1
+  year_offset: null
+
+colors:
+  month_palette: "Greys"
+  fiscal_palette: "Greys"
+  group_palette: "Pastel1"
+  special_day: "lightblue"
+  hash_lines: "black"
+  federal_holiday:
+    color: "red"
+    alpha: 0.25
+  company_holiday:
+    color: "green"
+    alpha: 0.25
+  special_day_types:
+    federal: "blue"
+    company: "red"
+    nonworkday: "pink"
+    furlough: "lightsteelblue"
+    special: "yellow"
+  resource_groups:
+    a: "black"
+    b: "yellow"
+    c: "red"
+    d: "grey"
+
+# ── Weekly Calendar ───────────────────────────────────────────────────────────
+weekly:
+  day_names:
+    font_family: "RobotoCondensed-LightItalic"
+    font_color: "grey"
+
+  week_numbers:
+    font_family: "RobotoCondensed-Bold"
+    font_color: "yellow"
+    label_format: "W{num:02d}"
+
+  day_box:
+    stroke_color: "grey"
+    stroke_opacity: 0.25
+    stroke_width: 2
+    stroke_dasharray: null
+    fill_color: "grey"
+    fill_opacity: 0.25
+    number_font: "Roboto-Black"
+    number_color: "white"
+    icon_color: "red"
+    font_color: "navy"
+    hash_pattern_opacity: 0.10
+    hash_rules:
+      # Milestones: prominent gold stripes
+      - pattern: "diagonal-stripes"
+        color: "gold"
+        opacity: 0.15
+        when:
+          milestone: true
+      # Federal holidays: red stripes (government red)
+      - pattern: "diagonal-stripes"
+        color: "tomato"
+        opacity: 0.12
+        when:
+          federal_holiday: true
+      # Non-work days: subtle silver stripes
+      - pattern: "diagonal-stripes"
+        color: "silver"
+        opacity: 0.08
+        when:
+          nonworkday: true
+      # Release/cutover events: gold stripes
+      - pattern: "diagonal-stripes"
+        color: "gold"
+        opacity: 0.10
+        when:
+          event_names: ["Release", "Cutover"]
+      # Sprint/freeze durations: steel blue stripes
+      - pattern: "diagonal-stripes"
+        color: "steelblue"
+        opacity: 0.08
+        when:
+          duration_names: ["Sprint", "Freeze"]
+      # Completed tasks: green stripes (any event/duration at 100%)
+      - pattern: "diagonal-stripes"
+        color: "mediumseagreen"
+        opacity: 0.10
+        when:
+          percent_complete: 100
+      # Urgent/blocker notes: orange-red stripes (hot signal)
+      - pattern: "diagonal-stripes"
+        color: "orangered"
+        opacity: 0.12
+        when:
+          notes: ["urgent", "blocker"]
+      # Top-level WBS items: sky blue stripes
+      - pattern: "diagonal-stripes"
+        color: "lightskyblue"
+        opacity: 0.08
+        when:
+          wbs: ["1."]
+      # Specific resource assigned: medium purple stripes
+      - pattern: "diagonal-stripes"
+        color: "mediumpurple"
+        opacity: 0.08
+        when:
+          resource_names: ["Alice"]
+      # Development group days: steel blue stripes (slightly stronger)
+      - pattern: "diagonal-stripes"
+        color: "steelblue"
+        opacity: 0.10
+        when:
+          resource_group: ["dev"]
+
+  overflow:
+    icon: "overflow"
+    color: "red"
+
+# ── Timeline ──────────────────────────────────────────────────────────────────
+timeline:
+  background_color: "powderblue"
+  axis_color: "lightgrey"
+  axis_opacity: 0.9
+  axis_width: 3
+  tick_color: "grey"
+  date_format: "M/D"
+  tick_label_format: "M/D"
+  today_date: ""
+  today_label_text: "Today"
+  today_label_offset_y: 10.0
+  today_line_color: "grey"
+  today_label_color: "grey"
+  marker_stroke_color: ""
+  marker_stroke_width: 1.0
+  marker_radius: 4.2
+  icon_size: 8
+  callout_offset_y: 30.0
+  duration_offset_y: 30
+  duration_lane_gap_y: 8.0
+  label_stroke_width: 1.0
+  label_fill_opacity: 0.25
+  duration_bar_fill_opacity: 0.75
+  axis_stroke_dasharray: null
+  tick_stroke_dasharray: null
+  today_line_stroke_dasharray: null
+  label_stroke_dasharray: null
+  duration_bar_stroke_dasharray: null
+  connector_stroke_dasharray: "4 2"
+  duration_bracket_stroke_dasharray: null
+  top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
+  bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
+  title:
+    font_family: "Roboto-Bold"
+    font_color: "deepskyblue"
+  notes:
+    font_family: "RobotoCondensed-Bold"
+    font_color: "deepskyblue"
+  date:
+    font_family: "Roboto-Bold"
+    font_color: "deepskyblue"
+
+timeline_events:
+  name_font_size: null
+  notes_font_size: null
+  box_width: null
+  box_height: 24
+  text_color: ""
+
+timeline_durations:
+  name_font_size: null
+  notes_font_size: null
+  box_width: null
+  box_height: 24
+  text_color: "White"
+  date_font: "RobotoCondensed-Italic"
+  date_font_size: 9
+  date_color: "grey"
+
+# ── Block Plan ────────────────────────────────────────────────────────────────
+blockplan:
+  background_color: "none"
+  grid_color: "grey"
+  grid_opacity: 0.3
+  grid_line_width: 1.0
+  grid_dasharray: null
+  timeband_line_color: null     # null → inherits grid_color
+  timeband_line_width: null     # null → inherits grid_line_width
+  timeband_line_opacity: null   # null → inherits grid_opacity
+  timeband_line_dasharray: null
+  label_column_ratio: 0.08
+  band_row_height: 10.0    # default row height for all bands; override per-band with row_height
+  fiscal_year_start_month: 2
+  week_start: 0
+  show_unmatched_lane: true
+  unmatched_lane_name: "Other"
+  lane_match_mode: "first"
+  header_font: "RobotoCondensed-Bold"
+  header_font_size: null
+  header_label_color: "black"
+  header_label_opacity: 1.0
+  header_label_align_h: "right"
+  header_heading_fill_color: "none"
+  band_font: "RobotoCondensed-Bold"
+  band_font_size: null
+  timeband_label_color: "black"
+  timeband_label_opacity: 1.0
+  timeband_fill_color: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue"]
+  timeband_fill_palette: accent
+  timeband_fill_opacity: 1.0
+  lane_heading_fill_color: "none"
+  lane_label_font: "RobotoCondensed-Bold"
+  lane_label_font_size: null
+  lane_label_color: "black"
+  lane_label_align_h: "right"
+  lane_label_align_v: "middle"
+  lane_label_rotation: 0          # clockwise degrees; 0=horizontal, -90=bottom-to-top, 90=top-to-bottom
+  # Position of the dividing line within each swimlane (0.0–1.0).
+  # 0.5 = midpoint; 0.3 = divider at 30% from the top.
+  # 0.0 or 1.0 = no dividing line; both events and durations share the full lane height.
+  # Use the --noevents / --nodurations CLI flags to suppress a content type entirely.
+  # Per-lane override: add split_ratio key to any swimlane definition.
+  lane_split_ratio: 0.5
+  event_font: "RobotoCondensed-Light"
+  event_font_size: null
+  event_color: "navy"
+  event_show_date: true
+  event_date_font: "RobotoCondensed-Light"
+  event_date_font_size: null
+  event_date_color: "grey"
+  event_date_format: "M/D"
+  marker_radius: 2.0
+  # Global style defaults for all vertical lines (overridable per entry).
+  vertical_line_color: "tomato"
+  vertical_line_width: 1.5
+  vertical_line_dasharray: null        # e.g. "6,3" for dashes
+  vertical_line_opacity: 0.85
+  vertical_line_fill_color: "none"     # default: no fill; set to a color, list, or palette name
+  vertical_line_fill_opacity: 0.2
+  # Each entry pins a line (and optional column fill) to a time-band segment.
+  #   band:         time band label (case-insensitive)
+  #   align:        start | center | end  (default: start)
+  #   repeat:       true → apply to every segment in the band; omit value when using repeat
+  #   value:        rendered segment label to match (required when repeat is absent/false)
+  #   color / width / opacity / dash_array: per-line style overrides
+  #   fill_color:   column fill; single color, list of colors, or palette name (cycles per segment)
+  #   fill_opacity: fill opacity 0–1 (default: vertical_line_fill_opacity)
+  vertical_lines:
+    - band: "Sprint"
+      repeat: true                   # draw after every sprint
+      align: "end"
+      color: grey
+      width: 1
+      dash_array: "5,5"
+      opacity: 0.33
+      fill_color: ["#f5f5f5", "#ebebeb"]
+    - band: "PI"
+      value: "PI 11"
+      align: "end"
+      color: "navy"
+      width: 1.0
+      dash_array: "8,2"
+  duration_font: "RobotoCondensed-Light"
+  duration_date_font: "RobotoCondensed-Light"
+  duration_font_size: null
+  duration_color: "navy"
+  duration_fill_opacity: 0.35
+  duration_stroke_color: null         # null → falls back to duration_color
+  duration_stroke_width: 1.0
+  duration_stroke_opacity: 0.9
+  duration_stroke_dasharray: null
+  duration_bar_height: 8.0
+  duration_icon_visible: true
+  duration_show_start_date: true
+  duration_show_end_date: true
+  duration_date_format: "M/D"
+  duration_date_color: "dimgray"
+  palette: ["lightskyblue", "gold", "tomato", "springgreen", "plum", "khaki"]
+  # Swimlane definitions govern the number of swimlanes and which events appear
+  # in each one.  Each entry supports:
+  #   name (str)                    — label shown in the left heading cell
+  #   fill_color (str|null)         — heading cell background (overrides lane_heading_fill_color)
+  #   label_color (str|null)        — label text color (overrides lane_label_color)
+  #   timeline_fill_color (str|null)— content area background tint (default: none)
+  #   label_align_h: left|center|right  — per-lane horizontal text alignment
+  #   label_align_v: top|middle|bottom  — per-lane vertical text alignment
+  #   label_rotation (float)        — per-lane clockwise degrees; 0=horizontal, -90=bottom-to-top, +90=top-to-bottom
+  #   split_ratio (float)           — per-lane split override (0.0–1.0)
+  #   match (dict)                  — event selection criteria:
+  #     resource_groups: [str]        match by resource group name (case-insensitive)
+  #     groups: [str]                 alias for resource_groups
+  #     resource_names_contains: [str] substring match on resource names
+  #     task_contains: [str]          substring match on task name
+  #     notes_contains: [str]         substring match on notes
+  #     wbs_prefixes: [str]           match if WBS starts with any prefix
+  #     milestone: true|false         match milestone flag
+  #     rollup: true|false            match rollup flag
+  #     event_type: event|duration|any  restrict to point events or duration bars
+  #     priority: int | [int]         exact priority value(s) to match
+  #     priority_min: int             minimum priority (inclusive)
+  #     priority_max: int             maximum priority (inclusive)
+  swimlanes:
+    - name: "Engineering"
+      match:
+        resource_groups: ["engineering", "dev", "a"]
+    - name: "Operations"
+      match:
+        resource_groups: ["operations", "ops","b"]
+
+  # Per-band keys (all optional — each falls back to the matching global setting above):
+  #   label          (str)           — text shown in the left heading column cell
+  #   unit           (str)           — fiscal_quarter | month | week | interval | date | dow | countdown | countup
+  #   row_height     (float)         — row height in pt; font auto-scales to 65% of this
+  #   font_size      (float)         — segment content label font size (overrides row_height scaling)
+  #   font           (str)           — segment content label font (overrides band_font)
+  #   font_color     (str)           — segment content label color (overrides timeband_label_color)
+  #   fill_color     (str)           — segment cell fill (overrides timeband_fill_color)
+  #   fill_palette   (list[str])     — per-segment cycling palette (overrides timeband_fill_palette)
+  #   label_color    (str)           — heading column label color (overrides header_label_color)
+  #   label_fill_color (str)         — heading column cell fill (overrides header_heading_fill_color)
+  #   label_font     (str)           — heading column label font (overrides header_font)
+  #   label_font_size (float)        — heading column label font size (overrides header_font_size)
+  #   label_align_h  (str)           — heading label alignment: left | center | right
+  #   stroke_color   (str)           — band border color (overrides grid_color)
+  #   show_every     (int)           — group N segments into one cell (default 1)
+  #   date_format    (str)           — Arrow format string for month/date/dow units
+  #   label_format   (str)           — format string for week ({week}) and fiscal_quarter ({fy},{fy2},{q})
+  #                                    {fy}=4-digit fiscal year, {fy2}=2-digit fiscal year, {q}=quarter number
+  #   interval_days  (int)           — segment length in days for interval unit
+  #   prefix         (str)           — label prefix for interval unit (e.g. "Sprint ")
+  #   start_index    (int)           — first counter value for interval unit
+  #   max_index      (int)           — counter resets to start_index after this value
+  #   anchor_date    (str YYYY-MM-DD)— alignment anchor for interval unit
+  #   label_values   (list[str|null]) — override displayed cell text (positional, cycling);
+  #                                    null falls back to auto-generated label; "" renders blank
+  #   countdown unit keys:
+  #   target_date    (str YYYY-MM-DD)— required: the date to count down to
+  #   skip_weekends  (bool)          — exclude Sat/Sun from the day count (default false)
+  #   skip_nonworkdays (bool)        — exclude holidays & company non-workdays (default false)
+  #   label_format   (str)           — format string; {n} is the count (positive=before, 0=target day, negative=after)
+  #   countup unit keys:
+  #   start_date     (str YYYY-MM-DD)— required: the date to count up from (day 0)
+  #   skip_weekends  (bool)          — exclude Sat/Sun from the day count (default false)
+  #   skip_nonworkdays (bool)        — exclude holidays & company non-workdays (default false)
+  #   label_format   (str)           — format string; {n} is the count (0=start day, positive=after, negative=before)
+  top_time_bands:
+    # - label: "Fiscal Quarter"
+    #   unit: "fiscal_quarter"
+    #   label_format: "FY{fy} Q{q}"
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "PI"
+    #   unit: "interval"
+    #   interval_days: 70
+    #   prefix: "PI "
+    #   start_index: 1
+    #   row_height: 14      # px; font auto-scales to fit (override with font_size)
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "Sprint"
+    #   unit: "interval"
+    #   interval_days: 14
+    #   prefix: "Sprint "
+    #   start_index: 1
+    #   max_index: 5        # reset to start_index after Sprint 5
+    #   row_height: 12
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "Month"
+    #   unit: "month"
+    #   date_format: "MMM YYYY"
+    #   row_height: 12
+    #   fill_color: "none"
+    #   font_color: "black"     # segment content label color (e.g. "Jan 2026")
+    #   label_color: "black"    # heading column label color (e.g. "Month")
+    #   show_every: 1
+    # - label: "Week Number"
+    #   unit: "week"
+    #   label_format: "Week {week}"
+    #   row_height: 10
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "Date"
+    #   unit: "date"
+    #   date_format: "D"
+    #   row_height: 8
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "DoW"
+    #   unit: "dow"
+    #   date_format: "ddd"
+    #   row_height: 8
+    #   fill_color: "none"
+    #   show_every: 1
+    # Example: monthly band with user-supplied labels instead of auto-generated month names
+    # - label: "Initiative"
+    #   unit: "month"
+    #   label_values: ["Kick-off", "Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4", "Go-Live"]
+    #   fill_color: ["#eef4ff", "#f4f8ff"]
+    #   row_height: 14
+    - label: "PI"
+      anchor_date: "20241007"
+      unit: "interval"
+      interval_days: 70
+      prefix: "PI "
+      start_index: 5
+      row_height: 24
+      fill_color: "none"
+      show_every: 1
+
+    - label: "Sprint"
+      anchor_date: "20241007"
+      unit: "interval"
+      interval_days: 14
+      prefix: "Sprint "
+      start_index: 1
+      max_index: 5
+      row_height: 18
+      fill_color: "none"
+      show_every: 1
+    # - label: "Week Number"
+    #   unit: "week"
+    #   label_format: "Week {week}"
+    #   fill_color: "none"
+    #   show_every: 1
+    # - label: "Date"
+    #   unit: "date"
+    #   date_format: "D"
+    #   fill_color: "none"
+    #   show_every: 2
+    # - label: "DoW"
+    #   unit: "dow"
+    #   date_format: "ddd"
+    #   fill_color: "none"
+    #   show_every: 2
+
+# ── Mini Calendar ─────────────────────────────────────────────────────────────
+  bottom_time_bands: []    # mirror of top_time_bands for bands at the bottom of the SVG
+  # ── Icon band example for top_time_bands / bottom_time_bands (uncomment to enable) ──
+  # - label: "Events"
+  #   unit: "icon"
+  #   row_height: 18
+  #   icon_height: 12
+  #   fill_color: "none"
+  #   icon_rules:
+  #     - milestone: true
+  #       icon: "diamond"
+  #       color: "#4472C4"
+  #     - task_contains: "Release"
+  #       icon: "star"
+  #       color: "#E74C3C"
+mini_calendar:
+  cell_font: "JuliaMono-Regular"
+  cell_bold_font: "Roboto-Bold"
+  cell_font_size: null
+  title_font: "RobotoCondensed-Bold"
+  title_font_size: null
+  title_format: "MMMM YYYY"
+  title_color: "navy"
+  header_font: "JuliaMono-Regular"
+  header_font_size: null
+  header_color: "grey"
+  day_number_glyphs: null
+  day_number_digits: null
+  day_color: "black"
+  adjacent_month_color: "lightgrey"
+  show_adjacent: true
+  holiday_color: "red"
+  nonworkday_shade: "lightblue"
+  milestone_color: "navy"
+  circle_milestones: true
+  milestone_stroke_color: "navy"
+  milestone_stroke_width: 1.0
+  milestone_stroke_opacity: 1.0
+  current_day_color: "lightblue"
+  week_number_font: "JuliaMono-Regular"
+  week_number_font_size: null
+  week_number_color: "darkgrey"
+  week_number_label_format: "W{num}"
+  grid_line_stroke_color: "lightgrey"
+  grid_line_stroke_width: 0.25
+  grid_line_stroke_opacity: 0.5
+  grid_line_stroke_dasharray: null
+  cell_box_stroke_dasharray: null
+  strikethrough_stroke_dasharray: null
+  hash_line_stroke_dasharray: null
+  duration_bar_stroke_dasharray: null
+  duration_bar_stroke_opacity: null
+  day_box:
+    hash_rules: []
+    # hash_rules:
+    #   - pattern: "brick-wall"
+    #     color: "lightgrey"
+    #     when:
+    #       milestone: true
+
+mini_details:
+  title_text: "Event Details"
+  title_font: "RobotoCondensed-Bold"
+  title_font_size: null
+  title_color: "navy"
+  header_font: "RobotoCondensed-Bold"
+  header_font_size: null
+  header_color: "grey"
+  row_font: "RobotoCondensed-Light"
+  row_font_size: null
+  row_color: "black"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_font_size: null
+  notes_color: "darkgrey"
+  separator_stroke_dasharray: null
+  headers:
+    - "Start Date"
+    - "Name / Description"
+    - "Milestone"
+    - "Priority"
+    - "Group"
+  column_widths: [0.16, 0.52, 0.10, 0.10, 0.12]
+
+text_mini:
+  cell_width: 2
+  month_gap: 4
+  week_number_digits: null 
+  day_number_digits: null
+  event_symbols: null
+  milestone_symbols: null 
+  holiday_symbols: null 
+  nonworkday_symbols: null 
+  duration_symbols: null
+  duration_fill: null
+
+
+# ── ExcelHeader ───────────────────────────────────────────────────────────────
+# Settings for the excelheader subcommand (Excel .xlsx output).
+# Timebands and vertical_lines are read from the blockplan section above.
+# excelheader:
+#   font_name: "Calibri"   # System-installed Excel font for all cells
+#   font_size: 9           # Font size in points
+#
+# Per-band Excel font overrides — add directly to any band dict:
+#   excel_font_name: "Arial Narrow"   # font override for this band only
+#   excel_font_size: 8                # size override for this band only
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPACT_PLAN — Compressed activities / duration-line view
+# ─────────────────────────────────────────────────────────────────────────────
+compact_plan:
+  palette: ["#92d050", "#6b9bc7", "gold", "tomato", "plum", "khaki"]
+  show_axis: true             # (bool) draw the central timeline axis line
+  axis_color: "#7f7f7f"
+  axis_dasharray: "1.75,7.0"
+  band_text_color: "black"
+  milestone_color: "black"
+  legend_label_color: "#595959"
+  header_bottom_y: null   # gap (pts) between the bottom of the header band block and the topmost duration line / milestone; null = no gap
+  key_top_y: null         # gap (pts) between the last duration line / milestone and the top of the key/legend block; null = no gap
+
+  # ── Two-column legend/roster layout ─────────────────────────────────────
+  # The legend (left column) and milestone roster (right column) are rendered
+  # side by side.  legend_column_split is the fraction of the total content
+  # width given to the legend column.
+  legend_column_split:   0.5   # (float 0–1) fraction of width for the left/legend column
+  legend_team_columns:   2     # (int ≥1) number of sub-columns within the left legend area
+
+  # ── Duration start icons ──────────────────────────────────────────────────
+  # An icon from the specified list is drawn at the start (left) end of each
+  # duration line, with a unique icon assigned per activity by sorted index.
+  # The same icon appears beside the activity name in the legend.
+  # Available icon lists: darksquare, squares, darkcircles, circles, squircles, darksquircles
+  show_duration_icons:   true           # (bool) draw icons on lines and in legend
+  duration_icon_list:    "darksquare"   # (str) icon list name from config.ICON_SETS
+  duration_icon_height:  8.0            # (float) icon display height in pts
+  duration_icon_color:   null           # (str|null) icon color; null = use line color
+
+  # ── Milestone roster (right column, beside legend) ───────────────────────
+  # When show_milestone_list is true, a date-sorted list of every milestone
+  # marker is appended below the legend: one row per milestone showing the
+  # date (formatted by milestone_list_date_format) and the task name.
+  show_milestone_list:           false        # (bool) render the milestone roster
+  milestone_list_date_format:    "M/D"        # (str) Arrow date format for the date column
+  milestone_list_font:           null         # (str|null) font name; null = base font
+  milestone_list_font_size:      null         # (float|null) pt; null = auto (8 pt)
+  milestone_list_date_color:     "#595959"    # (str) date column text color
+  milestone_list_name_color:     "#595959"    # (str) task name column text color
+  milestone_list_label_opacity:  1.0          # (float 0–1) text opacity
+  milestone_list_row_height:     10.0         # (float) vertical spacing per row in pts
+  milestone_list_date_col_width: 32.0         # (float) width of the date column in pts
+  milestone_list_section_gap:    6.0          # (float) gap between legend bottom and roster top
+
+  # ── Continuation icon (activities extending beyond the end date) ─────────
+  # When a duration bar extends past the specified end date the line is
+  # clamped to the right edge of the timeline and a small icon is placed
+  # there to indicate the activity continues.  A matching legend entry is
+  # appended below the milestone roster.
+  show_continuation_icon:      true           # (bool) render icon and legend entry
+  continuation_icon:           "arrow-right"  # (str) icon name from icons table
+  continuation_icon_height:    8.0            # (float) icon display height in pts
+  continuation_icon_color:     null           # (str|null) null = use the line color
+  continuation_legend_text:    "activity continues"  # (str) legend entry label
+  continuation_section_gap:    4.0            # (float) gap above the continuation legend row
+  show_axis_legend:  true          # (bool) show axis sample line + label in the legend
+  legend_axis_text:  "timeline"    # (str) label beside the axis sample
+
+  time_bands:
+    - label: "Date Range"
+      unit: "week"
+      label_format: "{start} – {end}"
+      fill_color: "none"
+      alt_fill_color: "#f2f2f2"
+      text_align: "left"        # "left" | "center" | "right"  (default: "left")
+    - label: "Week"
+      unit: "week"
+      label_format: "Week {n}"
+      fill_color: "none"
+      alt_fill_color: "none"
+      text_align: "left"
+    # ── Icon band example (uncomment to enable) ───────────────────────────────
+    # An icon band shows SVG icons in a per-day grid driven by event rules.
+    # Multiple different icons per day are supported; duplicates are suppressed.
+    # - label: "Events"
+    #   unit: "icon"
+    #   row_height: 18          # (float) row height in pts
+    #   icon_height: 12         # (float) icon display size in pts (default: row_height * 0.65)
+    #   fill_color: "none"      # (str)   background of every day cell
+    #   icon_rules:             # list of match rules (all criteria must match)
+    #     - milestone: true     # match milestones …
+    #       icon: "diamond"     # … show this icon
+    #       color: "#4472C4"    # … in this colour
+    #     - task_contains: "Release"
+    #       icon: "star"
+    #       color: "#E74C3C"

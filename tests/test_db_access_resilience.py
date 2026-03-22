@@ -1,0 +1,71 @@
+import sqlite3
+
+from shared.db_access import CalendarDB
+
+
+def _make_db_without_companyspecialdays(path: str) -> None:
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE government (
+            displayname TEXT,
+            icon TEXT,
+            nonworkday INTEGER,
+            country TEXT,
+            startdatetime TEXT,
+            enddatetime TEXT
+        )
+        """
+    )
+    cur.execute(
+        """
+        INSERT INTO government (displayname, icon, nonworkday, country, startdatetime, enddatetime)
+        VALUES ('Holiday', 'star', 1, 'US', '20260101', '20260101')
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_get_special_days_returns_empty_when_company_table_missing(tmp_path):
+    db_path = str(tmp_path / "missing_company.sqlite")
+    _make_db_without_companyspecialdays(db_path)
+    db = CalendarDB(db_path)
+
+    assert db.get_special_days_for_date("20260101") == []
+
+
+def test_is_nonworkday_falls_back_to_government_when_company_table_missing(tmp_path):
+    db_path = str(tmp_path / "missing_company.sqlite")
+    _make_db_without_companyspecialdays(db_path)
+    db = CalendarDB(db_path)
+
+    assert db.is_nonworkday("20260101", "US") is True
+
+
+def test_get_holiday_title_uses_government_icon_column(tmp_path):
+    db_path = str(tmp_path / "holiday_icon.sqlite")
+    _make_db_without_companyspecialdays(db_path)
+    db = CalendarDB(db_path)
+
+    title, icon = db.get_holiday_title_for_date("20260101", "US")
+    assert title == "Holiday"
+    assert icon == "star"
+
+
+def test_get_holiday_title_resolves_numeric_icon_id_via_fonticon(tmp_path):
+    db_path = str(tmp_path / "holiday_icon_id.sqlite")
+    _make_db_without_companyspecialdays(db_path)
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("UPDATE government SET icon = '42' WHERE displayname = 'Holiday'")
+    cur.execute("CREATE TABLE fonticon (id INTEGER PRIMARY KEY, name TEXT)")
+    cur.execute("INSERT INTO fonticon (id, name) VALUES (42, 'calendar')")
+    conn.commit()
+    conn.close()
+
+    db = CalendarDB(db_path)
+    title, icon = db.get_holiday_title_for_date("20260101", "US")
+    assert title == "Holiday"
+    assert icon == "calendar"

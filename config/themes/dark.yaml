@@ -1,0 +1,482 @@
+# Dark Theme
+# Dark background scheme for reduced eye strain.
+# Uses cool grey tones with light text.
+
+theme:
+  name: "Dark"
+  version: "1.0"
+  description: "Dark background theme for reduced eye strain"
+
+# ── General Settings ──────────────────────────────────────────────────────────
+base:
+  font_family: "RobotoCondensed-Light"
+  font_color: "silver"
+  default_missing_icon: null
+  size_rule:
+    - font_size: 12
+      when:
+        papersize: ["letter", "ledger"]
+    - font_size: 8
+      when:
+        papersize: ["3x5", "5x8"]
+
+header:
+  font_family: "Roboto-Bold"
+  font_color: "whitesmoke"
+
+footer:
+  font_family: "RobotoCondensed-Light"
+  font_color: "darkgrey"
+
+events:
+  font_family: "RobotoCondensed-Light"
+  font_color: "lightcyan"
+  icon_color: "lightskyblue"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_color: "darkgrey"
+  item_placement_order: ["priority"]
+
+durations:
+  font_family: "RobotoCondensed-Light"
+  font_color: "lightcyan"
+  icon_color: "lightskyblue"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_color: "darkgrey"
+  stroke_dasharray: null
+
+watermark:
+  text: null
+  color: "dimgrey"
+  font_family: "Roboto-Black"
+  alpha: 0.15
+  font_size: null
+  resize_mode: "fit"
+  rotation_angle: 0.0
+  imagemark_rotation_angle: 0.0
+
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  # How to number fiscal years relative to the start calendar year:
+  #   null (default): auto — blockplan uses +1 for non-Jan starts, 0 for Jan;
+  #                   weekly/NRF uses 0 (start year).
+  #   0: start year (FY starting Feb 2026 → FY2026)
+  #   1: start year + 1 (FY starting Oct 2025 → FY2026, US federal default)
+  #  -1: start year − 1
+  year_offset: null
+
+colors:
+  month_palette: "Greys"
+  fiscal_palette: "Greys"
+  group_palette: "Dark2"
+  special_day: "teal"
+  hash_lines: "grey"
+  federal_holiday:
+    color: "indianred"
+    alpha: 0.3
+  company_holiday:
+    color: "darkseagreen"
+    alpha: 0.3
+  special_day_types:
+    federal: "indianred"
+    company: "darkseagreen"
+    nonworkday: "slategrey"
+    furlough: "darkslategrey"
+    special: "goldenrod"
+  resource_groups:
+    a: "whitesmoke"
+    b: "lightskyblue"
+    c: "coral"
+    d: "darkgrey"
+
+# ── Weekly Calendar ───────────────────────────────────────────────────────────
+weekly:
+  day_names:
+    font_family: "RobotoCondensed-Bold"
+    font_color: "whitesmoke"
+
+  week_numbers:
+    font_family: "RobotoCondensed-Bold"
+    font_color: "darkgrey"
+    label_format: "W{num:02d}"
+
+  day_box:
+    stroke_color: "dimgrey"
+    stroke_opacity: 0.5
+    stroke_width: 1
+    stroke_dasharray: null
+    fill_color: "dimgrey"
+    fill_opacity: 0.35
+    number_font: "Roboto-Black"
+    number_color: "whitesmoke"
+    icon_color: "coral"
+    font_color: "lightyellow"
+    hash_pattern_opacity: 0.15
+    hash_rules:
+      # Milestones: gold wiggle (warm highlight against dark background)
+      - pattern: "wiggle"
+        color: "gold"
+        opacity: 0.18
+        when:
+          milestone: true
+      # Federal holidays: indian red wiggle
+      - pattern: "wiggle"
+        color: "indianred"
+        opacity: 0.15
+        when:
+          federal_holiday: true
+      # Non-work days: dim grey wiggle (barely-there texture)
+      - pattern: "wiggle"
+        color: "dimgrey"
+        opacity: 0.10
+        when:
+          nonworkday: true
+      # Release/cutover events: coral wiggle
+      - pattern: "wiggle"
+        color: "coral"
+        opacity: 0.12
+        when:
+          event_names: ["Release", "Cutover"]
+      # Sprint/freeze durations: sky blue wiggle
+      - pattern: "wiggle"
+        color: "lightskyblue"
+        opacity: 0.10
+        when:
+          duration_names: ["Sprint", "Freeze"]
+      # Completed tasks: sea green wiggle (done, visible on dark)
+      - pattern: "wiggle"
+        color: "mediumseagreen"
+        opacity: 0.15
+        when:
+          percent_complete: 100
+      # Urgent notes: orange-red wiggle (alarm on dark)
+      - pattern: "wiggle"
+        color: "orangered"
+        opacity: 0.14
+        when:
+          notes: ["urgent", "blocker"]
+      # Top-level WBS items: cadet blue wiggle
+      - pattern: "wiggle"
+        color: "cadetblue"
+        opacity: 0.10
+        when:
+          wbs: ["1."]
+      # Specific resource assigned: plum wiggle (muted highlight)
+      - pattern: "wiggle"
+        color: "plum"
+        opacity: 0.10
+        when:
+          resource_names: ["Alice"]
+      # Dev group days: teal wiggle (distinct from sky blue)
+      - pattern: "wiggle"
+        color: "teal"
+        opacity: 0.12
+        when:
+          resource_group: ["dev"]
+
+  overflow:
+    icon: "overflow"
+    color: "orangered"
+
+# ── Timeline ──────────────────────────────────────────────────────────────────
+timeline:
+  background_color: "black"
+  axis_color: "whitesmoke"
+  axis_opacity: 0.9
+  axis_width: 2
+  tick_color: "dimgrey"
+  date_format: "MMM D"
+  tick_label_format: "MMM YY"
+  today_date: ""
+  today_label_text: "Today"
+  today_label_offset_y: 10.0
+  today_line_color: "grey"
+  today_label_color: "grey"
+  marker_stroke_color: "black"
+  marker_stroke_width: 1.0
+  marker_radius: 4.2
+  icon_size: 10.0
+  callout_offset_y: 96.0
+  duration_offset_y: 44.0
+  duration_lane_gap_y: 8.0
+  label_stroke_width: 1.0
+  label_fill_opacity: 0.0
+  duration_bar_fill_opacity: 0.35
+  axis_stroke_dasharray: null
+  tick_stroke_dasharray: null
+  today_line_stroke_dasharray: null
+  label_stroke_dasharray: null
+  duration_bar_stroke_dasharray: null
+  connector_stroke_dasharray: null
+  duration_bracket_stroke_dasharray: null
+  top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue"]
+  bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "tomato"]
+  title:
+    font_family: "Roboto-Bold"
+    font_color: "lightskyblue"
+  notes:
+    font_family: "RobotoCondensed-Bold"
+    font_color: "lightskyblue"
+  date:
+    font_family: "Roboto-Bold"
+    font_color: "lightskyblue"
+
+timeline_events:
+  name_font_size: null
+  notes_font_size: null
+  box_width: null
+  box_height: null
+  text_color: ""
+
+timeline_durations:
+  name_font_size: null
+  notes_font_size: null
+  box_width: null
+  box_height: null
+  text_color: ""
+  date_font: ""
+  date_font_size: null
+  date_color: ""
+
+# ── Block Plan ────────────────────────────────────────────────────────────────
+blockplan:
+  background_color: "none"
+  grid_color: "lightslategray"
+  grid_opacity: 0.7
+  grid_line_width: 1.0
+  grid_dasharray: null
+  timeband_line_color: null     # null → inherits grid_color
+  timeband_line_width: null     # null → inherits grid_line_width
+  timeband_line_opacity: null   # null → inherits grid_opacity
+  timeband_line_dasharray: null
+  label_column_ratio: 0.16
+  band_row_height: 10.0
+  fiscal_year_start_month: 10
+  week_start: 0
+  show_unmatched_lane: true
+  unmatched_lane_name: "Unmatched"
+  lane_match_mode: "first"
+  header_font: "RobotoCondensed-Bold"
+  header_font_size: null
+  header_label_color: "whitesmoke"
+  header_label_opacity: 1.0
+  header_label_align_h: "left"
+  header_heading_fill_color: "none"
+  band_font: "RobotoCondensed-Bold"
+  band_font_size: null
+  timeband_label_color: "lightskyblue"
+  timeband_label_opacity: 1.0
+  timeband_fill_color: "none"
+  timeband_fill_palette: []
+  timeband_fill_opacity: 1.0
+  lane_heading_fill_color: "none"
+  lane_label_font: "RobotoCondensed-Bold"
+  lane_label_font_size: null
+  lane_label_color: "whitesmoke"
+  lane_label_align_h: "left"
+  lane_label_align_v: "middle"
+  lane_label_rotation: 0          # clockwise degrees; 0=horizontal, -90=bottom-to-top, 90=top-to-bottom
+  event_font: "RobotoCondensed-Light"
+  event_font_size: null
+  event_color: "lightskyblue"
+  event_show_date: false
+  event_date_font: "RobotoCondensed-Light"
+  event_date_font_size: null
+  event_date_color: "grey"
+  event_date_format: "YYYY-MM-DD"
+  marker_radius: 2.0
+  # Global style defaults for all vertical lines (overridable per entry).
+  vertical_line_color: "orangered"
+  vertical_line_width: 1.5
+  vertical_line_dasharray: null        # e.g. "6,3" for dashes
+  vertical_line_opacity: 0.85
+  vertical_line_fill_color: "none"     # default: no fill; set to a color, list, or palette name
+  vertical_line_fill_opacity: 0.2
+  # Each entry pins a line (and optional column fill) to a time-band segment.
+  #   band:         time band label (case-insensitive)
+  #   align:        start | center | end  (default: start)
+  #   repeat:       true → apply to every segment in the band; omit value when using repeat
+  #   value:        rendered segment label to match (required when repeat is absent/false)
+  #   color / width / opacity / dash_array: per-line style overrides
+  #   fill_color:   column fill; single color, list of colors, or palette name (cycles per segment)
+  #   fill_opacity: fill opacity 0–1 (default: vertical_line_fill_opacity)
+  vertical_lines:
+    - band: "Sprint"
+      repeat: true
+      align: "end"
+      fill_color: ["#1a2a3a", "#0d1a28"]
+  # vertical_lines:
+  #   - band: "Sprint"
+  #     repeat: true                   # draw after every sprint
+  #     align: "end"
+  #   - band: "PI"
+  #     value: "PI 5"
+  #     align: "end"
+  #     color: "lightskyblue"
+  #     width: 2.0
+  #     dash_array: "8,4"
+  duration_font: "RobotoCondensed-Light"
+  duration_font_size: null
+  duration_color: "lightskyblue"
+  duration_fill_opacity: 0.35
+  duration_stroke_color: null         # null → falls back to duration_color
+  duration_stroke_width: 1.0
+  duration_stroke_opacity: 0.85
+  duration_stroke_dasharray: null
+  duration_bar_height: 8.0
+  palette: ["deepskyblue", "gold", "tomato", "springgreen", "mediumpurple", "slategray"]
+  swimlanes:
+    - name: "Engineering"
+      match:
+        resource_groups: ["engineering", "dev"]
+    - name: "Operations"
+      match:
+        resource_groups: ["operations", "ops"]
+    - name: "Quality"
+      match:
+        resource_groups: ["quality", "qa"]
+  top_time_bands:
+    - label: "Fiscal Quarter"
+      unit: "fiscal_quarter"
+      label_format: "FY{fy} Q{q}"
+      fill_color: "none"
+      show_every: 1
+    - label: "PI"
+      unit: "interval"
+      interval_days: 70
+      prefix: "PI "
+      start_index: 1
+      fill_color: "none"
+      show_every: 1
+    - label: "Sprint"
+      unit: "interval"
+      interval_days: 14
+      prefix: "Sprint "
+      start_index: 1
+      fill_color: "none"
+      show_every: 1
+    - label: "Month"
+      unit: "month"
+      date_format: "MMM YYYY"
+      fill_color: "none"
+      show_every: 1
+    - label: "Week Number"
+      unit: "week"
+      label_format: "Week {week}"
+      fill_color: "none"
+      show_every: 1
+    - label: "Date"
+      unit: "date"
+      date_format: "D"
+      fill_color: "none"
+      show_every: 1
+    - label: "DoW"
+      unit: "dow"
+      date_format: "ddd"
+      fill_color: "none"
+      show_every: 1
+
+# ── Mini Calendar ─────────────────────────────────────────────────────────────
+  bottom_time_bands: []    # mirror of top_time_bands for bands at the bottom of the SVG
+mini_calendar:
+  cell_font: "JuliaMono-Regular"
+  cell_bold_font: "Roboto-Bold"
+  cell_font_size: null
+  title_font: "Roboto-Bold"
+  title_font_size: null
+  title_format: "MMMM YYYY"
+  title_color: "whitesmoke"
+  header_font: "JuliaMono-Regular"
+  header_font_size: null
+  header_color: "darkgrey"
+  day_number_glyphs: null
+  day_number_digits: null
+  day_color: "silver"
+  adjacent_month_color: "dimgrey"
+  show_adjacent: true
+  holiday_color: "indianred"
+  nonworkday_shade: "slategrey"
+  milestone_color: "lightskyblue"
+  circle_milestones: true
+  milestone_stroke_color: "lightskyblue"
+  milestone_stroke_width: 1.0
+  milestone_stroke_opacity: 1.0
+  current_day_color: "teal"
+  week_number_font: "JuliaMono-Regular"
+  week_number_font_size: null
+  week_number_color: "darkgrey"
+  week_number_label_format: "W{num}"
+  grid_line_stroke_color: "lightgrey"
+  grid_line_stroke_width: 0.25
+  grid_line_stroke_opacity: 0.5
+  grid_line_stroke_dasharray: null
+  cell_box_stroke_dasharray: null
+  strikethrough_stroke_dasharray: null
+  hash_line_stroke_dasharray: null
+  duration_bar_stroke_dasharray: null
+  duration_bar_stroke_opacity: null
+  day_box:
+    hash_rules: []
+    # hash_rules:
+    #   - pattern: "brick-wall"
+    #     color: "darkgrey"
+    #     when:
+    #       milestone: true
+
+mini_details:
+  title_text: "Event Details"
+  title_font: "RobotoCondensed-Bold"
+  title_font_size: null
+  title_color: "whitesmoke"
+  header_font: "RobotoCondensed-Bold"
+  header_font_size: null
+  header_color: "darkgrey"
+  row_font: "RobotoCondensed-Light"
+  row_font_size: null
+  row_color: "silver"
+  notes_font: "RobotoCondensed-LightItalic"
+  notes_font_size: null
+  notes_color: "darkgrey"
+  separator_stroke_dasharray: null
+  headers:
+    - "Start Date"
+    - "Name / Description"
+    - "Milestone"
+    - "Priority"
+    - "Group"
+  column_widths: [0.16, 0.52, 0.10, 0.10, 0.12]
+
+text_mini:
+  cell_width: 2
+  month_gap: 4
+  week_number_digits: null 
+  day_number_digits: null
+  event_symbols: null
+  milestone_symbols: null 
+  holiday_symbols: null 
+  nonworkday_symbols: null 
+  duration_symbols: null
+  duration_fill: null
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPACT_PLAN — Compressed activities / duration-line view
+# ─────────────────────────────────────────────────────────────────────────────
+compact_plan:
+  palette: ["deepskyblue", "gold", "tomato", "mediumpurple", "springgreen", "coral"]
+  axis_color: "slategrey"
+  axis_dasharray: "2,5"
+  band_text_color: "whitesmoke"
+  milestone_color: "whitesmoke"
+  legend_label_color: "lightgrey"
+  time_bands:
+    - label: "Date Range"
+      unit: "week"
+      label_format: "{start} – {end}"
+      fill_color: "none"
+      alt_fill_color: "#2a2a2a"
+    - label: "Week"
+      unit: "week"
+      label_format: "Week {n}"
+      fill_color: "none"
+      alt_fill_color: "none"
