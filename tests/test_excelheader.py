@@ -19,7 +19,7 @@ from visualizers.excelheader import (
 
 
 class _DummyDB:
-    """Minimal DB stub — no holidays, no palettes."""
+    """Minimal DB stub — no holidays, no palettes, no events."""
 
     @staticmethod
     def get_palette(name):
@@ -36,6 +36,10 @@ class _DummyDB:
     @staticmethod
     def is_nonworkday(daykey, country=None):
         return False
+
+    @staticmethod
+    def get_all_events_in_range(start, end):
+        return []
 
 
 class _HolidayDB(_DummyDB):
@@ -270,3 +274,90 @@ def test_excelheader_weekends_excluded_when_style_zero(tmp_path):
             date_cells.append(v)
     # Should have labels for 5 days: "5", "6", "7", "8", "9"
     assert len(date_cells) == 5
+
+
+class _EventDB(_DummyDB):
+    """Stub that returns a single milestone event on Mon Jan 12 2026."""
+
+    @staticmethod
+    def get_all_events_in_range(start, end):
+        return [
+            {
+                "ID": 1,
+                "Priority": 1,
+                "WBS": "",
+                "Rollup": False,
+                "Milestone": True,
+                "Percent_Complete": 0,
+                "Task_Name": "Release v2",
+                "Effort": 0,
+                "Duration": 0,
+                "Start_Date": "20260112",
+                "Finish_Date": "20260112",
+                "Predecessors": "",
+                "Resource_Names": "",
+                "Resource_Group": "",
+                "Notes": "",
+                "Icon": "",
+                "Color": "",
+                "Marks": "",
+                "Datekey": "20260112",
+                "Start": "20260112",
+                "End": "20260112",
+                "nonworkday": False,
+            }
+        ]
+
+
+def test_excelheader_icon_band_renders_symbol(tmp_path):
+    """Icon band must place a colored bullet in cells with matching events."""
+    out = tmp_path / "header.xlsx"
+    config = _base_config(out)
+    config.excelheader_top_time_bands = [
+        {
+            "label": "Events",
+            "unit": "icon",
+            "row_height": 14,
+            "icon_rules": [
+                {"milestone": True, "icon": "diamond", "color": "#4472C4"},
+            ],
+        },
+    ]
+    generate_excel_header(config, _EventDB(), out)
+    wb = openpyxl.load_workbook(str(out))
+    ws = wb.active
+
+    # Mon Jan 12 is the 6th visible weekday (Jan 5-9 = 5 days, Jan 12 = 6th)
+    event_col = FIRST_DATE_COL + 5
+    cell = ws.cell(row=1, column=event_col)
+    assert cell.value == "\u25cf", f"Expected ● symbol, got {cell.value!r}"
+
+    # Neighbouring day (Jan 13) should have no symbol
+    neighbour = ws.cell(row=1, column=event_col + 1)
+    assert neighbour.value is None or neighbour.value == ""
+
+
+def test_excelheader_icon_band_empty_without_events(tmp_path):
+    """Icon band with no matching events should produce no symbols."""
+    out = tmp_path / "header.xlsx"
+    config = _base_config(out)
+    config.excelheader_top_time_bands = [
+        {
+            "label": "Events",
+            "unit": "icon",
+            "row_height": 14,
+            "icon_rules": [
+                {"milestone": True, "icon": "diamond", "color": "#4472C4"},
+            ],
+        },
+    ]
+    generate_excel_header(config, _DummyDB(), out)
+    wb = openpyxl.load_workbook(str(out))
+    ws = wb.active
+
+    # No events → no symbols in any date cell
+    for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 15):
+        cell = ws.cell(row=1, column=col)
+        assert cell.value is None or cell.value == "", (
+            f"Column {col} should be empty but has {cell.value!r}"
+        )

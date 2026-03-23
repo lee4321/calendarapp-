@@ -987,7 +987,24 @@ excelheader:
       width:  2.0
 ```
 
-All standard timeband `unit` types are supported: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, and `countup`.
+All standard timeband `unit` types are supported: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, `countup`, and `icon`.
+
+Icon bands (`unit: "icon"`) render a colored bullet symbol (●) in each day cell where a matching event exists. Icons are matched using `icon_rules` — the same rule schema as blockplan icon bands. Example:
+
+```yaml
+excelheader:
+  top_time_bands:
+    - label: "Events"
+      unit: "icon"
+      row_height: 14
+      icon_rules:
+        - milestone: true
+          icon: "diamond"
+          color: "#4472C4"
+        - task_contains: "Release"
+          icon: "star"
+          color: "#E74C3C"
+```
 
 ### Excel Font Settings
 

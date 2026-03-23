@@ -833,6 +833,20 @@ excelheader:
       label_color: "dimgrey"
       show_every:  1
 
+    # Icon band example — renders a colored bullet (●) for matching events.
+    # Same icon_rules schema as blockplan icon bands.
+    # - label:       "Events"
+    #   unit:        "icon"
+    #   row_height:  14
+    #   fill_color:  "none"
+    #   icon_rules:
+    #     - milestone: true
+    #       icon: "diamond"
+    #       color: "#4472C4"
+    #     - task_contains: "Release"
+    #       icon: "star"
+    #       color: "#E74C3C"
+
 
 
 

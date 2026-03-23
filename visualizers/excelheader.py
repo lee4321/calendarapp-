@@ -30,6 +30,8 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from shared.data_models import Event
+from shared.icon_band import compute_icon_band_days
 from visualizers.blockplan.renderer import BlockPlanRenderer, _BandSegment
 
 if TYPE_CHECKING:
@@ -332,6 +334,19 @@ def generate_excel_header(
         visible_days, db, country, federal_color, company_color
     )
 
+    # ── Pre-fetch events for icon bands ───────────────────────────────────────
+    has_icon_bands = any(
+        str(b.get("unit", "")).strip().lower() == "icon" for b in top_bands
+    )
+    band_events: list[Event] = []
+    if has_icon_bands:
+        range_start_str = str(config.userstart or config.adjustedstart)
+        range_end_str = str(config.userend or config.adjustedend)
+        raw_events = db.get_all_events_in_range(range_start_str, range_end_str)
+        band_events = [
+            Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events
+        ]
+
     # ── Segment builder (reuse BlockPlanRenderer static helpers) ──────────────
     _renderer = BlockPlanRenderer()
     band_segments: dict[str, list[_BandSegment]] = {}
@@ -415,9 +430,31 @@ def generate_excel_header(
         _apply_fill(heading_cell, heading_fill_color)
 
         # ── Segment cells ─────────────────────────────────────────────────────
-        # Icon bands (unit: "icon") have no SVG icon support in Excel —
-        # leave the date cells empty; the heading cell and row height are kept.
+        # Icon bands — compute per-day icons and render as colored symbols.
         if str(band.get("unit", "")).strip().lower() == "icon":
+            icon_rules = list(band.get("icon_rules") or [])
+            day_icon_map = compute_icon_band_days(band_events, icon_rules, visible_days)
+            icon_fill = str(band.get("fill_color") or "none")
+            for i, d in enumerate(visible_days):
+                col = FIRST_DATE_COL + i
+                icons = day_icon_map.get(d, [])
+                # Holiday overlay
+                if d in holiday_map:
+                    _apply_fill(ws.cell(row=current_row, column=col), holiday_map[d]["color"])
+                elif icon_fill and icon_fill.lower() not in {"none", "transparent"}:
+                    _apply_fill(ws.cell(row=current_row, column=col), icon_fill)
+                if not icons:
+                    continue
+                # Render first icon as a colored bullet symbol in the cell.
+                icon_name, icon_color = icons[0]
+                symbol = "\u25cf"  # ● filled circle
+                cell = ws.cell(row=current_row, column=col, value=symbol)
+                cell.font = Font(
+                    name=band_font_name,
+                    size=band_font_size,
+                    color=_font_color_argb(icon_color),
+                )
+                cell.alignment = Alignment(horizontal="center", vertical="center")
             current_row += 1
             continue
 
