@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.4"
+__version__ = "26.03.23.5"
 
 import argparse
 import logging
@@ -512,7 +512,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         icons,
         colors,
         palettes,
-        palette,
+        palettesheet,
         iconsheet,
         colorsheet,
     ):
