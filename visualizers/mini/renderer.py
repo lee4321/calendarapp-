@@ -828,10 +828,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         header_font = config.mini_details_header_font
         header_font_size = config.mini_details_header_font_size
         header_y = title_y + header_font_size + 6
-        row_font = config.mini_details_row_font
-        row_font_size = config.mini_details_row_font_size
-        notes_font = config.mini_details_notes_font
-        notes_font_size = config.mini_details_notes_font_size
+        row_font = config.mini_details_name_text_font_name
+        row_font_size = config.mini_details_name_text_font_size
+        notes_font = config.mini_details_notes_text_font_name
+        notes_font_size = config.mini_details_notes_text_font_size
 
         # Header row
         for idx, head in enumerate(headers):
@@ -896,7 +896,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 start_fmt,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_row_color,
+                fill=config.mini_details_name_text_font_color,
             )
             self._draw_text(
                 col_x[1] + 4,
@@ -904,7 +904,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 name,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_row_color,
+                fill=config.mini_details_name_text_font_color,
                 max_width=name_width,
             )
             self._draw_text(
@@ -913,7 +913,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 milestone,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_row_color,
+                fill=config.mini_details_name_text_font_color,
             )
             self._draw_text(
                 col_x[3] + 4,
@@ -921,7 +921,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 priority,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_row_color,
+                fill=config.mini_details_name_text_font_color,
             )
             self._draw_text(
                 col_x[4] + 4,
@@ -929,7 +929,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 group,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_row_color,
+                fill=config.mini_details_name_text_font_color,
             )
 
             notes = event.get("Notes") or ""
@@ -949,7 +949,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     detail_line,
                     notes_font,
                     notes_font_size,
-                    fill=config.mini_details_notes_color,
+                    fill=config.mini_details_notes_text_font_color,
                     max_width=name_width,
                 )
 

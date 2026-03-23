@@ -29,11 +29,7 @@ footer:
   font_color: "grey"
 
 events:
-  font_family: "RobotoCondensed-Light"
-  font_color: "navy"
   icon_color: "navy"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_color: "darkgrey"
   # Controls which item types claim the topmost rows in each day box.
   # Ordered list of tokens; first token's type is placed first.
   # Type tokens: milestones | events | durations
@@ -42,11 +38,7 @@ events:
   item_placement_order: ["priority"]
 
 durations:
-  font_family: "RobotoCondensed-Light"
-  font_color: "navy"
   icon_color: "navy"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_color: "darkgrey"
   stroke_dasharray: null
 
 watermark:
@@ -179,6 +171,13 @@ weekly:
         when:
           resource_group: ["dev"]
 
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "navy"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "darkgrey"
+
   overflow:
     icon: "overflow"
     color: "red"
@@ -216,29 +215,23 @@ timeline:
   duration_bracket_stroke_dasharray: null
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
-  title:
-    font_family: "Roboto-Bold"
+  name_text:
+    font_name: "Roboto-Bold"
     font_color: "deepskyblue"
-  notes:
-    font_family: "RobotoCondensed-Bold"
+  notes_text:
+    font_name: "RobotoCondensed-Bold"
     font_color: "deepskyblue"
   date:
     font_family: "Roboto-Bold"
     font_color: "deepskyblue"
 
 timeline_events:
-  name_font_size: null
-  notes_font_size: null
   box_width: null
   box_height: 24
-  text_color: ""
 
 timeline_durations:
-  name_font_size: null
-  notes_font_size: null
   box_width: null
   box_height: 24
-  text_color: "White"
   date_font: "RobotoCondensed-Italic"
   date_font_size: 9
   date_color: "grey"
@@ -287,9 +280,6 @@ blockplan:
   # Use the --noevents / --nodurations CLI flags to suppress a content type entirely.
   # Per-lane override: add split_ratio key to any swimlane definition.
   lane_split_ratio: 0.5
-  event_font: "RobotoCondensed-Light"
-  event_font_size: null
-  event_color: "navy"
   event_show_date: true
   event_date_font: "RobotoCondensed-Light"
   event_date_font_size: null
@@ -326,10 +316,7 @@ blockplan:
       color: "navy"
       width: 1.0
       dash_array: "8,2"
-  duration_font: "RobotoCondensed-Light"
   duration_date_font: "RobotoCondensed-Light"
-  duration_font_size: null
-  duration_color: "navy"
   duration_fill_opacity: 0.35
   duration_stroke_color: null         # null → falls back to duration_color
   duration_stroke_width: 1.0
@@ -337,6 +324,9 @@ blockplan:
   duration_stroke_dasharray: null
   duration_bar_height: 8.0
   duration_icon_visible: true
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "navy"
   duration_show_start_date: true
   duration_show_end_date: true
   duration_date_format: "M/D"
@@ -568,12 +558,12 @@ mini_details:
   header_font: "RobotoCondensed-Bold"
   header_font_size: null
   header_color: "grey"
-  row_font: "RobotoCondensed-Light"
-  row_font_size: null
-  row_color: "black"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_font_size: null
-  notes_color: "darkgrey"
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "black"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "darkgrey"
   separator_stroke_dasharray: null
   headers:
     - "Start Date"
@@ -616,9 +606,9 @@ compact_plan:
   show_axis: true             # (bool) draw the central timeline axis line
   axis_color: "#7f7f7f"
   axis_dasharray: "1.75,7.0"
-  band_text_color: "black"
+  text:
+    font_color: "black"
   milestone_color: "black"
-  legend_label_color: "#595959"
   header_bottom_y: null   # gap (pts) between the bottom of the header band block and the topmost duration line / milestone; null = no gap
   key_top_y: null         # gap (pts) between the last duration line / milestone and the top of the key/legend block; null = no gap
 
@@ -645,11 +635,7 @@ compact_plan:
   # date (formatted by milestone_list_date_format) and the task name.
   show_milestone_list:           false        # (bool) render the milestone roster
   milestone_list_date_format:    "M/D"        # (str) Arrow date format for the date column
-  milestone_list_font:           null         # (str|null) font name; null = base font
-  milestone_list_font_size:      null         # (float|null) pt; null = auto (8 pt)
   milestone_list_date_color:     "#595959"    # (str) date column text color
-  milestone_list_name_color:     "#595959"    # (str) task name column text color
-  milestone_list_label_opacity:  1.0          # (float 0–1) text opacity
   milestone_list_row_height:     10.0         # (float) vertical spacing per row in pts
   milestone_list_date_col_width: 32.0         # (float) width of the date column in pts
   milestone_list_section_gap:    6.0          # (float) gap between legend bottom and roster top

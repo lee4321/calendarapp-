@@ -108,17 +108,17 @@ class TestThemeEngineCascading:
         assert config.header_left_font_color == "blue"
 
     def test_base_level_applies_when_no_section(self):
-        """base.font_family should apply to events when no events section."""
+        """base.font_name should apply to weekly text when no weekly section."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "base": {"font_family": "Roboto-Bold"},
+                "base": {"font_name": "Roboto-Bold"},
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.event_text_font == "Roboto-Bold"
-        assert config.duration_text_font == "Roboto-Bold"
+        assert config.weekly_name_text_font_name == "Roboto-Bold"
+        assert config.weekly_notes_text_font_name == "Roboto-Bold"
 
     def test_section_level_used_when_no_element_level(self):
         """header.font_family applies to header.left when left has no font_family."""
@@ -140,9 +140,9 @@ class TestThemeEngineCascading:
         """An empty theme should not modify config defaults."""
         engine = ThemeEngine()
         config = create_calendar_config()
-        original_color = config.event_text_color
+        original_color = config.weekly_name_text_font_color
         engine.apply(config)
-        assert config.event_text_color == original_color
+        assert config.weekly_name_text_font_color == original_color
 
 
 class TestThemeEngineApply:
@@ -170,7 +170,7 @@ class TestThemeEngineApply:
     def test_default_theme_matches_original_defaults(self):
         """The default theme should match the original hardcoded values."""
         _, config = self._load_builtin("default")
-        assert config.event_text_color == "navy"
+        assert config.weekly_name_text_font_color == "navy"
         assert config.day_box_number_color == "white"
         assert config.day_box_icon_color == "red"
         assert config.header_left_font_color == "grey"
@@ -277,17 +277,12 @@ class TestThemeEngineApply:
         assert config.mini_title_font_size == 18
         assert config.mini_cell_font_size == 10
 
-    def test_element_size_rule_applies_timeline_event_sizes(self):
+    def test_timeline_text_font_sizes_applied_from_theme(self):
         theme_data = {
-            "theme": {"name": "ElementSizeRuleTimeline"},
-            "timeline_events": {
-                "size_rule": [
-                    {
-                        "name_font_size": 16,
-                        "notes_font_size": 11,
-                        "when": {"papersize": ["letter"]},
-                    }
-                ]
+            "theme": {"name": "TimelineTextSizes"},
+            "timeline": {
+                "name_text": {"font_size": 16},
+                "notes_text": {"font_size": 11},
             },
         }
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -296,10 +291,9 @@ class TestThemeEngineApply:
             engine = ThemeEngine()
             engine.load(f.name)
             config = create_calendar_config()
-            config.papersize = "Letter"
             engine.apply(config)
-        assert config.timeline_event_name_font_size == 16
-        assert config.timeline_event_notes_font_size == 11
+        assert config.timeline_name_text_font_size == 16
+        assert config.timeline_notes_text_font_size == 11
 
     def test_layout_margin_with_units_sets_side_margins_and_enables_margin(self):
         theme_data = {
@@ -333,7 +327,7 @@ class TestThemeEngineApply:
             "theme": {"name": "MiniDetails"},
             "mini_details": {
                 "title_text": "Details",
-                "row_color": "purple",
+                "name_text": {"font_color": "purple"},
                 "headers": ["Start", "Name"],
                 "column_widths": [0.4, 0.6],
                 "output_suffix": "_more",
@@ -348,7 +342,7 @@ class TestThemeEngineApply:
             engine.apply(config)
 
         assert config.mini_details_title_text == "Details"
-        assert config.mini_details_row_color == "purple"
+        assert config.mini_details_name_text_font_color == "purple"
         assert config.mini_details_headers == ["Start", "Name"]
         assert config.mini_details_column_widths == [0.4, 0.6]
         assert config.mini_details_output_suffix == "_more"
@@ -370,22 +364,19 @@ class TestThemeEngineApply:
                 "duration_offset_y": 80,
                 "duration_lane_gap_y": 14,
                 "top_colors": ["red", "blue"],
-                "title": {"font_family": "Roboto-Bold", "font_color": "gold"},
-                "notes": {
-                    "font_family": "RobotoCondensed-Bold",
+                "name_text": {"font_name": "Roboto-Bold", "font_color": "gold", "font_size": 14.5},
+                "notes_text": {
+                    "font_name": "RobotoCondensed-Bold",
                     "font_color": "silver",
+                    "font_size": 11.5,
                 },
                 "date": {"font_family": "Roboto-Bold", "font_color": "orange"},
             },
             "timeline_events": {
-                "name_font_size": 14.5,
-                "notes_font_size": 11.5,
                 "box_width": 180,
                 "box_height": 80,
             },
             "timeline_durations": {
-                "name_font_size": 12.5,
-                "notes_font_size": 10.0,
                 "box_width": 120,
                 "box_height": 36,
             },
@@ -411,16 +402,14 @@ class TestThemeEngineApply:
         assert config.timeline_duration_offset_y == 80
         assert config.timeline_duration_lane_gap_y == 14
         assert config.timeline_top_colors == ["red", "blue"]
-        assert config.timeline_title_font == "Roboto-Bold"
-        assert config.timeline_title_color == "gold"
-        assert config.timeline_notes_font == "RobotoCondensed-Bold"
-        assert config.timeline_notes_color == "silver"
-        assert config.timeline_event_name_font_size == 14.5
-        assert config.timeline_event_notes_font_size == 11.5
+        assert config.timeline_name_text_font_name == "Roboto-Bold"
+        assert config.timeline_name_text_font_color == "gold"
+        assert config.timeline_notes_text_font_name == "RobotoCondensed-Bold"
+        assert config.timeline_notes_text_font_color == "silver"
+        assert config.timeline_name_text_font_size == 14.5
+        assert config.timeline_notes_text_font_size == 11.5
         assert config.timeline_event_box_width == 180
         assert config.timeline_event_box_height == 80
-        assert config.timeline_duration_name_font_size == 12.5
-        assert config.timeline_duration_notes_font_size == 10.0
         assert config.timeline_duration_box_width == 120
         assert config.timeline_duration_box_height == 36
         assert config.timeline_date_font == "Roboto-Bold"
@@ -895,7 +884,7 @@ class TestStrokeDasharray:
     def _make_renderer_config(self, **overrides):
         """Create a config with computed font sizes set for renderer tests."""
         config = create_calendar_config()
-        config.event_text_font_size = 9.0
+        config.weekly_name_text_font_size = 9.0
         config.event_icon_font_size = 9.0
         config.day_box_number_font_size = 13.0
         config.day_box_icon_font_size = 13.0
@@ -1254,14 +1243,13 @@ def test_blockplan_theme_applied():
             "vertical_lines": [{"band": "Date", "value": "20260205"}],
             "header_font": "Roboto-Bold",
             "header_label_align_h": "right",
-            "event_color": "tomato",
+            "name_text": {"font_color": "tomato"},
             "event_show_date": True,
             "event_date_font": "Roboto-Bold",
             "event_date_font_size": 11.0,
             "event_date_color": "purple",
             "event_date_format": "MMM D",
             "timeband_fill_palette": ["#111111", "#222222"],
-            "duration_color": "steelblue",
             "swimlanes": [{"name": "Infra", "match": {"resource_groups": ["ops"]}}],
             "top_time_bands": [
                 {"label": "PI", "unit": "interval", "interval_days": 70}
@@ -1287,14 +1275,13 @@ def test_blockplan_theme_applied():
     assert config.blockplan_vertical_lines == [{"band": "Date", "value": "20260205"}]
     assert config.blockplan_header_font == "Roboto-Bold"
     assert config.blockplan_header_label_align_h == "right"
-    assert config.blockplan_event_color == "tomato"
+    assert config.blockplan_name_text_font_color == "tomato"
     assert config.blockplan_event_show_date is True
     assert config.blockplan_event_date_font == "Roboto-Bold"
     assert config.blockplan_event_date_font_size == 11.0
     assert config.blockplan_event_date_color == "purple"
     assert config.blockplan_event_date_format == "MMM D"
     assert config.blockplan_timeband_fill_palette == ["#111111", "#222222"]
-    assert config.blockplan_duration_color == "steelblue"
     assert config.blockplan_swimlanes == [
         {"name": "Infra", "match": {"resource_groups": ["ops"]}}
     ]
@@ -1324,7 +1311,7 @@ class TestThemeEngineValidation:
         """Unregistered font names should produce a warning."""
         theme_data = {
             "theme": {"name": "Test"},
-            "events": {"font_family": "NonexistentFont-Bold"},
+            "weekly": {"name_text": {"font_name": "NonexistentFont-Bold"}},
         }
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(theme_data, f)

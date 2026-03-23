@@ -27,11 +27,7 @@ footer:
   font_color: "grey"
 
 events:
-  font_family: "AlumniSansPinstripe-Regular"
-  font_color: "blue"
   icon_color: "blue"
-  notes_font: "AlumniSansPinstripe-Italic"
-  notes_color: "grey"
   # Controls which item types claim the topmost rows in each day box.
   # Ordered list of tokens; first token's type is placed first.
   # Type tokens: milestones | events | durations
@@ -40,11 +36,7 @@ events:
   item_placement_order: ["priority"]
 
 durations:
-  font_family: "AlumniSansPinstripe-Regular"
-  font_color: "navy"
   icon_color: "navy"
-  notes_font: "AlumniSansPinstripe-Italic"
-  notes_color: "darkgrey"
   stroke_dasharray: null
 
 watermark:
@@ -186,6 +178,13 @@ weekly:
         when:
           resource_group: ["dev"]
 
+  name_text:
+    font_name: "AlumniSansPinstripe-Regular"
+    font_color: "blue"
+  notes_text:
+    font_name: "AlumniSansPinstripe-Italic"
+    font_color: "grey"
+
   overflow:
     icon: "overflow"
     color: "red"
@@ -223,29 +222,21 @@ timeline:
   duration_bracket_stroke_dasharray: null
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
-  title:
-    font_family: "ATGraphite-LightNarrow"
+  name_text:
+    font_name: "ATGraphite-LightNarrow"
     font_color: "deepskyblue"
-  notes:
-    font_family: "ATGraphite-LightNarrow"
+  notes_text:
+    font_name: "ATGraphite-LightNarrow"
     font_color: "deepskyblue"
   date:
     font_family: "ATGraphite-LightNarrow"
     font_color: "deepskyblue"
 
 timeline_events:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
   box_height: 24
-  text_color: ""
 
 timeline_durations:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
   box_height: 24
-  text_color: "White"
   date_font: "ATGraphite-LightNarrow"
   date_font_size: 9
   date_color: "grey"
@@ -419,13 +410,7 @@ blockplan:
       match:
         resource_groups: ["PostPI6"]
 
-  duration_font: "AlumniSansPinstripe-Regular"
-  duration_notes_font: "AlumniSansPinstripe-Regular"
   duration_date_font: "AlumniSansPinstripe-Italic"
-  duration_font_size: 18
-  duration_color: ""
-  duration_text_color: "white"
-  duration_notes_color: "white"
   duration_fill_opacity: 0.75
   duration_stroke_color: "white"      # white outline separates solid-colour bars
   duration_stroke_width: 1.5
@@ -433,6 +418,12 @@ blockplan:
   duration_stroke_dasharray: null
   duration_bar_height: 40
   duration_icon_visible: true
+  name_text:
+    font_name: "AlumniSansPinstripe-Regular"
+    font_color: "darkgrey"
+  notes_text:
+    font_name: "AlumniSansPinstripe-Regular"
+    font_color: "darkgrey"
   duration_show_start_date: false
   duration_show_end_date: false 
   duration_date_format: "M/D"
@@ -441,12 +432,7 @@ blockplan:
   
 
 
-  event_font: "AlumniSansPinstripe-Regular"
-  event_font_size: null
-  event_notes_font: "AlumniSansPinstripe-Regular"
-  event_notes_color: "darkgrey"
-  event_color: "darkgrey"
-  event_show_date: false 
+  event_show_date: false
   event_date_font: "AlumniSansPinstripe-Regular"
   event_date_font_size: null
   event_date_color: "grey"
@@ -542,12 +528,12 @@ mini_details:
   header_font: "RobotoCondensed-Bold"
   header_font_size: null
   header_color: "grey"
-  row_font: "RobotoCondensed-Light"
-  row_font_size: null
-  row_color: "black"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_font_size: null
-  notes_color: "darkgrey"
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "black"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "darkgrey"
   separator_stroke_dasharray: null
   headers:
     - "Start Date"
@@ -592,18 +578,16 @@ compact_plan:
   palette: ["deepskyblue", "gold", "tomato", "grey", "mediumseagreen", "mediumpurple"]
   axis_color: "lightgrey"
   axis_dasharray: "2,6"
-  band_text_color: "#333333"
   milestone_color: "#333333"
-  legend_label_color: "#595959"
   header_bottom_y: 8   # gap (pts) between the bottom of the header band block and the topmost duration line / milestone
   key_top_y: 8        # gap (pts) between the last duration line / milestone and the top of the key/legend block
   band_row_height: 10.0  # (float) height in points of each header band row
 
-  # ── Time-band text ─────────────────────────────────────────────────────
-  band_font:         "RobotoCondensed-Light"     # (str|null) band label font; null = base font
-  band_font_size:    null     # (float|null) pt; null = auto from band_row_height
-  band_text_color:   "black"  # (str) band label text color
-  band_text_opacity: 1.0      # (float 0–1) band label text opacity
+  # ── Text ─────────────────────────────────────────────────────
+  text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "black"
+    font_opacity: 1.0
 
 
   time_bands:
@@ -684,10 +668,10 @@ compact_plan:
   show_milestone_labels: false     # (bool) render task name beside milestone marker
 
   # ── Milestone label text ───────────────────────────────────────────────
-  milestone_label_color:     "#595959"  # (str) label text color
-  milestone_label_font:      "RobotoCondensed-Light"       # (str|null) font; null = italic base font
-  milestone_label_font_size: null       # (float|null) pt; null = auto (8 pt)
-  milestone_label_opacity:   1.0        # (float 0–1) label opacity
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "#595959"
+    font_opacity: 1.0
 
   # ── Two-column legend/roster layout ────────────────────────────────────
   # Left column: resource group swatches with wrapped duration names.
@@ -699,10 +683,6 @@ compact_plan:
   # (wrapped to fit the column width).
   # Set show_legend: false to suppress the entire left column.
   show_legend:          true      # (bool) render the legend left column
-  legend_font:          "RobotoCondensed-Light"
-  legend_font_size:     null      # (float|null) pt; null = auto (8 pt)
-  legend_label_color:   "#595959"
-  legend_label_opacity: 1.0
   legend_row_height:    10.0      # (float) height per legend row in points
   legend_swatch_width:  10.0      # (float) width of the colored swatch line in points
 
@@ -710,11 +690,7 @@ compact_plan:
   # Date-sorted list of every milestone: date column + task name column.
   show_milestone_list:           true
   milestone_list_date_format:    "M/D"
-  milestone_list_font:           "RobotoCondensed-Light"
-  milestone_list_font_size:      null
   milestone_list_date_color:     "#333333"
-  milestone_list_name_color:     "#595959"
-  milestone_list_label_opacity:  1.0
   milestone_list_row_height:     10.0
   milestone_list_date_col_width: 32.0
   milestone_list_section_gap:    6.0

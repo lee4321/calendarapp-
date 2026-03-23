@@ -353,12 +353,22 @@ class CalendarConfig:
     mini_details_header_font: str = Fonts.RC_BOLD
     mini_details_header_color: str = "grey"
     mini_details_header_font_size: float | None = None
-    mini_details_row_font: str = Fonts.RC_LIGHT
-    mini_details_row_color: str = "black"
-    mini_details_row_font_size: float | None = None
-    mini_details_notes_font: str = Fonts.RC_LIGHT_ITALIC
-    mini_details_notes_color: str = "darkgrey"
-    mini_details_notes_font_size: float | None = None
+    # ── Mini details text styling (uniform) ──────────────────────────────────
+    mini_details_text_font_name: str = Fonts.RC_LIGHT
+    mini_details_text_font_color: str = "black"
+    mini_details_text_font_size: float | None = None
+    mini_details_text_font_opacity: float = 1.0
+    mini_details_text_alignment: str = "left"
+    mini_details_name_text_font_name: str = Fonts.RC_LIGHT
+    mini_details_name_text_font_color: str = "black"
+    mini_details_name_text_font_size: float | None = None
+    mini_details_name_text_font_opacity: float = 1.0
+    mini_details_name_text_alignment: str = "left"
+    mini_details_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
+    mini_details_notes_text_font_color: str = "darkgrey"
+    mini_details_notes_text_font_size: float | None = None
+    mini_details_notes_text_font_opacity: float = 1.0
+    mini_details_notes_text_alignment: str = "left"
     mini_details_headers: list[str] = field(
         default_factory=lambda: [
             "Start Date",
@@ -437,7 +447,6 @@ class CalendarConfig:
     footer_right_font_size: float | None = None
     day_box_number_font_size: float | None = None
     day_box_icon_font_size: float | None = None
-    event_text_font_size: float | None = None
     event_icon_font_size: float | None = None
 
     # Week number styling
@@ -485,20 +494,27 @@ class CalendarConfig:
     day_box_icon_color: str = "red"
     day_box_font_color: str = "navy"
 
-    # Event styling
-    event_text_font: str = Fonts.RC_LIGHT
-    event_text_color: str = "navy"
+    # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
-    event_notes_font: str = Fonts.RC_LIGHT_ITALIC
-    event_notes_color: str = "darkgrey"
-
-    # Duration styling
-    duration_text_font: str = Fonts.RC_LIGHT
-    duration_text_color: str = "navy"
     duration_icon_color: str = "navy"
-    duration_notes_font: str = Fonts.RC_LIGHT_ITALIC
-    duration_notes_color: str = "darkgrey"
     duration_stroke_dasharray: str | None = None
+
+    # ── Weekly text styling (uniform) ──────────────────────────────────────────
+    weekly_text_font_name: str = Fonts.RC_LIGHT
+    weekly_text_font_color: str = "navy"
+    weekly_text_font_size: float | None = None
+    weekly_text_font_opacity: float = 1.0
+    weekly_text_alignment: str = "left"
+    weekly_name_text_font_name: str = Fonts.RC_LIGHT
+    weekly_name_text_font_color: str = "navy"
+    weekly_name_text_font_size: float | None = None
+    weekly_name_text_font_opacity: float = 1.0
+    weekly_name_text_alignment: str = "left"
+    weekly_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
+    weekly_notes_text_font_color: str = "darkgrey"
+    weekly_notes_text_font_size: float | None = None
+    weekly_notes_text_font_opacity: float = 1.0
+    weekly_notes_text_alignment: str = "left"
     hash_pattern_opacity: float = 0.15
 
     # Timeline styling
@@ -526,20 +542,27 @@ class CalendarConfig:
     timeline_callout_offset_y: float = 96.0
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
-    timeline_title_font: str = Fonts.R_BOLD
-    timeline_title_color: str = "deepskyblue"
-    timeline_notes_font: str = Fonts.RC_BOLD
-    timeline_notes_color: str = "deepskyblue"
-    timeline_event_name_font_size: float | None = None
-    timeline_event_notes_font_size: float | None = None
+    # ── Timeline text styling (uniform) ──────────────────────────────────────
+    timeline_text_font_name: str = Fonts.R_BOLD
+    timeline_text_font_color: str = "deepskyblue"
+    timeline_text_font_size: float | None = None
+    timeline_text_font_opacity: float = 1.0
+    timeline_text_alignment: str = "left"
+    timeline_name_text_font_name: str = Fonts.R_BOLD
+    timeline_name_text_font_color: str = "deepskyblue"
+    timeline_name_text_font_size: float | None = None
+    timeline_name_text_font_opacity: float = 1.0
+    timeline_name_text_alignment: str = "left"
+    timeline_notes_text_font_name: str = Fonts.RC_BOLD
+    timeline_notes_text_font_color: str = "deepskyblue"
+    timeline_notes_text_font_size: float | None = None
+    timeline_notes_text_font_opacity: float = 1.0
+    timeline_notes_text_alignment: str = "left"
+    # Timeline box/date fields (not renamed — not event name/notes text)
     timeline_event_box_width: float | None = None
     timeline_event_box_height: float | None = None
-    timeline_event_text_color: str | None = None
-    timeline_duration_name_font_size: float | None = None
-    timeline_duration_notes_font_size: float | None = None
     timeline_duration_box_width: float | None = None
     timeline_duration_box_height: float | None = None
-    timeline_duration_text_color: str | None = None
     timeline_duration_date_font: str | None = None
     timeline_duration_date_font_size: float | None = None
     timeline_duration_date_color: str | None = None
@@ -696,23 +719,29 @@ class CalendarConfig:
         0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
     )
     blockplan_lane_split_ratio: float = 0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
-    blockplan_event_font: str = Fonts.RC_LIGHT
-    blockplan_event_font_size: float | None = None
-    blockplan_event_color: str = "navy"
-    blockplan_event_notes_font: str | None = None
-    blockplan_event_notes_color: str | None = None
+    # ── Blockplan text styling (uniform) ─────────────────────────────────────
+    blockplan_text_font_name: str = Fonts.RC_LIGHT
+    blockplan_text_font_color: str = "navy"
+    blockplan_text_font_size: float | None = None
+    blockplan_text_font_opacity: float = 1.0
+    blockplan_text_alignment: str = "left"
+    blockplan_name_text_font_name: str = Fonts.RC_LIGHT
+    blockplan_name_text_font_color: str = "navy"
+    blockplan_name_text_font_size: float | None = None
+    blockplan_name_text_font_opacity: float = 1.0
+    blockplan_name_text_alignment: str = "left"
+    blockplan_notes_text_font_name: str | None = None
+    blockplan_notes_text_font_color: str | None = None
+    blockplan_notes_text_font_size: float | None = None
+    blockplan_notes_text_font_opacity: float = 1.0
+    blockplan_notes_text_alignment: str = "left"
+    # Blockplan event/duration date & marker fields (not renamed)
     blockplan_event_show_date: bool = False
     blockplan_event_date_font: str = Fonts.RC_LIGHT
     blockplan_event_date_font_size: float | None = None
     blockplan_event_date_color: str = "grey"
     blockplan_event_date_format: str = "YYYY-MM-DD"
     blockplan_marker_radius: float = 2.0
-    blockplan_duration_font: str = Fonts.RC_LIGHT
-    blockplan_duration_font_size: float | None = None
-    blockplan_duration_color: str = "navy"
-    blockplan_duration_text_color: str | None = None
-    blockplan_duration_notes_font: str | None = None
-    blockplan_duration_notes_color: str | None = None
     blockplan_duration_fill_opacity: float = 0.35
     blockplan_duration_stroke_color: str | None = None
     blockplan_duration_stroke_width: float = 1.0
@@ -751,10 +780,22 @@ class CalendarConfig:
         ]
     )
     compactplan_band_row_height: float = 22.0
-    compactplan_band_font: str | None = None
-    compactplan_band_font_size: float | None = None
-    compactplan_band_text_color: str = "black"
-    compactplan_band_text_opacity: float = 1.0
+    # ── Compact plan text styling (uniform) ──────────────────────────────────
+    compactplan_text_font_name: str | None = None
+    compactplan_text_font_color: str = "black"
+    compactplan_text_font_size: float | None = None
+    compactplan_text_font_opacity: float = 1.0
+    compactplan_text_alignment: str = "left"
+    compactplan_name_text_font_name: str | None = None
+    compactplan_name_text_font_color: str = "#595959"
+    compactplan_name_text_font_size: float | None = None
+    compactplan_name_text_font_opacity: float = 1.0
+    compactplan_name_text_alignment: str = "left"
+    compactplan_notes_text_font_name: str | None = None
+    compactplan_notes_text_font_color: str = "#595959"
+    compactplan_notes_text_font_size: float | None = None
+    compactplan_notes_text_font_opacity: float = 1.0
+    compactplan_notes_text_alignment: str = "left"
     compactplan_show_axis: bool = True
     compactplan_axis_color: str = "#7f7f7f"
     compactplan_axis_width: float = 1.75
@@ -788,15 +829,7 @@ class CalendarConfig:
     compactplan_milestone_flag_width: float = 7.0
     compactplan_milestone_flag_height: float = 9.0
     compactplan_show_milestone_labels: bool = True
-    compactplan_milestone_label_font: str | None = None
-    compactplan_milestone_label_font_size: float | None = None
-    compactplan_milestone_label_color: str = "#595959"
-    compactplan_milestone_label_opacity: float = 1.0
     compactplan_show_legend: bool = True
-    compactplan_legend_font: str | None = None
-    compactplan_legend_font_size: float | None = None
-    compactplan_legend_label_color: str = "#595959"
-    compactplan_legend_label_opacity: float = 1.0
     compactplan_legend_swatch_width: float = 18.0
     compactplan_legend_row_height: float = 10.0
     compactplan_legend_area_ratio: float = 0.28
@@ -806,11 +839,7 @@ class CalendarConfig:
     compactplan_key_top_y: float | None = None
     compactplan_show_milestone_list: bool = False
     compactplan_milestone_list_date_format: str = "M/D"
-    compactplan_milestone_list_font: str | None = None
-    compactplan_milestone_list_font_size: float | None = None
     compactplan_milestone_list_date_color: str = "#595959"
-    compactplan_milestone_list_name_color: str = "#595959"
-    compactplan_milestone_list_label_opacity: float = 1.0
     compactplan_milestone_list_row_height: float = 10.0
     compactplan_milestone_list_date_col_width: float = 32.0
     compactplan_milestone_list_section_gap: float = 6.0
@@ -1784,8 +1813,11 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
 
     config.fiscal_period_label_font_size = config.day_box_number_font_size * 0.7
 
-    config.event_text_font_size = _clamp(base_event_size * scale, 6.0, 32.0)
-    config.event_icon_font_size = config.event_text_font_size
+    # Weekly text sizes
+    config.weekly_name_text_font_size = _clamp(base_event_size * scale, 6.0, 32.0)
+    config.weekly_notes_text_font_size = config.weekly_name_text_font_size * 0.9
+    config.weekly_text_font_size = config.weekly_name_text_font_size
+    config.event_icon_font_size = config.weekly_name_text_font_size
 
     # Mini calendar font sizes
     config.mini_cell_font_size = _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0)
@@ -1806,22 +1838,19 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.mini_details_header_font_size = _clamp(
         _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
     )
-    config.mini_details_row_font_size = _clamp(
+    config.mini_details_name_text_font_size = _clamp(
         _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
     )
-    config.mini_details_notes_font_size = _clamp(
+    config.mini_details_text_font_size = config.mini_details_name_text_font_size
+    config.mini_details_notes_text_font_size = _clamp(
         _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
     )
 
-    # Timeline font sizes
-    config.timeline_event_name_font_size = max(10.0, config.event_text_font_size + 2.0)
-    config.timeline_event_notes_font_size = max(8.0, config.event_text_font_size * 0.9)
-    config.timeline_duration_name_font_size = max(
-        8.0, config.event_text_font_size * 0.86
-    )
-    config.timeline_duration_notes_font_size = max(
-        7.0, config.event_text_font_size * 0.74
-    )
+    # Timeline text sizes
+    base_event = config.weekly_name_text_font_size
+    config.timeline_name_text_font_size = max(10.0, base_event + 2.0)
+    config.timeline_notes_text_font_size = max(8.0, base_event * 0.9)
+    config.timeline_text_font_size = config.timeline_name_text_font_size
 
     # Blockplan font sizes
     config.blockplan_header_font_size = _clamp(
@@ -1833,14 +1862,13 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.blockplan_lane_label_font_size = _clamp(
         _clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0
     )
-    config.blockplan_event_font_size = _clamp(
+    config.blockplan_name_text_font_size = _clamp(
         _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
     )
+    config.blockplan_text_font_size = config.blockplan_name_text_font_size
+    config.blockplan_notes_text_font_size = config.blockplan_name_text_font_size * 0.85
     config.blockplan_event_date_font_size = _clamp(
         _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0
-    )
-    config.blockplan_duration_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
     )
     config.blockplan_duration_date_font_size = _clamp(
         _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0

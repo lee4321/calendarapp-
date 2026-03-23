@@ -60,16 +60,16 @@ class TimelineRenderer(BaseSVGRenderer):
     def _callout_metrics(config: "CalendarConfig") -> tuple[float, float, float]:
         """Return (title_size, notes_size, date_size) for point-event callouts."""
         title_size = (
-            float(config.timeline_event_name_font_size)
-            if config.timeline_event_name_font_size is not None
-            else max(10.0, config.event_text_font_size + 2.0)
+            float(config.timeline_name_text_font_size)
+            if config.timeline_name_text_font_size is not None
+            else max(10.0, config.weekly_name_text_font_size + 2.0)
         )
         notes_size = (
-            float(config.timeline_event_notes_font_size)
-            if config.timeline_event_notes_font_size is not None
-            else max(8.0, config.event_text_font_size * 0.9)
+            float(config.timeline_notes_text_font_size)
+            if config.timeline_notes_text_font_size is not None
+            else max(8.0, config.weekly_name_text_font_size * 0.9)
         )
-        date_size = max(8.0, config.event_text_font_size * 0.95)
+        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
         return title_size, notes_size, date_size
 
     @staticmethod
@@ -255,8 +255,8 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         # Seed bounds with the axis line itself (plus tick clearance).
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.event_text_font_size * 0.8)
-        date_size = max(8.0, config.event_text_font_size * 0.95)
+        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
 
         # Axis + tick labels extend above axis_y (smaller SVG y = visually higher)
         axis_tick_top = axis_y - (tick_h + label_size * 1.5)
@@ -387,7 +387,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         placed_boxes: list[tuple[float, float, float, float]] = []
         out: list[TimelineCallout] = []
-        palette = config.timeline_top_colors or [config.timeline_title_color]
+        palette = config.timeline_top_colors or [config.timeline_name_text_font_color]
 
         for idx, event in enumerate(ordered):
             day = self._safe_day(event.start, fallback=start)
@@ -513,10 +513,10 @@ class TimelineRenderer(BaseSVGRenderer):
 
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_width * 0.01)
-        palette = config.timeline_bottom_colors or [config.timeline_notes_color]
+        palette = config.timeline_bottom_colors or [config.timeline_notes_text_font_color]
         title_size, notes_size, _, _ = self._duration_metrics(config)
-        title_font_path = self._safe_font_path(config.timeline_notes_font)
-        notes_font_path = self._safe_font_path(config.timeline_notes_font)
+        title_font_path = self._safe_font_path(config.timeline_notes_text_font_name)
+        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name)
 
         out: list[TimelineDuration] = []
 
@@ -1019,8 +1019,8 @@ class TimelineRenderer(BaseSVGRenderer):
         icon_gap = 2.0
         icon_reserved = (title_font_size + icon_gap) if has_icon else 0.0
 
-        title_font_path = self._safe_font_path(config.timeline_title_font)
-        notes_font_path = self._safe_font_path(config.timeline_notes_font)
+        title_font_path = self._safe_font_path(config.timeline_name_text_font_name)
+        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -1036,7 +1036,7 @@ class TimelineRenderer(BaseSVGRenderer):
         title_y = item.box_y + fitted_title * 1.15
         notes_y = title_y + (fitted_notes * 1.55)
 
-        event_text_color = config.timeline_event_text_color or item.color
+        event_text_color = config.timeline_name_text_font_color or item.color
 
         if has_icon:
             self._draw_icon_svg(
@@ -1057,7 +1057,7 @@ class TimelineRenderer(BaseSVGRenderer):
             title_text_x,
             title_y,
             title,
-            config.timeline_title_font,
+            config.timeline_name_text_font_name,
             fitted_title,
             fill=event_text_color,
             max_width=title_max_w,
@@ -1068,7 +1068,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 text_x,
                 notes_y,
                 notes,
-                config.timeline_notes_font,
+                config.timeline_notes_text_font_name,
                 fitted_notes,
                 fill=event_text_color,
                 max_width=item.box_width - 12.0,
@@ -1178,8 +1178,8 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=max(0.6, config.timeline_marker_stroke_width * 0.8),
         )
 
-        title_font_path = self._safe_font_path(config.timeline_notes_font)
-        notes_font_path = self._safe_font_path(config.timeline_notes_font)
+        title_font_path = self._safe_font_path(config.timeline_notes_text_font_name)
+        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name)
         text_w = max(10.0, item.end_x - item.start_x - 6.0)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
@@ -1191,13 +1191,13 @@ class TimelineRenderer(BaseSVGRenderer):
             title_size,
             notes_size,
         )
-        duration_text_color = config.timeline_duration_text_color or item.color
+        duration_text_color = config.timeline_name_text_font_color or item.color
         title_y = bar_y + fitted_title * 1.15
         self._draw_text(
             (item.start_x + item.end_x) / 2,
             title_y,
             title,
-            config.timeline_notes_font,
+            config.timeline_notes_text_font_name,
             fitted_title,
             fill=duration_text_color,
             anchor="middle",
@@ -1210,7 +1210,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 (item.start_x + item.end_x) / 2,
                 notes_y,
                 notes,
-                config.timeline_notes_font,
+                config.timeline_notes_text_font_name,
                 fitted_notes,
                 fill=duration_text_color,
                 anchor="middle",
@@ -1296,19 +1296,19 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> tuple[float, float, float, float]:
         """Return (title_size, notes_size, date_size, bar_height)."""
         title_size = (
-            float(config.timeline_duration_name_font_size)
-            if config.timeline_duration_name_font_size is not None
-            else max(8.0, config.event_text_font_size * 0.86)
+            float(config.timeline_name_text_font_size * 0.85)
+            if config.timeline_name_text_font_size is not None
+            else max(8.0, config.weekly_name_text_font_size * 0.86)
         )
         notes_size = (
-            float(config.timeline_duration_notes_font_size)
-            if config.timeline_duration_notes_font_size is not None
-            else max(7.0, config.event_text_font_size * 0.74)
+            float(config.timeline_notes_text_font_size * 0.82)
+            if config.timeline_notes_text_font_size is not None
+            else max(7.0, config.weekly_name_text_font_size * 0.74)
         )
         date_size = (
             float(config.timeline_duration_date_font_size)
             if config.timeline_duration_date_font_size is not None
-            else max(7.0, config.event_text_font_size * 0.78)
+            else max(7.0, config.weekly_name_text_font_size * 0.78)
         )
         if config.timeline_duration_box_height is not None:
             bar_h = max(8.0, float(config.timeline_duration_box_height))
@@ -1349,7 +1349,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         draw_labels = len(ticks) <= 18
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.event_text_font_size * 0.8)
+        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
 
         for m in ticks:
             x = self._x_for_day(m, start, end, axis_left, axis_right)
@@ -1395,7 +1395,7 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.event_text_font_size * 0.8)
+        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
         band_h = label_size * 1.8
         band_gap = 2.0
 
@@ -1507,7 +1507,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_opacity=0.55,
             stroke_dasharray=config.timeline_today_line_stroke_dasharray or None,
         )
-        label_size = max(7.0, config.event_text_font_size * 0.8)
+        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
         # Keep label baseline inside SVG bounds.
         min_y = label_size * 1.1
@@ -1594,14 +1594,14 @@ class TimelineRenderer(BaseSVGRenderer):
     def _callout_metrics(config: "CalendarConfig") -> tuple[float, float, float]:
         """Return (title_size, notes_size, date_size) for point-event callouts."""
         title_size = (
-            float(config.timeline_event_name_font_size)
-            if config.timeline_event_name_font_size is not None
-            else max(10.0, config.event_text_font_size + 2.0)
+            float(config.timeline_name_text_font_size)
+            if config.timeline_name_text_font_size is not None
+            else max(10.0, config.weekly_name_text_font_size + 2.0)
         )
         notes_size = (
-            float(config.timeline_event_notes_font_size)
-            if config.timeline_event_notes_font_size is not None
-            else max(8.0, config.event_text_font_size * 0.9)
+            float(config.timeline_notes_text_font_size)
+            if config.timeline_notes_text_font_size is not None
+            else max(8.0, config.weekly_name_text_font_size * 0.9)
         )
-        date_size = max(8.0, config.event_text_font_size * 0.95)
+        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
         return title_size, notes_size, date_size

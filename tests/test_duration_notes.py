@@ -65,7 +65,7 @@ def _base_config(include_notes=True):
 
 def _make_rowcoords(config, days, x=0.0, base_y=100.0, w=158.4):
     """Build a minimal rowcoords dict for the given list of day keys."""
-    textrowheight = round(config.event_text_font_size * 1.3, 2)
+    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
     rowcoords = defaultdict(dict)
     for day in days:
         y = base_y
@@ -111,7 +111,7 @@ def _get_duration_rect_height(config, event, days):
     """Run _place_duration_rect and return the height of the drawn rect(s)."""
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
-    textrowheight = round(config.event_text_font_size * 1.3, 2)
+    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
 
     # Determine rowids the same way _place_duration does
     has_notes = bool(event.notes and str(event.notes).strip())
@@ -343,10 +343,10 @@ def test_duration_without_notes_does_not_render_notes_text():
 def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
     """Duration name/notes should use duration-specific font and color fields."""
     config = _base_config(include_notes=True)
-    config.duration_text_font = "RobotoCondensed-Bold"
-    config.duration_text_color = "darkgreen"
-    config.duration_notes_font = "JuliaMono-RegularItalic"
-    config.duration_notes_color = "red"
+    config.weekly_name_text_font_name = "RobotoCondensed-Bold"
+    config.weekly_name_text_font_color = "darkgreen"
+    config.weekly_notes_text_font_name = "JuliaMono-RegularItalic"
+    config.weekly_notes_text_font_color = "red"
     event = _make_event(
         "Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module"
     )
@@ -370,12 +370,12 @@ def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
 
 
 def test_event_notes_use_event_notes_font_and_color():
-    """Event notes should use event_notes_* style fields, not event_text_*."""
+    """Event notes should use weekly_notes_text_* style fields, not weekly_name_text_*."""
     config = _base_config(include_notes=True)
-    config.event_text_font = "RobotoCondensed-Regular"
-    config.event_text_color = "darkslategrey"
-    config.event_notes_font = "JuliaMono-RegularItalic"
-    config.event_notes_color = "red"
+    config.weekly_name_text_font_name = "RobotoCondensed-Regular"
+    config.weekly_name_text_font_color = "darkslategrey"
+    config.weekly_notes_text_font_name = "JuliaMono-RegularItalic"
+    config.weekly_notes_text_font_color = "red"
     day = "20260303"
     event = _make_event("Build API", day, day, notes="Owner: platform team")
 
@@ -466,7 +466,7 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
     # Row 0 is the topmost slot (highest Y in our coords); row 2 is two below it.
     row0_y = rowcoords[days[0]][0][1]
     row2_y = rowcoords[days[0]][2][1]
-    textrowheight = round(config.event_text_font_size * 1.3, 2)
+    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
 
     rowcoords = _mark_row_used(rowcoords, days, 0)
 

@@ -43,19 +43,11 @@ footer:
     font_color: "midnightblue"
 
 events:
-  font_family:
-  font_color: "darkslategrey"
   icon_color: "steelblue"
-  notes_font: "NotoSans-CondensedLightItalic"
-  notes_color: "red"
   item_placement_order: ["priority"]
 
 durations:
-  font_family:
-  font_color: "darkslategrey"
   icon_color: "steelblue"
-  notes_font: "NotoSans-CondensedLightItalic"
-  notes_color: "red"
   stroke_dasharray: null
 
 watermark:
@@ -175,6 +167,12 @@ weekly:
         when:
           resource_group: ["dev", "ops"]
 
+  name_text:
+    font_color: "darkslategrey"
+  notes_text:
+    font_name: "NotoSans-CondensedLightItalic"
+    font_color: "red"
+
   overflow:
     icon: "overflow"
     color: "darkorange"
@@ -212,32 +210,15 @@ timeline:
   duration_bracket_stroke_dasharray: null
   top_colors: ["lightskyblue", "khaki", "tomato", "mediumturquoise", "white"]
   bottom_colors: ["cadetblue", "mediumseagreen", "lightskyblue", "khaki", "tomato"]
-  title:
-    font_family: "Roboto-Bold"
+  name_text:
+    font_name: "Roboto-Bold"
     font_color: "aliceblue"
-  notes:
-    font_family: "RobotoCondensed-Bold"
+  notes_text:
+    font_name: "RobotoCondensed-Bold"
     font_color: "lightsteelblue"
   date:
     font_family: "Roboto-Bold"
     font_color: "aliceblue"
-
-timeline_events:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-
-timeline_durations:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-  date_font: ""
-  date_font_size: null
-  date_color: ""
 
 # ── Block Plan ────────────────────────────────────────────────────────────────
 blockplan:
@@ -277,9 +258,6 @@ blockplan:
   lane_label_align_h: "right"
   lane_label_align_v: "middle"
   lane_label_rotation: 0          # clockwise degrees; 0=horizontal, -90=bottom-to-top, 90=top-to-bottom
-  event_font: "RobotoCondensed-Light"
-  event_font_size: null
-  event_color: "midnightblue"
   event_show_date: false
   event_date_font: "RobotoCondensed-Light"
   event_date_font_size: null
@@ -316,15 +294,15 @@ blockplan:
   #     color: "sienna"
   #     width: 2.0
   #     dash_array: "8,4"
-  duration_font: "RobotoCondensed-Light"
-  duration_font_size: null
-  duration_color: "midnightblue"
   duration_fill_opacity: 0.35
   duration_stroke_color: null         # null → falls back to duration_color
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.9
   duration_stroke_dasharray: null
   duration_bar_height: 8.0
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "midnightblue"
   palette: ["lightskyblue", "khaki", "tomato", "springgreen", "plum", "khaki"]
   swimlanes:
     - name: "Engineering & \nDevelopment"
@@ -432,12 +410,12 @@ mini_details:
   header_font: "RobotoCondensed-Bold"
   header_font_size: null
   header_color: "slategrey"
-  row_font: "RobotoCondensed-Light"
-  row_font_size: null
-  row_color: "darkslategrey"
-  notes_font: "RobotoCondensed-Italic"
-  notes_font_size: null
-  notes_color: "slategrey"
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "darkslategrey"
+  notes_text:
+    font_name: "RobotoCondensed-Italic"
+    font_color: "slategrey"
   separator_stroke_dasharray: null
   headers:
     - "Start Date"
@@ -467,9 +445,9 @@ compact_plan:
   palette: ["lightskyblue", "khaki", "springgreen", "plum", "mediumturquoise", "salmon"]
   axis_color: "#8fa8c8"
   axis_dasharray: "2,6"
-  band_text_color: "#3a5070"
+  text:
+    font_color: "#3a5070"
   milestone_color: "#3a5070"
-  legend_label_color: "#5a7090"
   time_bands:
     - label: "Date Range"
       unit: "week"

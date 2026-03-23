@@ -321,13 +321,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
         events: "list[Event] | None" = None,
     ) -> None:
         font_name = self._resolve_font(
-            getattr(config, "compactplan_band_font", None), config
+            getattr(config, "compactplan_text_font_name", None), config
         )
         font_size = float(
-            getattr(config, "compactplan_band_font_size", None) or max(7.0, band_row_h * 0.35)
+            getattr(config, "compactplan_text_font_size", None) or max(7.0, band_row_h * 0.35)
         )
-        text_color = str(config.compactplan_band_text_color or "black")
-        text_opacity = float(config.compactplan_band_text_opacity)
+        text_color = str(config.compactplan_text_font_color or "black")
+        text_opacity = float(config.compactplan_text_font_opacity)
         _events: list[Event] = events or []
 
         for band_idx, band in enumerate(time_bands):
@@ -680,13 +680,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Milestone label
         if config.compactplan_show_milestone_labels and evt.task_name:
             font_name = self._resolve_font(
-                getattr(config, "compactplan_milestone_label_font", None), config, italic=True
+                getattr(config, "compactplan_name_text_font_name", None), config, italic=True
             )
             font_size = float(
-                getattr(config, "compactplan_milestone_label_font_size", None) or 8.0
+                getattr(config, "compactplan_name_text_font_size", None) or 8.0
             )
-            label_color = str(config.compactplan_milestone_label_color or "#595959")
-            label_opacity = float(config.compactplan_milestone_label_opacity)
+            label_color = str(config.compactplan_name_text_font_color or "#595959")
+            label_opacity = float(config.compactplan_name_text_font_opacity)
             label_x = x + flag_w + 3.0
             label_y = axis_y - flag_h / 2.0
             self._draw_text(
@@ -761,12 +761,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
             return legend_y
 
         font_name = self._resolve_font(
-            getattr(config, "compactplan_legend_font", None), config, italic=True
+            getattr(config, "compactplan_text_font_name", None), config, italic=True
         )
-        font_size = float(getattr(config, "compactplan_legend_font_size", None) or 8.0)
+        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
 
-        label_color = str(config.compactplan_legend_label_color or "#595959")
-        label_opacity = float(config.compactplan_legend_label_opacity)
+        label_color = str(config.compactplan_text_font_color or "#595959")
+        label_opacity = float(config.compactplan_text_font_opacity)
         swatch_w = float(config.compactplan_legend_swatch_width)
         swatch_text_gap = 5.0
         row_h = float(config.compactplan_legend_row_height)
@@ -892,14 +892,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         entries.sort(key=lambda e: e[0])
 
         font_name = self._resolve_font(
-            getattr(config, "compactplan_milestone_list_font", None), config
+            getattr(config, "compactplan_name_text_font_name", None), config
         )
         font_size = float(
-            getattr(config, "compactplan_milestone_list_font_size", None) or 8.0
+            getattr(config, "compactplan_name_text_font_size", None) or 8.0
         )
         date_color = str(config.compactplan_milestone_list_date_color or "#595959")
-        name_color = str(config.compactplan_milestone_list_name_color or "#595959")
-        opacity = float(config.compactplan_milestone_list_label_opacity)
+        name_color = str(config.compactplan_name_text_font_color or "#595959")
+        opacity = float(config.compactplan_name_text_font_opacity)
         row_h = float(config.compactplan_milestone_list_row_height)
         date_col_w = float(config.compactplan_milestone_list_date_col_width)
         date_fmt = str(config.compactplan_milestone_list_date_format or "M/D")
@@ -941,11 +941,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         from config.config import get_font_path
 
         font_name = self._resolve_font(
-            getattr(config, "compactplan_legend_font", None), config, italic=True
+            getattr(config, "compactplan_text_font_name", None), config, italic=True
         )
-        font_size = float(getattr(config, "compactplan_legend_font_size", None) or 8.0)
-        label_color = str(config.compactplan_legend_label_color or "#595959")
-        label_opacity = float(config.compactplan_legend_label_opacity)
+        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
+        label_color = str(config.compactplan_text_font_color or "#595959")
+        label_opacity = float(config.compactplan_text_font_opacity)
 
         icon_name = str(config.compactplan_continuation_icon or "arrow-right")
         icon_h = float(config.compactplan_continuation_icon_height or 8.0)
@@ -1007,11 +1007,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         from config.config import get_font_path
 
         font_name = self._resolve_font(
-            getattr(config, "compactplan_legend_font", None), config, italic=True
+            getattr(config, "compactplan_text_font_name", None), config, italic=True
         )
-        font_size = float(getattr(config, "compactplan_legend_font_size", None) or 8.0)
-        label_color = str(config.compactplan_legend_label_color or "#595959")
-        label_opacity = float(config.compactplan_legend_label_opacity)
+        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
+        label_color = str(config.compactplan_text_font_color or "#595959")
+        label_opacity = float(config.compactplan_text_font_opacity)
 
         legend_text = str(config.compactplan_legend_axis_text or "timeline")
         swatch_w = float(config.compactplan_legend_swatch_width)

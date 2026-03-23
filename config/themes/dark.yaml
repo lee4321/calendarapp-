@@ -29,19 +29,11 @@ footer:
   font_color: "darkgrey"
 
 events:
-  font_family: "RobotoCondensed-Light"
-  font_color: "lightcyan"
   icon_color: "lightskyblue"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_color: "darkgrey"
   item_placement_order: ["priority"]
 
 durations:
-  font_family: "RobotoCondensed-Light"
-  font_color: "lightcyan"
   icon_color: "lightskyblue"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_color: "darkgrey"
   stroke_dasharray: null
 
 watermark:
@@ -174,6 +166,13 @@ weekly:
         when:
           resource_group: ["dev"]
 
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "lightcyan"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "darkgrey"
+
   overflow:
     icon: "overflow"
     color: "orangered"
@@ -211,32 +210,15 @@ timeline:
   duration_bracket_stroke_dasharray: null
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "tomato"]
-  title:
-    font_family: "Roboto-Bold"
+  name_text:
+    font_name: "Roboto-Bold"
     font_color: "lightskyblue"
-  notes:
-    font_family: "RobotoCondensed-Bold"
+  notes_text:
+    font_name: "RobotoCondensed-Bold"
     font_color: "lightskyblue"
   date:
     font_family: "Roboto-Bold"
     font_color: "lightskyblue"
-
-timeline_events:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-
-timeline_durations:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-  date_font: ""
-  date_font_size: null
-  date_color: ""
 
 # ── Block Plan ────────────────────────────────────────────────────────────────
 blockplan:
@@ -276,9 +258,6 @@ blockplan:
   lane_label_align_h: "left"
   lane_label_align_v: "middle"
   lane_label_rotation: 0          # clockwise degrees; 0=horizontal, -90=bottom-to-top, 90=top-to-bottom
-  event_font: "RobotoCondensed-Light"
-  event_font_size: null
-  event_color: "lightskyblue"
   event_show_date: false
   event_date_font: "RobotoCondensed-Light"
   event_date_font_size: null
@@ -315,15 +294,15 @@ blockplan:
   #     color: "lightskyblue"
   #     width: 2.0
   #     dash_array: "8,4"
-  duration_font: "RobotoCondensed-Light"
-  duration_font_size: null
-  duration_color: "lightskyblue"
   duration_fill_opacity: 0.35
   duration_stroke_color: null         # null → falls back to duration_color
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.85
   duration_stroke_dasharray: null
   duration_bar_height: 8.0
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "lightskyblue"
   palette: ["deepskyblue", "gold", "tomato", "springgreen", "mediumpurple", "slategray"]
   swimlanes:
     - name: "Engineering"
@@ -431,12 +410,12 @@ mini_details:
   header_font: "RobotoCondensed-Bold"
   header_font_size: null
   header_color: "darkgrey"
-  row_font: "RobotoCondensed-Light"
-  row_font_size: null
-  row_color: "silver"
-  notes_font: "RobotoCondensed-LightItalic"
-  notes_font_size: null
-  notes_color: "darkgrey"
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "silver"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "darkgrey"
   separator_stroke_dasharray: null
   headers:
     - "Start Date"
@@ -449,12 +428,12 @@ mini_details:
 text_mini:
   cell_width: 2
   month_gap: 4
-  week_number_digits: null 
+  week_number_digits: null
   day_number_digits: null
   event_symbols: null
-  milestone_symbols: null 
-  holiday_symbols: null 
-  nonworkday_symbols: null 
+  milestone_symbols: null
+  holiday_symbols: null
+  nonworkday_symbols: null
   duration_symbols: null
   duration_fill: null
 
@@ -466,9 +445,9 @@ compact_plan:
   palette: ["deepskyblue", "gold", "tomato", "mediumpurple", "springgreen", "coral"]
   axis_color: "slategrey"
   axis_dasharray: "2,5"
-  band_text_color: "whitesmoke"
+  text:
+    font_color: "whitesmoke"
   milestone_color: "whitesmoke"
-  legend_label_color: "lightgrey"
   time_bands:
     - label: "Date Range"
       unit: "week"

@@ -1300,16 +1300,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
             bar_h = min(float(config.blockplan_duration_bar_height), row_h * 0.95)
             if weekly_style_with_notes:
-                notes_font_size = float(config.blockplan_duration_font_size)
+                notes_font_size = float(config.blockplan_notes_text_font_size)
             y = top + (row * row_h) + ((row_h - bar_h) / 2.0)
 
-            _palette = config.blockplan_palette or [config.blockplan_duration_color]
+            _palette = config.blockplan_palette or [config.blockplan_name_text_font_color]
             color = (
                 event.color if event.color else _palette[event.priority % len(_palette)]
             )
             dur_stroke_color = (
                 config.blockplan_duration_stroke_color
-                or config.blockplan_duration_color
+                or config.blockplan_name_text_font_color
             )
             self._draw_rect(
                 x0,
@@ -1332,7 +1332,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 date_baseline_y = y + bar_h + date_font_size
                 date_color = (
                     config.blockplan_duration_date_color
-                    or config.blockplan_duration_color
+                    or config.blockplan_name_text_font_color
                 )
                 date_fmt = config.blockplan_duration_date_format
                 date_font = config.blockplan_duration_date_font
@@ -1340,15 +1340,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     _dur_date_font_path = get_font_path(date_font)
                 except Exception:
                     _dur_date_font_path = ""
-            dur_text_color = (
-                config.blockplan_duration_text_color or config.duration_text_color
-            )
-            dur_notes_color = (
-                config.blockplan_duration_notes_color or config.duration_notes_color
-            )
-            _dur_notes_font_name = (
-                config.blockplan_duration_notes_font or config.duration_notes_font
-            )
+            dur_text_color = config.blockplan_name_text_font_color
+            dur_notes_color = config.blockplan_notes_text_font_color
+            _dur_notes_font_name = config.blockplan_notes_text_font_name
             show_icon = bool(config.blockplan_duration_icon_visible) and bool(
                 event.icon
             )
@@ -1361,7 +1355,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if show_icon:
                     icon_size = font_size
                     try:
-                        _fp = get_font_path(config.blockplan_duration_font)
+                        _fp = get_font_path(config.blockplan_name_text_font_name)
                         text_w = string_width(event.task_name, _fp, font_size)
                     except Exception:
                         text_w = len(event.task_name) * font_size * 0.55
@@ -1417,7 +1411,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         text_x,
                         baseline_y,
                         event.task_name,
-                        config.blockplan_duration_font,
+                        config.blockplan_name_text_font_name,
                         font_size,
                         fill=dur_text_color,
                         anchor="start" if icon_drawn else "middle",
@@ -1428,7 +1422,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         x0 + (w / 2.0),
                         baseline_y,
                         event.task_name,
-                        config.blockplan_duration_font,
+                        config.blockplan_name_text_font_name,
                         font_size,
                         fill=dur_text_color,
                         anchor="middle",
@@ -1442,7 +1436,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     y + (bar_h * 0.80),
                     str(event.notes),
                     _dur_notes_font_name,
-                    notes_font_size * 0.85,
+                    float(config.blockplan_notes_text_font_size),
                     fill=dur_notes_color,
                     anchor="middle",
                     max_width=max(8.0, w - 4),
@@ -1450,7 +1444,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             else:
                 _draw_icon_and_text(
                     y + (bar_h * 0.80),
-                    float(config.blockplan_duration_font_size),
+                    float(config.blockplan_name_text_font_size),
                     w - 4,
                 )
 
@@ -1550,22 +1544,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
         ordered = sorted(
             events, key=lambda e: (e.start, e.priority, e.task_name.lower())
         )
-        event_size = float(
-            config.blockplan_event_font_size or config.event_text_font_size or 9.0
-        )
-        notes_size = max(6.0, event_size * 0.9)
+        event_size = float(config.blockplan_name_text_font_size)
+        notes_size = float(config.blockplan_notes_text_font_size)
         date_size = float(
             config.blockplan_event_date_font_size or max(6.0, event_size * 0.9)
         )
         show_date = bool(getattr(config, "blockplan_event_show_date", False))
         icon_r = max(1.5, float(config.blockplan_marker_radius))
         try:
-            event_font_path = get_font_path(config.blockplan_event_font)
+            event_font_path = get_font_path(config.blockplan_name_text_font_name)
         except Exception:
             event_font_path = ""
-        _event_notes_font_name = (
-            config.blockplan_event_notes_font or config.event_notes_font
-        )
+        _event_notes_font_name = config.blockplan_notes_text_font_name
         try:
             notes_font_path = get_font_path(_event_notes_font_name)
         except Exception:
@@ -1670,7 +1660,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     name_baseline,
                     icon_size,
                     anchor="start",
-                    color=config.blockplan_event_color,
+                    color=config.blockplan_name_text_font_color,
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                 )
@@ -1681,8 +1671,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         x,
                         y_center,
                         icon_r,
-                        fill=config.blockplan_event_color,
-                        stroke=config.blockplan_event_color,
+                        fill=config.blockplan_name_text_font_color,
+                        stroke=config.blockplan_name_text_font_color,
                     )
                 )
             marker_extent = icon_size if marker_drawn else icon_r
@@ -1704,9 +1694,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    config.blockplan_event_font,
+                    config.blockplan_name_text_font_name,
                     event_size,
-                    fill=config.blockplan_event_color,
+                    fill=config.blockplan_name_text_font_color,
                     anchor="start",
                     max_width=max_width,
                 )
@@ -1718,7 +1708,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     str(event.notes),
                     _event_notes_font_name,
                     notes_size,
-                    fill=config.blockplan_event_notes_color or config.event_notes_color,
+                    fill=config.blockplan_notes_text_font_color,
                     anchor="start",
                     max_width=max_width,
                 )
@@ -1727,9 +1717,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    config.blockplan_event_font,
+                    config.blockplan_name_text_font_name,
                     event_size,
-                    fill=config.blockplan_event_color,
+                    fill=config.blockplan_name_text_font_color,
                     anchor="start",
                     max_width=max_width,
                 )
@@ -1777,7 +1767,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             return
 
         fs = float(
-            config.blockplan_lane_label_font_size or config.event_text_font_size or 9.0
+            config.blockplan_lane_label_font_size or config.weekly_name_text_font_size or 9.0
         )
         line_gap = fs * 1.20
         total_baseline_span = (len(lines) - 1) * line_gap

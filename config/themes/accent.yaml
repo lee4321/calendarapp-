@@ -49,19 +49,11 @@ footer:
     font_color: "palette:Accent:4"
 
 events:
-  font_family: "RobotoCondensed-Regular"
-  font_color: "palette:Accent:7"
   icon_color: "palette:Accent:4"
-  notes_font: "RobotoCondensed-Italic"
-  notes_color: "palette:Accent:6"
   item_placement_order: ["milestones", "events", "durations"]
 
 durations:
-  font_family: "RobotoCondensed-Regular"
-  font_color: "palette:Accent:7"
   icon_color: "palette:Accent:4"
-  notes_font: "RobotoCondensed-Italic"
-  notes_color: "palette:Accent:6"
   stroke_dasharray: null
 
 watermark:
@@ -133,6 +125,13 @@ weekly:
     font_color: "palette:Accent:7"
     hash_pattern_opacity: 0.20
 
+  name_text:
+    font_name: "RobotoCondensed-Regular"
+    font_color: "palette:Accent:7"
+  notes_text:
+    font_name: "RobotoCondensed-Italic"
+    font_color: "palette:Accent:6"
+
   overflow:
     icon: "send-backward"
     color: "orange"
@@ -171,32 +170,15 @@ timeline:
   top_colors: ["palette:Accent:4", "palette:Accent:0", "palette:Accent:5", "palette:Accent:2", "palette:Accent:1"]
   bottom_colors: ["palette:Accent:0", "palette:Accent:5", "palette:Accent:4", "palette:Accent:1", "palette:Accent:2"]
   palette: "Accent"
-  title:
-    font_family: "Roboto-Bold"
+  name_text:
+    font_name: "Roboto-Bold"
     font_color: "palette:Accent:3"
-  notes:
-    font_family: "RobotoCondensed-Bold"
+  notes_text:
+    font_name: "RobotoCondensed-Bold"
     font_color: "palette:Accent:1"
   date:
     font_family: "Roboto-Bold"
     font_color: "palette:Accent:3"
-
-timeline_events:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-
-timeline_durations:
-  name_font_size: null
-  notes_font_size: null
-  box_width: null
-  box_height: null
-  text_color: ""
-  date_font: ""
-  date_font_size: null
-  date_color: ""
 
 # ── Block Plan ────────────────────────────────────────────────────────────────
 blockplan:
@@ -236,9 +218,6 @@ blockplan:
   lane_label_align_h: "right"
   lane_label_align_v: "middle"
   lane_label_rotation: 0          # clockwise degrees; 0=horizontal, -90=bottom-to-top, 90=top-to-bottom
-  event_font: "RobotoCondensed-Light"
-  event_font_size: null
-  event_color: "palette:Accent:4"
   event_show_date: false
   event_date_font: "RobotoCondensed-Light"
   event_date_font_size: null
@@ -277,15 +256,15 @@ blockplan:
   #     color: "palette:Accent:3"
   #     width: 2.0
   #     dash_array: "8,4"
-  duration_font: "RobotoCondensed-Light"
-  duration_font_size: null
-  duration_color: "palette:Accent:4"
   duration_fill_opacity: 0.35
   duration_stroke_color: null         # null → falls back to duration_color
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.9
   duration_stroke_dasharray: null
   duration_bar_height: 8.0
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "palette:Accent:4"
   palette: ["palette:Accent:4", "palette:Accent:0", "palette:Accent:5", "palette:Accent:2", "palette:Accent:1", "palette:Accent:7"]
   palette_name: "Accent"
 
@@ -343,12 +322,12 @@ mini_details:
   header_font: "RobotoCondensed-Bold"
   header_font_size: null
   header_color: "palette:Accent:7"
-  row_font: "RobotoCondensed-Light"
-  row_font_size: null
-  row_color: "palette:Accent:7"
-  notes_font: "RobotoCondensed-Italic"
-  notes_font_size: null
-  notes_color: "palette:Accent:6"
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "palette:Accent:7"
+  notes_text:
+    font_name: "RobotoCondensed-Italic"
+    font_color: "palette:Accent:6"
   separator_stroke_dasharray: null
   headers:
     - "Start Date"
@@ -378,9 +357,9 @@ compact_plan:
   palette_name: "Accent"
   axis_color: "darkgrey"
   axis_dasharray: "2,5"
-  band_text_color: "#333333"
+  text:
+    font_color: "#333333"
   milestone_color: "#333333"
-  legend_label_color: "#555555"
   time_bands:
     - label: "Date Range"
       unit: "week"

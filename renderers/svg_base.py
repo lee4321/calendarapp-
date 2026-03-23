@@ -1048,8 +1048,8 @@ class BaseSVGRenderer(ABC):
         )
 
         # Table layout
-        table_font = config.event_text_font
-        table_font_size = config.event_text_font_size + 1
+        table_font = config.weekly_name_text_font_name
+        table_font_size = config.weekly_name_text_font_size + 1
         row_height = table_font_size + 6
         table_top = title_y + title_font_size + 5
 

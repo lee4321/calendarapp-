@@ -367,7 +367,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         Returns:
             Dict with coordinates for Number, Event positions, Row_Coords, etc.
         """
-        textrowheight = round(config.event_text_font_size * 1.3, 2)
+        textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
         daynumheight = config.day_box_number_font_size
 
         # All Y coordinates are in SVG space: y is the TOP edge of the day box,
@@ -944,19 +944,19 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         gap = config.day_box_number_font_size * 0.15
         available_right = x1 - day_num_rendered_width - gap
         daytitlewidth = max(available_right - x1_name, 0.0)
-        font_path = get_font_path(config.event_text_font)
+        font_path = get_font_path(config.weekly_name_text_font_name)
         fontsize = shrinktext(
             daytitle,
             daytitlewidth,
             font_path,
-            config.event_text_font_size,
+            config.weekly_name_text_font_size,
         )
 
         self._draw_text(
             x1_name,
             baseline_y,
             daytitle,
-            config.event_text_font,
+            config.weekly_name_text_font_name,
             fontsize,
             fill=config.day_box_font_color,
         )
@@ -1201,7 +1201,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             iconx, icony: Icon position
             t: Event object
         """
-        textcolor = config.event_text_color
+        textcolor = config.weekly_name_text_font_color
         iconcolor = config.event_icon_color
 
         _rg_colors = config.theme_resource_group_colors or Resource_Group_colors
@@ -1215,8 +1215,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 iconx,
                 icony,
                 str(myText),
-                config.event_text_font,
-                config.event_text_font_size,
+                config.weekly_name_text_font_name,
+                config.weekly_name_text_font_size,
                 fill=textcolor,
                 max_width=Width,
             )
@@ -1225,10 +1225,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 X,
                 icony,
                 str(myText),
-                config.event_text_font,
-                config.event_text_font_size,
+                config.weekly_name_text_font_name,
+                config.weekly_name_text_font_size,
                 fill=textcolor,
-                max_width=(Width - (config.event_text_font_size * 1.5)),
+                max_width=(Width - (config.weekly_name_text_font_size * 1.5)),
             )
 
             self._draw_icon_svg(
@@ -1353,9 +1353,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                                 notes_x,
                                 nicony,
                                 str(t.notes),
-                                config.event_notes_font,
-                                config.event_text_font_size * 0.9,
-                                fill=config.event_notes_color,
+                                config.weekly_notes_text_font_name,
+                                config.weekly_notes_text_font_size,
+                                fill=config.weekly_notes_text_font_color,
                                 max_width=notes_max_w,
                             )
 
@@ -1530,9 +1530,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 centerX,
                 name_ty,
                 display_name,
-                config.duration_text_font,
-                config.event_text_font_size,
-                fill=config.duration_text_color,
+                config.weekly_name_text_font_name,
+                config.weekly_name_text_font_size,
+                fill=config.weekly_name_text_font_color,
                 anchor="middle",
                 max_width=Width,
             )
@@ -1542,9 +1542,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     centerX,
                     notes_ty,
                     str(t.notes),
-                    config.duration_notes_font,
-                    config.event_text_font_size * 0.9,
-                    fill=config.duration_notes_color,
+                    config.weekly_notes_text_font_name,
+                    config.weekly_notes_text_font_size,
+                    fill=config.weekly_notes_text_font_color,
                     anchor="middle",
                     max_width=Width,
                 )

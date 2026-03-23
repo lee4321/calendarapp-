@@ -107,15 +107,10 @@ footer:
 # EVENTS — Single-day event text rendering (weekly, mini, blockplan, timeline)
 # ─────────────────────────────────────────────────────────────────────────────
 events:
-  font_color:          "navy"                    # (str) event name text color
-  font_family:         "RobotoCondensed-Light"   # (str) event name font
-  font_size:           null                      # (float|null) pt; null = auto-scaled
   icon_color:          "navy"                    # (str) event icon color
   item_placement_order: ["events", "durations"]  # (list) rendering order; first item appears
                                                  #   in upper half of day box
                                                  #   options: events | milestones | durations
-  notes_color:         "dimgrey"                 # (str) notes text color
-  notes_font:          "RobotoCondensed-LightItalic"  # (str) notes text font
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,11 +118,7 @@ events:
 # Blockplan-specific duration styling is under the blockplan: section below.
 # ─────────────────────────────────────────────────────────────────────────────
 durations:
-  font_color:      "navy"                         # (str) duration name text color
-  font_family:     "RobotoCondensed-Light"        # (str) duration name font
   icon_color:      "navy"                         # (str) duration icon color
-  notes_color:     "dimgrey"                      # (str) notes text color
-  notes_font:      "RobotoCondensed-LightItalic"  # (str) notes text font
   stroke_dasharray: null                          # (str|null) e.g. "6,3"; null = solid
 
 
@@ -303,6 +294,14 @@ weekly:
     #     when:
     #       percent_complete: 100
 
+  # ── Event/duration text in weekly view ───────────────────────────────────
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "navy"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "dimgrey"
+
   # ── Overflow indicator (shown when a day has more events than can fit) ───
   overflow:
     color: "grey"          # (str) overflow indicator color
@@ -345,31 +344,18 @@ timeline:
   today_line_stroke_dasharray:      "6,3"         # (str|null) today line dash pattern
   top_colors:                       []            # (list[str]) colors cycling above axis
 
-  # ── Timeline title text ────────────────────────────────────────────────
-  title:
-    font_color:  "black"        # (str) title text color
-    font_family: "Roboto-Bold"  # (str) title font
+  # ── Timeline text ──────────────────────────────────────────────────────
+  name_text:
+    font_name: "Roboto-Bold"
+    font_color: "black"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "dimgrey"
 
   # ── Timeline date labels (axis tick text) ─────────────────────────────
   date:
     font_color:  "grey"                   # (str) date label text color
     font_family: "RobotoCondensed-Light"  # (str) date label font
-
-  # ── Notes text (event notes rendered below name) ──────────────────────
-  notes:
-    font_color:  "dimgrey"                       # (str) notes text color
-    font_family: "RobotoCondensed-LightItalic"   # (str) notes font
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TIMELINE_EVENTS — Event boxes in the timeline view
-# ─────────────────────────────────────────────────────────────────────────────
-timeline_events:
-  box_height:     null   # (float|null) event box height in points; null = auto
-  box_width:      null   # (float|null) event box width in points; null = auto
-  name_font_size:  null  # (float|null) event name font size; null = auto
-  notes_font_size: null  # (float|null) notes font size; null = auto
-  text_color:     null   # (str|null) event text color; null = inherits timeline default
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -377,13 +363,9 @@ timeline_events:
 # ─────────────────────────────────────────────────────────────────────────────
 timeline_durations:
   box_height:      24      # (float|null) duration bar height in points; null = auto
-  box_width:       null    # (float|null) duration box width; null = auto
   date_color:      "grey"  # (str) start/end date label color
   date_font:       "RobotoCondensed-Italic"  # (str) date label font
   date_font_size:  9       # (float|null) date label font size; null = auto
-  name_font_size:  null    # (float|null) duration name font size; null = auto
-  notes_font_size: null    # (float|null) notes font size; null = auto
-  text_color:      "white" # (str|null) duration name text color
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -448,44 +430,31 @@ blockplan:
   unmatched_lane_name:     "Other"                 # (str) label for the unmatched catch-all lane
 
   # ── Event markers (single-day events in blockplan) ───────────────────────
-  event_color:       "darkgrey"                  # (str) default event marker color
   event_date_color:  "grey"                      # (str) event date label text color
   event_date_font:   "RobotoCondensed-Light"     # (str) event date label font
   event_date_format: "M/D"                       # (str) Arrow date format for event labels
   event_date_font_size: null                     # (float|null) pt; null = auto-scaled
-  event_font:        "RobotoCondensed-Light"     # (str) event name font
-  event_font_size:   null                        # (float|null) pt; null = auto-scaled
-  event_notes_font:  null                        # (str|null) event notes font; null = falls back to
-                                                 #   events.notes_font from the events: section
-  event_notes_color: null                        # (str|null) event notes text color; null = falls back to
-                                                 #   events.notes_color from the events: section
   event_show_date:   false                       # (bool) show start date below event name
   marker_radius:     3.0                         # (float) event dot marker radius in points
 
   # ── Duration bars ────────────────────────────────────────────────────────
   duration_bar_height:     20.0    # (float) bar height in points; respected as configured
                                    #   (no longer overridden by font size)
-  duration_color:          "navy"  # (str) bar fill color when event.color is not set in DB
   duration_date_color:     null    # (str|null) start/end date label color; null = duration_color
   duration_date_font:      "RobotoCondensed-LightItalic"  # (str) date label font
   duration_date_font_size: null    # (float|null) pt; null = auto-scaled
   duration_date_format:    "M/D"   # (str) Arrow date format for start/end labels
   duration_fill_opacity:   0.75    # (float 0–1) bar fill opacity
-  duration_font:           "RobotoCondensed-Bold"  # (str) bar label font
-  duration_font_size:      null    # (float|null) pt; null = auto-scaled
   duration_icon_visible:   false   # (bool) show event icon inside duration bar when available
-  duration_notes_font:     null    # (str|null) notes text font; null = falls back to
-                                   #   durations.notes_font from the durations: section
-  duration_notes_color:    null    # (str|null) notes text color; null = falls back to
-                                   #   durations.notes_color from the durations: section
   duration_show_end_date:  false   # (bool) show end date below the right edge of the bar
   duration_show_start_date: false  # (bool) show start date below the left edge of the bar
   duration_stroke_color:   null    # (str|null) bar border color; null = no border
   duration_stroke_dasharray: null  # (str|null) bar border dash pattern
   duration_stroke_opacity: 1.0     # (float 0–1) bar border opacity
   duration_stroke_width:   1.0     # (float) bar border width in points
-  duration_text_color:     null    # (str|null) bar label text color; null = falls back to
-                                   #   durations.font_color from the durations: section
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "darkgrey"
 
   # ── Color palette for duration bars (cycles by event priority) ───────────
   palette:      []     # (list[str]) explicit color list; overrides palette_name
@@ -723,15 +692,13 @@ mini_details:
   header_font:     "Roboto-Bold"        # (str) column header font
   header_font_size: null                # (float|null) pt; null = auto-scaled
 
-  # ── Notes text ────────────────────────────────────────────────────────────
-  notes_color:    "dimgrey"                      # (str) notes text color
-  notes_font:     "RobotoCondensed-LightItalic"  # (str) notes font
-  notes_font_size: null                          # (float|null) pt; null = auto-scaled
-
-  # ── Data row text ────────────────────────────────────────────────────────
-  row_color:    "black"                  # (str) data row text color
-  row_font:     "RobotoCondensed-Light"  # (str) data row font
-  row_font_size: null                    # (float|null) pt; null = auto-scaled
+  # ── Event/duration text ────────────────────────────────────────────────
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "black"
+  notes_text:
+    font_name: "RobotoCondensed-LightItalic"
+    font_color: "dimgrey"
 
   # ── Separator line style ─────────────────────────────────────────────────
   separator_stroke_dasharray: null   # (str|null) row separator dash pattern
@@ -889,11 +856,10 @@ compact_plan:
       fill_color:     "none"
       alt_fill_color: "none"
 
-  # ── Time-band text ─────────────────────────────────────────────────────
-  band_font:         null     # (str|null) band label font; null = base font
-  band_font_size:    null     # (float|null) pt; null = auto from band_row_height
-  band_text_color:   "black"  # (str) band label text color
-  band_text_opacity: 1.0      # (float 0–1) band label text opacity
+  # ── Text ─────────────────────────────────────────────────────
+  text:
+    font_color: "black"
+    font_opacity: 1.0
 
   # ── Timeline axis ──────────────────────────────────────────────────────
   axis_color:     "#7f7f7f"    # (str) axis line color
@@ -927,19 +893,14 @@ compact_plan:
   show_milestone_labels: true     # (bool) render task name beside milestone marker
 
   # ── Milestone label text ───────────────────────────────────────────────
-  milestone_label_color:     "#595959"  # (str) label text color
-  milestone_label_font:      null       # (str|null) font; null = italic base font
-  milestone_label_font_size: null       # (float|null) pt; null = auto (8 pt)
-  milestone_label_opacity:   1.0        # (float 0–1) label opacity
+  name_text:
+    font_color: "#595959"
+    font_opacity: 1.0
 
   # ── Legend ─────────────────────────────────────────────────────────────
   # Shows one row per resource group: a colored swatch + italic label
   # "Group Name: Duration 1, Duration 2, …"
   # Set show_legend: false to suppress the legend area entirely.
   show_legend:          true      # (bool) render the legend below the timeline
-  legend_font:          null      # (str|null) font; null = italic base font
-  legend_font_size:     null      # (float|null) pt; null = auto (8 pt)
-  legend_label_color:   "#595959" # (str) legend text color
-  legend_label_opacity: 1.0       # (float 0–1) legend text opacity
   legend_row_height:    10.0      # (float) height per legend row in points
   legend_swatch_width:  18.0      # (float) width of the colored swatch line in points

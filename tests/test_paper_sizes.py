@@ -63,8 +63,8 @@ class TestFormulaFontSizes(unittest.TestCase):
         config.orientation = "portrait"
         config = setfontsizes(config)
 
-        self.assertGreater(config.event_text_font_size, 0.0)
-        self.assertGreater(config.header_left_font_size, config.event_text_font_size)
+        self.assertGreater(config.weekly_name_text_font_size, 0.0)
+        self.assertGreater(config.header_left_font_size, config.weekly_name_text_font_size)
 
     def test_tabloid_portrait_sizes_larger_than_letter(self):
         letter_config = create_calendar_config()
@@ -76,8 +76,8 @@ class TestFormulaFontSizes(unittest.TestCase):
         tabloid_config = setfontsizes(tabloid_config)
 
         self.assertGreater(
-            tabloid_config.event_text_font_size,
-            letter_config.event_text_font_size,
+            tabloid_config.weekly_name_text_font_size,
+            letter_config.weekly_name_text_font_size,
         )
         self.assertGreater(
             tabloid_config.watermark_size,
@@ -93,7 +93,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         tinier.pageX, tinier.pageY = 50.0, 75.0
         tinier = setfontsizes(tinier)
         # Both should settle at the configured minimum floor.
-        self.assertEqual(tiny.event_text_font_size, tinier.event_text_font_size)
+        self.assertEqual(tiny.weekly_name_text_font_size, tinier.weekly_name_text_font_size)
 
     def test_huge_paper_hits_maximum(self):
         huge = create_calendar_config()
@@ -104,7 +104,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         huger.pageX, huger.pageY = 10000.0, 14000.0
         huger = setfontsizes(huger)
         # Both should settle at the configured maximum cap.
-        self.assertEqual(huge.event_text_font_size, huger.event_text_font_size)
+        self.assertEqual(huge.weekly_name_text_font_size, huger.weekly_name_text_font_size)
 
     def test_layout_percentages_set(self):
         config = create_calendar_config()
@@ -129,7 +129,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         config.pageX, config.pageY = 612.0, 792.0
         config.desired_font_size = 12.0
         config = setfontsizes(config)
-        self.assertAlmostEqual(config.event_text_font_size, 12.0, places=2)
+        self.assertAlmostEqual(config.weekly_name_text_font_size, 12.0, places=2)
 
     def test_resolve_page_margins_uses_side_overrides(self):
         config = create_calendar_config()

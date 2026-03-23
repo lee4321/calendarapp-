@@ -342,8 +342,8 @@ def test_timeline_marker_defaults_to_filled_circle_and_icon_uses_circle(tmp_path
 
 def test_timeline_callout_uses_configured_event_name_and_notes_font_sizes(tmp_path):
     config = _base_config(tmp_path / "timeline_callout_sizes.svg")
-    config.timeline_event_name_font_size = 15.0
-    config.timeline_event_notes_font_size = 11.0
+    config.timeline_name_text_font_size = 15.0
+    config.timeline_notes_text_font_size = 11.0
     renderer = _CaptureTimelineRenderer()
 
     event = Event(task_name="Launch", start="20260110", end="20260110", notes="Go live")
@@ -538,8 +538,8 @@ def test_timeline_callout_uses_configured_event_box_width_and_height(tmp_path):
 
 def test_timeline_duration_uses_configured_name_and_notes_font_sizes(tmp_path):
     config = _base_config(tmp_path / "timeline_duration_sizes.svg")
-    config.timeline_duration_name_font_size = 13.0
-    config.timeline_duration_notes_font_size = 9.0
+    config.timeline_name_text_font_size = 13.0
+    config.timeline_notes_text_font_size = 9.0
     renderer = _CaptureTimelineRenderer()
 
     event = Event(
@@ -587,8 +587,8 @@ def test_timeline_duration_uses_configured_box_height_and_min_width(tmp_path):
 
 def test_timeline_shrinks_text_when_box_constraints_are_tight(tmp_path):
     config = _base_config(tmp_path / "timeline_shrink.svg")
-    config.timeline_event_name_font_size = 18.0
-    config.timeline_event_notes_font_size = 14.0
+    config.timeline_name_text_font_size = 18.0
+    config.timeline_notes_text_font_size = 14.0
     config.timeline_event_box_width = 80.0
     config.timeline_event_box_height = 30.0
     renderer = _CaptureTimelineRenderer()
