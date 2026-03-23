@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.5"
+__version__ = "26.03.23.6"
 
 import argparse
 import logging
@@ -312,6 +312,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     fontsheet = sub.add_parser(
         "fontsheet", help="Generate a SVG sample sheet for all registered fonts"
     )
+    exportdata = sub.add_parser(
+        "exportdata",
+        help=(
+            "Export filtered event/duration data as a CSV file "
+            "compatible with importers/import_events.py"
+        ),
+    )
     help_cmd = sub.add_parser(
         "help", help="Show valid configurable values for a subcommand"
     )
@@ -333,6 +340,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "colors",
             "palettes",
             "fonts",
+            "exportdata",
         ],
         help="Subcommand to show help for",
     )
@@ -342,7 +350,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # If a flag belongs to every view, add it in these loops rather than
     # copy-pasting per-subcommand definitions.
     # Positional arguments for calendar views
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan, excelheader):
+    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan, excelheader, exportdata):
         view_parser.add_argument(
             "begin",
             type=str,
@@ -465,6 +473,70 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
 
+    # exportdata subcommand arguments
+    exportdata.add_argument(
+        "--outputfile",
+        "-o",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Output CSV file path (default: output/exportdata_YYYYMMDD.csv)",
+    )
+    _ed_content = exportdata.add_argument_group("Content Filtering")
+    _ed_content.add_argument(
+        "--noevents",
+        "-ne",
+        action="store_true",
+        help="Exclude single-day events",
+    )
+    _ed_content.add_argument(
+        "--nodurations",
+        "-nd",
+        action="store_true",
+        help="Exclude multi-day durations",
+    )
+    _ed_content.add_argument(
+        "--ignorecomplete",
+        "-ic",
+        action="store_true",
+        help="Exclude 100%% complete items",
+    )
+    _ed_content.add_argument(
+        "--milestones",
+        "-mo",
+        action="store_true",
+        help="Show only milestones",
+    )
+    _ed_content.add_argument(
+        "--rollups",
+        "-ro",
+        action="store_true",
+        help="Show only rollup entries",
+    )
+    _ed_content.add_argument(
+        "--WBS",
+        type=str,
+        default="",
+        help=(
+            "WBS filter expression. Comma-separated tokens; '!' excludes. "
+            "Segments are dot-separated. '*' matches a segment, '**' matches "
+            "any remaining segments (implicit if omitted)."
+        ),
+    )
+    _ed_content.add_argument(
+        "--country",
+        "-cc",
+        type=str,
+        default=None,
+        metavar="CODE",
+        help=(
+            "ISO 3166-1 alpha-2 country code(s) for government holidays. "
+            "Accepts a single code (e.g. US) or a comma-separated list "
+            "(e.g. US,CA,GB) to include holidays from multiple countries. "
+            "If omitted, US and CA holidays are loaded by default."
+        ),
+    )
+
     # fontsheet subcommand arguments
     fontsheet.add_argument(
         "--filter",
@@ -515,6 +587,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         palettesheet,
         iconsheet,
         colorsheet,
+        exportdata,
     ):
         db_group = view_parser.add_argument_group("Database Options")
         db_group.add_argument(
@@ -1041,6 +1114,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         colorsheet,
         fontsheet,
         fonts,
+        exportdata,
         help_cmd,
     ):
         logging_group = view_parser.add_argument_group("Logging Options")
@@ -1712,6 +1786,81 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
 
 
 # =============================================================================
+# Export Data CSV Writer
+# =============================================================================
+
+#: Column headers written to the export CSV.  These match the primary alias
+#: keys in importers/import_events.py COLUMN_MAPPING so the file can be
+#: re-imported without relying on fallback aliases.
+_EXPORTDATA_COLUMNS: list[str] = [
+    "task_name",
+    "start_date",
+    "finish_date",
+    "priority",
+    "wbs",
+    "rollup",
+    "milestone",
+    "percent_complete",
+    "effort",
+    "duration",
+    "predecessors",
+    "resource_names",
+    "resource_group",
+    "notes",
+    "icon",
+    "color",
+    "marks",
+]
+
+
+
+def _write_exportdata_csv(events: list[dict], out_path: "Path") -> None:
+    """
+    Write filtered events to a CSV file compatible with importers/import_events.py.
+
+    Dates are converted from YYYYMMDD compact strings to YYYY-MM-DD ISO format
+    (the importer accepts both).  All other fields are written as-is from the
+    raw database dictionaries returned by CalendarDB.get_all_events_in_range().
+
+    Called by:
+        run() when args.command == "exportdata".
+    """
+    import csv
+
+    def _fmt_date(d: str | None) -> str:
+        """Convert YYYYMMDD → YYYY-MM-DD; leave other strings untouched."""
+        if d and len(d) == 8 and d.isdigit():
+            return f"{d[:4]}-{d[4:6]}-{d[6:]}"
+        return d or ""
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=_EXPORTDATA_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        for ev in events:
+            writer.writerow(
+                {
+                    "task_name": ev.get("Task_Name", ""),
+                    "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date")),
+                    "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date")),
+                    "priority": ev.get("Priority", ""),
+                    "wbs": ev.get("WBS", ""),
+                    "rollup": ev.get("Rollup", ""),
+                    "milestone": ev.get("Milestone", ""),
+                    "percent_complete": ev.get("Percent_Complete", ""),
+                    "effort": ev.get("Effort", ""),
+                    "duration": ev.get("Duration", ""),
+                    "predecessors": ev.get("Predecessors", ""),
+                    "resource_names": ev.get("Resource_Names", ""),
+                    "resource_group": ev.get("Resource_Group", ""),
+                    "notes": ev.get("Notes", ""),
+                    "icon": ev.get("Icon", ""),
+                    "color": ev.get("Color", ""),
+                    "marks": ev.get("Marks", ""),
+                }
+            )
+
+
 # Palette SVG Generator
 # =============================================================================
 
@@ -2382,7 +2531,7 @@ def run(argv: list[str] | None = None) -> int:
     # Configure logging
     _configure_logging(args.verbose, args.quiet)
 
-    print(f"EventCalendar v9 ({__version__})")
+    print(f"EventCalendar ({__version__})")
 
     # Default output extension for text-mini
     if (
@@ -2624,6 +2773,39 @@ def run(argv: list[str] | None = None) -> int:
         generate_excel_header(_eh_config, _eh_db, out_path)
         if not args.quiet:
             print(out_path)
+        return 0
+
+    # exportdata — export filtered events/durations as import-compatible CSV
+    if args.command == "exportdata":
+        _ed_db = _open_calendar_db(args.database)
+        _ed_config = create_calendar_config()
+        _ed_config.country = args.country
+        _ed_config.includeevents = not args.noevents
+        _ed_config.includedurations = not args.nodurations
+        _ed_config.ignorecomplete = args.ignorecomplete
+        _ed_config.milestones = args.milestones
+        _ed_config.rollups = args.rollups
+        _ed_config.WBS = args.WBS
+        calc_calendar_range(_ed_config, args.begin, args.end)
+        _ed_db.load_python_holidays(
+            _ed_config.country, _ed_config.adjustedstart, _ed_config.adjustedend
+        )
+
+        from visualizers.base import filter_events
+
+        raw_events = _ed_db.get_all_events_in_range(
+            _ed_config.adjustedstart, _ed_config.adjustedend
+        )
+        exported = filter_events(raw_events, _ed_config)
+
+        out_path = (
+            Path(args.outputfile)
+            if args.outputfile
+            else Path("output") / f"exportdata_{_ed_config.adjustedstart}.csv"
+        )
+        _write_exportdata_csv(exported, out_path)
+        if not args.quiet:
+            print(f"Exported {len(exported)} record(s) → {out_path}")
         return 0
 
     # Create calendar configuration

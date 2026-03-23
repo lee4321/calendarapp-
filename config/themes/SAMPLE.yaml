@@ -4,23 +4,8 @@
 # Every configurable theme key is documented here with its purpose, type,
 # and available options. Keys are sorted alphabetically within each section.
 # Set any key to null to use the built-in default.
-#
-# ─── Available Fonts ─────────────────────────────────────────────────────────
-#   Roboto-Black, Roboto-BlackItalic
-#   Roboto-Bold,  Roboto-BoldItalic
-#   Roboto-Italic
-#   Roboto-Light, Roboto-LightItalic
-#   Roboto-Regular
-#   RobotoCondensed-Bold,  RobotoCondensed-BoldItalic
-#   RobotoCondensed-Italic
-#   RobotoCondensed-Light, RobotoCondensed-LightItalic
-#   RobotoCondensed-Regular
-#   JuliaMono-Regular, JuliaMono-RegularItalic
-#   ClearSans-Thin
-#   mplus-1m-light
-#   AndroidEmoji
-#   linearicons            (icon/symbol font)
-#
+
+
 # ─── Color Values ────────────────────────────────────────────────────────────
 #   CSS named color   : "navy", "tomato", "lightgrey", "whitesmoke", …
 #   Hex color         : "#1a2b3c"

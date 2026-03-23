@@ -23,6 +23,68 @@ Coordinate = tuple[float, float, float, float]  # (x, y, width, height)
 CoordinateDict = dict[str, Coordinate]
 
 
+def filter_events(events: list[dict], config: "CalendarConfig") -> list[dict]:
+    """
+    Return only the events from *events* that should appear in a rendered output.
+
+    This is the single authoritative filter used by every visualizer and by the
+    ``exportdata`` CLI subcommand, so both code paths always produce identical
+    results.
+
+    Filters applied (in order):
+
+    * Holidays (``Notes`` in ``'HOLIDAY'``, ``'USFederal'``, ``'CanFED'``) are
+      always excluded — they are rendered as day-box decorations, not event rows.
+    * ``config.ignorecomplete`` — skip items with ``Percent_Complete == 1``.
+    * ``config.milestones``     — keep **only** items where ``Milestone`` is truthy.
+    * ``config.rollups``        — keep **only** items where ``Rollup`` is truthy.
+    * ``config.WBS``            — WBS pattern filter (``WBSFilter`` expression).
+    * ``config.includeevents``  — skip single-day items when ``False``.
+    * ``config.includedurations`` — skip multi-day items when ``False``.
+
+    The WBS compiled filter is cached on the config object (``_wbs_filter`` /
+    ``_wbs_filter_raw``) to avoid re-parsing on every call.
+    """
+    from shared.wbs_filter import WBSFilter  # local import avoids circular deps
+
+    # Compile (and cache) the WBS filter once per config.WBS value.
+    # CalendarConfig is a plain (non-frozen) dataclass so setattr is safe.
+    wbs_compiled = None
+    if config.WBS:
+        if getattr(config, "_wbs_filter_raw", None) != config.WBS:
+            setattr(config, "_wbs_filter", WBSFilter.parse(config.WBS))
+            setattr(config, "_wbs_filter_raw", config.WBS)
+        wbs_compiled = getattr(config, "_wbs_filter", None)
+
+    result: list[dict] = []
+    for ev in events:
+        # --- holidays always excluded ---
+        if ev.get("Notes") in ("HOLIDAY", "USFederal", "CanFED"):
+            continue
+
+        # --- config-level content filters ---
+        if config.ignorecomplete and ev.get("Percent_Complete") == 1:
+            continue
+        if config.milestones and not ev.get("Milestone"):
+            continue
+        if config.rollups and not ev.get("Rollup"):
+            continue
+        if wbs_compiled and not wbs_compiled.matches(ev.get("WBS")):
+            continue
+
+        # --- event-type filters ---
+        start = ev.get("Start") or ev.get("Start_Date", "")
+        end = ev.get("End") or ev.get("Finish_Date", "")
+        is_duration = start != end
+        if is_duration and not config.includedurations:
+            continue
+        if not is_duration and not config.includeevents:
+            continue
+
+        result.append(ev)
+    return result
+
+
 @dataclass
 class VisualizationResult:
     """Result of visualization generation."""
@@ -327,21 +389,8 @@ class BaseVisualizer(ABC):
         events: list,
         config: CalendarConfig,
     ) -> list:
-        """
-        Apply filtering based on config options.
-
-        Args:
-            events: Raw event list from database
-            config: Calendar configuration with filter settings
-
-        Returns:
-            Filtered event list
-        """
-        filtered = []
-        for event in events:
-            if self._should_include_event(event, config):
-                filtered.append(event)
-        return filtered
+        """Delegate to the module-level :func:`filter_events` helper."""
+        return filter_events(events, config)
 
     def _should_include_event(
         self,
@@ -349,44 +398,9 @@ class BaseVisualizer(ABC):
         config: CalendarConfig,
     ) -> bool:
         """
-        Check if event should be included based on filters.
+        Check if a single event passes all active filters.
 
-        Args:
-            event: Event dictionary
-            config: Calendar configuration
-
-        Returns:
-            True if event should be included
+        Delegates to :func:`filter_events` for consistency; kept for
+        backwards-compatibility with any subclass that may override it.
         """
-        # Skip holidays handled by day decoration
-        if event.get("Notes") in ("HOLIDAY", "USFederal", "CanFED"):
-            return False
-
-        # Skip complete items if configured
-        if config.ignorecomplete and event.get("Percent_Complete") == 1:
-            return False
-
-        # Milestones filter
-        if config.milestones and not event.get("Milestone"):
-            return False
-
-        # Rollups filter
-        if config.rollups and not event.get("Rollup"):
-            return False
-
-        # WBS filter
-        if config.WBS:
-            from shared.wbs_filter import WBSFilter
-
-            compiled = getattr(config, "_wbs_filter", None)
-            if (
-                compiled is None
-                or getattr(config, "_wbs_filter_raw", None) != config.WBS
-            ):
-                compiled = WBSFilter.parse(config.WBS)
-                setattr(config, "_wbs_filter", compiled)
-                setattr(config, "_wbs_filter_raw", config.WBS)
-            if compiled and not compiled.matches(event.get("WBS")):
-                return False
-
-        return True
+        return bool(filter_events([event], config))

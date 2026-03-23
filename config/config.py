@@ -72,9 +72,9 @@ class CalendarConfig:
     doc_title: str = field(
         default_factory=lambda: f"Calendar created {get_creation_date()}"
     )
-    doc_author: str = "Calendar 2015 - 2026  A. Lee Ingram"
+    doc_author: str = "A. Lee Ingram"
     doc_subject: str = "Calendar"
-    doc_keywords: str = "Weekly Event Calendar"
+    doc_keywords: str = ""
     command_line: str = ""
 
     # Data source description (for header/footer expansion)
