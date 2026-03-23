@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.2"
+__version__ = "26.03.23.3"
 
 import argparse
 import logging
@@ -275,10 +275,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "Command line parameters can be read from a file using @filename"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--version", action="version",
-        version=f"EventCalendar ({__version__})",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
