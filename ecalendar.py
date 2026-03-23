@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.3"
+__version__ = "26.03.23.4"
 
 import argparse
 import logging
@@ -235,7 +235,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     Calendar visualizers : weekly, mini, mini-icon, text-mini, timeline, blockplan
     Output utilities     : excelheader
     Inspection / listing : themes, fonts, fontsheet, papersizes, patterns,
-                           icons, iconsheet, colors, colorsheet, palettes, palette
+                           icons, iconsheet, colors, colorsheet, palettes, palettesheet
     Help                 : help <subcommand>
 
     Argument groups (per visualizer subcommand)
@@ -279,15 +279,15 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    weekly = sub.add_parser("weekly", help="Generate a weekly calendar")
-    mini = sub.add_parser("mini", help="Generate a mini calendar")
+    weekly = sub.add_parser("weekly", help="Generate a SVG containing weekly calendar")
+    mini = sub.add_parser("mini", help="Generate a SVG mini calendar")
     mini_icon = sub.add_parser("mini-icon", help="Generate a mini calendar with icons for day numbers")
     text_mini = sub.add_parser("text-mini", help="Generate a text only mini calendar")
-    timeline = sub.add_parser("timeline", help="Generate a timeline")
-    blockplan = sub.add_parser("blockplan", help="Generate a blockplan")
+    timeline = sub.add_parser("timeline", help="Generate a SVG timeline")
+    blockplan = sub.add_parser("blockplan", help="Generate a SVG blockplan")
     compactplan = sub.add_parser(
         "compactplan",
-        help="Generate a compressed activities timeline (duration lines above/below a central axis)",
+        help="Generate a SVG compressed activities timeline",
     )
     excelheader = sub.add_parser(
         "excelheader",
@@ -301,12 +301,12 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     palettes = sub.add_parser(
         "palettes", help="List available color palettes from database"
     )
-    palette = sub.add_parser("palette", help="Generate a preview of a named palette")
+    palettesheet = sub.add_parser("palettesheet", help="Generate a SVG preview of a named palette")
     iconsheet = sub.add_parser(
-        "iconsheet", help="Generate a grid preview of icons from database"
+        "iconsheet", help="Generate a SVG grid preview of icons from database"
     )
     colorsheet = sub.add_parser(
-        "colorsheet", help="Generate a grid preview of named colors from database"
+        "colorsheet", help="Generate a SVG grid preview of named colors from database"
     )
     fonts = sub.add_parser("fonts", help="List available registered fonts")
     fontsheet = sub.add_parser(
@@ -360,14 +360,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="End date in YYYYMMDD format (will be adjusted to full week)",
         )
 
-    # palette subcommand arguments
-    palette.add_argument(
+    # palettesheet subcommand arguments
+    palettesheet.add_argument(
         "palette_name",
         type=str,
         metavar="NAME",
         help="Name of the palette to preview (case-sensitive, from DB palettes table)",
     )
-    palette.add_argument(
+    palettesheet.add_argument(
         "--outputfile",
         "-of",
         type=str,
@@ -1036,7 +1036,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         icons,
         colors,
         palettes,
-        palette,
+        palettesheet,
         iconsheet,
         colorsheet,
         fontsheet,
@@ -1372,7 +1372,7 @@ def _open_calendar_db(db_path: str) -> CalendarDB:
 
     Called by:
         run() for every subcommand that needs database access: papersizes,
-        patterns, icons, iconsheet, colors, colorsheet, palettes, palette,
+        patterns, icons, iconsheet, colors, colorsheet, palettes, palettesheet,
         excelheader, and all calendar-visualizer commands.
 
     Calls:
@@ -1728,7 +1728,7 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
     themes without needing to render a full calendar.
 
     Called by:
-        run() when args.command == "palette".
+        run() when args.command == "palettesheet".
 
     Args:
         name:        Palette name shown in the SVG title.
@@ -2316,7 +2316,7 @@ def run(argv: list[str] | None = None) -> int:
           papersizes, patterns, icons, colors, palettes → DB query + print
           iconsheet → _generate_iconsheet_svg
           colorsheet→ _generate_colorsheet_svg (HSV-sorted via _hsv_sort_key)
-          palette   → _generate_palette_svg
+          palettesheet → _generate_palette_svg
 
     7.  Require begin/end dates; error if absent.
 
@@ -2569,7 +2569,7 @@ def run(argv: list[str] | None = None) -> int:
             print(f"  {name:<{col_width}}{count} colors")
         return 0
 
-    if args.command == "palette":
+    if args.command == "palettesheet":
         db = _open_calendar_db(args.database)
         colors = db.get_palette(args.palette_name)
         if colors is None:
