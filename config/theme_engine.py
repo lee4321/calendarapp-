@@ -379,6 +379,21 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # ExcelHeader
     ("excelheader", "font_name"): "excelheader_font_name",
     ("excelheader", "font_size"): "excelheader_font_size",
+    ("excelheader", "top_time_bands"): "excelheader_top_time_bands",
+    ("excelheader", "vertical_lines"): "excelheader_vertical_lines",
+    ("excelheader", "vertical_line_color"): "excelheader_vertical_line_color",
+    ("excelheader", "vertical_line_width"): "excelheader_vertical_line_width",
+    ("excelheader", "vertical_line_dasharray"): "excelheader_vertical_line_dasharray",
+    ("excelheader", "vertical_line_opacity"): "excelheader_vertical_line_opacity",
+    ("excelheader", "vertical_line_fill_color"): "excelheader_vertical_line_fill_color",
+    ("excelheader", "vertical_line_fill_opacity"): "excelheader_vertical_line_fill_opacity",
+    ("excelheader", "band_row_height"): "excelheader_band_row_height",
+    ("excelheader", "header_heading_fill_color"): "excelheader_header_heading_fill_color",
+    ("excelheader", "header_label_color"): "excelheader_header_label_color",
+    ("excelheader", "header_label_align_h"): "excelheader_header_label_align_h",
+    ("excelheader", "timeband_fill_color"): "excelheader_timeband_fill_color",
+    ("excelheader", "timeband_fill_palette"): "excelheader_timeband_fill_palette",
+    ("excelheader", "timeband_label_color"): "excelheader_timeband_label_color",
 }
 
 # Valid top-level sections in a theme file

@@ -830,9 +830,79 @@ class CalendarConfig:
 
     # ── ExcelHeader ───────────────────────────────────────────────────────────
     # Settings for the excelheader subcommand (Excel workbook output).
-    # Timebands and vertical_lines are shared with the blockplan_ config fields.
     excelheader_font_name: str = "Calibri"  # System-installed Excel font for all cells
     excelheader_font_size: int = 9  # Font size in points
+    excelheader_top_time_bands: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {
+                "label": "Fiscal Quarter",
+                "unit": "fiscal_quarter",
+                "label_format": "FY{fy} Q{q}",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "PI",
+                "unit": "interval",
+                "interval_days": 70,
+                "prefix": "PI ",
+                "start_index": 1,
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "Sprint",
+                "unit": "interval",
+                "interval_days": 14,
+                "prefix": "Sprint ",
+                "start_index": 1,
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "Month",
+                "unit": "month",
+                "date_format": "MMM YYYY",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "Week Number",
+                "unit": "week",
+                "label_format": "Week {week}",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "Date",
+                "unit": "date",
+                "date_format": "D",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "DoW",
+                "unit": "dow",
+                "date_format": "ddd",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+        ]
+    )
+    excelheader_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
+    excelheader_vertical_line_color: str = "red"
+    excelheader_vertical_line_width: float = 1.5
+    excelheader_vertical_line_dasharray: str | None = None
+    excelheader_vertical_line_opacity: float = 0.9
+    excelheader_vertical_line_fill_color: str = "none"
+    excelheader_vertical_line_fill_opacity: float = 0.2
+    excelheader_band_row_height: float = 18.0
+    excelheader_header_heading_fill_color: str = "none"
+    excelheader_header_label_color: str = "black"
+    excelheader_header_label_align_h: str = "left"  # left | center | right
+    excelheader_timeband_fill_color: str = "none"
+    excelheader_timeband_fill_palette: list[str] = field(default_factory=list)
+    excelheader_timeband_label_color: str = "black"
 
     # Overflow indicator
     overflow_indicator_icon: str = "overflow"

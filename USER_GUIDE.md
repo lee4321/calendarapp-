@@ -131,7 +131,7 @@ PYTHONPATH=. uv run python ecalendar.py palettes
 | `START_DATE` | yes | Start date in YYYYMMDD format |
 | `END_DATE` | yes | End date in YYYYMMDD format |
 
-Generates an Excel workbook (`.xlsx`) with blockplan-style timeband rows at the top, a column-header row, and 100 empty data rows ready for project planning. Timeband configuration is shared with `blockplan.top_time_bands` and `blockplan.vertical_lines` from the active theme. See [ExcelHeader](#excelheader-subcommand) for full details.
+Generates an Excel workbook (`.xlsx`) with timeband rows at the top, a column-header row, and 100 empty data rows ready for project planning. Timeband configuration uses `excelheader.top_time_bands` and `excelheader.vertical_lines` from the active theme. See [ExcelHeader](#excelheader-subcommand) for full details.
 
 #### `blockplan` rendering behavior
 
@@ -676,6 +676,29 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_blockplan_palette_name` | `blockplan.palette_name` | `str | None` | `None` | palette name |
 
 
+#### `excelheader`
+
+| Config field | Theme key | Type | Default | Explanation |
+|---|---|---|---|---|
+| `excelheader_band_row_height` | `excelheader.band_row_height` | `float` | `18.0` | default timeband row height in points |
+| `excelheader_font_name` | `excelheader.font_name` | `str` | `'Calibri'` | system-installed Excel font for all cells |
+| `excelheader_font_size` | `excelheader.font_size` | `int` | `9` | default font size in points |
+| `excelheader_header_heading_fill_color` | `excelheader.header_heading_fill_color` | `str` | `'none'` | heading cell (A:E) background color |
+| `excelheader_header_label_align_h` | `excelheader.header_label_align_h` | `str` | `'left'` | heading cell alignment: left \| center \| right |
+| `excelheader_header_label_color` | `excelheader.header_label_color` | `str` | `'black'` | heading cell label color |
+| `excelheader_timeband_fill_color` | `excelheader.timeband_fill_color` | `str` | `'none'` | default segment fill color |
+| `excelheader_timeband_fill_palette` | `excelheader.timeband_fill_palette` | `list[str]` | `[]` | palette names cycling across segments |
+| `excelheader_timeband_label_color` | `excelheader.timeband_label_color` | `str` | `'black'` | default segment label color |
+| `excelheader_top_time_bands` | `excelheader.top_time_bands` | `list[dict]` | see default | timeband rows; same schema as blockplan.top_time_bands |
+| `excelheader_vertical_line_color` | `excelheader.vertical_line_color` | `str` | `'red'` | default vertical line color |
+| `excelheader_vertical_line_dasharray` | `excelheader.vertical_line_dasharray` | `str \| None` | `None` | default vertical line dash pattern |
+| `excelheader_vertical_line_fill_color` | `excelheader.vertical_line_fill_color` | `str` | `'none'` | default column fill color |
+| `excelheader_vertical_line_fill_opacity` | `excelheader.vertical_line_fill_opacity` | `float` | `0.2` | default column fill opacity |
+| `excelheader_vertical_line_opacity` | `excelheader.vertical_line_opacity` | `float` | `0.9` | default vertical line opacity |
+| `excelheader_vertical_line_width` | `excelheader.vertical_line_width` | `float` | `1.5` | default vertical line width |
+| `excelheader_vertical_lines` | `excelheader.vertical_lines` | `list[dict]` | `[]` | vertical lines rendered as right-cell borders |
+
+
 ## Complex Structures Reference
 
 ### `hash_rules` — Conditional SVG Pattern Rules
@@ -893,7 +916,7 @@ Keys present in at least one other visualization but absent in the listed one:
 
 ## ExcelHeader Subcommand
 
-The `excelheader` subcommand generates an Excel workbook (`.xlsx`) containing blockplan-style timeband rows in the top rows of a worksheet, followed by a fixed column-header row and 100 blank data rows. It is intended as a ready-to-use project planning template.
+The `excelheader` subcommand generates an Excel workbook (`.xlsx`) containing timeband rows in the top rows of a worksheet, followed by a fixed column-header row and 100 blank data rows. It is intended as a ready-to-use project planning template.
 
 ### Usage
 
@@ -918,7 +941,7 @@ ecalendar.py excelheader 20260101 20260630 --theme corporate --weekends 0 --coun
 ```
 Columns A–E  : Activity  |  Effort  |  Duration  |  Scheduled Start  |  Scheduled End
 Columns F+   : one column per visible calendar day (width = 3 characters)
-Rows 1..N    : timeband rows — one per entry in blockplan.top_time_bands
+Rows 1..N    : timeband rows — one per entry in excelheader.top_time_bands
 Row  N+1     : column-header row with the A–E labels
 Rows N+2..   : 100 empty data rows for project tracking
 ```
@@ -927,10 +950,19 @@ Freeze panes are set at column F / the column-header row so timebands and label 
 
 ### Timeband Configuration
 
-Timebands and vertical lines are configured under the `blockplan` section of the active theme — the same bands used by the `blockplan` subcommand:
+Timebands and vertical lines are configured under the `excelheader` section of the active theme (independent of `blockplan`):
 
 ```yaml
-blockplan:
+excelheader:
+  font_name: "Calibri"
+  font_size: 9
+  band_row_height: 18
+  header_heading_fill_color: "none"
+  header_label_color: "black"
+  header_label_align_h: "left"
+  timeband_fill_color: "none"
+  timeband_label_color: "black"
+
   top_time_bands:
     - label: "Quarter"
       unit:  "fiscal_quarter"
@@ -945,6 +977,8 @@ blockplan:
       unit:  "date"
       date_format: "D"
 
+  vertical_line_color: "red"
+  vertical_line_width: 1.5
   vertical_lines:
     - band:   "Month"
       repeat: true
@@ -968,7 +1002,7 @@ excelheader:
 Per-band font overrides can be set directly in any band dict:
 
 ```yaml
-blockplan:
+excelheader:
   top_time_bands:
     - label:           "Quarter"
       unit:            "fiscal_quarter"

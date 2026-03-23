@@ -761,18 +761,77 @@ text_mini:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXCELHEADER — Excel workbook timeband header generator
-# Produces a .xlsx file with blockplan-style timeband rows at the top,
-# followed by a column-header row and 100 empty data rows.
-# Timeband and vertical_lines configuration is shared with the blockplan section.
+# Produces a .xlsx file with timeband rows at the top, followed by a
+# column-header row and 100 empty data rows.
+# ExcelHeader has its own independent top_time_bands and vertical_lines
+# configuration (not shared with blockplan).
 # ─────────────────────────────────────────────────────────────────────────────
 excelheader:
   font_name: "Calibri"   # (str) System-installed Excel font for all cells
   font_size: 9           # (int) Default font size in points
 
-  # Per-band Excel font overrides — add these keys directly inside any band dict
-  # under blockplan.top_time_bands:
-  #   excel_font_name: "Arial Narrow"   # font name for this band only
-  #   excel_font_size: 8                # font size for this band only
+  # ── Heading & timeband global defaults ───────────────────────────────────
+  band_row_height: 18             # (float) default row height in points for each timeband row
+  header_heading_fill_color: "none"  # (str) heading cell (A:E) background color
+  header_label_color: "black"     # (str) heading cell label color
+  header_label_align_h: "left"    # (str) heading cell alignment: left | center | right
+  timeband_fill_color: "none"     # (str) default segment fill color
+  timeband_fill_palette: []       # (list[str]) palette name(s) cycling across segments
+  timeband_label_color: "black"   # (str) default segment label color
+
+  # ── Vertical marker lines ─────────────────────────────────────────────────
+  # Global style defaults; each entry in vertical_lines: can override per line.
+  vertical_line_color:        "red"    # (str) default vertical line color
+  vertical_line_dasharray:    null     # (str|null) default dash pattern; e.g. "6,3"
+  vertical_line_fill_color:   "none"   # (str|null) default column fill; "none" = no fill
+  vertical_line_fill_opacity: 0.15     # (float 0–1) default fill opacity
+  vertical_line_opacity:      0.85     # (float 0–1) default line opacity
+  vertical_line_width:        1.5      # (float) default line width in points
+
+  # ── Configured vertical lines ────────────────────────────────────────────
+  # List of vertical marker lines rendered as right-cell borders on date columns.
+  # Each entry:
+  #   band        (str)         — time-band label to anchor to (case-insensitive)
+  #   align       (str)         — start | center | end  (which edge of the segment)
+  #   repeat      (bool)        — true = draw at every segment boundary in the band
+  #   value       (str)         — segment label to match when repeat is absent/false
+  #   color       (str)         — per-line color (overrides vertical_line_color)
+  #   width       (float)       — per-line width (overrides vertical_line_width)
+  vertical_lines: []
+  # Example:
+  # vertical_lines:
+  #   - band:    "Month"
+  #     repeat:  true
+  #     align:   "end"
+  #     color:   "grey"
+  #     width:   1.0
+
+  # ── Top time-band rows ───────────────────────────────────────────────────
+  # Same schema as blockplan top_time_bands.  Supported units:
+  #   fiscal_quarter | month | week | interval | date | dow | countdown | countup
+  # Per-band keys:
+  #   label, unit, date_format, fill_color, font_color, font_size, row_height,
+  #   show_every, label_color, label_fill_color, label_align_h,
+  #   excel_font_name, excel_font_size (Excel-specific per-band font overrides),
+  #   interval_days, prefix, start_index, label_format, anchor_date,
+  #   target_date, start_date, skip_weekends, skip_nonworkdays, label_values
+  top_time_bands:
+    - label:       "Fiscal Quarter"
+      unit:        "fiscal_quarter"
+      label_format: "FY{fy2} Q{q}"
+      row_height:  25
+      fill_color:  ["steelblue"]
+      font_color:  "white"
+      label_color: "dimgrey"
+
+    - label:       "Month"
+      unit:        "month"
+      date_format: "MMM"
+      row_height:  20
+      fill_color:  ["lightblue", "lightyellow"]
+      font_color:  "navy"
+      label_color: "dimgrey"
+      show_every:  1
 
 
 

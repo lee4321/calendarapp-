@@ -1,15 +1,15 @@
-"""Excel workbook generator — blockplan-style timeband header.
+"""Excel workbook generator — timeband header.
 
 Produces an .xlsx file whose top rows contain merged-cell timeband segments
-(driven by the same ``blockplan_top_time_bands`` config used by the blockplan
-visualizer), followed by a fixed column-header row and 100 empty data rows.
+(driven by ``excelheader_top_time_bands`` config), followed by a fixed
+column-header row and 100 empty data rows.
 
 Layout
 ------
 Columns A-E  : fixed project-tracking labels (Activity, Effort, Duration,
                Scheduled Start, Scheduled End)
 Columns F+   : one column per visible calendar day (width = 3 chars)
-Rows 1..N    : one row per band in blockplan_top_time_bands
+Rows 1..N    : one row per band in excelheader_top_time_bands
 Row  N+1     : column header row ("Activity" … date columns)
 Rows N+2..   : 100 empty data rows (holiday shading + vertical-line borders)
 
@@ -233,12 +233,12 @@ def _build_right_border_cols(
         align = str(line.get("align", "end")).strip().lower()
         line_color = str(
             line.get("color")
-            or getattr(config, "blockplan_vertical_line_color", "red")
+            or getattr(config, "excelheader_vertical_line_color", "red")
             or "red"
         )
         line_width = float(
             line.get("width")
-            or getattr(config, "blockplan_vertical_line_width", 1.5)
+            or getattr(config, "excelheader_vertical_line_width", 1.5)
             or 1.5
         )
         if not band_name:
@@ -313,8 +313,8 @@ def generate_excel_header(
         return
 
     # ── Configuration ─────────────────────────────────────────────────────────
-    top_bands: list[dict] = list(getattr(config, "blockplan_top_time_bands", []) or [])
-    vertical_lines: list[dict] = list(getattr(config, "blockplan_vertical_lines", []) or [])
+    top_bands: list[dict] = list(getattr(config, "excelheader_top_time_bands", []) or [])
+    vertical_lines: list[dict] = list(getattr(config, "excelheader_vertical_lines", []) or [])
     country: str | None = getattr(config, "country", None)
 
     font_name: str = str(getattr(config, "excelheader_font_name", None) or "Calibri")
@@ -370,7 +370,7 @@ def generate_excel_header(
         # Row height: band row_height (pts) × 0.75 → Excel height units
         row_h_pts = float(
             band.get("row_height")
-            or getattr(config, "blockplan_band_row_height", 18)
+            or getattr(config, "excelheader_band_row_height", 18)
             or 18
         )
         ws.row_dimensions[current_row].height = max(12.0, row_h_pts * 0.75)
@@ -379,17 +379,17 @@ def generate_excel_header(
         label_text = str(band.get("label", ""))
         heading_fill_color = str(
             band.get("label_fill_color")
-            or getattr(config, "blockplan_header_heading_fill_color", None)
+            or getattr(config, "excelheader_header_heading_fill_color", None)
             or ""
         )
         heading_label_color = str(
             band.get("label_color")
-            or getattr(config, "blockplan_header_label_color", None)
+            or getattr(config, "excelheader_header_label_color", None)
             or "black"
         )
         heading_align_h = str(
             band.get("label_align_h")
-            or getattr(config, "blockplan_header_label_align_h", None)
+            or getattr(config, "excelheader_header_label_align_h", None)
             or "left"
         ).lower()
         excel_h_align = (
@@ -423,13 +423,13 @@ def generate_excel_header(
 
         segs = band_segments.get(str(band.get("label", "")).strip().lower(), [])
 
-        band_fill_raw = band.get("fill_color", getattr(config, "blockplan_timeband_fill_color", "none"))
-        band_palette_raw = band.get("fill_palette", getattr(config, "blockplan_timeband_fill_palette", []))
+        band_fill_raw = band.get("fill_color", getattr(config, "excelheader_timeband_fill_color", "none"))
+        band_palette_raw = band.get("fill_palette", getattr(config, "excelheader_timeband_fill_palette", []))
         color_list = BlockPlanRenderer._resolve_color_list(band_fill_raw, band_palette_raw, db)
 
         seg_label_color = str(
             band.get("font_color")
-            or getattr(config, "blockplan_timeband_label_color", None)
+            or getattr(config, "excelheader_timeband_label_color", None)
             or "black"
         )
         show_every = max(1, int(band.get("show_every", 1)))

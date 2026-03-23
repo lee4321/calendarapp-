@@ -76,7 +76,7 @@ def test_excelheader_creates_file(tmp_path):
     """generate_excel_header() must produce a valid .xlsx file."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month", "date_format": "MMM"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -89,7 +89,7 @@ def test_excelheader_day_columns_start_at_f(tmp_path):
     """Date columns must begin at column F (index 6)."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Date", "unit": "date", "date_format": "D"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -106,7 +106,7 @@ def test_excelheader_fixed_label_columns(tmp_path):
     """Column-header row must contain the 5 fixed label strings in A–E."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -122,7 +122,7 @@ def test_excelheader_day_column_width(tmp_path):
     """Date columns (F+) must have width == 3 characters."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -136,7 +136,7 @@ def test_excelheader_multi_month_band_uses_merged_cells(tmp_path):
     """Month segments spanning multiple day-columns must be merged cells."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month", "date_format": "MMM"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -156,7 +156,7 @@ def test_excelheader_data_rows_count(tmp_path):
     """There must be exactly DATA_ROWS empty data rows below the timebands."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month"},
         {"label": "Day", "unit": "date", "date_format": "D"},
     ]
@@ -173,7 +173,7 @@ def test_excelheader_holiday_shading_applied(tmp_path):
     """Holiday dates must receive a background fill in the data rows."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month"},
     ]
     # Use federal color
@@ -202,15 +202,15 @@ def test_excelheader_vertical_lines_produce_right_borders(tmp_path):
     """Vertical lines in the theme become right-cell borders on data rows."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Week", "unit": "week", "label_format": "W{week}"},
     ]
     # Pin a vertical line to the end of each week segment
-    config.blockplan_vertical_lines = [
+    config.excelheader_vertical_lines = [
         {"band": "Week", "repeat": True, "align": "end", "color": "navy", "width": 2.0},
     ]
-    config.blockplan_vertical_line_color = "navy"
-    config.blockplan_vertical_line_width = 2.0
+    config.excelheader_vertical_line_color = "navy"
+    config.excelheader_vertical_line_width = 2.0
 
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
@@ -236,7 +236,7 @@ def test_excelheader_freeze_panes_set(tmp_path):
     """Freeze panes must be set at column F / column-header row."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Month", "unit": "month"},
     ]
     generate_excel_header(config, _DummyDB(), out)
@@ -255,7 +255,7 @@ def test_excelheader_weekends_excluded_when_style_zero(tmp_path):
     config.adjustedstart = "20260105"
     config.adjustedend = "20260111"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
+    config.excelheader_top_time_bands = [
         {"label": "Date", "unit": "date", "date_format": "D"},
     ]
     generate_excel_header(config, _DummyDB(), out)
