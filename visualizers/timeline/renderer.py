@@ -123,8 +123,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 drawsvg.Rectangle(
                     0,
                     0,
-                    config.pageX,
-                    config.pageY,
+                    round(config.pageX, 2),
+                    round(config.pageY, 2),
                     fill=config.timeline_background_color,
                 )
             )

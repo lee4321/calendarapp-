@@ -36,6 +36,11 @@ def _is_none_color(color: str | None) -> bool:
     return color is None or str(color).strip().lower() in _NONE_COLORS
 
 
+def _r(v: float, n: int = 2) -> float:
+    """Round a numeric value for cleaner SVG output."""
+    return round(v, n)
+
+
 class BaseSVGRenderer(ABC):
     """
     Base class for SVG rendering with shared functionality.
@@ -91,17 +96,17 @@ class BaseSVGRenderer(ABC):
         if stroke_dasharray:
             extra["stroke_dasharray"] = stroke_dasharray
         rect = drawsvg.Rectangle(
-            x,
-            y,
-            w,
-            h,
+            _r(x),
+            _r(y),
+            _r(w),
+            _r(h),
             fill=fill,
             stroke=stroke,
             fill_opacity=fill_opacity,
             stroke_opacity=stroke_opacity,
-            stroke_width=stroke_width,
-            rx=rx,
-            ry=rx,
+            stroke_width=_r(stroke_width),
+            rx=_r(rx),
+            ry=_r(rx),
             **extra,
         )
         self._drawing.append(rect)
@@ -157,7 +162,7 @@ class BaseSVGRenderer(ABC):
             if measured > max_width and measured > 0:
                 scale_x = max_width / measured
                 fit_transform = (
-                    f"translate({x} {y}) scale({scale_x:.6f} 1) translate({-x} {-y})"
+                    f"translate({_r(x)} {_r(y)}) scale({scale_x:.6f} 1) translate({_r(-x)} {_r(-y)})"
                 )
                 combined_transform = (
                     f"{transform} {fit_transform}".strip()
@@ -207,12 +212,12 @@ class BaseSVGRenderer(ABC):
         if stroke_dasharray:
             extra["stroke_dasharray"] = stroke_dasharray
         line = drawsvg.Line(
-            x1,
-            y1,
-            x2,
-            y2,
+            _r(x1),
+            _r(y1),
+            _r(x2),
+            _r(y2),
             stroke=stroke,
-            stroke_width=stroke_width,
+            stroke_width=_r(stroke_width),
             stroke_opacity=stroke_opacity,
             **extra,
         )
@@ -244,13 +249,13 @@ class BaseSVGRenderer(ABC):
             extra["stroke_dasharray"] = stroke_dasharray
         group = drawsvg.Group(
             stroke=stroke,
-            stroke_width=stroke_width,
+            stroke_width=_r(stroke_width),
             stroke_opacity=stroke_opacity,
             fill="none",
             **extra,
         )
         for x1, y1, x2, y2 in line_list:
-            group.append(drawsvg.Line(x1, y1, x2, y2))
+            group.append(drawsvg.Line(_r(x1), _r(y1), _r(x2), _r(y2)))
         self._drawing.append(group)
 
     def _draw_image(
@@ -276,10 +281,10 @@ class BaseSVGRenderer(ABC):
         if transform:
             extra["transform"] = transform
         img = drawsvg.Image(
-            x,
-            y,
-            w,
-            h,
+            _r(x),
+            _r(y),
+            _r(w),
+            _r(h),
             path=path,
             embed=True,
             **extra,
@@ -400,12 +405,12 @@ class BaseSVGRenderer(ABC):
             return
 
         self._content_bbox_svg = (min_x, min_y, max_x, max_y)
-        content_w = round(max_x - min_x, 4)
-        content_h = round(max_y - min_y, 4)
+        content_w = _r(max_x - min_x)
+        content_h = _r(max_y - min_y)
         # Coordinates are already SVG-native; min_y is the SVG viewBox top edge.
         self._drawing.view_box = (
-            round(min_x, 4),
-            round(min_y, 4),
+            _r(min_x),
+            _r(min_y),
             content_w,
             content_h,
         )
@@ -606,8 +611,8 @@ class BaseSVGRenderer(ABC):
 
         # Wrap in a positioned SVG element
         nested_svg = (
-            f'<svg x="{x}" y="{y}" width="{target_width}" '
-            f'height="{target_height}" '
+            f'<svg x="{_r(x)}" y="{_r(y)}" width="{_r(target_width)}" '
+            f'height="{_r(target_height)}" '
             f'preserveAspectRatio="xMidYMid meet">'
             f"{svg_content}</svg>"
         )
@@ -709,7 +714,7 @@ class BaseSVGRenderer(ABC):
             f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
         )
         nested_svg = (
-            f'<svg x="{draw_x}" y="{draw_y}" width="{size}" height="{size}" '
+            f'<svg x="{_r(draw_x)}" y="{_r(draw_y)}" width="{_r(size)}" height="{_r(size)}" '
             f'viewBox="{viewbox}" preserveAspectRatio="xMidYMid meet"{style_attr}>'
             f"{inner}</svg>"
         )

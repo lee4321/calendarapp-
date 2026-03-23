@@ -668,7 +668,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 icon_y = axis_y - flag_h - icon_size / 2.0
                 self._drawing.append(
                     drawsvg.Raw(
-                        f'<g transform="translate({icon_x},{icon_y}) scale({icon_size/24:.4f})">'
+                        f'<g transform="translate({icon_x:.2f},{icon_y:.2f}) scale({icon_size/24:.4f})">'
                         f'{icon_svg}</g>'
                     )
                 )
