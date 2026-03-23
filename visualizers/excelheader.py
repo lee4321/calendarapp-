@@ -531,7 +531,7 @@ def generate_excel_header(
     # ── Freeze panes ──────────────────────────────────────────────────────────
     # Freeze everything above the column-header row and left of the date columns
     freeze_cell = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
-    ws.freeze_panes = freeze_cell
+    # ws.freeze_panes = freeze_cell
 
     # ── Save ──────────────────────────────────────────────────────────────────
     wb.save(str(out_path))
