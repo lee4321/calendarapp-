@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-EventCalendar v9 - SVG Calendar Generator
+EventCalendar - SVG Calendar Generator
 
-Creates customizable SVG calendars with events from a SQLite database.
-Supports multiple visualization formats including weekly, mini, text-mini,
-and timeline views.
+Creates highly customizable calendars with events from a SQLite database.
 
 (c) 2026 A. Lee Ingram
 """
 
 from __future__ import annotations
+
+__version__ = "26.03.23.1"
 
 import argparse
 import logging
@@ -265,15 +265,19 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         Fully configured ArgumentParser ready for parse_args().
     """
     parser = argparse.ArgumentParser(
-        prog="EventCalendar v9",
+        prog="EventCalendar",
         fromfile_prefix_chars="@",
-        description="Create SVG calendars with events from SQLite database",
+        description="Create calendars with events from a SQLite database",
         epilog=(
-            "EventCalendar v, Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC\n"
+            f"EventCalendar ({__version__}), Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC\n"
             "Change calendar configuration by modifying config/config.py\n"
             "Command line parameters can be read from a file using @filename"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version", action="version",
+        version=f"EventCalendar ({__version__})",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2380,6 +2384,8 @@ def run(argv: list[str] | None = None) -> int:
 
     # Configure logging
     _configure_logging(args.verbose, args.quiet)
+
+    print(f"EventCalendar v9 ({__version__})")
 
     # Default output extension for text-mini
     if (

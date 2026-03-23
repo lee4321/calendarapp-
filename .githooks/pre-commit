@@ -1,0 +1,20 @@
+#!/bin/bash
+
+FILE="ecalendar.py"
+
+# Only update if ecalendar.py is staged
+if git diff --cached --name-only | grep -q "^${FILE}$"; then
+    TODAY=$(date +"%y.%m.%d")
+    CURRENT=$(grep -o '__version__ = "[^"]*"' "$FILE" | sed 's/__version__ = "//;s/"//')
+
+    # If current version starts with today's date, increment the build number
+    if [[ "$CURRENT" == "$TODAY"* ]]; then
+        N=$(echo "$CURRENT" | awk -F. '{print $4 + 1}')
+    else
+        N=0
+    fi
+
+    NEW_VERSION="${TODAY}.${N}"
+    sed -i '' "s/^__version__ = .*/__version__ = \"${NEW_VERSION}\"/" "$FILE"
+    git add "$FILE"
+fi
