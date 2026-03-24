@@ -486,11 +486,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_details_title_text` | `mini_details.title_text` | `str` | `'Event Details'` | title text |
 | `mini_duration_bar_stroke_dasharray` | `mini_calendar.duration_bar_stroke_dasharray` | `str | None` | `None` | duration bar stroke dasharray |
 | `mini_duration_bar_stroke_opacity` | `mini_calendar.duration_bar_stroke_opacity` | `float` | `0.7` | duration bar stroke opacity |
-| `mini_grid_line_stroke_color` | `mini_calendar.grid_line_stroke_color` | `str` | `'lightgrey'` | mini grid line stroke color |
-| `mini_grid_line_stroke_opacity` | `mini_calendar.grid_line_stroke_opacity` | `float` | `0.5` | mini grid line stroke opacity |
-| `mini_grid_line_stroke_width` | `mini_calendar.grid_line_stroke_width` | `float` | `0.25` | mini grid line stroke width |
-| `mini_grid_line_stroke_dasharray` | `mini_calendar.grid_line_stroke_dasharray` | `str | None` | `None` | grid line stroke dasharray |
-| `mini_hash_line_stroke_dasharray` | `mini_calendar.hash_line_stroke_dasharray` | `str | None` | `None` | hash line stroke dasharray |
+| `mini_grid_line_color` | `mini_calendar.grid_line_color` | `str` | `'lightgrey'` | mini grid line stroke color |
+| `mini_grid_line_opacity` | `mini_calendar.grid_line_opacity` | `float` | `0.5` | mini grid line stroke opacity |
+| `mini_grid_line_width` | `mini_calendar.grid_line_width` | `float` | `0.25` | mini grid line stroke width |
+| `mini_grid_line_dasharray` | `mini_calendar.grid_line_dasharray` | `str | None` | `None` | grid line stroke dasharray |
+| `mini_hash_line_dasharray` | `mini_calendar.hash_line_dasharray` | `str | None` | `None` | hash line stroke dasharray |
 | `mini_header_color` | `mini_calendar.header_color` | `str` | `'grey'` | header color |
 | `mini_header_font` | `mini_calendar.header_font` | `str` | `Fonts.J_REGULAR` | Day-of-week header font |
 | `mini_header_font_size` | `mini_calendar.header_font_size` | `float | None` | `None` | header font size |
@@ -589,7 +589,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_today_label_offset_y` | `timeline.today_label_offset_y` | `float` | `10.0` | today label offset y |
 | `timeline_today_label_text` | `timeline.today_label_text` | `str` | `'Today'` | today label text |
 | `timeline_today_line_color` | `timeline.today_line_color` | `str` | `'grey'` | today line color |
-| `timeline_today_line_stroke_dasharray` | `timeline.today_line_stroke_dasharray` | `str | None` | `None` | today line stroke dasharray |
+| `timeline_today_line_dasharray` | `timeline.today_line_dasharray` | `str | None` | `None` | today line stroke dasharray |
 | `timeline_top_colors` | `timeline.top_colors` | `list[str]` | `field(default_factory=lambda: ['deepskyblue', 'gold', 'tomato', 'springgreen'...` | top colors |
 
 #### `blockplan`

@@ -1000,14 +1000,14 @@ class TestStrokeDasharrayTimelineMini:
         )
         assert config.timeline_tick_stroke_dasharray == "3,3"
 
-    def test_timeline_today_line_stroke_dasharray_applied(self):
+    def test_timeline_today_line_dasharray_applied(self):
         config = self._apply_theme_data(
             {
                 "theme": {"name": "T"},
-                "timeline": {"today_line_stroke_dasharray": "6,2"},
+                "timeline": {"today_line_dasharray": "6,2"},
             }
         )
-        assert config.timeline_today_line_stroke_dasharray == "6,2"
+        assert config.timeline_today_line_dasharray == "6,2"
 
     def test_timeline_label_stroke_dasharray_applied(self):
         config = self._apply_theme_data(
@@ -1029,29 +1029,29 @@ class TestStrokeDasharrayTimelineMini:
 
     # ── Mini theme mappings ──────────────────────────────────────────────────
 
-    def test_mini_grid_line_stroke_dasharray_applied(self):
+    def test_mini_grid_line_dasharray_applied(self):
         config = self._apply_theme_data(
             {
                 "theme": {"name": "T"},
-                "mini_calendar": {"grid_line_stroke_dasharray": "1,2"},
+                "mini_calendar": {"grid_line_dasharray": "1,2"},
             }
         )
-        assert config.mini_grid_line_stroke_dasharray == "1,2"
+        assert config.mini_grid_line_dasharray == "1,2"
 
-    def test_mini_grid_line_stroke_style_applied(self):
+    def test_mini_grid_line_style_applied(self):
         config = self._apply_theme_data(
             {
                 "theme": {"name": "T"},
                 "mini_calendar": {
-                    "grid_line_stroke_color": "orange",
-                    "grid_line_stroke_width": 0.5,
-                    "grid_line_stroke_opacity": 0.3,
+                    "grid_line_color": "orange",
+                    "grid_line_width": 0.5,
+                    "grid_line_opacity": 0.3,
                 },
             }
         )
-        assert config.mini_grid_line_stroke_color == "orange"
-        assert config.mini_grid_line_stroke_width == 0.5
-        assert config.mini_grid_line_stroke_opacity == 0.3
+        assert config.mini_grid_line_color == "orange"
+        assert config.mini_grid_line_width == 0.5
+        assert config.mini_grid_line_opacity == 0.3
 
     def test_mini_day_number_digits_applied(self):
         config = self._apply_theme_data(
@@ -1144,16 +1144,16 @@ class TestStrokeDasharrayTimelineMini:
         config = create_calendar_config()
         assert config.timeline_axis_stroke_dasharray is None
         assert config.timeline_tick_stroke_dasharray is None
-        assert config.timeline_today_line_stroke_dasharray is None
+        assert config.timeline_today_line_dasharray is None
         assert config.timeline_label_stroke_dasharray is None
         assert config.timeline_duration_bar_stroke_dasharray is None
 
     def test_mini_dasharray_fields_default_to_none(self):
         config = create_calendar_config()
-        assert config.mini_grid_line_stroke_dasharray is None
-        assert config.mini_grid_line_stroke_color == "lightgrey"
-        assert config.mini_grid_line_stroke_width == 0.25
-        assert config.mini_grid_line_stroke_opacity == 0.5
+        assert config.mini_grid_line_dasharray is None
+        assert config.mini_grid_line_color == "lightgrey"
+        assert config.mini_grid_line_width == 0.25
+        assert config.mini_grid_line_opacity == 0.5
         assert config.mini_day_number_glyphs is None
         assert config.mini_day_number_digits is None
         assert config.mini_show_adjacent is True

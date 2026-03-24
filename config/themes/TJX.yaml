@@ -215,7 +215,7 @@ timeline:
   duration_bar_fill_opacity: 0.75
   axis_stroke_dasharray: null
   tick_stroke_dasharray: null
-  today_line_stroke_dasharray: null
+  today_line_dasharray: null
   label_stroke_dasharray: null
   duration_bar_stroke_dasharray: null
   connector_stroke_dasharray: "4 2"
@@ -503,13 +503,13 @@ mini_calendar:
   week_number_font_size: null
   week_number_color: "darkgrey"
   week_number_label_format: "W{num}"
-  grid_line_stroke_color: "lightgrey"
-  grid_line_stroke_width: 0.251
-  grid_line_stroke_opacity: 0.5
-  grid_line_stroke_dasharray: null
+  grid_line_color: "lightgrey"
+  grid_line_width: 0.251
+  grid_line_opacity: 0.5
+  grid_line_dasharray: null
   cell_box_stroke_dasharray: null
   strikethrough_stroke_dasharray: null
-  hash_line_stroke_dasharray: null
+  hash_line_dasharray: null
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:

@@ -330,7 +330,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 4. Grid lines
         if config.mini_grid_lines:
-            grid_stroke_width = config.mini_grid_line_stroke_width
+            grid_stroke_width = config.mini_grid_line_width
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset,
@@ -338,10 +338,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
-                stroke=config.mini_grid_line_stroke_color,
+                stroke=config.mini_grid_line_color,
                 stroke_width=grid_stroke_width,
-                stroke_opacity=config.mini_grid_line_stroke_opacity,
-                stroke_dasharray=config.mini_grid_line_stroke_dasharray or None,
+                stroke_opacity=config.mini_grid_line_opacity,
+                stroke_dasharray=config.mini_grid_line_dasharray or None,
             )
 
         # Determine text to display
@@ -544,7 +544,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 stroke="lightgrey",
                 stroke_width=0.3,
                 stroke_opacity=0.5,
-                stroke_dasharray=config.mini_hash_line_stroke_dasharray or None,
+                stroke_dasharray=config.mini_hash_line_dasharray or None,
             )
 
     @staticmethod

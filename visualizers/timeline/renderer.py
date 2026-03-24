@@ -1505,7 +1505,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke=config.timeline_today_line_color,
             stroke_width=1.0,
             stroke_opacity=0.55,
-            stroke_dasharray=config.timeline_today_line_stroke_dasharray or None,
+            stroke_dasharray=config.timeline_today_line_dasharray or None,
         )
         label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)

@@ -196,9 +196,9 @@ def test_mini_event_icon_replaces_day_number():
 def test_mini_grid_lines_are_inset_to_avoid_bottom_clip():
     config = _config()
     config.mini_grid_lines = True
-    config.mini_grid_line_stroke_color = "orange"
-    config.mini_grid_line_stroke_width = 0.5
-    config.mini_grid_line_stroke_opacity = 0.3
+    config.mini_grid_line_color = "orange"
+    config.mini_grid_line_width = 0.5
+    config.mini_grid_line_opacity = 0.3
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):

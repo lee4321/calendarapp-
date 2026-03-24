@@ -163,13 +163,13 @@ class CalendarConfig:
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
     mini_duration_bar_stroke_opacity: float = 0.7
     mini_grid_lines: bool = False  # Draw grid lines between cells
-    mini_grid_line_stroke_color: str = "lightgrey"
-    mini_grid_line_stroke_width: float = 0.25
-    mini_grid_line_stroke_opacity: float = 0.5
-    mini_grid_line_stroke_dasharray: str | None = None
+    mini_grid_line_color: str = "lightgrey"
+    mini_grid_line_width: float = 0.25
+    mini_grid_line_opacity: float = 0.5
+    mini_grid_line_dasharray: str | None = None
     mini_cell_box_stroke_dasharray: str | None = None
     mini_strikethrough_stroke_dasharray: str | None = None
-    mini_hash_line_stroke_dasharray: str | None = None
+    mini_hash_line_dasharray: str | None = None
     mini_duration_bar_stroke_dasharray: str | None = None
     mini_details_separator_stroke_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
@@ -575,7 +575,7 @@ class CalendarConfig:
     # stroke-dasharray for timeline elements
     timeline_axis_stroke_dasharray: str | None = None
     timeline_tick_stroke_dasharray: str | None = None
-    timeline_today_line_stroke_dasharray: str | None = None
+    timeline_today_line_dasharray: str | None = None
     timeline_label_stroke_dasharray: str | None = None
     timeline_duration_bar_stroke_dasharray: str | None = None
     timeline_connector_stroke_dasharray: str | None = None

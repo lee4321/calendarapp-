@@ -341,7 +341,7 @@ timeline:
   today_label_offset_y:             null          # (float|null) vertical offset for today label
   today_label_text:                 "Today"       # (str) label text shown on the today line
   today_line_color:                 "tomato"      # (str) today vertical line color
-  today_line_stroke_dasharray:      "6,3"         # (str|null) today line dash pattern
+  today_line_dasharray:      "6,3"         # (str|null) today line dash pattern
   top_colors:                       []            # (list[str]) colors cycling above axis
 
   # ── Timeline text ──────────────────────────────────────────────────────
@@ -662,11 +662,11 @@ mini_calendar:
   cell_box_stroke_dasharray:       null   # (str|null) day cell border dash; null = solid
   duration_bar_stroke_dasharray:   null   # (str|null) duration bar border dash
   duration_bar_stroke_opacity:     0.8    # (float 0–1) duration bar border opacity
-  grid_line_stroke_color:          "grey" # (str) grid line color
-  grid_line_stroke_dasharray:      null   # (str|null) grid line dash pattern
-  grid_line_stroke_opacity:        0.4    # (float 0–1) grid line opacity
-  grid_line_stroke_width:          0.5    # (float) grid line width in points
-  hash_line_stroke_dasharray:      null   # (str|null) hash decoration line dash
+  grid_line_color:          "grey" # (str) grid line color
+  grid_line_dasharray:      null   # (str|null) grid line dash pattern
+  grid_line_opacity:        0.4    # (float 0–1) grid line opacity
+  grid_line_width:          0.5    # (float) grid line width in points
+  hash_line_dasharray:      null   # (str|null) hash decoration line dash
   milestone_stroke_color:          "navy" # (str) milestone circle border color
   milestone_stroke_opacity:        0.8    # (float 0–1) milestone circle border opacity
   milestone_stroke_width:          1.0    # (float) milestone circle border width

@@ -153,15 +153,15 @@ This plan addresses three areas of improvement:
 
 ### 1.8 Stroke vs. Line Naming
 
-**Problem:** `mini_grid_line_stroke_color` combines both `line_` and `stroke_`, while other fields use one or the other.
+**Problem:** `mini_grid_line_color` combines both `line_` and `stroke_`, while other fields use one or the other.
 
 **Convention to adopt:**
 - `*_line_*` for visual line elements (grid lines, axis lines, today line, timeband dividers)
 - `*_stroke_*` for SVG stroke properties on shapes (boxes, bars, circles, duration bars)
-- Never combine both (`grid_line_stroke_color` -> `grid_line_color`)
+- Never combine both (`grid_line_color` -> `grid_line_color`)
 
 **Steps:**
-1. Rename mini grid line fields: `mini_grid_line_stroke_color` -> `mini_grid_line_color`, etc.
+1. Rename mini grid line fields: `mini_grid_line_color` -> `mini_grid_line_color`, etc.
 2. Rename other combined fields similarly
 3. Update mini/renderer.py, theme_engine.py, SAMPLE.yaml, all theme YAMLs
 
@@ -510,8 +510,8 @@ After all changes, the naming convention should be:
 | 25 | ~~`theme_hashlinecolor`~~ | `theme_hash_line_color` | config.py, weekly/renderer.py | **DONE** |
 | 26 | ~~`theme_fiscalperiodcolors`~~ | `theme_fiscal_period_colors` | config.py, weekly/renderer.py, mini/renderer.py | **DONE** |
 | 27 | ~~`theme_monthcolors`~~ | `theme_month_colors` | config.py, weekly/renderer.py, mini/renderer.py | **DONE** |
-| 28 | `mini_grid_line_stroke_color` | `mini_grid_line_color` | config.py, mini/renderer.py |
-| 29 | `mini_grid_line_stroke_width` | `mini_grid_line_width` | config.py, mini/renderer.py |
-| 30 | `mini_grid_line_stroke_opacity` | `mini_grid_line_opacity` | config.py, mini/renderer.py |
-| 31 | `mini_grid_line_stroke_dasharray` | `mini_grid_line_dasharray` | config.py, mini/renderer.py |
+| 28 | `mini_grid_line_color` | `mini_grid_line_color` | config.py, mini/renderer.py |
+| 29 | `mini_grid_line_width` | `mini_grid_line_width` | config.py, mini/renderer.py |
+| 30 | `mini_grid_line_opacity` | `mini_grid_line_opacity` | config.py, mini/renderer.py |
+| 31 | `mini_grid_line_dasharray` | `mini_grid_line_dasharray` | config.py, mini/renderer.py |
 | 32 | `event_icon_font_size` | `event_icon_size` | config.py, weekly/renderer.py |
