@@ -1,0 +1,14 @@
+# ── Content Filtering ─────────────────────────────────────────
+# --filter=                    # Filter fonts by name substring (case-insensitive)
+# --fullset                    # Show every glyph instead of three fixed sample rows
+
+# ── Visual Style ──────────────────────────────────────────────
+# --color=#222222              # Glyph color
+
+# ── Output ────────────────────────────────────────────────────
+# --outputfile=                # Output SVG filename (default: output/fontsheet.svg)
+# --database=calendar.db       # Path to SQLite database file
+
+# ── Logging ───────────────────────────────────────────────────
+# --verbose                    # Increase verbosity (-v, -vv, -vvv)
+# --quiet                      # Suppress all output except errors

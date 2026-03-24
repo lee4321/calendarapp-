@@ -1,0 +1,22 @@
+# ── Date Range ────────────────────────────────────────────────
+# Start date (YYYYMMDD)
+# 20260101
+# End date (YYYYMMDD)
+# 20261231
+
+# ── Content Filtering ─────────────────────────────────────────
+# --noevents                   # Exclude single-day events
+# --nodurations                # Exclude multi-day durations
+# --ignorecomplete             # Exclude 100% complete items
+# --milestones                 # Show only milestones
+# --rollups                    # Show only rollup entries
+# --WBS=                       # WBS filter (e.g. PROJ.*,!PROJ.abandoned)
+# --country=                   # ISO country code(s) for holidays (e.g. US,CA,GB)
+
+# ── Output ────────────────────────────────────────────────────
+# --outputfile=                # Output CSV filename (default: output/exportdata_YYYYMMDD.csv)
+# --database=calendar.db       # Path to SQLite database file
+
+# ── Logging ───────────────────────────────────────────────────
+# --verbose                    # Increase verbosity (-v, -vv, -vvv)
+# --quiet                      # Suppress all output except errors

@@ -1,47 +1,72 @@
-20260101
-20261231
---database=calendar.db
---outputfile=
---theme=
---papersize=Letter
---orientation=landscape
---shrink
---weekends=0
---margin
---header
-# --footer
---monthnames
-# --headerleft=Left Header
---headercenter=2026
-# --headerright=Right Header
---footerleft=Left Footer
---footercenter=Center Footer
---footerright=Right Footer
---watermark=DRAFT
---watermark-rotation-angle=0.0
---imagemark=
+# ── Date Range ────────────────────────────────────────────────
+# Start date (YYYYMMDD), adjusted to full week
+# 20260101
+# End date (YYYYMMDD), adjusted to full week
+# 20261231
 
-# Pass empty to generate a calendar without events and durations 
-# --empty
+# ── Page Layout ───────────────────────────────────────────────
+# --papersize=Widescreen       # Paper size (Widescreen, Letter, Tabloid, A4, A3, etc.)
+# --orientation=landscape      # Page orientation (landscape or portrait)
+# --weekends=0                 # 0=Mon-Fri, 1=Sun-Sat, 2=half Sun start, 3=Mon-Sun, 4=half Mon start
+# --margin                     # Add page margins
+# --header                     # Include page header area
+# --footer                     # Include page footer area
+# --monthnames                 # Show month names on calendar
+# --shrink                     # Shrink SVG to bounding box of content
 
---shade
-# --noevents
-# --nodurations
-# --ignorecomplete
---milestones
-# --rollups
-# --includenotes
-# --WBS=
-# --overflow
---country=US
---mini-columns=3
---mini-rows=4
---mini-title-format=MMMM
---mini-no-adjacent
---weeknumbers
---week1-start=
---mini-grid-lines
-# --mini-details
+# ── Header / Footer Text ─────────────────────────────────────
+# Supports template variables: [now], [date], [startdate], [enddate], [events]
+# --headerleft=                # Left-aligned header text
+# --headercenter=              # Center-aligned header text
+# --headerright=               # Right-aligned header text
+# --footerleft=                # Left-aligned footer text
+# --footercenter=              # Center-aligned footer text
+# --footerright=               # Right-aligned footer text
 
-# --verbose
-# --quiet
+# ── Watermark ─────────────────────────────────────────────────
+# --watermark-text=            # Watermark text (supports template variables)
+# --watermark-rotation-angle=  # Rotate watermark text by degrees (clockwise)
+# --watermark-image=           # Path to watermark image file
+
+# ── Content Filtering ─────────────────────────────────────────
+# --empty                      # Create blank calendar (no events)
+# --shade                      # Shade current date
+# --noevents                   # Exclude single-day events
+# --nodurations                # Exclude multi-day durations
+# --ignorecomplete             # Exclude 100% complete items
+# --milestones                 # Show only milestones
+# --rollups                    # Show only rollup entries
+# --includenotes               # Show notes with event names
+# --WBS=                       # WBS filter (e.g. PROJ.*,!PROJ.abandoned)
+# --overflow                   # Create overflow page for items that didn't fit
+# --country=                   # ISO country code(s) for holidays (e.g. US,CA,GB)
+
+# ── Visual Style ──────────────────────────────────────────────
+# --theme=                     # Theme name or path to .yaml theme file
+
+# ── Mini Calendar Options ─────────────────────────────────────
+# --mini-columns=              # Number of months per row (default: 3)
+# --mini-rows=                 # Number of rows of months (0 = auto from date range)
+# --mini-title-format=         # Format string for month title (default: MMM YY)
+# --mini-no-adjacent           # Hide leading/trailing days from adjacent months
+# --mini-grid-lines            # Draw grid lines between day cells
+# --mini-details               # Generate a second SVG with event details
+
+# ── Week Numbers ──────────────────────────────────────────────
+# --weeknumbers                # Show week numbers
+# --week-number-mode=iso       # Week numbering system (iso or custom)
+# --week1-start=               # Anchor date for week 1 (YYYYMMDD); implies custom mode
+
+# ── Fiscal Calendar ───────────────────────────────────────────
+# --fiscal=                    # Fiscal overlay (nrf-454, nrf-445, nrf-544, 13-period)
+# --fiscal-year-offset=        # Offset for displayed fiscal year number (0, 1, or -1)
+# --fiscal-colors              # Use fiscal period colors for day box backgrounds
+
+# ── Output ────────────────────────────────────────────────────
+# --outputfile=                # Output SVG filename (written under output/)
+# --embed-data                 # Embed source event data (CSV) inside SVG metadata
+# --database=calendar.db       # Path to SQLite database file
+
+# ── Logging ───────────────────────────────────────────────────
+# --verbose                    # Increase verbosity (-v, -vv, -vvv)
+# --quiet                      # Suppress all output except errors

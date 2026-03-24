@@ -44,6 +44,15 @@
 # ── Visual Style ──────────────────────────────────────────────
 # --theme=                     # Theme name or path to .yaml theme file
 
+# ── Mini Calendar Options ─────────────────────────────────────
+# --mini-columns=              # Number of months per row (default: 3)
+# --mini-rows=                 # Number of rows of months (0 = auto from date range)
+# --mini-title-format=         # Format string for month title (default: MMM YY)
+# --mini-no-adjacent           # Hide leading/trailing days from adjacent months
+# --mini-grid-lines            # Draw grid lines between day cells
+# --mini-details               # Generate a second SVG with event details
+# --mini-icon-set=             # Icon set for day numbers (squares, darksquare, darkcircles, circles, squircles, darksquircles)
+
 # ── Week Numbers ──────────────────────────────────────────────
 # --weeknumbers                # Show week numbers
 # --week-number-mode=iso       # Week numbering system (iso or custom)

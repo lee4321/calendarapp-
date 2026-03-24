@@ -1,0 +1,13 @@
+# ── Content Filtering ─────────────────────────────────────────
+# --filter=                    # Filter icons by name substring (case-insensitive)
+
+# ── Visual Style ──────────────────────────────────────────────
+# --color=#333333              # Stroke color for icons
+
+# ── Output ────────────────────────────────────────────────────
+# --outputfile=                # Output SVG filename (default: output/iconsheet.svg)
+# --database=calendar.db       # Path to SQLite database file
+
+# ── Logging ───────────────────────────────────────────────────
+# --verbose                    # Increase verbosity (-v, -vv, -vvv)
+# --quiet                      # Suppress all output except errors

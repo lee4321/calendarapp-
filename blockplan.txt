@@ -44,15 +44,9 @@
 # ── Visual Style ──────────────────────────────────────────────
 # --theme=                     # Theme name or path to .yaml theme file
 
-# ── Week Numbers ──────────────────────────────────────────────
-# --weeknumbers                # Show week numbers
-# --week-number-mode=iso       # Week numbering system (iso or custom)
-# --week1-start=               # Anchor date for week 1 (YYYYMMDD); implies custom mode
-
 # ── Fiscal Calendar ───────────────────────────────────────────
 # --fiscal=                    # Fiscal overlay (nrf-454, nrf-445, nrf-544, 13-period)
 # --fiscal-year-offset=        # Offset for displayed fiscal year number (0, 1, or -1)
-# --fiscal-colors              # Use fiscal period colors for day box backgrounds
 
 # ── Output ────────────────────────────────────────────────────
 # --outputfile=                # Output SVG filename (written under output/)
