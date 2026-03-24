@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.7"
+__version__ = "26.03.24.0"
 
 import argparse
 import logging
@@ -244,7 +244,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     - Output Options          --outputfile, --papersize, --orientation, --shrink
     - Layout Options          --weekends, --header, --footer, --margin, --overflow
     - Header/Footer text      --headerleft, --headercenter, --headerright, …
-    - Watermark Options       --watermark, --watermark-rotation-angle, --imagemark
+    - Watermark Options       --watermark-text, --watermark-rotation-angle, --watermark-image
     - Content Filtering       --noevents, --nodurations, --ignorecomplete,
                               --milestones, --rollups, --WBS, --empty
     - Mini Calendar Options   --mini-columns, --mini-rows, --mini-no-adjacent, …
@@ -727,7 +727,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         # Watermark options
         watermark_group = view_parser.add_argument_group("Watermark Options")
         watermark_group.add_argument(
-            "--watermark", "-wt", type=str, default="", help="Watermark text"
+            "--watermark-text", "-wt", type=str, default="", help="Watermark text"
         )
         watermark_group.add_argument(
             "--watermark-rotation-angle",
@@ -737,7 +737,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Rotate text watermark by degrees (clockwise coordinates)",
         )
         watermark_group.add_argument(
-            "--imagemark", "-wi", type=str, default="", help="Watermark image file"
+            "--watermark-image", "-wi", type=str, default="", help="Watermark image file"
         )
 
         # Content filtering (SVG views include --shade and --overflow)
@@ -1351,9 +1351,9 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
         --footerleft            → config.footer_left_text
         --footercenter          → config.footer_center_text
         --footerright           → config.footer_right_text
-        --watermark             → config.watermark
+        --watermark-text        → config.watermark_text
         --watermark-rotation-angle → config.watermark_rotation_angle
-        --imagemark             → config.imagemark
+        --watermark-image       → config.watermark_image
 
     Called by:
         run() after calc_calendar_range() has populated adjustedstart/adjustedend.
@@ -1374,7 +1374,7 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
         ("footerleft", "footer_left_text"),
         ("footercenter", "footer_center_text"),
         ("footerright", "footer_right_text"),
-        ("watermark", "watermark"),
+        ("watermark_text", "watermark_text"),
     )
     for arg_name, config_attr in template_text_fields:
         value = getattr(args, arg_name, "")
@@ -1383,8 +1383,8 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
 
     if getattr(args, "watermark_rotation_angle", None) is not None:
         config.watermark_rotation_angle = float(args.watermark_rotation_angle)
-    if getattr(args, "imagemark", ""):
-        config.imagemark = replace_template_vars(config, args.imagemark)
+    if getattr(args, "watermark_image", ""):
+        config.watermark_image = replace_template_vars(config, args.watermark_image)
 
 
 def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -> None:
@@ -2945,9 +2945,9 @@ def run(argv: list[str] | None = None) -> int:
             ("footerleft",               bool(getattr(args, "footerleft", "")),                       "--footerleft"),
             ("footercenter",             bool(getattr(args, "footercenter", "")),                     "--footercenter"),
             ("footerright",              bool(getattr(args, "footerright", "")),                      "--footerright"),
-            ("watermark",                bool(getattr(args, "watermark", "")),                        "--watermark"),
+            ("watermark_text",           bool(getattr(args, "watermark_text", "")),                    "--watermark-text"),
             ("watermark_rotation_angle", getattr(args, "watermark_rotation_angle", None) is not None, "--watermark-rotation-angle"),
-            ("imagemark",                bool(getattr(args, "imagemark", "")),                        "--imagemark"),
+            ("watermark_image",          bool(getattr(args, "watermark_image", "")),                   "--watermark-image"),
             ("shrink",                   getattr(args, "shrink", False),                              "--shrink"),
             ("shade",                    getattr(args, "shade", False),                               "--shade"),
             ("monthnames",               getattr(args, "monthnames", False),                          "--monthnames"),

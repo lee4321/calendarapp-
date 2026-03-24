@@ -53,11 +53,11 @@ watermark:
   text: null
   color: "lightsteelblue"
   font_family: "JuliaMono-Regular"
-  alpha: 0.25
+  opacity: 0.25
   font_size: null
   resize_mode: "fit"
   rotation_angle: 0.0
-  imagemark_rotation_angle: 0.0
+  image_rotation_angle: 0.0
 
 fiscal:
   label_format: "{prefix}{period_short}"

@@ -280,8 +280,8 @@ class BaseVisualizer(ABC):
             "margin",
             "header",
             "footer",
-            "watermark",
-            "imagemark",
+            "watermark_text",
+            "watermark_image",
         ]
 
     def validate_config(self, config: CalendarConfig) -> list[str]:

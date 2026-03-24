@@ -942,19 +942,19 @@ class CalendarConfig:
     default_missing_icon: str | None = None
 
     # Watermark text
-    watermark: str = ""
+    watermark_text: str = ""
     watermark_color: str = "white"
     watermark_font: str = "CascadiaCode"
-    watermark_size: int | None = None
+    watermark_font_size: int | None = None
     watermark_resize_mode: str = "fit"  # "fit" (default) or "stretch"
-    watermark_alpha: float = 0.3
+    watermark_opacity: float = 0.3
     watermark_rotation_angle: float = 0.0
 
     # Watermark image
-    imagemark: str = ""
-    imagemark_width: int = 300
-    imagemark_height: int = 300
-    imagemark_rotation_angle: float = 0.0
+    watermark_image: str = ""
+    watermark_image_width: int = 300
+    watermark_image_height: int = 300
+    watermark_image_rotation_angle: float = 0.0
 
     # Theme-overridable color maps (None = use module-level defaults)
     theme_fiscalperiodcolors: dict[str, str] | None = None
@@ -1876,6 +1876,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     )
 
     # Watermark base font size (paper-size aware, theme-overridable)
-    config.watermark_size = int(round(_clamp(h * 0.10, 24.0, 256.0)))
+    config.watermark_font_size = int(round(_clamp(h * 0.10, 24.0, 256.0)))
 
     return config

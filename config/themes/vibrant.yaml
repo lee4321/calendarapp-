@@ -50,11 +50,11 @@ watermark:
   text: null    # place the desired text here or pass on the command line
   color: "orchid"
   font_family: "JuliaMono-Regular"
-  alpha: 0.5
+  opacity: 0.5
   font_size: null
   resize_mode: "fit"      # stretch also supported
   rotation_angle: 45.0
-  imagemark_rotation_angle: 0.0
+  image_rotation_angle: 0.0
 
 fiscal:
   label_format: "{prefix}{period_short}"

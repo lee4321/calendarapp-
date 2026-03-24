@@ -329,9 +329,9 @@ class BaseSVGRenderer(ABC):
             self._shrink_drawing_to_content(coordinates)
 
         # Render watermarks (under content)
-        if config.watermark:
+        if config.watermark_text:
             self._render_text_watermark(config)
-        if config.imagemark:
+        if config.watermark_image:
             self._render_image_watermark(config)
 
         # Render common elements (headers, footers)
@@ -491,7 +491,7 @@ class BaseSVGRenderer(ABC):
         Args:
             config: Calendar configuration with watermark settings
         """
-        if not config.watermark:
+        if not config.watermark_text:
             return
 
         from config.config import get_font_path
@@ -507,7 +507,7 @@ class BaseSVGRenderer(ABC):
         )
 
         # Use paper-size-scaled setfontsizes value unless explicitly overridden.
-        base_size = float(config.watermark_size or 256)
+        base_size = float(config.watermark_font_size or 256)
         base_size = max(1.0, base_size)
         left, top, span_w, span_h = self._watermark_bounds(config)
         waterX = left + (span_w / 2)
@@ -518,7 +518,7 @@ class BaseSVGRenderer(ABC):
         transform_parts: list[str] = []
 
         if resize_mode == "stretch":
-            text_width = string_width(config.watermark, font_path, base_size)
+            text_width = string_width(config.watermark_text, font_path, base_size)
             upm, ascender, descender = get_font_metrics(font_path)
             text_height = max(1.0, (ascender - descender) * (base_size / upm))
             if text_width <= 0:
@@ -545,7 +545,7 @@ class BaseSVGRenderer(ABC):
             # fit mode: keep glyph proportions and fit width using base_size as
             # the ceiling (paper-size aware via setfontsizes/config).
             font_size = shrinktext(
-                config.watermark,
+                config.watermark_text,
                 span_w * 0.98,
                 font_path,
                 base_size,
@@ -560,11 +560,11 @@ class BaseSVGRenderer(ABC):
         self._draw_text(
             waterX,
             waterY,
-            config.watermark,
+            config.watermark_text,
             config.watermark_font,
             font_size,
             fill=config.watermark_color,
-            fill_opacity=config.watermark_alpha,
+            fill_opacity=config.watermark_opacity,
             anchor="middle",
             transform=transform,
         )
@@ -580,36 +580,36 @@ class BaseSVGRenderer(ABC):
         Supports raster images (PNG, JPEG, etc.) and SVG files.
 
         Args:
-            config: Calendar configuration with imagemark settings
+            config: Calendar configuration with watermark image settings
         """
-        if not config.imagemark:
+        if not config.watermark_image:
             return
 
         # Calculate center position in SVG coordinates
         left, top, span_w, span_h = self._watermark_bounds(config)
-        waterX = left + (span_w / 2) - (config.imagemark_width / 2)
-        waterY = top + (span_h / 2) - (config.imagemark_height / 2)
-        angle = float(getattr(config, "imagemark_rotation_angle", 0.0) or 0.0)
-        center_x = waterX + (config.imagemark_width / 2)
-        center_y_svg = waterY + (config.imagemark_height / 2)
+        waterX = left + (span_w / 2) - (config.watermark_image_width / 2)
+        waterY = top + (span_h / 2) - (config.watermark_image_height / 2)
+        angle = float(getattr(config, "watermark_image_rotation_angle", 0.0) or 0.0)
+        center_x = waterX + (config.watermark_image_width / 2)
+        center_y_svg = waterY + (config.watermark_image_height / 2)
         transform = f"rotate({angle} {center_x} {center_y_svg})" if angle else None
 
-        if self._is_svg(config.imagemark):
+        if self._is_svg(config.watermark_image):
             self._draw_svg_watermark(
-                config.imagemark,
+                config.watermark_image,
                 waterX,
                 waterY,
-                config.imagemark_width,
-                config.imagemark_height,
+                config.watermark_image_width,
+                config.watermark_image_height,
                 transform=transform,
             )
         else:
             self._draw_image(
                 waterX,
                 waterY,
-                config.imagemark_width,
-                config.imagemark_height,
-                config.imagemark,
+                config.watermark_image_width,
+                config.watermark_image_height,
+                config.watermark_image,
                 transform=transform,
             )
 
@@ -1055,9 +1055,9 @@ class BaseSVGRenderer(ABC):
         self._content_bbox_svg = None
         if config.shrink_to_content:
             self._shrink_drawing_to_content(coordinates)
-        if config.watermark:
+        if config.watermark_text:
             self._render_text_watermark(config)
-        if config.imagemark:
+        if config.watermark_image:
             self._render_image_watermark(config)
         self._render_decorations(config, coordinates)
 

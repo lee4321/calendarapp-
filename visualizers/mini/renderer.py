@@ -762,9 +762,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         self._add_desc(config)
         if config.shrink_to_content:
             self._shrink_drawing_to_content(coordinates)
-        if config.watermark:
+        if config.watermark_text:
             self._render_text_watermark(config)
-        if config.imagemark:
+        if config.watermark_image:
             self._render_image_watermark(config)
         self._render_decorations(config, coordinates)
 

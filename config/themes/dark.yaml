@@ -40,11 +40,11 @@ watermark:
   text: null
   color: "dimgrey"
   font_family: "Roboto-Black"
-  alpha: 0.15
+  opacity: 0.15
   font_size: null
   resize_mode: "fit"
   rotation_angle: 0.0
-  imagemark_rotation_angle: 0.0
+  image_rotation_angle: 0.0
 
 fiscal:
   label_format: "{prefix}{period_short}"

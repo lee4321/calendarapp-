@@ -184,9 +184,9 @@ class TestThemeEngineApply:
     def test_watermark_styling_applied(self):
         _, config = self._load_builtin("dark")
         assert config.watermark_color == "dimgrey"
-        assert config.watermark_alpha == 0.15
+        assert config.watermark_opacity == 0.15
         assert config.watermark_rotation_angle == 0.0
-        assert config.imagemark_rotation_angle == 0.0
+        assert config.watermark_image_rotation_angle == 0.0
 
     def test_watermark_rotation_applied_from_theme(self):
         theme_data = {
@@ -194,7 +194,7 @@ class TestThemeEngineApply:
             "watermark": {
                 "text": "CONFIDENTIAL",
                 "rotation_angle": 17.5,
-                "imagemark_rotation_angle": -22.0,
+                "image_rotation_angle": -22.0,
                 "font_size": 144,
                 "resize_mode": "stretch",
             },
@@ -206,10 +206,10 @@ class TestThemeEngineApply:
             engine.load(f.name)
             config = create_calendar_config()
             engine.apply(config)
-        assert config.watermark == "CONFIDENTIAL"
+        assert config.watermark_text == "CONFIDENTIAL"
         assert config.watermark_rotation_angle == 17.5
-        assert config.imagemark_rotation_angle == -22.0
-        assert config.watermark_size == 144
+        assert config.watermark_image_rotation_angle == -22.0
+        assert config.watermark_font_size == 144
         assert config.watermark_resize_mode == "stretch"
 
     def test_base_size_rule_applies_desired_font_size_for_papersize(self):
@@ -735,8 +735,8 @@ class TestStrokeDasharray:
         config = create_calendar_config()
         config.pageX = 200
         config.pageY = 100
-        config.watermark = "WM"
-        config.watermark_size = 200
+        config.watermark_text = "WM"
+        config.watermark_font_size = 200
         config.watermark_resize_mode = "fit"
         config.watermark_rotation_angle = 30
 
@@ -769,8 +769,8 @@ class TestStrokeDasharray:
         config = create_calendar_config()
         config.pageX = 200
         config.pageY = 100
-        config.watermark = "WM"
-        config.watermark_size = 200
+        config.watermark_text = "WM"
+        config.watermark_font_size = 200
         config.watermark_resize_mode = "stretch"
 
         with (
@@ -867,10 +867,10 @@ class TestStrokeDasharray:
         config = create_calendar_config()
         config.pageX = 200
         config.pageY = 100
-        config.imagemark = "/tmp/fake.png"
-        config.imagemark_width = 40
-        config.imagemark_height = 20
-        config.imagemark_rotation_angle = -12
+        config.watermark_image = "/tmp/fake.png"
+        config.watermark_image_width = 40
+        config.watermark_image_height = 20
+        config.watermark_image_rotation_angle = -12
 
         with (
             patch.object(renderer, "_is_svg", return_value=False),

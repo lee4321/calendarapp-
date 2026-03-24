@@ -126,11 +126,11 @@ durations:
 # WATERMARK — Diagonal text or image overlay on every page
 # ─────────────────────────────────────────────────────────────────────────────
 watermark:
-  alpha:                    0.15       # (float 0–1) text opacity
+  opacity:                  0.15       # (float 0–1) text opacity
   color:                    "grey"     # (str) text color
   font_family:              "Roboto-Black"  # (str) watermark font
   font_size:                null       # (float|null) pt; null = auto-fit to page
-  imagemark_rotation_angle: 0.0        # (float) image watermark rotation in degrees
+  image_rotation_angle:     0.0        # (float) image watermark rotation in degrees
   resize_mode:              "fit"      # (str) fit | stretch  — how image fills the page
   rotation_angle:           45.0       # (float) text watermark rotation in degrees (clockwise)
   text:                     null       # (str|null) watermark text; null = no watermark

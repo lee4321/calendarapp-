@@ -300,14 +300,14 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.overflow", "icon"): "overflow_indicator_icon",
     ("weekly.overflow", "color"): "overflow_indicator_color",
     # Watermark
-    ("watermark", "text"): "watermark",
+    ("watermark", "text"): "watermark_text",
     ("watermark", "color"): "watermark_color",
     ("watermark", "font_family"): "watermark_font",
-    ("watermark", "font_size"): "watermark_size",
+    ("watermark", "font_size"): "watermark_font_size",
     ("watermark", "resize_mode"): "watermark_resize_mode",
-    ("watermark", "alpha"): "watermark_alpha",
+    ("watermark", "opacity"): "watermark_opacity",
     ("watermark", "rotation_angle"): "watermark_rotation_angle",
-    ("watermark", "imagemark_rotation_angle"): "imagemark_rotation_angle",
+    ("watermark", "image_rotation_angle"): "watermark_image_rotation_angle",
     # Fiscal labels
     ("fiscal", "label_format"): "fiscal_period_label_format",
     ("fiscal", "end_label_format"): "fiscal_period_end_label_format",

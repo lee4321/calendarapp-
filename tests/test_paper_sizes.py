@@ -80,8 +80,8 @@ class TestFormulaFontSizes(unittest.TestCase):
             letter_config.weekly_name_text_font_size,
         )
         self.assertGreater(
-            tabloid_config.watermark_size,
-            letter_config.watermark_size,
+            tabloid_config.watermark_font_size,
+            letter_config.watermark_font_size,
         )
 
     def test_tiny_paper_hits_minimum(self):

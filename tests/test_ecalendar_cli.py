@@ -129,7 +129,7 @@ def test_apply_text_options_sets_watermark_rotation_angle():
             "weekly",
             "20260101",
             "20260131",
-            "--watermark",
+            "--watermark-text",
             "WM",
             "--watermark-rotation-angle",
             "-15",
@@ -138,7 +138,7 @@ def test_apply_text_options_sets_watermark_rotation_angle():
     config = create_calendar_config()
     ecalendar._apply_text_options(args, config)
 
-    assert config.watermark == "WM"
+    assert config.watermark_text == "WM"
     assert config.watermark_rotation_angle == -15.0
 
 
@@ -149,7 +149,7 @@ def test_parse_atfile_lines_strips_comments_and_preserves_hash_numbers(tmp_path)
             [
                 "",
                 "# full line comment",
-                "--watermark=Build # 42",
+                "--watermark-text=Build # 42",
                 "--headerleft=Sprint#2",
                 "--footerleft=Release #1",
                 "weekly # inline comment",
@@ -161,7 +161,7 @@ def test_parse_atfile_lines_strips_comments_and_preserves_hash_numbers(tmp_path)
 
     lines = ecalendar._parse_atfile_lines(str(atfile))
 
-    assert "--watermark=Build" in lines
+    assert "--watermark-text=Build" in lines
     assert "--headerleft=Sprint#2" in lines
     assert "--footerleft=Release #1" in lines
     assert "weekly" in lines
