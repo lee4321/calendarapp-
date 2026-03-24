@@ -149,7 +149,7 @@ class CalendarConfig:
     mini_day_color: str = "black"  # Default day number color
     mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
     mini_holiday_color: str = "red"  # Holiday day number color
-    mini_nonworkday_shade: str = "lightblue"  # Non-work day background
+    mini_nonworkday_fill_color: str = "lightblue"  # Non-work day background
     mini_milestone_color: str = "navy"  # Milestone circle color
     mini_milestone_stroke_color: str = "navy"  # Milestone circle stroke color
     mini_milestone_stroke_width: float = 1.0
@@ -394,7 +394,7 @@ class CalendarConfig:
     theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
     theme_mini_holiday_color: str | None = None
-    theme_mini_nonworkday_shade: str | None = None
+    theme_mini_nonworkday_fill_color: str | None = None
     theme_mini_milestone_color: str | None = None
     theme_mini_week_number_color: str | None = None
     theme_mini_current_day_color: str | None = None

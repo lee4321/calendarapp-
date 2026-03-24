@@ -286,7 +286,7 @@ mini_calendar:
   adjacent_month_color: "palette:Accent:1"
   show_adjacent: true
   holiday_color: "palette:Accent:5"
-  nonworkday_shade: "palette:Accent:3"
+  nonworkday_fill_color: "palette:Accent:3"
   milestone_color: "palette:Accent:4"
   circle_milestones: true
   milestone_stroke_color: "palette:Accent:4"

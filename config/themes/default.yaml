@@ -522,7 +522,7 @@ mini_calendar:
   adjacent_month_color: "lightgrey"
   show_adjacent: true
   holiday_color: "red"
-  nonworkday_shade: "lightblue"
+  nonworkday_fill_color: "lightblue"
   milestone_color: "navy"
   circle_milestones: true
   milestone_stroke_color: "navy"

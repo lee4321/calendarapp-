@@ -374,7 +374,7 @@ mini_calendar:
   adjacent_month_color: "dimgrey"
   show_adjacent: true
   holiday_color: "indianred"
-  nonworkday_shade: "slategrey"
+  nonworkday_fill_color: "slategrey"
   milestone_color: "lightskyblue"
   circle_milestones: true
   milestone_stroke_color: "lightskyblue"

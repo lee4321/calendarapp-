@@ -407,7 +407,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_mini_header_color` | `colors.mini_calendar.header_color` | `str | None` | `None` | Mini weekday header color override |
 | `theme_mini_holiday_color` | `colors.mini_calendar.holiday_color` | `str | None` | `None` | Mini holiday day color override |
 | `theme_mini_milestone_color` | `colors.mini_calendar.milestone_color` | `str | None` | `None` | Mini milestone marker color override |
-| `theme_mini_nonworkday_shade` | `colors.mini_calendar.nonworkday_shade` | `str | None` | `None` | Mini non-workday cell shade override |
+| `theme_mini_nonworkday_fill_color` | `colors.mini_calendar.nonworkday_fill_color` | `str | None` | `None` | Mini non-workday cell fill color override |
 | `theme_mini_title_color` | `colors.mini_calendar.title_color` | `str | None` | `None` | Mini title color override |
 | `theme_mini_week_number_color` | `colors.mini_calendar.week_number_color` | `str | None` | `None` | Mini week number color override |
 | `theme_month_palette` | `colors.month_palette` | `str | None` | `None` | DB palette name for month colors |
@@ -499,7 +499,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_milestone_stroke_color` | `mini_calendar.milestone_stroke_color` | `str` | `'navy'` | Milestone circle stroke color |
 | `mini_milestone_stroke_opacity` | `mini_calendar.milestone_stroke_opacity` | `float` | `1.0` | Milestone circle stroke opacity |
 | `mini_milestone_stroke_width` | `mini_calendar.milestone_stroke_width` | `float` | `1.0` | Milestone circle stroke width |
-| `mini_nonworkday_shade` | `mini_calendar.nonworkday_shade` | `str` | `'lightblue'` | Non-work day background |
+| `mini_nonworkday_fill_color` | `mini_calendar.nonworkday_fill_color` | `str` | `'lightblue'` | Non-work day fill color |
 | `mini_show_adjacent` | `mini_calendar.show_adjacent` | `bool` | `True` | Show leading/trailing adjacent-month days |
 | `mini_strikethrough_stroke_dasharray` | `mini_calendar.strikethrough_stroke_dasharray` | `str | None` | `None` | strikethrough stroke dasharray |
 | `mini_title_color` | `mini_calendar.title_color` | `str` | `'navy'` | title color |

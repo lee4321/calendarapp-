@@ -178,8 +178,8 @@ class DayStyleResolver:
         if holiday.get("nonworkday"):
             style.shade_color = (
                 self._config.theme_federal_holiday_color
-                or self._config.theme_mini_nonworkday_shade
-                or self._config.mini_nonworkday_shade
+                or self._config.theme_mini_nonworkday_fill_color
+                or self._config.mini_nonworkday_fill_color
             )
             style.shade_opacity = 0.2
 
@@ -194,8 +194,8 @@ class DayStyleResolver:
                 # Unified: use company holiday color (same as weekly renderer), then mini-specific override
                 style.shade_color = (
                     self._config.theme_company_holiday_color
-                    or self._config.theme_mini_nonworkday_shade
-                    or self._config.mini_nonworkday_shade
+                    or self._config.theme_mini_nonworkday_fill_color
+                    or self._config.mini_nonworkday_fill_color
                 )
                 style.shade_opacity = 0.25
 

@@ -384,7 +384,7 @@ mini_calendar:
   adjacent_month_color: "lightgrey"
   show_adjacent: false 
   holiday_color: "crimson"
-  nonworkday_shade: "plum"
+  nonworkday_fill_color: "plum"
   milestone_color: "darkorange"
   circle_milestones: false
   milestone_stroke_color: "darkorange"

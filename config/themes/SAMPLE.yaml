@@ -221,7 +221,7 @@ colors:
     header_color:         null   # (str|null) day-of-week header row text color
     holiday_color:        null   # (str|null) federal holiday text/cell color
     milestone_color:      null   # (str|null) milestone dot color
-    nonworkday_shade:     null   # (str|null) fill shade for company non-workdays
+    nonworkday_fill_color: null  # (str|null) fill color for company non-workday cells
     title_color:          null   # (str|null) month title text color
     week_number_color:    null   # (str|null) week number column text color
 
@@ -642,7 +642,7 @@ mini_calendar:
   # ── Holidays & special days ───────────────────────────────────────────────
   holiday_color:         "tomato"     # (str) federal holiday day number color
   milestone_color:       "navy"       # (str) milestone marker dot color
-  nonworkday_shade:      "gold"       # (str) fill shade for company non-workday cells
+  nonworkday_fill_color: "gold"       # (str) fill color for company non-workday cells
   show_adjacent:         true         # (bool) render days from adjacent months in empty cells
 
   # ── Month title ───────────────────────────────────────────────────────────
