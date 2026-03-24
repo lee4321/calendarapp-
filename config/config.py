@@ -957,10 +957,10 @@ class CalendarConfig:
     watermark_image_rotation_angle: float = 0.0
 
     # Theme-overridable color maps (None = use module-level defaults)
-    theme_fiscalperiodcolors: dict[str, str] | None = None
-    theme_monthcolors: dict[str, str] | None = None
-    theme_specialdaycolor: str | None = None
-    theme_hashlinecolor: str | None = None
+    theme_fiscal_period_colors: dict[str, str] | None = None
+    theme_month_colors: dict[str, str] | None = None
+    theme_special_day_color: str | None = None
+    theme_hash_line_color: str | None = None
     theme_weekly_hash_rules: list[dict[str, Any]] | None = None
     theme_weekly_hash_pattern: str | None = None
     theme_mini_day_box_hash_rules: list[dict[str, Any]] | None = None

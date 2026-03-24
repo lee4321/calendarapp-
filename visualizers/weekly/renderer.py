@@ -733,8 +733,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         shadespecialday: str | bool,
     ) -> tuple[str, float]:
         """Return (fill_color, fill_opacity) for a day box."""
-        _specialdaycolor = config.theme_specialdaycolor or specialdaycolor
-        _monthcolors = config.theme_monthcolors or monthcolors
+        _specialdaycolor = config.theme_special_day_color or specialdaycolor
+        _monthcolors = config.theme_month_colors or monthcolors
 
         if shadespecialday == "government":
             fill_color = config.theme_federal_holiday_color or FederalHolidayColor
@@ -1021,7 +1021,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         # SVG pattern decorations — layered in declaration order
         for dec in hash_decorations or []:
-            _color = dec.color or config.theme_hashlinecolor or hashlinecolor
+            _color = dec.color or config.theme_hash_line_color or hashlinecolor
             self._draw_svg_pattern(config, X, Y, W, H, dec.pattern, _color, dec.opacity)
 
         # Day number with optional month indicator

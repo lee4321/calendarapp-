@@ -993,8 +993,8 @@ class BaseSVGRenderer(ABC):
 
             if idx % 2 == 1:
                 month_key = entry.start[4:6] if len(entry.start) >= 6 else "01"
-                theme_monthcolors = getattr(config, "theme_monthcolors", None)
-                row_color = (theme_monthcolors or monthcolors).get(
+                theme_month_colors = getattr(config, "theme_month_colors", None)
+                row_color = (theme_month_colors or monthcolors).get(
                     month_key, "lightgrey"
                 )
                 self._draw_rect(

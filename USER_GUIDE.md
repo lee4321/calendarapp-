@@ -398,9 +398,9 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_federal_holiday_alpha` | `colors.federal_holiday.alpha` | `float | None` | `None` | Federal holiday alpha override |
 | `theme_federal_holiday_color` | `colors.federal_holiday.color` | `str | None` | `None` | Federal holiday color override |
 | `theme_fiscal_palette` | `colors.fiscal_palette` | `str | None` | `None` | DB palette name for fiscal period colors |
-| `theme_fiscalperiodcolors` | `colors.fiscal_periods` | `dict[str, str] | None` | `None` | Fiscal period to color map |
+| `theme_fiscal_period_colors` | `colors.fiscal_periods` | `dict[str, str] | None` | `None` | Fiscal period to color map |
 | `theme_group_palette` | `colors.group_palette` | `str | None` | `None` | DB palette name for group colors |
-| `theme_hashlinecolor` | `colors.hash_lines` | `str | None` | `None` | Default hash line color |
+| `theme_hash_line_color` | `colors.hash_lines` | `str | None` | `None` | Default hash line color |
 | `theme_mini_adjacent_month_color` | `colors.mini_calendar.adjacent_month_color` | `str | None` | `None` | Mini adjacent-month day color override |
 | `theme_mini_current_day_color` | `colors.mini_calendar.current_day_color` | `str | None` | `None` | Mini current-day shade override |
 | `theme_mini_day_color` | `colors.mini_calendar.day_color` | `str | None` | `None` | Mini day number color override |
@@ -411,10 +411,10 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_mini_title_color` | `colors.mini_calendar.title_color` | `str | None` | `None` | Mini title color override |
 | `theme_mini_week_number_color` | `colors.mini_calendar.week_number_color` | `str | None` | `None` | Mini week number color override |
 | `theme_month_palette` | `colors.month_palette` | `str | None` | `None` | DB palette name for month colors |
-| `theme_monthcolors` | `colors.months` | `dict[str, str] | None` | `None` | Month number to color map (01-12) |
+| `theme_month_colors` | `colors.months` | `dict[str, str] | None` | `None` | Month number to color map (01-12) |
 | `theme_resource_group_colors` | `colors.resource_groups` | `dict[str, str] | None` | `None` | Resource-group to color map |
 | `theme_special_day_type_colors` | `colors.special_day_types` | `dict[str, str] | None` | `None` | Special-day-type to color map |
-| `theme_specialdaycolor` | `colors.special_day` | `str | None` | `None` | Special day accent color |
+| `theme_special_day_color` | `colors.special_day` | `str | None` | `None` | Special day accent color |
 | `watermark` | `watermark.text` | `str` | `''` | text |
 | `watermark_alpha` | `watermark.alpha` | `float` | `0.3` | alpha |
 | `watermark_color` | `watermark.color` | `str` | `'white'` | color |

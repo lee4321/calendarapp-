@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.24.0"
+__version__ = "26.03.24.1"
 
 import argparse
 import logging
@@ -1714,8 +1714,8 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
     Five sentinel fields are checked and expanded into colour dicts/lists:
 
       Sentinel field                  → Target field              Size
-      config.theme_month_palette      → config.theme_monthcolors  12 (one/month)
-      config.theme_fiscal_palette     → config.theme_fiscalperiodcolors 13 (one/period)
+      config.theme_month_palette      → config.theme_month_colors  12 (one/month)
+      config.theme_fiscal_palette     → config.theme_fiscal_period_colors 13 (one/period)
       config.theme_group_palette      → config.group_colors       full palette
       config.theme_timeline_palette   → config.timeline_top/bottom_colors full palette
       config.theme_blockplan_palette_name → config.blockplan_palette full palette
@@ -1738,14 +1738,14 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
     if config.theme_month_palette:
         colors = db.sample_palette_n(config.theme_month_palette, 12)
         if colors:
-            config.theme_monthcolors = {f"{i + 1:02d}": c for i, c in enumerate(colors)}
+            config.theme_month_colors = {f"{i + 1:02d}": c for i, c in enumerate(colors)}
         else:
             logger.warning(f"Palette not found: {config.theme_month_palette!r}")
 
     if config.theme_fiscal_palette:
         colors = db.sample_palette_n(config.theme_fiscal_palette, 13)
         if colors:
-            config.theme_fiscalperiodcolors = {
+            config.theme_fiscal_period_colors = {
                 f"{i + 1:02d}": c for i, c in enumerate(colors)
             }
         else:

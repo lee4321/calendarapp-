@@ -406,8 +406,8 @@ actual colour values fetched from the database.
 
    | Sentinel field | Target field | Sample size |
    |---|---|---|
-   | `config.theme_month_palette` | `config.theme_monthcolors` | 12 (one per month) |
-   | `config.theme_fiscal_palette` | `config.theme_fiscalperiodcolors` | 13 (one per period) |
+   | `config.theme_month_palette` | `config.theme_month_colors` | 12 (one per month) |
+   | `config.theme_fiscal_palette` | `config.theme_fiscal_period_colors` | 13 (one per period) |
    | `config.theme_group_palette` | `config.group_colors` | full palette |
    | `config.theme_timeline_palette` | `config.timeline_top_colors` / `timeline_bottom_colors` | full palette |
    | `config.theme_blockplan_palette_name` | `config.blockplan_palette` | full palette |

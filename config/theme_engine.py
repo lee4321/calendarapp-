@@ -934,21 +934,21 @@ class ThemeEngine:
 
         if "months" in colors and isinstance(colors["months"], dict):
             # Ensure keys are strings (YAML may parse "01" as int 1)
-            config.theme_monthcolors = {
+            config.theme_month_colors = {
                 str(k).zfill(2): v for k, v in colors["months"].items()
             }
 
         if "fiscal_periods" in colors and isinstance(colors["fiscal_periods"], dict):
             # Ensure keys are strings (YAML may parse "01" as int 1)
-            config.theme_fiscalperiodcolors = {
+            config.theme_fiscal_period_colors = {
                 str(k).zfill(2): v for k, v in colors["fiscal_periods"].items()
             }
 
         if "special_day" in colors:
-            config.theme_specialdaycolor = colors["special_day"]
+            config.theme_special_day_color = colors["special_day"]
 
         if "hash_lines" in colors:
-            config.theme_hashlinecolor = colors["hash_lines"]
+            config.theme_hash_line_color = colors["hash_lines"]
 
         if "resource_groups" in colors and isinstance(colors["resource_groups"], dict):
             config.theme_resource_group_colors = {

@@ -32,13 +32,13 @@ class FiscalSegment:
 def get_fiscal_period_color(fiscal_info: "FiscalPeriodInfo", config: "CalendarConfig") -> str:
     """Resolve the fill color for a fiscal period.
 
-    Returns the color from config.theme_fiscalperiodcolors keyed by
+    Returns the color from config.theme_fiscal_period_colors keyed by
     zero-padded period number (e.g. "01"), falling back to the
     module-level fiscalperiodcolors default, then "lightgrey".
     """
     from config.config import fiscalperiodcolors as _default_colors
 
-    colors = config.theme_fiscalperiodcolors or _default_colors
+    colors = config.theme_fiscal_period_colors or _default_colors
     period_key = str(fiscal_info.fiscal_period).zfill(2)
     return colors.get(period_key, "lightgrey")
 

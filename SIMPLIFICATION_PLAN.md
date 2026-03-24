@@ -122,10 +122,10 @@ This plan addresses three areas of improvement:
 
 | Current | Proposed |
 |---|---|
-| `theme_specialdaycolor` | `theme_special_day_color` |
-| `theme_hashlinecolor` | `theme_hash_line_color` |
-| `theme_fiscalperiodcolors` | `theme_fiscal_period_colors` |
-| `theme_monthcolors` | `theme_month_colors` |
+| ~~`theme_specialdaycolor`~~ | `theme_special_day_color` |
+| ~~`theme_hashlinecolor`~~ | `theme_hash_line_color` |
+| ~~`theme_fiscalperiodcolors`~~ | `theme_fiscal_period_colors` |
+| ~~`theme_monthcolors`~~ | `theme_month_colors` |
 
 **Steps:**
 1. Rename all 4 fields in CalendarConfig
@@ -506,10 +506,10 @@ After all changes, the naming convention should be:
 | 21 | `theme_company_holiday_alpha` | `theme_company_holiday_opacity` | config.py, weekly/renderer.py, mini/renderer.py |
 | 22 | `mini_nonworkday_shade` | `mini_nonworkday_fill_color` | config.py, mini/renderer.py, mini/day_styles.py |
 | 23 | `theme_mini_nonworkday_shade` | `theme_mini_nonworkday_fill_color` | config.py, mini/renderer.py |
-| 24 | `theme_specialdaycolor` | `theme_special_day_color` | config.py, weekly/renderer.py |
-| 25 | `theme_hashlinecolor` | `theme_hash_line_color` | config.py, weekly/renderer.py |
-| 26 | `theme_fiscalperiodcolors` | `theme_fiscal_period_colors` | config.py, weekly/renderer.py, mini/renderer.py |
-| 27 | `theme_monthcolors` | `theme_month_colors` | config.py, weekly/renderer.py, mini/renderer.py |
+| 24 | ~~`theme_specialdaycolor`~~ | `theme_special_day_color` | config.py, weekly/renderer.py | **DONE** |
+| 25 | ~~`theme_hashlinecolor`~~ | `theme_hash_line_color` | config.py, weekly/renderer.py | **DONE** |
+| 26 | ~~`theme_fiscalperiodcolors`~~ | `theme_fiscal_period_colors` | config.py, weekly/renderer.py, mini/renderer.py | **DONE** |
+| 27 | ~~`theme_monthcolors`~~ | `theme_month_colors` | config.py, weekly/renderer.py, mini/renderer.py | **DONE** |
 | 28 | `mini_grid_line_stroke_color` | `mini_grid_line_color` | config.py, mini/renderer.py |
 | 29 | `mini_grid_line_stroke_width` | `mini_grid_line_width` | config.py, mini/renderer.py |
 | 30 | `mini_grid_line_stroke_opacity` | `mini_grid_line_opacity` | config.py, mini/renderer.py |
