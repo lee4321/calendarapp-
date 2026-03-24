@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.23.6"
+__version__ = "26.03.23.7"
 
 import argparse
 import logging
@@ -645,6 +645,11 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "rendered content, removing blank page whitespace."
             ),
         )
+        output_group.add_argument(
+            "--embed-data",
+            action="store_true",
+            help="Embed source event data (CSV) inside SVG metadata",
+        )
     # text-mini: output file path only (no SVG layout args)
     _tm_output = text_mini.add_argument_group("Output Options")
     _tm_output.add_argument(
@@ -1254,6 +1259,7 @@ def _apply_args_to_config(
     # compactplan always shrinks by default; other views require --shrink.
     shrink_default = getattr(args, "command", None) == "compactplan"
     config.shrink_to_content = getattr(args, "shrink", False) or shrink_default
+    config.embed_data = getattr(args, "embed_data", False)
 
     # Paper size and orientation
     paper_name = getattr(args, "papersize", config.papersize)
@@ -1814,6 +1820,49 @@ _EXPORTDATA_COLUMNS: list[str] = [
 
 
 
+def _fmt_date(d: str | None) -> str:
+    """Convert YYYYMMDD → YYYY-MM-DD; leave other strings untouched."""
+    if d and len(d) == 8 and d.isdigit():
+        return f"{d[:4]}-{d[4:6]}-{d[6:]}"
+    return d or ""
+
+
+def _event_to_row(ev: dict) -> dict:
+    """Map a raw database event dict to an exportdata CSV row dict."""
+    return {
+        "task_name": ev.get("Task_Name", ""),
+        "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date")),
+        "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date")),
+        "priority": ev.get("Priority", ""),
+        "wbs": ev.get("WBS", ""),
+        "rollup": ev.get("Rollup", ""),
+        "milestone": ev.get("Milestone", ""),
+        "percent_complete": ev.get("Percent_Complete", ""),
+        "effort": ev.get("Effort", ""),
+        "duration": ev.get("Duration", ""),
+        "predecessors": ev.get("Predecessors", ""),
+        "resource_names": ev.get("Resource_Names", ""),
+        "resource_group": ev.get("Resource_Group", ""),
+        "notes": ev.get("Notes", ""),
+        "icon": ev.get("Icon", ""),
+        "color": ev.get("Color", ""),
+        "marks": ev.get("Marks", ""),
+    }
+
+
+def _events_to_csv_string(events: list[dict]) -> str:
+    """Convert raw event dicts to a CSV string using the exportdata format."""
+    import csv
+    import io
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=_EXPORTDATA_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    for ev in events:
+        writer.writerow(_event_to_row(ev))
+    return buf.getvalue()
+
+
 def _write_exportdata_csv(events: list[dict], out_path: "Path") -> None:
     """
     Write filtered events to a CSV file compatible with importers/import_events.py.
@@ -1825,40 +1874,10 @@ def _write_exportdata_csv(events: list[dict], out_path: "Path") -> None:
     Called by:
         run() when args.command == "exportdata".
     """
-    import csv
-
-    def _fmt_date(d: str | None) -> str:
-        """Convert YYYYMMDD → YYYY-MM-DD; leave other strings untouched."""
-        if d and len(d) == 8 and d.isdigit():
-            return f"{d[:4]}-{d[4:6]}-{d[6:]}"
-        return d or ""
-
+    csv_text = _events_to_csv_string(events)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=_EXPORTDATA_COLUMNS, extrasaction="ignore")
-        writer.writeheader()
-        for ev in events:
-            writer.writerow(
-                {
-                    "task_name": ev.get("Task_Name", ""),
-                    "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date")),
-                    "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date")),
-                    "priority": ev.get("Priority", ""),
-                    "wbs": ev.get("WBS", ""),
-                    "rollup": ev.get("Rollup", ""),
-                    "milestone": ev.get("Milestone", ""),
-                    "percent_complete": ev.get("Percent_Complete", ""),
-                    "effort": ev.get("Effort", ""),
-                    "duration": ev.get("Duration", ""),
-                    "predecessors": ev.get("Predecessors", ""),
-                    "resource_names": ev.get("Resource_Names", ""),
-                    "resource_group": ev.get("Resource_Group", ""),
-                    "notes": ev.get("Notes", ""),
-                    "icon": ev.get("Icon", ""),
-                    "color": ev.get("Color", ""),
-                    "marks": ev.get("Marks", ""),
-                }
-            )
+        fh.write(csv_text)
 
 
 # Palette SVG Generator

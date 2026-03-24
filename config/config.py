@@ -76,6 +76,7 @@ class CalendarConfig:
     doc_subject: str = "Calendar"
     doc_keywords: str = ""
     command_line: str = ""
+    embed_data: bool = False
 
     # Data source description (for header/footer expansion)
     events: str = ""

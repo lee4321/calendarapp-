@@ -342,6 +342,9 @@ class BaseSVGRenderer(ABC):
             config, coordinates, events, db
         )
 
+        # Embed event data if requested
+        self._add_embedded_data(config, events)
+
         # Save main SVG
         self._drawing.save_svg(config.outputfile)
 
@@ -438,6 +441,35 @@ class BaseSVGRenderer(ABC):
         desc_text = "\n".join(desc_lines)
         desc_elem = drawsvg.Raw(f"<desc>{desc_text}</desc>")
         self._drawing.append(desc_elem)
+
+    def _add_embedded_data(self, config: CalendarConfig, events: list) -> None:
+        """Embed compressed CSV event data in a ``<metadata>`` element.
+
+        The CSV uses the same format as the ``exportdata`` subcommand.
+        Data is deflate-compressed and base64-encoded to minimise SVG bloat.
+        """
+        if not config.embed_data or not events:
+            return
+
+        import base64
+        import zlib
+
+        from ecalendar import _events_to_csv_string
+
+        csv_text = _events_to_csv_string(events)
+        compressed = base64.b64encode(
+            zlib.compress(csv_text.encode("utf-8"))
+        ).decode("ascii")
+        row_count = len(events)
+        metadata = (
+            "<metadata>"
+            '<ecal:data xmlns:ecal="https://eventcalendar.local/svg-data"'
+            f' encoding="deflate+base64" format="csv" rows="{row_count}">'
+            f"{compressed}"
+            "</ecal:data>"
+            "</metadata>"
+        )
+        self._drawing.append(drawsvg.Raw(metadata))
 
     # =========================================================================
     # Watermarks
