@@ -48,14 +48,13 @@ class CalendarDB:
     def __init__(self, db_path: str = "calendar.db"):
         self.db_path = db_path
         # In-memory government holidays populated by load_python_holidays().
-        # None means "not loaded yet — fall back to DB"; {} means "loaded but empty".
-        self._python_holidays: dict[str, list[dict]] | None = None
+        self._python_holidays: dict[str, list[dict]] = {}
 
     def load_python_holidays(
         self, country: str | None, adjustedstart: str, adjustedend: str
     ) -> None:
         """
-        Pre-load government holidays from the 'holidays' Python package.
+        Load government holidays from the 'holidays' Python package.
 
         Loads public, government, optional, half-day, and unofficial holidays
         for every country in scope.  Public and government holidays are marked
@@ -64,27 +63,19 @@ class CalendarDB:
 
         When *country* is None the default countries (US and CA) are loaded.
 
-        After calling this, get_holidays_for_date(), is_government_nonworkday(),
-        is_nonworkday(), and get_holiday_title_for_date() all use this in-memory
-        data instead of the 'government' table in the database.
-
         Args:
             country: One or more ISO 3166-1 alpha-2 country codes.  Accepts a
                      single code ("US"), a comma-separated list ("US,CA,GB"), or
                      None to load the default set (US + CA).
             adjustedstart: Calendar start date in YYYYMMDD format.
             adjustedend:   Calendar end date in YYYYMMDD format.
+
+        Raises:
+            ImportError: If the 'holidays' package is not installed.
         """
         self._python_holidays = {}
 
-        try:
-            import holidays as holidays_lib
-        except ImportError:
-            logger.warning(
-                "'holidays' package not available; using DB government table"
-            )
-            self._python_holidays = None
-            return
+        import holidays as holidays_lib
 
         start_year = datetime.strptime(adjustedstart, "%Y%m%d").year
         end_year = datetime.strptime(adjustedend, "%Y%m%d").year
@@ -251,9 +242,6 @@ class CalendarDB:
         """
         Get government holidays for a specific date.
 
-        When load_python_holidays() has been called, returns holidays from the
-        'holidays' package in-memory store instead of querying the DB.
-
         Args:
             daykey: Date in YYYYMMDD format
             country: Country code filter.  Accepts a single code ("US"), a
@@ -264,37 +252,10 @@ class CalendarDB:
             List of holiday dictionaries with keys: displayname, icon, nonworkday, country
         """
         codes = _parse_country_codes(country)
-
-        if self._python_holidays is not None:
-            results = self._python_holidays.get(daykey, [])
-            if codes is not None:
-                results = [h for h in results if h.get("country") in codes]
-            return results
-
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            if codes is None:
-                cursor.execute(
-                    """
-                    SELECT displayname, icon, nonworkday, country
-                    FROM government
-                    WHERE startdatetime <= ? AND enddatetime >= ?
-                    """,
-                    (daykey, daykey),
-                )
-            else:
-                placeholders = ",".join("?" * len(codes))
-                cursor.execute(
-                    f"""
-                    SELECT displayname, icon, nonworkday, country
-                    FROM government
-                    WHERE startdatetime <= ? AND enddatetime >= ?
-                    AND country IN ({placeholders})
-                    """,
-                    (daykey, daykey, *sorted(codes)),
-                )
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+        results = self._python_holidays.get(daykey, [])
+        if codes is not None:
+            results = [h for h in results if h.get("country") in codes]
+        return results
 
     def get_special_days_for_date(self, daykey: str) -> list[dict]:
         """
@@ -346,9 +307,6 @@ class CalendarDB:
         """
         Check if a date is a non-working day (government holiday or company special day).
 
-        When load_python_holidays() has been called, the government-holiday part
-        uses the in-memory store; the companyspecialdays check still queries the DB.
-
         Args:
             daykey: Date in YYYYMMDD format
             country: Country code filter.  Accepts a single code ("US"), a
@@ -358,94 +316,31 @@ class CalendarDB:
             True if the date is a non-working day
         """
         codes = _parse_country_codes(country)
-
-        if self._python_holidays is not None:
-            hols = self._python_holidays.get(daykey, [])
-            if codes is not None:
-                hols = [h for h in hols if h.get("country") in codes]
-            if any(h.get("nonworkday") for h in hols):
-                return True
-            # Still check company special days in the DB
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                try:
-                    cursor.execute(
-                        """
-                        SELECT 1 FROM companyspecialdays
-                        WHERE startdate <= ? AND enddate >= ?
-                        AND nonworkday = 1
-                        LIMIT 1
-                        """,
-                        (daykey, daykey),
-                    )
-                    return cursor.fetchone() is not None
-                except sqlite3.OperationalError:
-                    return False
-
+        hols = self._python_holidays.get(daykey, [])
+        if codes is not None:
+            hols = [h for h in hols if h.get("country") in codes]
+        if any(h.get("nonworkday") for h in hols):
+            return True
+        # Check company special days in the DB
         with self._get_connection() as conn:
             cursor = conn.cursor()
             try:
-                if codes is None:
-                    cursor.execute(
-                        """
-                        SELECT 1 FROM government
-                        WHERE startdatetime <= ? AND enddatetime >= ?
-                        AND nonworkday = 1
-                        UNION
-                        SELECT 1 FROM companyspecialdays
-                        WHERE startdate <= ? AND enddate >= ?
-                        AND nonworkday = 1
-                        LIMIT 1
-                        """,
-                        (daykey, daykey, daykey, daykey),
-                    )
-                else:
-                    placeholders = ",".join("?" * len(codes))
-                    cursor.execute(
-                        f"""
-                        SELECT 1 FROM government
-                        WHERE startdatetime <= ? AND enddatetime >= ?
-                        AND country IN ({placeholders}) AND nonworkday = 1
-                        UNION
-                        SELECT 1 FROM companyspecialdays
-                        WHERE startdate <= ? AND enddate >= ?
-                        AND nonworkday = 1
-                        LIMIT 1
-                        """,
-                        (daykey, daykey, *sorted(codes), daykey, daykey),
-                    )
-            except sqlite3.OperationalError as e:
-                if "no such table: companyspecialdays" not in str(e):
-                    raise
-                if codes is None:
-                    cursor.execute(
-                        """
-                        SELECT 1 FROM government
-                        WHERE startdatetime <= ? AND enddatetime >= ?
-                        AND nonworkday = 1
-                        LIMIT 1
-                        """,
-                        (daykey, daykey),
-                    )
-                else:
-                    placeholders = ",".join("?" * len(codes))
-                    cursor.execute(
-                        f"""
-                        SELECT 1 FROM government
-                        WHERE startdatetime <= ? AND enddatetime >= ?
-                        AND country IN ({placeholders}) AND nonworkday = 1
-                        LIMIT 1
-                        """,
-                        (daykey, daykey, *sorted(codes)),
-                    )
-            return cursor.fetchone() is not None
+                cursor.execute(
+                    """
+                    SELECT 1 FROM companyspecialdays
+                    WHERE startdate <= ? AND enddate >= ?
+                    AND nonworkday = 1
+                    LIMIT 1
+                    """,
+                    (daykey, daykey),
+                )
+                return cursor.fetchone() is not None
+            except sqlite3.OperationalError:
+                return False
 
     def is_government_nonworkday(self, daykey: str, country: str | None = None) -> bool:
         """
         Check if a date has a government holiday marked as a non-working day.
-
-        When load_python_holidays() has been called, uses the in-memory store
-        instead of querying the DB.
 
         Args:
             daykey: Date in YYYYMMDD format
@@ -456,37 +351,10 @@ class CalendarDB:
             True if a government holiday with nonworkday=1 exists for this date
         """
         codes = _parse_country_codes(country)
-
-        if self._python_holidays is not None:
-            hols = self._python_holidays.get(daykey, [])
-            if codes is not None:
-                hols = [h for h in hols if h.get("country") in codes]
-            return any(h.get("nonworkday") for h in hols)
-
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            if codes is None:
-                cursor.execute(
-                    """
-                    SELECT 1 FROM government
-                    WHERE startdatetime <= ? AND enddatetime >= ?
-                    AND nonworkday = 1
-                    LIMIT 1
-                    """,
-                    (daykey, daykey),
-                )
-            else:
-                placeholders = ",".join("?" * len(codes))
-                cursor.execute(
-                    f"""
-                    SELECT 1 FROM government
-                    WHERE startdatetime <= ? AND enddatetime >= ?
-                    AND country IN ({placeholders}) AND nonworkday = 1
-                    LIMIT 1
-                    """,
-                    (daykey, daykey, *sorted(codes)),
-                )
-            return cursor.fetchone() is not None
+        hols = self._python_holidays.get(daykey, [])
+        if codes is not None:
+            hols = [h for h in hols if h.get("country") in codes]
+        return any(h.get("nonworkday") for h in hols)
 
     def get_special_markings_for_date(self, daykey: str) -> dict:
         """

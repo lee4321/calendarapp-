@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.25.0"
+__version__ = "26.03.25.1"
 
 import argparse
 import logging
@@ -2846,9 +2846,8 @@ def run(argv: list[str] | None = None) -> int:
         # Calculate date range (adjusts for complete weeks)
         calc_calendar_range(config, args.begin, args.end)
 
-        # Load government holidays from the 'holidays' Python package into the DB
-        # layer so all renderers transparently use live package data instead of
-        # the static 'government' table in the database.
+        # Load government holidays from the 'holidays' Python package so all
+        # renderers transparently use live package data.
         db.load_python_holidays(
             config.country, config.adjustedstart, config.adjustedend
         )
