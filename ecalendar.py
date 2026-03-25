@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.24.1"
+__version__ = "26.03.25.0"
 
 import argparse
 import logging
@@ -2534,6 +2534,8 @@ def run(argv: list[str] | None = None) -> int:
     now = datetime.now()
     default_output = f"ecalendar{now.strftime('%Y%m%d%H%M')}.svg"
 
+    print(f"EventCalendar ({__version__})")
+
     # Parse command line arguments
     parser = _create_argument_parser(default_output)
     raw_args = list(argv[1:] if argv else sys.argv[1:])
@@ -2549,8 +2551,6 @@ def run(argv: list[str] | None = None) -> int:
 
     # Configure logging
     _configure_logging(args.verbose, args.quiet)
-
-    print(f"EventCalendar ({__version__})")
 
     # Default output extension for text-mini
     if (
