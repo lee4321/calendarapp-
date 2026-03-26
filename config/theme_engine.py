@@ -449,8 +449,20 @@ VALID_SECTIONS = frozenset(
         "blockplan",
         "excelheader",
         "compact_plan",
+        # New unified theme format sections
+        "text_styles",
+        "box_styles",
+        "line_styles",
+        "icon_styles",
+        "axis",
+        "icons",
+        "patterns",
+        "element_styles",
     }
 )
+
+# Sections that indicate new unified theme format
+_NEW_FORMAT_SECTIONS = frozenset({"text_styles", "element_styles"})
 
 # Keys that reference font names (for validation)
 FONT_KEYS = frozenset({"font_family", "font_name", "number_font", "notes_font"})
@@ -924,6 +936,10 @@ class ThemeEngine:
         # Apply color maps
         self._apply_color_maps(config)
 
+        # Build unified ThemeStyles if the theme uses the new format
+        if self._is_new_format():
+            self._build_theme_styles(config)
+
         return config
 
     def _apply_color_maps(self, config: "CalendarConfig") -> None:
@@ -1005,3 +1021,233 @@ class ThemeEngine:
             for yaml_key, config_field in _MINI_COLOR_FIELDS.items():
                 if yaml_key in mc:
                     setattr(config, config_field, mc[yaml_key])
+
+    # ─── New unified theme format support ─────────────────────────────────
+
+    def _is_new_format(self) -> bool:
+        """Return True if the theme uses the new unified format."""
+        return bool(self._theme_data.keys() & _NEW_FORMAT_SECTIONS)
+
+    def _build_theme_styles(self, config: "CalendarConfig") -> None:
+        """Parse new-format YAML sections and build ThemeStyles on config."""
+        from config.styles import (
+            TextStyle,
+            BoxStyle,
+            LineStyle,
+            IconStyle,
+            AxisStyle,
+            ElementBinding,
+            ThemeStyles,
+        )
+        from renderers.css_generator import generate_css
+
+        # Parse named style token dictionaries
+        text_styles = self._parse_text_styles()
+        box_styles = self._parse_box_styles()
+        line_styles = self._parse_line_styles()
+        icon_styles = self._parse_icon_styles()
+        axis = self._parse_axis_style()
+
+        # Parse element bindings
+        element_bindings = self._parse_element_bindings(
+            text_styles, box_styles, line_styles, icon_styles
+        )
+
+        theme_styles = ThemeStyles(
+            text_styles=text_styles,
+            box_styles=box_styles,
+            line_styles=line_styles,
+            icon_styles=icon_styles,
+            axis=axis,
+            element_bindings=element_bindings,
+        )
+
+        # Generate and attach CSS
+        theme_styles.css = generate_css(theme_styles)
+        config.theme_styles = theme_styles
+
+    def _parse_text_styles(self) -> dict:
+        """Parse text_styles: section into {name: TextStyle} dict."""
+        from config.styles import TextStyle
+
+        raw = self._theme_data.get("text_styles", {})
+        if not isinstance(raw, dict):
+            return {}
+        result = {}
+        for name, props in raw.items():
+            if not isinstance(props, dict):
+                logger.warning("Theme: text_styles.%s must be a dict", name)
+                continue
+            size_rules = props.get("size_rules", ())
+            if isinstance(size_rules, list):
+                size_rules = tuple(size_rules)
+            else:
+                size_rules = ()
+            result[name] = TextStyle(
+                font=props.get("font", "RobotoCondensed-Light"),
+                size=float(props.get("size", 8.0)),
+                color=str(props.get("color", "#333333")),
+                opacity=float(props.get("opacity", 1.0)),
+                alignment=str(props.get("alignment", "start")),
+                size_rules=size_rules,
+            )
+        return result
+
+    def _parse_box_styles(self) -> dict:
+        """Parse box_styles: section into {name: BoxStyle} dict."""
+        from config.styles import BoxStyle
+
+        raw = self._theme_data.get("box_styles", {})
+        if not isinstance(raw, dict):
+            return {}
+        result = {}
+        for name, props in raw.items():
+            if not isinstance(props, dict):
+                logger.warning("Theme: box_styles.%s must be a dict", name)
+                continue
+            fill_colors = props.get("fill_colors")
+            if isinstance(fill_colors, list):
+                fill_colors = tuple(fill_colors)
+            else:
+                fill_colors = None
+            result[name] = BoxStyle(
+                fill=str(props.get("fill", "white")),
+                fill_opacity=float(props.get("fill_opacity", 1.0)),
+                stroke=props.get("stroke"),
+                stroke_width=float(props.get("stroke_width", 0.5)),
+                stroke_opacity=float(props.get("stroke_opacity", 1.0)),
+                stroke_dasharray=props.get("stroke_dasharray"),
+                fill_palette=props.get("fill_palette"),
+                fill_colors=fill_colors,
+            )
+        return result
+
+    def _parse_line_styles(self) -> dict:
+        """Parse line_styles: section into {name: LineStyle} dict."""
+        from config.styles import LineStyle
+
+        raw = self._theme_data.get("line_styles", {})
+        if not isinstance(raw, dict):
+            return {}
+        result = {}
+        for name, props in raw.items():
+            if not isinstance(props, dict):
+                logger.warning("Theme: line_styles.%s must be a dict", name)
+                continue
+            result[name] = LineStyle(
+                color=str(props.get("color", "#CCCCCC")),
+                width=float(props.get("width", 0.5)),
+                opacity=float(props.get("opacity", 1.0)),
+                dasharray=props.get("dasharray"),
+            )
+        return result
+
+    def _parse_icon_styles(self) -> dict:
+        """Parse icon_styles: or icons: section into {name: IconStyle} dict."""
+        from config.styles import IconStyle
+
+        # Try icon_styles first, fall back to icons
+        raw = self._theme_data.get("icon_styles") or self._theme_data.get("icons", {})
+        if not isinstance(raw, dict):
+            return {}
+        result = {}
+        for name, props in raw.items():
+            if not isinstance(props, dict):
+                continue
+            result[name] = IconStyle(
+                color=str(props.get("color", "#333333")),
+                size=float(props.get("size", 10.0)),
+                icon=props.get("icon"),
+            )
+        return result
+
+    def _parse_axis_style(self):
+        """Parse axis: section into AxisStyle."""
+        from config.styles import AxisStyle
+
+        raw = self._theme_data.get("axis", {})
+        if not isinstance(raw, dict):
+            return AxisStyle()
+
+        tick = raw.get("tick", {})
+        if not isinstance(tick, dict):
+            tick = {}
+        today = raw.get("today", {})
+        if not isinstance(today, dict):
+            today = {}
+
+        return AxisStyle(
+            line_style=str(raw.get("line_style", "axis")),
+            tick_color=str(tick.get("color", "#666666")),
+            tick_label_style=str(tick.get("label_style", "caption")),
+            tick_date_format=str(tick.get("date_format", "MMM D")),
+            today_line_style=str(today.get("line_style", "today")),
+            today_label_color=str(today.get("label_color", "red")),
+            today_label_text=str(today.get("label_text", "Today")),
+        )
+
+    def _parse_element_bindings(
+        self, text_styles: dict, box_styles: dict,
+        line_styles: dict, icon_styles: dict,
+    ) -> dict:
+        """Parse element_styles: section into {class_name: ElementBinding} dict."""
+        from config.styles import ElementBinding
+
+        raw = self._theme_data.get("element_styles", {})
+        if not isinstance(raw, dict):
+            return {}
+
+        result = {}
+        for class_name, binding_def in raw.items():
+            if not isinstance(binding_def, dict):
+                logger.warning("Theme: element_styles.%s must be a dict", class_name)
+                continue
+
+            binding = ElementBinding()
+
+            if "text_style" in binding_def:
+                style_name = binding_def["text_style"]
+                if style_name in text_styles:
+                    binding.text_style = text_styles[style_name]
+                else:
+                    logger.warning(
+                        "Theme: element_styles.%s references unknown text_style '%s'",
+                        class_name, style_name,
+                    )
+
+            if "box_style" in binding_def:
+                style_name = binding_def["box_style"]
+                if style_name in box_styles:
+                    binding.box_style = box_styles[style_name]
+                else:
+                    logger.warning(
+                        "Theme: element_styles.%s references unknown box_style '%s'",
+                        class_name, style_name,
+                    )
+
+            if "line_style" in binding_def:
+                style_name = binding_def["line_style"]
+                if style_name in line_styles:
+                    binding.line_style = line_styles[style_name]
+                else:
+                    logger.warning(
+                        "Theme: element_styles.%s references unknown line_style '%s'",
+                        class_name, style_name,
+                    )
+
+            if "icon_style" in binding_def:
+                style_name = binding_def["icon_style"]
+                if style_name in icon_styles:
+                    binding.icon_style = icon_styles[style_name]
+                else:
+                    logger.warning(
+                        "Theme: element_styles.%s references unknown icon_style '%s'",
+                        class_name, style_name,
+                    )
+
+            if "color" in binding_def:
+                binding.color = str(binding_def["color"])
+
+            result[class_name] = binding
+
+        return result

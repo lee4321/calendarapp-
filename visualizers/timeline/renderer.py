@@ -193,6 +193,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=config.timeline_axis_width,
             stroke_opacity=config.timeline_axis_opacity,
             stroke_dasharray=config.timeline_axis_stroke_dasharray or None,
+            css_class="ec-axis-line",
         )
 
         self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
@@ -705,7 +706,7 @@ class TimelineRenderer(BaseSVGRenderer):
         for j in range(len(waypoints) - 1):
             x1, y1 = waypoints[j]
             x2, y2 = waypoints[j + 1]
-            self._draw_line(x1, y1, x2, y2, **kw)
+            self._draw_line(x1, y1, x2, y2, **kw, css_class="ec-connector")
 
     def _draw_callout_connector(
         self,
@@ -903,6 +904,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=1.1,
             stroke_opacity=0.9,
             stroke_dasharray=config.timeline_connector_stroke_dasharray or None,
+            css_class="ec-connector",
         )
 
         new_segs: list[tuple[float, float, float, float]] = []
@@ -1013,6 +1015,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=config.timeline_label_stroke_width,
             stroke_opacity=0.95,
             stroke_dasharray=config.timeline_label_stroke_dasharray or None,
+            css_class="ec-callout-box",
         )
 
         has_icon = bool(item.event.icon and self._resolve_icon_svg(item.event.icon))
@@ -1046,6 +1049,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 fitted_title,
                 anchor="start",
                 color=event_text_color,
+                css_class="ec-event-icon",
             )
             title_text_x = text_x + fitted_title + icon_gap
             title_max_w = item.box_width - 12.0 - fitted_title - icon_gap
@@ -1061,6 +1065,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fitted_title,
             fill=event_text_color,
             max_width=title_max_w,
+            css_class="ec-event-name",
         )
 
         if notes:
@@ -1072,6 +1077,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 fitted_notes,
                 fill=event_text_color,
                 max_width=item.box_width - 12.0,
+                css_class="ec-event-notes",
             )
 
         date_label = self._safe_day(item.event.start, fallback=arrow.now()).format(
@@ -1089,6 +1095,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_font_size,
             fill=event_text_color,
             anchor="middle",
+            css_class="ec-event-date",
         )
 
     def _draw_duration_connectors(
@@ -1114,6 +1121,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=0.9,
             stroke_opacity=0.8,
             stroke_dasharray=config.timeline_duration_bracket_stroke_dasharray or None,
+            css_class="ec-connector",
         )
         self._draw_line(
             item.end_x,
@@ -1124,6 +1132,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=0.9,
             stroke_opacity=0.8,
             stroke_dasharray=config.timeline_duration_bracket_stroke_dasharray or None,
+            css_class="ec-connector",
         )
 
     def _draw_duration(
@@ -1158,6 +1167,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=0.9,
             stroke_opacity=0.9,
             stroke_dasharray=config.timeline_duration_bar_stroke_dasharray or None,
+            css_class="ec-duration-bar",
         )
 
         # Start/end markers on the main axis.
@@ -1202,6 +1212,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill=duration_text_color,
             anchor="middle",
             max_width=text_w,
+            css_class="ec-event-name",
         )
 
         if notes:
@@ -1215,6 +1226,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 fill=duration_text_color,
                 anchor="middle",
                 max_width=text_w,
+                css_class="ec-event-notes",
             )
 
         # Keep start/end labels on the same Y baseline.
@@ -1229,6 +1241,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_size,
             fill=date_color,
             anchor="middle",
+            css_class="ec-duration-date",
         )
         self._draw_text(
             item.end_x,
@@ -1238,6 +1251,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_size,
             fill=date_color,
             anchor="middle",
+            css_class="ec-duration-date",
         )
 
     def _draw_timeline_marker(
@@ -1278,6 +1292,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 max(7.0, config.timeline_icon_size),
                 anchor="middle",
                 color=effective_color,
+                css_class="ec-event-icon",
             )
             return
 
@@ -1362,6 +1377,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 stroke_width=1.0,
                 stroke_opacity=0.35,
                 stroke_dasharray=config.timeline_tick_stroke_dasharray or None,
+                css_class="ec-axis-tick",
             )
             if draw_labels:
                 self._draw_text(
@@ -1373,6 +1389,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     fill=config.timeline_tick_color,
                     fill_opacity=0.8,
                     anchor="middle",
+                    css_class="ec-label",
                 )
 
     def _draw_fiscal_bands(
@@ -1433,6 +1450,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     x1, row_top, x2 - x1, band_h,
                     fill=fill, fill_opacity=0.6,
                     stroke="#aaaaaa", stroke_width=0.5,
+                    css_class="ec-callout-box",
                 )
                 cx = (x1 + x2) / 2.0
                 cy = row_top + band_h / 2.0 + label_size * 0.35
@@ -1444,6 +1462,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     fill_opacity=0.9,
                     anchor="middle",
                     max_width=x2 - x1 - 4.0,
+                    css_class="ec-label",
                 )
 
     def _draw_today_marker(
@@ -1506,6 +1525,7 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=1.0,
             stroke_opacity=0.55,
             stroke_dasharray=config.timeline_today_line_dasharray or None,
+            css_class="ec-today-line",
         )
         label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
@@ -1524,6 +1544,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill=config.timeline_today_label_color,
             fill_opacity=0.85,
             anchor="middle",
+            css_class="ec-today-label",
         )
 
     def _draw_circle(

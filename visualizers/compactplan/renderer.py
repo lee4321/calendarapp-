@@ -163,7 +163,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Background (full area)
         bg = str(config.compactplan_background_color or "").strip().lower()
         if bg not in {"", "none", "transparent"}:
-            self._draw_rect(area_x, area_y, area_w, area_h, fill=config.compactplan_background_color)
+            self._draw_rect(area_x, area_y, area_w, area_h, fill=config.compactplan_background_color, css_class="ec-background")
 
         # Header bands at computed floating position
         self._draw_bands(
@@ -180,6 +180,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 stroke_width=config.compactplan_axis_width,
                 stroke_dasharray=config.compactplan_axis_dasharray or None,
                 stroke_opacity=config.compactplan_axis_opacity,
+                css_class="ec-axis-line",
             )
 
         # Duration lines
@@ -190,6 +191,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 stroke_width=line_w,
                 stroke_dasharray=config.compactplan_duration_stroke_dasharray or None,
                 stroke_opacity=float(config.compactplan_duration_opacity),
+                css_class="ec-duration-bar",
             )
 
         # Start icons — one unique icon at the left (start-date) end of each duration line.
@@ -207,6 +209,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     self._draw_icon_svg(
                         p.icon_name, p.x1, icon_baseline, dur_icon_h,
                         anchor="start", color=icon_color,
+                        css_class="ec-duration-icon",
                     )
 
         # Continuation icons — drawn at the clamped right edge of any duration
@@ -229,6 +232,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     self._draw_icon_svg(
                         cont_icon_name, p.x2, icon_baseline, cont_icon_h,
                         anchor="end", color=icon_color,
+                        css_class="ec-duration-icon",
                     )
 
         # Milestones
@@ -348,10 +352,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     )
                     for d in visible_days
                 ]
-                self._draw_icon_band_row(day_cells, row_y, band_row_h, icon_h, fill)
+                self._draw_icon_band_row(day_cells, row_y, band_row_h, icon_h, fill, css_class="ec-band-cell")
                 self._draw_line(
                     area_x, row_y + band_row_h, area_x + area_w, row_y + band_row_h,
                     stroke="#cccccc", stroke_width=0.5,
+                    css_class="ec-separator",
                 )
                 continue
 
@@ -374,7 +379,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
                 fill = alt_fill_color if seg_idx % 2 else fill_color
                 if not _is_none_color(fill):
-                    self._draw_rect(x1, row_y, seg_w, band_row_h, fill=fill)
+                    self._draw_rect(x1, row_y, seg_w, band_row_h, fill=fill, css_class="ec-band-cell")
 
                 # Label text, vertically centered in the band row
                 label = seg.label
@@ -400,6 +405,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         fill_opacity=text_opacity,
                         anchor=anchor,
                         max_width=max_w,
+                        css_class="ec-label",
                     )
 
             # Draw thin separator line below each band row
@@ -407,6 +413,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             self._draw_line(
                 area_x, sep_y, area_x + area_w, sep_y,
                 stroke="#cccccc", stroke_width=0.5,
+                css_class="ec-separator",
             )
 
     # ------------------------------------------------------------------
@@ -693,6 +700,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 label_x, label_y, evt.task_name,
                 font_name, font_size,
                 fill=label_color, fill_opacity=label_opacity,
+                css_class="ec-event-name",
             )
 
     def _draw_flag_marker(
@@ -706,9 +714,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """Draw a flag-on-stem milestone marker matching the reference SVG design."""
         stem_top = axis_y - flag_h
         # Vertical stem
-        self._draw_line(x, axis_y, x, stem_top, stroke=color, stroke_width=1.0)
+        self._draw_line(x, axis_y, x, stem_top, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
         # Short horizontal foot tick at axis
-        self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0)
+        self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
 
         # Pennant: a parallelogram/trapezoid to the right of stem tip
         pennant_h = flag_h * 0.7
@@ -834,12 +842,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     stroke=group_color,
                     stroke_width=line_w,
                     stroke_opacity=float(config.compactplan_duration_opacity),
+                    css_class="ec-legend-swatch",
                 )
                 self._draw_text(
                     sub_x + text_offset, cur_y, display_group,
                     font_name, font_size,
                     fill=label_color, fill_opacity=label_opacity,
                     max_width=text_max_w,
+                    css_class="ec-heading",
                 )
                 cur_y += row_h
 
@@ -855,6 +865,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         self._draw_icon_svg(
                             p.icon_name, sub_x, icon_baseline, dur_icon_h,
                             anchor="start", color=icon_color,
+                            css_class="ec-legend-icon",
                         )
 
                     self._draw_text(
@@ -862,6 +873,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         font_name, font_size,
                         fill=label_color, fill_opacity=label_opacity,
                         max_width=text_max_w,
+                        css_class="ec-legend-text",
                     )
                     cur_y += row_h
 
@@ -911,12 +923,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 area_x, cur_y, date_str,
                 font_name, font_size,
                 fill=date_color, fill_opacity=opacity,
+                css_class="ec-event-date",
             )
             self._draw_text(
                 area_x + date_col_w, cur_y, name,
                 font_name, font_size,
                 fill=name_color, fill_opacity=opacity,
                 max_width=area_w - date_col_w,
+                css_class="ec-event-name",
             )
             cur_y += row_h
 
@@ -977,6 +991,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._draw_icon_svg(
             icon_name, icon_x, icon_baseline, icon_h,
             anchor="end", color=icon_color,
+            css_class="ec-legend-icon",
         )
 
         # Text: right edge at diagram right edge.
@@ -985,6 +1000,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             font_name, font_size,
             fill=label_color, fill_opacity=label_opacity,
             anchor="end",
+            css_class="ec-legend-text",
         )
 
     def _draw_axis_legend(
@@ -1040,6 +1056,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             stroke_width=float(config.compactplan_axis_width),
             stroke_dasharray=config.compactplan_axis_dasharray or None,
             stroke_opacity=float(config.compactplan_axis_opacity),
+            css_class="ec-legend-swatch",
         )
 
         # Label: right edge at diagram right edge.
@@ -1048,6 +1065,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             font_name, font_size,
             fill=label_color, fill_opacity=label_opacity,
             anchor="end",
+            css_class="ec-legend-text",
         )
 
     # ------------------------------------------------------------------

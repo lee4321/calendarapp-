@@ -71,7 +71,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
         bg = str(config.blockplan_background_color or "").strip().lower()
         if bg not in {"", "none", "transparent"}:
             self._draw_rect(
-                area_x, area_y, area_w, area_h, fill=config.blockplan_background_color
+                area_x, area_y, area_w, area_h, fill=config.blockplan_background_color,
+                css_class="ec-background",
             )
 
         # Heights — cap combined band heights so swimlane region always has positive height
@@ -141,6 +142,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             stroke_width=config.blockplan_grid_line_width,
             stroke_opacity=config.blockplan_grid_opacity,
             stroke_dasharray=config.blockplan_grid_dasharray,
+            css_class="ec-separator",
         )
 
         # ── swimlanes ─────────────────────────────────────────────────────────
@@ -170,6 +172,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_width=config.blockplan_grid_line_width,
                 stroke_opacity=config.blockplan_grid_opacity,
                 stroke_dasharray=config.blockplan_grid_dasharray,
+                css_class="ec-separator",
             )
             self._draw_time_bands(
                 config=config,
@@ -505,6 +508,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=heading_fill,
                     stroke=stroke, stroke_width=tb_width,
                     stroke_opacity=tb_opacity, stroke_dasharray=tb_dasharray,
+                    css_class="ec-heading-cell",
                 )
                 heading_font = band.get("label_font", config.blockplan_header_font)
                 heading_font_size = float(
@@ -520,6 +524,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=heading_color, fill_opacity=heading_opacity,
                     anchor="start",
                     max_width=max(8.0, timeline_x - left_x - 10),
+                    css_class="ec-heading",
                 )
                 # Icon cells.
                 icon_rules = list(band.get("icon_rules") or [])
@@ -540,6 +545,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     timeline_x, y_top + row_h, timeline_x + timeline_w, y_top + row_h,
                     stroke=stroke, stroke_width=tb_width,
                     stroke_opacity=tb_opacity, stroke_dasharray=tb_dasharray,
+                    css_class="ec-grid-line",
                 )
                 continue
 
@@ -604,6 +610,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_width=tb_width,
                 stroke_opacity=tb_opacity,
                 stroke_dasharray=tb_dasharray,
+                css_class="ec-heading-cell",
             )
             heading_w = timeline_x - left_x
             if heading_align_h == "center":
@@ -625,6 +632,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 fill_opacity=heading_opacity,
                 anchor=heading_anchor,
                 max_width=max(8.0, timeline_x - left_x - 10),
+                css_class="ec-heading",
             )
 
             segments = self._build_segments(
@@ -685,6 +693,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_width=tb_width,
                     stroke_opacity=tb_opacity,
                     stroke_dasharray=tb_dasharray,
+                    css_class="ec-band-cell",
                 )
                 _lv = band.get("label_values")
                 if _lv and isinstance(_lv, list):
@@ -703,6 +712,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         fill_opacity=band_label_opacity,
                         anchor="middle",
                         max_width=max(8.0, seg_w - 4),
+                        css_class="ec-label",
                     )
 
     def _draw_configured_vertical_lines(
@@ -796,6 +806,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                             bottom_y - top_y,
                             fill=fill,
                             fill_opacity=fill_opacity,
+                            css_class="ec-vline-fill",
                         )
                 matched_idx += 1
 
@@ -854,6 +865,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_width=width,
                     stroke_opacity=opacity,
                     stroke_dasharray=dash_value,
+                    css_class="ec-vline",
                 )
 
     @staticmethod
@@ -1106,6 +1118,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_width=config.blockplan_grid_line_width,
                 stroke_opacity=config.blockplan_grid_opacity,
                 stroke_dasharray=config.blockplan_grid_dasharray,
+                css_class="ec-heading-cell",
             )
             self._draw_rect(
                 timeline_x,
@@ -1117,6 +1130,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_width=config.blockplan_grid_line_width,
                 stroke_opacity=config.blockplan_grid_opacity,
                 stroke_dasharray=config.blockplan_grid_dasharray,
+                css_class="ec-band-cell",
             )
             if show_split_line:
                 self._draw_line(
@@ -1128,6 +1142,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_width=config.blockplan_grid_line_width,
                     stroke_opacity=config.blockplan_grid_opacity,
                     stroke_dasharray=config.blockplan_grid_dasharray,
+                    css_class="ec-separator",
                 )
 
             # Lane label (single or multiline), with configurable alignment.
@@ -1322,6 +1337,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_opacity=config.blockplan_duration_stroke_opacity,
                 stroke_width=config.blockplan_duration_stroke_width,
                 stroke_dasharray=config.blockplan_duration_stroke_dasharray,
+                css_class="ec-duration-bar",
             )
             has_dates = bool(
                 config.blockplan_duration_show_start_date
@@ -1401,6 +1417,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         fallback_name=config.default_missing_icon,
                         fallback_color=dur_text_color,
                         transform=icon_transform,
+                        css_class="ec-event-icon",
                     )
                     text_x = (
                         draw_x + effective_icon_w + gap
@@ -1416,6 +1433,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         fill=dur_text_color,
                         anchor="start" if icon_drawn else "middle",
                         max_width=max(8.0, x0 + w - text_x - 2),
+                        css_class="ec-event-name",
                     )
                 else:
                     self._draw_text(
@@ -1427,6 +1445,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         fill=dur_text_color,
                         anchor="middle",
                         max_width=max(8.0, max_w),
+                        css_class="ec-event-name",
                     )
 
             if weekly_style_with_notes:
@@ -1440,6 +1459,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=dur_notes_color,
                     anchor="middle",
                     max_width=max(8.0, w - 4),
+                    css_class="ec-event-notes",
                 )
             else:
                 _draw_icon_and_text(
@@ -1503,6 +1523,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         anchor="start",
                         max_width=None if both else half_w,
                         transform=xform,
+                        css_class="ec-duration-date",
                     )
                 if show_end:
                     ex = x0 + w - 2.0
@@ -1523,6 +1544,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         anchor="end",
                         max_width=None if both else half_w,
                         transform=xform,
+                        css_class="ec-duration-date",
                     )
 
     def _draw_lane_events(
@@ -1663,18 +1685,19 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     color=config.blockplan_name_text_font_color,
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
+                    css_class="ec-event-icon",
                 )
 
             if not marker_drawn:
-                self._drawing.append(
-                    drawsvg.Circle(
-                        x,
-                        y_center,
-                        icon_r,
-                        fill=config.blockplan_name_text_font_color,
-                        stroke=config.blockplan_name_text_font_color,
-                    )
+                _circle = drawsvg.Circle(
+                    x,
+                    y_center,
+                    icon_r,
+                    fill=config.blockplan_name_text_font_color,
+                    stroke=config.blockplan_name_text_font_color,
+                    class_="ec-milestone-marker",
                 )
+                self._drawing.append(_circle)
             marker_extent = icon_size if marker_drawn else icon_r
             label_x = x + marker_extent + 2.0
             max_width = max(8.0, (timeline_x + timeline_w) - x - 6)
@@ -1688,6 +1711,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=config.blockplan_event_date_color,
                     anchor="start",
                     max_width=max_width,
+                    css_class="ec-event-date",
                 )
             if has_notes:
                 self._draw_text(
@@ -1699,6 +1723,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=config.blockplan_name_text_font_color,
                     anchor="start",
                     max_width=max_width,
+                    css_class="ec-event-name",
                 )
                 self._draw_text(
                     label_x,
@@ -1711,6 +1736,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=config.blockplan_notes_text_font_color,
                     anchor="start",
                     max_width=max_width,
+                    css_class="ec-event-notes",
                 )
             else:
                 self._draw_text(
@@ -1722,6 +1748,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill=config.blockplan_name_text_font_color,
                     anchor="start",
                     max_width=max_width,
+                    css_class="ec-event-name",
                 )
 
     @staticmethod
@@ -1844,6 +1871,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 anchor=anchor,
                 max_width=max_width,
                 transform=xform,
+                css_class="ec-heading",
             )
 
     @staticmethod

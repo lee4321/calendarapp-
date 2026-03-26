@@ -107,6 +107,7 @@ def text_to_svg_group(
     fill: str = "black",
     fill_opacity: float = 1.0,
     anchor: str = "start",
+    css_class: str | None = None,
 ) -> str:
     """
     Convert a text string to an SVG <g> element containing <path> elements.
@@ -182,5 +183,6 @@ def text_to_svg_group(
         return ""
 
     opacity_attr = f' fill-opacity="{fill_opacity}"' if fill_opacity < 1.0 else ""
+    class_attr = f' class="{css_class}"' if css_class else ""
     inner = "".join(paths)
-    return f'<g fill="{fill}"{opacity_attr}>{inner}</g>'
+    return f'<g fill="{fill}"{opacity_attr}{class_attr}>{inner}</g>'

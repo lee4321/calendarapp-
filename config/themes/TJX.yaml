@@ -2,8 +2,182 @@
 
 theme:
   name: "TJX"
-  version: "1.0"
-  description: "TJX colors and style"
+  version: "2.0"
+  description: "TJX colors and style — unified theme model"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Unified Style Tokens
+# ══════════════════════════════════════════════════════════════════════════════
+
+text_styles:
+  heading:
+    font: "AlumniSansPinstripe-Regular"
+    size: 10
+    color: "grey"
+    size_rules:
+      - font_size: 10
+        when: { papersize: ["letter", "ledger", "tabloid"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "AlumniSansPinstripe-Regular"
+    size: 8
+    color: "navy"
+  body_secondary:
+    font: "AlumniSansPinstripe-Italic"
+    size: 7
+    color: "grey"
+  label:
+    font: "InstrumentSerif-Regular"
+    size: 7
+    color: "grey"
+  label_bold:
+    font: "InstrumentSerif-Regular"
+    size: 7
+    color: "yellow"
+  caption:
+    font: "AlumniSansPinstripe-Regular"
+    size: 6
+    color: "grey"
+  day_number:
+    font: "InstrumentSerif-Regular"
+    size: 10
+    color: "blue"
+  month_title:
+    font: "Caveat-Bold"
+    size: 8
+    color: "navy"
+
+box_styles:
+  default:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "none"
+  cell:
+    fill: "grey"
+    fill_opacity: 0.25
+    stroke: "grey"
+    stroke_width: 2
+    stroke_opacity: 0.25
+  header:
+    fill: "none"
+    stroke: "none"
+  timeband:
+    fill: "none"
+    fill_opacity: 1.0
+    stroke: "none"
+  highlight:
+    fill: "lightblue"
+    fill_opacity: 0.3
+    stroke: "none"
+  callout:
+    fill: "white"
+    fill_opacity: 0.25
+    stroke: "grey"
+    stroke_width: 1.0
+
+line_styles:
+  grid:
+    color: "grey"
+    width: 0.5
+    opacity: 0.3
+  axis:
+    color: "lightgrey"
+    width: 3
+    opacity: 0.9
+  separator:
+    color: "grey"
+    width: 0.5
+    opacity: 0.5
+  today:
+    color: "grey"
+    width: 1.5
+    opacity: 1.0
+  connector:
+    color: "grey"
+    width: 0.5
+    opacity: 1.0
+    dasharray: "4 2"
+
+icon_styles:
+  event:
+    color: "blue"
+    size: 10
+  duration:
+    color: "navy"
+  overflow:
+    icon: "overflow"
+    color: "red"
+
+axis:
+  line_style: axis
+  tick:
+    color: "grey"
+    label_style: caption
+    date_format: "M/D"
+  today:
+    line_style: today
+    label_color: "grey"
+    label_text: "Today"
+
+element_styles:
+  # ── Text elements ──
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-day-number:     { text_style: day_number }
+  ec-month-title:    { text_style: month_title }
+  ec-week-number:    { text_style: label_bold }
+  ec-fiscal-label:   { text_style: caption }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-event-date:     { text_style: caption }
+  ec-duration-date:  { text_style: caption }
+  ec-holiday-title:  { text_style: body }
+  ec-today-label:    { text_style: label, color: "grey" }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+
+  # ── Box/rectangle elements ──
+  ec-background:     { box_style: default }
+  ec-cell:           { box_style: cell }
+  ec-heading-cell:   { box_style: header }
+  ec-band-cell:      { box_style: timeband }
+  ec-callout-box:    { box_style: callout }
+  ec-vline-fill:     { box_style: highlight }
+  ec-day-box:        { box_style: cell }
+  ec-pattern-fill:   { box_style: default }
+
+  # ── Line elements ──
+  ec-grid-line:      { line_style: grid }
+  ec-axis-line:      { line_style: axis }
+  ec-axis-tick:      { line_style: axis }
+  ec-today-line:     { line_style: today }
+  ec-separator:      { line_style: separator }
+  ec-connector:      { line_style: connector }
+  ec-vline:          { line_style: grid }
+  ec-duration-bar:   { line_style: axis }
+  ec-hash-line:      { line_style: grid }
+  ec-strikethrough:  { line_style: grid }
+
+  # ── Marker elements ──
+  ec-milestone-marker: { line_style: axis }
+  ec-milestone-flag:   { line_style: axis }
+  ec-duration-marker:  { line_style: axis }
+
+  # ── Icon elements ──
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: duration }
+  ec-overflow-icon:  { icon_style: overflow }
+
+  # ── Legend elements ──
+  ec-legend-swatch:  { line_style: axis }
+  ec-legend-text:    { text_style: body }
+  ec-legend-icon:    { icon_style: event }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Legacy Settings (retained for non-styling configuration)
+# ══════════════════════════════════════════════════════════════════════════════
 
 # ── General Settings ──────────────────────────────────────────────────────────
 base:

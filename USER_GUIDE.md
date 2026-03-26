@@ -288,9 +288,224 @@ In weekly, day boxes are drawn first, then events and durations are placed into 
 
 ## Theme System
 
+Themes control all visual styling of SVG output. Two formats are supported:
+
+- **Unified format (v2.0)**: Token-based style definitions with CSS class names on every SVG element. All 9 built-in themes use this format.
+- **Legacy format (v1.0)**: Flat per-visualizer fields. Still supported for backward compatibility.
+
+The theme engine auto-detects the format based on the presence of `text_styles` or `element_styles` top-level sections.
+
+### Unified Theme Format
+
+The unified format defines reusable style tokens and binds them to semantic CSS element classes. Every SVG element gets a `class="ec-..."` attribute and a `<style>` block is injected into each SVG.
+
+#### Theme YAML Structure
+
+```yaml
+theme:
+  name: "My Theme"
+  version: "2.0"
+
+text_styles:       # Named text style tokens
+box_styles:        # Named box/rectangle style tokens
+line_styles:       # Named line style tokens
+icon_styles:       # Named icon style tokens
+axis:              # Shared axis definition
+element_styles:    # Flat map: CSS class name -> style token binding
+```
+
+#### Text Styles
+
+Each text style defines font, size, color, opacity, and optional paper-size scaling rules.
+
+```yaml
+text_styles:
+  heading:
+    font: "Roboto-Bold"
+    size: 10
+    color: "#000000"
+    opacity: 1.0
+    alignment: start       # start | middle | end
+    size_rules:
+      - font_size: 12
+        when: { papersize: ["letter", "ledger"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "RobotoCondensed-Light"
+    size: 8
+    color: "#333333"
+```
+
+#### Box Styles
+
+Box styles control rectangles, cells, and backgrounds. Optional palette cycling for repeating elements.
+
+```yaml
+box_styles:
+  cell:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "#E0E0E0"
+    stroke_width: 0.25
+    stroke_opacity: 1.0
+    stroke_dasharray: null
+    fill_palette: "Greys"                    # Named DB palette for color cycling
+    fill_colors: ["#F0F0F0", "#E8E8E8"]     # Inline color list (takes priority)
+```
+
+Palette resolution priority: `fill_colors` > `fill_palette` > `fill` (static fallback). The renderer calls `palette[index % len(palette)]` to cycle through colors for repeating instances.
+
+#### Line Styles
+
+All line elements support color, width, opacity, and dash array.
+
+```yaml
+line_styles:
+  grid:
+    color: "#CCCCCC"
+    width: 0.5
+    opacity: 1.0
+    dasharray: null          # e.g. "4,2" for dashed lines
+  today:
+    color: "red"
+    width: 1.5
+    dasharray: "4,2"
+```
+
+#### Icon Styles
+
+```yaml
+icon_styles:
+  event:
+    color: "#333333"
+    size: 10
+  overflow:
+    icon: "overflow"         # Default icon name
+    color: "red"
+```
+
+#### Axis Definition
+
+Shared configuration for timeline/blockplan/compact plan axes.
+
+```yaml
+axis:
+  line_style: axis           # Reference to a line_styles name
+  tick:
+    color: "#666666"
+    label_style: caption     # Reference to a text_styles name
+    date_format: "MMM D"
+  today:
+    line_style: today
+    label_color: "red"
+    label_text: "Today"
+```
+
+#### Element Styles (Binding Map)
+
+A single flat map binds each CSS element class to its style tokens. No per-visualizer overrides; different styling needs require a new theme file.
+
+```yaml
+element_styles:
+  # Text elements
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-event-name:     { text_style: body }
+  ec-today-label:    { text_style: label, color: "red" }  # Per-element color override
+
+  # Box elements
+  ec-cell:           { box_style: cell }
+  ec-background:     { box_style: default }
+
+  # Line elements
+  ec-grid-line:      { line_style: grid }
+  ec-today-line:     { line_style: today }
+
+  # Icon elements
+  ec-event-icon:     { icon_style: event }
+```
+
+### CSS Element Catalog
+
+Every SVG element gets a semantic CSS class. These classes appear in the SVG output and can be used for external CSS overrides.
+
+| CSS Class | Type | What it styles |
+|-----------|------|---------------|
+| `ec-heading` | text | Section/area heading text |
+| `ec-label` | text | Short label text (DOW headers, tick labels) |
+| `ec-day-number` | text | Day of month number |
+| `ec-month-title` | text | Month name display |
+| `ec-week-number` | text | Week number label |
+| `ec-fiscal-label` | text | Fiscal period label |
+| `ec-event-name` | text | Event/task name |
+| `ec-event-notes` | text | Event notes/description |
+| `ec-event-date` | text | Event date display |
+| `ec-duration-date` | text | Duration start/end date |
+| `ec-holiday-title` | text | Holiday/special day name |
+| `ec-today-label` | text | Today marker label |
+| `ec-header-text` | text | Page header text |
+| `ec-footer-text` | text | Page footer text |
+| `ec-watermark` | text | Watermark overlay text |
+| `ec-background` | box | Page/area background |
+| `ec-cell` | box | Content cell background |
+| `ec-heading-cell` | box | Heading area background |
+| `ec-band-cell` | box | Time band segment cell |
+| `ec-callout-box` | box | Popup/callout box |
+| `ec-vline-fill` | box | Vertical line fill column |
+| `ec-day-box` | box | Day number box outline |
+| `ec-pattern-fill` | box | SVG pattern overlay |
+| `ec-grid-line` | line | Grid/cell boundary |
+| `ec-axis-line` | line | Timeline axis line |
+| `ec-axis-tick` | line | Axis tick mark |
+| `ec-today-line` | line | Today marker line |
+| `ec-separator` | line | Section divider |
+| `ec-connector` | line | Connector line |
+| `ec-vline` | line | Configured vertical line |
+| `ec-duration-bar` | line | Duration span bar/line |
+| `ec-hash-line` | line | Hash pattern line |
+| `ec-strikethrough` | line | Strikethrough line |
+| `ec-milestone-marker` | marker | Milestone indicator |
+| `ec-milestone-flag` | marker | Milestone flag pennant |
+| `ec-duration-marker` | marker | Duration start indicator |
+| `ec-event-icon` | icon | Event/holiday icon |
+| `ec-duration-icon` | icon | Duration category icon |
+| `ec-overflow-icon` | icon | Overflow indicator |
+| `ec-legend-swatch` | legend | Legend color swatch |
+| `ec-legend-text` | legend | Legend item text |
+| `ec-legend-icon` | legend | Legend item icon |
+
+Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`, `ec-current-day`, `ec-adjacent`.
+
+### Creating a New Theme
+
+New themes do not need to replicate existing themes. Define only the style tokens and element bindings you need:
+
+1. Start with a `theme:` metadata block
+2. Define the `text_styles` you need (typically 3-5 is sufficient)
+3. Define `box_styles`, `line_styles`, `icon_styles` as needed
+4. Create the `element_styles` binding map connecting CSS classes to your style tokens
+5. Add any non-styling configuration sections (blockplan swimlanes, time bands, etc.) as legacy sections
+
+### External CSS Overrides
+
+Since every SVG element has a semantic CSS class, you can apply external CSS to restyle elements when SVGs are embedded in HTML:
+
+```css
+/* Override event name color in embedded SVGs */
+.ec-event-name { fill: darkblue; }
+
+/* Hide grid lines */
+.ec-grid-line { stroke: none; }
+```
+
+CSS class rules override inline SVG presentational attributes due to CSS specificity.
+
+### Legacy Theme Format
+
 Cascade precedence for a setting: exact section key -> parent section key -> `base` key. CLI flags override theme values.
 
-Valid top-level theme sections: `theme`, `base`, `header`, `footer`, `weekly`, `events`, `durations`, `timeline`, `timeline_events`, `timeline_durations`, `watermark`, `colors`, `mini_calendar`, `fiscal`, `mini_details`, `text_mini`, `layout`, `blockplan`, `compact_plan`.
+Valid top-level theme sections: `theme`, `base`, `header`, `footer`, `weekly`, `events`, `durations`, `timeline`, `timeline_events`, `timeline_durations`, `watermark`, `colors`, `mini_calendar`, `fiscal`, `mini_details`, `text_mini`, `layout`, `blockplan`, `compact_plan`, `text_styles`, `box_styles`, `line_styles`, `icon_styles`, `axis`, `icons`, `patterns`, `element_styles`.
 
 ### Theme Resources
 

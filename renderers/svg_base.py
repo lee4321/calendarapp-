@@ -75,6 +75,7 @@ class BaseSVGRenderer(ABC):
         stroke_width: float = 1,
         rx: float = 0,
         stroke_dasharray: str | None = None,
+        css_class: str | None = None,
     ):
         """
         Draw a rectangle in SVG coordinates.
@@ -89,12 +90,15 @@ class BaseSVGRenderer(ABC):
             stroke_width: Stroke width in points
             rx: Corner radius for rounded rectangles
             stroke_dasharray: SVG stroke-dasharray value (e.g. "5,3"); None disables dashing
+            css_class: Optional CSS class name(s) for the element
         """
         if _is_none_color(fill) and _is_none_color(stroke):
             return
         extra = {}
         if stroke_dasharray:
             extra["stroke_dasharray"] = stroke_dasharray
+        if css_class:
+            extra["class_"] = css_class
         rect = drawsvg.Rectangle(
             _r(x),
             _r(y),
@@ -124,6 +128,7 @@ class BaseSVGRenderer(ABC):
         anchor: str = "start",
         max_width: float | None = None,
         transform: str | None = None,
+        css_class: str | None = None,
     ):
         """
         Draw text as SVG paths at a given baseline position.
@@ -142,6 +147,7 @@ class BaseSVGRenderer(ABC):
             max_width: Optional width cap in points; if exceeded, text is
                 horizontally scaled (X only) to fit.
             transform: Optional SVG transform attribute applied to the text group
+            css_class: Optional CSS class name(s) for the text group element
         """
         if not text or _is_none_color(fill):
             return
@@ -178,6 +184,7 @@ class BaseSVGRenderer(ABC):
             fill=fill,
             fill_opacity=fill_opacity,
             anchor=anchor,
+            css_class=css_class,
         )
         if svg_markup:
             if combined_transform:
@@ -195,6 +202,7 @@ class BaseSVGRenderer(ABC):
         stroke_width: float = 1,
         stroke_opacity: float = 1.0,
         stroke_dasharray: str | None = None,
+        css_class: str | None = None,
     ):
         """
         Draw a line in SVG coordinates.
@@ -205,12 +213,15 @@ class BaseSVGRenderer(ABC):
             stroke_width: Line width in points
             stroke_opacity: Line opacity (0-1)
             stroke_dasharray: SVG stroke-dasharray value (e.g. "5,3"); None disables dashing
+            css_class: Optional CSS class name(s) for the element
         """
         if _is_none_color(stroke):
             return
         extra = {}
         if stroke_dasharray:
             extra["stroke_dasharray"] = stroke_dasharray
+        if css_class:
+            extra["class_"] = css_class
         line = drawsvg.Line(
             _r(x1),
             _r(y1),
@@ -231,6 +242,7 @@ class BaseSVGRenderer(ABC):
         stroke_width: float = 0.5,
         stroke_opacity: float = 1.0,
         stroke_dasharray: str | None = None,
+        css_class: str | None = None,
     ):
         """
         Draw multiple line segments in a group in SVG coordinates.
@@ -241,12 +253,15 @@ class BaseSVGRenderer(ABC):
             stroke_width: Line width in points
             stroke_opacity: Line opacity (0-1)
             stroke_dasharray: SVG stroke-dasharray value (e.g. "5,3"); None disables dashing
+            css_class: Optional CSS class name(s) for the group element
         """
         if not line_list or _is_none_color(stroke):
             return
         extra = {}
         if stroke_dasharray:
             extra["stroke_dasharray"] = stroke_dasharray
+        if css_class:
+            extra["class_"] = css_class
         group = drawsvg.Group(
             stroke=stroke,
             stroke_width=_r(stroke_width),
@@ -321,9 +336,13 @@ class BaseSVGRenderer(ABC):
         self._page_width = config.pageX
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None
+        self._config = config
 
         # Add metadata
         self._add_desc(config)
+
+        # Inject CSS <style> block (if theme provides unified styles)
+        self._inject_css()
 
         if config.shrink_to_content:
             self._shrink_drawing_to_content(coordinates)
@@ -384,6 +403,22 @@ class BaseSVGRenderer(ABC):
         drawing.append_title(title)
 
         return drawing
+
+    def _inject_css(self, css_content: str | None = None) -> None:
+        """Inject a <style> block into the current SVG drawing.
+
+        If *css_content* is not provided, falls back to the pre-generated CSS
+        string stored on ``self._config.theme_styles.css`` (when available).
+        Call once per SVG page, after ``_create_drawing()``.
+        """
+        if css_content is None:
+            config = getattr(self, "_config", None)
+            if config is not None:
+                ts = getattr(config, "theme_styles", None)
+                if ts is not None:
+                    css_content = ts.css
+        if css_content and self._drawing is not None:
+            self._drawing.append_css(css_content)
 
     def _shrink_drawing_to_content(self, coordinates: CoordinateDict) -> None:
         """Adjust SVG width/height/viewBox to tightly fit the content bounding box.
@@ -567,6 +602,7 @@ class BaseSVGRenderer(ABC):
             fill_opacity=config.watermark_opacity,
             anchor="middle",
             transform=transform,
+            css_class="ec-watermark",
         )
 
     def _is_svg(self, filepath: str) -> bool:
@@ -691,6 +727,7 @@ class BaseSVGRenderer(ABC):
         fallback_name: str | None = None,
         fallback_color: str | None = None,
         transform: str | None = None,
+        css_class: str | None = None,
     ) -> bool:
         """
         Draw an icon from the DB icon cache at text-like baseline coordinates.
@@ -745,9 +782,10 @@ class BaseSVGRenderer(ABC):
         style_attr = (
             f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
         )
+        class_attr = f' class="{css_class}"' if css_class else ""
         nested_svg = (
             f'<svg x="{_r(draw_x)}" y="{_r(draw_y)}" width="{_r(size)}" height="{_r(size)}" '
-            f'viewBox="{viewbox}" preserveAspectRatio="xMidYMid meet"{style_attr}>'
+            f'viewBox="{viewbox}" preserveAspectRatio="xMidYMid meet"{style_attr}{class_attr}>'
             f"{inner}</svg>"
         )
         if transform:
@@ -840,6 +878,7 @@ class BaseSVGRenderer(ABC):
 
             if key in self._HEADER_FOOTER_MAP:
                 _, x_fn, anchor, prefix = self._HEADER_FOOTER_MAP[key]
+                css = "ec-header-text" if prefix.startswith("header") else "ec-footer-text"
                 self._draw_text(
                     x_fn(X, width),
                     Y + (height * 0.8),
@@ -848,6 +887,7 @@ class BaseSVGRenderer(ABC):
                     getattr(config, f"{prefix}_font_size"),
                     fill=getattr(config, f"{prefix}_font_color"),
                     anchor=anchor,
+                    css_class=css,
                 )
 
             elif key in self._DAY_NAME_KEYS:
@@ -860,6 +900,7 @@ class BaseSVGRenderer(ABC):
                     fill=config.day_name_font_color,
                     anchor="middle",
                     max_width=width,
+                    css_class="ec-label",
                 )
 
     # =========================================================================
@@ -1053,6 +1094,7 @@ class BaseSVGRenderer(ABC):
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None
+        self._inject_css()
         if config.shrink_to_content:
             self._shrink_drawing_to_content(coordinates)
         if config.watermark_text:

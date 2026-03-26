@@ -10,8 +10,184 @@
 
 theme:
   name: "Accent"
-  version: "1.0"
-  description: "Palette-driven theme with all colors from the Accent DB palette"
+  version: "2.0"
+  description: "Palette-driven theme with all colors from the Accent DB palette — unified theme model"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Unified Style Tokens
+# ══════════════════════════════════════════════════════════════════════════════
+
+text_styles:
+  heading:
+    font: "Roboto-Bold"
+    size: 10
+    color: "palette:Accent:4"
+    size_rules:
+      - font_size: 18
+        when: { papersize: ["letter", "ledger"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "RobotoCondensed-Regular"
+    size: 8
+    color: "palette:Accent:7"
+  body_secondary:
+    font: "RobotoCondensed-Italic"
+    size: 7
+    color: "palette:Accent:6"
+  label:
+    font: "RobotoCondensed-Light"
+    size: 7
+    color: "palette:Accent:7"
+  label_bold:
+    font: "RobotoCondensed-Bold"
+    size: 7
+    color: "palette:Accent:7"
+  caption:
+    font: "RobotoCondensed-Light"
+    size: 6
+    color: "palette:Accent:7"
+  day_number:
+    font: "Roboto-Bold"
+    size: 10
+    color: "palette:Accent:4"
+  month_title:
+    font: "Roboto-Bold"
+    size: 8
+    color: "palette:Accent:4"
+
+box_styles:
+  default:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "none"
+  cell:
+    fill: "palette:Accent:0"
+    fill_opacity: 0.15
+    stroke: "palette:Accent:7"
+    stroke_width: 2
+    stroke_opacity: 0.2
+  header:
+    fill: "none"
+    stroke: "none"
+  timeband:
+    fill: "none"
+    fill_opacity: 1.0
+    stroke: "none"
+    fill_palette: "Accent"
+    fill_colors: ["palette:Accent:4", "palette:Accent:0", "palette:Accent:5", "palette:Accent:2", "palette:Accent:1"]
+  highlight:
+    fill: "palette:Accent:0"
+    fill_opacity: 0.15
+    stroke: "none"
+  callout:
+    fill: "white"
+    fill_opacity: 0.25
+    stroke: "palette:Accent:7"
+    stroke_width: 1.0
+
+line_styles:
+  grid:
+    color: "palette:Accent:7"
+    width: 0.5
+    opacity: 0.4
+  axis:
+    color: "palette:Accent:3"
+    width: 2
+    opacity: 0.9
+  separator:
+    color: "palette:Accent:7"
+    width: 0.5
+    opacity: 0.5
+  today:
+    color: "palette:Accent:5"
+    width: 1.5
+    opacity: 1.0
+  connector:
+    color: "palette:Accent:7"
+    width: 0.5
+    opacity: 1.0
+    dasharray: "4 2"
+
+icon_styles:
+  event:
+    color: "palette:Accent:4"
+    size: 10
+  duration:
+    color: "palette:Accent:4"
+  overflow:
+    icon: "send-backward"
+    color: "orange"
+
+axis:
+  line_style: axis
+  tick:
+    color: "palette:Accent:1"
+    label_style: caption
+    date_format: "M/D"
+  today:
+    line_style: today
+    label_color: "palette:Accent:3"
+    label_text: "Today"
+
+element_styles:
+  # ── Text elements ──
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-day-number:     { text_style: day_number }
+  ec-month-title:    { text_style: month_title }
+  ec-week-number:    { text_style: label_bold }
+  ec-fiscal-label:   { text_style: caption }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-event-date:     { text_style: caption }
+  ec-duration-date:  { text_style: caption }
+  ec-holiday-title:  { text_style: body }
+  ec-today-label:    { text_style: label, color: "palette:Accent:3" }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+
+  # ── Box/rectangle elements ──
+  ec-background:     { box_style: default }
+  ec-cell:           { box_style: cell }
+  ec-heading-cell:   { box_style: header }
+  ec-band-cell:      { box_style: timeband }
+  ec-callout-box:    { box_style: callout }
+  ec-vline-fill:     { box_style: highlight }
+  ec-day-box:        { box_style: cell }
+  ec-pattern-fill:   { box_style: default }
+
+  # ── Line elements ──
+  ec-grid-line:      { line_style: grid }
+  ec-axis-line:      { line_style: axis }
+  ec-axis-tick:      { line_style: axis }
+  ec-today-line:     { line_style: today }
+  ec-separator:      { line_style: separator }
+  ec-connector:      { line_style: connector }
+  ec-vline:          { line_style: grid }
+  ec-duration-bar:   { line_style: axis }
+  ec-hash-line:      { line_style: grid }
+  ec-strikethrough:  { line_style: grid }
+
+  # ── Marker elements ──
+  ec-milestone-marker: { line_style: axis }
+  ec-milestone-flag:   { line_style: axis }
+  ec-duration-marker:  { line_style: axis }
+
+  # ── Icon elements ──
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: duration }
+  ec-overflow-icon:  { icon_style: overflow }
+
+  # ── Legend elements ──
+  ec-legend-swatch:  { line_style: axis }
+  ec-legend-text:    { text_style: body }
+  ec-legend-icon:    { icon_style: event }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Legacy Settings (retained for non-styling configuration)
+# ══════════════════════════════════════════════════════════════════════════════
 
 # ── General Settings ──────────────────────────────────────────────────────────
 base:

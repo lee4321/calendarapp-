@@ -78,6 +78,9 @@ class CalendarConfig:
     command_line: str = ""
     embed_data: bool = False
 
+    # Unified theme styles (new system — populated by theme engine for new-format themes)
+    theme_styles: Any = None  # config.styles.ThemeStyles | None
+
     # Data source description (for header/footer expansion)
     events: str = ""
 
