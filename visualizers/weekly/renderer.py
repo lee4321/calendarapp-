@@ -851,7 +851,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             or config.day_box_number_font_size * 0.7
         )
         label_y = dbc["Number"][1]
-        font_path = get_font_path(config.fiscal_period_label_font)
+        _ts_fiscal = config.get_text_style("ec-fiscal-label")
+        font_path = get_font_path(_ts_fiscal.font)
         label_width = 0.0
         if font_path:
             label_width = string_width(fiscal_label, font_path, label_font_size)
@@ -859,9 +860,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             label_x,
             label_y,
             fiscal_label,
-            config.fiscal_period_label_font,
+            _ts_fiscal.font,
             label_font_size,
-            fill=config.fiscal_period_label_color,
+            fill=_ts_fiscal.color,
             css_class="ec-fiscal-label",
         )
         return label_width
@@ -912,13 +913,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             gap = config.day_box_number_font_size * 0.3
             wn_x = label_x + (label_width + gap if label_width else 0.0)
             anchor = "start"
+        _ts_wn = config.get_text_style("ec-week-number")
         self._draw_text(
             wn_x,
             y1,
             week_text,
-            config.week_number_font,
+            _ts_wn.font,
             config.week_number_font_size,
-            fill=config.week_number_font_color,
+            fill=_ts_wn.color,
             anchor=anchor,
             css_class="ec-week-number",
         )
@@ -942,25 +944,26 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if not daytitle:
             return
 
+        _ts_ht = config.get_text_style("ec-holiday-title")
+        _is_ei = config.get_icon_style("ec-event-icon")
         x1_name, _ = dbc["Day_Name"]
         gap = config.day_box_number_font_size * 0.15
         available_right = x1 - day_num_rendered_width - gap
         daytitlewidth = max(available_right - x1_name, 0.0)
-        font_path = get_font_path(config.weekly_name_text_font_name)
+        font_path = get_font_path(_ts_ht.font)
         fontsize = shrinktext(
             daytitle,
             daytitlewidth,
             font_path,
             config.weekly_name_text_font_size,
         )
-
         self._draw_text(
             x1_name,
             baseline_y,
             daytitle,
-            config.weekly_name_text_font_name,
+            _ts_ht.font,
             fontsize,
-            fill=config.day_box_font_color,
+            fill=_ts_ht.color,
             css_class="ec-holiday-title",
         )
 
@@ -970,7 +973,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             x1_icon,
             baseline_y,
             fontsize,
-            color=config.day_box_icon_color,
+            color=_is_ei.color,
             css_class="ec-event-icon",
         )
 
@@ -1009,18 +1012,19 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         fill_color, fill_opacity = self._resolve_day_box_fill(
             config, oneday_str, month, shadespecialday
         )
+        _bs_cell = config.get_box_style("ec-cell")
         self._draw_rect(
             X,
             Y,
             W,
             H,
             fill=fill_color,
-            stroke=config.day_box_stroke_color,
+            stroke=_bs_cell.stroke,
             fill_opacity=fill_opacity,
-            stroke_opacity=config.day_box_stroke_opacity,
-            stroke_width=config.day_box_stroke_width,
+            stroke_opacity=_bs_cell.stroke_opacity,
+            stroke_width=_bs_cell.stroke_width,
             rx=5,
-            stroke_dasharray=config.day_box_stroke_dasharray or None,
+            stroke_dasharray=_bs_cell.stroke_dasharray or None,
             css_class="ec-cell",
         )
 
@@ -1030,19 +1034,20 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             self._draw_svg_pattern(config, X, Y, W, H, dec.pattern, _color, dec.opacity)
 
         # Day number with optional month indicator
+        _ts_dn = config.get_text_style("ec-day-number")
         boxdate = self._build_day_number_label(config, oneday, oneday_str)
         day_num_width = string_width(
             boxdate,
-            get_font_path(config.day_box_number_font),
+            get_font_path(_ts_dn.font),
             config.day_box_number_font_size,
         )
         self._draw_text(
             x1,
             y1,
             boxdate,
-            config.day_box_number_font,
+            _ts_dn.font,
             config.day_box_number_font_size,
-            fill=config.day_box_number_color,
+            fill=_ts_dn.color,
             anchor="end",
             css_class="ec-day-number",
         )
@@ -1208,8 +1213,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             iconx, icony: Icon position
             t: Event object
         """
-        textcolor = config.weekly_name_text_font_color
-        iconcolor = config.event_icon_color
+        _ts_en = config.get_text_style("ec-event-name")
+        _is_ei = config.get_icon_style("ec-event-icon")
+        textcolor = _ts_en.color
+        iconcolor = _is_ei.color
 
         _rg_colors = config.theme_resource_group_colors or Resource_Group_colors
         group = (t.resource_group or "").lower()
@@ -1222,7 +1229,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 iconx,
                 icony,
                 str(myText),
-                config.weekly_name_text_font_name,
+                _ts_en.font,
                 config.weekly_name_text_font_size,
                 fill=textcolor,
                 max_width=Width,
@@ -1233,7 +1240,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 X,
                 icony,
                 str(myText),
-                config.weekly_name_text_font_name,
+                _ts_en.font,
                 config.weekly_name_text_font_size,
                 fill=textcolor,
                 max_width=(Width - (config.weekly_name_text_font_size * 1.5)),
@@ -1275,13 +1282,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         numX, numY = dbc["Number"]
         indicatorY = numY
 
+        _is_oi = config.get_icon_style("ec-overflow-icon")
         font_size = config.day_box_number_font_size
         self._draw_icon_svg(
             config.overflow_indicator_icon,
             indicatorX,
             indicatorY,
             font_size,
-            color=config.overflow_indicator_color,
+            color=_is_oi.color,
             css_class="ec-overflow-icon",
         )
 
@@ -1360,13 +1368,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             notes_max_w = (
                                 nWidth - (ntextx - niconx) if t.icon else nWidth
                             )
+                            _ts_notes = config.get_text_style("ec-event-notes")
                             self._draw_text(
                                 notes_x,
                                 nicony,
                                 str(t.notes),
-                                config.weekly_notes_text_font_name,
+                                _ts_notes.font,
                                 config.weekly_notes_text_font_size,
-                                fill=config.weekly_notes_text_font_color,
+                                fill=_ts_notes.color,
                                 max_width=notes_max_w,
                                 css_class="ec-event-notes",
                             )
@@ -1520,6 +1529,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         list_of_rects.append((X, Y, W, H, tx, name_ty, ix, iy, notes_ty))
 
+        _ls_dur = config.get_line_style("ec-duration-bar")
+        _ts_en = config.get_text_style("ec-event-name")
+        _ts_notes = config.get_text_style("ec-event-notes")
         for X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty in list_of_rects:
             self._draw_rect(
                 X,
@@ -1530,7 +1542,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 stroke="white",
                 stroke_width=0.5,
                 rx=2,
-                stroke_dasharray=config.duration_stroke_dasharray or None,
+                stroke_dasharray=_ls_dur.dasharray or None,
                 css_class="ec-duration-bar",
             )
 
@@ -1543,9 +1555,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 centerX,
                 name_ty,
                 display_name,
-                config.weekly_name_text_font_name,
+                _ts_en.font,
                 config.weekly_name_text_font_size,
-                fill=config.weekly_name_text_font_color,
+                fill=_ts_en.color,
                 anchor="middle",
                 max_width=Width,
                 css_class="ec-event-name",
@@ -1556,9 +1568,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     centerX,
                     notes_ty,
                     str(t.notes),
-                    config.weekly_notes_text_font_name,
+                    _ts_notes.font,
                     config.weekly_notes_text_font_size,
-                    fill=config.weekly_notes_text_font_color,
+                    fill=_ts_notes.color,
                     anchor="middle",
                     max_width=Width,
                     css_class="ec-event-notes",

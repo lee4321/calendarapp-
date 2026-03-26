@@ -68,10 +68,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
         timeline_x = area_x + label_col_w
         timeline_w = max(1.0, area_w - label_col_w)
 
-        bg = str(config.blockplan_background_color or "").strip().lower()
+        _bg_style = config.get_box_style("ec-background")
+        bg = str(_bg_style.fill or "").strip().lower()
         if bg not in {"", "none", "transparent"}:
             self._draw_rect(
-                area_x, area_y, area_w, area_h, fill=config.blockplan_background_color,
+                area_x, area_y, area_w, area_h, fill=_bg_style.fill,
                 css_class="ec-background",
             )
 
@@ -133,15 +134,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
 
         # ── separator between top bands and swimlanes ─────────────────────────
+        _grid_style = config.get_line_style("ec-grid-line")
         self._draw_line(
             area_x,
             lanes_top,
             area_x + area_w,
             lanes_top,
-            stroke=config.blockplan_grid_color,
-            stroke_width=config.blockplan_grid_line_width,
-            stroke_opacity=config.blockplan_grid_opacity,
-            stroke_dasharray=config.blockplan_grid_dasharray,
+            stroke=_grid_style.color,
+            stroke_width=_grid_style.width,
+            stroke_opacity=_grid_style.opacity,
+            stroke_dasharray=_grid_style.dasharray,
             css_class="ec-separator",
         )
 
@@ -168,10 +170,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 lanes_bottom,
                 area_x + area_w,
                 lanes_bottom,
-                stroke=config.blockplan_grid_color,
-                stroke_width=config.blockplan_grid_line_width,
-                stroke_opacity=config.blockplan_grid_opacity,
-                stroke_dasharray=config.blockplan_grid_dasharray,
+                stroke=_grid_style.color,
+                stroke_width=_grid_style.width,
+                stroke_opacity=_grid_style.opacity,
+                stroke_dasharray=_grid_style.dasharray,
                 css_class="ec-separator",
             )
             self._draw_time_bands(
@@ -486,22 +488,15 @@ class BlockPlanRenderer(BaseSVGRenderer):
             # ── Icon band — one cell per visible day, icons driven by rules ──
             if unit == "icon":
                 # Heading cell (left column — same as regular bands).
+                _heading_cell_style = config.get_box_style("ec-heading-cell")
                 heading_fill = band.get(
-                    "label_fill_color", config.blockplan_header_heading_fill_color
+                    "label_fill_color", _heading_cell_style.fill
                 )
-                tb_color = (
-                    config.blockplan_timeband_line_color or config.blockplan_grid_color
-                )
-                tb_width = (
-                    config.blockplan_timeband_line_width
-                    or config.blockplan_grid_line_width
-                )
-                tb_opacity = (
-                    config.blockplan_timeband_line_opacity
-                    if config.blockplan_timeband_line_opacity is not None
-                    else config.blockplan_grid_opacity
-                )
-                tb_dasharray = config.blockplan_timeband_line_dasharray
+                _axis_style = config.get_line_style("ec-axis-line")
+                tb_color = _axis_style.color
+                tb_width = _axis_style.width
+                tb_opacity = _axis_style.opacity
+                tb_dasharray = _axis_style.dasharray
                 stroke = band.get("stroke_color", tb_color)
                 self._draw_rect(
                     left_x, y_top, timeline_x - left_x, row_h,
@@ -510,12 +505,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_opacity=tb_opacity, stroke_dasharray=tb_dasharray,
                     css_class="ec-heading-cell",
                 )
-                heading_font = band.get("label_font", config.blockplan_header_font)
+                _heading_text_style = config.get_text_style("ec-heading")
+                heading_font = band.get("label_font", _heading_text_style.font)
                 heading_font_size = float(
                     band.get("label_font_size") or (row_h * 0.65 if has_explicit_row_h else config.blockplan_header_font_size)
                 )
-                heading_color = band.get("label_color", config.blockplan_header_label_color)
-                heading_opacity = float(band.get("label_opacity", config.blockplan_header_label_opacity))
+                heading_color = band.get("label_color", _heading_text_style.color)
+                heading_opacity = float(band.get("label_opacity", _heading_text_style.opacity))
                 self._draw_text(
                     left_x + 6.0,
                     y_top + (row_h * 0.50) + (heading_font_size * 0.30),
@@ -549,54 +545,51 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 continue
 
-            band_fill = band.get("fill_color", config.blockplan_timeband_fill_color)
+            _band_cell_style = config.get_box_style("ec-band-cell")
+            _label_text_style = config.get_text_style("ec-label")
+            _heading_text_style = config.get_text_style("ec-heading")
+            _heading_cell_style = config.get_box_style("ec-heading-cell")
+            _axis_style = config.get_line_style("ec-axis-line")
+            band_fill = band.get("fill_color", _band_cell_style.fill)
             band_palette = band.get(
                 "fill_palette", config.blockplan_timeband_fill_palette
             )
             color_list = self._resolve_color_list(band_fill, band_palette, db)
             band_label_color = band.get(
-                "font_color", config.blockplan_timeband_label_color
+                "font_color", _label_text_style.color
             )
             band_label_opacity = float(
-                band.get("font_opacity", config.blockplan_timeband_label_opacity)
+                band.get("font_opacity", _label_text_style.opacity)
             )
-            band_font = band.get("font", config.blockplan_band_font)
+            band_font = band.get("font", _label_text_style.font)
             if band.get("font_size"):
                 band_font_size = float(band["font_size"])
             elif has_explicit_row_h:
                 band_font_size = row_h * 0.65
             else:
                 band_font_size = float(config.blockplan_band_font_size)
-            heading_font = band.get("label_font", config.blockplan_header_font)
+            heading_font = band.get("label_font", _heading_text_style.font)
             if band.get("label_font_size"):
                 heading_font_size = float(band["label_font_size"])
             elif has_explicit_row_h:
                 heading_font_size = row_h * 0.65
             else:
                 heading_font_size = float(config.blockplan_header_font_size)
-            heading_color = band.get("label_color", config.blockplan_header_label_color)
+            heading_color = band.get("label_color", _heading_text_style.color)
             heading_opacity = float(
-                band.get("label_opacity", config.blockplan_header_label_opacity)
+                band.get("label_opacity", _heading_text_style.opacity)
             )
             heading_fill = band.get(
-                "label_fill_color", config.blockplan_header_heading_fill_color
+                "label_fill_color", _heading_cell_style.fill
             )
             heading_align_h = self._normalize_halign(
                 band.get("label_align_h", config.blockplan_header_label_align_h),
                 default="left",
             )
-            tb_color = (
-                config.blockplan_timeband_line_color or config.blockplan_grid_color
-            )
-            tb_width = (
-                config.blockplan_timeband_line_width or config.blockplan_grid_line_width
-            )
-            tb_opacity = (
-                config.blockplan_timeband_line_opacity
-                if config.blockplan_timeband_line_opacity is not None
-                else config.blockplan_grid_opacity
-            )
-            tb_dasharray = config.blockplan_timeband_line_dasharray
+            tb_color = _axis_style.color
+            tb_width = _axis_style.width
+            tb_opacity = _axis_style.opacity
+            tb_dasharray = _axis_style.dasharray
             stroke = band.get("stroke_color", tb_color)
 
             # Left heading cell
@@ -688,7 +681,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     seg_w,
                     row_h,
                     fill=seg_fill,
-                    fill_opacity=config.blockplan_timeband_fill_opacity,
+                    fill_opacity=_band_cell_style.fill_opacity,
                     stroke=stroke,
                     stroke_width=tb_width,
                     stroke_opacity=tb_opacity,
@@ -757,15 +750,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 band, start, end, config, visible_days=visible_days, db=db
             )
 
+        _vline_fill_style = config.get_box_style("ec-vline-fill")
+        _vline_style = config.get_line_style("ec-vline")
         # --- Pass 1: column fills (drawn behind lines) ---
         for line in lines:
             if not isinstance(line, dict):
                 continue
             fill_color_raw = line.get(
-                "fill_color", config.blockplan_vertical_line_fill_color
+                "fill_color", _vline_fill_style.fill
             )
             fill_opacity = float(
-                line.get("fill_opacity", config.blockplan_vertical_line_fill_opacity)
+                line.get("fill_opacity", _vline_fill_style.fill_opacity)
             )
             color_list = self._resolve_color_list(fill_color_raw, None, db)
 
@@ -846,14 +841,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         seg.start, visible_days, timeline_x, timeline_w
                     )
 
-                stroke = str(line.get("color", config.blockplan_vertical_line_color))
-                width = float(line.get("width", config.blockplan_vertical_line_width))
+                stroke = str(line.get("color", _vline_style.color))
+                width = float(line.get("width", _vline_style.width))
                 opacity = float(
-                    line.get("opacity", config.blockplan_vertical_line_opacity)
+                    line.get("opacity", _vline_style.opacity)
                 )
                 dash = line.get(
                     "dash_array",
-                    line.get("dasharray", config.blockplan_vertical_line_dasharray),
+                    line.get("dasharray", _vline_style.dasharray),
                 )
                 dash_value = str(dash) if dash is not None else None
                 self._draw_line(
@@ -1102,8 +1097,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
             show_split_line = 0.0 < split_ratio < 1.0
 
             # Per-lane visual style overrides (fall back to global config values).
+            _lane_heading_cell_style = config.get_box_style("ec-heading-cell")
+            _lane_grid_style = config.get_line_style("ec-grid-line")
             heading_fill = (
-                lane_cfg.get("fill_color") or config.blockplan_lane_heading_fill_color
+                lane_cfg.get("fill_color") or _lane_heading_cell_style.fill
             )
             timeline_fill = lane_cfg.get("timeline_fill_color") or "none"
 
@@ -1114,10 +1111,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_x - left_x,
                 lane_h,
                 fill=heading_fill,
-                stroke=config.blockplan_grid_color,
-                stroke_width=config.blockplan_grid_line_width,
-                stroke_opacity=config.blockplan_grid_opacity,
-                stroke_dasharray=config.blockplan_grid_dasharray,
+                stroke=_lane_grid_style.color,
+                stroke_width=_lane_grid_style.width,
+                stroke_opacity=_lane_grid_style.opacity,
+                stroke_dasharray=_lane_grid_style.dasharray,
                 css_class="ec-heading-cell",
             )
             self._draw_rect(
@@ -1126,10 +1123,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_w,
                 lane_h,
                 fill=timeline_fill,
-                stroke=config.blockplan_grid_color,
-                stroke_width=config.blockplan_grid_line_width,
-                stroke_opacity=config.blockplan_grid_opacity,
-                stroke_dasharray=config.blockplan_grid_dasharray,
+                stroke=_lane_grid_style.color,
+                stroke_width=_lane_grid_style.width,
+                stroke_opacity=_lane_grid_style.opacity,
+                stroke_dasharray=_lane_grid_style.dasharray,
                 css_class="ec-band-cell",
             )
             if show_split_line:
@@ -1138,10 +1135,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     split,
                     timeline_x + timeline_w,
                     split,
-                    stroke=config.blockplan_grid_color,
-                    stroke_width=config.blockplan_grid_line_width,
-                    stroke_opacity=config.blockplan_grid_opacity,
-                    stroke_dasharray=config.blockplan_grid_dasharray,
+                    stroke=_lane_grid_style.color,
+                    stroke_width=_lane_grid_style.width,
+                    stroke_opacity=_lane_grid_style.opacity,
+                    stroke_dasharray=_lane_grid_style.dasharray,
                     css_class="ec-separator",
                 )
 
@@ -1318,13 +1315,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 notes_font_size = float(config.blockplan_notes_text_font_size)
             y = top + (row * row_h) + ((row_h - bar_h) / 2.0)
 
-            _palette = config.blockplan_palette or [config.blockplan_name_text_font_color]
+            _dur_bar_style = config.get_line_style("ec-duration-bar")
+            _event_name_style = config.get_text_style("ec-event-name")
+            _event_notes_style = config.get_text_style("ec-event-notes")
+            _palette = config.blockplan_palette or [_event_name_style.color]
             color = (
                 event.color if event.color else _palette[event.priority % len(_palette)]
-            )
-            dur_stroke_color = (
-                config.blockplan_duration_stroke_color
-                or config.blockplan_name_text_font_color
             )
             self._draw_rect(
                 x0,
@@ -1333,32 +1329,30 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 bar_h,
                 fill=color,
                 fill_opacity=config.blockplan_duration_fill_opacity,
-                stroke=dur_stroke_color,
-                stroke_opacity=config.blockplan_duration_stroke_opacity,
-                stroke_width=config.blockplan_duration_stroke_width,
-                stroke_dasharray=config.blockplan_duration_stroke_dasharray,
+                stroke=_dur_bar_style.color,
+                stroke_opacity=_dur_bar_style.opacity,
+                stroke_width=_dur_bar_style.width,
+                stroke_dasharray=_dur_bar_style.dasharray,
                 css_class="ec-duration-bar",
             )
             has_dates = bool(
                 config.blockplan_duration_show_start_date
                 or config.blockplan_duration_show_end_date
             )
+            _dur_date_style = config.get_text_style("ec-duration-date")
             if has_dates:
                 date_font_size = float(config.blockplan_duration_date_font_size)
                 date_baseline_y = y + bar_h + date_font_size
-                date_color = (
-                    config.blockplan_duration_date_color
-                    or config.blockplan_name_text_font_color
-                )
+                date_color = _dur_date_style.color
                 date_fmt = config.blockplan_duration_date_format
-                date_font = config.blockplan_duration_date_font
+                date_font = _dur_date_style.font
                 try:
                     _dur_date_font_path = get_font_path(date_font)
                 except Exception:
                     _dur_date_font_path = ""
-            dur_text_color = config.blockplan_name_text_font_color
-            dur_notes_color = config.blockplan_notes_text_font_color
-            _dur_notes_font_name = config.blockplan_notes_text_font_name
+            dur_text_color = _event_name_style.color
+            dur_notes_color = _event_notes_style.color
+            _dur_notes_font_name = _event_notes_style.font
             show_icon = bool(config.blockplan_duration_icon_visible) and bool(
                 event.icon
             )
@@ -1371,7 +1365,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if show_icon:
                     icon_size = font_size
                     try:
-                        _fp = get_font_path(config.blockplan_name_text_font_name)
+                        _fp = get_font_path(_event_name_style.font)
                         text_w = string_width(event.task_name, _fp, font_size)
                     except Exception:
                         text_w = len(event.task_name) * font_size * 0.55
@@ -1428,7 +1422,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         text_x,
                         baseline_y,
                         event.task_name,
-                        config.blockplan_name_text_font_name,
+                        _event_name_style.font,
                         font_size,
                         fill=dur_text_color,
                         anchor="start" if icon_drawn else "middle",
@@ -1440,7 +1434,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         x0 + (w / 2.0),
                         baseline_y,
                         event.task_name,
-                        config.blockplan_name_text_font_name,
+                        _event_name_style.font,
                         font_size,
                         fill=dur_text_color,
                         anchor="middle",
@@ -1467,6 +1461,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     float(config.blockplan_name_text_font_size),
                     w - 4,
                 )
+
 
             # --- Date row (outside bar, below rectangle) — shared for both layout modes ---
             if has_dates:
@@ -1566,6 +1561,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
         ordered = sorted(
             events, key=lambda e: (e.start, e.priority, e.task_name.lower())
         )
+        _evt_name_style = config.get_text_style("ec-event-name")
+        _evt_notes_style = config.get_text_style("ec-event-notes")
+        _evt_date_style = config.get_text_style("ec-event-date")
         event_size = float(config.blockplan_name_text_font_size)
         notes_size = float(config.blockplan_notes_text_font_size)
         date_size = float(
@@ -1574,16 +1572,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
         show_date = bool(getattr(config, "blockplan_event_show_date", False))
         icon_r = max(1.5, float(config.blockplan_marker_radius))
         try:
-            event_font_path = get_font_path(config.blockplan_name_text_font_name)
+            event_font_path = get_font_path(_evt_name_style.font)
         except Exception:
             event_font_path = ""
-        _event_notes_font_name = config.blockplan_notes_text_font_name
+        _event_notes_font_name = _evt_notes_style.font
         try:
             notes_font_path = get_font_path(_event_notes_font_name)
         except Exception:
             notes_font_path = event_font_path
         try:
-            date_font_path = get_font_path(config.blockplan_event_date_font)
+            date_font_path = get_font_path(_evt_date_style.font)
         except Exception:
             date_font_path = event_font_path
 
@@ -1682,7 +1680,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     name_baseline,
                     icon_size,
                     anchor="start",
-                    color=config.blockplan_name_text_font_color,
+                    color=_evt_name_style.color,
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-event-icon",
@@ -1693,8 +1691,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     x,
                     y_center,
                     icon_r,
-                    fill=config.blockplan_name_text_font_color,
-                    stroke=config.blockplan_name_text_font_color,
+                    fill=_evt_name_style.color,
+                    stroke=_evt_name_style.color,
                     class_="ec-milestone-marker",
                 )
                 self._drawing.append(_circle)
@@ -1706,9 +1704,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     date_baseline,
                     date_text,
-                    config.blockplan_event_date_font,
+                    _evt_date_style.font,
                     date_size,
-                    fill=config.blockplan_event_date_color,
+                    fill=_evt_date_style.color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-date",
@@ -1718,9 +1716,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    config.blockplan_name_text_font_name,
+                    _evt_name_style.font,
                     event_size,
-                    fill=config.blockplan_name_text_font_color,
+                    fill=_evt_name_style.color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",
@@ -1733,7 +1731,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     str(event.notes),
                     _event_notes_font_name,
                     notes_size,
-                    fill=config.blockplan_notes_text_font_color,
+                    fill=_evt_notes_style.color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-notes",
@@ -1743,9 +1741,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    config.blockplan_name_text_font_name,
+                    _evt_name_style.font,
                     event_size,
-                    fill=config.blockplan_name_text_font_color,
+                    fill=_evt_name_style.color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",
@@ -1853,7 +1851,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
             lane_mid = (lane_top + lane_bottom) / 2.0
             first_baseline = lane_mid - (total_baseline_span * 0.5)
 
-        label_color = lane_cfg.get("label_color") or config.blockplan_lane_label_color
+        _lane_label_style = config.get_text_style("ec-heading")
+        label_color = lane_cfg.get("label_color") or _lane_label_style.color
         max_width = (
             max(8.0, lane_bottom - lane_top - 10.0)
             if cross_axis
@@ -1865,7 +1864,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 x,
                 y,
                 line,
-                config.blockplan_lane_label_font,
+                _lane_label_style.font,
                 fs,
                 fill=label_color,
                 anchor=anchor,

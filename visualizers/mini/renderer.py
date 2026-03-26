@@ -159,14 +159,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         dt = arrow.Arrow(year, month, 1)
         title = dt.format(config.mini_title_format)
 
-        title_color = config.theme_mini_title_color or config.mini_title_color
+        _ts = config.get_text_style("ec-month-title")
         self._draw_text(
             x + w / 2,
             y + h * 0.8,
             title,
-            config.mini_title_font,
+            _ts.font,
             config.mini_title_font_size,
-            fill=title_color,
+            fill=_ts.color,
             anchor="middle",
             css_class="ec-month-title",
         )
@@ -190,7 +190,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         When week numbers are enabled, draws "W#" as the first label
         in a narrower column, with 7 day labels in the remaining space.
         """
-        header_color = config.theme_mini_header_color or config.mini_header_color
+        _ts_label = config.get_text_style("ec-label")
 
         labels = self._ordered_day_labels(week_start_sunday)
 
@@ -201,14 +201,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             day_area_x = x + wn_col_width
 
             # Draw "W#" label
+            _ts_wn = config.get_text_style("ec-week-number")
             self._draw_text(
                 x + wn_col_width / 2,
                 y + h * 0.75,
                 "W#",
-                config.mini_week_number_font,
+                _ts_wn.font,
                 config.mini_header_font_size,
-                fill=config.theme_mini_week_number_color
-                or config.mini_week_number_color,
+                fill=_ts_wn.color,
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -222,9 +222,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 cx,
                 y + h * 0.75,
                 label,
-                config.mini_header_font,
+                _ts_label.font,
                 config.mini_header_font_size,
-                fill=header_color,
+                fill=_ts_label.color,
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -255,7 +255,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         wn_value: int,
     ) -> None:
         """Draw a week number in the W# column cell."""
-        wn_color = config.theme_mini_week_number_color or config.mini_week_number_color
+        _ts = config.get_text_style("ec-week-number")
         font_size = config.mini_week_number_font_size
         try:
             label = config.mini_week_number_label_format.format(num=wn_value)
@@ -266,9 +266,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             x + w / 2,
             y + (h / 2) + (font_size / 3),
             label,
-            config.mini_week_number_font,
+            _ts.font,
             font_size,
-            fill=wn_color,
+            fill=_ts.color,
             anchor="middle",
             css_class="ec-week-number",
         )
@@ -302,7 +302,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         9. Strikethrough line
         10. Icon (append or replace)
         """
-        default_color = config.theme_mini_day_color or config.mini_day_color
+        default_color = config.get_element_color("ec-day-number", config.mini_day_color)
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -335,7 +335,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 4. Grid lines
         if config.mini_grid_lines:
-            grid_stroke_width = config.mini_grid_line_width
+            _ls_grid = config.get_line_style("ec-grid-line")
+            grid_stroke_width = _ls_grid.width
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset,
@@ -343,10 +344,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
-                stroke=config.mini_grid_line_color,
+                stroke=_ls_grid.color,
                 stroke_width=grid_stroke_width,
-                stroke_opacity=config.mini_grid_line_opacity,
-                stroke_dasharray=config.mini_grid_line_dasharray or None,
+                stroke_opacity=_ls_grid.opacity,
+                stroke_dasharray=_ls_grid.dasharray or None,
                 css_class="ec-day-box",
             )
 
@@ -358,12 +359,13 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             display_text = ""
 
         # Determine font
+        _ts_day = config.get_text_style("ec-day-number")
         if style.font_name:
             font = style.font_name
         elif style.bold:
             font = config.mini_cell_bold_font
         else:
-            font = config.mini_cell_font
+            font = _ts_day.font
 
         # Determine color and opacity
         text_color = style.text_color or default_color
@@ -379,6 +381,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 5. Circle (milestone)
         if style.circled:
+            _ls_milestone = config.get_line_style("ec-milestone-marker")
             radius = min(w, h) * 0.38
             self._draw_circle(
                 cx,
@@ -386,8 +389,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 radius,
                 stroke=style.circle_color,
                 fill=style.circle_fill or "none",
-                stroke_width=config.mini_milestone_stroke_width,
-                stroke_opacity=config.mini_milestone_stroke_opacity,
+                stroke_width=_ls_milestone.width,
+                stroke_opacity=_ls_milestone.opacity,
                 css_class="ec-milestone-marker",
             )
 
@@ -411,7 +414,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 fill="none",
                 stroke=style.box_color,
                 stroke_width=0.75,
-                stroke_dasharray=config.mini_cell_box_stroke_dasharray or None,
+                stroke_dasharray=config.get_box_style("ec-cell").stroke_dasharray or None,
                 css_class="ec-day-box",
             )
 
@@ -460,6 +463,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 7b. Fiscal period start label (small text at bottom of cell)
         if style.fiscal_period_label:
+            _ts_fiscal = config.get_text_style("ec-fiscal-label")
             label_font_size = max(
                 4.0,
                 (config.fiscal_period_label_font_size or config.mini_cell_font_size * 0.6),
@@ -469,9 +473,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 cx,
                 label_y,
                 style.fiscal_period_label,
-                config.fiscal_period_label_font,
+                _ts_fiscal.font,
                 label_font_size,
-                fill=config.fiscal_period_label_color,
+                fill=_ts_fiscal.color,
                 fill_opacity=0.85,
                 anchor="middle",
                 css_class="ec-fiscal-label",
@@ -492,7 +496,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 strike_y,
                 stroke=text_color,
                 stroke_width=0.75,
-                stroke_dasharray=config.mini_strikethrough_stroke_dasharray or None,
+                stroke_dasharray=config.get_line_style("ec-strikethrough").dasharray or None,
                 css_class="ec-strikethrough",
             )
 
@@ -564,7 +568,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 stroke="lightgrey",
                 stroke_width=0.3,
                 stroke_opacity=0.5,
-                stroke_dasharray=config.mini_hash_line_dasharray or None,
+                stroke_dasharray=config.get_line_style("ec-hash-line").dasharray or None,
                 css_class="ec-hash-line",
             )
 
@@ -737,7 +741,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             day_cell_keys.setdefault(daykey, []).append(key)
 
         # Draw stacked bar lines per day (bottom-up) for every matching cell.
-        stroke_w = config.mini_duration_bar_height
+        _ls_dur = config.get_line_style("ec-duration-bar")
+        stroke_w = config.mini_duration_bar_height  # keep: behavioral dimension, not styling
         gap = stroke_w * 0.5
         for daykey, colors in bars_by_day.items():
             for cell_key in day_cell_keys.get(daykey, []):
@@ -754,9 +759,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                         line_y,
                         stroke=color,
                         stroke_width=stroke_w,
-                        stroke_opacity=config.mini_duration_bar_stroke_opacity,
-                        stroke_dasharray=config.mini_duration_bar_stroke_dasharray
-                        or None,
+                        stroke_opacity=_ls_dur.opacity,
+                        stroke_dasharray=_ls_dur.dasharray or None,
                         css_class="ec-duration-bar",
                     )
 
@@ -813,7 +817,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         content_bottom = config.pageY - margins["bottom"] - footer_height
 
         # Title
-        title_font = config.mini_details_title_font
+        _ts_heading = config.get_text_style("ec-heading")
         title_font_size = config.mini_details_title_font_size
         title_text = config.mini_details_title_text
         title_y = content_top + title_font_size + 10
@@ -821,9 +825,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             content_left + content_width / 2,
             title_y,
             title_text,
-            title_font,
+            _ts_heading.font,
             title_font_size,
-            fill=config.mini_details_title_color,
+            fill=_ts_heading.color,
             anchor="middle",
             css_class="ec-heading",
         )
@@ -850,12 +854,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         for w in col_widths[:-1]:
             col_x.append(col_x[-1] + w)
 
-        header_font = config.mini_details_header_font
+        _ts_det_label = config.get_text_style("ec-label")
         header_font_size = config.mini_details_header_font_size
         header_y = title_y + header_font_size + 6
-        row_font = config.mini_details_name_text_font_name
+        _ts_event_name = config.get_text_style("ec-event-name")
+        row_font = _ts_event_name.font
         row_font_size = config.mini_details_name_text_font_size
-        notes_font = config.mini_details_notes_text_font_name
+        _ts_event_notes = config.get_text_style("ec-event-notes")
+        notes_font = _ts_event_notes.font
         notes_font_size = config.mini_details_notes_text_font_size
 
         # Header row
@@ -864,13 +870,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 col_x[idx] + 4,
                 header_y,
                 head,
-                header_font,
+                _ts_det_label.font,
                 header_font_size,
-                fill=config.mini_details_header_color,
+                fill=_ts_det_label.color,
                 css_class="ec-label",
             )
 
         # Separator
+        _ls_sep = config.get_line_style("ec-separator")
         sep_y = header_y + (header_font_size * 0.6)
         self._draw_line(
             content_left,
@@ -879,7 +886,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             sep_y,
             stroke="grey",
             stroke_opacity=0.5,
-            stroke_dasharray=config.mini_details_separator_stroke_dasharray or None,
+            stroke_dasharray=_ls_sep.dasharray or None,
             css_class="ec-separator",
         )
 
@@ -923,7 +930,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 start_fmt,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
+                fill=_ts_event_name.color,
+                fill_opacity=_ts_event_name.opacity,
                 css_class="ec-event-date",
             )
             self._draw_text(
@@ -932,7 +940,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 name,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
+                fill=_ts_event_name.color,
+                fill_opacity=_ts_event_name.opacity,
                 max_width=name_width,
                 css_class="ec-event-name",
             )
@@ -942,7 +951,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 milestone,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
+                fill=_ts_event_name.color,
+                fill_opacity=_ts_event_name.opacity,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -951,7 +961,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 priority,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
+                fill=_ts_event_name.color,
+                fill_opacity=_ts_event_name.opacity,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -960,7 +971,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 group,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
+                fill=_ts_event_name.color,
+                fill_opacity=_ts_event_name.opacity,
                 css_class="ec-event-name",
             )
 
@@ -981,7 +993,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     detail_line,
                     notes_font,
                     notes_font_size,
-                    fill=config.mini_details_notes_text_font_color,
+                    fill=_ts_event_notes.color,
+                    fill_opacity=_ts_event_notes.opacity,
                     max_width=name_width,
                     css_class="ec-event-notes",
                 )

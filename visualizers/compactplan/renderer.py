@@ -161,9 +161,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         legend_y = max_content_y + key_gap
 
         # Background (full area)
-        bg = str(config.compactplan_background_color or "").strip().lower()
+        bg_style = config.get_box_style("ec-background")
+        bg = str(bg_style.fill or "").strip().lower()
         if bg not in {"", "none", "transparent"}:
-            self._draw_rect(area_x, area_y, area_w, area_h, fill=config.compactplan_background_color, css_class="ec-background")
+            self._draw_rect(area_x, area_y, area_w, area_h, fill=bg_style.fill, css_class="ec-background")
 
         # Header bands at computed floating position
         self._draw_bands(
@@ -174,23 +175,25 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Axis (optional)
         if bool(config.compactplan_show_axis):
+            _axis_style = config.get_line_style("ec-axis-line")
             self._draw_line(
                 area_x, axis_y, area_x + area_w, axis_y,
-                stroke=config.compactplan_axis_color,
+                stroke=_axis_style.color,
                 stroke_width=config.compactplan_axis_width,
-                stroke_dasharray=config.compactplan_axis_dasharray or None,
-                stroke_opacity=config.compactplan_axis_opacity,
+                stroke_dasharray=_axis_style.dasharray or None,
+                stroke_opacity=_axis_style.opacity,
                 css_class="ec-axis-line",
             )
 
         # Duration lines
+        _dur_style = config.get_line_style("ec-duration-bar")
         for p in placed:
             self._draw_line(
                 p.x1, p.row_y, p.x2, p.row_y,
                 stroke=p.color,
                 stroke_width=line_w,
-                stroke_dasharray=config.compactplan_duration_stroke_dasharray or None,
-                stroke_opacity=float(config.compactplan_duration_opacity),
+                stroke_dasharray=_dur_style.dasharray or None,
+                stroke_opacity=_dur_style.opacity,
                 css_class="ec-duration-bar",
             )
 
@@ -198,7 +201,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Each duration gets its own icon by index, cycling through the configured list.
         show_dur_icons = bool(config.compactplan_show_duration_icons)
         dur_icon_h = float(config.compactplan_duration_icon_height)
-        dur_icon_color_cfg = str(config.compactplan_duration_icon_color or "").strip()
+        _dur_icon_style = config.get_icon_style("ec-duration-icon")
+        dur_icon_color_cfg = str(_dur_icon_style.color or "").strip()
         if show_dur_icons and dur_icon_h > 0:
             for p in placed:
                 if p.icon_name:
@@ -330,8 +334,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         font_size = float(
             getattr(config, "compactplan_text_font_size", None) or max(7.0, band_row_h * 0.35)
         )
-        text_color = str(config.compactplan_text_font_color or "black")
-        text_opacity = float(config.compactplan_text_font_opacity)
+        _band_text_style = config.get_text_style("ec-label")
+        text_color = str(_band_text_style.color or "black")
+        text_opacity = float(_band_text_style.opacity)
         _events: list[Event] = events or []
 
         for band_idx, band in enumerate(time_bands):
@@ -660,7 +665,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if start_d in day_x:
             x = day_x[start_d] + px_per_day / 2.0
 
-        color = evt.color or str(config.compactplan_milestone_color or "black")
+        color = evt.color or config.get_element_color("ec-milestone-marker", "black")
         flag_h = float(config.compactplan_milestone_flag_height)
         flag_w = float(config.compactplan_milestone_flag_width)
 
@@ -686,14 +691,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Milestone label
         if config.compactplan_show_milestone_labels and evt.task_name:
+            _name_style = config.get_text_style("ec-event-name")
             font_name = self._resolve_font(
                 getattr(config, "compactplan_name_text_font_name", None), config, italic=True
             )
             font_size = float(
                 getattr(config, "compactplan_name_text_font_size", None) or 8.0
             )
-            label_color = str(config.compactplan_name_text_font_color or "#595959")
-            label_opacity = float(config.compactplan_name_text_font_opacity)
+            label_color = str(_name_style.color or "#595959")
+            label_opacity = float(_name_style.opacity)
             label_x = x + flag_w + 3.0
             label_y = axis_y - flag_h / 2.0
             self._draw_text(
@@ -773,8 +779,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
         font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
 
-        label_color = str(config.compactplan_text_font_color or "#595959")
-        label_opacity = float(config.compactplan_text_font_opacity)
+        _legend_text_style = config.get_text_style("ec-legend-text")
+        label_color = str(_legend_text_style.color or "#595959")
+        label_opacity = float(_legend_text_style.opacity)
         swatch_w = float(config.compactplan_legend_swatch_width)
         swatch_text_gap = 5.0
         row_h = float(config.compactplan_legend_row_height)
@@ -782,7 +789,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         show_dur_icons = bool(config.compactplan_show_duration_icons)
         dur_icon_h = float(config.compactplan_duration_icon_height)
-        dur_icon_color_cfg = str(config.compactplan_duration_icon_color or "").strip()
+        _legend_icon_style = config.get_icon_style("ec-duration-icon")
+        dur_icon_color_cfg = str(_legend_icon_style.color or "").strip()
         icon_text_gap = 3.0
 
         n_cols = max(1, int(getattr(config, "compactplan_legend_team_columns", 2) or 2))
@@ -837,11 +845,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
                 # ── Group header: colored swatch + group name ──────────────
                 swatch_y = cur_y - font_size * 0.3
+                _swatch_dur_style = config.get_line_style("ec-duration-bar")
                 self._draw_line(
                     sub_x, swatch_y, sub_x + swatch_w, swatch_y,
                     stroke=group_color,
                     stroke_width=line_w,
-                    stroke_opacity=float(config.compactplan_duration_opacity),
+                    stroke_opacity=_swatch_dur_style.opacity,
                     css_class="ec-legend-swatch",
                 )
                 self._draw_text(
@@ -909,9 +918,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         font_size = float(
             getattr(config, "compactplan_name_text_font_size", None) or 8.0
         )
-        date_color = str(config.compactplan_milestone_list_date_color or "#595959")
-        name_color = str(config.compactplan_name_text_font_color or "#595959")
-        opacity = float(config.compactplan_name_text_font_opacity)
+        _date_style = config.get_text_style("ec-event-date")
+        date_color = str(_date_style.color or "#595959")
+        _ms_name_style = config.get_text_style("ec-event-name")
+        name_color = str(_ms_name_style.color or "#595959")
+        opacity = float(_ms_name_style.opacity)
         row_h = float(config.compactplan_milestone_list_row_height)
         date_col_w = float(config.compactplan_milestone_list_date_col_width)
         date_fmt = str(config.compactplan_milestone_list_date_format or "M/D")
@@ -958,8 +969,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
             getattr(config, "compactplan_text_font_name", None), config, italic=True
         )
         font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
-        label_color = str(config.compactplan_text_font_color or "#595959")
-        label_opacity = float(config.compactplan_text_font_opacity)
+        _cont_legend_style = config.get_text_style("ec-legend-text")
+        label_color = str(_cont_legend_style.color or "#595959")
+        label_opacity = float(_cont_legend_style.opacity)
 
         icon_name = str(config.compactplan_continuation_icon or "arrow-right")
         icon_h = float(config.compactplan_continuation_icon_height or 8.0)
@@ -1026,8 +1038,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
             getattr(config, "compactplan_text_font_name", None), config, italic=True
         )
         font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
-        label_color = str(config.compactplan_text_font_color or "#595959")
-        label_opacity = float(config.compactplan_text_font_opacity)
+        _axis_legend_style = config.get_text_style("ec-legend-text")
+        label_color = str(_axis_legend_style.color or "#595959")
+        label_opacity = float(_axis_legend_style.opacity)
 
         legend_text = str(config.compactplan_legend_axis_text or "timeline")
         swatch_w = float(config.compactplan_legend_swatch_width)
@@ -1050,12 +1063,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
         swatch_x1 = swatch_x2 - swatch_w
         swatch_y = entry_y - font_size * 0.3
 
+        _axis_swatch_style = config.get_line_style("ec-axis-line")
         self._draw_line(
             swatch_x1, swatch_y, swatch_x2, swatch_y,
-            stroke=str(config.compactplan_axis_color or "#7f7f7f"),
+            stroke=_axis_swatch_style.color,
             stroke_width=float(config.compactplan_axis_width),
-            stroke_dasharray=config.compactplan_axis_dasharray or None,
-            stroke_opacity=float(config.compactplan_axis_opacity),
+            stroke_dasharray=_axis_swatch_style.dasharray or None,
+            stroke_opacity=_axis_swatch_style.opacity,
             css_class="ec-legend-swatch",
         )
 

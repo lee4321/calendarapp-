@@ -1065,6 +1065,120 @@ class CalendarConfig:
             )
 
 
+    # ── Style accessor methods ──────────────────────────────────────────────
+    # These delegate to theme_styles when available, falling back to style
+    # objects built from old config fields for backward compatibility.
+
+    def get_text_style(self, element_class: str) -> Any:
+        """Look up the TextStyle bound to a CSS element class."""
+        if self.theme_styles is not None:
+            s = self.theme_styles.get_text_style(element_class)
+            if s is not None:
+                return s
+        return self._fallback_text_style(element_class)
+
+    def get_box_style(self, element_class: str) -> Any:
+        """Look up the BoxStyle bound to a CSS element class."""
+        if self.theme_styles is not None:
+            s = self.theme_styles.get_box_style(element_class)
+            if s is not None:
+                return s
+        return self._fallback_box_style(element_class)
+
+    def get_line_style(self, element_class: str) -> Any:
+        """Look up the LineStyle bound to a CSS element class."""
+        if self.theme_styles is not None:
+            s = self.theme_styles.get_line_style(element_class)
+            if s is not None:
+                return s
+        return self._fallback_line_style(element_class)
+
+    def get_icon_style(self, element_class: str) -> Any:
+        """Look up the IconStyle bound to a CSS element class."""
+        if self.theme_styles is not None:
+            s = self.theme_styles.get_icon_style(element_class)
+            if s is not None:
+                return s
+        return self._fallback_icon_style(element_class)
+
+    def get_element_color(self, element_class: str, fallback: str = "#333333") -> str:
+        """Get the effective color for a CSS element class."""
+        if self.theme_styles is not None:
+            c = self.theme_styles.get_element_color(element_class)
+            if c is not None:
+                return c
+        return fallback
+
+    # ── Fallback style builders (no theme loaded) ─────────────────────────
+    # These build style objects from old config fields so the no-theme case
+    # preserves backward-compatible default values.
+
+    def _fallback_text_style(self, ec: str) -> Any:
+        from config.styles import TextStyle
+        _map = {
+            "ec-heading": lambda: TextStyle(font=self.header_left_font, color=self.header_left_font_color),
+            "ec-label": lambda: TextStyle(font=self.day_name_font, color=self.day_name_font_color),
+            "ec-day-number": lambda: TextStyle(font=self.day_box_number_font, color=self.day_box_number_color),
+            "ec-month-title": lambda: TextStyle(font=self.mini_title_font, color=self.mini_title_color),
+            "ec-week-number": lambda: TextStyle(font=self.week_number_font, color=self.week_number_font_color),
+            "ec-fiscal-label": lambda: TextStyle(font=self.fiscal_period_label_font, color=self.fiscal_period_label_color),
+            "ec-event-name": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color, opacity=self.weekly_name_text_font_opacity),
+            "ec-event-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
+            "ec-event-date": lambda: TextStyle(font=self.timeline_date_font, color=self.timeline_date_color),
+            "ec-duration-date": lambda: TextStyle(font=self.timeline_duration_date_font or self.timeline_date_font, color=self.timeline_duration_date_color or self.timeline_date_color),
+            "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_font_color),
+            "ec-today-label": lambda: TextStyle(color=self.timeline_today_label_color),
+            "ec-header-text": lambda: TextStyle(font=self.header_center_font, color=self.header_center_font_color),
+            "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
+            "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
+            "ec-legend-text": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color),
+        }
+        builder = _map.get(ec)
+        return builder() if builder else TextStyle()
+
+    def _fallback_box_style(self, ec: str) -> Any:
+        from config.styles import BoxStyle
+        _map = {
+            "ec-cell": lambda: BoxStyle(fill=self.day_box_fill_color, fill_opacity=self.day_box_fill_opacity, stroke=self.day_box_stroke_color, stroke_width=self.day_box_stroke_width, stroke_opacity=self.day_box_stroke_opacity, stroke_dasharray=self.day_box_stroke_dasharray),
+            "ec-background": lambda: BoxStyle(fill="none"),
+            "ec-heading-cell": lambda: BoxStyle(fill=self.blockplan_header_heading_fill_color),
+            "ec-band-cell": lambda: BoxStyle(fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity),
+            "ec-callout-box": lambda: BoxStyle(fill_opacity=self.timeline_label_fill_opacity, stroke_width=self.timeline_label_stroke_width, stroke_dasharray=self.timeline_label_stroke_dasharray),
+            "ec-vline-fill": lambda: BoxStyle(fill=self.blockplan_vertical_line_fill_color, fill_opacity=self.blockplan_vertical_line_fill_opacity),
+            "ec-milestone-marker": lambda: BoxStyle(stroke=self.timeline_marker_stroke_color, stroke_width=self.timeline_marker_stroke_width),
+        }
+        builder = _map.get(ec)
+        return builder() if builder else BoxStyle()
+
+    def _fallback_line_style(self, ec: str) -> Any:
+        from config.styles import LineStyle
+        _map = {
+            "ec-grid-line": lambda: LineStyle(color=self.mini_grid_line_color, width=self.mini_grid_line_width, opacity=self.mini_grid_line_opacity, dasharray=self.mini_grid_line_dasharray),
+            "ec-axis-line": lambda: LineStyle(color=self.timeline_axis_color, width=self.timeline_axis_width, opacity=self.timeline_axis_opacity, dasharray=self.timeline_axis_stroke_dasharray),
+            "ec-axis-tick": lambda: LineStyle(color=self.timeline_tick_color, dasharray=self.timeline_tick_stroke_dasharray),
+            "ec-today-line": lambda: LineStyle(color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray),
+            "ec-separator": lambda: LineStyle(dasharray=self.mini_details_separator_stroke_dasharray),
+            "ec-connector": lambda: LineStyle(dasharray=self.timeline_connector_stroke_dasharray),
+            "ec-vline": lambda: LineStyle(color=self.blockplan_vertical_line_color, width=self.blockplan_vertical_line_width, opacity=self.blockplan_vertical_line_opacity, dasharray=self.blockplan_vertical_line_dasharray),
+            "ec-duration-bar": lambda: LineStyle(dasharray=self.duration_stroke_dasharray, opacity=self.mini_duration_bar_stroke_opacity),
+            "ec-hash-line": lambda: LineStyle(dasharray=self.mini_hash_line_dasharray),
+            "ec-strikethrough": lambda: LineStyle(dasharray=self.mini_strikethrough_stroke_dasharray),
+            "ec-milestone-marker": lambda: LineStyle(width=self.mini_milestone_stroke_width, opacity=self.mini_milestone_stroke_opacity),
+        }
+        builder = _map.get(ec)
+        return builder() if builder else LineStyle()
+
+    def _fallback_icon_style(self, ec: str) -> Any:
+        from config.styles import IconStyle
+        _map = {
+            "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
+            "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
+            "ec-overflow-icon": lambda: IconStyle(color=self.overflow_indicator_color, icon=self.overflow_indicator_icon),
+        }
+        builder = _map.get(ec)
+        return builder() if builder else IconStyle()
+
+
 def create_calendar_config() -> CalendarConfig:
     """Factory function to create a new CalendarConfig instance."""
     return CalendarConfig()

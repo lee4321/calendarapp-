@@ -592,13 +592,14 @@ class BaseSVGRenderer(ABC):
             transform_parts.insert(0, f"rotate({angle} {center_x_svg} {center_y_svg})")
         transform = " ".join(transform_parts) or None
 
+        _wm_ts = config.get_text_style("ec-watermark")
         self._draw_text(
             waterX,
             waterY,
             config.watermark_text,
-            config.watermark_font,
+            _wm_ts.font,
             font_size,
-            fill=config.watermark_color,
+            fill=_wm_ts.color,
             fill_opacity=config.watermark_opacity,
             anchor="middle",
             transform=transform,
@@ -873,19 +874,25 @@ class BaseSVGRenderer(ABC):
             config: Calendar configuration
             coordinates: Layout coordinates
         """
+        _hdr_ts = config.get_text_style("ec-header-text")
+        _ftr_ts = config.get_text_style("ec-footer-text")
+        _lbl_ts = config.get_text_style("ec-label")
+
         for key in sorted(coordinates):
             X, Y, width, height = coordinates[key]
 
             if key in self._HEADER_FOOTER_MAP:
                 _, x_fn, anchor, prefix = self._HEADER_FOOTER_MAP[key]
-                css = "ec-header-text" if prefix.startswith("header") else "ec-footer-text"
+                is_header = prefix.startswith("header")
+                css = "ec-header-text" if is_header else "ec-footer-text"
+                _ts = _hdr_ts if is_header else _ftr_ts
                 self._draw_text(
                     x_fn(X, width),
                     Y + (height * 0.8),
                     getattr(config, f"{prefix}_text"),
-                    getattr(config, f"{prefix}_font"),
+                    _ts.font,
                     getattr(config, f"{prefix}_font_size"),
-                    fill=getattr(config, f"{prefix}_font_color"),
+                    fill=_ts.color,
                     anchor=anchor,
                     css_class=css,
                 )
@@ -895,9 +902,9 @@ class BaseSVGRenderer(ABC):
                     X + width / 2,
                     Y + (height * 0.7),
                     key,
-                    config.day_name_font,
+                    _lbl_ts.font,
                     config.day_name_font_size,
-                    fill=config.day_name_font_color,
+                    fill=_lbl_ts.color,
                     anchor="middle",
                     max_width=width,
                     css_class="ec-label",
@@ -1108,14 +1115,14 @@ class BaseSVGRenderer(ABC):
         )
 
         # Title
-        title_font = config.header_center_font
+        _hdr_ts = config.get_text_style("ec-header-text")
         title_font_size = config.header_center_font_size
         title_y = content_top + title_font_size + 10
         self._draw_text(
             content_left + content_width / 2,
             title_y,
             "Overflow Events",
-            title_font,
+            _hdr_ts.font,
             title_font_size,
             fill=config.day_box_font_color,
             anchor="middle",
