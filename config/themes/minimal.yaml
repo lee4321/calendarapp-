@@ -1,0 +1,113 @@
+# Minimal Theme
+# The bare minimum configuration for the unified theme model.
+# Only the required style tokens and element bindings are defined.
+# All omitted properties use dataclass defaults.
+
+theme:
+  name: "Minimal"
+  version: "2.0"
+  description: "Minimal theme — fewest settings possible"
+
+# ── Style Tokens ─────────────────────────────────────────────────────────────
+# Define only the named styles referenced by element_styles bindings.
+# Each style only needs the properties you want to override from defaults.
+
+text_styles:
+  heading:
+    font: "Roboto-Bold"
+    color: "#222222"
+  body:
+    font: "RobotoCondensed-Light"
+    color: "#333333"
+  body_secondary:
+    font: "RobotoCondensed-LightItalic"
+    color: "#888888"
+  label:
+    font: "RobotoCondensed-Light"
+    color: "#555555"
+  caption:
+    font: "RobotoCondensed-Light"
+    size: 6
+    color: "#999999"
+
+box_styles:
+  default:
+    fill: "white"
+  cell:
+    fill: "#F5F5F5"
+    stroke: "#CCCCCC"
+    stroke_width: 0.5
+
+line_styles:
+  grid:
+    color: "#DDDDDD"
+    width: 0.5
+  axis:
+    color: "#888888"
+    width: 1.0
+  today:
+    color: "red"
+    width: 1.5
+
+icon_styles:
+  event:
+    color: "#333333"
+
+# ── Element Bindings ─────────────────────────────────────────────────────────
+# Map every CSS class to a named style token above.
+# Elements sharing a style just point to the same token name.
+
+element_styles:
+  # Text
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-day-number:     { text_style: label }
+  ec-month-title:    { text_style: heading }
+  ec-week-number:    { text_style: label }
+  ec-fiscal-label:   { text_style: caption }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-event-date:     { text_style: caption }
+  ec-duration-date:  { text_style: caption }
+  ec-holiday-title:  { text_style: body }
+  ec-today-label:    { text_style: label, color: "red" }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+
+  # Boxes
+  ec-background:     { box_style: default }
+  ec-cell:           { box_style: cell }
+  ec-heading-cell:   { box_style: default }
+  ec-band-cell:      { box_style: default }
+  ec-callout-box:    { box_style: default }
+  ec-vline-fill:     { box_style: default }
+  ec-day-box:        { box_style: cell }
+  ec-pattern-fill:   { box_style: default }
+
+  # Lines
+  ec-grid-line:      { line_style: grid }
+  ec-axis-line:      { line_style: axis }
+  ec-axis-tick:      { line_style: axis }
+  ec-today-line:     { line_style: today }
+  ec-separator:      { line_style: grid }
+  ec-connector:      { line_style: grid }
+  ec-vline:          { line_style: grid }
+  ec-duration-bar:   { line_style: axis }
+  ec-hash-line:      { line_style: grid }
+  ec-strikethrough:  { line_style: grid }
+
+  # Markers
+  ec-milestone-marker: { line_style: axis }
+  ec-milestone-flag:   { line_style: axis }
+  ec-duration-marker:  { line_style: axis }
+
+  # Icons
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: event }
+  ec-overflow-icon:  { icon_style: event }
+
+  # Legend
+  ec-legend-swatch:  { line_style: axis }
+  ec-legend-text:    { text_style: body }
+  ec-legend-icon:    { icon_style: event }
