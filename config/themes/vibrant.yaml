@@ -13,7 +13,7 @@ theme:
 
 text_styles:
   heading:
-    font: "Roboto-Black"
+    font: "RobotoCondensed-Light"
     size: 12
     color: "deeppink"
     size_rules:
@@ -42,7 +42,7 @@ text_styles:
     size: 7
     color: "dimgrey"
   day_number:
-    font: "Roboto-Black"
+    font: "RobotoCondensed-Light"
     size: 12
     color: "orange"
   month_title:
@@ -197,13 +197,13 @@ base:
         papersize: ["3x5", "5x8"]
 
 header:
-  font_family: "Roboto-Black"
+  font_family: "RobotoCondensed-Light"
   left:
     font_color: "deeppink"
   center:
     font_color: "darkorange"
   right:
-    font_family: "Roboto-BlackItalic"
+    font_family: "RobotoCondensed-Light"
     font_color: "dodgerblue"
 
 footer:
@@ -285,7 +285,7 @@ weekly:
     stroke_dasharray: "8 2"
     fill_color: "white"
     fill_opacity: 0.4
-    number_font: "Roboto-Black"
+    number_font: "RobotoCondensed-Light"
     number_color: "orange"
     icon_color: "orange"
     font_color: "orange"
@@ -397,7 +397,7 @@ timeline:
   top_colors: ["deeppink", "gold", "dodgerblue", "limegreen", "darkorange"]
   bottom_colors: ["turquoise", "crimson", "lightskyblue", "chartreuse", "hotpink"]
   name_text:
-    font_name: "Roboto-Black"
+    font_name: "RobotoCondensed-Light"
     font_color: "deeppink"
   notes_text:
     font_name: "Roboto-Bold"
@@ -547,7 +547,7 @@ mini_calendar:
   cell_font: "JuliaMono-Regular"
   cell_bold_font: "JuliaMono-Bold"
   cell_font_size: 12
-  title_font: "Roboto-Black"
+  title_font: "RobotoCondensed-Light"
   title_font_size: null
   title_format: "MMMM"
   title_color: "red"
@@ -590,7 +590,7 @@ mini_calendar:
 
 mini_details:
   title_text: "Event Details"
-  title_font: "Roboto-Black"
+  title_font: "RobotoCondensed-Light"
   title_font_size: 12
   title_color: "deeppink"
   header_font: "Roboto-Bold"

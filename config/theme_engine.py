@@ -559,6 +559,9 @@ class ThemeEngine:
 
         self._validate_fonts(self._theme_data, FONT_REGISTRY)
 
+    # Sections where font names refer to system-installed fonts, not FONT_REGISTRY
+    _FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader"})
+
     def _validate_fonts(
         self,
         data: Any,
@@ -569,6 +572,8 @@ class ThemeEngine:
         if isinstance(data, dict):
             for key, value in data.items():
                 current_path = f"{path}.{key}" if path else key
+                if not path and key in self._FONT_VALIDATION_SKIP_SECTIONS:
+                    continue
                 if key in FONT_KEYS and isinstance(value, str):
                     if value not in registry:
                         logger.warning(

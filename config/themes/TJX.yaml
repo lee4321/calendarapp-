@@ -422,7 +422,7 @@ blockplan:
   grid_opacity: 1.0
   grid_line_width: 2.0
   grid_dasharray: null
-  timeband_line_color: "white"     # null → inherits grid_color
+  timeband_line_color: "black"     # null → inherits grid_color
   timeband_line_width: 2     # null → inherits grid_line_width
   timeband_line_opacity: 1.0   # null → inherits grid_opacity
   timeband_line_dasharray: null
@@ -505,15 +505,15 @@ blockplan:
 
 
     #Countdown example — one cell per visible day showing days remaining to a target:
-    - label:         "Days to Launch"
-      unit:          "countdown"         # one segment per visible day, labelled with remaining count
-      target_date:   "2026-06-30"        # required: the target date (YYYY-MM-DD)
-      skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
-      skip_nonworkdays: false           # set true to also skip holidays & company non-workdays
-      label_format:  "T-{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
-      row_height:    14
-      excel_font_name: "Avenir Next Condensed"   # font name for this band only
-      excel_font_size: 8                # font size for this band only
+    # - label:         "Days to Launch"
+    #   unit:          "countdown"         # one segment per visible day, labelled with remaining count
+    #   target_date:   "2026-06-30"        # required: the target date (YYYY-MM-DD)
+    #   skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
+    #   skip_nonworkdays: false           # set true to also skip holidays & company non-workdays
+    #   label_format:  "T-{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
+    #   row_height:    14
+    #   excel_font_name: "Avenir Next Condensed"   # font name for this band only
+    #   excel_font_size: 8                # font size for this band only
 
 
 
@@ -594,10 +594,10 @@ blockplan:
   duration_icon_visible: true
   name_text:
     font_name: "AlumniSansPinstripe-Regular"
-    font_color: "darkgrey"
+    font_color: "white"
   notes_text:
     font_name: "AlumniSansPinstripe-Regular"
-    font_color: "darkgrey"
+    font_color: "white"
   duration_show_start_date: false
   duration_show_end_date: false 
   duration_date_format: "M/D"

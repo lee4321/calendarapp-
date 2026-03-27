@@ -42,7 +42,7 @@ text_styles:
     size: 6
     color: "darkgrey"
   day_number:
-    font: "Roboto-Black"
+    font: "RobotoCondensed-Light"
     size: 10
     color: "whitesmoke"
   month_title:
@@ -215,7 +215,7 @@ durations:
 watermark:
   text: null
   color: "dimgrey"
-  font_family: "Roboto-Black"
+  font_family: "RobotoCondensed-Light"
   opacity: 0.15
   font_size: null
   resize_mode: "fit"
@@ -275,7 +275,7 @@ weekly:
     stroke_dasharray: null
     fill_color: "dimgrey"
     fill_opacity: 0.35
-    number_font: "Roboto-Black"
+    number_font: "RobotoCondensed-Light"
     number_color: "whitesmoke"
     icon_color: "coral"
     font_color: "lightyellow"

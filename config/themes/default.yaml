@@ -13,7 +13,7 @@ theme:
 
 text_styles:
   heading:
-    font: "Roboto-BlackItalic"
+    font: "RobotoCondensed-Light"
     size: 10
     color: "grey"
     size_rules:
@@ -42,7 +42,7 @@ text_styles:
     size: 6
     color: "grey"
   day_number:
-    font: "Roboto-Black"
+    font: "RobotoCondensed-Light"
     size: 10
     color: "white"
   month_title:
@@ -197,7 +197,7 @@ base:
         papersize: ["3x5", "5x8"]
 
 header:
-  font_family: "Roboto-BlackItalic"
+  font_family: "RobotoCondensed-Light"
   font_color: "grey"
 
 footer:
@@ -220,7 +220,7 @@ durations:
 watermark:
   text: null
   color: "blue"
-  font_family: "Roboto-Black"
+  font_family: "RobotoCondensed-Light"
   opacity: 0.5
   font_size: null
   resize_mode: "fit"
@@ -280,7 +280,7 @@ weekly:
     stroke_dasharray: null
     fill_color: "grey"
     fill_opacity: 0.25
-    number_font: "Roboto-Black"
+    number_font: "RobotoCondensed-Light"
     number_color: "white"
     icon_color: "red"
     font_color: "navy"

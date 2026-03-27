@@ -45,8 +45,6 @@ class Fonts:
     R_ITALIC = "Roboto-Italic"
     R_BOLD = "Roboto-Bold"
     R_BOLD_ITALIC = "Roboto-BoldItalic"
-    R_BLACK = "Roboto-Black"
-    R_BLACK_ITALIC = "Roboto-BlackItalic"
     R_LIGHT = "Roboto-Light"
     R_LIGHT_ITALIC = "Roboto-LightItalic"
 
@@ -460,15 +458,15 @@ class CalendarConfig:
 
     # Header text and styling
     header_left_text: str = ""
-    header_left_font: str = Fonts.R_BLACK_ITALIC
+    header_left_font: str = Fonts.R_BOLD_ITALIC
     header_left_font_color: str = "grey"
     header_center_text: str = ""
-    header_center_font: str = Fonts.R_BLACK_ITALIC
+    header_center_font: str = Fonts.R_BOLD_ITALIC
     header_center_font_color: str = "grey"
     header_right_text: str = field(
         default_factory=lambda: f"as of {get_creation_date()}"
     )
-    header_right_font: str = Fonts.R_BLACK_ITALIC
+    header_right_font: str = Fonts.R_BOLD_ITALIC
     header_right_font_color: str = "grey"
 
     # Footer text and styling
