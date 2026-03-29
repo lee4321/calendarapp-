@@ -1,0 +1,99 @@
+
+# variable = glyph number
+
+mid_0 = 1523
+mid_1 = 1524
+mid_2 = 1525
+mid_3 = 1526
+mid_4 = 1527
+mid_5 = 1528
+mid_6 = 1529
+mid_7 = 1530
+mid_8 = 1531 
+mid_9 = 1532
+
+cleft_0 = 1513
+cleft_1 = 1514
+cleft_2 = 1515
+cleft_3 = 1516
+cleft_4 = 1517
+cleft_5 = 1518
+cleft_6 = 1519
+cleft_7 = 1520
+cleft_8 = 1521 
+cleft_9 = 1522
+
+
+cright_0 = 1533
+cright_1 = 1534
+cright_2 = 1535
+cright_3 = 1536
+cright_4 = 1537
+cright_5 = 1538
+cright_6 = 1539
+cright_7 = 1540
+cright_8 = 1541 
+cright_9 = 1542
+
+
+sleft_0 = 1557
+sleft_1 = 1558
+sleft_2 = 1559
+sleft_3 = 1560
+sleft_4 = 1561
+sleft_5 = 1562
+sleft_6 = 1563
+sleft_7 = 1564
+sleft_8 = 1565 
+sleft_9 = 1566
+
+
+
+sright_0 = 1567
+sright_1 = 1568
+sright_2 = 1569
+sright_3 = 1570
+sright_4 = 1571
+sright_5 = 1572
+sright_6 = 1573
+sright_7 = 1574
+sright_8 = 1575 
+sright_9 = 1576
+
+for the numerals '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+
+middle_numbers = [mid_0,mid_1,mid_2,mid_3,mid_4,mid_5,mid_6,mid_7,mid_8,mid_9,]
+
+circle_left_numbers = [cleft_0,cleft_1,cleft_2,cleft_3,cleft_4,cleft_5,cleft_6,cleft_7,cleft_8,cleft_9,]
+circle_right_numbers = [cright_0,cright_1,cright_2,cright_3,cright_4,cright_5,cright_6,cright_7,cright_8,cright_9,]
+
+square_left_numbers = [sleft_0,sleft_1,sleft_2,sleft_3,sleft_4,sleft_5,sleft_6,sleft_7,sleft_8,sleft_9,]
+square_right_numbers = [sright_0,sright_1,sright_2,sright_3,sright_4,sright_5,sright_6,sright_7,sright_8,sright_9,]
+
+There will be two sets of icons: circle and square. 
+
+The first set of icons should be named: circle0000, circle0001, circle0002 ... circle9999. 
+The second set of icons should be named: square0000, square0001, square0002 ... square9999.
+
+The icon should be created as individual svg files using the name.svg. Store each file in the folder /Users/ali/Code/CalendarApp/capsule_numbers.
+
+Use the font /Users/ali/Code/CalendarApp/fonts/SF-Mono-Light.otf 
+
+each enclosed number icon will consist of 4 glyphs, equal to the numerals
+0000, 0001, 0002, 0003, ... 9999. 
+
+circle0000 = [cleft_0,mid_0,mid_0,cright_0]
+circle0001 = [cleft_0,mid_0,mid_0,cright_1]
+circle0001 = [cleft_0,mid_0,mid_0,cright_2]
+circle9999 = [cleft_9,mid_9,mid_9,cright_9] 
+
+square0000 = [sleft_0,mid_0,mid_0,sright_0]
+square0001 = [sleft_0,mid_0,mid_0,sright_1]
+square0002 = [sleft_0,mid_0,mid_0,sright_2]
+square9999 = [sleft_9,mid_9,mid_9,sright_9] 
+
+the glyph numbers are found in the variables: middle_numbers, circle_left_numbers, circle_right_numbers, square_left_numbers, square_right_numbers.
+
+Each icon should be created as SVG paths not text. Create the icons that are 24px high. The path should be able to be used as icons in ecalendar.py.  The color of the path should default to black at 0.5pt. 
+
+

@@ -1,0 +1,572 @@
+Name, glyph
+command, 4377
+flatdiamond,2107
+apple, 2108
+at, 1937
+blackbullet, 1949
+whitebullet,1950 
+trianglebullet,1951
+blackcircle,2227
+personbadge,2239
+whitecircle,2305
+gear,2308
+timemachine,2311
+steeringwheel,2314
+snowflake,2317
+directionalarrows,2320
+shield,2323
+halfshield,2326
+eye,2323
+drop,2335
+cloud,2338
+wifi,2341
+trianglebadge,2344
+airplane,2347
+circlepath,2350
+emptyrectangle,2359
+filledrectangle,2362
+waves,2365
+lock,2368
+unlock,2371
+sparkles,2374
+heatwave,2389
+key,2392
+location,2395
+magnifyingglass,2398
+microphone,2401
+camera,2404
+chevronsupanddown,4371
+shuffle,4464
+repeat,4470
+repeat1,4476
+infinity,4494
+star,4509
+theatermasks,4518
+bed,4524
+washer, 4530
+dryer,4536
+dishwasher,4542
+toilet,4551
+tent,4557
+tents,4560
+lodge,4566
+houseflag,4572
+signpost,4578
+signposts,4590
+mountains,4602
+mountainstar,4608
+popcorn,4620
+microbe,4626
+dottedcircle,4632
+plant,4638
+car,4644
+ev,4650
+gasstation,4656
+thermo,4662
+forkandknife,4665
+drop,4677
+asterisk,4683
+shoppingcart,4695
+headphones,4707
+headset,4713
+speakeron,4734
+speakermute,4746
+pencilsquare,4761
+trash,4767
+folder, 4782
+paperairplane,4785
+musicnote,4791
+sharrow, 4797
+tray, 4803
+docbox,4809
+doc, 4824
+terminal, 4827
+calendar,4833
+book,4893
+books, 4902
+closedbook,4910
+bookmark,4916
+gradcap,4922
+paperclip,4931
+chain,4937
+portrait, 4958
+twopeople,4966
+personandscreen,4972
+sun,4987
+sunhorizon,4993
+sunrise,4999
+sunset,5008
+sundust,5014
+sunhaze,5020
+sunrain,5026
+sunsnow,5029
+moonrise,5035
+moonset,5041
+moondust,5047
+moonhaze,5056
+moon,5062
+moonstar,5065
+cloudsprinkle,5083
+cloudrain,5092
+heavyrain,5098
+hail,5107
+cloudsnow,5113
+sleet,5119
+cloudbolt,5125
+thunderstorm,5131
+partlycloudy,5140
+smokey,5176
+windy,5182
+flurries,5188
+tornado,5191
+tropicalstorm,5197
+hurricane,5203
+hotday, 5209
+coldday, 5215
+snowflake, 5230
+flame, 5233
+umbrella, 5239
+musicmic, 5245
+radiomic, 5251
+microphoneoff, 5257
+filledsquare,5273
+dottedsquare, 5276
+opensquare, 5279
+filleddiamond, 5282
+filledheart, 5288
+noheart, 5294
+bolt, 5300
+nobolt, 5314
+sidebolt, 5323
+filledflag, 5329
+noflag, 5335
+checkeredflag, 5338
+flags, 5344
+north, 5368
+bell, 5371
+bellalarm, 5377
+noalarm, 5383
+tag, 5392
+eye, 5398
+noeye, 5401
+sidekey, 5413
+key, 5419
+clockwise, 5425
+anticlockwise, 5440
+circlearrows, 5449
+rightturn, 5455
+camera, 5461
+photo, 5470
+cube, 5473
+shippingbox, 5482
+clock, 5485
+timer, 5491
+gamecontroller, 5497
+speechbubble,5509
+bubble, 5527
+bangbubble, 5539
+quotes, 5545
+downquotes, 5551
+phone, 5557
+pausephone, 5566
+phonekeys,5581
+hammer, 5608
+stethescope, 5611
+briefcase,5617
+suitecase, 5623
+luggage, 5638
+handbag, 5656
+crosscase,5662
+ampersand,5677
+plusminus,5686
+brackets, 5692
+power,5719
+dotarrows, 5726
+film, 5734
+updown,5821
+leftright,5827
+diagarrows,5833
+diagarrows2,5839
+uturn,5845
+downuturn, 5854
+updownarrow, 5869
+leftrightarrow, 5875
+brokendiagarrow, 5881
+brokendiagarrow2, 5890
+closedarrows,5896
+closedarrows2,5902
+uptoline, 5908
+downtoline, 5911
+lefttoline, 5917
+righttoline, 5926
+leaf, 5929
+pawprint, 5938
+hdscreen, 5959
+envelope, 5965
+ellipsis, 5968
+opengear, 5974
+scissor, 5986
+creditcard, 5992
+house, 6001
+storefront, 6007
+government, 6013
+pushpin, 6022
+locationpin, 6028
+mappin, 6037
+compass, 6043
+rotate, 6049
+twopeople, 6057
+iphone, 6035
+iphoneringing,6069
+screen, 6134
+binoculars,6153
+wallet, 6156
+lightbulb, 6162
+pills,6201
+hare, 6204
+tortoise, 6210
+dog, 6216
+cat, 6225
+bug, 6231
+ladybug, 6234
+fish, 6246
+bird, 6252
+lizard, 6261
+selectionbox,6267
+barcode, 6270
+qrcode, 6273
+faceid,6294
+gift, 6308
+flashlight, 6323
+map, 6359
+purchase, 6365
+bulletlist, 6371
+hourglass, 6413
+figurewave, 6440
+figurewalking, 6443
+figuresuitecase, 6449
+figurefall, 6455
+figurerun, 6461
+figurewheel, 6479
+figurespeeding, 6485
+stop, 6953
+thumbsup, 6959
+thumbsdown, 6965
+bike, 7037
+tram, 7043
+sailboat, 7058
+time, 7064
+circlehex, 7067
+circlegrid, 7073
+linechartup, 7079
+linechartdown, 7085
+barchart, 7100
+flower, 7106
+tree, 7115
+tshirt, 7121
+jacket, 7127
+coat, 7133
+trophy, 7137
+sportscourt, 7143
+soccer, 7149
+baseball, 7161
+basketball, 7170
+football, 7176
+tennis, 7197
+hockey, 7203
+cricket, 7221
+shoe, 7238
+aqi,7518
+fan, 7521
+heat, 7527
+highlighter, 7563
+clip, 7743
+rays, 7848
+zzz, 7917
+squaregrid, 8429
+printerdots, 8443
+printerlines, 8436
+scanner, 8449
+downtime, 9011
+figuremoving, 9073
+ear, 9076
+handwave, 9092
+readbraille, 9102
+ekg,9108
+cpu, 9556
+messagebubbles,9577
+travel, 9592
+signhere, 9762
+sign, 9801
+draw, 9810
+lasso, 9840
+lassostars, 9843
+garbage, 9846
+inboxoutbox, 10032
+receipt, 10164
+zipfile, 10236
+quoteletter, 10398
+medicalrecords, 10416
+documents, 10482
+music, 10488
+todolist, 10521
+ruler, 11379
+chessboard, 11877
+bikerace, 12444
+swimming,12489
+rowing, 12525
+iceskate,12561
+snowboard, 12570
+dancing, 12597
+climbstairs, 12633
+surfing, 12651
+threediamonds, 12750
+court, 12672
+skateboard, 13302
+medal, 13077
+lighton, 13161
+blinking,13254
+bright, 13266
+clockface, 13269
+keyboard, 13356
+peacesign, 13398
+whiteglobe, 13401
+blackglobe, 13404
+globeamericas, 13428
+globeafrica, 13434
+globeasia, 13440
+globeeurope, 13446
+circledots, 13449
+circlelines, 13455
+brighten, 13479
+darken, 13491
+moon1, 13563
+moon2, 13566
+moon3, 13569
+moon4, 13572
+moon5, 13575
+moon6, 13578
+moon7, 13581
+moon8, 13584
+sleep, 13674
+star, 13680
+stars, 13683
+moonstars, 13689
+extinguisher, 14109
+megaphone, 14394
+singing, 14523
+paintdrip, 15027
+yinyang, 15030
+leftdark, 15036
+rightdim, 15039
+leftdim, 15042
+rightdark, 15045
+halfdim, 15054
+wholedim, 15057
+wholewhite, 15061
+wholedark, 15064
+darkandwhite, 15115
+whiteanddark, 15118
+updarkbottomwhite, 15139
+upwhitebottomdark, 15142
+bullseye, 15169
+circledots, 15181
+circledash, 15184
+whitestack, 15440
+darkstack, 15443
+diagbrackets, 15512
+websquare, 15515
+whiteroundedsquare, 15518
+darkroundedsquare, 15521
+shadedsquare, 15581
+darkdashedsquared, 15602
+dashedsquarelock, 15599
+whitepresent, 15605
+darkpresent, 15608
+newwhitescreen, 15617
+newdarkscreen, 15620
+whitecapsule, 16166
+darkcapsule, 16169
+whitepluscapsule, 16172
+darkplucapsule, 16175
+whiteplusminuscapsule, 16178
+darkplusminuscapsule, 16181
+darkwhitecapsule, 16184
+whitedarkcapsule, 16187
+darkupwhitedowncapsule, 16190
+whiteupdarkdowncapsule, 16193
+whiteoctagon, 16340
+darkoctagon, 16343
+whitehex, 16358
+darkhex, 16361
+whitehexstar, 16364
+darkhexstar, 16367
+white8star, 16400
+dark8star, 16403
+white8starcheck, 16406
+dark8starcheck, 16409
+white8starcross, 16412
+dark8starcross, 16415
+halfshield, 16589
+quadshield, 16601
+whiteflag, 16622
+darkflag, 16625
+whitecircleflag, 16628
+darkcircleflag, 16631
+whitesquareflag, 16634
+darksquareflag, 16637
+doubleflags, 16670
+doubledarkflags, 16673
+darkandwhiteflags, 16682
+doublecheckeredflags, 16688
+dashedcloud, 17024
+download, 17012
+upload, 17018
+textmessage, 17417
+audiomessage, 17513
+dialog, 17543
+sendemails, 17807
+blockemail, 17861
+twogears, 17927
+signature, 17942
+shoppingbasket, 18107
+securitynumber, 18128
+magicwand, 18161
+whiteknob, 18197
+darkknob, 18200
+gyroscope, 18215
+gaugelow, 18230
+gaugemed, 18233
+gaugehigh, 18242
+metronome, 18263
+musickeyboard, 18320
+tuningfork, 18326
+paintbrush, 18329
+crayon, 18341
+whitewrench, 18359
+darkwrench, 18362
+whitehammer, 18365
+darkhammer, 18368
+whitescrewdriver, 18377
+darkscrewdriver, 18380
+wrenchscrewdriver, 18392
+scroll, 18404
+happysad, 18593
+puzzlepiece, 18611
+puzzlepiece2, 18617
+deskfan, 18797
+ceilingfan, 18803
+desklamp, 18815
+plug, 19664
+opendoor, 19706
+closeddoor, 19715
+frenchdoors, 19754
+shower, 19916
+bathtub, 19928
+celebrate, 19982
+baloons, 19994
+fireworks, 20003
+cooking, 20006
+sofa, 20042
+chair, 20048
+fireplace, 20072
+laundry, 20078
+stovetop, 20126
+microwave, 20132
+fridge, 20138
+sink, 20162
+bighouse, 20207
+keys, 20477
+3drays, 20603
+torus, 20621
+paintbucket, 20639
+macface, 20645
+cd, 20660
+rackserver, 20846
+rackstorage, 20849
+oldphone, 20990
+candybarphone, 20993
+shadedrectangle, 21260
+computermouse, 21629
+analogwatch, 21635
+airpods, 21818
+oldradio, 22457
+guitars, 22592
+ship, 22769
+drone, 22823
+wheelchair, 22826
+bikehelmet, 22841
+scooter, 22847
+motorcycle, 22850
+stroller, 22859
+gaspump, 22892
+engine, 22967
+horn, 24917
+lungs, 25109
+thermometer, 25154
+bandaid, 25163
+facemask, 25172
+injection, 25166
+flask, 25214
+testtubes, 25220
+blood, 25223
+medicine, 25229
+teddy, 25397
+laurel, 25421
+whitetree, 25442
+darktree, 25445
+hanger, 25454
+crown, 25457
+baseballcap, 25469
+shoes, 25523
+dancestep, 25529
+movieclapper, 25550
+smileyface, 25568
+sleepyeye, 25616
+closedeye, 25628
+nose, 25631
+comb, 25637
+mustache, 25646
+lips, 25652
+glasses, 25655
+sunglasses, 25664
+brains, 25667
+brain, 25676
+clapping, 25901
+pinching, 25913
+joystick, 26765
+arrowkeys, 26900
+playstation, 27251
+nintendoswitch, 27269
+xbox, 27254
+coffee, 27287
+hotcoffee, 27296
+wineglass, 27311
+birthcake, 27323
+carrot, 27332
+fork, 27335
+knife, 27338
+spoon, 27341
+crush, 27353
+expand, 27356
+stretch, 27359
+piechart, 27452
+explosion, 27524
+fingerprint, 27620
+atomic, 27626
+angle, 27635
+seashell, 27650
+money, 27689
+radiation, 28067
+life-preserver, 28070
+3dspace, 29456
+squareinfo, 29771
+circleinfo, 29765
+diamondquestion, 29828
+tripleexclame, 29846
+stopexclame, 29861
+twoarrows, 31238
+threearrows, 31241
+merge, 31259
+split, 31265
+join, 31268
