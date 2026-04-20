@@ -684,7 +684,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     seg_w,
                     row_h,
                     fill=seg_fill,
-                    fill_opacity=_band_cell_style.fill_opacity,
+                    fill_opacity=config.blockplan_timeband_fill_opacity,
                     stroke=stroke,
                     stroke_width=tb_width,
                     stroke_opacity=tb_opacity,

@@ -49,13 +49,11 @@ def _binding_to_css_properties(binding: "ElementBinding") -> list[tuple[str, str
             props.append(("fill", bs.fill))
         if bs.fill_opacity < 1.0:
             props.append(("fill-opacity", _fmt(bs.fill_opacity)))
-        if bs.stroke is not None:
+        if bs.stroke is not None and bs.stroke.strip().lower() not in ("none", "transparent", ""):
             props.append(("stroke", bs.stroke))
             props.append(("stroke-width", _fmt(bs.stroke_width)))
             if bs.stroke_opacity < 1.0:
                 props.append(("stroke-opacity", _fmt(bs.stroke_opacity)))
-        else:
-            props.append(("stroke", "none"))
         if bs.stroke_dasharray is not None:
             props.append(("stroke-dasharray", bs.stroke_dasharray))
 
