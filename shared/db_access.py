@@ -532,6 +532,25 @@ class CalendarDB:
                 rows.append(d)
             return rows
 
+    def resolve_color_name(self, name: str) -> str:
+        """Return the hex value for a DB color name, or the original string if not found.
+
+        Looks up the EN column case-insensitively.  Allows themes to use
+        human-friendly names like 'bondi blue' or 'roman silver' that are
+        stored in the colors table but are not valid SVG/CSS color strings.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT red, green, blue FROM colors WHERE lower(EN) = lower(?)",
+                (name,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return name
+            r, g, b = int(row["red"]), int(row["green"]), int(row["blue"])
+            return f"#{r:02X}{g:02X}{b:02X}"
+
     @staticmethod
     def _split_icon_aliases(raw: str | None) -> list[str]:
         """Split alternativenames text into normalized aliases."""

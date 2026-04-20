@@ -223,9 +223,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
         5. Empty list — caller should fall back to ``fill_color`` as a plain
            single-color string.
         """
+        def _resolve(c: str) -> str:
+            return db.resolve_color_name(c) if db is not None else c
+
         # fill_color as explicit list
         if isinstance(fill_color, list):
-            colors = [str(c) for c in fill_color if c]
+            colors = [_resolve(str(c)) for c in fill_color if c]
             if colors:
                 return colors
         # fill_color as named palette
@@ -235,7 +238,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 return resolved
         # fill_palette as explicit list
         if isinstance(fill_palette, list):
-            colors = [str(c) for c in fill_palette if c]
+            colors = [_resolve(str(c)) for c in fill_palette if c]
             if colors:
                 return colors
         # fill_palette as named palette
@@ -672,7 +675,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if color_list:
                     seg_fill = color_list[gidx % len(color_list)]
                 elif isinstance(band_fill, str):
-                    seg_fill = band_fill
+                    seg_fill = db.resolve_color_name(band_fill) if db is not None else band_fill
                 else:
                     seg_fill = "none"
                 self._draw_rect(
