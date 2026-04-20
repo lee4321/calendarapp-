@@ -45,7 +45,8 @@ def _binding_to_css_properties(binding: "ElementBinding") -> list[tuple[str, str
 
     elif binding.box_style is not None:
         bs = binding.box_style
-        props.append(("fill", bs.fill))
+        if bs.fill.strip().lower() not in ("none", "transparent", ""):
+            props.append(("fill", bs.fill))
         if bs.fill_opacity < 1.0:
             props.append(("fill-opacity", _fmt(bs.fill_opacity)))
         if bs.stroke is not None:
