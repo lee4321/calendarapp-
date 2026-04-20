@@ -13,6 +13,22 @@ if TYPE_CHECKING:
     from config.styles import ElementBinding, ThemeStyles
 
 
+# Classes whose stroke/fill are always set inline per-instance by the renderer.
+# Emitting CSS rules for these classes would override the inline presentation
+# attributes (CSS beats presentation attrs in the cascade), clobbering
+# per-instance colors like duration bar strokes or band-cell fills.
+_INLINE_STYLED_CLASSES: frozenset[str] = frozenset({
+    "ec-band-cell",
+    "ec-heading-cell",
+    "ec-duration-bar",
+    "ec-grid-line",
+    "ec-separator",
+    "ec-vline",
+    "ec-vline-fill",
+    "ec-background",
+})
+
+
 def generate_css(theme_styles: "ThemeStyles") -> str:
     """
     Generate CSS rules from theme element bindings.
@@ -24,6 +40,8 @@ def generate_css(theme_styles: "ThemeStyles") -> str:
     rules: list[str] = []
 
     for class_name, binding in sorted(theme_styles.element_bindings.items()):
+        if class_name in _INLINE_STYLED_CLASSES:
+            continue
         props = _binding_to_css_properties(binding)
         if props:
             rule_body = "; ".join(f"{k}: {v}" for k, v in props)

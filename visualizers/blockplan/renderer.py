@@ -134,16 +134,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
 
         # ── separator between top bands and swimlanes ─────────────────────────
-        _grid_style = config.get_line_style("ec-grid-line")
+        _grid_color, _grid_w, _grid_op, _grid_dash = self._grid_stroke(config)
         self._draw_line(
             area_x,
             lanes_top,
             area_x + area_w,
             lanes_top,
-            stroke=_grid_style.color,
-            stroke_width=_grid_style.width,
-            stroke_opacity=_grid_style.opacity,
-            stroke_dasharray=_grid_style.dasharray,
+            stroke=_grid_color,
+            stroke_width=_grid_w,
+            stroke_opacity=_grid_op,
+            stroke_dasharray=_grid_dash,
             css_class="ec-separator",
         )
 
@@ -170,10 +170,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 lanes_bottom,
                 area_x + area_w,
                 lanes_bottom,
-                stroke=_grid_style.color,
-                stroke_width=_grid_style.width,
-                stroke_opacity=_grid_style.opacity,
-                stroke_dasharray=_grid_style.dasharray,
+                stroke=_grid_color,
+                stroke_width=_grid_w,
+                stroke_opacity=_grid_op,
+                stroke_dasharray=_grid_dash,
                 css_class="ec-separator",
             )
             self._draw_time_bands(
@@ -191,6 +191,40 @@ class BlockPlanRenderer(BaseSVGRenderer):
             )
 
         return 0, []
+
+    @staticmethod
+    def _timeband_stroke(
+        config: "CalendarConfig",
+    ) -> tuple[str, float, float, str | None]:
+        """Stroke attrs for band/heading row cells.
+
+        Honors blockplan.timeband_line_* when set, falling back to blockplan.grid_*.
+        """
+        color = config.blockplan_timeband_line_color
+        if color is None:
+            color = config.blockplan_grid_color
+        width = config.blockplan_timeband_line_width
+        if width is None:
+            width = config.blockplan_grid_line_width
+        opacity = config.blockplan_timeband_line_opacity
+        if opacity is None:
+            opacity = config.blockplan_grid_opacity
+        dasharray = config.blockplan_timeband_line_dasharray
+        if dasharray is None:
+            dasharray = config.blockplan_grid_dasharray
+        return color, float(width), float(opacity), dasharray
+
+    @staticmethod
+    def _grid_stroke(
+        config: "CalendarConfig",
+    ) -> tuple[str, float, float, str | None]:
+        """Stroke attrs for blockplan grid lines."""
+        return (
+            config.blockplan_grid_color,
+            float(config.blockplan_grid_line_width),
+            float(config.blockplan_grid_opacity),
+            config.blockplan_grid_dasharray,
+        )
 
     @staticmethod
     def _band_row_h(band: dict[str, Any], config: "CalendarConfig") -> float:
@@ -223,8 +257,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
         5. Empty list — caller should fall back to ``fill_color`` as a plain
            single-color string.
         """
+        _resolver = getattr(db, "resolve_color_name", None) if db is not None else None
+
         def _resolve(c: str) -> str:
-            return db.resolve_color_name(c) if db is not None else c
+            return _resolver(c) if _resolver else c
 
         # fill_color as explicit list
         if isinstance(fill_color, list):
@@ -495,11 +531,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_fill = band.get(
                     "label_fill_color", _heading_cell_style.fill
                 )
-                _axis_style = config.get_line_style("ec-axis-line")
-                tb_color = _axis_style.color
-                tb_width = _axis_style.width
-                tb_opacity = _axis_style.opacity
-                tb_dasharray = _axis_style.dasharray
+                tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
                 stroke = band.get("stroke_color", tb_color)
                 self._draw_rect(
                     left_x, y_top, timeline_x - left_x, row_h,
@@ -552,7 +584,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _label_text_style = config.get_text_style("ec-label")
             _heading_text_style = config.get_text_style("ec-heading")
             _heading_cell_style = config.get_box_style("ec-heading-cell")
-            _axis_style = config.get_line_style("ec-axis-line")
             band_fill = band.get("fill_color", _band_cell_style.fill)
             band_palette = band.get(
                 "fill_palette", config.blockplan_timeband_fill_palette
@@ -578,9 +609,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_font_size = row_h * 0.65
             else:
                 heading_font_size = float(config.blockplan_header_font_size)
-            heading_color = band.get("label_color", _heading_text_style.color)
+            heading_color = band.get(
+                "label_color", config.blockplan_header_label_color
+            )
             heading_opacity = float(
-                band.get("label_opacity", _heading_text_style.opacity)
+                band.get("label_opacity", config.blockplan_header_label_opacity)
             )
             heading_fill = band.get(
                 "label_fill_color", _heading_cell_style.fill
@@ -589,10 +622,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 band.get("label_align_h", config.blockplan_header_label_align_h),
                 default="left",
             )
-            tb_color = _axis_style.color
-            tb_width = _axis_style.width
-            tb_opacity = _axis_style.opacity
-            tb_dasharray = _axis_style.dasharray
+            tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
             stroke = band.get("stroke_color", tb_color)
 
             # Left heading cell
@@ -675,7 +705,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if color_list:
                     seg_fill = color_list[gidx % len(color_list)]
                 elif isinstance(band_fill, str):
-                    seg_fill = db.resolve_color_name(band_fill) if db is not None else band_fill
+                    _resolver = getattr(db, "resolve_color_name", None) if db is not None else None
+                    seg_fill = _resolver(band_fill) if _resolver else band_fill
                 else:
                     seg_fill = "none"
                 self._draw_rect(
@@ -755,6 +786,19 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
         _vline_fill_style = config.get_box_style("ec-vline-fill")
         _vline_style = config.get_line_style("ec-vline")
+        # Warn once per misconfigured rule (by dict id) so logs aren't spammed
+        # across the two passes below.
+        _warned: set[int] = set()
+
+        def _skip_reason(line: dict, band_name: str, value: str, repeat: bool) -> str | None:
+            if not band_name:
+                return "missing 'band' key"
+            if not value and not repeat:
+                return "needs 'value' or 'repeat: true'"
+            if band_name not in band_segments:
+                return f"band '{line.get('band') or line.get('band_label')}' not found in configured time bands"
+            return None
+
         # --- Pass 1: column fills (drawn behind lines) ---
         for line in lines:
             if not isinstance(line, dict):
@@ -772,7 +816,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
             )
             value = str(line.get("value") or "").strip()
             repeat = bool(line.get("repeat", False))
-            if not band_name or (not value and not repeat):
+            reason = _skip_reason(line, band_name, value, repeat)
+            if reason is not None:
+                if id(line) not in _warned:
+                    print(
+                        f"[blockplan] vertical_lines rule skipped ({reason}): "
+                        f"{line}"
+                    )
+                    _warned.add(id(line))
                 continue
             segments = band_segments.get(band_name, [])
             if not segments:
@@ -817,7 +868,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
             )
             value = str(line.get("value") or "").strip()
             repeat = bool(line.get("repeat", False))
-            if not band_name or (not value and not repeat):
+            reason = _skip_reason(line, band_name, value, repeat)
+            if reason is not None:
+                if id(line) not in _warned:
+                    print(
+                        f"[blockplan] vertical_lines rule skipped ({reason}): "
+                        f"{line}"
+                    )
+                    _warned.add(id(line))
                 continue
             segments = band_segments.get(band_name, [])
             if not segments:
@@ -1101,7 +1159,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
             # Per-lane visual style overrides (fall back to global config values).
             _lane_heading_cell_style = config.get_box_style("ec-heading-cell")
-            _lane_grid_style = config.get_line_style("ec-grid-line")
+            _lg_color, _lg_w, _lg_op, _lg_dash = self._grid_stroke(config)
             heading_fill = (
                 lane_cfg.get("fill_color") or _lane_heading_cell_style.fill
             )
@@ -1114,10 +1172,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_x - left_x,
                 lane_h,
                 fill=heading_fill,
-                stroke=_lane_grid_style.color,
-                stroke_width=_lane_grid_style.width,
-                stroke_opacity=_lane_grid_style.opacity,
-                stroke_dasharray=_lane_grid_style.dasharray,
+                stroke=_lg_color,
+                stroke_width=_lg_w,
+                stroke_opacity=_lg_op,
+                stroke_dasharray=_lg_dash,
                 css_class="ec-heading-cell",
             )
             self._draw_rect(
@@ -1126,10 +1184,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_w,
                 lane_h,
                 fill=timeline_fill,
-                stroke=_lane_grid_style.color,
-                stroke_width=_lane_grid_style.width,
-                stroke_opacity=_lane_grid_style.opacity,
-                stroke_dasharray=_lane_grid_style.dasharray,
+                stroke=_lg_color,
+                stroke_width=_lg_w,
+                stroke_opacity=_lg_op,
+                stroke_dasharray=_lg_dash,
                 css_class="ec-band-cell",
             )
             if show_split_line:
@@ -1138,10 +1196,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     split,
                     timeline_x + timeline_w,
                     split,
-                    stroke=_lane_grid_style.color,
-                    stroke_width=_lane_grid_style.width,
-                    stroke_opacity=_lane_grid_style.opacity,
-                    stroke_dasharray=_lane_grid_style.dasharray,
+                    stroke=_lg_color,
+                    stroke_width=_lg_w,
+                    stroke_opacity=_lg_op,
+                    stroke_dasharray=_lg_dash,
                     css_class="ec-separator",
                 )
 
@@ -1325,6 +1383,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
             color = (
                 event.color if event.color else _palette[event.priority % len(_palette)]
             )
+            _dur_stroke_color = (
+                config.blockplan_duration_stroke_color
+                if config.blockplan_duration_stroke_color is not None
+                else _dur_bar_style.color
+            )
+            _dur_stroke_dash = (
+                config.blockplan_duration_stroke_dasharray
+                if config.blockplan_duration_stroke_dasharray is not None
+                else _dur_bar_style.dasharray
+            )
             self._draw_rect(
                 x0,
                 y,
@@ -1332,10 +1400,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 bar_h,
                 fill=color,
                 fill_opacity=config.blockplan_duration_fill_opacity,
-                stroke=_dur_bar_style.color,
-                stroke_opacity=_dur_bar_style.opacity,
-                stroke_width=_dur_bar_style.width,
-                stroke_dasharray=_dur_bar_style.dasharray,
+                stroke=_dur_stroke_color,
+                stroke_opacity=float(config.blockplan_duration_stroke_opacity),
+                stroke_width=float(config.blockplan_duration_stroke_width),
+                stroke_dasharray=_dur_stroke_dash,
                 css_class="ec-duration-bar",
             )
             has_dates = bool(
