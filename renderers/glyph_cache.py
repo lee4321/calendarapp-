@@ -185,4 +185,9 @@ def text_to_svg_group(
     opacity_attr = f' fill-opacity="{fill_opacity}"' if fill_opacity < 1.0 else ""
     class_attr = f' class="{css_class}"' if css_class else ""
     inner = "".join(paths)
-    return f'<g fill="{fill}"{opacity_attr}{class_attr}>{inner}</g>'
+    # Use inline style for fill so per-call color overrides beat any CSS class rule
+    # (e.g. element_styles token defaults) — presentation attributes lose to CSS.
+    return (
+        f'<g style="fill:{fill}" fill="{fill}"'
+        f'{opacity_attr}{class_attr}>{inner}</g>'
+    )
