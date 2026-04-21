@@ -1527,16 +1527,30 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if has_dates:
                 date_font_size = float(config.blockplan_duration_date_font_size)
                 date_baseline_y = y + bar_h + date_font_size
-                date_color = _dur_date_style.color
+                date_color = (
+                    config.blockplan_duration_date_color
+                    if config.blockplan_duration_date_color is not None
+                    else _dur_date_style.color
+                )
                 date_fmt = config.blockplan_duration_date_format
-                date_font = _dur_date_style.font
+                date_font = (
+                    config.blockplan_duration_date_font
+                    or _dur_date_style.font
+                )
                 try:
                     _dur_date_font_path = get_font_path(date_font)
                 except Exception:
                     _dur_date_font_path = ""
             dur_text_color = _event_name_style.color
-            dur_notes_color = _event_notes_style.color
-            _dur_notes_font_name = _event_notes_style.font
+            dur_notes_color = (
+                config.blockplan_notes_text_font_color
+                if config.blockplan_notes_text_font_color is not None
+                else _event_notes_style.color
+            )
+            _dur_notes_font_name = (
+                config.blockplan_notes_text_font_name
+                or _event_notes_style.font
+            )
             show_icon = bool(config.blockplan_duration_icon_visible) and bool(
                 event.icon
             )
@@ -1759,7 +1773,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
             event_font_path = get_font_path(_evt_name_style.font)
         except Exception:
             event_font_path = ""
-        _event_notes_font_name = _evt_notes_style.font
+        _event_notes_font_name = (
+            config.blockplan_notes_text_font_name or _evt_notes_style.font
+        )
+        _event_notes_color = (
+            config.blockplan_notes_text_font_color
+            if config.blockplan_notes_text_font_color is not None
+            else _evt_notes_style.color
+        )
         try:
             notes_font_path = get_font_path(_event_notes_font_name)
         except Exception:
@@ -1915,7 +1936,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     str(event.notes),
                     _event_notes_font_name,
                     notes_size,
-                    fill=_evt_notes_style.color,
+                    fill=_event_notes_color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-notes",
