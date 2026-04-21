@@ -286,68 +286,6 @@ weekly:
     icon_color: "steelblue"
     font_color: "darkslategrey"
     hash_pattern_opacity: 0.20
-    hash_rules:
-      # Milestones: temple pattern in solid blue
-      - pattern: "temple"
-        color: "blue"
-        opacity: 0.22
-        when:
-          milestone: true
-      # Federal holidays: royal blue temple
-      - pattern: "temple"
-        color: "royalblue"
-        opacity: 0.18
-        when:
-          federal_holiday: true
-      # Non-work days: light steel blue temple (quiet background texture)
-      - pattern: "temple"
-        color: "lightsteelblue"
-        opacity: 0.10
-        when:
-          nonworkday: true
-      # Release/cutover events: blue temple
-      - pattern: "temple"
-        color: "blue"
-        opacity: 0.15
-        when:
-          event_names: ["Release", "Cutover"]
-      # Sprint durations: cadet blue temple
-      - pattern: "temple"
-        color: "cadetblue"
-        opacity: 0.12
-        when:
-          duration_names: ["Imaginary Sprint 4"]
-      # Completed tasks: sea green temple (delivery complete)
-      - pattern: "temple"
-        color: "mediumseagreen"
-        opacity: 0.15
-        when:
-          percent_complete: 100
-      # Blocker/risk notes: tomato temple (flag for review)
-      - pattern: "temple"
-        color: "tomato"
-        opacity: 0.15
-        when:
-          notes: ["blocker", "risk"]
-      # Top-level WBS items: powder blue temple
-      - pattern: "temple"
-        color: "powderblue"
-        opacity: 0.10
-        when:
-          wbs: ["1."]
-      # Specific resource assigned: plum temple
-      - pattern: "temple"
-        color: "plum"
-        opacity: 0.10
-        when:
-          resource_names: ["Alice"]
-      # Dev group days: slate blue temple
-      - pattern: "temple"
-        color: "slateblue"
-        opacity: 0.12
-        when:
-          resource_group: ["dev"]
-
   name_text:
     font_name: "RobotoCondensed-Regular"
     font_color: "darkslategrey"
@@ -492,14 +430,8 @@ blockplan:
   palette: ["lightskyblue", "gold", "tomato", "springgreen", "plum", "khaki"]
   swimlanes:
     - name: "Engineering"
-      match:
-        resource_groups: ["engineering", "dev"]
     - name: "Operations"
-      match:
-        resource_groups: ["operations", "ops"]
     - name: "Quality"
-      match:
-        resource_groups: ["quality", "qa"]
   top_time_bands:
     - label: "Fiscal Quarter"
       unit: "fiscal_quarter"
@@ -581,13 +513,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "lightsteelblue"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "JuliaMono-Regular"
@@ -645,3 +570,115 @@ compact_plan:
       label_format: "Week {n}"
       fill_color: "none"
       alt_fill_color: "none"
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      milestone: true
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: blue
+      pattern_opacity: 0.22
+  - name: weekly_hash_1
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: royalblue
+      pattern_opacity: 0.18
+  - name: weekly_hash_2
+    select:
+      nonworkday: true
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: lightsteelblue
+      pattern_opacity: 0.1
+  - name: weekly_hash_3
+    select:
+      task_name:
+      - Release
+      - Cutover
+      event_type: event
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: blue
+      pattern_opacity: 0.15
+  - name: weekly_hash_4
+    select:
+      task_name:
+      - Imaginary Sprint 4
+      event_type: duration
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: cadetblue
+      pattern_opacity: 0.12
+  - name: weekly_hash_5
+    select:
+      percent_complete:
+        min: 100
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: mediumseagreen
+      pattern_opacity: 0.15
+  - name: weekly_hash_6
+    select:
+      notes:
+      - blocker
+      - risk
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: tomato
+      pattern_opacity: 0.15
+  - name: weekly_hash_7
+    select:
+      wbs: '1.'
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: powderblue
+      pattern_opacity: 0.1
+  - name: weekly_hash_8
+    select:
+      resource_names:
+      - Alice
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: plum
+      pattern_opacity: 0.1
+  - name: weekly_hash_9
+    select:
+      resource_group:
+      - dev
+    apply_to: day_box
+    style:
+      pattern: temple
+      pattern_color: slateblue
+      pattern_opacity: 0.12
+
+swimlane_rules:
+  - name: Route Engineering
+    select:
+      resource_group:
+      - engineering
+      - dev
+    apply_to: Engineering
+  - name: Route Operations
+    select:
+      resource_group:
+      - operations
+      - ops
+    apply_to: Operations
+  - name: Route Quality
+    select:
+      resource_group:
+      - quality
+      - qa
+    apply_to: Quality

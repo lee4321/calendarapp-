@@ -278,68 +278,6 @@ weekly:
     icon_color: "red"
     font_color: "navy"
     hash_pattern_opacity: 0.10
-    hash_rules:
-      # Milestones: prominent gold stripes
-      - pattern: "diagonal-stripes"
-        color: "gold"
-        opacity: 0.15
-        when:
-          milestone: true
-      # Federal holidays: red stripes (government red)
-      - pattern: "diagonal-stripes"
-        color: "tomato"
-        opacity: 0.12
-        when:
-          federal_holiday: true
-      # Non-work days: subtle silver stripes
-      - pattern: "diagonal-stripes"
-        color: "silver"
-        opacity: 0.08
-        when:
-          nonworkday: true
-      # Release/cutover events: gold stripes
-      - pattern: "diagonal-stripes"
-        color: "gold"
-        opacity: 0.10
-        when:
-          event_names: ["Release", "Cutover"]
-      # Sprint/freeze durations: steel blue stripes
-      - pattern: "diagonal-stripes"
-        color: "steelblue"
-        opacity: 0.08
-        when:
-          duration_names: ["Sprint", "Freeze"]
-      # Completed tasks: green stripes (any event/duration at 100%)
-      - pattern: "diagonal-stripes"
-        color: "mediumseagreen"
-        opacity: 0.10
-        when:
-          percent_complete: 100
-      # Urgent/blocker notes: orange-red stripes (hot signal)
-      - pattern: "diagonal-stripes"
-        color: "orangered"
-        opacity: 0.12
-        when:
-          notes: ["urgent", "blocker"]
-      # Top-level WBS items: sky blue stripes
-      - pattern: "diagonal-stripes"
-        color: "lightskyblue"
-        opacity: 0.08
-        when:
-          wbs: ["1."]
-      # Specific resource assigned: medium purple stripes
-      - pattern: "diagonal-stripes"
-        color: "mediumpurple"
-        opacity: 0.08
-        when:
-          resource_names: ["Alice"]
-      # Development group days: steel blue stripes (slightly stronger)
-      - pattern: "diagonal-stripes"
-        color: "steelblue"
-        opacity: 0.10
-        when:
-          resource_group: ["dev"]
-
   name_text:
     font_name: "RobotoCondensed-Light"
     font_color: "navy"
@@ -526,48 +464,7 @@ blockplan:
   #     priority_max: int             maximum priority (inclusive)
   swimlanes:
     - name: "Engineering"
-      match:
-        resource_groups: ["engineering", "dev", "a"]
     - name: "Operations"
-      match:
-        resource_groups: ["operations", "ops","b"]
-
-  # Per-band keys (all optional — each falls back to the matching global setting above):
-  #   label          (str)           — text shown in the left heading column cell
-  #   unit           (str)           — fiscal_quarter | month | week | interval | date | dow | countdown | countup
-  #   row_height     (float)         — row height in pt; font auto-scales to 65% of this
-  #   font_size      (float)         — segment content label font size (overrides row_height scaling)
-  #   font           (str)           — segment content label font (overrides band_font)
-  #   font_color     (str)           — segment content label color (overrides timeband_label_color)
-  #   fill_color     (str)           — segment cell fill (overrides timeband_fill_color)
-  #   fill_palette   (list[str])     — per-segment cycling palette (overrides timeband_fill_palette)
-  #   label_color    (str)           — heading column label color (overrides header_label_color)
-  #   label_fill_color (str)         — heading column cell fill (overrides header_heading_fill_color)
-  #   label_font     (str)           — heading column label font (overrides header_font)
-  #   label_font_size (float)        — heading column label font size (overrides header_font_size)
-  #   label_align_h  (str)           — heading label alignment: left | center | right
-  #   stroke_color   (str)           — band border color (overrides grid_color)
-  #   show_every     (int)           — group N segments into one cell (default 1)
-  #   date_format    (str)           — Arrow format string for month/date/dow units
-  #   label_format   (str)           — format string for week ({week}) and fiscal_quarter ({fy},{fy2},{q})
-  #                                    {fy}=4-digit fiscal year, {fy2}=2-digit fiscal year, {q}=quarter number
-  #   interval_days  (int)           — segment length in days for interval unit
-  #   prefix         (str)           — label prefix for interval unit (e.g. "Sprint ")
-  #   start_index    (int)           — first counter value for interval unit
-  #   max_index      (int)           — counter resets to start_index after this value
-  #   anchor_date    (str YYYY-MM-DD)— alignment anchor for interval unit
-  #   label_values   (list[str|null]) — override displayed cell text (positional, cycling);
-  #                                    null falls back to auto-generated label; "" renders blank
-  #   countdown unit keys:
-  #   target_date    (str YYYY-MM-DD)— required: the date to count down to
-  #   skip_weekends  (bool)          — exclude Sat/Sun from the day count (default false)
-  #   skip_nonworkdays (bool)        — exclude holidays & company non-workdays (default false)
-  #   label_format   (str)           — format string; {n} is the count (positive=before, 0=target day, negative=after)
-  #   countup unit keys:
-  #   start_date     (str YYYY-MM-DD)— required: the date to count up from (day 0)
-  #   skip_weekends  (bool)          — exclude Sat/Sun from the day count (default false)
-  #   skip_nonworkdays (bool)        — exclude holidays & company non-workdays (default false)
-  #   label_format   (str)           — format string; {n} is the count (0=start day, positive=after, negative=before)
   top_time_bands:
     # - label: "Fiscal Quarter"
     #   unit: "fiscal_quarter"
@@ -712,13 +609,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "lightgrey"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "RobotoCondensed-Bold"
@@ -851,3 +741,112 @@ compact_plan:
     #     - task_contains: "Release"
     #       icon: "star"
     #       color: "#E74C3C"
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      milestone: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: gold
+      pattern_opacity: 0.15
+  - name: weekly_hash_1
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: tomato
+      pattern_opacity: 0.12
+  - name: weekly_hash_2
+    select:
+      nonworkday: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: silver
+      pattern_opacity: 0.08
+  - name: weekly_hash_3
+    select:
+      task_name:
+      - Release
+      - Cutover
+      event_type: event
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: gold
+      pattern_opacity: 0.1
+  - name: weekly_hash_4
+    select:
+      task_name:
+      - Sprint
+      - Freeze
+      event_type: duration
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: steelblue
+      pattern_opacity: 0.08
+  - name: weekly_hash_5
+    select:
+      percent_complete:
+        min: 100
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: mediumseagreen
+      pattern_opacity: 0.1
+  - name: weekly_hash_6
+    select:
+      notes:
+      - urgent
+      - blocker
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: orangered
+      pattern_opacity: 0.12
+  - name: weekly_hash_7
+    select:
+      wbs: '1.'
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: lightskyblue
+      pattern_opacity: 0.08
+  - name: weekly_hash_8
+    select:
+      resource_names:
+      - Alice
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: mediumpurple
+      pattern_opacity: 0.08
+  - name: weekly_hash_9
+    select:
+      resource_group:
+      - dev
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: steelblue
+      pattern_opacity: 0.1
+
+swimlane_rules:
+  - name: Route Engineering
+    select:
+      resource_group:
+      - engineering
+      - dev
+      - a
+    apply_to: Engineering
+  - name: Route Operations
+    select:
+      resource_group:
+      - operations
+      - ops
+      - b
+    apply_to: Operations

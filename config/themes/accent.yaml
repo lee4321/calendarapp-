@@ -476,13 +476,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "palette:Accent:1"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "RobotoCondensed-Bold"

@@ -54,7 +54,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "stroke_opacity"): "day_box_stroke_opacity",
     ("weekly.day_box", "stroke_width"): "day_box_stroke_width",
     ("weekly.day_box", "stroke_dasharray"): "day_box_stroke_dasharray",
-    ("weekly.day_box", "hash_rules"): "theme_weekly_hash_rules",
     ("weekly.day_box", "hash_pattern"): "theme_weekly_hash_pattern",
     ("weekly.day_box", "hash_pattern_opacity"): "hash_pattern_opacity",
     ("weekly.day_box", "fill_color"): "day_box_fill_color",
@@ -348,7 +347,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "week_number_font_size"): "mini_week_number_font_size",
     ("mini_calendar", "week_number_color"): "mini_week_number_color",
     ("mini_calendar", "week_number_label_format"): "mini_week_number_label_format",
-    ("mini_calendar.day_box", "hash_rules"): "theme_mini_day_box_hash_rules",
+    # mini_calendar.day_box.hash_rules removed — use style_rules instead
     # Mini details page
     ("mini_details", "title_text"): "mini_details_title_text",
     ("mini_details", "title_font"): "mini_details_title_font",
@@ -928,23 +927,11 @@ class ThemeEngine:
         # Apply layout-level overrides (margins).
         self._apply_layout_overrides(config)
 
-        # Normalize weekly day-box hash rule config.
-        if config.theme_weekly_hash_rules is not None and not isinstance(
-            config.theme_weekly_hash_rules, list
-        ):
-            logger.warning(
-                "Theme: day_box.hash_rules must be a list; got %r",
-                type(config.theme_weekly_hash_rules).__name__,
-            )
-            config.theme_weekly_hash_rules = None
-        if config.theme_mini_day_box_hash_rules is not None and not isinstance(
-            config.theme_mini_day_box_hash_rules, list
-        ):
-            logger.warning(
-                "Theme: mini_calendar.day_box.hash_rules must be a list; got %r",
-                type(config.theme_mini_day_box_hash_rules).__name__,
-            )
-            config.theme_mini_day_box_hash_rules = None
+        # Raise on old hash_rules / swimlanes.match keys that should have been migrated.
+        self._check_deprecated_rule_keys()
+
+        # Load unified style_rules and swimlane_rules.
+        self._load_rule_lists(config)
 
         # If mini week number label format isn't set, fall back to week_numbers
         if self._resolve_value("mini_calendar", "week_number_label_format") is None:
@@ -1262,3 +1249,44 @@ class ThemeEngine:
             result[class_name] = binding
 
         return result
+
+    # ── Rule-list support ─────────────────────────────────────────────────────
+
+    def _check_deprecated_rule_keys(self) -> None:
+        """Raise ThemeError if the YAML contains old-format rule keys."""
+        weekly = self._theme_data.get("weekly", {}) or {}
+        day_box = (weekly.get("day_box", {}) or {}) if isinstance(weekly, dict) else {}
+        if isinstance(day_box, dict) and "hash_rules" in day_box:
+            if day_box["hash_rules"]:  # non-empty list is an error; empty list is tolerated
+                raise ThemeError(
+                    "weekly.day_box.hash_rules is deprecated — run tools/migrate_theme.py "
+                    "to convert to style_rules"
+                )
+
+        mini = self._theme_data.get("mini_calendar", {}) or {}
+        mini_day_box = (mini.get("day_box", {}) or {}) if isinstance(mini, dict) else {}
+        if isinstance(mini_day_box, dict) and "hash_rules" in mini_day_box:
+            if mini_day_box["hash_rules"]:
+                raise ThemeError(
+                    "mini_calendar.day_box.hash_rules is deprecated — run "
+                    "tools/migrate_theme.py to convert to style_rules"
+                )
+
+        blockplan = self._theme_data.get("blockplan", {}) or {}
+        swimlanes = (blockplan.get("swimlanes", []) or []) if isinstance(blockplan, dict) else []
+        for lane in (swimlanes if isinstance(swimlanes, list) else []):
+            if isinstance(lane, dict) and "match" in lane:
+                raise ThemeError(
+                    f"blockplan.swimlanes[{lane.get('name', '?')!r}].match is deprecated — "
+                    "run tools/migrate_theme.py to convert to swimlane_rules"
+                )
+
+    def _load_rule_lists(self, config: "CalendarConfig") -> None:
+        """Load style_rules and swimlane_rules from the top-level theme data."""
+        style_rules = self._theme_data.get("style_rules")
+        if isinstance(style_rules, list):
+            config.theme_style_rules = style_rules
+
+        swimlane_rules = self._theme_data.get("swimlane_rules")
+        if isinstance(swimlane_rules, list):
+            config.theme_swimlane_rules = swimlane_rules

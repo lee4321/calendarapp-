@@ -1135,20 +1135,35 @@ class BlockPlanRenderer(BaseSVGRenderer):
             getattr(config, "blockplan_lane_match_mode", "first") or "first"
         ).lower()
         unmatched_events: list[Event] = []
+        lanes_by_name = {lane["name"]: lane for lane in result}
 
-        for event in events:
-            matched = False
-            for lane in result:
-                if self._event_matches_lane(event, lane["lane"]):
-                    matched = True
+        if config.theme_swimlane_rules:
+            from shared.rule_engine import LaneEngine
+            lane_engine = LaneEngine(config.theme_swimlane_rules)
+            for event in events:
+                lane_name = lane_engine.assign(event)
+                lane = lanes_by_name.get(lane_name) if lane_name is not None else None
+                if lane is not None:
                     if event.is_duration and config.includedurations:
                         lane["durations"].append(event)
                     elif (not event.is_duration) and config.includeevents:
                         lane["events"].append(event)
-                    if mode != "all":
-                        break
-            if not matched:
-                unmatched_events.append(event)
+                else:
+                    unmatched_events.append(event)
+        else:
+            for event in events:
+                matched = False
+                for lane in result:
+                    if self._event_matches_lane(event, lane["lane"]):
+                        matched = True
+                        if event.is_duration and config.includedurations:
+                            lane["durations"].append(event)
+                        elif (not event.is_duration) and config.includeevents:
+                            lane["events"].append(event)
+                        if mode != "all":
+                            break
+                if not matched:
+                    unmatched_events.append(event)
 
         if config.blockplan_show_unmatched_lane and unmatched_events:
             unmatched = {

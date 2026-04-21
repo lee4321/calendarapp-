@@ -568,22 +568,22 @@ class TestStrokeDasharray:
         )
         assert config.hash_pattern_opacity == 0.2
 
-    def test_weekly_hash_rules_applied_from_theme(self):
+    def test_style_rules_applied_from_theme(self):
         rules = [
             {
-                "style": 12,
-                "color": "gold",
-                "min_match": 1,
-                "when": {"nonworkday": True, "milestone": True},
+                "name": "nwd-pattern",
+                "select": {"nonworkday": True},
+                "apply_to": "day_box",
+                "style": {"pattern": "diagonal-stripes", "pattern_color": "gold"},
             }
         ]
         config = self._apply_theme_data(
             {
-                "theme": {"name": "HashRules"},
-                "weekly": {"day_box": {"hash_rules": rules}},
+                "theme": {"name": "StyleRules"},
+                "style_rules": rules,
             }
         )
-        assert config.theme_weekly_hash_rules == rules
+        assert config.theme_style_rules == rules
 
     def test_duration_stroke_dasharray_applied_from_theme(self):
         config = self._apply_theme_data(
@@ -1117,21 +1117,22 @@ class TestStrokeDasharrayTimelineMini:
         assert config.mini_milestone_stroke_width == 2.5
         assert config.mini_milestone_stroke_opacity == 0.4
 
-    def test_mini_day_box_hash_rules_applied_from_theme(self):
+    def test_style_rules_applied_from_theme_mini(self):
         rules = [
             {
-                "pattern": "brick-wall",
-                "color": "gold",
-                "when": {"milestone": True},
+                "name": "ms-pattern",
+                "select": {"milestone": True},
+                "apply_to": "day_box",
+                "style": {"pattern": "brick-wall", "pattern_color": "gold"},
             }
         ]
         config = self._apply_theme_data(
             {
-                "theme": {"name": "MiniHash"},
-                "mini_calendar": {"day_box": {"hash_rules": rules}},
+                "theme": {"name": "MiniStyleRules"},
+                "style_rules": rules,
             }
         )
-        assert config.theme_mini_day_box_hash_rules == rules
+        assert config.theme_style_rules == rules
 
     # ── Defaults are None ────────────────────────────────────────────────────
 
@@ -1155,7 +1156,7 @@ class TestStrokeDasharrayTimelineMini:
         assert config.mini_circle_milestones is True
         assert config.mini_milestone_stroke_width == 1.0
         assert config.mini_milestone_stroke_opacity == 1.0
-        assert config.theme_mini_day_box_hash_rules is None
+        assert config.theme_style_rules is None
 
     # ── SVG output integration ───────────────────────────────────────────────
 
@@ -1245,7 +1246,7 @@ def test_blockplan_theme_applied():
             "event_date_color": "purple",
             "event_date_format": "MMM D",
             "timeband_fill_palette": ["#111111", "#222222"],
-            "swimlanes": [{"name": "Infra", "match": {"resource_groups": ["ops"]}}],
+            "swimlanes": [{"name": "Infra"}],
             "top_time_bands": [
                 {"label": "PI", "unit": "interval", "interval_days": 70}
             ],
@@ -1277,9 +1278,7 @@ def test_blockplan_theme_applied():
     assert config.blockplan_event_date_color == "purple"
     assert config.blockplan_event_date_format == "MMM D"
     assert config.blockplan_timeband_fill_palette == ["#111111", "#222222"]
-    assert config.blockplan_swimlanes == [
-        {"name": "Infra", "match": {"resource_groups": ["ops"]}}
-    ]
+    assert config.blockplan_swimlanes == [{"name": "Infra"}]
     assert config.blockplan_top_time_bands == [
         {"label": "PI", "unit": "interval", "interval_days": 70}
     ]

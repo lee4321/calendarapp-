@@ -37,19 +37,18 @@ def test_mini_circle_milestones_can_be_disabled():
     assert style.circled is False
 
 
-def test_mini_hash_rules_follow_weekly_rule_grammar():
+def test_mini_style_rules_apply_pattern_decoration():
     config = _config()
-    config.theme_mini_day_box_hash_rules = [
+    config.theme_style_rules = [
         {
-            "pattern": "brick-wall",
-            "color": "gold",
-            "opacity": 0.25,
-            "when": {
-                "milestone": True,
-                "notes": ["launch"],
-                "resource_group": ["eng"],
+            "name": "milestone-pattern",
+            "select": {"milestone": True, "notes": ["launch"]},
+            "apply_to": "day_box",
+            "style": {
+                "pattern": "brick-wall",
+                "pattern_color": "gold",
+                "pattern_opacity": 0.25,
             },
-            "min_match": 2,
         }
     ]
     style = DayStyleResolver(config, _StubDB()).resolve(

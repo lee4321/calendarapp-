@@ -446,21 +446,6 @@ weekly:
     #     resource_group    (list[str]) — case-insensitive resource group match
     #     resource_names    (list[str]) — substring match on resource name
     #     wbs               (list[str]) — WBS prefix match
-    hash_rules: []
-    # Example:
-    # hash_rules:
-    #   - pattern: "diagonal-stripes"
-    #     color:   "steelblue"
-    #     opacity: 0.10
-    #     when:
-    #       duration_names: ["Sprint"]
-    #   - pattern: "polka-dots"
-    #     color:   "tomato"
-    #     opacity: 0.12
-    #     when:
-    #       percent_complete: 100
-
-  # ── Event/duration text in weekly view ───────────────────────────────────
   name_text:
     font_name: "RobotoCondensed-Light"
     font_color: "navy"
@@ -766,20 +751,13 @@ blockplan:
   #     wbs_prefixes            (list[str])  — WBS prefix match
   swimlanes:
     - name: "Engineering"
-      match:
-        resource_groups: ["Engineering", "Dev"]
       fill_color:          null   # heading cell fill; null = use lane_heading_fill_color
       label_color:         null   # label text color; null = use lane_label_color
       timeline_fill_color: "none" # content area tint
       split_ratio:         0.5    # events in upper half, durations in lower half
 
     - name: "Design"
-      match:
-        resource_groups: ["Design", "UX"]
-
     - name: "Milestones"
-      match:
-        milestone: true
       split_ratio: 0.0            # no divider — single content area
 
 
@@ -840,12 +818,6 @@ mini_calendar:
 
   # ── Day box hash rules (same structure as weekly.day_box.hash_rules) ──────
   day_box:
-    hash_rules: []
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MINI_DETAILS — Supplementary event details page rendered alongside the mini
-# ─────────────────────────────────────────────────────────────────────────────
 mini_details:
 
   # ── Column definitions ────────────────────────────────────────────────────
@@ -1070,3 +1042,21 @@ compact_plan:
   show_legend:          true      # (bool) render the legend below the timeline
   legend_row_height:    10.0      # (float) height per legend row in points
   legend_swatch_width:  18.0      # (float) width of the colored swatch line in points
+
+swimlane_rules:
+  - name: Route Engineering
+    select:
+      resource_group:
+      - Engineering
+      - Dev
+    apply_to: Engineering
+  - name: Route Design
+    select:
+      resource_group:
+      - Design
+      - UX
+    apply_to: Design
+  - name: Route Milestones
+    select:
+      milestone: true
+    apply_to: Milestones

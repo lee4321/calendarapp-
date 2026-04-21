@@ -290,50 +290,6 @@ weekly:
     icon_color: "steelblue"
     font_color: "darkslategrey"
     hash_pattern_opacity: 0.10
-    hash_rules:
-      # Federal holidays: deeper royal blue bamboo
-      - pattern: "bamboo"
-        color: "royalblue"
-        opacity: 0.12
-        when:
-          federal_holiday: true
-      # Non-work days
-      - pattern: "egg-fried"
-        color: "white"
-        opacity: 0.20
-        when:
-          nonworkday: true
-      # Completed tasks: sea green bamboo (delivery done)
-      - pattern: "bamboo"
-        color: "mediumseagreen"
-        opacity: 0.12
-        when:
-          percent_complete: 100
-      # Urgent/blocker notes: tomato bamboo (attention needed)
-      - pattern: "bamboo"
-        color: "tomato"
-        opacity: 0.12
-        when:
-          notes: ["urgent", "blocker"]
-      # Top-level WBS items: powder blue bamboo
-      - pattern: "bamboo"
-        color: "powderblue"
-        opacity: 0.10
-        when:
-          wbs: ["1."]
-      # Specific resource assigned: plum bamboo
-      - pattern: "bamboo"
-        color: "plum"
-        opacity: 0.08
-        when:
-          resource_names: ["Alice"]
-      # Dev/ops group days: slate blue bamboo
-      - pattern: "bamboo"
-        color: "slateblue"
-        opacity: 0.10
-        when:
-          resource_group: ["dev", "ops"]
-
   name_text:
     font_color: "darkslategrey"
   notes_text:
@@ -473,14 +429,8 @@ blockplan:
   palette: ["lightskyblue", "khaki", "tomato", "springgreen", "plum", "khaki"]
   swimlanes:
     - name: "Engineering & \nDevelopment"
-      match:
-        resource_groups: ["engineering", "dev"]
     - name: "Operations"
-      match:
-        resource_groups: ["operations", "ops"]
     - name: "Quality"
-      match:
-        resource_groups: ["quality", "qa"]
   top_time_bands:
     - label: "Fiscal Quarter"
       unit: "fiscal_quarter"
@@ -562,13 +512,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: "3 1"
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "lightsteelblue"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "Roboto-Bold"
@@ -626,3 +569,87 @@ compact_plan:
       label_format: "Week {n}"
       fill_color: "none"
       alt_fill_color: "none"
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: royalblue
+      pattern_opacity: 0.12
+  - name: weekly_hash_1
+    select:
+      nonworkday: true
+    apply_to: day_box
+    style:
+      pattern: egg-fried
+      pattern_color: white
+      pattern_opacity: 0.2
+  - name: weekly_hash_2
+    select:
+      percent_complete:
+        min: 100
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: mediumseagreen
+      pattern_opacity: 0.12
+  - name: weekly_hash_3
+    select:
+      notes:
+      - urgent
+      - blocker
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: tomato
+      pattern_opacity: 0.12
+  - name: weekly_hash_4
+    select:
+      wbs: '1.'
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: powderblue
+      pattern_opacity: 0.1
+  - name: weekly_hash_5
+    select:
+      resource_names:
+      - Alice
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: plum
+      pattern_opacity: 0.08
+  - name: weekly_hash_6
+    select:
+      resource_group:
+      - dev
+      - ops
+    apply_to: day_box
+    style:
+      pattern: bamboo
+      pattern_color: slateblue
+      pattern_opacity: 0.1
+
+swimlane_rules:
+  - name: 'Route Engineering & '
+    select:
+      resource_group:
+      - engineering
+      - dev
+    apply_to: "Engineering & \nDevelopment"
+  - name: Route Operations
+    select:
+      resource_group:
+      - operations
+      - ops
+    apply_to: Operations
+  - name: Route Quality
+    select:
+      resource_group:
+      - quality
+      - qa
+    apply_to: Quality

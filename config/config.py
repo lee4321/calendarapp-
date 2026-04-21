@@ -985,9 +985,10 @@ class CalendarConfig:
     theme_fiscal_period_colors: dict[str, str] | None = None
     theme_month_colors: dict[str, str] | None = None
     theme_hash_line_color: str | None = None
-    theme_weekly_hash_rules: list[dict[str, Any]] | None = None
     theme_weekly_hash_pattern: str | None = None
-    theme_mini_day_box_hash_rules: list[dict[str, Any]] | None = None
+    # Unified rule lists (style_rules / swimlane_rules from theme YAML)
+    theme_style_rules: list[dict[str, Any]] | None = None
+    theme_swimlane_rules: list[dict[str, Any]] | None = None
 
     # Item placement order in day boxes (determines which type gets top rows).
     # A list of tokens; the first token's item type is placed first, etc.

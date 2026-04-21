@@ -20,6 +20,8 @@ from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.date_utils import get_week_number
 from shared.data_models import Event
+from shared.day_classifier import classify_day
+from shared.rule_engine import DayContext, StyleResult, StyleEngine
 from shared.fiscal_renderer import (
     get_fiscal_period_color,
     format_fiscal_period_label,
@@ -60,36 +62,6 @@ class OverflowEntry:
     datekey: str  # The daykey where overflow was detected
 
 
-@dataclass(frozen=True)
-class DayHashContext:
-    """Per-day attributes used to evaluate theme hash rules."""
-
-    milestone: bool = False
-    nonworkday: bool = False
-    federal_holiday: bool = False
-    event_names: tuple[str, ...] = ()
-    duration_names: tuple[str, ...] = ()
-    # Extended event-property conditions
-    notes_values: tuple[str, ...] = ()  # notes text of events/durations on this day
-    wbs_values: tuple[str, ...] = ()  # WBS values of events/durations on this day
-    any_complete: bool = False  # any event/duration on this day is 100% done
-    resource_name_values: tuple[
-        str, ...
-    ] = ()  # individual resource names (comma-separated field)
-    resource_group_values: tuple[
-        str, ...
-    ] = ()  # resource group names of events/durations
-
-
-@dataclass(frozen=True)
-class HashDecoration:
-    """A single pattern decoration resolved from a theme hash rule."""
-
-    pattern: str
-    color: str | None = None
-    opacity: float | None = None  # None → use config.hash_pattern_opacity
-
-
 class WeeklyCalendarRenderer(BaseSVGRenderer):
     """
     Renderer for weekly calendar visualization.
@@ -111,7 +83,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         db: CalendarDB,
         adjustedstart: arrow.Arrow,
         adjustedend: arrow.Arrow,
-        day_hash_contexts: dict[str, DayHashContext],
+        events_by_day: dict[str, list[Event]],
     ) -> tuple[list[str], dict]:
         """
         First pass: draw all day boxes and return visible day keys and row coords.
@@ -122,12 +94,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             db: Database access instance
             adjustedstart: Calendar start as arrow object
             adjustedend: Calendar end as arrow object
+            events_by_day: Events keyed by YYYYMMDD for style rule evaluation
 
         Returns:
             Tuple of (days_to_print list, rows_on_days dict)
         """
         rows_on_days = defaultdict(dict)
         days_to_print = []
+        style_engine = StyleEngine(config.theme_style_rules or [])
 
         for oneday in arrow.Arrow.range("day", adjustedstart, adjustedend):
             daykey = oneday.format("YYYYMMDD")
@@ -144,10 +118,17 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
             shadespecialday = self._get_special_markings(daykey, db, config.country)
             daytitle, dayicon = self._get_special_day_title(daykey, db, config.country)
-            hash_decorations = self._resolve_day_hash_decorations(
-                config,
-                day_hash_contexts.get(daykey, DayHashContext()),
+
+            day_classes = classify_day(oneday.date(), db, config)
+            ctx = DayContext(
+                date=daykey,
+                federal_holiday="federal_holiday" in day_classes,
+                company_holiday="company_holiday" in day_classes,
+                nonworkday=bool(day_classes),
+                workday=not bool(day_classes),
+                weekend="weekend" in day_classes,
             )
+            style_result = style_engine.evaluate_day(ctx, events_by_day.get(daykey, []))
 
             self._draw_day_box(
                 config,
@@ -159,7 +140,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 daytitle,
                 dayicon,
                 shadespecialday,
-                hash_decorations,
+                style_result=style_result,
             )
 
         return days_to_print, rows_on_days
@@ -326,16 +307,15 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         self._registered_pattern_ids = set()
         self._load_icon_svg_cache(db)
 
-        day_hash_contexts = self._build_day_hash_contexts(
+        events_by_day = self._build_events_by_day(
             config,
             event_objects,
-            db,
             adjustedstart,
             adjustedend,
         )
 
         days_to_print, rows_on_days = self._build_day_boxes(
-            config, coordinates, db, adjustedstart, adjustedend, day_hash_contexts
+            config, coordinates, db, adjustedstart, adjustedend, events_by_day
         )
 
         rows_on_days, overflow_count, overflow_entries = self._place_all_events(
@@ -481,248 +461,36 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         return daytitle, dayicon
 
-    def _build_day_hash_contexts(
+    def _build_events_by_day(
         self,
         config: CalendarConfig,
         event_objects: list[Event],
-        db: CalendarDB,
         adjustedstart: arrow.Arrow,
         adjustedend: arrow.Arrow,
-    ) -> dict[str, DayHashContext]:
-        """Build per-day context used by theme hash-rule matching."""
-        names_by_day: dict[str, set[str]] = defaultdict(set)
-        durations_by_day: dict[str, set[str]] = defaultdict(set)
-        milestone_days: set[str] = set()
-        notes_by_day: dict[str, set[str]] = defaultdict(set)
-        wbs_by_day: dict[str, set[str]] = defaultdict(set)
-        complete_days: set[str] = set()
-        resource_names_by_day: dict[str, set[str]] = defaultdict(set)
-        resource_groups_by_day: dict[str, set[str]] = defaultdict(set)
+    ) -> dict[str, list[Event]]:
+        """Build a mapping from YYYYMMDD datekey to Event objects present on that day."""
+        result: dict[str, list[Event]] = defaultdict(list)
 
         for t in event_objects:
             daystart = arrow.get(arrow.get(t.start).date())
             dayend = arrow.get(arrow.get(t.end).date())
-            task_name = (t.task_name or "").strip()
 
             span_start = max(daystart, adjustedstart)
             span_end = min(dayend, adjustedend)
             if span_end < span_start:
                 continue
 
-            span_days = [
-                d.format("YYYYMMDD")
-                for d in arrow.Arrow.range("day", span_start, span_end)
-            ]
-
-            if t.milestone:
-                milestone_days.update(span_days)
-
-            if daystart == dayend and config.includeevents and task_name:
+            if t.milestone and config.milestones:
                 day_key = t.datekey or daystart.format("YYYYMMDD")
-                names_by_day[day_key].add(task_name)
-                self._collect_event_props(
-                    t,
-                    [day_key],
-                    notes_by_day,
-                    wbs_by_day,
-                    complete_days,
-                    resource_names_by_day,
-                    resource_groups_by_day,
-                )
-            elif daystart != dayend and config.includedurations and task_name:
-                for daykey in span_days:
-                    durations_by_day[daykey].add(task_name)
-                self._collect_event_props(
-                    t,
-                    span_days,
-                    notes_by_day,
-                    wbs_by_day,
-                    complete_days,
-                    resource_names_by_day,
-                    resource_groups_by_day,
-                )
+                result[day_key].append(t)
+            elif daystart == dayend and config.includeevents:
+                day_key = t.datekey or daystart.format("YYYYMMDD")
+                result[day_key].append(t)
+            elif daystart != dayend and config.includedurations:
+                for oneday in arrow.Arrow.range("day", span_start, span_end):
+                    result[oneday.format("YYYYMMDD")].append(t)
 
-        contexts: dict[str, DayHashContext] = {}
-        for oneday in arrow.Arrow.range("day", adjustedstart, adjustedend):
-            daykey = oneday.format("YYYYMMDD")
-            contexts[daykey] = DayHashContext(
-                milestone=daykey in milestone_days,
-                nonworkday=db.is_nonworkday(daykey, config.country),
-                federal_holiday=bool(db.get_holidays_for_date(daykey, config.country)),
-                event_names=tuple(sorted(names_by_day.get(daykey, set()))),
-                duration_names=tuple(sorted(durations_by_day.get(daykey, set()))),
-                notes_values=tuple(sorted(notes_by_day.get(daykey, set()))),
-                wbs_values=tuple(sorted(wbs_by_day.get(daykey, set()))),
-                any_complete=daykey in complete_days,
-                resource_name_values=tuple(
-                    sorted(resource_names_by_day.get(daykey, set()))
-                ),
-                resource_group_values=tuple(
-                    sorted(resource_groups_by_day.get(daykey, set()))
-                ),
-            )
-
-        return contexts
-
-    @staticmethod
-    def _collect_event_props(
-        t: Event,
-        day_keys: list[str],
-        notes_by_day: dict,
-        wbs_by_day: dict,
-        complete_days: set,
-        resource_names_by_day: dict,
-        resource_groups_by_day: dict,
-    ) -> None:
-        """Accumulate event property values into per-day lookup dicts."""
-        notes_str = (t.notes or "").strip()
-        wbs_str = (t.wbs or "").strip()
-        is_complete = t.percent_complete >= 1.0
-        rg_str = (t.resource_group or "").strip()
-        # resource_names may be a comma-separated list of individual names
-        rn_parts = [n.strip() for n in (t.resource_names or "").split(",") if n.strip()]
-
-        for daykey in day_keys:
-            if notes_str:
-                notes_by_day[daykey].add(notes_str)
-            if wbs_str:
-                wbs_by_day[daykey].add(wbs_str)
-            if is_complete:
-                complete_days.add(daykey)
-            if rg_str:
-                resource_groups_by_day[daykey].add(rg_str)
-            for rn in rn_parts:
-                resource_names_by_day[daykey].add(rn)
-
-    @staticmethod
-    def _name_match(patterns: list[str], names: tuple[str, ...]) -> bool:
-        """Case-insensitive substring matching for event/duration name rules."""
-        if not patterns or not names:
-            return False
-        lowered_names = [n.lower() for n in names]
-        for pattern in patterns:
-            if not pattern:
-                continue
-            needle = str(pattern).strip().lower()
-            if not needle:
-                continue
-            if any(needle in name for name in lowered_names):
-                return True
-        return False
-
-    def _resolve_day_hash_decorations(
-        self,
-        config: CalendarConfig,
-        day_ctx: DayHashContext,
-    ) -> list[HashDecoration]:
-        """
-        Resolve all SVG pattern decorations for a day from theme hash rules.
-
-        Every rule whose conditions are satisfied contributes an independent
-        decoration.  Rules are applied in declaration order so earlier rules
-        render beneath later ones.
-
-        Rule schema (under day_box.hash_rules):
-        - pattern: str               named SVG pattern from the patterns DB table
-        - color: optional CSS color  fill color applied to the pattern
-        - opacity: optional float    overrides config.hash_pattern_opacity for this layer
-        - min_match: optional int >=1 (default: 1)
-        - when:
-            milestone: bool
-            nonworkday: bool
-            federal_holiday: bool
-            event_names: [str, ...]  # substring match
-            duration_names: [str, ...]  # substring match
-
-        Returns:
-            Ordered list of HashDecoration objects for every rule that matched.
-            Falls back to a single decoration from config.theme_weekly_hash_pattern
-            when no rules match and a global default pattern is configured.
-        """
-        rules = config.theme_weekly_hash_rules or []
-        decorations: list[HashDecoration] = []
-
-        for rule in rules:
-            if not isinstance(rule, dict):
-                continue
-
-            raw_pattern = rule.get("pattern")
-            pattern_name: str | None = str(raw_pattern).strip() if raw_pattern else None
-            if not pattern_name:
-                continue
-
-            when = rule.get("when", {})
-            if not isinstance(when, dict):
-                continue
-
-            checks = []
-            if "milestone" in when:
-                checks.append(day_ctx.milestone == bool(when["milestone"]))
-            if "nonworkday" in when:
-                checks.append(day_ctx.nonworkday == bool(when["nonworkday"]))
-            if "federal_holiday" in when:
-                checks.append(day_ctx.federal_holiday == bool(when["federal_holiday"]))
-            if "event_names" in when:
-                raw = when["event_names"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.event_names))
-            if "duration_names" in when:
-                raw = when["duration_names"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.duration_names))
-            if "notes" in when:
-                raw = when["notes"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.notes_values))
-            if "wbs" in when:
-                raw = when["wbs"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.wbs_values))
-            if "percent_complete" in when:
-                # Any truthy value (e.g. 100, true) means "any event is 100% complete"
-                checks.append(day_ctx.any_complete)
-            if "resource_names" in when:
-                raw = when["resource_names"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.resource_name_values))
-            if "resource_group" in when:
-                raw = when["resource_group"]
-                patterns = [raw] if isinstance(raw, str) else list(raw or [])
-                checks.append(self._name_match(patterns, day_ctx.resource_group_values))
-
-            if not checks:
-                continue
-
-            try:
-                min_match = max(1, int(rule.get("min_match", 1)))
-            except Exception:
-                min_match = 1
-
-            if sum(1 for matched in checks if matched) >= min_match:
-                color = rule.get("color")
-                raw_opacity = rule.get("opacity")
-                opacity: float | None = None
-                if raw_opacity is not None:
-                    try:
-                        opacity = float(raw_opacity)
-                    except (TypeError, ValueError):
-                        pass
-                decorations.append(
-                    HashDecoration(
-                        pattern=pattern_name,
-                        color=str(color) if color else None,
-                        opacity=opacity,
-                    )
-                )
-
-        if decorations:
-            return decorations
-
-        # No rule matched — fall back to global default pattern (no color)
-        fallback = config.theme_weekly_hash_pattern
-        if fallback:
-            return [HashDecoration(pattern=fallback)]
-        return []
+        return dict(result)
 
     def _resolve_day_box_fill(
         self,
@@ -986,7 +754,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         daytitle: str | bool,
         dayicon: str,
         shadespecialday: str | bool,
-        hash_decorations: list[HashDecoration] | None = None,
+        style_result: StyleResult | None = None,
     ):
         """
         Create day box rectangle and place day number, fiscal labels,
@@ -999,17 +767,21 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             daytitle: Holiday title or False
             dayicon: Holiday icon
             shadespecialday: Whether to shade as special day
-            hash_decorations: Ordered pattern decorations to layer over the box
+            style_result: Accumulated style overrides from matched style_rules
         """
         dbc = self._day_box_coords(config, X, Y, W, H)
         oneday_str = oneday.format("YYYYMMDD")
         month = oneday.format("MM")
         x1, y1 = dbc["Number"]
 
-        # Background fill
+        # Background fill (style_result overrides holiday/fiscal defaults)
         fill_color, fill_opacity = self._resolve_day_box_fill(
             config, oneday_str, month, shadespecialday
         )
+        if style_result is not None and style_result.fill_color is not None:
+            fill_color = style_result.fill_color
+        if style_result is not None and style_result.fill_opacity is not None:
+            fill_opacity = style_result.fill_opacity
         self._draw_rect(
             X,
             Y,
@@ -1025,10 +797,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             css_class="ec-cell",
         )
 
-        # SVG pattern decorations — layered in declaration order
-        for dec in hash_decorations or []:
-            _color = dec.color or config.theme_hash_line_color or hashlinecolor
-            self._draw_svg_pattern(config, X, Y, W, H, dec.pattern, _color, dec.opacity)
+        # SVG pattern decoration from style_rules
+        if style_result is not None and style_result.pattern:
+            _color = style_result.pattern_color or config.theme_hash_line_color or hashlinecolor
+            self._draw_svg_pattern(config, X, Y, W, H, style_result.pattern, _color, style_result.pattern_opacity)
+        elif config.theme_weekly_hash_pattern:
+            _color = config.theme_hash_line_color or hashlinecolor
+            self._draw_svg_pattern(config, X, Y, W, H, config.theme_weekly_hash_pattern, _color, None)
 
         # Day number with optional month indicator
         _ts_dn = config.get_text_style("ec-day-number")

@@ -286,62 +286,6 @@ weekly:
     icon_color: "steelblue"
     font_color: "darkslategrey"
     hash_pattern_opacity: 0.20
-    hash_rules:
-      # Milestones: solid brick pattern in brand blue
-      - pattern: "bricks"
-        color: "steelblue"
-        opacity: 0.25
-        when:
-          milestone: true
-      # Federal holidays: deeper blue bricks
-      - pattern: "bricks"
-        color: "royalblue"
-        opacity: 0.20
-        when:
-          federal_holiday: true
-      # Non-work days: light bricks (barely visible, just a texture)
-      - pattern: "bricks"
-        color: "lightsteelblue"
-        opacity: 0.12
-        when:
-          nonworkday: true
-      # Sprint durations: circuit-board overlay to distinguish from milestones
-      - pattern: "circuit-board"
-        color: "steelblue"
-        opacity: 0.15
-        when:
-          duration_names: ["Sprint 10"]
-      # Completed tasks: green bricks (delivery complete)
-      - pattern: "bricks"
-        color: "mediumseagreen"
-        opacity: 0.15
-        when:
-          percent_complete: 100
-      # Blocker/risk notes: coral bricks (requires attention)
-      - pattern: "bricks"
-        color: "coral"
-        opacity: 0.18
-        when:
-          notes: ["blocker", "risk"]
-      # Top-level WBS items: circuit-board in cadet blue
-      - pattern: "circuit-board"
-        color: "cadetblue"
-        opacity: 0.12
-        when:
-          wbs: ["1."]
-      # Specific resource assigned: steel blue circuit-board
-      - pattern: "circuit-board"
-        color: "slategrey"
-        opacity: 0.12
-        when:
-          resource_names: ["Alice"]
-      # Dev/ops group days: royal blue circuit-board
-      - pattern: "circuit-board"
-        color: "royalblue"
-        opacity: 0.12
-        when:
-          resource_group: ["dev", "ops"]
-
   name_text:
     font_name: "RobotoCondensed-Regular"
     font_color: "darkslategrey"
@@ -482,14 +426,8 @@ blockplan:
   palette: ["lightskyblue", "khaki", "tomato", "mediumturquoise", "white", "cadetblue"]
   swimlanes:
     - name: "Engineering"
-      match:
-        resource_groups: ["engineering", "dev"]
     - name: "Operations"
-      match:
-        resource_groups: ["operations", "ops"]
     - name: "Quality"
-      match:
-        resource_groups: ["quality", "qa"]
   top_time_bands:
     - label: "Fiscal Quarter"
       unit: "fiscal_quarter"
@@ -571,13 +509,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "lightsteelblue"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "RobotoCondensed-Bold"
@@ -635,3 +566,105 @@ compact_plan:
       label_format: "Week {n}"
       fill_color: "none"
       alt_fill_color: "none"
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      milestone: true
+    apply_to: day_box
+    style:
+      pattern: bricks
+      pattern_color: steelblue
+      pattern_opacity: 0.25
+  - name: weekly_hash_1
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      pattern: bricks
+      pattern_color: royalblue
+      pattern_opacity: 0.2
+  - name: weekly_hash_2
+    select:
+      nonworkday: true
+    apply_to: day_box
+    style:
+      pattern: bricks
+      pattern_color: lightsteelblue
+      pattern_opacity: 0.12
+  - name: weekly_hash_3
+    select:
+      task_name:
+      - Sprint 10
+      event_type: duration
+    apply_to: day_box
+    style:
+      pattern: circuit-board
+      pattern_color: steelblue
+      pattern_opacity: 0.15
+  - name: weekly_hash_4
+    select:
+      percent_complete:
+        min: 100
+    apply_to: day_box
+    style:
+      pattern: bricks
+      pattern_color: mediumseagreen
+      pattern_opacity: 0.15
+  - name: weekly_hash_5
+    select:
+      notes:
+      - blocker
+      - risk
+    apply_to: day_box
+    style:
+      pattern: bricks
+      pattern_color: coral
+      pattern_opacity: 0.18
+  - name: weekly_hash_6
+    select:
+      wbs: '1.'
+    apply_to: day_box
+    style:
+      pattern: circuit-board
+      pattern_color: cadetblue
+      pattern_opacity: 0.12
+  - name: weekly_hash_7
+    select:
+      resource_names:
+      - Alice
+    apply_to: day_box
+    style:
+      pattern: circuit-board
+      pattern_color: slategrey
+      pattern_opacity: 0.12
+  - name: weekly_hash_8
+    select:
+      resource_group:
+      - dev
+      - ops
+    apply_to: day_box
+    style:
+      pattern: circuit-board
+      pattern_color: royalblue
+      pattern_opacity: 0.12
+
+swimlane_rules:
+  - name: Route Engineering
+    select:
+      resource_group:
+      - engineering
+      - dev
+    apply_to: Engineering
+  - name: Route Operations
+    select:
+      resource_group:
+      - operations
+      - ops
+    apply_to: Operations
+  - name: Route Quality
+    select:
+      resource_group:
+      - quality
+      - qa
+    apply_to: Quality

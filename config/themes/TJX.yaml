@@ -283,87 +283,6 @@ weekly:
     icon_color: "red"
     font_color: "black"
     hash_pattern_opacity: 0.10
-    hash_rules:
-      # Milestones: prominent gold stripes
-      - pattern: "diagonal-stripes"
-        color: "gold"
-        opacity: 0.15
-        when:
-          milestone: true
-      # Federal holidays: red stripes (government red)
-      - pattern: "diagonal-stripes"
-        color: "tomato"
-        opacity: 0.12
-        when:
-          federal_holiday: true
-      # Non-work days: subtle silver stripes
-      - pattern: "diagonal-stripes"
-        color: "silver"
-        opacity: 0.08
-        when:
-          nonworkday: true
-      # Release/cutover events: gold stripes
-      - pattern: "diagonal-stripes"
-        color: "gold"
-        opacity: 0.10
-        when:
-          event_names: ["Release", "Cutover"]
-      # Sprint/freeze durations: steel blue stripes
-      - pattern: "diagonal-stripes"
-        color: "steelblue"
-        opacity: 0.08
-        when:
-          duration_names: ["Sprint", "Freeze"]
-      # Completed tasks: green stripes (any event/duration at 100%)
-      - pattern: "diagonal-stripes"
-        color: "mediumseagreen"
-        opacity: 0.10
-        when:
-          percent_complete: 100
-      # Urgent/blocker notes: orange-red stripes (hot signal)
-      - pattern: "diagonal-stripes"
-        color: "orangered"
-        opacity: 0.12
-        when:
-          notes: ["urgent", "blocker"]
-      # Top-level WBS items: sky blue stripes
-      - pattern: "diagonal-stripes"
-        color: "lightskyblue"
-        opacity: 0.08
-        when:
-          wbs: ["1."]
-      # Specific resource assigned: medium purple stripes
-      - pattern: "diagonal-stripes"
-        color: "mediumpurple"
-        opacity: 0.08
-        when:
-          resource_names: ["Alice"]
-      # Development group days: steel blue stripes (slightly stronger)
-      - pattern: "diagonal-stripes"
-        color: "steelblue"
-        opacity: 0.10
-        when:
-          resource_group: ["dev"]
-
-      # Try to get weekly to look like blockplan
-      - pattern:
-        color: "red"
-        opacity: 0.5 
-        when:
-          resource_groups: ["Xstore"]
-#     - name: "Triversity\nPOSReady7"
-#       match:
-#         resource_groups: ["Triversity"]
-#     - name: "15.0.2"
-#       match:
-#         resource_groups: ["15.0.2"]
-#     - name: "IC Fix"
-#       match:
-#         resource_groups: ["ICFix"]
-#     - name: "Post PI6"
-#       match:
-#         resource_groups: ["PostPI6"]
-
   name_text:
     font_name: "AlumniSansPinstripe-Regular"
     font_color: "blue"
@@ -563,21 +482,10 @@ blockplan:
   #     priority_max: int             maximum priority (inclusive)
   swimlanes:
     - name: "Xstore\nConversions"
-      match:
-        resource_groups: ["Xstore"]
     - name: "Triversity\nPOSReady7"
-      match:
-        resource_groups: ["Triversity"]
     - name: "15.0.2"
-      match:
-        resource_groups: ["15.0.2"]
     - name: "IC Fix"
-      match:
-        resource_groups: ["ICFix"]
     - name: "Post PI6"
-      match:
-        resource_groups: ["PostPI6"]
-
   duration_date_font: "OfficinaSans-BookItalic"
   duration_fill_opacity: 1.0
   duration_stroke_color: "white"      # white outline separates solid-colour bars
@@ -716,13 +624,6 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box:
-    hash_rules: []
-    # hash_rules:
-    #   - pattern: "brick-wall"
-    #     color: "lightgrey"
-    #     when:
-    #       milestone: true
-
 mini_details:
   title_text: "Event Details"
   title_font: "RobotoCondensed-Bold"
@@ -905,3 +806,127 @@ compact_plan:
   continuation_icon_color:     "black"           # null = use the line color
   continuation_legend_text:    "activity continues"
   continuation_section_gap:    4.0
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      milestone: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: gold
+      pattern_opacity: 0.15
+  - name: weekly_hash_1
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: tomato
+      pattern_opacity: 0.12
+  - name: weekly_hash_2
+    select:
+      nonworkday: true
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: silver
+      pattern_opacity: 0.08
+  - name: weekly_hash_3
+    select:
+      task_name:
+      - Release
+      - Cutover
+      event_type: event
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: gold
+      pattern_opacity: 0.1
+  - name: weekly_hash_4
+    select:
+      task_name:
+      - Sprint
+      - Freeze
+      event_type: duration
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: steelblue
+      pattern_opacity: 0.08
+  - name: weekly_hash_5
+    select:
+      percent_complete:
+        min: 100
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: mediumseagreen
+      pattern_opacity: 0.1
+  - name: weekly_hash_6
+    select:
+      notes:
+      - urgent
+      - blocker
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: orangered
+      pattern_opacity: 0.12
+  - name: weekly_hash_7
+    select:
+      wbs: '1.'
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: lightskyblue
+      pattern_opacity: 0.08
+  - name: weekly_hash_8
+    select:
+      resource_names:
+      - Alice
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: mediumpurple
+      pattern_opacity: 0.08
+  - name: weekly_hash_9
+    select:
+      resource_group:
+      - dev
+    apply_to: day_box
+    style:
+      pattern: diagonal-stripes
+      pattern_color: steelblue
+      pattern_opacity: 0.1
+
+swimlane_rules:
+  - name: Route Xstore
+    select:
+      resource_group:
+      - Xstore
+    apply_to: 'Xstore
+
+      Conversions'
+  - name: Route Triversity
+    select:
+      resource_group:
+      - Triversity
+    apply_to: 'Triversity
+
+      POSReady7'
+  - name: Route 15.0.2
+    select:
+      resource_group:
+      - 15.0.2
+    apply_to: 15.0.2
+  - name: Route IC Fix
+    select:
+      resource_group:
+      - ICFix
+    apply_to: IC Fix
+  - name: Route Post PI6
+    select:
+      resource_group:
+      - PostPI6
+    apply_to: Post PI6

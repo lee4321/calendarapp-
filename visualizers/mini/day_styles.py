@@ -17,18 +17,25 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
-from visualizers.weekly.renderer import (
-    DayHashContext,
-    HashDecoration,
-    WeeklyCalendarRenderer,
-)
+from dataclasses import dataclass
+
 from shared.fiscal_renderer import get_fiscal_period_color
+from shared.rule_engine import DayContext, StyleEngine
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class HashDecoration:
+    """A single SVG pattern decoration for a mini calendar day cell."""
+
+    pattern: str
+    color: str | None = None
+    opacity: float | None = None
 
 
 @dataclass
@@ -91,7 +98,6 @@ class DayStyleResolver:
     def __init__(self, config: CalendarConfig, db: CalendarDB):
         self._config = config
         self._db = db
-        self._weekly_hash_rule_resolver = WeeklyCalendarRenderer()
 
     def resolve(
         self,
@@ -264,87 +270,58 @@ class DayStyleResolver:
         special_days: list[dict],
         events: list[dict],
     ) -> list[HashDecoration]:
-        """Resolve mini day-cell SVG pattern decorations from weekly-style rules."""
-        if not self._config.theme_mini_day_box_hash_rules:
+        """Resolve mini day-cell SVG pattern decorations from style_rules."""
+        style_rules = self._config.theme_style_rules or []
+        if not style_rules:
             return []
 
-        day_ctx = DayHashContext(
-            milestone=any(bool(event.get("Milestone")) for event in events),
-            nonworkday=any(bool(sd.get("nonworkday")) for sd in special_days)
-            or any(bool(holiday.get("nonworkday")) for holiday in holidays),
-            federal_holiday=bool(holidays),
-            event_names=tuple(
-                str(event.get("Task") or "").strip()
-                for event in events
-                if str(event.get("Task") or "").strip()
-                and (event.get("Start") or "")[:8]
-                == (
-                    event.get("End") or event.get("Finish") or event.get("Start") or ""
-                )[:8]
-            ),
-            duration_names=tuple(
-                str(event.get("Task") or "").strip()
-                for event in events
-                if str(event.get("Task") or "").strip()
-                and (event.get("Start") or "")[:8]
-                != (
-                    event.get("End") or event.get("Finish") or event.get("Start") or ""
-                )[:8]
-            ),
-            notes_values=tuple(
-                str(event.get("Notes") or "").strip()
-                for event in events
-                if str(event.get("Notes") or "").strip()
-            ),
-            wbs_values=tuple(
-                str(event.get("WBS") or "").strip()
-                for event in events
-                if str(event.get("WBS") or "").strip()
-            ),
-            any_complete=any(
-                self._is_complete(event.get("Percent_Complete")) for event in events
-            ),
-            resource_name_values=tuple(self._iter_resource_names(events)),
-            resource_group_values=tuple(
-                str(event.get("Resource_Group") or "").strip()
-                for event in events
-                if str(event.get("Resource_Group") or "").strip()
-            ),
+        federal_holiday = bool(holidays)
+        company_holiday = any(bool(sd.get("nonworkday")) for sd in special_days)
+        nonworkday = federal_holiday or company_holiday
+
+        ctx = DayContext(
+            federal_holiday=federal_holiday,
+            company_holiday=company_holiday,
+            nonworkday=nonworkday,
+            workday=not nonworkday,
         )
 
-        original_rules = self._config.theme_weekly_hash_rules
-        original_pattern = self._config.theme_weekly_hash_pattern
-        try:
-            self._config.theme_weekly_hash_rules = (
-                self._config.theme_mini_day_box_hash_rules
-            )
-            self._config.theme_weekly_hash_pattern = None
-            return self._weekly_hash_rule_resolver._resolve_day_hash_decorations(
-                self._config,
-                day_ctx,
-            )
-        finally:
-            self._config.theme_weekly_hash_rules = original_rules
-            self._config.theme_weekly_hash_pattern = original_pattern
+        event_objects = [self._dict_to_event(e) for e in events]
+        style_result = StyleEngine(style_rules).evaluate_day(ctx, event_objects)
+
+        if not style_result.pattern:
+            return []
+        return [HashDecoration(
+            pattern=style_result.pattern,
+            color=style_result.pattern_color,
+            opacity=style_result.pattern_opacity,
+        )]
 
     @staticmethod
-    def _is_complete(value: object) -> bool:
-        """Treat 100 / 100.0 / '100' as complete for rule matching."""
-        if value in (None, "", False):
-            return False
+    def _dict_to_event(d: dict):
+        """Convert a mini event dict to an Event object for rule matching."""
+        from shared.data_models import Event
         try:
-            return float(value) >= 100.0
+            pc = float(d.get("Percent_Complete") or 0.0)
         except (TypeError, ValueError):
-            return bool(value)
-
-    @staticmethod
-    def _iter_resource_names(events: list[dict]):
-        """Yield individual resource names split from comma-delimited fields."""
-        for event in events:
-            raw = str(event.get("Resource_Name") or "").strip()
-            if not raw:
-                continue
-            for part in raw.split(","):
-                name = part.strip()
-                if name:
-                    yield name
+            pc = 0.0
+        try:
+            pri = int(d.get("Priority") or 0)
+        except (TypeError, ValueError):
+            pri = 0
+        return Event(
+            task_name=str(d.get("Task_Name") or d.get("Task") or ""),
+            start=str(d.get("Start", ""))[:8],
+            end=str(d.get("End") or d.get("Finish") or d.get("Start") or "")[:8],
+            notes=d.get("Notes"),
+            icon=d.get("Icon"),
+            resource_group=d.get("Resource_Group"),
+            resource_names=d.get("Resource_Name") or d.get("Resource_Names"),
+            percent_complete=pc,
+            milestone=bool(d.get("Milestone")),
+            rollup=bool(d.get("Rollup")),
+            datekey=d.get("Datekey") or d.get("datekey"),
+            priority=pri,
+            wbs=d.get("WBS"),
+            color=d.get("Color") or d.get("color") or None,
+        )
