@@ -815,6 +815,21 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     if _nwd_fill:
                         seg_fill = _nwd_fill
                     _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
+                    # Prefer the per-holiday DB icon over the static config icon
+                    # (mirrors how the weekly calendar shows country flag icons).
+                    if _nwd_icon_result and "federal_holiday" in _day_cls and db is not None:
+                        _daykey_str = first_seg.start.strftime("%Y%m%d")
+                        _holidays = db.get_holidays_for_date(_daykey_str, config.country)
+                        if _holidays:
+                            _raw = (
+                                _holidays[0].get("icon")
+                                or _holidays[0].get("displayiconid")
+                                or _holidays[0].get("displayicon")
+                                or ""
+                            )
+                            _db_icon = str(_raw).strip()
+                            if _db_icon:
+                                _nwd_icon_result = (_db_icon, _nwd_icon_result[1])
                 self._draw_rect(
                     seg_x0,
                     y_top,
