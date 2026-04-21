@@ -283,6 +283,7 @@ weekly:
     icon_color: "red"
     font_color: "black"
     hash_pattern_opacity: 0.10
+    
   name_text:
     font_name: "AlumniSansPinstripe-Regular"
     font_color: "blue"
@@ -351,12 +352,12 @@ blockplan:
   background_color: "none"
   grid_color: "black"
   grid_opacity: 1.0
-  grid_line_width: 1.0
+  grid_line_width: 0.75
   grid_dasharray: null
   timeband_fill_color: ["iron","ivory","old silver","nickel","honeydew","smoke","bubbles","bondi blue","anti-flash white","roman silver"]
   timeband_fill_opacity: 1.0
   timeband_line_color: "black"     # null → inherits grid_color
-  timeband_line_width: 1    # null → inherits grid_line_width
+  timeband_line_width: 0.75    # null → inherits grid_line_width
   timeband_line_opacity: 1.0   # null → inherits grid_opacity
   timeband_line_dasharray: null
   label_column_ratio: 0.05
@@ -364,6 +365,9 @@ blockplan:
   fiscal_year_start_month: 2
   week_start: 0
   duration_date_font_size: 8
+  federal_holiday_icon: flag-us   # fallback; DB icon takes priority per holiday
+  federal_holiday_fill_color: "#ffe0e0"
+  federal_holiday_fill_opacity: 1.0
   
   show_unmatched_lane: false
   unmatched_lane_name: "Other"
@@ -406,42 +410,54 @@ blockplan:
       label_color: "black"       # heading column label color
       font_color: "black"        # segment content label color (e.g. "March")
 
-#     - label: "DoW"
-#       unit: "date"
-#       date_format: "ddd"
-#       fill_color: ["iron","ivory","old silver","nickel","honeydew","smoke","bubbles","bondi blue","anti-flash white","roman silver"]
-#       row_height: 14
-#       show_every: 1
-#       label_color: "dimgrey"     # heading column label color
-#       font_color: "white"      # segment content label color (e.g. "3")
-#       excel_font_name: "Avenir Next Condensed"   # font name for this band only
-#       excel_font_size: 8                # font size for this band only
-
-
     - label: "Day"
       unit: "date"
-      date_format: "ddd D"
+      date_format: "D"
       fill_color: "white"
       row_height: 14
       show_every: 1
       label_color: "Black"     # heading column label color
       font_color: "Black"      # segment content label color (e.g. "3")
 
+#     - label:         "Work Days to Freeze"
+#       unit:          "countdown"         # one segment per visible day, labelled with remaining count
+#       target_date:   "2019-10-31"        # required: the target date (YYYY-MM-DD)
+#       skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
+#       skip_nonworkdays: true           # set true to also skip holidays & company non-workdays
+#       label_format:  "{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
+#       row_height:    14
+#       label_color: "Black"     # heading column label color
+#       font_color: "Black"      # segment content label color (e.g. "3")
 
-    #Countdown example — one cell per visible day showing days remaining to a target:
-    - label:         "Work Days to Freeze"
-      unit:          "countdown"         # one segment per visible day, labelled with remaining count
-      target_date:   "2019-10-30"        # required: the target date (YYYY-MM-DD)
-      skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
-      skip_nonworkdays: true           # set true to also skip holidays & company non-workdays
-      label_format:  "{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
-      row_height:    14
+
+  bottom_time_bands:  # when an empty set there are no bottom time bands
+    - label: "DoW"
+      unit: "date"
+      date_format: "ddd"
+      fill_color: "white"
+      row_height: 14
+      show_every: 1
       label_color: "Black"     # heading column label color
       font_color: "Black"      # segment content label color (e.g. "3")
 
-
-
-  bottom_time_bands: []
+    - label: "Date"
+      unit: "date"
+      date_format: "D"
+      fill_color: "white"
+      row_height: 14
+      show_every: 1
+      label_color: "Black"     # heading column label color
+      font_color: "Black"      # segment content label color (e.g. "3")
+      
+    - label: "Month"
+      unit: "month"
+      date_format: "MMMM"
+      row_height: 14
+      fill_color: ["white smoke","darkgrey"]
+      show_every: 1
+      label_color: "black"       # heading column label color
+      font_color: "black"        # segment content label color (e.g. "March")
+    
 
   lane_heading_fill_color: "none"
   lane_label_font_size: 14
@@ -486,11 +502,12 @@ blockplan:
     - name: "15.0.2"
     - name: "IC Fix"
     - name: "Post PI6"
+  
   duration_date_font: "OfficinaSans-BookItalic"
   duration_fill_opacity: 1.0
   duration_stroke_color: "white"      # white outline separates solid-colour bars
-  duration_stroke_width: 1.0
-  duration_stroke_opacity: 1.0
+  duration_stroke_width: 0.1
+  duration_stroke_opacity: 0.01
   duration_stroke_dasharray: null
   duration_bar_height: 30
   duration_icon_visible: true
@@ -521,32 +538,34 @@ blockplan:
   #   color / width / opacity / dash_array: per-line style overrides
   #   fill_color:   column fill; single color, list of colors, or palette name (cycles per segment)
   #   fill_opacity: fill opacity 0–1 (default: vertical_line_fill_opacity)
+  
   vertical_lines:
     - band: "Month"
       repeat: true
       align: "end"
       color: "grey"
-      width: 1.5
-      dash_array: "5,5"
+      width: 0.0
+      dash_array: null
       opacity: 0.33
-      fill_color: ["#eef4ff", "none"]
+      fill_color: ["#eef4ff", "white"]
 
     - band: "Fiscal Quarter"
       repeat: true
       align: "end"
       color: "navy"
-      width: 1.5
-      dash_array: "8,4"
+      width: 0.0
+      dash_array: null
       fill_color: ["green","pink"]
 
     # Non-workday highlights — pinned to the single-day "Date" band.
     # `match` filters segments by classify_day() classes.
+    
     - band: "Day"
       repeat: true
       align: "center"
       match: {weekend: true}
       color: "#888888"
-      width: 0.75
+      width: 0.0
       opacity: 0.05
       dash_array: "2,3"
       fill_color: "#E8E8E8"
@@ -557,8 +576,8 @@ blockplan:
       align: "center"
       match: {company_holiday: true}
       color: "goldenrod"
-      width: 1.0
-      opacity: 0.7
+      width: 0.0
+      opacity: 0.07
       dash_array: "4,2"
       fill_color: "gold"
       fill_opacity: 0.3
@@ -568,22 +587,12 @@ blockplan:
       align: "center"
       match: {federal_holiday: true}
       color: "firebrick"
-      width: 1.25
-      opacity: 0.8
-      dash_array: "6,2"
+      width: 0.0
+      opacity: 0.25
+      dash_array: null
       fill_color: "tomato"
-      fill_opacity: 0.1
+      fill_opacity: 0.5
  
-#     - band: "Date"
-#       repeat: true                   
-#       align: "end"
-#       color: ["grey","white"]
-#       width: 1
-#       dash_array: ""
-#       opacity: 0.33
-#       fill_color: ["#eef4ff", "none"] 
-  
-
 
 # ── Mini Calendar ─────────────────────────────────────────────────────────────
 mini_calendar:
@@ -908,6 +917,7 @@ swimlane_rules:
     apply_to: 'Xstore
 
       Conversions'
+      
   - name: Route Triversity
     select:
       resource_group:
@@ -915,16 +925,19 @@ swimlane_rules:
     apply_to: 'Triversity
 
       POSReady7'
+      
   - name: Route 15.0.2
     select:
       resource_group:
       - 15.0.2
     apply_to: 15.0.2
+    
   - name: Route IC Fix
     select:
       resource_group:
       - ICFix
     apply_to: IC Fix
+    
   - name: Route Post PI6
     select:
       resource_group:
