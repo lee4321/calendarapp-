@@ -721,8 +721,11 @@ class CalendarConfig:
     # Non-workday highlighting for timeband date/dow cells.  None → disabled.
     # Applied in priority order: federal_holiday → company_holiday → weekend.
     blockplan_federal_holiday_fill_color: str | None = None
+    blockplan_federal_holiday_fill_opacity: float | None = None  # None → blockplan_timeband_fill_opacity
     blockplan_company_holiday_fill_color: str | None = None
+    blockplan_company_holiday_fill_opacity: float | None = None
     blockplan_weekend_fill_color: str | None = None
+    blockplan_weekend_fill_opacity: float | None = None
     blockplan_federal_holiday_icon: str | None = None
     blockplan_company_holiday_icon: str | None = None
     blockplan_weekend_icon: str | None = None

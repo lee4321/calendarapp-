@@ -181,8 +181,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "timeband_fill_opacity"): "blockplan_timeband_fill_opacity",
     # Non-workday highlighting
     ("blockplan", "federal_holiday_fill_color"): "blockplan_federal_holiday_fill_color",
+    ("blockplan", "federal_holiday_fill_opacity"): "blockplan_federal_holiday_fill_opacity",
     ("blockplan", "company_holiday_fill_color"): "blockplan_company_holiday_fill_color",
+    ("blockplan", "company_holiday_fill_opacity"): "blockplan_company_holiday_fill_opacity",
     ("blockplan", "weekend_fill_color"): "blockplan_weekend_fill_color",
+    ("blockplan", "weekend_fill_opacity"): "blockplan_weekend_fill_opacity",
     ("blockplan", "federal_holiday_icon"): "blockplan_federal_holiday_icon",
     ("blockplan", "company_holiday_icon"): "blockplan_company_holiday_icon",
     ("blockplan", "weekend_icon"): "blockplan_weekend_icon",

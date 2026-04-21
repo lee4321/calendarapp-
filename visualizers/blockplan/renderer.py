@@ -57,6 +57,40 @@ def _nwd_fill_for_classes(
     return None
 
 
+def _nwd_fill_opacity_for_classes(
+    classes: frozenset[str],
+    band_fill_rules: list[dict] | None,
+    config: "CalendarConfig",
+) -> float | None:
+    """Resolve the fill opacity for a non-workday override cell.
+
+    Band-level ``fill_rules`` may carry an ``opacity`` key; if the matching
+    rule has one, it is returned.  Otherwise falls back to the per-type config
+    field.  Returns ``None`` if no override applies (caller uses the default
+    ``blockplan_timeband_fill_opacity``).
+    """
+    if not classes:
+        return None
+    if band_fill_rules:
+        for rule in band_fill_rules:
+            if not isinstance(rule, dict):
+                continue
+            match = rule.get("match") or {}
+            if not isinstance(match, dict):
+                continue
+            if day_rule_matches(classes, match):
+                if rule.get("color"):  # only override opacity when fill matched
+                    op = rule.get("opacity")
+                    return float(op) if op is not None else None
+    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
+        return config.blockplan_federal_holiday_fill_opacity
+    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
+        return config.blockplan_company_holiday_fill_opacity
+    if "weekend" in classes and config.blockplan_weekend_fill_color:
+        return config.blockplan_weekend_fill_opacity
+    return None
+
+
 def _nwd_icon_for_classes(
     classes: frozenset[str], config: "CalendarConfig"
 ) -> tuple[str, str] | None:
@@ -807,6 +841,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     and (first_seg.end_exclusive - first_seg.start).days == 1
                 )
                 _nwd_icon_result: tuple[str, str] | None = None
+                _nwd_opacity: float | None = None
                 if _is_single_day:
                     _day_cls = _classify(first_seg.start)
                     _nwd_fill = _nwd_fill_for_classes(
@@ -814,6 +849,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     )
                     if _nwd_fill:
                         seg_fill = _nwd_fill
+                        _nwd_opacity = _nwd_fill_opacity_for_classes(
+                            _day_cls, band_fill_rules, config
+                        )
                     _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
                     # Prefer the per-holiday DB icon over the static config icon
                     # (mirrors how the weekly calendar shows country flag icons).
@@ -836,7 +874,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     seg_w,
                     row_h,
                     fill=seg_fill,
-                    fill_opacity=config.blockplan_timeband_fill_opacity,
+                    fill_opacity=_nwd_opacity if _nwd_opacity is not None else config.blockplan_timeband_fill_opacity,
                     stroke=stroke,
                     stroke_width=tb_width,
                     stroke_opacity=tb_opacity,
