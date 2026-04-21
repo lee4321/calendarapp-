@@ -471,6 +471,8 @@ VALID_SECTIONS = frozenset(
         "icons",
         "patterns",
         "element_styles",
+        "style_rules",
+        "swimlane_rules",
     }
 )
 
