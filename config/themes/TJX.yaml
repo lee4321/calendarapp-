@@ -11,8 +11,8 @@ theme:
 
 text_styles:
   heading:
-    font: "MapleMonoNormal-Bold"
-    size: 14
+    font: "OfficinaSans-Bold"
+    size: 12
     color: "grey"
     size_rules:
       - font_size: 10
@@ -20,31 +20,31 @@ text_styles:
       - font_size: 8
         when: { papersize: ["3x5", "5x8"] }
   body:
-    font: "MapleMonoNormal-Regular"
+    font: "OfficinaSans-Book"
     size: 12
     color: "white"
   body_secondary:
-    font: "MapleMonoNormal-Italic"
+    font: "OfficinaSans-BookItalic"
     size: 10
     color: "grey"
   label:
-    font: "MapleMonoNormal-Italic"
+    font: "OfficinaSans-Book"
     size: 10
     color: "grey"
   label_bold:
-    font: "MapleMonoNormal-BoldItalic"
+    font: "OfficinaSans-Bold"
     size: 10
     color: "yellow"
   caption:
-    font: "AlumniSansPinstripe-Regular"
+    font: "OfficinaSans-Bold"
     size: 10
     color: "grey"
   day_number:
-    font: "InstrumentSerif-Regular"
-    size: 12
-    color: "blue"
+    font: "OfficinaSans-Bold"
+    size: 11
+    color: "#E5E4E2"
   month_title:
-    font: "Caveat-Bold"
+    font: "OfficinaSans-Bold"
     size: 10
     color: "navy"
 
@@ -54,10 +54,10 @@ box_styles:
     fill_opacity: 1.0
     stroke: "none"
   cell:
-    fill: "grey"
+    fill: "#F8F8FF"
     fill_opacity: 0.25
-    stroke: "grey"
-    stroke_width: 2
+    stroke: "none"
+    stroke_width: 0.1
     stroke_opacity: 0.25
   header:
     fill: "none"
@@ -235,7 +235,7 @@ fiscal:
   year_offset: +1
 
 colors:
-  month_palette: "Greys"
+  month_palette: "viridis"
   fiscal_palette: "Greys"
   group_palette: "Pastel1"
   special_day: "lightblue"
@@ -279,16 +279,17 @@ weekly:
     label_format: "W{num:02d}"
 
   day_box:
-    stroke_color: "grey"
-    stroke_opacity: 0.25
+    stroke_color: "black"
+    stroke_opacity: 0.5
     stroke_width: 2
     stroke_dasharray: null
+    
     fill_color: "grey"
     fill_opacity: 0.25
     number_font: "InstrumentSerif-Regular"
-    number_color: "blue"
+    number_color: #FF7800
     icon_color: "red"
-    font_color: "navy"
+    font_color: "black"
     hash_pattern_opacity: 0.10
     hash_rules:
       # Milestones: prominent gold stripes
@@ -351,6 +352,25 @@ weekly:
         opacity: 0.10
         when:
           resource_group: ["dev"]
+
+      # Try to get weekly to look like blockplan
+      - pattern:
+        color: "red"
+        opacity: 0.5 
+        when:
+          resource_groups: ["Xstore"]
+#     - name: "Triversity\nPOSReady7"
+#       match:
+#         resource_groups: ["Triversity"]
+#     - name: "15.0.2"
+#       match:
+#         resource_groups: ["15.0.2"]
+#     - name: "IC Fix"
+#       match:
+#         resource_groups: ["ICFix"]
+#     - name: "Post PI6"
+#       match:
+#         resource_groups: ["PostPI6"]
 
   name_text:
     font_name: "AlumniSansPinstripe-Regular"
@@ -432,19 +452,20 @@ blockplan:
   band_row_height: 25.0    # default row height for all bands; override per-band with row_height
   fiscal_year_start_month: 2
   week_start: 0
+  duration_date_font_size: 8
   
   show_unmatched_lane: false
   unmatched_lane_name: "Other"
   lane_match_mode: "first"
   
-  header_font: "MapleMonoNormal-Italic"
+  header_font: "OfficinaSans-BookItalic"
   header_font_size: 11
   header_label_color: "Green"
   header_label_opacity: 1.0
   header_label_align_h: "right"
   header_heading_fill_color: "none"
   
-  band_font: "MapleMonoNormal-Bold"
+  band_font: "OfficinaSans-Book"
   band_font_size: 14
 
   timeband_label_opacity: 1.0
@@ -462,8 +483,8 @@ blockplan:
       fill_color: ["ghostwhite","silver"]
       show_every: 1
       row_height: 14
-      label_color: "grey"        # heading column label color
-      font_color: "white"         # segment content label color (e.g. "FY26 Q2")
+      label_color: "Black"        # heading column label color
+      font_color: "Black"         # segment content label color (e.g. "FY26 Q2")
 
     - label: "Month"
       unit: "month"
@@ -486,24 +507,27 @@ blockplan:
 #       excel_font_size: 8                # font size for this band only
 
 
-    - label: "Date"
+    - label: "Day"
       unit: "date"
-      date_format: "ddd-DD"
+      date_format: "ddd D"
       fill_color: "white"
       row_height: 14
       show_every: 1
-      label_color: "white"     # heading column label color
-      font_color: "white"      # segment content label color (e.g. "3")
+      label_color: "Black"     # heading column label color
+      font_color: "Black"      # segment content label color (e.g. "3")
 
 
     #Countdown example — one cell per visible day showing days remaining to a target:
-    - label:         "Biz Days to Freeze"
+    - label:         "Work Days to Freeze"
       unit:          "countdown"         # one segment per visible day, labelled with remaining count
       target_date:   "2019-10-30"        # required: the target date (YYYY-MM-DD)
       skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
       skip_nonworkdays: true           # set true to also skip holidays & company non-workdays
       label_format:  "{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
       row_height:    14
+      label_color: "Black"     # heading column label color
+      font_color: "Black"      # segment content label color (e.g. "3")
+
 
 
   bottom_time_bands: []
@@ -562,7 +586,7 @@ blockplan:
       match:
         resource_groups: ["PostPI6"]
 
-  duration_date_font: "DejaVuSans-ExtraLight"
+  duration_date_font: "OfficinaSans-BookItalic"
   duration_fill_opacity: 1.0
   duration_stroke_color: "white"      # white outline separates solid-colour bars
   duration_stroke_width: 1.0
@@ -571,20 +595,20 @@ blockplan:
   duration_bar_height: 30
   duration_icon_visible: true
   name_text:
-    font_name: "MapleMonoNormal-Thin"
+    font_name: "OfficinaSans-Book"
     font_color: "white"
   notes_text:
-    font_name: "MapleMonoNormal-ThinItalic"
+    font_name: "OfficinaSans-BookItalic"
     font_color: "white"
   duration_show_start_date: true
   duration_show_end_date: true
   duration_date_format: "M/D"
-  duration_date_color: "white"
+  duration_date_color: "Black"
 
   event_show_date: false
-  event_date_font: "MapleMonoNormal-ThinItalic"
+  event_date_font: "OfficinaSans-BookItalic"
   event_date_font_size: null
-  event_date_color: "grey"
+  event_date_color: "Black"
   event_date_format: "MM/DD"
   marker_radius: 2.0
   
@@ -602,7 +626,7 @@ blockplan:
       repeat: true
       align: "end"
       color: "grey"
-      width: 4
+      width: 1.5
       dash_array: "5,5"
       opacity: 0.33
       fill_color: ["#eef4ff", "none"]
@@ -611,24 +635,24 @@ blockplan:
       repeat: true
       align: "end"
       color: "navy"
-      width: 4.0
+      width: 1.5
       dash_array: "8,4"
       fill_color: ["green","pink"]
 
     # Non-workday highlights — pinned to the single-day "Date" band.
     # `match` filters segments by classify_day() classes.
-    - band: "Date"
+    - band: "Day"
       repeat: true
       align: "center"
       match: {weekend: true}
       color: "#888888"
       width: 0.75
-      opacity: 0.5
+      opacity: 0.05
       dash_array: "2,3"
       fill_color: "#E8E8E8"
       fill_opacity: 0.4
 
-    - band: "Date"
+    - band: "Day"
       repeat: true
       align: "center"
       match: {company_holiday: true}
@@ -639,7 +663,7 @@ blockplan:
       fill_color: "gold"
       fill_opacity: 0.3
 
-    - band: "Date"
+    - band: "Day"
       repeat: true
       align: "center"
       match: {federal_holiday: true}
@@ -648,7 +672,7 @@ blockplan:
       opacity: 0.8
       dash_array: "6,2"
       fill_color: "tomato"
-      fill_opacity: 0.3
+      fill_opacity: 0.1
  
 #     - band: "Date"
 #       repeat: true                   

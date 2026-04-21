@@ -1012,19 +1012,18 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         fill_color, fill_opacity = self._resolve_day_box_fill(
             config, oneday_str, month, shadespecialday
         )
-        _bs_cell = config.get_box_style("ec-cell")
         self._draw_rect(
             X,
             Y,
             W,
             H,
             fill=fill_color,
-            stroke=_bs_cell.stroke,
+            stroke=config.day_box_stroke_color,
             fill_opacity=fill_opacity,
-            stroke_opacity=_bs_cell.stroke_opacity,
-            stroke_width=_bs_cell.stroke_width,
+            stroke_opacity=config.day_box_stroke_opacity,
+            stroke_width=config.day_box_stroke_width,
             rx=5,
-            stroke_dasharray=_bs_cell.stroke_dasharray or None,
+            stroke_dasharray=config.day_box_stroke_dasharray or None,
             css_class="ec-cell",
         )
 
