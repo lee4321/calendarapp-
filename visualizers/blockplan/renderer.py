@@ -899,7 +899,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     display_label = first_seg.label if _raw is None else str(_raw)
                 else:
                     display_label = first_seg.label
-                if display_label:
+                if display_label and not _nwd_icon_result:
                     self._draw_text(
                         seg_x0 + (seg_w / 2.0),
                         y_top + (row_h * 0.50) + (band_font_size * 0.30),
