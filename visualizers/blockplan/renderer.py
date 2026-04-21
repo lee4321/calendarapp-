@@ -579,12 +579,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
             return _day_classes.get(d, frozenset())
 
         # Load icon cache once if any icon bands are present (event- or
-        # day-driven icon rules both need rendered icons).
+        # day-driven icon rules both need rendered icons), or if non-workday
+        # icons are configured for date/dow cells.
         _has_icon_band = any(
             str(b.get("unit", "")).strip().lower() == "icon" for b in bands
         )
+        _has_nwd_icons = bool(
+            config.blockplan_federal_holiday_icon
+            or config.blockplan_company_holiday_icon
+            or config.blockplan_weekend_icon
+        )
         _band_events: list[Event] = []
-        if _has_icon_band:
+        if _has_icon_band or _has_nwd_icons:
             self._load_icon_svg_cache(db)
             if events:
                 _band_events = [
@@ -800,12 +806,15 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     and len(group) == 1
                     and (first_seg.end_exclusive - first_seg.start).days == 1
                 )
+                _nwd_icon_result: tuple[str, str] | None = None
                 if _is_single_day:
+                    _day_cls = _classify(first_seg.start)
                     _nwd_fill = _nwd_fill_for_classes(
-                        _classify(first_seg.start), band_fill_rules, config
+                        _day_cls, band_fill_rules, config
                     )
                     if _nwd_fill:
                         seg_fill = _nwd_fill
+                    _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
                 self._draw_rect(
                     seg_x0,
                     y_top,
@@ -819,6 +828,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_dasharray=tb_dasharray,
                     css_class="ec-band-cell",
                 )
+                if _nwd_icon_result:
+                    _icon_name, _icon_color = _nwd_icon_result
+                    _icon_size = row_h * 0.65
+                    self._draw_icon_svg(
+                        _icon_name,
+                        seg_x0 + seg_w / 2.0,
+                        y_top + row_h / 2.0 + _icon_size * 0.30,
+                        _icon_size,
+                        color=_icon_color,
+                        anchor="middle",
+                        css_class="ec-nwd-icon",
+                    )
                 _lv = band.get("label_values")
                 if _lv and isinstance(_lv, list):
                     _raw = _lv[gidx % len(_lv)]
