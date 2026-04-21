@@ -99,6 +99,15 @@ class BaseSVGRenderer(ABC):
             extra["stroke_dasharray"] = stroke_dasharray
         if css_class:
             extra["class_"] = css_class
+            # Inline style beats CSS class rules (presentation attributes lose to CSS).
+            # Emit fill/fill_opacity as inline style so per-call colors always win.
+            style_parts = []
+            if not _is_none_color(fill):
+                style_parts.append(f"fill:{fill}")
+            if fill_opacity != 1.0:
+                style_parts.append(f"fill-opacity:{fill_opacity}")
+            if style_parts:
+                extra["style"] = ";".join(style_parts)
         rect = drawsvg.Rectangle(
             _r(x),
             _r(y),
