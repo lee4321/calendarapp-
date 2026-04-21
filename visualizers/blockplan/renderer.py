@@ -867,6 +867,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
           fill_color   – column fill color, list of colors, or named palette; colors cycle
                          through matched segments (default: blockplan_vertical_line_fill_color)
           fill_opacity – fill opacity 0–1 (default: blockplan_vertical_line_fill_opacity)
+          match        – optional dict of day-class keys (weekend / federal_holiday /
+                         company_holiday / nonworkday) that filters segments to only
+                         those days whose classification matches; segments spanning
+                         multiple days use the starting day for classification
         """
         lines = list(getattr(config, "blockplan_vertical_lines", []) or [])
         if not lines:
@@ -880,6 +884,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
             band_segments[band_name] = self._build_segments(
                 band, start, end, config, visible_days=visible_days, db=db
             )
+
+        def _segment_matches_rule(seg: "_BandSegment", match: dict) -> bool:
+            if not isinstance(match, dict) or not match:
+                return True
+            classes = classify_day(seg.start, db, config)
+            return day_rule_matches(classes, match)
 
         _vline_fill_style = config.get_box_style("ec-vline-fill")
         _vline_style = config.get_line_style("ec-vline")
@@ -926,9 +936,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if not segments:
                 continue
 
+            match_rule = line.get("match") if isinstance(line.get("match"), dict) else None
             matched_idx = 0
             for seg in segments:
                 if not repeat and str(seg.label) != value:
+                    continue
+                if match_rule is not None and not _segment_matches_rule(seg, match_rule):
                     continue
                 seg_x0 = self._boundary_x(
                     seg.start, visible_days, timeline_x, timeline_w
@@ -979,8 +992,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 continue
 
             align = str(line.get("align", "start")).strip().lower()
+            match_rule = line.get("match") if isinstance(line.get("match"), dict) else None
             for seg in segments:
                 if not repeat and str(seg.label) != value:
+                    continue
+                if match_rule is not None and not _segment_matches_rule(seg, match_rule):
                     continue
                 if align == "center":
                     x0 = self._boundary_x(
