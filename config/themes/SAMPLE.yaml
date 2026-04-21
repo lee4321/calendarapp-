@@ -376,13 +376,6 @@ colors:
   # Map of resource group name (case-insensitive) → CSS color.
   resource_groups: {}   # e.g. {"Engineering": "steelblue", "Design": "tomato"}
 
-  # ── Special day color (company-defined highlighted days) ───────────────
-  special_day: null   # (str|null) fill color for special/highlighted days
-
-  # ── Special day type colors ─────────────────────────────────────────────
-  # Map of special-day type name → CSS color.
-  special_day_types: {}   # e.g. {"Holiday": "tomato", "Training": "gold"}
-
   # ── Mini calendar color overrides ──────────────────────────────────────
   # These override the equivalent mini_calendar: section values.
   # Useful when you want one color setting to apply to all visualizers

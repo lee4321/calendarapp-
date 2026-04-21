@@ -36,7 +36,6 @@ from config.config import (
     weekend_style_starts_sunday,
     weekend_style_starts_monday,
     monthcolors,
-    specialdaycolor,
     hashlinecolor,
     Resource_Group_colors,
     resolve_page_margins,
@@ -733,7 +732,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         shadespecialday: str | bool,
     ) -> tuple[str, float]:
         """Return (fill_color, fill_opacity) for a day box."""
-        _specialdaycolor = config.theme_special_day_color or specialdaycolor
         _monthcolors = config.theme_month_colors or monthcolors
 
         if shadespecialday == "government":
@@ -759,7 +757,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if config.shade_current_day:
             today = arrow.now().format("YYYYMMDD")
             if today == oneday_str:
-                fill_color = _specialdaycolor
+                fill_color = "lightblue"
                 fill_opacity = 0.25
 
         return fill_color, fill_opacity

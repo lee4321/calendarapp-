@@ -247,7 +247,6 @@ colors:
   month_palette: "flattastic_flatui"
   fiscal_palette: "dark"
   group_palette: "PairedColor12Steps"
-  special_day: "plum"
   hash_lines: "white"
   federal_holiday:
     color: "crimson"
@@ -255,12 +254,6 @@ colors:
   company_holiday:
     color: "limegreen"
     alpha: 0.3
-  special_day_types:
-    federal: "crimson"
-    company: "limegreen"
-    nonworkday: "plum"
-    furlough: "lightskyblue"
-    special: "gold"
   resource_groups:
     a: "deeppink"
     b: "dodgerblue"

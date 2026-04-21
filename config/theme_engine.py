@@ -979,9 +979,6 @@ class ThemeEngine:
                 str(k).zfill(2): v for k, v in colors["fiscal_periods"].items()
             }
 
-        if "special_day" in colors:
-            config.theme_special_day_color = colors["special_day"]
-
         if "hash_lines" in colors:
             config.theme_hash_line_color = colors["hash_lines"]
 
@@ -989,11 +986,6 @@ class ThemeEngine:
             config.theme_resource_group_colors = {
                 str(k).lower(): v for k, v in colors["resource_groups"].items()
             }
-
-        if "special_day_types" in colors and isinstance(
-            colors["special_day_types"], dict
-        ):
-            config.theme_special_day_type_colors = colors["special_day_types"]
 
         if "group_colors" in colors and isinstance(colors["group_colors"], list):
             config.group_colors = colors["group_colors"]

@@ -257,7 +257,6 @@ colors:
   month_palette: "PuBuGn"
   fiscal_palette: "Accent"
   group_palette: "PuBuGn"
-  special_day: "palette:Accent:3"
   hash_lines: "palette:Accent:7"
   federal_holiday:
     color: "palette:Accent:5"
@@ -265,12 +264,6 @@ colors:
   company_holiday:
     color: "palette:Accent:0"
     alpha: 0.25
-  special_day_types:
-    federal: "palette:Accent:5"
-    company: "palette:Accent:0"
-    nonworkday: "palette:Accent:3"
-    furlough: "palette:Accent:1"
-    special: "palette:Accent:2"
   resource_groups:
     a: "palette:Accent:4"
     b: "palette:Accent:0"

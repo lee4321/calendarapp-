@@ -237,7 +237,6 @@ colors:
   month_palette: "Greys"
   fiscal_palette: "Greys"
   group_palette: "Dark2"
-  special_day: "teal"
   hash_lines: "grey"
   federal_holiday:
     color: "indianred"
@@ -245,12 +244,6 @@ colors:
   company_holiday:
     color: "darkseagreen"
     alpha: 0.3
-  special_day_types:
-    federal: "indianred"
-    company: "darkseagreen"
-    nonworkday: "slategrey"
-    furlough: "darkslategrey"
-    special: "goldenrod"
   resource_groups:
     a: "whitesmoke"
     b: "lightskyblue"

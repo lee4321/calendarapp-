@@ -238,7 +238,6 @@ colors:
   month_palette: "viridis"
   fiscal_palette: "Greys"
   group_palette: "Pastel1"
-  special_day: "lightblue"
   hash_lines: "black"
   federal_holiday:
     color: "red"
@@ -246,13 +245,6 @@ colors:
   company_holiday:
     color: "green"
     alpha: 0.25
-  special_day_types:
-    federal: "blue"
-    company: "red"
-    alpha: 0.25
-    nonworkday: "pink"
-    furlough: "lightsteelblue"
-    special: "yellow"
   resource_groups:
     a: "black"
     b: "yellow"
@@ -284,7 +276,7 @@ weekly:
     stroke_width: 2
     stroke_dasharray: null
     
-    fill_color: "grey"
+    fill_color: null
     fill_opacity: 0.25
     number_font: "InstrumentSerif-Regular"
     number_color: #FF7800

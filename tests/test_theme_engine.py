@@ -448,10 +448,6 @@ class TestThemeEngineColorMaps:
         assert config.theme_month_colors["01"] == "aliceblue"
         assert config.theme_month_colors["02"] == "lavender"
 
-    def test_special_day_color_applied(self):
-        config = self._load_builtin("dark")
-        assert config.theme_special_day_color == "teal"
-
     def test_hash_line_color_applied(self):
         config = self._load_builtin("corporate")
         assert config.theme_hash_line_color == "lightsteelblue"
@@ -511,7 +507,6 @@ class TestThemeEngineColorMaps:
         config = create_calendar_config()
         engine.apply(config)
         assert config.theme_month_colors is None
-        assert config.theme_special_day_color is None
 
     def test_month_color_keys_are_zero_padded_strings(self):
         """YAML might parse '01' as int 1; engine should normalize to '01'."""

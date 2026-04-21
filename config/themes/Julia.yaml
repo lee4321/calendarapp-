@@ -250,7 +250,6 @@ colors:
   month_palette: "Blues"
   fiscal_palette: "Blues"
   group_palette: "Blues"
-  special_day: "lightskyblue"
   hash_lines: "lightsteelblue"
   federal_holiday:
     color: "royalblue"
@@ -258,12 +257,6 @@ colors:
   company_holiday:
     color: "mediumseagreen"
     alpha: 0.2
-  special_day_types:
-    federal: "royalblue"
-    company: "mediumseagreen"
-    nonworkday: "lavender"
-    furlough: "lightsteelblue"
-    special: "khaki"
   resource_groups:
     a: "midnightblue"
     b: "steelblue"

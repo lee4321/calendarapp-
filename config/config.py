@@ -984,7 +984,6 @@ class CalendarConfig:
     # Theme-overridable color maps (None = use module-level defaults)
     theme_fiscal_period_colors: dict[str, str] | None = None
     theme_month_colors: dict[str, str] | None = None
-    theme_special_day_color: str | None = None
     theme_hash_line_color: str | None = None
     theme_weekly_hash_rules: list[dict[str, Any]] | None = None
     theme_weekly_hash_pattern: str | None = None
@@ -998,7 +997,6 @@ class CalendarConfig:
     # Example: ["milestones", "events", "durations"]
     item_placement_order: list[str] = field(default_factory=lambda: ["priority"])
     theme_resource_group_colors: dict[str, str] | None = None
-    theme_special_day_type_colors: dict[str, str] | None = None
     theme_federal_holiday_color: str | None = None
     theme_federal_holiday_alpha: float | None = None
     theme_company_holiday_color: str | None = None
@@ -1630,16 +1628,6 @@ FederalHolidayColor = "red"
 FederalHolidayAlpha = 0.25
 CompanyHolidayColor = "green"
 CompanyHolidayAlpha = 0.25
-
-specialdaycolor = "lightblue"
-
-specialdaycolors: dict[str, str] = {
-    "federal": "blue",
-    "company": "red",
-    "nonworkday": "pink",
-    "furlough": "lightsteelblue",
-    "special": "yellow",
-}
 
 hashlinecolor = "white"
 
