@@ -180,6 +180,13 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "timeband_fill_color"): "blockplan_timeband_fill_color",
     ("blockplan", "timeband_fill_palette"): "blockplan_timeband_fill_palette",
     ("blockplan", "timeband_fill_opacity"): "blockplan_timeband_fill_opacity",
+    # Non-workday highlighting
+    ("blockplan", "federal_holiday_fill_color"): "blockplan_federal_holiday_fill_color",
+    ("blockplan", "company_holiday_fill_color"): "blockplan_company_holiday_fill_color",
+    ("blockplan", "weekend_fill_color"): "blockplan_weekend_fill_color",
+    ("blockplan", "federal_holiday_icon"): "blockplan_federal_holiday_icon",
+    ("blockplan", "company_holiday_icon"): "blockplan_company_holiday_icon",
+    ("blockplan", "weekend_icon"): "blockplan_weekend_icon",
     ("blockplan", "lane_heading_fill_color"): "blockplan_lane_heading_fill_color",
     ("blockplan", "lane_label_align_h"): "blockplan_lane_label_align_h",
     ("blockplan", "lane_label_align_v"): "blockplan_lane_label_align_v",
@@ -424,6 +431,13 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "timeband_fill_color"): "excelheader_timeband_fill_color",
     ("excelheader", "timeband_fill_palette"): "excelheader_timeband_fill_palette",
     ("excelheader", "timeband_label_color"): "excelheader_timeband_label_color",
+    # Non-workday highlighting
+    ("excelheader", "federal_holiday_fill_color"): "excelheader_federal_holiday_fill_color",
+    ("excelheader", "company_holiday_fill_color"): "excelheader_company_holiday_fill_color",
+    ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
+    ("excelheader", "federal_holiday_icon"): "excelheader_federal_holiday_icon",
+    ("excelheader", "company_holiday_icon"): "excelheader_company_holiday_icon",
+    ("excelheader", "weekend_icon"): "excelheader_weekend_icon",
 }
 
 # Valid top-level sections in a theme file

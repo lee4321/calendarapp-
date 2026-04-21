@@ -31,6 +31,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from shared.data_models import Event
+from shared.day_classifier import classify_days, day_rule_matches
 from shared.icon_band import compute_icon_band_days
 from visualizers.blockplan.renderer import BlockPlanRenderer, _BandSegment
 
@@ -175,43 +176,66 @@ def _col_for_day(
 def _build_holiday_map(
     visible_days: list[date],
     db: "CalendarDB",
-    country: str | None,
+    config: "CalendarConfig",
     federal_color: str,
     company_color: str,
+    weekend_color: str | None,
 ) -> dict[date, dict]:
-    """Return a dict mapping each holiday/nonworkday date to display info."""
+    """Return a dict mapping each non-workday to display info.
+
+    Classification uses :func:`shared.day_classifier.classify_days` so
+    blockplan and excelheader share one source of truth.  Precedence when
+    multiple classes match a single date: federal > company > weekend.
+    """
     hmap: dict[date, dict] = {}
+    classes_by_day = classify_days(visible_days, db, config)
+    country = getattr(config, "country", None)
     for d in visible_days:
+        classes = classes_by_day.get(d, frozenset())
+        if not classes:
+            continue
         daykey = d.strftime("%Y%m%d")
-        # Government / federal holidays (nonworkday=1 only)
-        gov = [
-            h for h in db.get_holidays_for_date(daykey, country)
-            if h.get("nonworkday")
-        ]
-        if gov:
-            icon_key = str(gov[0].get("icon") or "").lower()
+        if "federal_holiday" in classes:
+            gov = [
+                h for h in db.get_holidays_for_date(daykey, country)
+                if h.get("nonworkday")
+            ]
+            icon_key = str((gov[0].get("icon") if gov else "") or "").lower()
             emoji = _COUNTRY_FLAGS.get(icon_key, "🏛")
             hmap[d] = {
                 "color": federal_color,
                 "emoji": emoji,
-                "name": str(gov[0].get("displayname") or ""),
+                "name": str((gov[0].get("displayname") if gov else "") or ""),
                 "is_nonwork": True,
+                "class": "federal_holiday",
             }
             continue
-        # Company / special days (nonworkday=1 only)
-        special = [
-            s for s in db.get_special_days_for_date(daykey)
-            if s.get("nonworkday")
-        ]
-        if special:
-            day_color = str(special[0].get("daycolor") or "").strip() or company_color
-            icon_key = str(special[0].get("icon") or "").lower()
+        if "company_holiday" in classes:
+            special = [
+                s for s in db.get_special_days_for_date(daykey)
+                if s.get("nonworkday")
+            ]
+            day_color = (
+                str((special[0].get("daycolor") if special else "") or "").strip()
+                or company_color
+            )
+            icon_key = str((special[0].get("icon") if special else "") or "").lower()
             emoji = _COUNTRY_FLAGS.get(icon_key, "🏢")
             hmap[d] = {
                 "color": day_color,
                 "emoji": emoji,
-                "name": str(special[0].get("name") or ""),
+                "name": str((special[0].get("name") if special else "") or ""),
                 "is_nonwork": True,
+                "class": "company_holiday",
+            }
+            continue
+        if "weekend" in classes and weekend_color:
+            hmap[d] = {
+                "color": weekend_color,
+                "emoji": "",
+                "name": "",
+                "is_nonwork": True,
+                "class": "weekend",
             }
     return hmap
 
@@ -317,22 +341,33 @@ def generate_excel_header(
     # ── Configuration ─────────────────────────────────────────────────────────
     top_bands: list[dict] = list(getattr(config, "excelheader_top_time_bands", []) or [])
     vertical_lines: list[dict] = list(getattr(config, "excelheader_vertical_lines", []) or [])
-    country: str | None = getattr(config, "country", None)
 
     font_name: str = str(getattr(config, "excelheader_font_name", None) or "Calibri")
     font_size: int = int(getattr(config, "excelheader_font_size", None) or 9)
 
     federal_color: str = str(
-        getattr(config, "theme_federal_holiday_color", None) or "#FFE4E1"
+        getattr(config, "excelheader_federal_holiday_fill_color", None)
+        or getattr(config, "theme_federal_holiday_color", None)
+        or "#FFE4E1"
     )
     company_color: str = str(
-        getattr(config, "theme_company_holiday_color", None) or "#FFFACD"
+        getattr(config, "excelheader_company_holiday_fill_color", None)
+        or getattr(config, "theme_company_holiday_color", None)
+        or "#FFFACD"
+    )
+    weekend_color: str | None = (
+        getattr(config, "excelheader_weekend_fill_color", None) or None
     )
 
     # ── Pre-fetch holiday info ────────────────────────────────────────────────
     holiday_map = _build_holiday_map(
-        visible_days, db, country, federal_color, company_color
+        visible_days, db, config, federal_color, company_color, weekend_color
     )
+    # Classifier cache for icon-band and fill_rules evaluation.
+    day_classes = classify_days(visible_days, db, config)
+
+    def _classify(d: date) -> frozenset[str]:
+        return day_classes.get(d, frozenset())
 
     # ── Pre-fetch events for icon bands ───────────────────────────────────────
     has_icon_bands = any(
@@ -433,7 +468,9 @@ def generate_excel_header(
         # Icon bands — compute per-day icons and render as colored symbols.
         if str(band.get("unit", "")).strip().lower() == "icon":
             icon_rules = list(band.get("icon_rules") or [])
-            day_icon_map = compute_icon_band_days(band_events, icon_rules, visible_days)
+            day_icon_map = compute_icon_band_days(
+                band_events, icon_rules, visible_days, classify_fn=_classify
+            )
             icon_fill = str(band.get("fill_color") or "none")
             for i, d in enumerate(visible_days):
                 col = FIRST_DATE_COL + i
@@ -471,6 +508,10 @@ def generate_excel_header(
         )
         show_every = max(1, int(band.get("show_every", 1)))
         label_values: list | None = band.get("label_values")
+        band_fill_rules_raw = band.get("fill_rules")
+        band_fill_rules: list[dict] | None = (
+            band_fill_rules_raw if isinstance(band_fill_rules_raw, list) else None
+        )
         groups = _group_segments(segs, show_every)
 
         for gidx, group in enumerate(groups):
@@ -497,9 +538,27 @@ def generate_excel_header(
                 day_idx = col_s - FIRST_DATE_COL
                 if 0 <= day_idx < len(visible_days):
                     d = visible_days[day_idx]
-                    if d in holiday_map:
+                    # Band-level fill_rules win over holiday_map fill
+                    if band_fill_rules:
+                        for rule in band_fill_rules:
+                            if not isinstance(rule, dict):
+                                continue
+                            match = rule.get("match") or {}
+                            if isinstance(match, dict) and day_rule_matches(
+                                _classify(d), match
+                            ):
+                                color = rule.get("color")
+                                if color:
+                                    cell_fill_color = str(color)
+                                    break
+                        else:
+                            if d in holiday_map:
+                                cell_fill_color = holiday_map[d]["color"]
+                                cell_text = holiday_map[d]["emoji"] or cell_text
+                    elif d in holiday_map:
                         cell_fill_color = holiday_map[d]["color"]
-                        cell_text = holiday_map[d]["emoji"]
+                        if holiday_map[d]["emoji"]:
+                            cell_text = holiday_map[d]["emoji"]
 
             # Write cell
             if col_e > col_s:

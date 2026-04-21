@@ -107,6 +107,13 @@ class CalendarConfig:
     # Weekend style (0-4)
     weekend_style: int = 0
 
+    # User-configurable weekend days (ISO weekday: 0=Mon .. 6=Sun).
+    # When None, derived from ``weekend_style`` — style 0 → no weekends shown,
+    # styles 1–4 → [5, 6] (Sat/Sun).  Explicit values override and are used by
+    # the day classifier so international weekend conventions work
+    # (e.g. ``[4, 5]`` for Fri/Sat).  Does not change layout geometry.
+    weekend_days: list[int] | None = None
+
     # ISO 3166-1 alpha-2 country code(s) for government holiday loading.
     # Accepts a single code ("US"), a comma-separated list ("US,CA,GB"), or
     # None (loads the default set — US and CA — via load_python_holidays).
@@ -711,6 +718,14 @@ class CalendarConfig:
     blockplan_timeband_fill_color: str = "none"
     blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
     blockplan_timeband_fill_opacity: float = 1.0
+    # Non-workday highlighting for timeband date/dow cells.  None → disabled.
+    # Applied in priority order: federal_holiday → company_holiday → weekend.
+    blockplan_federal_holiday_fill_color: str | None = None
+    blockplan_company_holiday_fill_color: str | None = None
+    blockplan_weekend_fill_color: str | None = None
+    blockplan_federal_holiday_icon: str | None = None
+    blockplan_company_holiday_icon: str | None = None
+    blockplan_weekend_icon: str | None = None
     blockplan_lane_heading_fill_color: str = "none"
     blockplan_lane_label_font: str = Fonts.RC_BOLD
     blockplan_lane_label_font_size: float | None = None
@@ -934,6 +949,15 @@ class CalendarConfig:
     excelheader_timeband_fill_color: str = "none"
     excelheader_timeband_fill_palette: list[str] = field(default_factory=list)
     excelheader_timeband_label_color: str = "black"
+    # Non-workday highlighting for excelheader timeband cells.  None → fall
+    # back to the global `theme_federal_holiday_color` / `theme_company_holiday_color`
+    # so the existing behaviour is preserved when a theme does not opt in.
+    excelheader_federal_holiday_fill_color: str | None = None
+    excelheader_company_holiday_fill_color: str | None = None
+    excelheader_weekend_fill_color: str | None = None
+    excelheader_federal_holiday_icon: str | None = None
+    excelheader_company_holiday_icon: str | None = None
+    excelheader_weekend_icon: str | None = None
 
     # Overflow indicator
     overflow_indicator_icon: str = "overflow"
@@ -1022,6 +1046,18 @@ class CalendarConfig:
             raise ValueError(f"weekend_style must be 0–4, got {self.weekend_style}")
         if self.mini_columns < 1:
             raise ValueError(f"mini_columns must be >= 1, got {self.mini_columns}")
+        if self.weekend_days is not None:
+            if not isinstance(self.weekend_days, list) or not all(
+                isinstance(d, int) and 0 <= d <= 6 for d in self.weekend_days
+            ):
+                raise ValueError(
+                    "weekend_days must be a list of ints 0–6 (ISO weekday), "
+                    f"got {self.weekend_days!r}"
+                )
+            if len(set(self.weekend_days)) != len(self.weekend_days):
+                raise ValueError(
+                    f"weekend_days must not contain duplicates, got {self.weekend_days!r}"
+                )
         _valid_placement_tokens = frozenset(
             {"priority", "milestones", "events", "durations", "alphabetical"}
         )
@@ -1061,6 +1097,20 @@ class CalendarConfig:
                 "blockplan_header_label_align_h must be 'left', 'center', or 'right', "
                 f"got {self.blockplan_header_label_align_h!r}"
             )
+
+
+    def get_weekend_days(self) -> frozenset[int]:
+        """Resolve weekend days (ISO weekday 0=Mon..6=Sun).
+
+        If ``weekend_days`` is explicitly set, use it verbatim.  Otherwise
+        derive from ``weekend_style``: style 0 yields an empty set (no
+        weekends), and styles 1–4 yield {5, 6} (Saturday/Sunday).
+        """
+        if self.weekend_days is not None:
+            return frozenset(self.weekend_days)
+        if self.weekend_style == 0:
+            return frozenset()
+        return frozenset({5, 6})
 
 
     # ── Style accessor methods ──────────────────────────────────────────────

@@ -38,6 +38,10 @@ class _DummyDB:
         return False
 
     @staticmethod
+    def is_government_nonworkday(daykey, country=None):
+        return False
+
+    @staticmethod
     def get_all_events_in_range(start, end):
         return []
 
@@ -55,6 +59,10 @@ class _HolidayDB(_DummyDB):
 
     @classmethod
     def is_nonworkday(cls, daykey, country=None):
+        return daykey == cls.HOLIDAY_KEY
+
+    @classmethod
+    def is_government_nonworkday(cls, daykey, country=None):
         return daykey == cls.HOLIDAY_KEY
 
 

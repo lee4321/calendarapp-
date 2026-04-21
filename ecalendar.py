@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.03.25.1"
+__version__ = "26.04.20.0"
 
 import argparse
 import logging
@@ -461,6 +461,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
     excelheader.add_argument(
+        "--weekend-days",
+        type=str,
+        default=None,
+        metavar="DAYS",
+        help=(
+            "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
+            "non-working days for holiday/weekend classification."
+        ),
+    )
+    excelheader.add_argument(
         "--country",
         "-cc",
         type=str,
@@ -680,6 +690,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             ),
         )
         layout_group.add_argument(
+            "--weekend-days",
+            type=str,
+            default=None,
+            metavar="DAYS",
+            help=(
+                "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
+                "non-working days for holiday/weekend classification. "
+                "Defaults to Sat/Sun when weekends are shown."
+            ),
+        )
+        layout_group.add_argument(
             "--margin",
             "-m",
             action="store_true",
@@ -835,6 +856,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "2=half weekends Sunday start, "
             "3=full week Monday start, "
             "4=half weekends Monday start"
+        ),
+    )
+    _tm_layout.add_argument(
+        "--weekend-days",
+        type=str,
+        default=None,
+        metavar="DAYS",
+        help=(
+            "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
+            "non-working days for holiday/weekend classification."
         ),
     )
     _tm_content = text_mini.add_argument_group("Content Filtering")
@@ -1227,6 +1258,9 @@ def _apply_args_to_config(
 
     # Weekend style
     config.weekend_style = getattr(args, "weekends", config.weekend_style)
+    _wd = getattr(args, "weekend_days", None)
+    if _wd:
+        config.weekend_days = _parse_weekend_days(_wd)
 
     # Month display
     if getattr(args, "monthnames", False):
@@ -1695,6 +1729,28 @@ def _resolve_single_palette_ref(value: str, db: "CalendarDB") -> str:
         logger.warning(f"Invalid palette index: {idx_str!r}")
         return value
     return colors[idx]
+
+
+def _parse_weekend_days(raw: str) -> list[int]:
+    """Parse ``--weekend-days`` CLI value ``"5,6"`` → ``[5, 6]``.
+
+    Raises ``SystemExit`` via argparse-style error on malformed input.
+    """
+    try:
+        parts = [p.strip() for p in str(raw).split(",") if p.strip()]
+        days = [int(p) for p in parts]
+    except ValueError as exc:
+        raise SystemExit(
+            f"--weekend-days: expected comma-separated ints, got {raw!r}"
+        ) from exc
+    for d in days:
+        if d < 0 or d > 6:
+            raise SystemExit(
+                f"--weekend-days: each value must be 0–6 (ISO weekday), got {d}"
+            )
+    if len(set(days)) != len(days):
+        raise SystemExit(f"--weekend-days: duplicate values in {raw!r}")
+    return days
 
 
 def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> None:
@@ -2771,6 +2827,9 @@ def run(argv: list[str] | None = None) -> int:
         _eh_db = _open_calendar_db(args.database)
         _eh_config = create_calendar_config()
         _eh_config.weekend_style = args.weekends
+        _eh_wd = getattr(args, "weekend_days", None)
+        if _eh_wd:
+            _eh_config.weekend_days = _parse_weekend_days(_eh_wd)
         _eh_config.country = args.country
         _eh_config.userstart = args.begin
         _eh_config.userend = args.end

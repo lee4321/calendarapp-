@@ -19,11 +19,21 @@ Rule dict keys (all optional except ``icon``):
     priority_min   : int  — inclusive lower bound on priority
     priority_max   : int  — inclusive upper bound on priority
     wbs_prefixes   : list[str] — event.wbs must start with one of these
+
+Day-based rules (evaluated against a non-workday classifier instead of an
+event — see :mod:`shared.day_classifier`):
+    federal_holiday : bool
+    company_holiday : bool
+    weekend         : bool
+    nonworkday      : bool  — any of the three
+A rule that contains any day-based key is treated as a day rule.
 """
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
+
+from shared.day_classifier import day_rule_matches, rule_has_day_keys
 
 if TYPE_CHECKING:
     from shared.data_models import Event
@@ -81,6 +91,7 @@ def compute_icon_band_days(
     events: "list[Event]",
     rules: list[dict[str, Any]],
     visible_days: list[date],
+    classify_fn: Callable[[date], frozenset[str]] | None = None,
 ) -> dict[date, list[tuple[str, str]]]:
     """
     Return ``{day: [(icon_name, color), ...]}`` for every day in
@@ -108,6 +119,27 @@ def compute_icon_band_days(
     day_icons: dict[date, list[tuple[str, str]]] = {d: [] for d in visible_days}
     day_seen: dict[date, set[str]] = {d: set() for d in visible_days}
 
+    # ── Day-based rules: evaluated once per visible day ────────────────────
+    day_rules = [r for r in rules if rule_has_day_keys(r)]
+    if day_rules and classify_fn is not None:
+        for d in visible_days:
+            classes = classify_fn(d)
+            for rule in day_rules:
+                icon_name = str(rule.get("icon") or "").strip()
+                if not icon_name:
+                    continue
+                if not day_rule_matches(classes, rule):
+                    continue
+                if icon_name not in day_seen[d]:
+                    color = str(rule.get("color") or "#333333")
+                    day_icons[d].append((icon_name, color))
+                    day_seen[d].add(icon_name)
+
+    # ── Event-based rules ─────────────────────────────────────────────────
+    event_rules = [r for r in rules if not rule_has_day_keys(r)]
+    if not event_rules:
+        return day_icons
+
     for event in events:
         date_str = (
             (event.datekey or event.start) if event.milestone else event.start
@@ -120,7 +152,7 @@ def compute_icon_band_days(
         if evt_date not in visible_set:
             continue
 
-        for rule in rules:
+        for rule in event_rules:
             icon_name = str(rule.get("icon") or "").strip()
             if not icon_name:
                 continue

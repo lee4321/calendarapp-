@@ -15,7 +15,75 @@ from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.fiscal_renderer import build_fiscal_quarter_segments
+from shared.day_classifier import classify_day, day_rule_matches
 from shared.icon_band import compute_icon_band_days
+
+
+def _nwd_fill_for_classes(
+    classes: frozenset[str],
+    band_fill_rules: list[dict] | None,
+    config: "CalendarConfig",
+) -> str | None:
+    """Resolve a non-workday fill override for a single-day cell.
+
+    Order of precedence:
+
+    1. Band-level ``fill_rules`` — first matching rule wins.
+    2. Config-level defaults — ``federal_holiday`` → ``company_holiday`` →
+       ``weekend``.
+
+    Returns ``None`` if the day has no non-workday classes or no override
+    is configured.
+    """
+    if not classes:
+        return None
+    if band_fill_rules:
+        for rule in band_fill_rules:
+            if not isinstance(rule, dict):
+                continue
+            match = rule.get("match") or {}
+            if not isinstance(match, dict):
+                continue
+            if day_rule_matches(classes, match):
+                color = rule.get("color")
+                if color:
+                    return str(color)
+    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
+        return config.blockplan_federal_holiday_fill_color
+    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
+        return config.blockplan_company_holiday_fill_color
+    if "weekend" in classes and config.blockplan_weekend_fill_color:
+        return config.blockplan_weekend_fill_color
+    return None
+
+
+def _nwd_icon_for_classes(
+    classes: frozenset[str], config: "CalendarConfig"
+) -> tuple[str, str] | None:
+    """Resolve a global non-workday icon for a single-day cell.
+
+    Returns ``(icon_name, color)`` or ``None``.  Priority:
+    federal_holiday → company_holiday → weekend.  The icon colour reuses
+    the matching fill colour (or a default "#333333" when none is set).
+    """
+    if not classes:
+        return None
+    if "federal_holiday" in classes and config.blockplan_federal_holiday_icon:
+        return (
+            config.blockplan_federal_holiday_icon,
+            config.blockplan_federal_holiday_fill_color or "#333333",
+        )
+    if "company_holiday" in classes and config.blockplan_company_holiday_icon:
+        return (
+            config.blockplan_company_holiday_icon,
+            config.blockplan_company_holiday_fill_color or "#333333",
+        )
+    if "weekend" in classes and config.blockplan_weekend_icon:
+        return (
+            config.blockplan_weekend_icon,
+            config.blockplan_weekend_fill_color or "#333333",
+        )
+    return None
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -501,15 +569,27 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top_y: float,
         events: list | None = None,
     ) -> None:
-        # Load icon cache once if any icon bands are present.
-        _band_events: list[Event] = []
-        if events and any(
+        # Any band may want non-workday fills or day-based icon rules; build a
+        # classifier cache once for every visible day and reuse across bands.
+        _day_classes: dict[date, frozenset[str]] = {
+            d: classify_day(d, db, config) for d in visible_days
+        }
+
+        def _classify(d: date) -> frozenset[str]:
+            return _day_classes.get(d, frozenset())
+
+        # Load icon cache once if any icon bands are present (event- or
+        # day-driven icon rules both need rendered icons).
+        _has_icon_band = any(
             str(b.get("unit", "")).strip().lower() == "icon" for b in bands
-        ):
+        )
+        _band_events: list[Event] = []
+        if _has_icon_band:
             self._load_icon_svg_cache(db)
-            _band_events = [
-                Event.from_dict(e) if isinstance(e, dict) else e for e in events
-            ]
+            if events:
+                _band_events = [
+                    Event.from_dict(e) if isinstance(e, dict) else e for e in events
+                ]
 
         _n_vis = len(visible_days)
         _px_per_day = timeline_w / max(1, _n_vis)
@@ -559,7 +639,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 # Icon cells.
                 icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(_band_events, icon_rules, visible_days)
+                day_icon_map = compute_icon_band_days(
+                    _band_events, icon_rules, visible_days, classify_fn=_classify
+                )
                 icon_h = float(band.get("icon_height") or row_h * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 day_cells = [
@@ -661,6 +743,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 css_class="ec-heading",
             )
 
+            band_fill_rules = band.get("fill_rules")
+            if band_fill_rules is not None and not isinstance(band_fill_rules, list):
+                band_fill_rules = None
             segments = self._build_segments(
                 band, start, end, config, visible_days=visible_days, db=db
             )
@@ -709,6 +794,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     seg_fill = _resolver(band_fill) if _resolver else band_fill
                 else:
                     seg_fill = "none"
+                # Non-workday override (single-day date/dow cells only)
+                _is_single_day = (
+                    unit in {"date", "dow"}
+                    and len(group) == 1
+                    and (first_seg.end_exclusive - first_seg.start).days == 1
+                )
+                if _is_single_day:
+                    _nwd_fill = _nwd_fill_for_classes(
+                        _classify(first_seg.start), band_fill_rules, config
+                    )
+                    if _nwd_fill:
+                        seg_fill = _nwd_fill
                 self._draw_rect(
                     seg_x0,
                     y_top,
