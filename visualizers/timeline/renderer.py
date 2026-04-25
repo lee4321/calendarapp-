@@ -146,8 +146,13 @@ class TimelineRenderer(BaseSVGRenderer):
             "TimelineArea", (0.0, 0.0, config.pageX, config.pageY)
         )
 
-        start = arrow.get(config.adjustedstart, "YYYYMMDD")
-        end = arrow.get(config.adjustedend, "YYYYMMDD")
+        # Timeline is a continuous time axis — use the user-typed range so the
+        # axis edges match the requested dates exactly. Fall back to the
+        # weekend-style-adjusted range only when no user range was captured.
+        user_start_str = getattr(config, "userstart", None) or config.adjustedstart
+        user_end_str = getattr(config, "userend", None) or config.adjustedend
+        start = arrow.get(user_start_str, "YYYYMMDD")
+        end = arrow.get(user_end_str, "YYYYMMDD")
         if end < start:
             start, end = end, start
 
@@ -216,11 +221,43 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-axis-line",
         )
 
-        tick_band = getattr(config, "timeline_ticks", None)
-        if tick_band:
-            self._draw_axis_ticks_from_band(
-                config, tick_band, start, end, axis_left, axis_right, axis_y, db
+        tick_bands_cfg = getattr(config, "timeline_ticks", None)
+        if tick_bands_cfg:
+            tick_bands = (
+                [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
             )
+            # Precompute ticks per band so labels can be deduplicated when
+            # bands collide on the same day. The band whose unit covers the
+            # largest number of days (e.g. month > week > day) wins the label.
+            band_ticks: list[list[tuple]] = []
+            band_priorities: list[int] = []
+            for tb in tick_bands:
+                if not isinstance(tb, dict):
+                    band_ticks.append([])
+                    band_priorities.append(-1)
+                    continue
+                band_ticks.append(
+                    self._compute_band_ticks(config, tb, start, end, db)
+                )
+                band_priorities.append(self._tick_unit_priority(tb))
+            winner_idx: dict = {}
+            for idx, ticks in enumerate(band_ticks):
+                prio = band_priorities[idx]
+                for tick_date, _label in ticks:
+                    cur = winner_idx.get(tick_date)
+                    if cur is None or band_priorities[cur] < prio:
+                        winner_idx[tick_date] = idx
+            for idx, tb in enumerate(tick_bands):
+                if not isinstance(tb, dict):
+                    continue
+                allowed = {
+                    d for d, _l in band_ticks[idx] if winner_idx.get(d) == idx
+                }
+                self._draw_axis_ticks_from_band(
+                    config, tb, start, end, axis_left, axis_right, axis_y, db,
+                    ticks=band_ticks[idx],
+                    allowed_label_dates=allowed,
+                )
         else:
             self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
         if config.fiscal_lookup and (
@@ -1584,24 +1621,40 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             row_y += row_h
 
-    def _draw_axis_ticks_from_band(
+    @staticmethod
+    def _tick_unit_priority(band: dict) -> int:
+        """Approximate days-per-segment for a tick band's unit.
+
+        Larger units (month) win the shared-day label over smaller ones (week,
+        day). Used to deduplicate labels when two bands tick on the same date.
+        """
+        unit = str(band.get("unit", "date")).strip().lower()
+        if unit == "interval":
+            try:
+                return max(1, int(band.get("interval_days", 14) or 14))
+            except (TypeError, ValueError):
+                return 14
+        return {
+            "year": 365,
+            "fiscal_quarter": 91,
+            "month": 30,
+            "fiscal_period": 28,
+            "week": 7,
+            "dow": 7,
+            "date": 1,
+            "countdown": 1,
+            "countup": 1,
+        }.get(unit, 1)
+
+    def _compute_band_ticks(
         self,
         config: "CalendarConfig",
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
         db: "CalendarDB",
-    ) -> None:
-        """Draw axis ticks at the start of each segment produced by a band dict.
-
-        Accepts any unit supported by shared.timeband.build_segments
-        (fiscal_quarter, fiscal_period, month, week, interval, date, dow,
-        countdown, countup). Each segment.start gets a tick line; segment.label
-        is rendered above the axis.
-        """
+    ) -> list[tuple[date, str]]:
+        """Return the (date, label) ticks a band would draw."""
         from datetime import timedelta
 
         start_d = start.floor("day").date()
@@ -1622,43 +1675,89 @@ class TimelineRenderer(BaseSVGRenderer):
             ),
         )
         if not segments:
-            return
+            return []
 
-        unit = str(band.get("unit", "")).strip().lower()
         fmt = band.get("label_format") or band.get("date_format")
-        # Units whose format string is an Arrow date pattern (vs. a {placeholder}
-        # template). For these, ticks label the actual tick date (not the period
-        # boundary the segment was born from), and the range endpoints get their
-        # own ticks so the axis start/end always shows the real date.
-        date_formattable = unit in {"month", "date", "dow"}
+        fmt_str = str(fmt) if fmt else None
+        include_endpoints = bool(band.get("include_endpoints", True))
+
+        def _format_label(d: date, fallback: str = "") -> str:
+            if fmt_str:
+                return arrow.get(d).format(fmt_str)
+            return fallback
 
         ticks: list[tuple[date, str]] = []
-        if date_formattable and fmt:
-            fmt_str = str(fmt)
-            seen: set[date] = set()
-            ticks.append((start_d, arrow.get(start_d).format(fmt_str)))
+        seen: set[date] = set()
+        if include_endpoints:
+            ticks.append((start_d, _format_label(start_d)))
             seen.add(start_d)
-            for seg in segments:
-                if seg.start in seen:
-                    continue
-                ticks.append((seg.start, arrow.get(seg.start).format(fmt_str)))
-                seen.add(seg.start)
-            if end_d not in seen:
-                ticks.append((end_d, arrow.get(end_d).format(fmt_str)))
-        else:
-            for seg in segments:
-                ticks.append((seg.start, seg.label))
+        for seg in segments:
+            if seg.start in seen:
+                continue
+            ticks.append((seg.start, _format_label(seg.start, fallback=seg.label)))
+            seen.add(seg.start)
+        if include_endpoints and end_d not in seen:
+            ticks.append((end_d, _format_label(end_d)))
+        return ticks
 
-        tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
-        label_size = float(band.get("font_size") or label_size)
+    def _draw_axis_ticks_from_band(
+        self,
+        config: "CalendarConfig",
+        band: dict,
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_left: float,
+        axis_right: float,
+        axis_y: float,
+        db: "CalendarDB",
+        ticks: list[tuple[date, str]] | None = None,
+        allowed_label_dates: set[date] | None = None,
+    ) -> None:
+        """Draw axis ticks at the start of each segment produced by a band dict.
+
+        Accepts any unit supported by shared.timeband.build_segments
+        (fiscal_quarter, fiscal_period, month, week, interval, date, dow,
+        countdown, countup). Each segment.start gets a tick line; segment.label
+        is rendered above the axis.
+
+        Tick label_format is always an Arrow date format applied to each
+        tick's own date — independent of the band's unit. This lets any
+        supported unit produce date-style tick labels like "MMM D" or
+        "MMMM DD". When no label_format/date_format is given, fall back to the
+        segment's generated label.
+
+        When ``allowed_label_dates`` is provided, only ticks whose date is in
+        that set draw a label; the tick line is still drawn. The caller uses
+        this to suppress duplicate labels when multiple bands tick on the
+        same day.
+        """
+        if ticks is None:
+            ticks = self._compute_band_ticks(config, band, start, end, db)
+        if not ticks:
+            return
+
+        # Tick decoration: per-band overrides.
+        _tick_style = config.get_line_style("ec-axis-tick")
+        default_tick_h = max(6.0, config.timeline_axis_width * 2.5)
+        tick_h = float(band.get("tick_length") or default_tick_h)
+        tick_width = float(band.get("tick_width") or 1.0)
+        tick_opacity = float(band.get("tick_opacity") if band.get("tick_opacity") is not None else 0.35)
+        tick_color = str(band.get("tick_color") or _tick_style.color)
+        tick_dash = band.get("tick_dasharray") or _tick_style.dasharray or None
+
+        # Label styling.
+        default_label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        label_size = float(band.get("font_size") or default_label_size)
         draw_labels = bool(band.get("show_labels", True)) and len(ticks) <= int(
             band.get("max_label_count", 60)
         )
-        _tick_style = config.get_line_style("ec-axis-tick")
-        tick_color = str(band.get("tick_color") or _tick_style.color)
         label_color = str(band.get("label_color") or band.get("font_color") or _tick_style.color)
+        label_opacity = float(
+            band.get("label_opacity") if band.get("label_opacity") is not None else 0.8
+        )
         font_name = str(band.get("font") or config.timeline_date_font)
+        label_offset = band.get("label_offset_y")
+        label_offset_y = float(label_offset) if label_offset is not None else (tick_h + label_size * 1.5)
 
         last_idx = len(ticks) - 1
         for idx, (tick_date, tick_label) in enumerate(ticks):
@@ -1670,12 +1769,16 @@ class TimelineRenderer(BaseSVGRenderer):
                 x,
                 axis_y + tick_h,
                 stroke=tick_color,
-                stroke_width=1.0,
-                stroke_opacity=0.35,
-                stroke_dasharray=_tick_style.dasharray or None,
+                stroke_width=tick_width,
+                stroke_opacity=tick_opacity,
+                stroke_dasharray=tick_dash,
                 css_class="ec-axis-tick",
             )
-            if draw_labels and tick_label:
+            if (
+                draw_labels
+                and tick_label
+                and (allowed_label_dates is None or tick_date in allowed_label_dates)
+            ):
                 if idx == 0:
                     label_anchor = "start"
                 elif idx == last_idx:
@@ -1684,12 +1787,12 @@ class TimelineRenderer(BaseSVGRenderer):
                     label_anchor = "middle"
                 self._draw_text(
                     x,
-                    axis_y - (tick_h + label_size * 1.5),
+                    axis_y - label_offset_y,
                     tick_label,
                     font_name,
                     label_size,
                     fill=label_color,
-                    fill_opacity=0.8,
+                    fill_opacity=label_opacity,
                     anchor=label_anchor,
                     css_class="ec-label",
                 )

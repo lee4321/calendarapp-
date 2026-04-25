@@ -622,8 +622,11 @@ class CalendarConfig:
 
     # Tick mark frequency along the timeline axis. Same dict shape as a single
     # entry in *_time_bands (any unit accepted by shared.timeband.build_segments).
+    # Accepts a single dict or a list of dicts — every entry draws onto the same
+    # timeline axis, so callers can stack a coarse band (e.g. months with bold
+    # ticks and labels) over a finer band (e.g. weeks with thin unlabelled ticks).
     # None = legacy month-start ticks.
-    timeline_ticks: dict | None = None
+    timeline_ticks: dict | list | None = None
 
     # Continuation icons on duration bars whose event extends past the visible
     # date range. Drawn flush with the clipped end of the bar.

@@ -378,13 +378,26 @@ timeline:
 #       font_color: "black"
 
   # ── Axis tick frequency ──────────────────────────────────────────────────
-  # Accepts the same fields as a single time_bands entry; any unit supported
-  # by shared.timeband.build_segments works (fiscal_quarter, fiscal_period,
-  # month, week, interval, date, dow, countdown, countup).
+  # Accepts a single tick band (dict) or a list of bands. Every band draws on
+  # the same axis, so callers can stack a coarse labelled band over a finer
+  # unlabelled one. Each entry takes the same fields as a time_bands entry,
+  # plus tick decoration: tick_width, tick_color, tick_opacity, tick_length,
+  # tick_dasharray, label_color, label_opacity, label_offset_y,
+  # include_endpoints (default true for date-formattable units).
   ticks:
-    unit: "month"
-    label_format: "MMMM DD"
-    show_labels: true
+    - unit: "month"
+      label_format: "MMMM DD"
+      show_labels: true
+      tick_width: 1.5
+      tick_opacity: 0.7
+      tick_length: 8.0
+    - unit: "week"
+      show_labels: true
+      label_format: "DD"
+      tick_width: 0.5
+      tick_opacity: 0.25
+      tick_length: 4.0
+      include_endpoints: false
 
   # ── Continuation icons for clipped duration bars ─────────────────────────
   show_continuation_icon: true
