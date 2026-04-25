@@ -9,11 +9,13 @@ Supported ``unit`` values:
   - ``fiscal_quarter`` — labelled by ``label_format`` (default ``FY{fy} Q{q}``).
   - ``fiscal_period``  — labelled by the fiscal-period engine.
   - ``month``          — labelled by ``date_format`` (default ``MMM``).
+    ``label_format`` is accepted as an alias.
   - ``week``           — labelled by ``label_format`` with placeholders
     ``{n}`` (sequential 1-based), ``{week}`` (ISO week), ``{start}``/``{end}``
     (M/D date strings).
   - ``interval``       — labelled by ``"{prefix}{index}"``.
-  - ``date`` / ``dow`` — one segment per visible day; ``date_format``.
+  - ``date`` / ``dow`` — one segment per visible day; ``date_format``
+    (``label_format`` accepted as an alias).
   - ``countdown`` / ``countup`` — per-day count to/from a reference date.
 """
 
@@ -90,7 +92,7 @@ def build_segments(
 
     if unit == "month":
         cursor = date(start.year, start.month, 1)
-        fmt = str(band.get("date_format", "MMM"))
+        fmt = str(band.get("date_format") or band.get("label_format") or "MMM")
         while cursor <= end:
             next_cursor = _shift_months(cursor, 1)
             if next_cursor > start:
@@ -174,7 +176,11 @@ def build_segments(
         return segments
 
     if unit in {"date", "dow"}:
-        fmt = str(band.get("date_format", "D" if unit == "date" else "ddd"))
+        fmt = str(
+            band.get("date_format")
+            or band.get("label_format")
+            or ("D" if unit == "date" else "ddd")
+        )
         if visible_days is not None:
             iter_days = [d for d in visible_days if start <= d <= end]
         else:

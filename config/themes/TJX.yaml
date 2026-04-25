@@ -382,8 +382,8 @@ timeline:
   # by shared.timeband.build_segments works (fiscal_quarter, fiscal_period,
   # month, week, interval, date, dow, countdown, countup).
   ticks:
-    unit: "week"
-    label_format: "{start}"
+    unit: "month"
+    label_format: "MMMM DD"
     show_labels: true
 
   # ── Continuation icons for clipped duration bars ─────────────────────────

@@ -1624,10 +1624,35 @@ class TimelineRenderer(BaseSVGRenderer):
         if not segments:
             return
 
+        unit = str(band.get("unit", "")).strip().lower()
+        fmt = band.get("label_format") or band.get("date_format")
+        # Units whose format string is an Arrow date pattern (vs. a {placeholder}
+        # template). For these, ticks label the actual tick date (not the period
+        # boundary the segment was born from), and the range endpoints get their
+        # own ticks so the axis start/end always shows the real date.
+        date_formattable = unit in {"month", "date", "dow"}
+
+        ticks: list[tuple[date, str]] = []
+        if date_formattable and fmt:
+            fmt_str = str(fmt)
+            seen: set[date] = set()
+            ticks.append((start_d, arrow.get(start_d).format(fmt_str)))
+            seen.add(start_d)
+            for seg in segments:
+                if seg.start in seen:
+                    continue
+                ticks.append((seg.start, arrow.get(seg.start).format(fmt_str)))
+                seen.add(seg.start)
+            if end_d not in seen:
+                ticks.append((end_d, arrow.get(end_d).format(fmt_str)))
+        else:
+            for seg in segments:
+                ticks.append((seg.start, seg.label))
+
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
         label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
         label_size = float(band.get("font_size") or label_size)
-        draw_labels = bool(band.get("show_labels", True)) and len(segments) <= int(
+        draw_labels = bool(band.get("show_labels", True)) and len(ticks) <= int(
             band.get("max_label_count", 60)
         )
         _tick_style = config.get_line_style("ec-axis-tick")
@@ -1635,9 +1660,10 @@ class TimelineRenderer(BaseSVGRenderer):
         label_color = str(band.get("label_color") or band.get("font_color") or _tick_style.color)
         font_name = str(band.get("font") or config.timeline_date_font)
 
-        for seg in segments:
-            seg_start_arrow = arrow.Arrow(seg.start.year, seg.start.month, seg.start.day)
-            x = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
+        last_idx = len(ticks) - 1
+        for idx, (tick_date, tick_label) in enumerate(ticks):
+            tick_arrow = arrow.Arrow(tick_date.year, tick_date.month, tick_date.day)
+            x = self._x_for_day(tick_arrow, start, end, axis_left, axis_right)
             self._draw_line(
                 x,
                 axis_y - tick_h,
@@ -1649,16 +1675,22 @@ class TimelineRenderer(BaseSVGRenderer):
                 stroke_dasharray=_tick_style.dasharray or None,
                 css_class="ec-axis-tick",
             )
-            if draw_labels and seg.label:
+            if draw_labels and tick_label:
+                if idx == 0:
+                    label_anchor = "start"
+                elif idx == last_idx:
+                    label_anchor = "end"
+                else:
+                    label_anchor = "middle"
                 self._draw_text(
                     x,
                     axis_y - (tick_h + label_size * 1.5),
-                    seg.label,
+                    tick_label,
                     font_name,
                     label_size,
                     fill=label_color,
                     fill_opacity=0.8,
-                    anchor="middle",
+                    anchor=label_anchor,
                     css_class="ec-label",
                 )
 
