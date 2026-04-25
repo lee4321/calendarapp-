@@ -540,6 +540,7 @@ def test_timeline_duration_uses_configured_name_and_notes_font_sizes(tmp_path):
     config = _base_config(tmp_path / "timeline_duration_sizes.svg")
     config.timeline_name_text_font_size = 13.0
     config.timeline_notes_text_font_size = 9.0
+    config.include_notes = True
     renderer = _CaptureTimelineRenderer()
 
     event = Event(

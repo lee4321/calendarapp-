@@ -184,7 +184,7 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - A day number is bold when the day contains a milestone, or when any event on that day has `Priority <= 1`.
 - A day number changes color when one of these applies: the day is from an adjacent month, the day is a holiday, or an event's `Resource_Group` maps to a configured resource-group color.
 - Adjacent-month day cells can be shown or hidden with `mini_calendar.show_adjacent` (default: `true`) or `--mini-no-adjacent`.
-- Day cells can also receive SVG pattern decorations from `mini_calendar.day_box.hash_rules`, using the same condition grammar as weekly `day_box.hash_rules`.
+- Day cells can also receive SVG pattern decorations from top-level `style_rules` entries with `apply_to: day_box` (the mini renderer reads the same `style_rules` list as weekly).
 - If none of those overrides apply, the day number uses the default mini-calendar day color from the active theme/config.
 - `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
 
@@ -280,7 +280,7 @@ In weekly, day boxes are drawn first, then events and durations are placed into 
 - Day-box background color is chosen from month colors by default, from fiscal-period colors when fiscal colors are enabled, or from holiday/company nonworkday colors when the date is marked as a special day. `--shade` overrides that fill for the current day only.
 - Holiday titles and holiday icons are drawn on the same baseline as the day number when a holiday title exists for that date.
 - Week numbers appear only on week-start days when enabled. Fiscal period labels appear only when fiscal labeling is enabled and the date qualifies as a fiscal boundary according to the fiscal lookup.
-- Day-box hash/pattern decorations come from `theme_weekly_hash_rules`. Rules can match on milestone, nonworkday, holiday presence, event names, duration names, notes, WBS, completion, resource names, and resource group. If no rule matches, `theme_weekly_hash_pattern` is used as the fallback pattern.
+- Day-box pattern and color decorations come from top-level `style_rules` entries with `apply_to: day_box`. Rules can match on day context (federal/company holiday, nonworkday, weekend, date) and event criteria (task name, notes, WBS, percent complete, resource group/names, priority, milestone, rollup, event type). Rules layer additively in declaration order. If no rule supplies a pattern, `theme_weekly_hash_pattern` is used as the fallback pattern. See Complex Structures Reference for the full syntax.
 - Single-day event text and event icons use the event's resource-group color when that group maps to a configured resource-group color; otherwise they use the default weekly event colors.
 - Item placement order is controlled by `item_placement_order`. Type tokens (`milestones`, `events`, `durations`) determine grouping order, and `priority` or `alphabetical` determine ordering within each group.
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
@@ -312,7 +312,12 @@ line_styles:       # Named line style tokens
 icon_styles:       # Named icon style tokens
 axis:              # Shared axis definition
 element_styles:    # Flat map: CSS class name -> style token binding
+
+style_rules:       # Conditional visual styling (day_box / event / duration)
+swimlane_rules:    # Blockplan lane routing (first-match-wins)
 ```
+
+`style_rules` and `swimlane_rules` are top-level keys that replace the legacy per-visualizer `weekly.day_box.hash_rules`, `mini_calendar.day_box.hash_rules`, and `blockplan.swimlanes[].match` blocks. See [Complex Structures Reference](#complex-structures-reference) for full syntax.
 
 #### Text Styles
 
@@ -545,7 +550,7 @@ Valid top-level theme sections: `theme`, `base`, `header`, `footer`, `weekly`, `
 
 #### Available SVG Patterns
 
-Use these names with `weekly.day_box.hash_pattern`, `weekly.day_box.hash_rules[].pattern`, and `mini_calendar.day_box.hash_rules[].pattern`. Run `ecalendar.py patterns` for the full list (35 total).
+Use these names with `weekly.day_box.hash_pattern` and with `style_rules[].style.pattern` (see Complex Structures Reference). Run `ecalendar.py patterns` for the full list (35 total).
 
 `diagonal-stripes`, `horizontal-stripes`, `vertical-stripes`, `cross-hatch`, `brick-wall`, `circuit-board`, `polka-dots`, `wiggle`, `bamboo`, `temple`, `hexagons`, `triangles`, `wavy-lines`, `zigzag`, `dots-grid`
 
@@ -659,7 +664,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `overflow_indicator_color` | `weekly.overflow.color` | `str` | `'red'` | color |
 | `overflow_indicator_icon` | `weekly.overflow.icon` | `str` | `'overflow'` | icon |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
-| `theme_weekly_hash_rules` | `weekly.day_box.hash_rules` | `list[dict[str, Any]] | None` | `None` | hash rules |
+| *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
 | `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |
 | `week_number_font_color` | `weekly.week_numbers.font_color` | `str` | `'grey'` | font color |
 | `week_number_font_size` | `weekly.week_numbers.size_rule` | `float | None` | `None` | Per-papersize week-number font size rule |
@@ -680,7 +685,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_day_color` | `mini_calendar.day_color` | `str` | `'black'` | Default day number color |
 | `mini_day_number_glyphs` | `mini_calendar.day_number_glyphs` | `list[str] \| None` | `None` | Optional explicit glyphs for day numbers 1-31 in SVG mini calendars |
 | `mini_day_number_digits` | `mini_calendar.day_number_digits` | `list[str] \| None` | `None` | Optional digit glyph substitutions for SVG mini day numbers |
-| `theme_mini_day_box_hash_rules` | `mini_calendar.day_box.hash_rules` | `list[dict[str, Any]] \| None` | `None` | Weekly-style SVG pattern rules for mini day cells |
+| *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `mini_calendar.day_box.hash_rules`. Mini renderer reads the same top-level `style_rules` filtered by `apply_to: day_box`. |
 | `mini_details_*_font_size` | `mini_details.size_rule` | `` | `` | Per-papersize mini-details font sizes |
 | `mini_details_column_widths` | `mini_details.column_widths` | `list[float]` | `field(default_factory=lambda: [0.16, 0.52, 0.1, 0.1, 0.12])` | column widths |
 | `mini_details_header_color` | `mini_details.header_color` | `str` | `'grey'` | header color |
@@ -867,7 +872,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_marker_radius` | `blockplan.marker_radius` | `float` | `2.0` | marker radius |
 | `blockplan_palette` | `blockplan.palette` | `list[str]` | `field(default_factory=lambda: ['lightskyblue', 'gold', 'tomato', 'springgreen...` | palette |
 | `blockplan_show_unmatched_lane` | `blockplan.show_unmatched_lane` | `bool` | `True` | show unmatched lane |
-| `blockplan_swimlanes` | `blockplan.swimlanes` | `list[dict[str, Any]]` | `field(default_factory=lambda: [{'name': 'Engineering', 'match': {'resource_gr...` | swimlanes |
+| `blockplan_swimlanes` | `blockplan.swimlanes` | `list[dict[str, Any]]` | see default | Lane visual definitions only. Routing is handled by top-level `swimlane_rules`. |
+| *(new)* | `swimlane_rules` (top-level) | `list[dict]` | `[]` | Blockplan lane routing: `select:` + `apply_to: "lane name"`. First match wins. See Complex Structures Reference. |
 | `blockplan_time_bands` | `blockplan.time_bands` | `list[dict[str, Any]]` | `field(default_factory=lambda: [{'label': 'Fiscal Quarter', 'unit': 'fiscal_qu...` | time bands |
 | `blockplan_top_time_bands` | `blockplan.top_time_bands` | `list[dict]` | see default | time-band rows rendered above swimlanes; see Complex Structures Reference |
 | `blockplan_timeband_fill_color` | `blockplan.timeband_fill_color` | `str` | `'none'` | timeband fill color |
@@ -916,72 +922,286 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 ## Complex Structures Reference
 
-### `hash_rules` — Conditional SVG Pattern Rules
+### `style_rules` — Unified Visual Styling Rules
 
-Used in `weekly.day_box.hash_rules` and `mini_calendar.day_box.hash_rules`. Each rule applies the first match wins logic.
+Top-level theme key that replaces the per-visualizer `weekly.day_box.hash_rules` and `mini_calendar.day_box.hash_rules` lists. Each rule has three parts:
 
-```yaml
-hash_rules:
-  - pattern: "diagonal-stripes"   # SVG pattern name from DB
-    color:   "steelblue"          # colorize pattern with this color
-    opacity: 0.10                 # pattern overlay opacity (0–1)
-    when:                         # all conditions must be true
-      duration_names: ["Sprint"]  # substring match on duration name
-```
+- **`select:`** — what to match (day context and/or event criteria)
+- **`apply_to:`** — which visual element type(s) to style: `day_box`, `event`, `duration`, or `all` (or a list mixing them)
+- **`style:`** — visual properties to apply (fill, pattern, stroke, text, icon)
 
-#### `when` Conditions
-
-| Condition | Type | Description |
-|---|---|---|
-| `company_holiday` | `bool` | day is a company non-workday |
-| `duration_names` | `list[str]` | substring match on duration name |
-| `event_names` | `list[str]` | substring match on event name |
-| `federal_holiday` | `bool` | day is a federal holiday |
-| `milestone` | `bool` | day has at least one milestone event |
-| `nonworkday` | `bool` | day is a non-work day (any type) |
-| `notes` | `list[str]` | substring match on notes |
-| `percent_complete` | `int` | event/duration completion % (e.g. `100`) |
-| `resource_group` | `list[str]` | case-insensitive resource group match |
-| `resource_names` | `list[str]` | substring match on resource name |
-| `wbs` | `list[str]` | WBS prefix match |
-
----
-
-### `swimlanes` — Blockplan Lane Definitions
-
-Used in `blockplan.swimlanes`. Each entry defines one horizontal lane.
+Rules are evaluated **in declaration order**. Later rules **layer on top of** earlier ones — a `None` field in a later rule leaves the earlier value intact, so rules compose additively (e.g., a federal holiday rule lays down a red pattern; a "Sprint" rule on the same day adds a steelblue overlay).
 
 ```yaml
-swimlanes:
-  - name: "Engineering"
-    match:
-      resource_groups: ["Engineering", "Dev"]
-    fill_color:          null    # heading cell fill; null = lane_heading_fill_color
-    label_color:         null    # label text color; null = lane_label_color
-    timeline_fill_color: "none"  # content area background tint
-    split_ratio:         0.5     # events upper half, durations lower half
-    label_align_h:       "center"
-    label_align_v:       "middle"
-    label_rotation:      0
+style_rules:
+
+  - name: "Federal Holidays"
+    select:
+      federal_holiday: true
+    apply_to: [day_box, event, duration]
+    style:
+      fill_color: tomato
+      fill_opacity: 0.10
+      pattern: diagonal-stripes
+      pattern_color: tomato
+      pattern_opacity: 0.12
+
+  - name: "Sprint Durations"
+    select:
+      task_name: ["Sprint"]
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: steelblue
+      stroke_color: white
+      stroke_width: 1.0
+      font_color: white
+
+  - name: "Code Freeze Window"
+    select:
+      date: "20190301-20190321"
+    apply_to: [day_box, event, duration]
+    style:
+      fill_color: steelblue
+      fill_opacity: 0.15
+      pattern: diagonal-stripes
+      pattern_color: steelblue
+      pattern_opacity: 0.10
+
+  - name: "Priority 1"
+    select:
+      priority: 1
+    apply_to: [event, duration]
+    style:
+      stroke_color: crimson
+      stroke_width: 1.5
+      text:
+        event_name:
+          font: OfficinaSans-Bold
+          font_color: crimson
+        duration_name:
+          font: OfficinaSans-Bold
+          font_color: white
 ```
 
-#### Swimlane `match` Criteria (all are AND-ed together)
+#### `select:` — Day/Context Criteria
+
+Derived from the date and DB. Use these on `apply_to: day_box` rules and as filters on event-targeted rules.
 
 | Key | Type | Description |
 |---|---|---|
-| `duration_names_contains` | `list[str]` | substring match on duration name |
-| `event_type` | `str` | `event` \| `duration` \| `any` |
-| `groups` | `list[str]` | alias for `resource_groups` |
-| `milestone` | `bool` | match milestone flag |
-| `notes_contains` | `list[str]` | substring match on notes |
-| `priority` | `int \| list` | exact priority value(s) |
-| `priority_max` | `int` | maximum priority (inclusive) |
-| `priority_min` | `int` | minimum priority (inclusive) |
-| `resource_groups` | `list[str]` | case-insensitive resource group match |
-| `resource_names_contains` | `list[str]` | substring match on resource names |
-| `rollup` | `bool` | match rollup flag |
-| `task_contains` | `list[str]` | substring match on task name |
-| `wbs_prefixes` | `list[str]` | WBS prefix match |
+| `federal_holiday` | `bool` | Government holiday with nonworkday=1 |
+| `company_holiday` | `bool` | Company special day with nonworkday=1 |
+| `nonworkday` | `bool` | Any of the above, or weekend |
+| `workday` | `bool` | Not nonworkday |
+| `weekend` | `bool` | Falls on config weekend days |
+| `date` | `str \| list` | Single `YYYYMMDD`, closed range `YYYYMMDD-YYYYMMDD`, or list of dates |
+
+#### `select:` — Event Criteria
+
+Matched against `Event` fields on the day/event being styled. All specified criteria must match (AND logic) unless `min_match:` is set.
+
+| Key | Type | Match style |
+|---|---|---|
+| `task_name` | `str \| list` | Substring |
+| `notes` | `str \| list` | Substring |
+| `resource_group` | `str \| list` | Case-insensitive exact |
+| `resource_names` | `str \| list` | Substring (comma-split field) |
+| `wbs` | `str` | `WBSFilter` expression: comma-separated tokens; `!` excludes; `*` matches one segment, `**` matches any remaining |
+| `priority` | `int \| list` | Exact |
+| `priority_min` / `priority_max` | `int` | Inclusive range |
+| `percent_complete` | `int \| {min, max}` | Exact or range |
+| `milestone` | `bool` | Flag field |
+| `rollup` | `bool` | Flag field |
+| `event_type` | `event \| duration \| any` | Point vs span |
+| `color` | `str` | Exact match on `Event.color` |
+| `icon` | `str` | Exact match on `Event.icon` |
+| `date_overlap` | `bool` | When `true`, `date` matches durations whose span overlaps the date/range (default: matches start date only) |
+
+#### `select:` — Aggregation Modifiers (for `apply_to: day_box`)
+
+Control how event criteria are tested across all events on a day.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `min_match` | `1` | Min criteria that must be true |
+| `any_event` | `true` | Passes if *any* event on the day matches event criteria |
+| `all_events` | `false` | Passes only if *all* events match |
+
+#### `apply_to:` — Style Targets
+
+| Value | What gets styled |
+|---|---|
+| `day_box` | Weekly day cell background + pattern; mini calendar cell |
+| `event` | Point event icon, name text, date text |
+| `duration` | Duration bar fill, stroke, label text |
+| `all` | All three of the above |
+
+A single rule can specify a list (e.g., `apply_to: [day_box, duration]`) to style multiple target types in one pass.
+
+#### `style:` — Fill and Background
+
+| Property | Applies to | Notes |
+|---|---|---|
+| `fill_color` | day_box, event, duration | Background / bar fill |
+| `fill_opacity` | day_box, event, duration | |
+| `pattern` | day_box | SVG pattern name from DB |
+| `pattern_color` | day_box | Colorizes the pattern |
+| `pattern_opacity` | day_box | |
+
+#### `style:` — Stroke and Border
+
+| Property | Applies to | Notes |
+|---|---|---|
+| `stroke_color` | day_box, event, duration | Border / outline color |
+| `stroke_width` | day_box, event, duration | |
+| `stroke_opacity` | day_box, event, duration | |
+| `stroke_dasharray` | day_box, event, duration | SVG dash pattern, e.g. `"4 2"` |
+
+#### `style:` — Text Shorthand
+
+Flat keys apply to **all** text elements rendered for the matched target.
+
+| Property | Notes |
+|---|---|
+| `font` | Font name — applied to all sub-elements |
+| `font_size` | Point size — applied to all sub-elements |
+| `font_color` | Color — applied to all sub-elements |
+| `font_opacity` | Opacity — applied to all sub-elements |
+
+#### `style:` — Per-Element Text (`text:` block)
+
+A nested `text:` block provides per-element control. Any key omitted inherits from the shorthand or theme default.
+
+```yaml
+style:
+  text:
+    event_name:           # ec-event-name  — point event title
+      font: OfficinaSans-Bold
+      font_size: 10
+      font_color: crimson
+    event_notes:          # ec-event-notes — point event notes line
+      font: OfficinaSans-BookItalic
+      font_color: grey
+    event_date:           # ec-event-date  — point event date label
+      font_size: 7
+      font_color: darkgrey
+    duration_name:        # duration title in bar or label column
+      font: OfficinaSans-Bold
+      font_color: white
+    duration_notes:       # duration notes line
+      font_color: "#DDDDDD"
+    duration_start_date:  # start date printed on or beside duration bar
+      font_size: 8
+      font_color: gold
+    duration_end_date:    # end date printed on or beside duration bar
+      font_size: 8
+      font_color: gold
+    day_number:           # ec-day-number  — large digit in day box corner
+      font_size: 11
+      font_color: "#FF7800"
+    week_number:          # ec-week-number — week label beside row
+      font_color: yellow
+    month_indicator:      # ec-month-title — abbreviated month on 1st of month
+      font_color: navy
+      font_size: 8
+    holiday_title:        # ec-holiday-title — special day / holiday name
+      font_color: white
+      font_size: 8
+```
+
+##### Text Element Reference
+
+| `text:` key | CSS class | Where rendered |
+|---|---|---|
+| `event_name` | `ec-event-name` | Point event title (weekly, blockplan, timeline) |
+| `event_notes` | `ec-event-notes` | Point event notes line |
+| `event_date` | `ec-event-date` | Point event date label |
+| `duration_name` | `ec-event-name` | Duration bar / lane label title |
+| `duration_notes` | `ec-event-notes` | Duration notes line |
+| `duration_start_date` | `ec-duration-date` | Start date beside duration bar |
+| `duration_end_date` | `ec-duration-date` | End date beside duration bar |
+| `day_number` | `ec-day-number` | Large digit in weekly / mini day box |
+| `week_number` | `ec-week-number` | Week number label on row left edge |
+| `month_indicator` | `ec-month-title` | Abbreviated month on first day of month |
+| `holiday_title` | `ec-holiday-title` | Holiday / special day name in day box |
+
+#### `style:` — Icons
+
+| Property | Applies to | Notes |
+|---|---|---|
+| `icon` | event | Override the event icon glyph |
+| `icon_color` | event | Icon color |
+
+#### Date Range Matching
+
+The `date` criterion is evaluated against the **day being rendered** for `apply_to: day_box`, and against the **event's start date** for `apply_to: event` / `duration`. Use `date_overlap: true` to match durations that overlap a date range rather than start within it.
+
+| Format | Example | Meaning |
+|---|---|---|
+| Single date | `"20190321"` | Exactly that calendar day |
+| Closed range | `"20190301-20190321"` | Start and end inclusive |
+| List | `["20190101", "20190704", "20191225"]` | Any of the listed dates |
+
+---
+
+### `swimlane_rules` — Blockplan Lane Routing
+
+Top-level theme key controlling **which lane** each blockplan event/duration is placed into. Routing is separate from styling — `style_rules` controls how events look; `swimlane_rules` controls where they go. Lane visual properties (colors, label alignment, split ratio) remain in `blockplan.swimlanes`.
+
+`swimlane_rules` shares the same `select:` syntax as `style_rules`. The `apply_to:` field is a **lane name string** matching the `name` field of a `blockplan.swimlanes` entry — not a list. Rules are evaluated **in declaration order** and **first match wins**. An empty `select: {}` matches everything and is therefore only useful as a final catch-all.
+
+```yaml
+swimlane_rules:
+
+  - name: "Route Xstore"
+    select:
+      resource_group: ["Xstore"]
+    apply_to: "Xstore\nConversions"
+
+  - name: "Route Triversity"
+    select:
+      resource_group: ["Triversity"]
+    apply_to: "Triversity\nPOSReady7"
+
+  - name: "High-priority milestones to top lane"
+    select:
+      milestone: true
+      priority: 1
+    apply_to: "Key Milestones"
+
+  - name: "Unmatched catch-all"
+    select: {}
+    apply_to: "Other"
+```
+
+Events that match no rule and have no catch-all are placed into the unmatched lane if `blockplan.show_unmatched_lane: true`, or dropped from the blockplan otherwise.
+
+---
+
+### `swimlanes` — Blockplan Lane Visual Definitions
+
+Used in `blockplan.swimlanes`. Each entry defines the **visual properties** of one horizontal lane. Routing is handled by `swimlane_rules` above.
+
+```yaml
+blockplan:
+  swimlanes:
+    - name: "Xstore\nConversions"     # must match apply_to value in swimlane_rules
+      fill_color:          null       # heading cell fill; null = lane_heading_fill_color
+      label_color:         red        # label text color; null = lane_label_color
+      timeline_fill_color: "none"     # content area background tint
+      split_ratio:         0.5        # events upper half, durations lower half
+      label_align_h:       "center"   # left | center | right
+      label_align_v:       "middle"   # top | middle | bottom
+      label_rotation:      0          # degrees clockwise; -90 = bottom-to-top
+    - name: "Key Milestones"
+      fill_color: gold
+      label_color: black
+      split_ratio: 0.0                # 0.0 or 1.0 removes the events/durations divider
+    - name: "Other"
+      fill_color: "#F0F0F0"
+      label_color: dimgrey
+```
 
 ---
 

@@ -12,7 +12,7 @@ theme:
 text_styles:
   heading:
     font: "OfficinaSans-Bold"
-    size: 12
+    size: 14
     color: "grey"
     size_rules:
       - font_size: 10
@@ -25,27 +25,27 @@ text_styles:
     color: "white"
   body_secondary:
     font: "OfficinaSans-BookItalic"
-    size: 10
+    size: 12
     color: "grey"
   label:
     font: "OfficinaSans-Book"
-    size: 10
+    size: 12
     color: "grey"
   label_bold:
     font: "OfficinaSans-Bold"
-    size: 10
+    size: 12
     color: "yellow"
   caption:
     font: "OfficinaSans-Bold"
-    size: 10
+    size: 12
     color: "grey"
   day_number:
     font: "OfficinaSans-Bold"
-    size: 11
+    size: 12
     color: "#E5E4E2"
   month_title:
     font: "OfficinaSans-Bold"
-    size: 10
+    size: 12
     color: "navy"
 
 box_styles:
@@ -57,8 +57,8 @@ box_styles:
     fill: "#F8F8FF"
     fill_opacity: 0.25
     stroke: "none"
-    stroke_width: 0.1
-    stroke_opacity: 0.25
+    stroke_width: 0.5
+    stroke_opacity: 0.5
   header:
     fill: "none"
     stroke: "none"
@@ -314,8 +314,11 @@ timeline:
   marker_radius: 4.0
   icon_size: 8
   callout_offset_y: 30.0
+  # Extra clearance between the axis and event callouts. Bump this when tick
+  # labels collide with event date/name text above the timeline.
+  event_axis_padding: 24.0
   duration_offset_y: 30
-  duration_lane_gap_y: 8.0
+  duration_lane_gap_y: 18.0
   label_stroke_width: 1.0
   label_fill_opacity: 0.25
   duration_bar_fill_opacity: 0.75
@@ -329,30 +332,82 @@ timeline:
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
   name_text:
-    font_name: "ATGraphite-LightNarrow"
+    font_name: "OfficinaSans-BookItalic"
     font_color: "deepskyblue"
   notes_text:
-    font_name: "ATGraphite-LightNarrow"
+    font_name: "OfficinaSans-BookItalic"
     font_color: "deepskyblue"
   date:
-    font_family: "ATGraphite-LightNarrow"
-    font_color: "deepskyblue"
+    font_family: "OfficinaSans-BookItalic"
+    font_color: "grey"
+
+  # ── Timebands ────────────────────────────────────────────────────────────
+  # Explicit timeband declarations for the timeline visualization. Bands are
+  # drawn above (top_time_bands) and below (bottom_time_bands) the axis using
+  # the same _build_segments engine as blockplan / compactplan / excelheader.
+  # Supported units: fiscal_quarter, fiscal_period, month, week, interval,
+  # date, dow, countdown, countup.
+#   top_time_bands:
+#     - label: "Fiscal Quarter"
+#       unit: "fiscal_quarter"
+#       label_format: "Q{q}-FY{fy2}"
+#       fill_color: ["ghostwhite","silver"]
+#       show_every: 1
+#       row_height: 14
+#       label_color: "Black"
+#       font_color: "Black"
+# 
+#     - label: "Month"
+#       unit: "month"
+#       date_format: "MMMM"
+#       row_height: 14
+#       fill_color: ["white smoke","darkgrey"]
+#       show_every: 1
+#       label_color: "black"
+#       font_color: "black"
+# 
+#   bottom_time_bands:
+#     - label: "Date Range"
+#       unit: "week"
+#       label_format: "{start} – {end}"
+#       fill_color: "none"
+#       alt_fill_color: "#f2f2f2"
+#       row_height: 12
+#       text_align: "center"
+#       label_color: "dimgrey"
+#       font_color: "black"
+
+  # ── Axis tick frequency ──────────────────────────────────────────────────
+  # Accepts the same fields as a single time_bands entry; any unit supported
+  # by shared.timeband.build_segments works (fiscal_quarter, fiscal_period,
+  # month, week, interval, date, dow, countdown, countup).
+  ticks:
+    unit: "week"
+    label_format: "{start}"
+    show_labels: true
+
+  # ── Continuation icons for clipped duration bars ─────────────────────────
+  show_continuation_icon: true
+  continuation_icon_right: "move-right"
+  continuation_icon_left: "move-left"
+  continuation_icon_height: 9.0
+  continuation_icon_color: "black"
 
 timeline_events:
   box_height: 24
 
 timeline_durations:
   box_height: 24
-  date_font: "ATGraphite-LightNarrow"
-  date_font_size: 9
-  date_color: "grey"
+  date_font: "OfficinaSans-BookItalic"
+  date_font_size: 11
+  date_color: "black"
 
 # ── Block Plan ────────────────────────────────────────────────────────────────
 blockplan:
   background_color: "none"
   grid_color: "black"
   grid_opacity: 1.0
-  grid_line_width: 0.75
+  grid_line_width: 1.0
   grid_dasharray: null
   timeband_fill_color: ["iron","ivory","old silver","nickel","honeydew","smoke","bubbles","bondi blue","anti-flash white","roman silver"]
   timeband_fill_opacity: 1.0
@@ -361,7 +416,7 @@ blockplan:
   timeband_line_opacity: 1.0   # null → inherits grid_opacity
   timeband_line_dasharray: null
   label_column_ratio: 0.05
-  band_row_height: 25.0    # default row height for all bands; override per-band with row_height
+  band_row_height: 40.0    # default row height for all bands; override per-band with row_height
   fiscal_year_start_month: 2
   week_start: 0
   duration_date_font_size: 8
@@ -410,7 +465,7 @@ blockplan:
       label_color: "black"       # heading column label color
       font_color: "black"        # segment content label color (e.g. "March")
 
-    - label: "Day"
+    - label: "Date"
       unit: "date"
       date_format: "D"
       fill_color: "white"
@@ -434,7 +489,7 @@ blockplan:
     - label: "DoW"
       unit: "date"
       date_format: "ddd"
-      fill_color: "white"
+      fill_color: null
       row_height: 14
       show_every: 1
       label_color: "Black"     # heading column label color
@@ -443,7 +498,7 @@ blockplan:
     - label: "Date"
       unit: "date"
       date_format: "D"
-      fill_color: "white"
+      fill_color: null
       row_height: 14
       show_every: 1
       label_color: "Black"     # heading column label color
@@ -506,17 +561,17 @@ blockplan:
   duration_date_font: "OfficinaSans-BookItalic"
   duration_fill_opacity: 1.0
   duration_stroke_color: "white"      # white outline separates solid-colour bars
-  duration_stroke_width: 0.1
-  duration_stroke_opacity: 0.01
+  duration_stroke_width: 1.0
+  duration_stroke_opacity: 1.0
   duration_stroke_dasharray: null
-  duration_bar_height: 30
+  duration_bar_height: 40
   duration_icon_visible: true
   name_text:
     font_name: "OfficinaSans-Book"
-    font_color: "white"
+    font_color: "grey"
   notes_text:
     font_name: "OfficinaSans-BookItalic"
-    font_color: "white"
+    font_color: "grey"
   duration_show_start_date: true
   duration_show_end_date: true
   duration_date_format: "M/D"
@@ -560,7 +615,7 @@ blockplan:
     # Non-workday highlights — pinned to the single-day "Date" band.
     # `match` filters segments by classify_day() classes.
     
-    - band: "Day"
+    - band: "Date"
       repeat: true
       align: "center"
       match: {weekend: true}
@@ -571,7 +626,7 @@ blockplan:
       fill_color: "#E8E8E8"
       fill_opacity: 0.4
 
-    - band: "Day"
+    - band: "Date"
       repeat: true
       align: "center"
       match: {company_holiday: true}
@@ -582,7 +637,7 @@ blockplan:
       fill_color: "gold"
       fill_opacity: 0.3
 
-    - band: "Day"
+    - band: "Date"
       repeat: true
       align: "center"
       match: {federal_holiday: true}
@@ -695,6 +750,16 @@ compact_plan:
   header_bottom_y: 8   # gap (pts) between the bottom of the header band block and the topmost duration line / milestone
   key_top_y: 8        # gap (pts) between the last duration line / milestone and the top of the key/legend block
   band_row_height: 10.0  # (float) height in points of each header band row
+
+  # ── Non-workday cell fills (applied to single-day date/dow band cells) ──
+  # Precedence: federal_holiday > company_holiday > weekend.
+  federal_holiday_fill_color: "tomato"
+  federal_holiday_fill_opacity: 1.0
+  company_holiday_fill_color: "gold"
+  company_holiday_fill_opacity: 1.0
+  weekend_fill_color: "#E8E8E8"
+  weekend_fill_opacity: 1.0
+  federal_holiday_icon: flag-us   # fallback; DB icon takes priority per holiday
 
   # ── Text ─────────────────────────────────────────────────────
   text:
@@ -812,7 +877,7 @@ compact_plan:
   show_continuation_icon:      true
   continuation_icon:           "move-right"
   continuation_icon_height:    8.0
-  continuation_icon_color:     "black"           # null = use the line color
+  continuation_icon_color:     "white"           # null = use the line color
   continuation_legend_text:    "activity continues"
   continuation_section_gap:    4.0
 
@@ -908,6 +973,45 @@ style_rules:
       pattern: diagonal-stripes
       pattern_color: steelblue
       pattern_opacity: 0.1
+
+  # ── Banner-based duration fills ────────────────────────────────────────────
+  # Marshalls: red fill when "Marshalls" appears in either the task name or
+  # the notes. Two rules with the same style act as an OR across the two
+  # criteria (task_name AND notes within one rule would require both to match).
+  - name: Marshalls durations (name)
+    select:
+      task_name:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+  - name: Marshalls durations (notes)
+    select:
+      notes:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Maxx durations
+    select:
+      task_name:
+      - Maxx
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: blue
+
+  - name: Canada durations
+    select:
+      task_name:
+      - Canada
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: black
 
 swimlane_rules:
   - name: Route Xstore

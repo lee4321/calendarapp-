@@ -19,11 +19,68 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
-from shared.fiscal_renderer import (
-    build_fiscal_period_segments,
-    build_fiscal_quarter_segments,
-)
+from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
+from shared.rule_engine import StyleEngine
+from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
+
+
+def _nwd_fill_for_classes(
+    classes: frozenset[str],
+    config: "CalendarConfig",
+) -> str | None:
+    """Resolve a non-workday fill override for a single-day cell.
+
+    Priority: federal_holiday → company_holiday → weekend.  Returns ``None``
+    when the day has no non-workday classes or no override is configured.
+    """
+    if not classes:
+        return None
+    if "federal_holiday" in classes and config.compactplan_federal_holiday_fill_color:
+        return config.compactplan_federal_holiday_fill_color
+    if "company_holiday" in classes and config.compactplan_company_holiday_fill_color:
+        return config.compactplan_company_holiday_fill_color
+    if "weekend" in classes and config.compactplan_weekend_fill_color:
+        return config.compactplan_weekend_fill_color
+    return None
+
+
+def _nwd_fill_opacity_for_classes(
+    classes: frozenset[str],
+    config: "CalendarConfig",
+) -> float | None:
+    if not classes:
+        return None
+    if "federal_holiday" in classes and config.compactplan_federal_holiday_fill_color:
+        return config.compactplan_federal_holiday_fill_opacity
+    if "company_holiday" in classes and config.compactplan_company_holiday_fill_color:
+        return config.compactplan_company_holiday_fill_opacity
+    if "weekend" in classes and config.compactplan_weekend_fill_color:
+        return config.compactplan_weekend_fill_opacity
+    return None
+
+
+def _nwd_icon_for_classes(
+    classes: frozenset[str], config: "CalendarConfig"
+) -> tuple[str, str] | None:
+    if not classes:
+        return None
+    if "federal_holiday" in classes and config.compactplan_federal_holiday_icon:
+        return (
+            config.compactplan_federal_holiday_icon,
+            config.compactplan_federal_holiday_fill_color or "#333333",
+        )
+    if "company_holiday" in classes and config.compactplan_company_holiday_icon:
+        return (
+            config.compactplan_company_holiday_icon,
+            config.compactplan_company_holiday_fill_color or "#333333",
+        )
+    if "weekend" in classes and config.compactplan_weekend_icon:
+        return (
+            config.compactplan_weekend_icon,
+            config.compactplan_weekend_fill_color or "#333333",
+        )
+    return None
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -34,15 +91,6 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Internal data structures
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class _BandSegment:
-    """A labeled segment within a time-band column."""
-
-    start: date
-    end_exclusive: date
-    label: str
 
 
 @dataclass(frozen=True)
@@ -127,6 +175,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
+        self._style_engine = StyleEngine(config.theme_style_rules or [])
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
@@ -171,6 +220,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             config, time_bands, band_row_h, area_x, bands_y, area_w, start, end,
             visible_days, px_per_day, n_vis,
             events=evt_objects,
+            db=db,
         )
 
         # Axis (optional)
@@ -327,6 +377,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         px_per_day: float,
         n_vis: int,
         events: "list[Event] | None" = None,
+        db: "CalendarDB | None" = None,
     ) -> None:
         font_name = self._resolve_font(
             getattr(config, "compactplan_text_font_name", None), config
@@ -338,6 +389,18 @@ class CompactPlanRenderer(BaseSVGRenderer):
         text_color = str(_band_text_style.color or "black")
         text_opacity = float(_band_text_style.opacity)
         _events: list[Event] = events or []
+
+        # Per-day non-workday classes — used for date/dow band cells.
+        _day_classes: dict[date, frozenset[str]] = (
+            {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
+        )
+        _has_nwd_icons = bool(
+            config.compactplan_federal_holiday_icon
+            or config.compactplan_company_holiday_icon
+            or config.compactplan_weekend_icon
+        )
+        if _day_classes and _has_nwd_icons:
+            self._load_icon_svg_cache(db)
 
         for band_idx, band in enumerate(time_bands):
             row_y = area_y + band_idx * band_row_h
@@ -365,7 +428,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 )
                 continue
 
-            segments = self._build_segments(band, start, end, config, visible_days, band_idx)
+            segments = self._build_segments(band, start, end, config, visible_days, band_idx, db=db)
 
             fill_color = str(band.get("fill_color") or "none")
             alt_fill_color = str(band.get("alt_fill_color") or "none")
@@ -383,10 +446,68 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     continue
 
                 fill = alt_fill_color if seg_idx % 2 else fill_color
-                if not _is_none_color(fill):
-                    self._draw_rect(x1, row_y, seg_w, band_row_h, fill=fill, css_class="ec-band-cell")
+                fill_opacity: float | None = None
 
-                # Label text, vertically centered in the band row
+                # Non-workday override for single-day date/dow cells.
+                _is_single_day = (
+                    unit in {"date", "dow"}
+                    and (seg.end_exclusive - seg.start).days == 1
+                )
+                _nwd_icon_result: tuple[str, str] | None = None
+                if _is_single_day and _day_classes:
+                    _day_cls = _day_classes.get(seg.start, frozenset())
+                    _nwd_fill = _nwd_fill_for_classes(_day_cls, config)
+                    if _nwd_fill:
+                        fill = _nwd_fill
+                        fill_opacity = _nwd_fill_opacity_for_classes(_day_cls, config)
+                    _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
+                    # Prefer the per-holiday DB icon over the static config icon.
+                    if (
+                        _nwd_icon_result
+                        and "federal_holiday" in _day_cls
+                        and db is not None
+                    ):
+                        _daykey_str = seg.start.strftime("%Y%m%d")
+                        _holidays = db.get_holidays_for_date(
+                            _daykey_str, config.country
+                        )
+                        if _holidays:
+                            _raw = (
+                                _holidays[0].get("icon")
+                                or _holidays[0].get("displayiconid")
+                                or _holidays[0].get("displayicon")
+                                or ""
+                            )
+                            _db_icon = str(_raw).strip()
+                            if _db_icon:
+                                _nwd_icon_result = (_db_icon, _nwd_icon_result[1])
+
+                if not _is_none_color(fill):
+                    self._draw_rect(
+                        x1, row_y, seg_w, band_row_h,
+                        fill=fill,
+                        fill_opacity=fill_opacity if fill_opacity is not None else 1.0,
+                        css_class="ec-band-cell",
+                    )
+
+                if _nwd_icon_result:
+                    _icon_name, _icon_color = _nwd_icon_result
+                    _icon_size = band_row_h * 0.65
+                    self._draw_icon_svg(
+                        _icon_name,
+                        x1 + seg_w / 2.0,
+                        row_y + band_row_h / 2.0 + _icon_size * 0.30,
+                        _icon_size,
+                        color=_icon_color,
+                        anchor="middle",
+                        css_class="ec-nwd-icon",
+                    )
+
+                # Label text, vertically centered in the band row.
+                # When a non-workday icon is drawn, suppress the date label so
+                # the icon isn't overprinted (matches blockplan behavior).
+                if _nwd_icon_result:
+                    continue
                 label = seg.label
                 if label:
                     text_y = row_y + band_row_h * 0.72
@@ -433,115 +554,17 @@ class CompactPlanRenderer(BaseSVGRenderer):
         config: "CalendarConfig",
         visible_days: list[date],
         band_idx: int,
+        db: "CalendarDB | None" = None,
     ) -> list[_BandSegment]:
-        unit = str(band.get("unit", "week")).strip().lower()
-        segments: list[_BandSegment] = []
-        one_day = timedelta(days=1)
-
-        if unit == "week":
-            # week_start: 0=Mon (default), 6=Sun
-            week_start_dow = int(band.get("week_start", 0))
-            delta = (start.weekday() - week_start_dow) % 7
-            cursor = start - timedelta(days=delta)
-            seq_n = 1
-            while cursor <= end:
-                next_cursor = cursor + timedelta(days=7)
-                if next_cursor > start:
-                    seg_start = max(cursor, start)
-                    seg_end = min(next_cursor, end + one_day)
-                    if seg_start < seg_end:
-                        iso_week = cursor.isocalendar()[1]
-                        w_end = next_cursor - one_day  # last day of the week
-                        label = str(band.get("label_format", "Week {n}")).format(
-                            n=seq_n,
-                            week=iso_week,
-                            start=cursor.strftime("%-m/%-d"),
-                            end=w_end.strftime("%-m/%-d"),
-                        )
-                        segments.append(
-                            _BandSegment(start=seg_start, end_exclusive=seg_end, label=label)
-                        )
-                        seq_n += 1
-                cursor = next_cursor
-            return segments
-
-        if unit == "month":
-            cursor = date(start.year, start.month, 1)
-            fmt = str(band.get("date_format", "MMM"))
-            while cursor <= end:
-                next_cursor = self._shift_months(cursor, 1)
-                if next_cursor > start:
-                    seg_start = max(cursor, start)
-                    seg_end = min(next_cursor, end + one_day)
-                    if seg_start < seg_end:
-                        label = arrow.get(cursor).format(fmt)
-                        segments.append(
-                            _BandSegment(start=seg_start, end_exclusive=seg_end, label=label)
-                        )
-                cursor = next_cursor
-            return segments
-
-        if unit == "fiscal_quarter":
-            fiscal_start = int(band.get("fiscal_year_start_month", 10))
-            lbl_fmt = str(band.get("label_format", "FY{fy} Q{q}"))
-            for seg in build_fiscal_quarter_segments(
-                start, end, config,
-                fiscal_start_month=fiscal_start,
-                label_format=lbl_fmt,
-            ):
-                segments.append(
-                    _BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
-                )
-            return segments
-
-        if unit == "fiscal_period":
-            for seg in build_fiscal_period_segments(start, end, config):
-                segments.append(
-                    _BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
-                )
-            return segments
-
-        if unit == "interval":
-            interval_days = max(1, int(band.get("interval_days", 14)))
-            prefix = str(band.get("prefix", ""))
-            start_index = int(band.get("start_index", 1))
-            anchor_str = band.get("anchor_date") or band.get("anchor")
-            if anchor_str:
-                anchor = date.fromisoformat(str(anchor_str))
-                delta_days = (start - anchor).days
-                if delta_days >= 0:
-                    intervals_elapsed = delta_days // interval_days
-                else:
-                    intervals_elapsed = -((-delta_days - 1) // interval_days + 1)
-                cursor = anchor + timedelta(days=intervals_elapsed * interval_days)
-                index = start_index + intervals_elapsed
-            else:
-                cursor = start
-                index = start_index
-            while cursor <= end:
-                next_cursor = cursor + timedelta(days=interval_days)
-                seg_start = max(cursor, start)
-                seg_end = min(next_cursor, end + one_day)
-                if seg_start < seg_end:
-                    segments.append(
-                        _BandSegment(start=seg_start, end_exclusive=seg_end, label=f"{prefix}{index}".strip())
-                    )
-                cursor = next_cursor
-                index += 1
-            return segments
-
-        # Fallback: date or day-of-week, one segment per visible day
-        fmt = str(band.get("date_format", "D"))
-        for d in visible_days:
-            if start <= d <= end:
-                segments.append(
-                    _BandSegment(
-                        start=d,
-                        end_exclusive=d + one_day,
-                        label=arrow.get(d).format(fmt),
-                    )
-                )
-        return segments
+        return _build_band_segments(
+            band, start, end, config,
+            visible_days=visible_days,
+            db=db,
+            week_start_default=0,
+            fiscal_year_start_month_default=int(
+                getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
+            ),
+        )
 
     # ------------------------------------------------------------------
     # Group color / icon assignment
@@ -605,6 +628,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
             group_key = (evt.resource_group or "").strip()
             color = evt.color or group_color_map.get(group_key, "steelblue")
+            _style_engine = getattr(self, "_style_engine", None)
+            if _style_engine is not None:
+                _sr = _style_engine.evaluate_event(evt)
+                if _sr.fill_color:
+                    color = _sr.fill_color
 
             # Assign a unique icon to each duration by cycling through the list.
             icon_name: str | None = icon_list[evt_idx % len(icon_list)] if icon_list else None
@@ -666,6 +694,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
             x = day_x[start_d] + px_per_day / 2.0
 
         color = evt.color or config.get_element_color("ec-milestone-marker", "black")
+        _style_engine = getattr(self, "_style_engine", None)
+        if _style_engine is not None:
+            _sr = _style_engine.evaluate_event(evt)
+            if _sr.fill_color:
+                color = _sr.fill_color
         flag_h = float(config.compactplan_milestone_flag_height)
         flag_w = float(config.compactplan_milestone_flag_width)
 
@@ -1200,14 +1233,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
             return axis_y - axis_padding - half * lane_spacing
         else:
             return axis_y + axis_padding + half * lane_spacing
-
-    @staticmethod
-    def _shift_months(d: date, months: int) -> date:
-        month_index = (d.month - 1) + months
-        year = d.year + (month_index // 12)
-        month = (month_index % 12) + 1
-        return date(year, month, 1)
-
 
     @staticmethod
     def _resolve_font(

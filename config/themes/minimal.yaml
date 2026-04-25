@@ -111,3 +111,19 @@ element_styles:
   ec-legend-swatch:  { line_style: axis }
   ec-legend-text:    { text_style: body }
   ec-legend-icon:    { icon_style: event }
+
+# ── Style Rules ──────────────────────────────────────────────────────────────
+# Conditional visual styling for day boxes, events, and durations.
+# Each rule has: select (what to match), apply_to (day_box|event|duration|all
+# or a list), style (fill/pattern/stroke/text/icon properties).
+# Rules layer in declaration order; later rules layer over earlier ones.
+# The minimal theme defines no rules — renderers fall back to element_styles.
+
+style_rules: []
+
+# ── Swimlane Rules ───────────────────────────────────────────────────────────
+# Blockplan lane routing only. apply_to is the lane name string matching a
+# name in blockplan.swimlanes. First matching rule wins; empty select: {}
+# is a catch-all. The minimal theme defines no rules.
+
+swimlane_rules: []

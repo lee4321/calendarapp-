@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from bisect import bisect_left
 from datetime import date, timedelta
 from typing import TYPE_CHECKING, Any
@@ -14,9 +13,10 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
-from shared.fiscal_renderer import build_fiscal_quarter_segments
 from shared.day_classifier import classify_day, day_rule_matches
 from shared.icon_band import compute_icon_band_days
+from shared.rule_engine import StyleEngine
+from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
 def _nwd_fill_for_classes(
@@ -125,13 +125,6 @@ if TYPE_CHECKING:
     from visualizers.base import CoordinateDict
 
 
-@dataclass(frozen=True)
-class _BandSegment:
-    start: date
-    end_exclusive: date
-    label: str
-
-
 class BlockPlanRenderer(BaseSVGRenderer):
     """Renderer for the blockplan spreadsheet-like visualization."""
 
@@ -156,6 +149,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
         visible_days = self._visible_days(start, end, int(config.weekend_style))
         if not visible_days:
             return 0, []
+
+        self._style_engine = StyleEngine(config.theme_style_rules or [])
 
         top_bands = list(getattr(config, "blockplan_top_time_bands", []) or [])
         bottom_bands = list(getattr(config, "blockplan_bottom_time_bands", []) or [])
@@ -386,13 +381,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 return resolved
         return []
 
-    @staticmethod
-    def _shift_months(d: date, months: int) -> date:
-        month_index = (d.month - 1) + months
-        year = d.year + (month_index // 12)
-        month = (month_index % 12) + 1
-        return date(year, month, 1)
-
     def _build_segments(
         self,
         band: dict[str, Any],
@@ -402,191 +390,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
         visible_days: list[date] | None = None,
         db: "CalendarDB | None" = None,
     ) -> list[_BandSegment]:
-        unit = str(band.get("unit", "date")).strip().lower()
-        segments: list[_BandSegment] = []
-        one_day = timedelta(days=1)
-
-        if unit == "fiscal_quarter":
-            fiscal_start = int(
-                band.get(
-                    "fiscal_year_start_month", config.blockplan_fiscal_year_start_month
-                )
-            )
-            lbl_fmt = str(band.get("label_format", "FY{fy} Q{q}"))
-            for seg in build_fiscal_quarter_segments(
-                start, end, config,
-                fiscal_start_month=fiscal_start,
-                label_format=lbl_fmt,
-            ):
-                segments.append(
-                    _BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
-                )
-            return segments
-
-        if unit == "month":
-            cursor = date(start.year, start.month, 1)
-            fmt = str(band.get("date_format", "MMM"))
-            while cursor <= end:
-                next_cursor = self._shift_months(cursor, 1)
-                if next_cursor > start:
-                    label = arrow.get(cursor).format(fmt)
-                    segments.append(
-                        _BandSegment(
-                            start=max(cursor, start),
-                            end_exclusive=min(next_cursor, end + one_day),
-                            label=label,
-                        )
-                    )
-                cursor = next_cursor
-            return [s for s in segments if s.start < s.end_exclusive]
-
-        if unit == "week":
-            week_start = int(band.get("week_start", config.blockplan_week_start))
-            delta = (start.weekday() - week_start) % 7
-            cursor = start - timedelta(days=delta)
-            while cursor <= end:
-                next_cursor = cursor + timedelta(days=7)
-                if next_cursor > start:
-                    iso_week = cursor.isocalendar()[1]
-                    label = str(band.get("label_format", "Week {week}")).format(
-                        week=iso_week
-                    )
-                    segments.append(
-                        _BandSegment(
-                            start=max(cursor, start),
-                            end_exclusive=min(next_cursor, end + one_day),
-                            label=label,
-                        )
-                    )
-                cursor = next_cursor
-            return [s for s in segments if s.start < s.end_exclusive]
-
-        if unit == "interval":
-            interval_days = max(1, int(band.get("interval_days", 14)))
-            prefix = str(band.get("prefix", ""))
-            start_index = int(band.get("start_index", 1))
-            max_index_raw = band.get("max_index")
-            max_index = int(max_index_raw) if max_index_raw is not None else None
-            anchor_str = band.get("anchor_date") or band.get("anchor")
-            if anchor_str:
-                anchor = date.fromisoformat(str(anchor_str))
-                delta_days = (start - anchor).days
-                if delta_days >= 0:
-                    intervals_elapsed = delta_days // interval_days
-                else:
-                    intervals_elapsed = -((-delta_days - 1) // interval_days + 1)
-                cursor = anchor + timedelta(days=intervals_elapsed * interval_days)
-                if max_index is not None:
-                    cycle_len = max_index - start_index + 1
-                    index = start_index + (intervals_elapsed % cycle_len)
-                else:
-                    index = start_index + intervals_elapsed
-            else:
-                cursor = start
-                index = start_index
-            while cursor <= end:
-                next_cursor = cursor + timedelta(days=interval_days)
-                seg_start = max(cursor, start)
-                seg_end = min(next_cursor, end + one_day)
-                if seg_start < seg_end:
-                    segments.append(
-                        _BandSegment(
-                            start=seg_start,
-                            end_exclusive=seg_end,
-                            label=f"{prefix}{index}".strip(),
-                        )
-                    )
-                cursor = next_cursor
-                index += 1
-                if max_index is not None and index > max_index:
-                    index = start_index
-            return segments
-
-        if unit in {"date", "dow"}:
-            fmt = str(band.get("date_format", "D" if unit == "date" else "ddd"))
-            date_source = (
-                visible_days
-                if (unit in {"date", "dow"} and visible_days is not None)
-                else None
-            )
-            if date_source is not None:
-                iter_days = [d for d in date_source if start <= d <= end]
-            else:
-                iter_days = []
-                cursor = start
-                while cursor <= end:
-                    iter_days.append(cursor)
-                    cursor += one_day
-            for cursor in iter_days:
-                segments.append(
-                    _BandSegment(
-                        start=cursor,
-                        end_exclusive=cursor + one_day,
-                        label=arrow.get(cursor).format(fmt),
-                    )
-                )
-            return segments
-
-        if unit in {"countdown", "countup"}:
-            if unit == "countdown":
-                ref_str = band.get("target_date") or band.get("target")
-            else:
-                ref_str = band.get("start_date") or band.get("start")
-            if not ref_str:
-                return []
-            ref_date = date.fromisoformat(str(ref_str))
-            skip_wk = bool(band.get("skip_weekends", False))
-            skip_nwd = bool(band.get("skip_nonworkdays", False))
-            label_fmt = str(band.get("label_format", "{n}"))
-
-            # Pre-compute nonworkday dates once for the full span
-            nwd_set: set[date] = set()
-            if skip_nwd and db is not None:
-                span_start = min(start, ref_date)
-                span_end = max(end, ref_date)
-                d_iter = span_start
-                while d_iter <= span_end:
-                    if db.is_nonworkday(d_iter.strftime("%Y%m%d")):
-                        nwd_set.add(d_iter)
-                    d_iter += timedelta(days=1)
-
-            def _count_days(from_d: date, to_d: date) -> int:
-                """Days from from_d (exclusive) to to_d (inclusive), skipping filtered days."""
-                if from_d == to_d:
-                    return 0
-                sign = 1 if to_d > from_d else -1
-                count = 0
-                cursor = from_d + timedelta(days=sign)
-                while (sign == 1 and cursor <= to_d) or (sign == -1 and cursor >= to_d):
-                    if not (skip_wk and cursor.weekday() >= 5) and cursor not in nwd_set:
-                        count += 1
-                    cursor += timedelta(days=sign)
-                return sign * count
-
-            iter_days = [d for d in (visible_days or []) if start <= d <= end]
-            if not iter_days:
-                c = start
-                while c <= end:
-                    iter_days.append(c)
-                    c += timedelta(days=1)
-
-            for d in iter_days:
-                # countdown: days remaining to ref_date  (from d → ref_date)
-                # countup:   days elapsed since ref_date (from ref_date → d)
-                if unit == "countdown":
-                    n = _count_days(d, ref_date)
-                else:
-                    n = _count_days(ref_date, d)
-                segments.append(
-                    _BandSegment(
-                        start=d,
-                        end_exclusive=d + one_day,
-                        label=label_fmt.format(n=n),
-                    )
-                )
-            return segments
-
-        return [_BandSegment(start=start, end_exclusive=end + one_day, label="")]
+        return _build_band_segments(
+            band, start, end, config,
+            visible_days=visible_days,
+            db=db,
+            week_start_default=config.blockplan_week_start,
+            fiscal_year_start_month_default=config.blockplan_fiscal_year_start_month,
+        )
 
     def _draw_time_bands(
         self,
@@ -1585,6 +1395,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
             color = (
                 event.color if event.color else _palette[event.priority % len(_palette)]
             )
+            _style_engine = getattr(self, "_style_engine", None)
+            if _style_engine is not None:
+                _sr = _style_engine.evaluate_event(event)
+                if _sr.fill_color:
+                    color = _sr.fill_color
             _dur_stroke_color = (
                 config.blockplan_duration_stroke_color
                 if config.blockplan_duration_stroke_color is not None
@@ -1947,10 +1762,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
         row_count = max(1, len(row_spans))
         row_h = (bottom - top) / row_count
 
+        _style_engine = getattr(self, "_style_engine", None)
         for event, row, x, has_notes, has_date, date_text in placements:
             y_center = top + ((row + 0.5) * row_h)
             marker_drawn = False
             icon_size = max(6.0, event_size * 1.1)
+
+            event_color = _evt_name_style.color
+            if _style_engine is not None:
+                _sr = _style_engine.evaluate_event(event)
+                if _sr.fill_color:
+                    event_color = _sr.fill_color
             if has_notes and has_date:
                 name_baseline = y_center - (event_size * 0.70)
                 notes_baseline = y_center + (notes_size * 0.15)
@@ -1974,7 +1796,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     name_baseline,
                     icon_size,
                     anchor="start",
-                    color=_evt_name_style.color,
+                    color=event_color,
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-event-icon",
@@ -1985,8 +1807,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     x,
                     y_center,
                     icon_r,
-                    fill=_evt_name_style.color,
-                    stroke=_evt_name_style.color,
+                    fill=event_color,
+                    stroke=event_color,
                     class_="ec-milestone-marker",
                 )
                 self._drawing.append(_circle)

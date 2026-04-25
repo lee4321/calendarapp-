@@ -17,6 +17,8 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
+from shared.rule_engine import StyleEngine
+from shared.timeband import build_segments as _build_band_segments
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -49,6 +51,8 @@ class TimelineDuration:
     end_x: float
     lane: int
     min_width: float
+    continues_left: bool = False
+    continues_right: bool = False
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -147,13 +151,25 @@ class TimelineRenderer(BaseSVGRenderer):
         if end < start:
             start, end = end, start
 
+        # Reserve vertical space for top/bottom timebands only when defined.
+        top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
+        bottom_bands = list(getattr(config, "timeline_bottom_time_bands", None) or [])
+        top_bands_h = sum(float(b.get("row_height", 14.0)) for b in top_bands)
+        bottom_bands_h = sum(float(b.get("row_height", 14.0)) for b in bottom_bands)
+
         axis_left = area_x + (area_w * 0.04)
         axis_right = area_x + (area_w * 0.96)
-        axis_y = area_y + (area_h * 0.44)
+        # Shift the axis down by the top-band block height so callouts/axis/
+        # ticks lie below the bands without overlap.
+        inner_y = area_y + top_bands_h
+        inner_h = max(1.0, area_h - top_bands_h - bottom_bands_h)
+        axis_y = inner_y + (inner_h * 0.44)
 
         event_objs = [Event.from_dict(e) for e in events]
         self._load_icon_svg_cache(db)
         point_events, duration_events = self._split_events(config, event_objs)
+
+        style_engine = StyleEngine(config.theme_style_rules or [])
 
         callouts = self._layout_callouts(
             config,
@@ -166,6 +182,7 @@ class TimelineRenderer(BaseSVGRenderer):
             area_x + area_w,
             axis_y,
             area_h,
+            style_engine,
         )
         durations = self._layout_durations(
             config,
@@ -175,6 +192,7 @@ class TimelineRenderer(BaseSVGRenderer):
             axis_left,
             axis_right,
             axis_y,
+            style_engine,
         )
 
         # Pass 1: draw all connector/aligner lines below everything else.
@@ -198,7 +216,13 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-axis-line",
         )
 
-        self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
+        tick_band = getattr(config, "timeline_ticks", None)
+        if tick_band:
+            self._draw_axis_ticks_from_band(
+                config, tick_band, start, end, axis_left, axis_right, axis_y, db
+            )
+        else:
+            self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
         if config.fiscal_lookup and (
             config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters
         ):
@@ -220,11 +244,31 @@ class TimelineRenderer(BaseSVGRenderer):
         for duration in durations:
             self._draw_duration(config, duration, axis_y)
 
-        # After all content is laid out, tighten the TimelineArea coordinate to
-        # the actual rendered extent so _shrink_drawing_to_content() crops
-        # correctly when --shrink is requested.
+        # Timebands: top bands stack above the timeline area; bottom bands
+        # stack below it. Only drawn when declared in the theme.
+        if top_bands:
+            self._draw_timeline_bands(
+                config, top_bands, area_y, axis_left, axis_right, start, end, db
+            )
+        if bottom_bands:
+            self._draw_timeline_bands(
+                config,
+                bottom_bands,
+                area_y + area_h - bottom_bands_h,
+                axis_left,
+                axis_right,
+                start,
+                end,
+                db,
+            )
+
+        # After all content is laid out, tighten the SVG viewBox to the actual
+        # rendered extent. _shrink_drawing_to_content() runs before
+        # _render_content() and uses only the coordinate dict, so it cannot see
+        # the dynamic callout / duration row positions computed here. Override
+        # the viewBox directly now that all bounds are known.
         if config.shrink_to_content:
-            coordinates["TimelineArea"] = self._actual_content_bounds(
+            tight = self._actual_content_bounds(
                 config,
                 callouts,
                 durations,
@@ -234,7 +278,14 @@ class TimelineRenderer(BaseSVGRenderer):
                 area_x,
                 area_y,
                 area_w,
+                area_h,
             )
+            coordinates["TimelineArea"] = tight
+            tx, ty, tw, th = tight
+            self._drawing.view_box = (tx, ty, tw, th)
+            self._drawing.width = tw
+            self._drawing.height = th
+            self._content_bbox_svg = (tx, ty, tx + tw, ty + th)
 
         # Timeline view does not use overflow pages.
         return 0, []
@@ -250,6 +301,7 @@ class TimelineRenderer(BaseSVGRenderer):
         area_x: float,
         area_y: float,
         area_w: float,
+        area_h: float = 0.0,
     ) -> tuple[float, float, float, float]:
         """
         Compute the tight bounding box (SVG space) of all rendered timeline content.
@@ -289,6 +341,16 @@ class TimelineRenderer(BaseSVGRenderer):
                 # Date labels sit below bar at bar_y + bar_h + date_size * 1.1
                 label_y = bar_y + bar_h + (d_date_size * 1.1)
                 max_y = max(max_y, label_y + d_date_size)
+
+        # Extend bounds for declared timebands (only when present).
+        top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
+        bottom_bands = list(getattr(config, "timeline_bottom_time_bands", None) or [])
+        top_bands_h = sum(float(b.get("row_height", 14.0)) for b in top_bands)
+        bottom_bands_h = sum(float(b.get("row_height", 14.0)) for b in bottom_bands)
+        if top_bands_h > 0:
+            min_y = min(min_y, area_y)
+        if bottom_bands_h > 0:
+            max_y = max(max_y, area_y + area_h)
 
         # X: axis extent (with 4% margins already baked in as area_x offsets)
         x = axis_left
@@ -330,6 +392,7 @@ class TimelineRenderer(BaseSVGRenderer):
         content_right: float,
         axis_y: float,
         area_h: float,
+        style_engine: StyleEngine | None = None,
     ) -> list[TimelineCallout]:
         if not events:
             return []
@@ -372,7 +435,8 @@ class TimelineRenderer(BaseSVGRenderer):
         date_row_gap_factor = 1.35
         max_date_factor = 0.9 + ((date_rows - 1) * date_row_gap_factor)
         min_callout_offset = date_size * (max_date_factor + 1.0)
-        base_top = axis_y - max(config.timeline_callout_offset_y, min_callout_offset)
+        extra_pad = float(getattr(config, "timeline_event_axis_padding", 0.0) or 0.0)
+        base_top = axis_y - (max(config.timeline_callout_offset_y, min_callout_offset) + extra_pad)
         min_top = self._page_height * 0.015
         top_limit = min(base_top, min_top)
         if base_top < top_limit:
@@ -396,6 +460,10 @@ class TimelineRenderer(BaseSVGRenderer):
             day = self._safe_day(event.start, fallback=start)
             x = self._x_for_day(day, start, end, axis_left, axis_right)
             color = palette[idx % len(palette)]
+            if style_engine is not None:
+                _sr = style_engine.evaluate_event(event)
+                if _sr.fill_color:
+                    color = _sr.fill_color
 
             chosen: tuple[int, float, float] | None = None
             # Try multiple horizontal offsets per lane to avoid box collisions.
@@ -500,6 +568,7 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_left: float,
         axis_right: float,
         axis_y: float,
+        style_engine: StyleEngine | None = None,
     ) -> list[TimelineDuration]:
         if not events:
             return []
@@ -530,6 +599,14 @@ class TimelineRenderer(BaseSVGRenderer):
             if end_day < start_day:
                 start_day, end_day = end_day, start_day
 
+            # Compare to the user-typed range (not the weekend-adjusted range)
+            # so events ending on an excluded weekend day are not flagged as
+            # continuing past the visible diagram.
+            user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
+            user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
+            continues_left = start_day.floor("day") < user_start.floor("day")
+            continues_right = end_day.floor("day") > user_end.floor("day")
+
             sx = self._x_for_day(start_day, start, end, axis_left, axis_right)
             ex = self._x_for_day(end_day, start, end, axis_left, axis_right)
 
@@ -559,6 +636,10 @@ class TimelineRenderer(BaseSVGRenderer):
 
             lane = self._place_span_in_lane(lane_last_end, sx, ex, min_gap)
             color = palette[idx % len(palette)]
+            if style_engine is not None:
+                _sr = style_engine.evaluate_event(event)
+                if _sr.fill_color:
+                    color = _sr.fill_color
             out.append(
                 TimelineDuration(
                     event=event,
@@ -567,6 +648,8 @@ class TimelineRenderer(BaseSVGRenderer):
                     end_x=ex,
                     lane=lane,
                     min_width=min_width,
+                    continues_left=continues_left,
+                    continues_right=continues_right,
                 )
             )
 
@@ -1202,6 +1285,35 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
         )
 
+        # Continuation icons for duration bars clipped by the visible range.
+        if (item.continues_left or item.continues_right) and bool(
+            getattr(config, "timeline_show_continuation_icon", True)
+        ):
+            cont_h = float(getattr(config, "timeline_continuation_icon_height", 8.0))
+            cont_color_cfg = getattr(config, "timeline_continuation_icon_color", None)
+            cont_color = cont_color_cfg if cont_color_cfg else item.color
+            cont_baseline = bar_y + bar_h * 0.5 + cont_h * 0.3
+            if item.continues_left:
+                self._draw_icon_svg(
+                    str(getattr(config, "timeline_continuation_icon_left", "arrow-left")),
+                    item.start_x,
+                    cont_baseline,
+                    cont_h,
+                    anchor="start",
+                    color=cont_color,
+                    css_class="ec-duration-icon",
+                )
+            if item.continues_right:
+                self._draw_icon_svg(
+                    str(getattr(config, "timeline_continuation_icon_right", "arrow-right")),
+                    item.end_x,
+                    cont_baseline,
+                    cont_h,
+                    anchor="end",
+                    color=cont_color,
+                    css_class="ec-duration-icon",
+                )
+
         _dur_name_style = config.get_text_style("ec-event-name")
         _dur_notes_style = config.get_text_style("ec-event-notes")
         title_font_path = self._safe_font_path(_dur_name_style.font or config.timeline_notes_text_font_name)
@@ -1232,7 +1344,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-event-name",
         )
 
-        if notes:
+        if notes and config.include_notes:
             notes_y = title_y + (fitted_notes * 1.35)
             self._draw_text(
                 (item.start_x + item.end_x) / 2,
@@ -1259,7 +1371,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_font,
             date_size,
             fill=date_color,
-            anchor="middle",
+            anchor="start",
             css_class="ec-duration-date",
         )
         self._draw_text(
@@ -1269,7 +1381,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_font,
             date_size,
             fill=date_color,
-            anchor="middle",
+            anchor="end",
             css_class="ec-duration-date",
         )
 
@@ -1359,6 +1471,196 @@ class TimelineRenderer(BaseSVGRenderer):
     def _min_duration_offset(date_size: float) -> float:
         """Minimum axis-to-bar clearance so timeline date labels remain unobstructed."""
         return max(22.0, date_size * 3.2)
+
+    def _draw_timeline_bands(
+        self,
+        config: "CalendarConfig",
+        bands: list[dict],
+        block_top_y: float,
+        axis_left: float,
+        axis_right: float,
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        db: "CalendarDB",
+    ) -> None:
+        """Draw a stack of timebands using shared.timeband.build_segments().
+
+        Each band gets a row of the configured ``row_height``. Bands are stacked
+        downward starting at ``block_top_y``. Segment x positions are mapped via
+        the same date→x function used by the timeline axis.
+        """
+        if not bands:
+            return
+
+        start_d = start.floor("day").date()
+        end_d = end.floor("day").date()
+        # visible_days for date/dow units (continuous calendar — timeline does
+        # not skip weekends).
+        from datetime import timedelta
+        visible_days: list = []
+        d = start_d
+        while d <= end_d:
+            visible_days.append(d)
+            d = d + timedelta(days=1)
+
+        _band_text_style = config.get_text_style("ec-label")
+        text_color = str(_band_text_style.color or "black")
+        text_opacity = float(_band_text_style.opacity)
+
+        row_y = block_top_y
+        for band in bands:
+            row_h = float(band.get("row_height", 14.0))
+            unit = str(band.get("unit", "week")).strip().lower()
+            fill_color = str(band.get("fill_color") or "none")
+            alt_fill_color = str(band.get("alt_fill_color") or "none")
+            text_align = str(band.get("text_align", "center")).strip().lower()
+            if text_align not in {"left", "center", "right"}:
+                text_align = "center"
+            band_font = str(band.get("font") or _band_text_style.font or config.timeline_text_font_name)
+            band_font_color = str(band.get("font_color") or text_color)
+            band_label_color = str(band.get("label_color") or band_font_color)
+            font_size = float(band.get("font_size") or max(7.0, row_h * 0.55))
+
+            segments = _build_band_segments(
+                band, start_d, end_d, config,
+                visible_days=visible_days,
+                db=db,
+                week_start_default=0,
+                fiscal_year_start_month_default=int(
+                    getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
+                ),
+            )
+
+            for seg_idx, seg in enumerate(segments):
+                seg_start_arrow = arrow.Arrow(seg.start.year, seg.start.month, seg.start.day)
+                seg_end_arrow = arrow.Arrow(
+                    seg.end_exclusive.year, seg.end_exclusive.month, seg.end_exclusive.day
+                )
+                x1 = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
+                x2 = self._x_for_day(seg_end_arrow, start, end, axis_left, axis_right)
+                seg_w = max(0.0, x2 - x1)
+                if seg_w <= 0:
+                    continue
+
+                fill = alt_fill_color if seg_idx % 2 else fill_color
+                if fill and fill.strip().lower() not in {"none", "transparent", ""}:
+                    self._draw_rect(
+                        x1, row_y, seg_w, row_h,
+                        fill=fill,
+                        fill_opacity=1.0,
+                        css_class="ec-band-cell",
+                    )
+
+                label = seg.label
+                if label:
+                    pad = 2.0
+                    if text_align == "center":
+                        text_x = x1 + seg_w / 2.0
+                        anchor = "middle"
+                        max_w = seg_w - pad * 2
+                    elif text_align == "right":
+                        text_x = x2 - pad
+                        anchor = "end"
+                        max_w = seg_w - pad * 2
+                    else:
+                        text_x = x1 + pad
+                        anchor = "start"
+                        max_w = seg_w - pad * 2
+                    self._draw_text(
+                        text_x, row_y + row_h * 0.72, label,
+                        band_font, font_size,
+                        fill=band_label_color,
+                        fill_opacity=text_opacity,
+                        anchor=anchor,
+                        max_width=max_w,
+                        css_class="ec-label",
+                    )
+
+            sep_y = row_y + row_h
+            self._draw_line(
+                axis_left, sep_y, axis_right, sep_y,
+                stroke="#cccccc", stroke_width=0.5,
+                css_class="ec-separator",
+            )
+            row_y += row_h
+
+    def _draw_axis_ticks_from_band(
+        self,
+        config: "CalendarConfig",
+        band: dict,
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_left: float,
+        axis_right: float,
+        axis_y: float,
+        db: "CalendarDB",
+    ) -> None:
+        """Draw axis ticks at the start of each segment produced by a band dict.
+
+        Accepts any unit supported by shared.timeband.build_segments
+        (fiscal_quarter, fiscal_period, month, week, interval, date, dow,
+        countdown, countup). Each segment.start gets a tick line; segment.label
+        is rendered above the axis.
+        """
+        from datetime import timedelta
+
+        start_d = start.floor("day").date()
+        end_d = end.floor("day").date()
+        visible_days: list = []
+        d = start_d
+        while d <= end_d:
+            visible_days.append(d)
+            d = d + timedelta(days=1)
+
+        segments = _build_band_segments(
+            band, start_d, end_d, config,
+            visible_days=visible_days,
+            db=db,
+            week_start_default=0,
+            fiscal_year_start_month_default=int(
+                getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
+            ),
+        )
+        if not segments:
+            return
+
+        tick_h = max(6.0, config.timeline_axis_width * 2.5)
+        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        label_size = float(band.get("font_size") or label_size)
+        draw_labels = bool(band.get("show_labels", True)) and len(segments) <= int(
+            band.get("max_label_count", 60)
+        )
+        _tick_style = config.get_line_style("ec-axis-tick")
+        tick_color = str(band.get("tick_color") or _tick_style.color)
+        label_color = str(band.get("label_color") or band.get("font_color") or _tick_style.color)
+        font_name = str(band.get("font") or config.timeline_date_font)
+
+        for seg in segments:
+            seg_start_arrow = arrow.Arrow(seg.start.year, seg.start.month, seg.start.day)
+            x = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
+            self._draw_line(
+                x,
+                axis_y - tick_h,
+                x,
+                axis_y + tick_h,
+                stroke=tick_color,
+                stroke_width=1.0,
+                stroke_opacity=0.35,
+                stroke_dasharray=_tick_style.dasharray or None,
+                css_class="ec-axis-tick",
+            )
+            if draw_labels and seg.label:
+                self._draw_text(
+                    x,
+                    axis_y - (tick_h + label_size * 1.5),
+                    seg.label,
+                    font_name,
+                    label_size,
+                    fill=label_color,
+                    fill_opacity=0.8,
+                    anchor="middle",
+                    css_class="ec-label",
+                )
 
     def _draw_month_ticks(
         self,

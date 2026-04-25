@@ -549,6 +549,10 @@ class CalendarConfig:
     timeline_marker_radius: float = 6
     timeline_icon_size: float = 8.0
     timeline_callout_offset_y: float = 96.0
+    # Extra padding (pts) added between the timeline axis and the bottom of
+    # event callouts above the axis. Use this to push events away from tick
+    # labels. Stacks on top of callout_offset_y / min-callout-offset.
+    timeline_event_axis_padding: float = 0.0
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     # ── Timeline text styling (uniform) ──────────────────────────────────────
@@ -609,6 +613,25 @@ class CalendarConfig:
     # Fiscal period/quarter bands in timeline header (requires --fiscal)
     timeline_show_fiscal_periods: bool = False
     timeline_show_fiscal_quarters: bool = False
+
+    # Timebands rendered above/below the timeline axis. Each band is a dict
+    # accepted by shared.timeband.build_segments(); see blockplan / compactplan
+    # for examples. Empty list = no bands and no reserved vertical space.
+    timeline_top_time_bands: list = field(default_factory=list)
+    timeline_bottom_time_bands: list = field(default_factory=list)
+
+    # Tick mark frequency along the timeline axis. Same dict shape as a single
+    # entry in *_time_bands (any unit accepted by shared.timeband.build_segments).
+    # None = legacy month-start ticks.
+    timeline_ticks: dict | None = None
+
+    # Continuation icons on duration bars whose event extends past the visible
+    # date range. Drawn flush with the clipped end of the bar.
+    timeline_show_continuation_icon: bool = True
+    timeline_continuation_icon_right: str = "arrow-right"
+    timeline_continuation_icon_left: str = "arrow-left"
+    timeline_continuation_icon_height: float = 8.0
+    timeline_continuation_icon_color: str | None = None  # None = use bar color
 
     # Blockplan styling and behavior
     blockplan_background_color: str = "none"
@@ -876,6 +899,18 @@ class CalendarConfig:
     compactplan_continuation_section_gap: float = 4.0
     compactplan_show_axis_legend: bool = True  # show axis sample + label in the legend
     compactplan_legend_axis_text: str = "timeline"  # label beside the axis sample
+
+    # Non-workday highlighting for date/dow timeband cells.  None → disabled.
+    # Applied in priority order: federal_holiday → company_holiday → weekend.
+    compactplan_federal_holiday_fill_color: str | None = None
+    compactplan_federal_holiday_fill_opacity: float | None = None
+    compactplan_company_holiday_fill_color: str | None = None
+    compactplan_company_holiday_fill_opacity: float | None = None
+    compactplan_weekend_fill_color: str | None = None
+    compactplan_weekend_fill_opacity: float | None = None
+    compactplan_federal_holiday_icon: str | None = None
+    compactplan_company_holiday_icon: str | None = None
+    compactplan_weekend_icon: str | None = None
 
     # ── ExcelHeader ───────────────────────────────────────────────────────────
     # Settings for the excelheader subcommand (Excel workbook output).

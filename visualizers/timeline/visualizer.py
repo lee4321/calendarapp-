@@ -28,6 +28,7 @@ class TimelineVisualizer(BaseVisualizer):
             "rollups",
             "includenotes",
             "WBS",
+            "shrink",
         ]
 
     def _create_layout(self) -> BaseLayout:

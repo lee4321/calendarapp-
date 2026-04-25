@@ -18,6 +18,7 @@ from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from visualizers.mini.day_styles import DayStyleResolver, DayStyle
 from config.config import day_short, weekend_style_starts_sunday
 from shared.date_utils import index_events_by_day as _index_events_by_day
+from shared.rule_engine import StyleEngine
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
 if TYPE_CHECKING:
@@ -698,9 +699,19 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # Assign a distinct color to each duration event (cycle palette if needed)
         palette = config.group_colors or ["lightsteelblue"]
+        style_engine = StyleEngine(config.theme_style_rules or [])
+        from visualizers.mini.day_styles import DayStyleResolver
         event_colors: dict[int, str] = {}
         for idx, event in enumerate(duration_events):
-            event_colors[id(event)] = palette[idx % len(palette)]
+            color = palette[idx % len(palette)]
+            try:
+                evt_obj = DayStyleResolver._dict_to_event(event)
+                sr = style_engine.evaluate_event(evt_obj)
+                if sr.fill_color:
+                    color = sr.fill_color
+            except Exception:
+                pass
+            event_colors[id(event)] = color
 
         # Build a day -> list of bar colors (one entry per overlapping duration)
         bars_by_day: dict[str, list[str]] = {}

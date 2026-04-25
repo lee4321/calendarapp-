@@ -149,8 +149,10 @@ class DayStyleResolver:
         # Layer 3: Events on this day
         self._apply_events(style, events)
 
-        # Layer 3b: Day-box decorations driven by mini hash rules
-        style.hash_decorations = self._resolve_hash_decorations(
+        # Layer 3b: theme style_rules — applies fill, pattern, icon, and text
+        # overrides driven by day classification + event criteria.
+        self._apply_style_rules(
+            style,
             holidays=holidays,
             special_days=special_days,
             events=events,
@@ -263,17 +265,26 @@ class DayStyleResolver:
         if milestone_icon:
             style.icon_replace = milestone_icon
 
-    def _resolve_hash_decorations(
+    def _apply_style_rules(
         self,
+        style: DayStyle,
         *,
         holidays: list[dict],
         special_days: list[dict],
         events: list[dict],
-    ) -> list[HashDecoration]:
-        """Resolve mini day-cell SVG pattern decorations from style_rules."""
+    ) -> None:
+        """Layer theme ``style_rules`` overrides onto a mini day cell.
+
+        Applies (in priority order over earlier layers):
+
+        - ``fill_color`` / ``fill_opacity`` → cell shade
+        - ``pattern`` / ``pattern_color`` / ``pattern_opacity`` → hash decoration
+        - ``icon`` → ``icon_replace``
+        - ``text["day_number"]`` font / color → text style fields
+        """
         style_rules = self._config.theme_style_rules or []
         if not style_rules:
-            return []
+            return
 
         federal_holiday = bool(holidays)
         company_holiday = any(bool(sd.get("nonworkday")) for sd in special_days)
@@ -289,13 +300,29 @@ class DayStyleResolver:
         event_objects = [self._dict_to_event(e) for e in events]
         style_result = StyleEngine(style_rules).evaluate_day(ctx, event_objects)
 
-        if not style_result.pattern:
-            return []
-        return [HashDecoration(
-            pattern=style_result.pattern,
-            color=style_result.pattern_color,
-            opacity=style_result.pattern_opacity,
-        )]
+        if style_result.fill_color:
+            style.shade_color = style_result.fill_color
+            if style_result.fill_opacity is not None:
+                style.shade_opacity = float(style_result.fill_opacity)
+
+        if style_result.pattern:
+            style.hash_decorations = [HashDecoration(
+                pattern=style_result.pattern,
+                color=style_result.pattern_color,
+                opacity=style_result.pattern_opacity,
+            )]
+
+        if style_result.icon:
+            style.icon_replace = style_result.icon
+
+        day_text = style_result.text.get("day_number")
+        if day_text is not None:
+            if day_text.font_color is not None:
+                style.text_color = day_text.font_color
+            if day_text.font_opacity is not None:
+                style.text_opacity = float(day_text.font_opacity)
+            if day_text.font is not None:
+                style.font_name = day_text.font
 
     @staticmethod
     def _dict_to_event(d: dict):
