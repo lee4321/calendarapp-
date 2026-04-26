@@ -1747,7 +1747,11 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Label styling.
         default_label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
-        label_size = float(band.get("font_size") or default_label_size)
+        label_size = float(
+            band.get("label_font_size")
+            or band.get("font_size")
+            or default_label_size
+        )
         draw_labels = bool(band.get("show_labels", True)) and len(ticks) <= int(
             band.get("max_label_count", 60)
         )

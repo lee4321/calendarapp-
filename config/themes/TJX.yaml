@@ -387,6 +387,11 @@ timeline:
   # tick_dasharray, label_color, label_opacity, include_endpoints
   # (default true for date-formattable units).
   #
+  # Label typography (per-band):
+  #   label_font_size  — label font size in points. Falls back to font_size,
+  #                      then to max(7, weekly.name_text.font_size * 0.8).
+  #   font             — label font name; defaults to timeline.date.font_family.
+  #
   # Label-to-axis spacing (per-band):
   #   label_gap        — gap (pts) between the tick-mark end and the label
   #                      baseline. Default: label_size * 1.5.
@@ -398,6 +403,7 @@ timeline:
       label_format: "MMMM DD"
       show_labels: true
       label_color: "black"
+      label_font_size: 14
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 8.0
@@ -407,6 +413,7 @@ timeline:
       show_labels: true
       label_format: "M/D"
       label_color: "black"
+      label_font_size: 10
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 4.0
@@ -417,6 +424,7 @@ timeline:
       show_labels: true
       label_format: "ddd"
       label_color: "black"
+      label_font_size: 7
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 2.0
