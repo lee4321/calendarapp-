@@ -184,6 +184,7 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - A day number is bold when the day contains a milestone, or when any event on that day has `Priority <= 1`.
 - A day number changes color when one of these applies: the day is from an adjacent month, the day is a holiday, or an event's `Resource_Group` maps to a configured resource-group color.
 - Adjacent-month day cells can be shown or hidden with `mini_calendar.show_adjacent` (default: `true`) or `--mini-no-adjacent`.
+- A configurable outline can be drawn around each entire month grid (title + DOW header + day cells) using `mini_calendar.month_outline_color/width/opacity/dasharray`; the outline is disabled by default (color is `null`).
 - Day cells can also receive SVG pattern decorations from top-level `style_rules` entries with `apply_to: day_box` (the mini renderer reads the same `style_rules` list as weekly).
 - If none of those overrides apply, the day number uses the default mini-calendar day color from the active theme/config.
 - `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
@@ -710,6 +711,10 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_grid_line_opacity` | `mini_calendar.grid_line_opacity` | `float` | `0.5` | mini grid line stroke opacity |
 | `mini_grid_line_width` | `mini_calendar.grid_line_width` | `float` | `0.25` | mini grid line stroke width |
 | `mini_grid_line_dasharray` | `mini_calendar.grid_line_dasharray` | `str | None` | `None` | grid line stroke dasharray |
+| `mini_month_outline_color` | `mini_calendar.month_outline_color` | `str | None` | `None` | Outline color drawn around each entire month grid; `None` disables the outline |
+| `mini_month_outline_width` | `mini_calendar.month_outline_width` | `float` | `0.5` | Month outline stroke width in points |
+| `mini_month_outline_opacity` | `mini_calendar.month_outline_opacity` | `float` | `1.0` | Month outline stroke opacity (0–1) |
+| `mini_month_outline_dasharray` | `mini_calendar.month_outline_dasharray` | `str | None` | `None` | Month outline stroke dasharray |
 | `mini_hash_line_dasharray` | `mini_calendar.hash_line_dasharray` | `str | None` | `None` | hash line stroke dasharray |
 | `mini_header_color` | `mini_calendar.header_color` | `str` | `'grey'` | header color |
 | `mini_header_font` | `mini_calendar.header_font` | `str` | `Fonts.J_REGULAR` | Day-of-week header font |

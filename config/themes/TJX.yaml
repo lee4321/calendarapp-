@@ -729,6 +729,10 @@ mini_calendar:
   grid_line_width: 0.251
   grid_line_opacity: 0.5
   grid_line_dasharray: null
+  month_outline_color: "navy"
+  month_outline_width: 0.75
+  month_outline_opacity: 0.6
+  month_outline_dasharray: null
   cell_box_stroke_dasharray: null
   strikethrough_stroke_dasharray: null
   hash_line_dasharray: null
@@ -814,7 +818,6 @@ compact_plan:
     font_color: "black"
     font_opacity: 1.0
 
-
   time_bands:
     - label: "Month"
       unit: "month"
@@ -856,16 +859,16 @@ compact_plan:
   axis_opacity:   0.5          # (float 0–1) axis opacity
   axis_padding:   5.0          # (float) gap in points from axis to nearest duration row
   axis_width:     1.0         # (float) axis line width in points
-  show_axis: true 
+  show_axis: false
 
   # ── Duration lines ─────────────────────────────────────────────────────
   # Lines are placed using greedy row assignment: row 0 = just above axis,
   # row 1 = just below, row 2 = further above, row 3 = further below, etc.
   # Non-overlapping durations share rows; overlapping ones get separate rows.
-  duration_line_width:       5.0   # (float) line thickness in points
+  duration_line_width:       9.0   # (float) line thickness in points
   duration_opacity:          1.0   # (float 0–1) line opacity
   duration_stroke_dasharray: null  # (str|null) dash pattern; null = solid
-  lane_spacing:              6.0   # (float) vertical distance between stacked rows
+  lane_spacing:              9.0   # (float) vertical distance between stacked rows
 
   # ── Duration start icons ───────────────────────────────────────────────
   # An icon from the specified list is drawn at the start (left) end of each
@@ -874,8 +877,8 @@ compact_plan:
   # Available icon lists: darksquare, squares, darkcircles, circles, squircles, darksquircles
   show_duration_icons:   true           # (bool) draw icons on lines and in legend
   duration_icon_list:    "darksquare"   # (str) icon list name from config.ICON_SETS
-  duration_icon_height:  5.0            # (float) icon display height in pts
-  duration_icon_color:   "black"           # (str|null) icon color; null = use line color
+  duration_icon_height:  8.0            # (float) icon display height in pts
+  duration_icon_color:   "white"           # (str|null) icon color; null = use line color
 
   # ── Duration color palette (cycled by resource group) ─────────────────
   # palette cycles through groups in sorted order; palette_name fetches from DB.
