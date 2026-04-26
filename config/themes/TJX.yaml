@@ -705,7 +705,7 @@ blockplan:
 mini_calendar:
   cell_font: "JuliaMono-Regular"
   cell_bold_font: "Caveat-Bold"
-  cell_font_size: 14
+  cell_font_size: 48
   title_font: "Caveat-Bold"
   title_font_size: 18
   title_format: "MMMM YYYY"
@@ -719,7 +719,7 @@ mini_calendar:
   adjacent_month_color: "lightgrey"
   show_adjacent: false
   holiday_color: "red"
-  nonworkday_fill_color: "lightblue"
+  nonworkday_fill_color: "blood"
   milestone_color: "navy"
   circle_milestones: false
   milestone_stroke_color: "navy"
