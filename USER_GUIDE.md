@@ -707,6 +707,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_details_title_text` | `mini_details.title_text` | `str` | `'Event Details'` | title text |
 | `mini_duration_bar_stroke_dasharray` | `mini_calendar.duration_bar_stroke_dasharray` | `str | None` | `None` | duration bar stroke dasharray |
 | `mini_duration_bar_stroke_opacity` | `mini_calendar.duration_bar_stroke_opacity` | `float` | `0.7` | duration bar stroke opacity |
+| `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell (also enabled by `--mini-grid-lines`) |
 | `mini_grid_line_color` | `mini_calendar.grid_line_color` | `str` | `'lightgrey'` | mini grid line stroke color |
 | `mini_grid_line_opacity` | `mini_calendar.grid_line_opacity` | `float` | `0.5` | mini grid line stroke opacity |
 | `mini_grid_line_width` | `mini_calendar.grid_line_width` | `float` | `0.25` | mini grid line stroke width |

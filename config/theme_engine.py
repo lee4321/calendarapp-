@@ -362,6 +362,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "milestone_stroke_width"): "mini_milestone_stroke_width",
     ("mini_calendar", "milestone_stroke_opacity"): "mini_milestone_stroke_opacity",
     ("mini_calendar", "circle_milestones"): "mini_circle_milestones",
+    ("mini_calendar", "grid_lines"): "mini_grid_lines",
     ("mini_calendar", "grid_line_color"): "mini_grid_line_color",
     ("mini_calendar", "grid_line_width"): "mini_grid_line_width",
     ("mini_calendar", "grid_line_opacity"): "mini_grid_line_opacity",

@@ -81,6 +81,11 @@ line_styles:
     color: "grey"
     width: 0.5
     opacity: 0.3
+  mini_grid:
+    color: "grey"
+    width: 0.4
+    opacity: 0.7
+    dasharray: "1,2"
   axis:
     color: "lightgrey"
     width: 3
@@ -149,7 +154,7 @@ element_styles:
   ec-pattern-fill:   { box_style: default }
 
   # ── Line elements ──
-  ec-grid-line:      { line_style: grid }
+  ec-grid-line:      { line_style: mini_grid }
   ec-axis-line:      { line_style: axis }
   ec-axis-tick:      { line_style: axis }
   ec-today-line:     { line_style: today }
@@ -725,10 +730,11 @@ mini_calendar:
   week_number_font_size: null
   week_number_color: "darkgrey"
   week_number_label_format: "W{num}"
-  grid_line_color: "lightgrey"
-  grid_line_width: 0.251
-  grid_line_opacity: 0.5
-  grid_line_dasharray: null
+  grid_lines: true
+  grid_line_color: "grey"
+  grid_line_width: 0.4
+  grid_line_opacity: 0.7
+  grid_line_dasharray: "1,2"
   month_outline_color: "navy"
   month_outline_width: 0.75
   month_outline_opacity: 0.6

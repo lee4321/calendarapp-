@@ -806,8 +806,12 @@ mini_calendar:
   cell_box_stroke_dasharray:       null   # (str|null) day cell border dash; null = solid
   duration_bar_stroke_dasharray:   null   # (str|null) duration bar border dash
   duration_bar_stroke_opacity:     0.8    # (float 0–1) duration bar border opacity
+  grid_lines:               false  # (bool) draw a stroked outline around every
+                                   #   day cell in each month grid; equivalent
+                                   #   to the --mini-grid-lines CLI flag
   grid_line_color:          "grey" # (str) grid line color
-  grid_line_dasharray:      null   # (str|null) grid line dash pattern
+  grid_line_dasharray:      null   # (str|null) grid line dash pattern (e.g.
+                                   #   "1,2" for dotted, "3,2" for dashed)
   grid_line_opacity:        0.4    # (float 0–1) grid line opacity
   grid_line_width:          0.5    # (float) grid line width in points
   month_outline_color:      null   # (str|null) outline drawn around each entire
