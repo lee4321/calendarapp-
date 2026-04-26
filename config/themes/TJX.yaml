@@ -406,7 +406,7 @@ timeline:
       
     - unit: "Date"
       show_labels: true
-      label_format: "dd"
+      label_format: "ddd"
       label_color: "black"
       tick_width: 0.5
       tick_opacity: 0.5
