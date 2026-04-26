@@ -810,6 +810,12 @@ mini_calendar:
   grid_line_dasharray:      null   # (str|null) grid line dash pattern
   grid_line_opacity:        0.4    # (float 0–1) grid line opacity
   grid_line_width:          0.5    # (float) grid line width in points
+  month_outline_color:      null   # (str|null) outline drawn around each entire
+                                   #   month grid (title + DOW + cells); null
+                                   #   disables the outline
+  month_outline_dasharray:  null   # (str|null) month outline dash pattern
+  month_outline_opacity:    1.0    # (float 0–1) month outline opacity
+  month_outline_width:      0.5    # (float) month outline stroke width in points
   hash_line_dasharray:      null   # (str|null) hash decoration line dash
   milestone_stroke_color:          "navy" # (str) milestone circle border color
   milestone_stroke_opacity:        0.8    # (float 0–1) milestone circle border opacity

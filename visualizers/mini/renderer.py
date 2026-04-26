@@ -84,7 +84,23 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             and weekend_style_starts_sunday(config.weekend_style)
         )
 
-        # First pass: titles, headers, week numbers
+        # First pass: month outlines (drawn behind titles, headers, cells)
+        outline_color = config.mini_month_outline_color
+        if outline_color and not _is_none_color(outline_color):
+            for key in sorted(coordinates):
+                if not key.startswith("MonthGrid_"):
+                    continue
+                x, y, w, h = coordinates[key]
+                self._draw_rect(
+                    x, y, w, h,
+                    fill="none",
+                    stroke=outline_color,
+                    stroke_width=config.mini_month_outline_width,
+                    stroke_opacity=config.mini_month_outline_opacity,
+                    stroke_dasharray=config.mini_month_outline_dasharray or None,
+                )
+
+        # Second pass: titles, headers, week numbers
         for key in sorted(coordinates):
             x, y, w, h = coordinates[key]
 
@@ -100,11 +116,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 if wn_value is not None:
                     self._draw_week_number(config, x, y, w, h, wn_value)
 
-        # Second pass: duration bars (behind day numbers and icons)
+        # Third pass: duration bars (behind day numbers and icons)
         if config.includedurations:
             self._draw_all_duration_bars(config, coordinates, events)
 
-        # Third pass: day cells (day numbers, icons, backgrounds)
+        # Fourth pass: day cells (day numbers, icons, backgrounds)
         for key in sorted(coordinates):
             if not key.startswith("Cell_"):
                 continue

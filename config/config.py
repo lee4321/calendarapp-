@@ -175,6 +175,10 @@ class CalendarConfig:
     mini_grid_line_width: float = 0.25
     mini_grid_line_opacity: float = 0.5
     mini_grid_line_dasharray: str | None = None
+    mini_month_outline_color: str | None = None  # None disables the outline
+    mini_month_outline_width: float = 0.5
+    mini_month_outline_opacity: float = 1.0
+    mini_month_outline_dasharray: str | None = None
     mini_cell_box_stroke_dasharray: str | None = None
     mini_strikethrough_stroke_dasharray: str | None = None
     mini_hash_line_dasharray: str | None = None
