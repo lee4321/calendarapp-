@@ -317,8 +317,8 @@ timeline:
   # Extra clearance between the axis and event callouts. Bump this when tick
   # labels collide with event date/name text above the timeline.
   event_axis_padding: 24.0
-  duration_offset_y: 30
-  duration_lane_gap_y: 18.0
+  duration_offset_y: 20.0
+  duration_lane_gap_y: 20.0
   label_stroke_width: 1.0
   label_fill_opacity: 0.25
   duration_bar_fill_opacity: 0.75
@@ -400,7 +400,7 @@ timeline:
   #                      tick_length component entirely.
   ticks:
     - unit: "month"
-      label_format: "MMMM DD"
+      label_format: "MMM D"
       show_labels: true
       label_color: "black"
       label_font_size: 14
@@ -413,7 +413,7 @@ timeline:
       show_labels: true
       label_format: "M/D"
       label_color: "black"
-      label_font_size: 10
+      label_font_size: 12
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 4.0
@@ -444,7 +444,7 @@ timeline_events:
   box_height: 24
 
 timeline_durations:
-  box_height: 24
+  box_height: 50
   date_font: "OfficinaSans-BookItalic"
   date_font_size: 10
   date_color: "black"
