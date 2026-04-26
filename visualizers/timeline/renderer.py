@@ -168,7 +168,15 @@ class TimelineRenderer(BaseSVGRenderer):
         # ticks lie below the bands without overlap.
         inner_y = area_y + top_bands_h
         inner_h = max(1.0, area_h - top_bands_h - bottom_bands_h)
-        axis_y = inner_y + (inner_h * 0.44)
+        if getattr(config, "includeevents", True):
+            axis_y = inner_y + (inner_h * 0.44)
+        else:
+            # No event callouts above the axis: only the tick-label stack needs
+            # clearance, so pull the axis up to just below the top-band block.
+            tick_clearance = self._tick_label_top_clearance(
+                config, getattr(config, "timeline_ticks", None)
+            )
+            axis_y = inner_y + tick_clearance + 4.0
 
         event_objs = [Event.from_dict(e) for e in events]
         self._load_icon_svg_cache(db)
@@ -1620,6 +1628,46 @@ class TimelineRenderer(BaseSVGRenderer):
                 css_class="ec-separator",
             )
             row_y += row_h
+
+    @staticmethod
+    def _tick_label_top_clearance(
+        config: "CalendarConfig", tick_bands_cfg: object
+    ) -> float:
+        """Maximum vertical extent (pts) of any tick band's label above the axis.
+
+        Used to size the area above axis_y when there are no callouts/events to
+        accommodate, so the axis can be raised toward the top edge while still
+        leaving room for the tick labels themselves.
+        """
+        if not tick_bands_cfg:
+            return 0.0
+        bands = (
+            [tick_bands_cfg]
+            if isinstance(tick_bands_cfg, dict)
+            else list(tick_bands_cfg)
+        )
+        default_label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        default_tick_h = max(6.0, config.timeline_axis_width * 2.5)
+        max_above = 0.0
+        for tb in bands:
+            if not isinstance(tb, dict):
+                continue
+            tick_h = float(tb.get("tick_length") or default_tick_h)
+            lsize = float(
+                tb.get("label_font_size")
+                or tb.get("font_size")
+                or default_label_size
+            )
+            offset = tb.get("label_offset_y")
+            gap = tb.get("label_gap")
+            if offset is not None:
+                lo = float(offset)
+            elif gap is not None:
+                lo = tick_h + float(gap)
+            else:
+                lo = tick_h + lsize * 1.5
+            max_above = max(max_above, lo + lsize)
+        return max_above
 
     @staticmethod
     def _tick_unit_priority(band: dict) -> int:
