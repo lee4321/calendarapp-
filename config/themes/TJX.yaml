@@ -391,17 +391,29 @@ timeline:
       label_format: "MMMM DD"
       show_labels: true
       label_color: "black"
-      tick_width: 1.0
-      tick_opacity: 0.75
+      tick_width: 0.5
+      tick_opacity: 0.5
       tick_length: 8.0
+      
     - unit: "week"
       show_labels: true
       label_format: "M/D"
       label_color: "black"
-      tick_width: 0.75
-      tick_opacity: 0.25
+      tick_width: 0.5
+      tick_opacity: 0.5
       tick_length: 4.0
       include_endpoints: false
+      
+    - unit: "Date"
+      show_labels: true
+      label_format: "dd"
+      label_color: "black"
+      tick_width: 0.5
+      tick_opacity: 0.5
+      tick_length: 2.0
+      include_endpoints: false
+      max_label_count: 400
+
 
   # ── Continuation icons for clipped duration bars ─────────────────────────
   show_continuation_icon: true
