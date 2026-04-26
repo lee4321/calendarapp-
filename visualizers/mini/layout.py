@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import arrow
 
 from shared.date_utils import get_week_number, get_months_in_range
-from config.config import weekend_style_starts_sunday
+from config.config import weekend_style_is_workweek, weekend_style_starts_sunday
 from visualizers.base import BaseLayout, CoordinateDict
 
 if TYPE_CHECKING:
@@ -112,11 +112,12 @@ class MiniCalendarLayout(BaseLayout):
         #   1. Width constraint  — cells are square: cell = day_col_width
         #   2. Height constraint — all row-grids must fit within content_height
         # The binding constraint is whichever produces the smaller cell.
+        days_per_week = 5 if weekend_style_is_workweek(config.weekend_style) else 7
         show_wn = config.mini_show_week_numbers
         if show_wn:
-            day_col_width = month_width / (7 + 0.6)
+            day_col_width = month_width / (days_per_week + 0.6)
         else:
-            day_col_width = month_width / 7
+            day_col_width = month_width / days_per_week
 
         title_height = config.mini_title_font_size * 1.8
         header_height = config.mini_header_font_size * 1.8
@@ -221,16 +222,20 @@ class MiniCalendarLayout(BaseLayout):
         cal = calendar.Calendar(firstweekday=firstweekday)
         weeks_dates = cal.monthdatescalendar(year, month)
 
-        # Horizontal allocation: optional W# column + 7 day columns
+        # Workweek mode (--weekends 0) drops Sat/Sun columns
+        is_workweek = weekend_style_is_workweek(config.weekend_style)
+        days_per_week = 5 if is_workweek else 7
+
+        # Horizontal allocation: optional W# column + day columns
         show_wn = config.mini_show_week_numbers
         if show_wn:
             # W# column is ~60% the width of a day column
-            # Solve: wn_w + 7 * day_w = width, wn_w = 0.6 * day_w
-            day_col_width = width / (7 + 0.6)
+            # Solve: wn_w + N * day_w = width, wn_w = 0.6 * day_w
+            day_col_width = width / (days_per_week + 0.6)
             wn_col_width = day_col_width * 0.6
         else:
             wn_col_width = 0.0
-            day_col_width = width / 7
+            day_col_width = width / days_per_week
 
         # Vertical allocation — cell height is provided by the caller when
         # the height constraint is tighter than the square-cell width
@@ -268,8 +273,11 @@ class MiniCalendarLayout(BaseLayout):
                 )
                 self.week_numbers[wn_key] = wn_value
 
-            # Day cells
-            for col_idx, d in enumerate(week):
+            # Day cells — in workweek mode, skip Sat/Sun and reflow columns
+            visible_days = (
+                [d for d in week if d.weekday() < 5] if is_workweek else list(week)
+            )
+            for col_idx, d in enumerate(visible_days):
                 cell_x = day_area_x + col_idx * day_col_width
                 is_adj = d.month != month
 

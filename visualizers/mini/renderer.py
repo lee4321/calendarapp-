@@ -16,7 +16,7 @@ import drawsvg
 
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from visualizers.mini.day_styles import DayStyleResolver, DayStyle
-from config.config import day_short, weekend_style_starts_sunday
+from config.config import day_short, weekend_style_is_workweek, weekend_style_starts_sunday
 from shared.date_utils import index_events_by_day as _index_events_by_day
 from shared.rule_engine import StyleEngine
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
@@ -209,11 +209,13 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         _ts_label = config.get_text_style("ec-label")
 
-        labels = self._ordered_day_labels(week_start_sunday)
+        is_workweek = weekend_style_is_workweek(config.weekend_style)
+        labels = self._ordered_day_labels(week_start_sunday, is_workweek)
+        days_per_week = len(labels)
 
         show_wn = config.mini_show_week_numbers
         if show_wn:
-            day_col_width = w / (7 + 0.6)
+            day_col_width = w / (days_per_week + 0.6)
             wn_col_width = day_col_width * 0.6
             day_area_x = x + wn_col_width
 
@@ -230,7 +232,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 css_class="ec-label",
             )
         else:
-            day_col_width = w / 7
+            day_col_width = w / days_per_week
             day_area_x = x
 
         for i, label in enumerate(labels):
@@ -247,16 +249,28 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             )
 
     @staticmethod
-    def _ordered_day_labels(week_start_sunday: bool) -> list[str]:
+    def _ordered_day_labels(
+        week_start_sunday: bool, workweek_only: bool = False
+    ) -> list[str]:
         """
         Return weekday labels derived from shared global config values.
 
         Uses config.config.day_short to keep mini headers configurable from one place.
+        When ``workweek_only`` is True, drops Sat and Sun from the returned list.
         """
         labels = list(day_short)
         if len(labels) != 7:
             labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        return [labels[6], *labels[:6]] if week_start_sunday else labels
+        ordered = [labels[6], *labels[:6]] if week_start_sunday else labels
+        if workweek_only:
+            # day_short is Mon..Sun, so weekday() < 5 maps to Sat/Sun being the
+            # last two positions in Monday-start ordering and the first/last
+            # positions in Sunday-start ordering. Filter by the source weekday
+            # rather than position to stay correct under both orderings.
+            mon_to_sun = labels  # canonical Mon..Sun
+            wd = [mon_to_sun.index(lbl) for lbl in ordered]
+            return [lbl for lbl, w in zip(ordered, wd) if w < 5]
+        return ordered
 
     # =========================================================================
     # Week number cell
