@@ -641,17 +641,23 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         box_left: float,
         label_x: float,
         label_width: float,
-    ) -> None:
-        """Draw week number on week-start days at the same baseline as the day number."""
+    ) -> float:
+        """Draw week number on week-start days at the same baseline as the day number.
+
+        Returns the rightmost x-coordinate occupied by the in-box week-number
+        label, so callers can shift downstream content to avoid overlap.
+        Returns 0.0 when nothing was drawn inside the box (skipped, or drawn
+        in the left page margin).
+        """
         if not (config.include_week_numbers and config.week_number_font_size):
-            return
+            return 0.0
 
         week_start_sunday = weekend_style_starts_sunday(config.weekend_style)
         is_week_start = (
             oneday.isoweekday() == 7 if week_start_sunday else oneday.isoweekday() == 1
         )
         if not is_week_start:
-            return
+            return 0.0
 
         anchor = None
         if config.week_number_mode == "custom" and config.week1_start:
@@ -665,13 +671,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             anchor=anchor,
         )
         if week_num <= 0:
-            return
+            return 0.0
 
         try:
             week_text = config.week_number_label_format.format(num=week_num)
         except (KeyError, ValueError):
             week_text = f"W{week_num:02d}"
         margins = resolve_page_margins(config)
+        drew_inside = False
         if margins["left"] > 0:
             wn_x = box_left - 2.0
             anchor = "end"
@@ -679,6 +686,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             gap = config.day_box_number_font_size * 0.3
             wn_x = label_x + (label_width + gap if label_width else 0.0)
             anchor = "start"
+            drew_inside = True
         _ts_wn = config.get_text_style("ec-week-number")
         self._draw_text(
             wn_x,
@@ -691,6 +699,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             css_class="ec-week-number",
         )
 
+        if not drew_inside:
+            return 0.0
+        font_path = get_font_path(_ts_wn.font)
+        text_w = (
+            string_width(week_text, font_path, config.week_number_font_size)
+            if font_path
+            else 0.0
+        )
+        return wn_x + text_w
+
     def _draw_special_day_title(
         self,
         config: CalendarConfig,
@@ -701,18 +719,27 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         daytitle: str | bool,
         dayicon: str,
         day_num_rendered_width: float = 0.0,
+        min_left_x: float = 0.0,
     ) -> None:
         """Draw special day (holiday) title text and icon in the day box.
 
         baseline_y is the shared text baseline for this row (same as the day
         number), so the title and icon are baseline-aligned with the day number.
+
+        ``min_left_x`` is the rightmost x already occupied on this row by
+        upstream labels (e.g. an in-box week-number label); the icon and
+        title are shifted right so they begin past this boundary.
         """
         if not daytitle:
             return
 
         _ts_ht = config.get_text_style("ec-holiday-title")
         _is_ei = config.get_icon_style("ec-event-icon")
-        x1_name, _ = dbc["Day_Name"]
+        x1_icon_default, _ = dbc["Day_Icon"]
+        x1_name_default, _ = dbc["Day_Name"]
+        shift = max(0.0, min_left_x + (config.day_box_number_font_size * 0.3) - x1_icon_default)
+        x1_icon = x1_icon_default + shift
+        x1_name = x1_name_default + shift
         gap = config.day_box_number_font_size * 0.15
         available_right = x1 - day_num_rendered_width - gap
         daytitlewidth = max(available_right - x1_name, 0.0)
@@ -733,7 +760,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             css_class="ec-holiday-title",
         )
 
-        x1_icon, _ = dbc["Day_Icon"]
         self._draw_icon_svg(
             dayicon,
             x1_icon,
@@ -827,12 +853,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # Fiscal period label and week number
         label_x = X + (W * 0.02)
         label_width = self._draw_fiscal_label(config, oneday, oneday_str, dbc, label_x)
-        self._draw_week_number_label(config, oneday, y1, X, label_x, label_width)
+        wn_right_x = self._draw_week_number_label(
+            config, oneday, y1, X, label_x, label_width
+        )
 
         # Holiday title and icon share the day-number baseline so all elements
         # on the same row are baseline-aligned (standard typographic convention).
+        # Shift past the week-number label when one was drawn inside the box.
         self._draw_special_day_title(
-            config, dbc, x1, X, y1, daytitle, dayicon, day_num_width
+            config, dbc, x1, X, y1, daytitle, dayicon, day_num_width,
+            min_left_x=wn_right_x,
         )
 
     # =========================================================================
