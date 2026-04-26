@@ -97,7 +97,11 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         def required_h(ts: float, ns: float, has_notes: bool) -> float:
-            return (ts * 1.9) + ((ns * 1.7) if has_notes else 0.0)
+            # Use ~1.2 line height per row plus a small inner padding. The
+            # earlier 1.9/1.7 multipliers were generous and caused declared
+            # font sizes to be shrunk well below the box's actual capacity.
+            line_h = ts * 1.2 + ((ns * 1.2) if has_notes else 0.0)
+            return line_h + 2.0
 
         has_notes = bool(notes)
         need = required_h(tsize, nsize, has_notes)
@@ -1375,7 +1379,15 @@ class TimelineRenderer(BaseSVGRenderer):
             notes_size,
         )
         duration_text_color = config.timeline_name_text_font_color or _dur_name_style.color or item.color
-        title_y = bar_y + fitted_title * 1.15
+        # Vertically center the title (and notes, when present) within the bar
+        # so the text sits in the lower portion of the rectangle rather than
+        # being pinned to its top edge.
+        has_notes = bool(notes and config.include_notes)
+        line1_h = fitted_title * 1.2
+        line2_h = (fitted_notes * 1.2) if has_notes else 0.0
+        text_block_h = line1_h + line2_h
+        text_top_y = bar_y + max(0.0, (bar_h - text_block_h) / 2.0)
+        title_y = text_top_y + fitted_title * 0.85
         self._draw_text(
             (item.start_x + item.end_x) / 2,
             title_y,
@@ -1389,8 +1401,8 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-event-name",
         )
 
-        if notes and config.include_notes:
-            notes_y = title_y + (fitted_notes * 1.35)
+        if has_notes:
+            notes_y = text_top_y + line1_h + fitted_notes * 0.85
             self._draw_text(
                 (item.start_x + item.end_x) / 2,
                 notes_y,
