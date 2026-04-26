@@ -34,7 +34,7 @@ text_styles:
   label_bold:
     font: "OfficinaSans-Bold"
     size: 12
-    color: "yellow"
+    color: "Blue"
   caption:
     font: "OfficinaSans-Bold"
     size: 12
@@ -705,30 +705,30 @@ blockplan:
 mini_calendar:
   cell_font: "JuliaMono-Regular"
   cell_bold_font: "Caveat-Bold"
-  cell_font_size: null
+  cell_font_size: 14
   title_font: "Caveat-Bold"
-  title_font_size: null
+  title_font_size: 18
   title_format: "MMMM YYYY"
   title_color: "navy"
   header_font: "JuliaMono-Regular"
-  header_font_size: null
+  header_font_size: 12
   header_color: "grey"
   day_number_glyphs: null
   day_number_digits: null
   day_color: "black"
   adjacent_month_color: "lightgrey"
-  show_adjacent: true
+  show_adjacent: false
   holiday_color: "red"
   nonworkday_fill_color: "lightblue"
   milestone_color: "navy"
-  circle_milestones: true
+  circle_milestones: false
   milestone_stroke_color: "navy"
   milestone_stroke_width: 1.0
   milestone_stroke_opacity: 1.0
-  current_day_color: "lightblue"
+  current_day_color: "black"
   week_number_font: "JuliaMono-Regular"
-  week_number_font_size: null
-  week_number_color: "darkgrey"
+  week_number_font_size: 12
+  week_number_color: "Blue"
   week_number_label_format: "W{num}"
   grid_lines: true
   grid_line_color: "grey"
