@@ -1757,7 +1757,13 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         font_name = str(band.get("font") or config.timeline_date_font)
         label_offset = band.get("label_offset_y")
-        label_offset_y = float(label_offset) if label_offset is not None else (tick_h + label_size * 1.5)
+        label_gap = band.get("label_gap")
+        if label_offset is not None:
+            label_offset_y = float(label_offset)
+        elif label_gap is not None:
+            label_offset_y = tick_h + float(label_gap)
+        else:
+            label_offset_y = tick_h + label_size * 1.5
 
         last_idx = len(ticks) - 1
         for idx, (tick_date, tick_label) in enumerate(ticks):

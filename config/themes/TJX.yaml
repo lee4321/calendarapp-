@@ -384,8 +384,15 @@ timeline:
   # the same axis, so callers can stack a coarse labelled band over a finer
   # unlabelled one. Each entry takes the same fields as a time_bands entry,
   # plus tick decoration: tick_width, tick_color, tick_opacity, tick_length,
-  # tick_dasharray, label_color, label_opacity, label_offset_y,
-  # include_endpoints (default true for date-formattable units).
+  # tick_dasharray, label_color, label_opacity, include_endpoints
+  # (default true for date-formattable units).
+  #
+  # Label-to-axis spacing (per-band):
+  #   label_gap        — gap (pts) between the tick-mark end and the label
+  #                      baseline. Default: label_size * 1.5.
+  #   label_offset_y   — absolute offset (pts) from the axis to the label
+  #                      baseline. When set, overrides label_gap and the
+  #                      tick_length component entirely.
   ticks:
     - unit: "month"
       label_format: "MMMM DD"
@@ -394,7 +401,8 @@ timeline:
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 8.0
-      
+      label_gap: 18.0
+
     - unit: "week"
       show_labels: true
       label_format: "M/D"
@@ -403,7 +411,8 @@ timeline:
       tick_opacity: 0.5
       tick_length: 4.0
       include_endpoints: false
-      
+      label_gap: 8.0
+
     - unit: "Date"
       show_labels: true
       label_format: "ddd"
@@ -413,6 +422,7 @@ timeline:
       tick_length: 2.0
       include_endpoints: false
       max_label_count: 400
+      label_gap: 2.0
 
 
   # ── Continuation icons for clipped duration bars ─────────────────────────
