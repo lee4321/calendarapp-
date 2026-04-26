@@ -1150,8 +1150,8 @@ class TimelineRenderer(BaseSVGRenderer):
 
         _name_style = config.get_text_style("ec-event-name")
         _notes_style = config.get_text_style("ec-event-notes")
-        title_font_path = self._safe_font_path(_name_style.font or config.timeline_name_text_font_name)
-        notes_font_path = self._safe_font_path(_notes_style.font or config.timeline_notes_text_font_name)
+        title_font_path = self._safe_font_path(config.timeline_name_text_font_name or _name_style.font)
+        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name or _notes_style.font)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -1167,7 +1167,7 @@ class TimelineRenderer(BaseSVGRenderer):
         title_y = item.box_y + fitted_title * 1.15
         notes_y = title_y + (fitted_notes * 1.55)
 
-        event_text_color = _name_style.color or config.timeline_name_text_font_color or item.color
+        event_text_color = config.timeline_name_text_font_color or _name_style.color or item.color
 
         if has_icon:
             self._draw_icon_svg(
@@ -1189,7 +1189,7 @@ class TimelineRenderer(BaseSVGRenderer):
             title_text_x,
             title_y,
             title,
-            _name_style.font or config.timeline_name_text_font_name,
+            config.timeline_name_text_font_name or _name_style.font,
             fitted_title,
             fill=event_text_color,
             fill_opacity=_name_style.opacity,
@@ -1202,9 +1202,9 @@ class TimelineRenderer(BaseSVGRenderer):
                 text_x,
                 notes_y,
                 notes,
-                _notes_style.font or config.timeline_notes_text_font_name,
+                config.timeline_notes_text_font_name or _notes_style.font,
                 fitted_notes,
-                fill=_notes_style.color or event_text_color,
+                fill=config.timeline_notes_text_font_color or _notes_style.color or event_text_color,
                 fill_opacity=_notes_style.opacity,
                 max_width=item.box_width - 12.0,
                 css_class="ec-event-notes",
@@ -1353,8 +1353,8 @@ class TimelineRenderer(BaseSVGRenderer):
 
         _dur_name_style = config.get_text_style("ec-event-name")
         _dur_notes_style = config.get_text_style("ec-event-notes")
-        title_font_path = self._safe_font_path(_dur_name_style.font or config.timeline_notes_text_font_name)
-        notes_font_path = self._safe_font_path(_dur_notes_style.font or config.timeline_notes_text_font_name)
+        title_font_path = self._safe_font_path(config.timeline_name_text_font_name or _dur_name_style.font)
+        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name or _dur_notes_style.font)
         text_w = max(10.0, item.end_x - item.start_x - 6.0)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
@@ -1366,13 +1366,13 @@ class TimelineRenderer(BaseSVGRenderer):
             title_size,
             notes_size,
         )
-        duration_text_color = _dur_name_style.color or config.timeline_name_text_font_color or item.color
+        duration_text_color = config.timeline_name_text_font_color or _dur_name_style.color or item.color
         title_y = bar_y + fitted_title * 1.15
         self._draw_text(
             (item.start_x + item.end_x) / 2,
             title_y,
             title,
-            _dur_name_style.font or config.timeline_notes_text_font_name,
+            config.timeline_name_text_font_name or _dur_name_style.font,
             fitted_title,
             fill=duration_text_color,
             fill_opacity=_dur_name_style.opacity,
@@ -1387,9 +1387,9 @@ class TimelineRenderer(BaseSVGRenderer):
                 (item.start_x + item.end_x) / 2,
                 notes_y,
                 notes,
-                _dur_notes_style.font or config.timeline_notes_text_font_name,
+                config.timeline_notes_text_font_name or _dur_notes_style.font,
                 fitted_notes,
-                fill=_dur_notes_style.color or duration_text_color,
+                fill=config.timeline_notes_text_font_color or _dur_notes_style.color or duration_text_color,
                 fill_opacity=_dur_notes_style.opacity,
                 anchor="middle",
                 max_width=text_w,

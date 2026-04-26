@@ -185,10 +185,10 @@ base:
   font_color: "grey"
   default_missing_icon: applet-closed
   size_rule:
-    - font_size: 10
+    - font_size: 14
       when:
         papersize: ["letter", "ledger", "tabloid"]
-    - font_size: 8
+    - font_size: 12
       when:
         papersize: ["3x5", "5x8"]
 
@@ -312,8 +312,8 @@ timeline:
   marker_stroke_color: ""
   marker_stroke_width: 1.0
   marker_radius: 4.0
-  icon_size: 8
-  callout_offset_y: 30.0
+  icon_size: 14
+  callout_offset_y: 20.0
   # Extra clearance between the axis and event callouts. Bump this when tick
   # labels collide with event date/name text above the timeline.
   event_axis_padding: 24.0
@@ -332,11 +332,13 @@ timeline:
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
   name_text:
-    font_name: "OfficinaSans-BookItalic"
-    font_color: "deepskyblue"
+    font_name: "OfficinaSans-Book"
+    font_color: "white"
+    font_size: 18
   notes_text:
     font_name: "OfficinaSans-BookItalic"
-    font_color: "deepskyblue"
+    font_color: "white"
+    font_size: 14
   date:
     font_family: "OfficinaSans-BookItalic"
     font_color: "grey"
@@ -388,13 +390,15 @@ timeline:
     - unit: "month"
       label_format: "MMMM DD"
       show_labels: true
-      tick_width: 1.5
-      tick_opacity: 0.7
+      label_color: "black"
+      tick_width: 1.0
+      tick_opacity: 0.75
       tick_length: 8.0
     - unit: "week"
       show_labels: true
-      label_format: "DD"
-      tick_width: 0.5
+      label_format: "M/D"
+      label_color: "black"
+      tick_width: 0.75
       tick_opacity: 0.25
       tick_length: 4.0
       include_endpoints: false
@@ -403,8 +407,8 @@ timeline:
   show_continuation_icon: true
   continuation_icon_right: "move-right"
   continuation_icon_left: "move-left"
-  continuation_icon_height: 9.0
-  continuation_icon_color: "black"
+  continuation_icon_height: 14.0
+  continuation_icon_color: "white"
 
 timeline_events:
   box_height: 24
@@ -412,7 +416,7 @@ timeline_events:
 timeline_durations:
   box_height: 24
   date_font: "OfficinaSans-BookItalic"
-  date_font_size: 11
+  date_font_size: 10
   date_color: "black"
 
 # ── Block Plan ────────────────────────────────────────────────────────────────
