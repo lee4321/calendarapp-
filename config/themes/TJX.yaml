@@ -11,7 +11,7 @@ theme:
 
 text_styles:
   heading:
-    font: "OfficinaSans-Bold"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 14
     color: "grey"
     size_rules:
@@ -20,31 +20,31 @@ text_styles:
       - font_size: 8
         when: { papersize: ["3x5", "5x8"] }
   body:
-    font: "OfficinaSans-Book"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "white"
   body_secondary:
-    font: "OfficinaSans-BookItalic"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "grey"
   label:
-    font: "OfficinaSans-Book"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "grey"
   label_bold:
-    font: "OfficinaSans-Bold"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "Blue"
   caption:
-    font: "OfficinaSans-Bold"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "grey"
   day_number:
-    font: "OfficinaSans-Bold"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "#E5E4E2"
   month_title:
-    font: "OfficinaSans-Bold"
+    font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "navy"
 
@@ -186,7 +186,7 @@ element_styles:
 
 # ── General Settings ──────────────────────────────────────────────────────────
 base:
-  font_family: "AlumniSansPinstripe-Regular"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
   font_color: "grey"
   default_missing_icon: applet-closed
   size_rule:
@@ -198,11 +198,11 @@ base:
         papersize: ["3x5", "5x8"]
 
 header:
-  font_family: "AlumniSansPinstripe-Regular"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
   font_color: "grey"
 
 footer:
-  font_family: "AlumniSansPinstripe-Regular"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
   font_color: "grey"
 
 events:
@@ -221,7 +221,7 @@ durations:
 watermark:
   text: null
   color: "blue"
-  font_family: "AlumniSansPinstripe-Regular"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
   opacity: 0.5
   font_size: null
   resize_mode: "fit"
@@ -267,11 +267,11 @@ colors:
 # ── Weekly Calendar ───────────────────────────────────────────────────────────
 weekly:
   day_names:
-    font_family: "InstrumentSerif-Regular"
+    font_family: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "grey"
 
   week_numbers:
-    font_family: "InstrumentSerif-Regular"
+    font_family: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "yellow"
     label_format: "W{num:02d}"
 
@@ -283,14 +283,14 @@ weekly:
     
     fill_color: null
     fill_opacity: 0.25
-    number_font: "InstrumentSerif-Regular"
+    number_font: "PlaywriteDEGrund-VariableFont_wght"
     number_color: #FF7800
     icon_color: "red"
     font_color: "black"
     hash_pattern_opacity: 0.10
     
   name_text:
-    font_name: "AlumniSansPinstripe-Regular"
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "blue"
   notes_text:
     font_name: "AlumniSansPinstripe-Italic"
@@ -337,15 +337,15 @@ timeline:
   top_colors: ["deepskyblue", "gold", "tomato", "springgreen", "lightskyblue", "ivory", "lightgoldenrod", "lightsalmon", "lime", "mistyrose"]
   bottom_colors: ["midnightblue", "springgreen", "deepskyblue", "gold", "orchid", "orange", "mediumblue", "orangered", "firebrick", "fuchsia"]
   name_text:
-    font_name: "OfficinaSans-Book"
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "white"
     font_size: 18
   notes_text:
-    font_name: "OfficinaSans-BookItalic"
-    font_color: "white"
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "grey"
     font_size: 14
   date:
-    font_family: "OfficinaSans-BookItalic"
+    font_family: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "grey"
 
   # ── Timebands ────────────────────────────────────────────────────────────
@@ -408,28 +408,28 @@ timeline:
       label_format: "MMM D"
       show_labels: true
       label_color: "black"
-      label_font_size: 14
+      label_font_size: 11
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 8.0
       label_gap: 18.0
 
-    - unit: "week"
-      show_labels: true
-      label_format: "M/D"
-      label_color: "black"
-      label_font_size: 12
-      tick_width: 0.5
-      tick_opacity: 0.5
-      tick_length: 4.0
-      include_endpoints: false
-      label_gap: 8.0
+#     - unit: "week"
+#       show_labels: true
+#       label_format: "D"
+#       label_color: "black"
+#       label_font_size: 10
+#       tick_width: 0.5
+#       tick_opacity: 0.5
+#       tick_length: 4.0
+#       include_endpoints: false
+#       label_gap: 8.0
 
     - unit: "Date"
       show_labels: true
-      label_format: "ddd"
+      label_format: "D"
       label_color: "black"
-      label_font_size: 7
+      label_font_size: 6
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 2.0
@@ -450,7 +450,7 @@ timeline_events:
 
 timeline_durations:
   box_height: 50
-  date_font: "OfficinaSans-BookItalic"
+  date_font: "PlaywriteDEGrund-VariableFont_wght"
   date_font_size: 10
   date_color: "black"
 
@@ -480,14 +480,14 @@ blockplan:
   unmatched_lane_name: "Other"
   lane_match_mode: "first"
   
-  header_font: "OfficinaSans-BookItalic"
+  header_font: "PlaywriteDEGrund-VariableFont_wght"
   header_font_size: 11
   header_label_color: "Green"
   header_label_opacity: 1.0
   header_label_align_h: "right"
   header_heading_fill_color: "none"
   
-  band_font: "OfficinaSans-Book"
+  band_font: "PlaywriteDEGrund-VariableFont_wght"
   band_font_size: 14
 
   timeband_label_opacity: 1.0
@@ -610,7 +610,7 @@ blockplan:
     - name: "IC Fix"
     - name: "Post PI6"
   
-  duration_date_font: "OfficinaSans-BookItalic"
+  duration_date_font: "PlaywriteDEGrund-VariableFont_wght"
   duration_fill_opacity: 1.0
   duration_stroke_color: "white"      # white outline separates solid-colour bars
   duration_stroke_width: 1.0
@@ -619,10 +619,10 @@ blockplan:
   duration_bar_height: 40
   duration_icon_visible: true
   name_text:
-    font_name: "OfficinaSans-Book"
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "grey"
   notes_text:
-    font_name: "OfficinaSans-BookItalic"
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "grey"
   duration_show_start_date: true
   duration_show_end_date: true
@@ -630,7 +630,7 @@ blockplan:
   duration_date_color: "Black"
 
   event_show_date: false
-  event_date_font: "OfficinaSans-BookItalic"
+  event_date_font: "PlaywriteDEGrund-VariableFont_wght"
   event_date_font_size: null
   event_date_color: "Black"
   event_date_format: "MM/DD"

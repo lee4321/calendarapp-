@@ -640,6 +640,13 @@ class CalendarConfig:
     timeline_continuation_icon_height: float = 8.0
     timeline_continuation_icon_color: str | None = None  # None = use bar color
 
+    # Government holiday icons rendered in a row below the timeline axis,
+    # one icon per holiday date positioned at that date's x-coordinate.
+    timeline_show_holiday_icons: bool = True
+    timeline_holiday_icon_size: float = 10.0
+    timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
+    timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
+
     # Blockplan styling and behavior
     blockplan_background_color: str = "none"
     blockplan_grid_color: str = "grey"

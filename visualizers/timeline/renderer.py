@@ -287,6 +287,13 @@ class TimelineRenderer(BaseSVGRenderer):
             area_h,
         )
 
+        # Government holiday icons sit between the axis line and the duration
+        # bars (the duration offset already reserves enough vertical space).
+        if getattr(config, "timeline_show_holiday_icons", True):
+            self._draw_holiday_icons(
+                config, start, end, axis_left, axis_right, axis_y, db
+            )
+
         # Pass 2: draw all boxes, markers, and text on top.
         for callout in callouts:
             self._draw_callout(config, callout, axis_y)
@@ -505,8 +512,13 @@ class TimelineRenderer(BaseSVGRenderer):
         out: list[TimelineCallout] = []
         palette = config.timeline_top_colors or [config.get_text_style("ec-event-name").color or config.timeline_name_text_font_color]
 
+        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
+        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
+
         for idx, event in enumerate(ordered):
             day = self._safe_day(event.start, fallback=start)
+            if day.floor("day") < user_start.floor("day") or day.floor("day") > user_end.floor("day"):
+                continue
             x = self._x_for_day(day, start, end, axis_left, axis_right)
             color = palette[idx % len(palette)]
             if style_engine is not None:
@@ -642,17 +654,24 @@ class TimelineRenderer(BaseSVGRenderer):
 
         out: list[TimelineDuration] = []
 
+        # Compare to the user-typed range (not the weekend-adjusted range)
+        # so events ending on an excluded weekend day are not flagged as
+        # continuing past the visible diagram.
+        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
+        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
+
         for idx, event in enumerate(ordered):
             start_day = self._safe_day(event.start, fallback=start)
             end_day = self._safe_day(event.end, fallback=start_day)
             if end_day < start_day:
                 start_day, end_day = end_day, start_day
 
-            # Compare to the user-typed range (not the weekend-adjusted range)
-            # so events ending on an excluded weekend day are not flagged as
-            # continuing past the visible diagram.
-            user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
-            user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
+            # Skip events entirely outside the visible date range.
+            if end_day.floor("day") < user_start.floor("day"):
+                continue
+            if start_day.floor("day") > user_end.floor("day"):
+                continue
+
             continues_left = start_day.floor("day") < user_start.floor("day")
             continues_right = end_day.floor("day") > user_end.floor("day")
 
@@ -1866,6 +1885,52 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor=label_anchor,
                     css_class="ec-label",
                 )
+
+    def _draw_holiday_icons(
+        self,
+        config: "CalendarConfig",
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_left: float,
+        axis_right: float,
+        axis_y: float,
+        db: "CalendarDB",
+    ) -> None:
+        """Render one icon per government-holiday date below the axis line."""
+        size = float(getattr(config, "timeline_holiday_icon_size", 10.0))
+        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
+        if size <= 0:
+            return
+        color = getattr(config, "timeline_holiday_icon_color", None)
+        baseline_y = axis_y + y_offset + (size * 0.80)
+
+        seen: set[str] = set()
+        for day in arrow.Arrow.range("day", start.floor("day"), end.floor("day")):
+            daykey = day.format("YYYYMMDD")
+            if daykey in seen:
+                continue
+            seen.add(daykey)
+            try:
+                hols = db.get_holidays_for_date(daykey, config.country)
+            except Exception:
+                continue
+            icon_name = next(
+                (h.get("icon") for h in hols
+                 if h.get("nonworkday") and h.get("icon")),
+                None,
+            )
+            if not icon_name:
+                continue
+            x = self._x_for_day(day, start, end, axis_left, axis_right)
+            self._draw_icon_svg(
+                str(icon_name),
+                x,
+                baseline_y,
+                size,
+                anchor="middle",
+                color=color,
+                css_class="ec-holiday-icon",
+            )
 
     def _draw_month_ticks(
         self,
