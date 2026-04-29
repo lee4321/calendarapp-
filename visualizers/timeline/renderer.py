@@ -17,6 +17,7 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine
 from shared.timeband import build_segments as _build_band_segments
 
@@ -1242,8 +1243,9 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
         _event_date_style = config.get_text_style("ec-event-date")
-        date_label = self._safe_day(item.event.start, fallback=arrow.now()).format(
-            config.timeline_date_format
+        date_label = format_arrow_date(
+            self._safe_day(item.event.start, fallback=arrow.now()),
+            config.timeline_date_format,
         )
         date_row_gap_factor = 1.35
         date_y = axis_y - (
@@ -1443,7 +1445,7 @@ class TimelineRenderer(BaseSVGRenderer):
         self._draw_text(
             item.start_x,
             date_y,
-            start_day.format(config.timeline_date_format),
+            format_arrow_date(start_day, config.timeline_date_format),
             date_font,
             date_size,
             fill=date_color,
@@ -1453,7 +1455,7 @@ class TimelineRenderer(BaseSVGRenderer):
         self._draw_text(
             item.end_x,
             date_y,
-            end_day.format(config.timeline_date_format),
+            format_arrow_date(end_day, config.timeline_date_format),
             date_font,
             date_size,
             fill=date_color,
@@ -1762,7 +1764,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         def _format_label(d: date, fallback: str = "") -> str:
             if fmt_str:
-                return arrow.get(d).format(fmt_str)
+                return format_arrow_date(arrow.get(d), fmt_str)
             return fallback
 
         ticks: list[tuple[date, str]] = []
@@ -1976,7 +1978,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 self._draw_text(
                     x,
                     axis_y - (tick_h + label_size * 1.5),
-                    m.format(config.timeline_tick_label_format),
+                    format_arrow_date(m, config.timeline_tick_label_format),
                     config.timeline_date_font,
                     label_size,
                     fill=_tick_style.color,

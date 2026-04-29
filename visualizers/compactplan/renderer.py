@@ -19,6 +19,7 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine
@@ -962,7 +963,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         cur_y = list_y + row_h
         for d, name in entries:
-            date_str = arrow.get(d).format(date_fmt)
+            date_str = format_arrow_date(arrow.get(d), date_fmt)
             self._draw_text(
                 area_x, cur_y, date_str,
                 font_name, font_size,

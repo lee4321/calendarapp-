@@ -8,6 +8,7 @@ visualization types.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
@@ -29,6 +30,37 @@ class InvalidDateError(Exception):
     """Raised when a date format is invalid."""
 
     pass
+
+
+# Match a `dd` token that is not part of `ddd`/`dddd` and not adjacent to other letters.
+# Arrow treats `dd` as an unknown token (yields empty string), so we substitute it
+# with a bracket-escaped 2-letter weekday abbreviation before delegating to Arrow.
+_DD_TOKEN_RE = re.compile(r"(?<![A-Za-z])dd(?![A-Za-z])")
+# Split format strings around `[...]` literal-escape sections so we don't substitute
+# inside them.
+_LITERAL_SECTION_RE = re.compile(r"(\[[^\]]*\])")
+
+
+def format_arrow_date(arrow_date: arrow.Arrow, fmt: str) -> str:
+    """
+    Format an Arrow date, with extra support for the `dd` token.
+
+    Arrow does not natively support a 2-letter weekday abbreviation token, so a
+    `dd` in the format string (when not part of `ddd`/`dddd` or inside an Arrow
+    literal escape `[...]`) is replaced with the first two letters of the
+    weekday name (Mo, Tu, We, Th, Fr, Sa, Su).
+    """
+    if not fmt or "dd" not in fmt:
+        return arrow_date.format(fmt)
+    two_letter = arrow_date.format("dddd")[:2]
+    parts = _LITERAL_SECTION_RE.split(fmt)
+    rebuilt = []
+    for part in parts:
+        if part.startswith("[") and part.endswith("]"):
+            rebuilt.append(part)
+        else:
+            rebuilt.append(_DD_TOKEN_RE.sub(f"[{two_letter}]", part))
+    return arrow_date.format("".join(rebuilt))
 
 
 def get_week_number(

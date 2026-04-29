@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 
+from shared.date_utils import format_arrow_date
 from shared.fiscal_renderer import (
     _shift_months,
     build_fiscal_period_segments,
@@ -96,7 +97,7 @@ def build_segments(
         while cursor <= end:
             next_cursor = _shift_months(cursor, 1)
             if next_cursor > start:
-                label = arrow.get(cursor).format(fmt)
+                label = format_arrow_date(arrow.get(cursor), fmt)
                 segments.append(
                     BandSegment(
                         start=max(cursor, start),
@@ -194,7 +195,7 @@ def build_segments(
                 BandSegment(
                     start=cursor,
                     end_exclusive=cursor + one_day,
-                    label=arrow.get(cursor).format(fmt),
+                    label=format_arrow_date(arrow.get(cursor), fmt),
                 )
             )
         return segments

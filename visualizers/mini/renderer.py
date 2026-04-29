@@ -17,7 +17,10 @@ import drawsvg
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from visualizers.mini.day_styles import DayStyleResolver, DayStyle
 from config.config import day_short, weekend_style_is_workweek, weekend_style_starts_sunday
-from shared.date_utils import index_events_by_day as _index_events_by_day
+from shared.date_utils import (
+    format_arrow_date,
+    index_events_by_day as _index_events_by_day,
+)
 from shared.rule_engine import StyleEngine
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
@@ -174,7 +177,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         year = int(month_key[:4])
         month = int(month_key[4:6])
         dt = arrow.Arrow(year, month, 1)
-        title = dt.format(config.mini_title_format)
+        title = format_arrow_date(dt, config.mini_title_format)
 
         _ts = config.get_text_style("ec-month-title")
         self._draw_text(

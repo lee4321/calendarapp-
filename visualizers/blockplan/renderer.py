@@ -13,6 +13,7 @@ from config.config import get_font_path
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day, day_rule_matches
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine
@@ -1575,12 +1576,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 start_label = end_label = ""
                 if show_start:
                     try:
-                        start_label = arrow.get(ev_start).format(date_fmt)
+                        start_label = format_arrow_date(arrow.get(ev_start), date_fmt)
                     except Exception:
                         start_label = str(ev_start)
                 if show_end:
                     try:
-                        end_label = arrow.get(ev_end).format(date_fmt)
+                        end_label = format_arrow_date(arrow.get(ev_end), date_fmt)
                     except Exception:
                         end_label = str(ev_end)
 
@@ -1716,8 +1717,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             date_text = ""
             if has_date:
                 try:
-                    date_text = arrow.get(event.start, "YYYYMMDD").format(
-                        config.blockplan_event_date_format
+                    date_text = format_arrow_date(
+                        arrow.get(event.start, "YYYYMMDD"),
+                        config.blockplan_event_date_format,
                     )
                 except Exception:
                     date_text = str(event.start)
