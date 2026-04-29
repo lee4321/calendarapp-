@@ -414,20 +414,21 @@ timeline:
       tick_length: 8.0
       label_gap: 18.0
 
-#     - unit: "week"
-#       show_labels: true
-#       label_format: "D"
-#       label_color: "black"
-#       label_font_size: 10
-#       tick_width: 0.5
-#       tick_opacity: 0.5
-#       tick_length: 4.0
-#       include_endpoints: false
-#       label_gap: 8.0
-
     - unit: "Date"
       show_labels: true
       label_format: "D"
+      label_color: "black"
+      label_font_size: 10
+      tick_width: 0.5
+      tick_opacity: 0.5
+      tick_length: 4.0
+      include_endpoints: false
+      max_label_count: 400
+      label_gap: 10.0
+
+    - unit: "Date"
+      show_labels: true
+      label_format: "dd"
       label_color: "black"
       label_font_size: 6
       tick_width: 0.5
@@ -435,7 +436,7 @@ timeline:
       tick_length: 2.0
       include_endpoints: false
       max_label_count: 400
-      label_gap: 2.0
+      label_gap: 4.0
 
 
   # ── Continuation icons for clipped duration bars ─────────────────────────

@@ -253,18 +253,22 @@ class TimelineRenderer(BaseSVGRenderer):
                     self._compute_band_ticks(config, tb, start, end, db)
                 )
                 band_priorities.append(self._tick_unit_priority(tb))
-            winner_idx: dict = {}
+            # Per-date max priority across bands. Equal-priority bands ticking
+            # on the same date all draw their labels (each sits on its own
+            # label row via label_gap/label_offset_y); only strictly lower
+            # priority bands are suppressed.
+            max_prio: dict = {}
             for idx, ticks in enumerate(band_ticks):
                 prio = band_priorities[idx]
                 for tick_date, _label in ticks:
-                    cur = winner_idx.get(tick_date)
-                    if cur is None or band_priorities[cur] < prio:
-                        winner_idx[tick_date] = idx
+                    if tick_date not in max_prio or max_prio[tick_date] < prio:
+                        max_prio[tick_date] = prio
             for idx, tb in enumerate(tick_bands):
                 if not isinstance(tb, dict):
                     continue
+                prio = band_priorities[idx]
                 allowed = {
-                    d for d, _l in band_ticks[idx] if winner_idx.get(d) == idx
+                    d for d, _l in band_ticks[idx] if max_prio.get(d) == prio
                 }
                 self._draw_axis_ticks_from_band(
                     config, tb, start, end, axis_left, axis_right, axis_y, db,
