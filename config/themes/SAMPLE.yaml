@@ -37,7 +37,7 @@ theme:
 
 text_styles:
   heading:
-    font: "RobotoCondensed-Light"
+    font: "FiraSans-ExtraLight"
     size: 10
     color: "black"
     size_rules:
@@ -46,23 +46,23 @@ text_styles:
       - font_size: 11
         when: { papersize: ["ledger", "a3", "tabloid"] }
   body:
-    font: "RobotoCondensed-Light"
+    font: "FiraSans-ExtraLight"
     size: 8
     color: "black"
   body_secondary:
-    font: "RobotoCondensed-LightItalic"
+    font: "FiraSans-ExtraLightItalic"
     size: 7
     color: "dimgrey"
   label:
-    font: "RobotoCondensed-Light"
+    font: "FiraSans-ExtraLight"
     size: 7
     color: "black"
   label_bold:
-    font: "RobotoCondensed-Bold"
+    font: "FiraSans-Black"
     size: 7
     color: "grey"
   caption:
-    font: "RobotoCondensed-Light"
+    font: "FiraSans-ExtraLight"
     size: 6
     color: "grey"
   day_number:
@@ -211,7 +211,7 @@ element_styles:
 base:
   default_missing_icon: null        # (str) icon name used when an event icon is not found in the DB
   font_color: "black"               # (str) fallback text color for all sections
-  font_family: "RobotoCondensed-Light"  # (str) fallback font for all sections
+  font_family: "FiraSans-ExtraLight"  # (str) fallback font for all sections
 
   # size_rule: papersize-conditional font sizes; evaluated before section overrides
   # Each entry specifies font_size when the output papersize matches any listed value.
@@ -249,11 +249,11 @@ header:
     font_size:   null                   # (float|null) pt; null = auto from base size_rule
   left:
     font_color:  "black"                # (str) text color for left header cell
-    font_family: "RobotoCondensed-Light"
+    font_family: "FiraSans-ExtraLight"
     font_size:   null
   right:
     font_color:  "grey"                 # (str) text color for right header cell
-    font_family: "RobotoCondensed-Light"
+    font_family: "FiraSans-ExtraLight"
     font_size:   null
 
 
@@ -264,15 +264,15 @@ header:
 footer:
   center:
     font_color:  "grey"
-    font_family: "RobotoCondensed-Light"
+    font_family: "FiraSans-ExtraLight"
     font_size:   null
   left:
     font_color:  "grey"
-    font_family: "RobotoCondensed-Light"
+    font_family: "FiraSans-ExtraLight"
     font_size:   null
   right:
     font_color:  "grey"
-    font_family: "RobotoCondensed-Light"
+    font_family: "FiraSans-ExtraLight"
     font_size:   null
 
 
@@ -301,7 +301,7 @@ durations:
 watermark:
   opacity:                  0.15       # (float 0–1) text opacity
   color:                    "grey"     # (str) text color
-  font_family:              "RobotoCondensed-Light"  # (str) watermark font
+  font_family:              "FiraSans-ExtraLight"  # (str) watermark font
   font_size:                null       # (float|null) pt; null = auto-fit to page
   image_rotation_angle:     0.0        # (float) image watermark rotation in degrees
   resize_mode:              "fit"      # (str) fit | stretch  — how image fills the page
@@ -400,13 +400,13 @@ weekly:
   # ── Day names row (Mon, Tue, Wed … column headers) ──────────────────────
   day_names:
     font_color:  "black"                  # (str) day-name header text color
-    font_family: "RobotoCondensed-Light"  # (str) day-name header font
+    font_family: "FiraSans-ExtraLight"  # (str) day-name header font
     font_size:   null                     # (float|null) pt; null = auto-scaled
 
   # ── Week number column (left edge of grid) ──────────────────────────────
   week_numbers:
     font_color:         "grey"                    # (str) week number text color
-    font_family:        "RobotoCondensed-Light"   # (str) week number font
+    font_family:        "FiraSans-ExtraLight"   # (str) week number font
     font_size:          null                      # (float|null) pt; null = auto-scaled
     label_format:       "W{num}"                  # (str) format string; {num} = week number
 
@@ -447,10 +447,10 @@ weekly:
     #     resource_names    (list[str]) — substring match on resource name
     #     wbs               (list[str]) — WBS prefix match
   name_text:
-    font_name: "RobotoCondensed-Light"
+    font_name: "FiraSans-ExtraLight"
     font_color: "navy"
   notes_text:
-    font_name: "RobotoCondensed-LightItalic"
+    font_name: "FiraSans-ExtraLightItalic"
     font_color: "dimgrey"
 
   # ── Overflow indicator (shown when a day has more events than can fit) ───
@@ -476,6 +476,7 @@ timeline:
   duration_bracket_stroke_dasharray: null         # (str|null) duration bracket dash pattern
   duration_lane_gap_y:              null          # (float|null) vertical gap between duration lanes
   duration_offset_y:                null          # (float|null) vertical offset of duration bars from axis
+  duration_icon_visible:            false         # (bool) show event icon inside duration bar when available
   icon_size:                        null          # (float|null) event icon size in points
   label_fill_opacity:               0.85          # (float 0–1) event label background opacity
   label_stroke_dasharray:           null          # (str|null) label border dash pattern
@@ -500,13 +501,13 @@ timeline:
     font_name: "Roboto-Bold"
     font_color: "black"
   notes_text:
-    font_name: "RobotoCondensed-LightItalic"
+    font_name: "FiraSans-ExtraLightItalic"
     font_color: "dimgrey"
 
   # ── Timeline date labels (axis tick text) ─────────────────────────────
   date:
     font_color:  "grey"                   # (str) date label text color
-    font_family: "RobotoCondensed-Light"  # (str) date label font
+    font_family: "FiraSans-ExtraLight"  # (str) date label font
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -552,7 +553,7 @@ blockplan:
   timeband_fill_palette:  []      # (list[str]) palette name(s) for time-band fill cycling
 
   # ── Header column (leftmost label cell of each time-band row) ────────────
-  header_font:              "RobotoCondensed-Bold"  # (str) heading cell font
+  header_font:              "FiraSans-Black"  # (str) heading cell font
   header_font_size:         null                    # (float|null) pt; null = auto-scaled
   header_heading_fill_color: "none"                 # (str) heading cell background fill
   header_label_align_h:     "left"                  # (str) left | center | right
@@ -560,7 +561,7 @@ blockplan:
   header_label_opacity:     1.0                     # (float 0–1) heading label text opacity
 
   # ── Segment label cells (the time-period cells in each time-band row) ────
-  band_font:              "RobotoCondensed-Bold"  # (str) segment label font
+  band_font:              "FiraSans-Black"  # (str) segment label font
   band_font_size:         null                    # (float|null) pt; null = auto from row_height
   timeband_label_color:   "black"                 # (str) segment label text color
   timeband_label_opacity: 1.0                     # (float 0–1) segment label text opacity
@@ -570,7 +571,7 @@ blockplan:
   lane_label_align_h:      "center"                # (str) left | center | right
   lane_label_align_v:      "middle"                # (str) top | middle | bottom
   lane_label_color:        "black"                 # (str) lane label text color
-  lane_label_font:         "RobotoCondensed-Bold"  # (str) lane label font
+  lane_label_font:         "FiraSans-Black"  # (str) lane label font
   lane_label_font_size:    null                    # (float|null) pt; null = auto-scaled
   lane_label_rotation:     0                       # (float) clockwise degrees;
                                                    #   0=horizontal, -90=bottom-to-top,
@@ -582,7 +583,7 @@ blockplan:
 
   # ── Event markers (single-day events in blockplan) ───────────────────────
   event_date_color:  "grey"                      # (str) event date label text color
-  event_date_font:   "RobotoCondensed-Light"     # (str) event date label font
+  event_date_font:   "FiraSans-ExtraLight"     # (str) event date label font
   event_date_format: "M/D"                       # (str) Arrow date format for event labels
   event_date_font_size: null                     # (float|null) pt; null = auto-scaled
   event_show_date:   false                       # (bool) show start date below event name
@@ -592,7 +593,7 @@ blockplan:
   duration_bar_height:     20.0    # (float) bar height in points; respected as configured
                                    #   (no longer overridden by font size)
   duration_date_color:     null    # (str|null) start/end date label color; null = duration_color
-  duration_date_font:      "RobotoCondensed-LightItalic"  # (str) date label font
+  duration_date_font:      "FiraSans-ExtraLightItalic"  # (str) date label font
   duration_date_font_size: null    # (float|null) pt; null = auto-scaled
   duration_date_format:    "M/D"   # (str) Arrow date format for start/end labels
   duration_fill_opacity:   0.75    # (float 0–1) bar fill opacity
@@ -604,7 +605,7 @@ blockplan:
   duration_stroke_opacity: 1.0     # (float 0–1) bar border opacity
   duration_stroke_width:   1.0     # (float) bar border width in points
   name_text:
-    font_name: "RobotoCondensed-Light"
+    font_name: "FiraSans-ExtraLight"
     font_color: "darkgrey"
 
   # ── Color palette for duration bars (cycles by event priority) ───────────
@@ -769,7 +770,7 @@ mini_calendar:
   # ── Cell content ─────────────────────────────────────────────────────────
   adjacent_month_color:  "lightgrey"              # (str) day number color for days outside current month
   cell_bold_font:        "Roboto-Bold"            # (str) font for bold/highlighted day numbers
-  cell_font:             "RobotoCondensed-Light"  # (str) default day number font
+  cell_font:             "FiraSans-ExtraLight"  # (str) default day number font
   cell_font_size:        null                     # (float|null) pt; null = auto-scaled
   circle_milestones:     false                    # (bool) draw a circle around milestone day numbers
   current_day_color:     "tomato"                 # (str) today's date highlight color
@@ -780,7 +781,7 @@ mini_calendar:
 
   # ── Column header row (Mon, Tue, … ) ─────────────────────────────────────
   header_color:          "grey"                   # (str) day-name header text color
-  header_font:           "RobotoCondensed-Light"  # (str) day-name header font
+  header_font:           "FiraSans-ExtraLight"  # (str) day-name header font
   header_font_size:      null                     # (float|null) pt; null = auto-scaled
 
   # ── Holidays & special days ───────────────────────────────────────────────
@@ -798,7 +799,7 @@ mini_calendar:
 
   # ── Week numbers column ───────────────────────────────────────────────────
   week_number_color:     "grey"               # (str) week number text color
-  week_number_font:      "RobotoCondensed-Light"  # (str) week number font
+  week_number_font:      "FiraSans-ExtraLight"  # (str) week number font
   week_number_font_size: null                 # (float|null) pt; null = auto-scaled
   week_number_label_format: "W{num}"          # (str) format string; {num} = ISO week number
 
@@ -842,10 +843,10 @@ mini_details:
 
   # ── Event/duration text ────────────────────────────────────────────────
   name_text:
-    font_name: "RobotoCondensed-Light"
+    font_name: "FiraSans-ExtraLight"
     font_color: "black"
   notes_text:
-    font_name: "RobotoCondensed-LightItalic"
+    font_name: "FiraSans-ExtraLightItalic"
     font_color: "dimgrey"
 
   # ── Separator line style ─────────────────────────────────────────────────

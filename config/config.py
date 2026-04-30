@@ -559,6 +559,7 @@ class CalendarConfig:
     timeline_event_axis_padding: float = 0.0
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
+    timeline_duration_icon_visible: bool = False
     # ── Timeline text styling (uniform) ──────────────────────────────────────
     timeline_text_font_name: str = Fonts.R_BOLD
     timeline_text_font_color: str = "deepskyblue"

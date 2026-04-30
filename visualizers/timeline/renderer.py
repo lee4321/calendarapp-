@@ -1413,18 +1413,67 @@ class TimelineRenderer(BaseSVGRenderer):
         text_block_h = line1_h + line2_h
         text_top_y = bar_y + max(0.0, (bar_h - text_block_h) / 2.0)
         title_y = text_top_y + fitted_title * 0.85
-        self._draw_text(
-            (item.start_x + item.end_x) / 2,
-            title_y,
-            title,
-            config.timeline_name_text_font_name or _dur_name_style.font,
-            fitted_title,
-            fill=duration_text_color,
-            fill_opacity=_dur_name_style.opacity,
-            anchor="middle",
-            max_width=text_w,
-            css_class="ec-event-name",
-        )
+        title_font = config.timeline_name_text_font_name or _dur_name_style.font
+        show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
+        if show_icon:
+            icon_size = fitted_title
+            try:
+                title_w = string_width(title, title_font_path, fitted_title)
+            except Exception:
+                title_w = len(title) * fitted_title * 0.55
+            gap = 2.0
+            total_w = icon_size + gap + title_w
+            available_w = max(8.0, text_w)
+            icon_scale_x = min(1.0, available_w / total_w) if total_w > available_w else 1.0
+            effective_icon_w = icon_size * icon_scale_x
+            effective_text_w = min(title_w * icon_scale_x, available_w - effective_icon_w - gap)
+            group_x0 = (item.start_x + item.end_x) / 2 - (effective_icon_w + gap + effective_text_w) / 2.0
+            draw_x = max(item.start_x, group_x0)
+            icon_transform = None
+            if icon_scale_x < 1.0:
+                icon_transform = (
+                    f"translate({draw_x:.4f} {title_y:.4f}) "
+                    f"scale({icon_scale_x:.6f} 1) "
+                    f"translate({-draw_x:.4f} {-title_y:.4f})"
+                )
+            icon_drawn = self._draw_icon_svg(
+                item.event.icon,
+                draw_x,
+                title_y,
+                icon_size,
+                anchor="start",
+                color=duration_text_color,
+                fallback_name=config.default_missing_icon,
+                fallback_color=duration_text_color,
+                transform=icon_transform,
+                css_class="ec-duration-icon",
+            )
+            text_x = draw_x + effective_icon_w + gap if icon_drawn else (item.start_x + item.end_x) / 2
+            self._draw_text(
+                text_x,
+                title_y,
+                title,
+                title_font,
+                fitted_title,
+                fill=duration_text_color,
+                fill_opacity=_dur_name_style.opacity,
+                anchor="start" if icon_drawn else "middle",
+                max_width=max(8.0, item.end_x - text_x - 2),
+                css_class="ec-event-name",
+            )
+        else:
+            self._draw_text(
+                (item.start_x + item.end_x) / 2,
+                title_y,
+                title,
+                title_font,
+                fitted_title,
+                fill=duration_text_color,
+                fill_opacity=_dur_name_style.opacity,
+                anchor="middle",
+                max_width=text_w,
+                css_class="ec-event-name",
+            )
 
         if has_notes:
             notes_y = text_top_y + line1_h + fitted_notes * 0.85

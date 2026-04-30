@@ -324,6 +324,7 @@ timeline:
   event_axis_padding: 24.0
   duration_offset_y: 20.0
   duration_lane_gap_y: 20.0
+  duration_icon_visible: true
   label_stroke_width: 1.0
   label_fill_opacity: 0.25
   duration_bar_fill_opacity: 0.75
@@ -418,7 +419,7 @@ timeline:
       show_labels: true
       label_format: "D"
       label_color: "black"
-      label_font_size: 10
+      label_font_size: 6
       tick_width: 0.5
       tick_opacity: 0.5
       tick_length: 4.0
@@ -527,6 +528,16 @@ blockplan:
       label_color: "Black"     # heading column label color
       font_color: "Black"      # segment content label color (e.g. "3")
 
+    - label: "DoW"
+      unit: "date"
+      date_format: "dd"
+      fill_color: "white"
+      row_height: 14
+      show_every: 1
+      label_color: "Black"     # heading column label color
+      font_color: "Black"      # segment content label color (e.g. "3")
+
+
 #     - label:         "Work Days to Freeze"
 #       unit:          "countdown"         # one segment per visible day, labelled with remaining count
 #       target_date:   "2019-10-31"        # required: the target date (YYYY-MM-DD)
@@ -541,7 +552,7 @@ blockplan:
   bottom_time_bands:  # when an empty set there are no bottom time bands
     - label: "DoW"
       unit: "date"
-      date_format: "ddd"
+      date_format: "dd"
       fill_color: null
       row_height: 14
       show_every: 1
