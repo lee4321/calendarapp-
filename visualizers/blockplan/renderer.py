@@ -1424,6 +1424,39 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_dasharray=_dur_stroke_dash,
                 css_class="ec-duration-bar",
             )
+
+            continues_left = ev_start < start
+            continues_right = ev_end > end
+            if (continues_left or continues_right) and bool(
+                getattr(config, "blockplan_show_continuation_icon", True)
+            ):
+                cont_h = min(
+                    float(getattr(config, "blockplan_continuation_icon_height", 8.0)),
+                    bar_h,
+                )
+                cont_color_cfg = getattr(config, "blockplan_continuation_icon_color", None)
+                cont_color = cont_color_cfg if cont_color_cfg else color
+                cont_baseline = y + bar_h * 0.5 + cont_h * 0.3
+                if continues_left:
+                    self._draw_icon_svg(
+                        str(getattr(config, "blockplan_continuation_icon_left", "arrow-left")),
+                        x0,
+                        cont_baseline,
+                        cont_h,
+                        anchor="start",
+                        color=cont_color,
+                        css_class="ec-duration-icon",
+                    )
+                if continues_right:
+                    self._draw_icon_svg(
+                        str(getattr(config, "blockplan_continuation_icon_right", "arrow-right")),
+                        x0 + w,
+                        cont_baseline,
+                        cont_h,
+                        anchor="end",
+                        color=cont_color,
+                        css_class="ec-duration-icon",
+                    )
             has_dates = bool(
                 config.blockplan_duration_show_start_date
                 or config.blockplan_duration_show_end_date

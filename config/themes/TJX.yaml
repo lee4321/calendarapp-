@@ -630,6 +630,11 @@ blockplan:
   duration_stroke_dasharray: null
   duration_bar_height: 40
   duration_icon_visible: true
+  show_continuation_icon: true
+  continuation_icon_right: "move-right"
+  continuation_icon_left: "move-left"
+  continuation_icon_height: 12.0
+  continuation_icon_color: "white"
   name_text:
     font_name: "PlaywriteDEGrund-VariableFont_wght"
     font_color: "grey"

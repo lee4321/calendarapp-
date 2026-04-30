@@ -807,6 +807,11 @@ class CalendarConfig:
     blockplan_duration_stroke_dasharray: str | None = None
     blockplan_duration_bar_height: float = 8.0
     blockplan_duration_icon_visible: bool = False
+    blockplan_show_continuation_icon: bool = True
+    blockplan_continuation_icon_right: str = "arrow-right"
+    blockplan_continuation_icon_left: str = "arrow-left"
+    blockplan_continuation_icon_height: float = 8.0
+    blockplan_continuation_icon_color: str | None = None  # None = use bar color
     blockplan_duration_show_start_date: bool = False
     blockplan_duration_show_end_date: bool = False
     blockplan_duration_date_format: str = "MMM D"

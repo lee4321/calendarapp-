@@ -604,6 +604,11 @@ blockplan:
   duration_stroke_dasharray: null  # (str|null) bar border dash pattern
   duration_stroke_opacity: 1.0     # (float 0–1) bar border opacity
   duration_stroke_width:   1.0     # (float) bar border width in points
+  show_continuation_icon:   true   # (bool) draw an icon on duration bars that extend past the visible range
+  continuation_icon_right:  "arrow-right"  # (str) icon name for right-clipped duration bars
+  continuation_icon_left:   "arrow-left"   # (str) icon name for left-clipped duration bars
+  continuation_icon_height: 8.0    # (float) icon height in points
+  continuation_icon_color:  null   # (str|null) icon color; null = use the bar color
   name_text:
     font_name: "FiraSans-ExtraLight"
     font_color: "darkgrey"
