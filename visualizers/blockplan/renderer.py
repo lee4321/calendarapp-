@@ -1817,8 +1817,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 name_baseline = y_center - (event_size * 0.35)
                 notes_baseline = y_center + (notes_size * 0.85)
             elif has_date:
-                name_baseline = y_center - (event_size * 0.20)
-                date_baseline = y_center + (date_size * 1.00)
+                # Date sits above the name (smaller Y in SVG = higher on page)
+                date_baseline = y_center - (date_size * 0.85)
+                name_baseline = y_center + (event_size * 0.35)
                 notes_baseline = None
             else:
                 date_baseline = None

@@ -185,7 +185,7 @@ def test_run_sanitizes_atfiles_by_default(tmp_path, capsys):
     out = capsys.readouterr().out
 
     assert rc == 0
-    assert "usage: EventCalendar v9 weekly" in out
+    assert "usage: EventCalendar weekly" in out
 
 
 def test_to_output_dir_path_forces_output_folder():
@@ -206,4 +206,4 @@ def test_help_blockplan_shows_usage(capsys):
     out = capsys.readouterr().out
 
     assert rc == 0
-    assert "usage: EventCalendar v9 blockplan" in out
+    assert "usage: EventCalendar blockplan" in out

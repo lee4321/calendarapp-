@@ -64,13 +64,17 @@ def _base_config(include_notes=True):
 
 
 def _make_rowcoords(config, days, x=0.0, base_y=100.0, w=158.4):
-    """Build a minimal rowcoords dict for the given list of day keys."""
+    """Build a minimal rowcoords dict for the given list of day keys.
+
+    Mirrors production SVG layout: row 0 has the smallest Y (top of page),
+    each subsequent row sits below it (Y increases downward).
+    """
     textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
     rowcoords = defaultdict(dict)
     for day in days:
         y = base_y
         for r in range(config.maxrows):
-            texty = y + textrowheight * 0.2
+            texty = y + textrowheight * 0.8
             rowcoords[day][r] = (
                 x,
                 y,
@@ -82,7 +86,7 @@ def _make_rowcoords(config, days, x=0.0, base_y=100.0, w=158.4):
                 texty,
                 False,
             )
-            y = round(y - textrowheight, 2)
+            y = round(y + textrowheight, 2)
     return rowcoords
 
 
@@ -293,10 +297,8 @@ def test_duration_with_notes_task_name_above_notes_text():
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
 
-    # _make_rowcoords builds rows with Y decreasing per row (row 0 is topmost
-    # in the test grid: Y=base_y, row 1 is Y=base_y-textrowheight, etc.)
-    # That matches real _day_box_coords: row 0 has the highest PDF Y and is
-    # therefore rendered at the smallest SVG Y (topmost on screen).
+    # _make_rowcoords mirrors production SVG layout: row 0 has the smallest Y
+    # (topmost on screen), row 1 has a larger Y (below row 0).
     renderer._place_duration_rect(config, event, days, rowcoords, [0, 1])
 
     # Find the Y positions of the task name call and the notes call
@@ -313,12 +315,12 @@ def test_duration_with_notes_task_name_above_notes_text():
     name_y = name_events[0][0]
     notes_y = notes_events[0][0]
 
-    # rowcoords uses PDF-space Y (increases upward), so the topmost row has the
-    # LARGER Y value.  The task name must be in the upper (larger-Y) row and
-    # notes in the lower (smaller-Y) row.
-    assert name_y > notes_y, (
-        f"Task name Y ({name_y:.2f}) must be greater than notes Y ({notes_y:.2f}) "
-        f"in PDF-space coordinates so the name appears above the notes on screen"
+    # In SVG space (Y increases downward) the topmost row has the SMALLER Y
+    # value.  The task name must be drawn at the upper row (smaller Y) and
+    # notes at the lower row (larger Y) so the name appears above the notes.
+    assert name_y < notes_y, (
+        f"Task name Y ({name_y:.2f}) must be less than notes Y ({notes_y:.2f}) "
+        f"in SVG coordinates so the name appears above the notes on screen"
     )
 
 
@@ -449,11 +451,12 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
     pre-occupied row.
 
     Row 0 is pre-occupied (simulating PI-7 Release Cycle).  When a second
-    event with notes is placed, it must select rows [1, 2].  In SVG
-    coordinates (Y increasing downward) the rect's base Y comes from the
-    higher-numbered row (row 2), and H*2 expands upward to cover row 1 as
-    well.  The key invariant is that the rect must not start at or above
-    row 0's Y value (which would paint over the pre-existing bar).
+    event with notes is placed, it must select rows [1, 2].  In SVG space
+    (Y increasing downward) row 0 has the smallest Y; the renderer anchors
+    the rect at rowids[0] (row 1, the top of the [1,2] pair) and expands H
+    downward by 2× textrowheight to cover row 2 as well.  The key
+    invariant is that the rect must start strictly below row 0 so it does
+    not paint over the pre-existing bar.
     """
     config = _base_config(include_notes=True)
     event = _make_event("New Bar", "20260309", "20260311", notes="Has notes")
@@ -462,10 +465,9 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
 
-    # Record row 0's Y and row 2's Y before marking row 0 as used.
-    # Row 0 is the topmost slot (highest Y in our coords); row 2 is two below it.
+    # Row 0 has smallest Y (top), rows 1 and 2 sit below it.
     row0_y = rowcoords[days[0]][0][1]
-    row2_y = rowcoords[days[0]][2][1]
+    row1_y = rowcoords[days[0]][1][1]
     textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
 
     rowcoords = _mark_row_used(rowcoords, days, 0)
@@ -478,13 +480,14 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
     drawn_y = duration_rects[0][1]
     drawn_h = duration_rects[0][3]
 
-    # The rect must not start at row 0's Y (that would overlay the prior bar)
-    assert abs(drawn_y - row0_y) > 0.01, (
-        f"Bar started at row 0's Y ({drawn_y:.2f}), overlapping the pre-occupied row"
+    # The rect must start strictly below row 0 (larger Y in SVG space)
+    assert drawn_y > row0_y + 0.01, (
+        f"Bar started at or above row 0's Y ({drawn_y:.2f} vs {row0_y:.2f}), "
+        f"overlapping the pre-occupied row"
     )
-    # The rect should start at row 2's Y (the base of the [1,2] pair)
-    assert abs(drawn_y - row2_y) < 0.01, (
-        f"Bar should start at row 2's Y ({row2_y:.2f}), got {drawn_y:.2f}"
+    # The rect should anchor at row 1's Y (top of the [1,2] pair)
+    assert abs(drawn_y - row1_y) < 0.01, (
+        f"Bar should anchor at row 1's Y ({row1_y:.2f}), got {drawn_y:.2f}"
     )
     # Height should be exactly 2× textrowheight
     assert abs(drawn_h - textrowheight * 2) < 0.01, (
