@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.04.20.0"
+__version__ = "26.05.04.0"
 
 import argparse
 import logging
@@ -235,7 +235,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     Calendar visualizers : weekly, mini, mini-icon, text-mini, timeline, blockplan
     Output utilities     : excelheader
     Inspection / listing : themes, fonts, fontsheet, papersizes, patterns,
-                           icons, iconsheet, colors, colorsheet, palettes, palettesheet
+                           patternsheet, icons, iconsheet, colors, colorsheet,
+                           palettes, palettesheet
     Help                 : help <subcommand>
 
     Argument groups (per visualizer subcommand)
@@ -304,6 +305,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     palettesheet = sub.add_parser("palettesheet", help="Generate a SVG preview of a named palette")
     iconsheet = sub.add_parser(
         "iconsheet", help="Generate a SVG grid preview of icons from database"
+    )
+    patternsheet = sub.add_parser(
+        "patternsheet",
+        help="Generate a SVG grid preview of day-box patterns from database",
     )
     colorsheet = sub.add_parser(
         "colorsheet", help="Generate a SVG grid preview of named colors from database"
@@ -408,6 +413,32 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         default=None,
         metavar="PATH",
         help="Output file name and path (default: output/iconsheet.svg)",
+    )
+
+    # patternsheet subcommand arguments
+    patternsheet.add_argument(
+        "--filter",
+        "-f",
+        type=str,
+        default=None,
+        metavar="TEXT",
+        help="Filter patterns by name substring (case-insensitive)",
+    )
+    patternsheet.add_argument(
+        "--color",
+        "-c",
+        type=str,
+        default="#333333",
+        metavar="COLOR",
+        help="Fill color for pattern tiles (default: #333333)",
+    )
+    patternsheet.add_argument(
+        "--outputfile",
+        "-of",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Output file name and path (default: output/patternsheet.svg)",
     )
 
     # colorsheet subcommand arguments
@@ -596,6 +627,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         palettes,
         palettesheet,
         iconsheet,
+        patternsheet,
         colorsheet,
         exportdata,
     ):
@@ -1147,6 +1179,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         palettes,
         palettesheet,
         iconsheet,
+        patternsheet,
         colorsheet,
         fontsheet,
         fonts,
@@ -1486,8 +1519,8 @@ def _open_calendar_db(db_path: str) -> CalendarDB:
 
     Called by:
         run() for every subcommand that needs database access: papersizes,
-        patterns, icons, iconsheet, colors, colorsheet, palettes, palettesheet,
-        excelheader, and all calendar-visualizer commands.
+        patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes,
+        palettesheet, excelheader, and all calendar-visualizer commands.
 
     Calls:
         _validate_database() → CalendarDB()
@@ -2511,6 +2544,132 @@ def _generate_iconsheet_svg(
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _generate_patternsheet_svg(
+    patterns: list[tuple[str, str]],
+    output_path: "Path",
+    color: str = "#333333",
+    title: str = "Patterns",
+) -> None:
+    """
+    Write an SVG grid preview of day-box patterns from the database.
+
+    Each cell shows a swatch filled with the pattern (tiled at its native
+    size) plus the pattern name as a label below.  Lets users identify
+    pattern names for use in theme ``day_box.hash_pattern`` and per-rule
+    ``hash_rules[].pattern`` fields without querying the database directly.
+
+    Pattern colorization mirrors the weekly renderer: black fills
+    (``#000000``, ``#000``, ``black``) in the source SVG are replaced with
+    *color* before the tile is embedded in a ``<pattern>`` element in
+    ``<defs>``.  Each cell is then a ``<rect fill="url(#pat-id)">`` covering
+    the swatch area.
+
+    Called by:
+        run() when args.command == "patternsheet".
+
+    Args:
+        patterns:    List of (name, svg) tuples (raw SVG markup).
+        output_path: Destination path for the generated SVG.
+        color:       Fill color applied to pattern tiles (default ``"#333333"``).
+        title:       SVG title string.
+    """
+    import math
+    import re
+
+    from visualizers.weekly.renderer import WeeklyCalendarRenderer
+
+    MARGIN = 40
+    TITLE_H = 55
+    SWATCH_SIZE = 120
+    LABEL_H = 22
+    GAP_X = 22
+    GAP_Y = 22
+    MAX_COLS = 6
+    CELL_W = SWATCH_SIZE + GAP_X
+    CELL_H = SWATCH_SIZE + LABEL_H + GAP_Y
+
+    n = len(patterns)
+    ncols = min(n, MAX_COLS) if n else 1
+    nrows = math.ceil(n / ncols) if n else 1
+    svg_w = MARGIN * 2 + ncols * CELL_W - GAP_X
+    svg_h = MARGIN + TITLE_H + nrows * CELL_H - GAP_Y + MARGIN
+
+    defs: list[str] = []
+    body: list[str] = []
+    seen_ids: set[str] = set()
+
+    for i, (name, raw_svg) in enumerate(patterns):
+        r = i // ncols
+        col = i % ncols
+        x = MARGIN + col * CELL_W
+        y = MARGIN + TITLE_H + r * CELL_H
+
+        safe_color = color.replace("#", "").replace(" ", "_")
+        safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+        pat_id = f"pat-{safe_name}-{safe_color}"
+
+        if pat_id not in seen_ids:
+            tile_w, tile_h = WeeklyCalendarRenderer._parse_svg_tile_size(raw_svg)
+            colorized = WeeklyCalendarRenderer._colorize_pattern_svg(raw_svg, color)
+            inner = re.sub(r"<\?xml[^>]*\?>", "", colorized)
+            inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner)
+            inner = re.sub(r"<svg[^>]*>", "", inner, count=1)
+            inner = inner.rsplit("</svg>", 1)[0].strip()
+
+            # Scale oversized tiles down so at least one full tile fits inside
+            # the swatch.  Wrap the tile content in a <g transform="scale(s)">
+            # and shrink the pattern's reported tile size by the same factor
+            # so the pattern still tiles correctly across the swatch.
+            scale = min(1.0, SWATCH_SIZE / max(tile_w, tile_h)) if max(tile_w, tile_h) > 0 else 1.0
+            if scale < 1.0:
+                inner = f'<g transform="scale({scale})">{inner}</g>'
+                tile_w *= scale
+                tile_h *= scale
+
+            defs.append(
+                f'    <pattern id="{pat_id}" x="0" y="0"'
+                f' width="{tile_w}" height="{tile_h}"'
+                f' patternUnits="userSpaceOnUse">{inner}</pattern>'
+            )
+            seen_ids.add(pat_id)
+
+        body.append(
+            f'  <rect x="{x}" y="{y}" width="{SWATCH_SIZE}" height="{SWATCH_SIZE}"'
+            f' fill="white" stroke="#cccccc" stroke-width="1"/>'
+        )
+        body.append(
+            f'  <rect x="{x}" y="{y}" width="{SWATCH_SIZE}" height="{SWATCH_SIZE}"'
+            f' fill="url(#{pat_id})"/>'
+        )
+
+        label_y = y + SWATCH_SIZE + 14
+        body.append(
+            f'  <text x="{x + SWATCH_SIZE // 2}" y="{label_y}"'
+            f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
+            f' fill="#555" text-anchor="middle">{name}</text>'
+        )
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}"'
+        f' viewBox="0 0 {svg_w} {svg_h}">',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        "  <defs>",
+        *defs,
+        "  </defs>",
+        f'  <text x="{MARGIN}" y="{MARGIN + 36}"'
+        f' font-family="Helvetica, Arial, sans-serif"'
+        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
+        f'{title}  <tspan font-size="18" font-weight="normal" font-style="normal"'
+        f' fill="#666">({n} patterns)</tspan></text>',
+        *body,
+        "</svg>",
+    ]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
 # =============================================================================
 # Main Entry Point
 # =============================================================================
@@ -2539,6 +2698,7 @@ def run(argv: list[str] | None = None) -> int:
           fontsheet → _generate_fontsheet_svg
           papersizes, patterns, icons, colors, palettes → DB query + print
           iconsheet → _generate_iconsheet_svg
+          patternsheet → _generate_patternsheet_svg
           colorsheet→ _generate_colorsheet_svg (HSV-sorted via _hsv_sort_key)
           palettesheet → _generate_palette_svg
 
@@ -2725,6 +2885,34 @@ def run(argv: list[str] | None = None) -> int:
             out_path = Path("output") / "iconsheet.svg"
         sheet_title = "Icons" if not args.filter else f"Icons: {args.filter}"
         _generate_iconsheet_svg(filtered, out_path, color=args.color, title=sheet_title)
+        if not args.quiet:
+            print(out_path)
+        return 0
+
+    if args.command == "patternsheet":
+        db = _open_calendar_db(args.database)
+        all_patterns = db.get_all_patterns()
+        items = sorted(all_patterns.items())
+        if args.filter:
+            flt = args.filter.lower()
+            items = [(name, svg) for name, svg in items if flt in name.lower()]
+        if not items:
+            print(
+                f"Error: no patterns match filter '{args.filter}'.", file=sys.stderr
+            )
+            print(
+                "Use 'ecalendar.py patterns' to list available pattern names.",
+                file=sys.stderr,
+            )
+            return 1
+        if args.outputfile:
+            out_path = Path(args.outputfile)
+        else:
+            out_path = Path("output") / "patternsheet.svg"
+        sheet_title = "Patterns" if not args.filter else f"Patterns: {args.filter}"
+        _generate_patternsheet_svg(
+            items, out_path, color=args.color, title=sheet_title
+        )
         if not args.quiet:
             print(out_path)
         return 0
