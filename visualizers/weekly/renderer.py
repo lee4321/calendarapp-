@@ -351,8 +351,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         # All Y coordinates are in SVG space: y is the TOP edge of the day box,
         # y + height is the BOTTOM edge, and Y increases downward.
+        # Baseline sits within the reserved top_clearance band (1.2× font_size,
+        # see _draw_svg_pattern) so the digits clear the day-box stroke.
         numX = round((x + width) - (config.day_box_number_font_size * 0.25), 2)
-        numY = round(y + (config.day_box_number_font_size * 0.9), 2)
+        numY = round(y + (config.day_box_number_font_size * 1.1), 2)
 
         monthX = round(x + (width * 0.1), 2)
         monthY = round(y + textrowheight, 2)
