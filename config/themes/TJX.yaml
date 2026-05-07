@@ -47,6 +47,10 @@ text_styles:
     font: "PlaywriteDEGrund-VariableFont_wght"
     size: 12
     color: "navy"
+  holiday_title:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "black"
 
 box_styles:
   default:
@@ -137,7 +141,7 @@ element_styles:
   ec-event-notes:    { text_style: body_secondary }
   ec-event-date:     { text_style: caption }
   ec-duration-date:  { text_style: caption }
-  ec-holiday-title:  { text_style: body }
+  ec-holiday-title:  { text_style: holiday_title }
   ec-today-label:    { text_style: label, color: "grey" }
   ec-header-text:    { text_style: heading }
   ec-footer-text:    { text_style: caption }
