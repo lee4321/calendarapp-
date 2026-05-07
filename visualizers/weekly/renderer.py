@@ -1054,14 +1054,24 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             textcolor = _rg_colors[group]
             iconcolor = textcolor
 
-        if not t.icon:
+        ev_style = StyleEngine(config.theme_style_rules or []).evaluate_event(t)
+        name_font, name_size, name_color, _ = ev_style.text_override(
+            "event_name",
+            font=_ts_en.font,
+            font_size=config.weekly_name_text_font_size,
+            color=textcolor,
+        )
+        icon_to_draw = ev_style.icon if ev_style.icon is not None else t.icon
+        icon_color = ev_style.icon_color or iconcolor
+
+        if not icon_to_draw:
             self._draw_text(
                 iconx,
                 icony,
                 str(myText),
-                _ts_en.font,
-                config.weekly_name_text_font_size,
-                fill=textcolor,
+                name_font,
+                name_size,
+                fill=name_color,
                 max_width=Width,
                 css_class="ec-event-name",
             )
@@ -1070,19 +1080,19 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 X,
                 icony,
                 str(myText),
-                _ts_en.font,
-                config.weekly_name_text_font_size,
-                fill=textcolor,
+                name_font,
+                name_size,
+                fill=name_color,
                 max_width=(Width - (config.weekly_name_text_font_size * 1.5)),
                 css_class="ec-event-name",
             )
 
             self._draw_icon_svg(
-                t.icon,
+                icon_to_draw,
                 iconx,
                 icony,
                 config.event_icon_font_size,
-                color=iconcolor,
+                color=icon_color,
                 fallback_name=config.default_missing_icon,
                 fallback_color="red",
                 css_class="ec-event-icon",
@@ -1199,13 +1209,22 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                                 nWidth - (ntextx - niconx) if t.icon else nWidth
                             )
                             _ts_notes = config.get_text_style("ec-event-notes")
+                            _ev_style = StyleEngine(
+                                config.theme_style_rules or []
+                            ).evaluate_event(t)
+                            n_font, n_size, n_color, _ = _ev_style.text_override(
+                                "event_notes",
+                                font=_ts_notes.font,
+                                font_size=config.weekly_notes_text_font_size,
+                                color=_ts_notes.color,
+                            )
                             self._draw_text(
                                 notes_x,
                                 nicony,
                                 str(t.notes),
-                                _ts_notes.font,
-                                config.weekly_notes_text_font_size,
-                                fill=_ts_notes.color,
+                                n_font,
+                                n_size,
+                                fill=n_color,
                                 max_width=notes_max_w,
                                 css_class="ec-event-notes",
                             )
@@ -1362,18 +1381,39 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _ls_dur = config.get_line_style("ec-duration-bar")
         _ts_en = config.get_text_style("ec-event-name")
         _ts_notes = config.get_text_style("ec-event-notes")
+
+        style_engine = StyleEngine(config.theme_style_rules or [])
+        dur_style = style_engine.evaluate_event(t)
+
+        rect_kwargs = dur_style.rect_overrides(
+            fill="lightsteelblue",
+            stroke="white",
+            stroke_width=0.5,
+            stroke_dasharray=_ls_dur.dasharray or None,
+        )
+
+        name_font, name_size, name_color, name_opacity = dur_style.text_override(
+            "duration_name",
+            font=_ts_en.font,
+            font_size=config.weekly_name_text_font_size,
+            color=_ts_en.color,
+        )
+        notes_font, notes_size, notes_color, notes_opacity = dur_style.text_override(
+            "duration_notes",
+            font=_ts_notes.font,
+            font_size=config.weekly_notes_text_font_size,
+            color=_ts_notes.color,
+        )
+
         for X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty in list_of_rects:
             self._draw_rect(
                 X,
                 Y,
                 Width,
                 Height,
-                fill="lightsteelblue",
-                stroke="white",
-                stroke_width=0.5,
                 rx=2,
-                stroke_dasharray=_ls_dur.dasharray or None,
                 css_class="ec-duration-bar",
+                **rect_kwargs,
             )
 
             if inline_notes and has_notes:
@@ -1385,9 +1425,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 centerX,
                 name_ty,
                 display_name,
-                _ts_en.font,
-                config.weekly_name_text_font_size,
-                fill=_ts_en.color,
+                name_font,
+                name_size,
+                fill=name_color,
                 anchor="middle",
                 max_width=Width,
                 css_class="ec-event-name",
@@ -1398,9 +1438,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     centerX,
                     notes_ty,
                     str(t.notes),
-                    _ts_notes.font,
-                    config.weekly_notes_text_font_size,
-                    fill=_ts_notes.color,
+                    notes_font,
+                    notes_size,
+                    fill=notes_color,
                     anchor="middle",
                     max_width=Width,
                     css_class="ec-event-notes",

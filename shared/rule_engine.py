@@ -93,6 +93,51 @@ class StyleResult:
             )
         ) and not self.text
 
+    def rect_overrides(
+        self,
+        *,
+        fill: str = "none",
+        fill_opacity: float = 1.0,
+        stroke: str = "none",
+        stroke_width: float = 0.0,
+        stroke_opacity: float = 1.0,
+        stroke_dasharray: str | None = None,
+    ) -> dict[str, Any]:
+        """Return a dict of rect-drawing kwargs with style-rule overrides applied
+        on top of the supplied base values. None on the StyleResult means "keep
+        the base value"; a non-None value means "override".
+        """
+        return {
+            "fill": self.fill_color if self.fill_color is not None else fill,
+            "fill_opacity": self.fill_opacity if self.fill_opacity is not None else fill_opacity,
+            "stroke": self.stroke_color if self.stroke_color is not None else stroke,
+            "stroke_width": self.stroke_width if self.stroke_width is not None else stroke_width,
+            "stroke_opacity": self.stroke_opacity if self.stroke_opacity is not None else stroke_opacity,
+            "stroke_dasharray": self.stroke_dasharray if self.stroke_dasharray is not None else stroke_dasharray,
+        }
+
+    def text_override(
+        self,
+        key: str,
+        *,
+        font: str | None = None,
+        font_size: float | None = None,
+        color: str | None = None,
+        opacity: float | None = None,
+    ) -> tuple[str | None, float | None, str | None, float | None]:
+        """Return (font, font_size, color, opacity) for the named text element,
+        applying any per-element overrides on top of the supplied base values.
+        """
+        ts = self.text.get(key)
+        if ts is None:
+            return font, font_size, color, opacity
+        return (
+            ts.font if ts.font else font,
+            ts.font_size if ts.font_size is not None else font_size,
+            ts.font_color if ts.font_color else color,
+            ts.font_opacity if ts.font_opacity is not None else opacity,
+        )
+
     def merge(self, other: "StyleResult") -> None:
         """Layer non-None fields from other on top of self (later rules win)."""
         if other.fill_color is not None:

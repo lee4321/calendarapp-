@@ -16,7 +16,7 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day, day_rule_matches
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import StyleEngine
+from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
@@ -1397,10 +1397,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 event.color if event.color else _palette[event.priority % len(_palette)]
             )
             _style_engine = getattr(self, "_style_engine", None)
-            if _style_engine is not None:
-                _sr = _style_engine.evaluate_event(event)
-                if _sr.fill_color:
-                    color = _sr.fill_color
+            _sr = (
+                _style_engine.evaluate_event(event)
+                if _style_engine is not None
+                else StyleResult()
+            )
+            if _sr.fill_color:
+                color = _sr.fill_color
             _dur_stroke_color = (
                 config.blockplan_duration_stroke_color
                 if config.blockplan_duration_stroke_color is not None
@@ -1411,18 +1414,21 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if config.blockplan_duration_stroke_dasharray is not None
                 else _dur_bar_style.dasharray
             )
-            self._draw_rect(
-                x0,
-                y,
-                w,
-                bar_h,
+            rect_kwargs = _sr.rect_overrides(
                 fill=color,
                 fill_opacity=config.blockplan_duration_fill_opacity,
                 stroke=_dur_stroke_color,
                 stroke_opacity=float(config.blockplan_duration_stroke_opacity),
                 stroke_width=float(config.blockplan_duration_stroke_width),
                 stroke_dasharray=_dur_stroke_dash,
+            )
+            self._draw_rect(
+                x0,
+                y,
+                w,
+                bar_h,
                 css_class="ec-duration-bar",
+                **rect_kwargs,
             )
 
             continues_left = ev_start < start
@@ -1475,6 +1481,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     config.blockplan_duration_date_font
                     or _dur_date_style.font
                 )
+                date_font, _, date_color, _ = _sr.text_override(
+                    "duration_start_date",
+                    font=date_font,
+                    color=date_color,
+                )
                 try:
                     _dur_date_font_path = get_font_path(date_font)
                 except Exception:
@@ -1489,9 +1500,21 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 config.blockplan_notes_text_font_name
                 or _event_notes_style.font
             )
+            _dur_name_font, _, dur_text_color, _ = _sr.text_override(
+                "duration_name",
+                font=_event_name_style.font,
+                color=dur_text_color,
+            )
+            _dur_notes_font_name, _, dur_notes_color, _ = _sr.text_override(
+                "duration_notes",
+                font=_dur_notes_font_name,
+                color=dur_notes_color,
+            )
             show_icon = bool(config.blockplan_duration_icon_visible) and bool(
                 event.icon
             )
+            event_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
+            event_icon_color = _sr.icon_color or dur_text_color
 
             # --- shared icon-layout helper ---
             def _draw_icon_and_text(
@@ -1538,14 +1561,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                             f"translate({-draw_x:.4f} {-baseline_y:.4f})"
                         )
                     icon_drawn = self._draw_icon_svg(
-                        event.icon,
+                        event_icon_to_draw,
                         draw_x,
                         baseline_y,
                         icon_size,
                         anchor="start",
-                        color=dur_text_color,
+                        color=event_icon_color,
                         fallback_name=config.default_missing_icon,
-                        fallback_color=dur_text_color,
+                        fallback_color=event_icon_color,
                         transform=icon_transform,
                         css_class="ec-event-icon",
                     )
@@ -1558,7 +1581,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         text_x,
                         baseline_y,
                         event.task_name,
-                        _event_name_style.font,
+                        _dur_name_font,
                         font_size,
                         fill=dur_text_color,
                         anchor="start" if icon_drawn else "middle",
@@ -1570,7 +1593,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         x0 + (w / 2.0),
                         baseline_y,
                         event.task_name,
-                        _event_name_style.font,
+                        _dur_name_font,
                         font_size,
                         fill=dur_text_color,
                         anchor="middle",
@@ -1804,10 +1827,33 @@ class BlockPlanRenderer(BaseSVGRenderer):
             icon_size = max(6.0, event_size * 1.1)
 
             event_color = _evt_name_style.color
-            if _style_engine is not None:
-                _sr = _style_engine.evaluate_event(event)
-                if _sr.fill_color:
-                    event_color = _sr.fill_color
+            _sr = (
+                _style_engine.evaluate_event(event)
+                if _style_engine is not None
+                else StyleResult()
+            )
+            if _sr.fill_color:
+                event_color = _sr.fill_color
+            ev_name_font, _, ev_name_color, ev_name_opacity = _sr.text_override(
+                "event_name",
+                font=_evt_name_style.font,
+                color=event_color,
+            )
+            ev_notes_font, _, ev_notes_color, _ = _sr.text_override(
+                "event_notes",
+                font=_event_notes_font_name,
+                color=_event_notes_color,
+            )
+            ev_date_font, _, ev_date_color, _ = _sr.text_override(
+                "event_date",
+                font=_evt_date_style.font,
+                color=_evt_date_style.color,
+            )
+            ev_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
+            ev_icon_color = _sr.icon_color or event_color
+            ev_marker_stroke = (
+                _sr.stroke_color if _sr.stroke_color is not None else event_color
+            )
             if has_notes and has_date:
                 name_baseline = y_center - (event_size * 0.70)
                 notes_baseline = y_center + (notes_size * 0.15)
@@ -1825,14 +1871,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 date_baseline = None
                 name_baseline = y_center + (event_size * 0.35)
                 notes_baseline = None
-            if event.icon:
+            if ev_icon_to_draw:
                 marker_drawn = self._draw_icon_svg(
-                    event.icon,
+                    ev_icon_to_draw,
                     x,
                     name_baseline,
                     icon_size,
                     anchor="start",
-                    color=event_color,
+                    color=ev_icon_color,
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-event-icon",
@@ -1844,7 +1890,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     y_center,
                     icon_r,
                     fill=event_color,
-                    stroke=event_color,
+                    stroke=ev_marker_stroke,
                     class_="ec-milestone-marker",
                 )
                 self._drawing.append(_circle)
@@ -1856,9 +1902,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     date_baseline,
                     date_text,
-                    _evt_date_style.font,
+                    ev_date_font,
                     date_size,
-                    fill=_evt_date_style.color,
+                    fill=ev_date_color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-date",
@@ -1868,9 +1914,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    _evt_name_style.font,
+                    ev_name_font,
                     event_size,
-                    fill=_evt_name_style.color,
+                    fill=ev_name_color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",
@@ -1881,9 +1927,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     if notes_baseline is not None
                     else y_center - (notes_size * 0.85),
                     str(event.notes),
-                    _event_notes_font_name,
+                    ev_notes_font,
                     notes_size,
-                    fill=_event_notes_color,
+                    fill=ev_notes_color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-notes",
@@ -1893,9 +1939,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     label_x,
                     name_baseline,
                     event.task_name,
-                    _evt_name_style.font,
+                    ev_name_font,
                     event_size,
-                    fill=_evt_name_style.color,
+                    fill=ev_name_color,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",

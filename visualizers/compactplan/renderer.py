@@ -22,7 +22,7 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import StyleEngine
+from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
@@ -105,6 +105,7 @@ class _PlacedDuration:
     row_y: float
     continues: bool = False  # True when the event extends beyond the timeline end date
     icon_name: str | None = None  # icon drawn at the start (left) of the line
+    style: StyleResult | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -239,12 +240,27 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Duration lines
         _dur_style = config.get_line_style("ec-duration-bar")
         for p in placed:
+            _ps = p.style or StyleResult()
+            line_stroke = _ps.stroke_color if _ps.stroke_color is not None else p.color
+            line_stroke_width = (
+                _ps.stroke_width if _ps.stroke_width is not None else line_w
+            )
+            line_stroke_dash = (
+                _ps.stroke_dasharray
+                if _ps.stroke_dasharray is not None
+                else (_dur_style.dasharray or None)
+            )
+            line_stroke_opacity = (
+                _ps.stroke_opacity
+                if _ps.stroke_opacity is not None
+                else _dur_style.opacity
+            )
             self._draw_line(
                 p.x1, p.row_y, p.x2, p.row_y,
-                stroke=p.color,
-                stroke_width=line_w,
-                stroke_dasharray=_dur_style.dasharray or None,
-                stroke_opacity=_dur_style.opacity,
+                stroke=line_stroke,
+                stroke_width=line_stroke_width,
+                stroke_dasharray=line_stroke_dash,
+                stroke_opacity=line_stroke_opacity,
                 css_class="ec-duration-bar",
             )
 
@@ -257,12 +273,18 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if show_dur_icons and dur_icon_h > 0:
             for p in placed:
                 if p.icon_name:
+                    _ps = p.style or StyleResult()
                     # Centre icon vertically on the duration row (same formula as
                     # continuation icons: baseline = row_y + 0.3 * icon_h).
                     icon_baseline = p.row_y + 0.3 * dur_icon_h
-                    icon_color = dur_icon_color_cfg if dur_icon_color_cfg else p.color
+                    icon_to_draw = _ps.icon if _ps.icon is not None else p.icon_name
+                    icon_color = (
+                        _ps.icon_color
+                        if _ps.icon_color
+                        else (dur_icon_color_cfg if dur_icon_color_cfg else p.color)
+                    )
                     self._draw_icon_svg(
-                        p.icon_name, p.x1, icon_baseline, dur_icon_h,
+                        icon_to_draw, p.x1, icon_baseline, dur_icon_h,
                         anchor="start", color=icon_color,
                         css_class="ec-duration-icon",
                     )
@@ -630,10 +652,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
             group_key = (evt.resource_group or "").strip()
             color = evt.color or group_color_map.get(group_key, "steelblue")
             _style_engine = getattr(self, "_style_engine", None)
-            if _style_engine is not None:
-                _sr = _style_engine.evaluate_event(evt)
-                if _sr.fill_color:
-                    color = _sr.fill_color
+            _sr = (
+                _style_engine.evaluate_event(evt)
+                if _style_engine is not None
+                else None
+            )
+            if _sr is not None and _sr.fill_color:
+                color = _sr.fill_color
 
             # Assign a unique icon to each duration by cycling through the list.
             icon_name: str | None = icon_list[evt_idx % len(icon_list)] if icon_list else None
@@ -667,7 +692,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             placed.append(
                 _PlacedDuration(
                     event=evt, color=color, x1=x1, x2=x2, row_y=row_y,
-                    continues=continues, icon_name=icon_name,
+                    continues=continues, icon_name=icon_name, style=_sr,
                 )
             )
 
@@ -696,15 +721,20 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         color = evt.color or config.get_element_color("ec-milestone-marker", "black")
         _style_engine = getattr(self, "_style_engine", None)
-        if _style_engine is not None:
-            _sr = _style_engine.evaluate_event(evt)
-            if _sr.fill_color:
-                color = _sr.fill_color
+        _sr = (
+            _style_engine.evaluate_event(evt)
+            if _style_engine is not None
+            else StyleResult()
+        )
+        if _sr.fill_color:
+            color = _sr.fill_color
         flag_h = float(config.compactplan_milestone_flag_height)
         flag_w = float(config.compactplan_milestone_flag_width)
 
         # Try icon first
-        icon_name = evt.icon or getattr(config, "compactplan_milestone_icon", None)
+        icon_name = _sr.icon if _sr.icon is not None else (
+            evt.icon or getattr(config, "compactplan_milestone_icon", None)
+        )
         drew_icon = False
         if icon_name and db is not None:
             icon_svg = db.get_icon_svg(icon_name) if hasattr(db, "get_icon_svg") else None
@@ -734,11 +764,17 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
             label_color = str(_name_style.color or "#595959")
             label_opacity = float(_name_style.opacity)
+            label_font, _, label_color, label_opacity = _sr.text_override(
+                "event_name",
+                font=font_name,
+                color=label_color,
+                opacity=label_opacity,
+            )
             label_x = x + flag_w + 3.0
             label_y = axis_y - flag_h / 2.0
             self._draw_text(
                 label_x, label_y, evt.task_name,
-                font_name, font_size,
+                label_font, font_size,
                 fill=label_color, fill_opacity=label_opacity,
                 css_class="ec-event-name",
             )

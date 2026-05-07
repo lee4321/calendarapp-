@@ -727,13 +727,15 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if not duration_events:
             return
 
-        # Assign a distinct color to each duration event (cycle palette if needed)
+        # Assign a distinct color and StyleResult to each duration event.
         palette = config.group_colors or ["lightsteelblue"]
         style_engine = StyleEngine(config.theme_style_rules or [])
         from visualizers.mini.day_styles import DayStyleResolver
-        event_colors: dict[int, str] = {}
+        from shared.rule_engine import StyleResult
+        event_styles: dict[int, tuple[str, StyleResult]] = {}
         for idx, event in enumerate(duration_events):
             color = palette[idx % len(palette)]
+            sr = StyleResult()
             try:
                 evt_obj = DayStyleResolver._dict_to_event(event)
                 sr = style_engine.evaluate_event(evt_obj)
@@ -741,10 +743,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     color = sr.fill_color
             except Exception:
                 pass
-            event_colors[id(event)] = color
+            event_styles[id(event)] = (color, sr)
 
-        # Build a day -> list of bar colors (one entry per overlapping duration)
-        bars_by_day: dict[str, list[str]] = {}
+        # Build a day -> list of (color, StyleResult) per overlapping duration.
+        bars_by_day: dict[str, list[tuple[str, StyleResult]]] = {}
         for event in duration_events:
             start = event.get("Start", "")[:8]
             end = event.get("End", event.get("Finish", ""))[:8]
@@ -758,11 +760,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 continue
 
             # Use palette-based color to ensure distinct bars
-            bar_color = event_colors.get(id(event), "lightsteelblue")
+            bar_entry = event_styles.get(id(event), ("lightsteelblue", StyleResult()))
 
             for dt in arrow.Arrow.range("day", s_arrow, e_arrow):
                 daykey = dt.format("YYYYMMDD")
-                bars_by_day.setdefault(daykey, []).append(bar_color)
+                bars_by_day.setdefault(daykey, []).append(bar_entry)
 
         # Build daykey → all cell keys (primary + adjacent) from coordinates.
         # Adjacent keys have format Cell_{month_key}_{daykey}__adj; primary
@@ -785,23 +787,37 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         _ls_dur = config.get_line_style("ec-duration-bar")
         stroke_w = config.mini_duration_bar_height  # keep: behavioral dimension, not styling
         gap = stroke_w * 0.5
-        for daykey, colors in bars_by_day.items():
+        for daykey, entries in bars_by_day.items():
             for cell_key in day_cell_keys.get(daykey, []):
                 cx, cy, cw, ch = coordinates[cell_key]
                 max_bars = int(ch // (stroke_w + gap)) if stroke_w > 0 else 0
-                for idx, color in enumerate(colors):
+                for idx, (color, sr) in enumerate(entries):
                     if max_bars and idx >= max_bars:
                         break
                     line_y = (cy + ch) - idx * (stroke_w + gap) - stroke_w / 2
+                    bar_stroke = sr.stroke_color if sr.stroke_color is not None else color
+                    bar_stroke_width = (
+                        sr.stroke_width if sr.stroke_width is not None else stroke_w
+                    )
+                    bar_stroke_opacity = (
+                        sr.stroke_opacity
+                        if sr.stroke_opacity is not None
+                        else _ls_dur.opacity
+                    )
+                    bar_dash = (
+                        sr.stroke_dasharray
+                        if sr.stroke_dasharray is not None
+                        else (_ls_dur.dasharray or None)
+                    )
                     self._draw_line(
                         cx,
                         line_y,
                         cx + cw,
                         line_y,
-                        stroke=color,
-                        stroke_width=stroke_w,
-                        stroke_opacity=_ls_dur.opacity,
-                        stroke_dasharray=_ls_dur.dasharray or None,
+                        stroke=bar_stroke,
+                        stroke_width=bar_stroke_width,
+                        stroke_opacity=bar_stroke_opacity,
+                        stroke_dasharray=bar_dash,
                         css_class="ec-duration-bar",
                     )
 

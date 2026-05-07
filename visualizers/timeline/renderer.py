@@ -18,7 +18,7 @@ from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
-from shared.rule_engine import StyleEngine
+from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
 
 if TYPE_CHECKING:
@@ -40,6 +40,7 @@ class TimelineCallout:
     box_width: float
     box_height: float
     date_row: int = 0
+    style: StyleResult | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class TimelineDuration:
     min_width: float
     continues_left: bool = False
     continues_right: bool = False
+    style: StyleResult | None = None
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -526,10 +528,9 @@ class TimelineRenderer(BaseSVGRenderer):
                 continue
             x = self._x_for_day(day, start, end, axis_left, axis_right)
             color = palette[idx % len(palette)]
-            if style_engine is not None:
-                _sr = style_engine.evaluate_event(event)
-                if _sr.fill_color:
-                    color = _sr.fill_color
+            _sr = style_engine.evaluate_event(event) if style_engine is not None else None
+            if _sr is not None and _sr.fill_color:
+                color = _sr.fill_color
 
             chosen: tuple[int, float, float] | None = None
             # Try multiple horizontal offsets per lane to avoid box collisions.
@@ -620,6 +621,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     box_width=box_w,
                     box_height=box_h,
                     date_row=idx % date_rows,
+                    style=_sr,
                 )
             )
 
@@ -709,10 +711,9 @@ class TimelineRenderer(BaseSVGRenderer):
 
             lane = self._place_span_in_lane(lane_last_end, sx, ex, min_gap)
             color = palette[idx % len(palette)]
-            if style_engine is not None:
-                _sr = style_engine.evaluate_event(event)
-                if _sr.fill_color:
-                    color = _sr.fill_color
+            _sr = style_engine.evaluate_event(event) if style_engine is not None else None
+            if _sr is not None and _sr.fill_color:
+                color = _sr.fill_color
             out.append(
                 TimelineDuration(
                     event=event,
@@ -723,6 +724,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     min_width=min_width,
                     continues_left=continues_left,
                     continues_right=continues_right,
+                    style=_sr,
                 )
             )
 
@@ -1166,18 +1168,22 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Label box.
         _callout_style = config.get_box_style("ec-callout-box")
-        self._draw_rect(
-            item.box_x,
-            item.box_y,
-            item.box_width,
-            item.box_height,
+        _sr = item.style or StyleResult()
+        rect_kwargs = _sr.rect_overrides(
             fill=item.color,
             fill_opacity=_callout_style.fill_opacity,
             stroke=item.color,
             stroke_width=_callout_style.stroke_width,
             stroke_opacity=0.95,
             stroke_dasharray=_callout_style.stroke_dasharray or None,
+        )
+        self._draw_rect(
+            item.box_x,
+            item.box_y,
+            item.box_width,
+            item.box_height,
             css_class="ec-callout-box",
+            **rect_kwargs,
         )
 
         has_icon = bool(item.event.icon and self._resolve_icon_svg(item.event.icon))
@@ -1204,15 +1210,30 @@ class TimelineRenderer(BaseSVGRenderer):
         notes_y = title_y + (fitted_notes * 1.55)
 
         event_text_color = config.timeline_name_text_font_color or _name_style.color or item.color
+        name_font, _, name_color, name_opacity = _sr.text_override(
+            "event_name",
+            font=config.timeline_name_text_font_name or _name_style.font,
+            color=event_text_color,
+            opacity=_name_style.opacity,
+        )
+        notes_color_base = config.timeline_notes_text_font_color or _notes_style.color or event_text_color
+        notes_font, _, notes_color, notes_opacity = _sr.text_override(
+            "event_notes",
+            font=config.timeline_notes_text_font_name or _notes_style.font,
+            color=notes_color_base,
+            opacity=_notes_style.opacity,
+        )
+        icon_to_draw = _sr.icon if _sr.icon is not None else item.event.icon
+        icon_color = _sr.icon_color or event_text_color
 
         if has_icon:
             self._draw_icon_svg(
-                item.event.icon,
+                icon_to_draw,
                 text_x,
                 title_y,
                 fitted_title,
                 anchor="start",
-                color=event_text_color,
+                color=icon_color,
                 css_class="ec-event-icon",
             )
             title_text_x = text_x + fitted_title + icon_gap
@@ -1225,10 +1246,10 @@ class TimelineRenderer(BaseSVGRenderer):
             title_text_x,
             title_y,
             title,
-            config.timeline_name_text_font_name or _name_style.font,
+            name_font,
             fitted_title,
-            fill=event_text_color,
-            fill_opacity=_name_style.opacity,
+            fill=name_color,
+            fill_opacity=name_opacity,
             max_width=title_max_w,
             css_class="ec-event-name",
         )
@@ -1238,10 +1259,10 @@ class TimelineRenderer(BaseSVGRenderer):
                 text_x,
                 notes_y,
                 notes,
-                config.timeline_notes_text_font_name or _notes_style.font,
+                notes_font,
                 fitted_notes,
-                fill=config.timeline_notes_text_font_color or _notes_style.color or event_text_color,
-                fill_opacity=_notes_style.opacity,
+                fill=notes_color,
+                fill_opacity=notes_opacity,
                 max_width=item.box_width - 12.0,
                 css_class="ec-event-notes",
             )
@@ -1255,13 +1276,18 @@ class TimelineRenderer(BaseSVGRenderer):
         date_y = axis_y - (
             date_font_size * (0.9 + (item.date_row * date_row_gap_factor))
         )
+        date_font, _, date_color, _ = _sr.text_override(
+            "event_date",
+            font=_event_date_style.font or config.timeline_date_font,
+            color=_event_date_style.color or event_text_color,
+        )
         self._draw_text(
             item.x,
             date_y,
             date_label,
-            _event_date_style.font or config.timeline_date_font,
+            date_font,
             date_font_size,
-            fill=_event_date_style.color or event_text_color,
+            fill=date_color,
             anchor="middle",
             css_class="ec-event-date",
         )
@@ -1326,36 +1352,42 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Duration bar.
         _dur_bar_style = config.get_line_style("ec-duration-bar")
-        self._draw_rect(
-            item.start_x,
-            bar_y,
-            max(1.0, item.end_x - item.start_x),
-            bar_h,
+        _sr = item.style or StyleResult()
+        rect_kwargs = _sr.rect_overrides(
             fill=item.color,
             fill_opacity=_dur_bar_style.opacity,
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.9,
             stroke_dasharray=_dur_bar_style.dasharray or None,
+        )
+        self._draw_rect(
+            item.start_x,
+            bar_y,
+            max(1.0, item.end_x - item.start_x),
+            bar_h,
             css_class="ec-duration-bar",
+            **rect_kwargs,
         )
 
         # Start/end markers on the main axis.
         _marker_style = config.get_box_style("ec-milestone-marker")
+        marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
+        marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
         self._draw_circle(
             item.start_x,
             axis_y,
             radius=max(2.7, config.timeline_marker_radius * 0.8),
-            fill=item.color,
-            stroke=_marker_style.stroke,
+            fill=marker_fill,
+            stroke=marker_stroke,
             stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
         )
         self._draw_circle(
             item.end_x,
             axis_y,
             radius=max(2.7, config.timeline_marker_radius * 0.8),
-            fill=item.color,
-            stroke=_marker_style.stroke,
+            fill=marker_fill,
+            stroke=marker_stroke,
             stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
         )
 
@@ -1404,6 +1436,13 @@ class TimelineRenderer(BaseSVGRenderer):
             notes_size,
         )
         duration_text_color = config.timeline_name_text_font_color or _dur_name_style.color or item.color
+        title_font_base = config.timeline_name_text_font_name or _dur_name_style.font
+        title_font, _, name_color, name_opacity = _sr.text_override(
+            "duration_name",
+            font=title_font_base,
+            color=duration_text_color,
+            opacity=_dur_name_style.opacity,
+        )
         # Vertically center the title (and notes, when present) within the bar
         # so the text sits in the lower portion of the rectangle rather than
         # being pinned to its top edge.
@@ -1413,7 +1452,6 @@ class TimelineRenderer(BaseSVGRenderer):
         text_block_h = line1_h + line2_h
         text_top_y = bar_y + max(0.0, (bar_h - text_block_h) / 2.0)
         title_y = text_top_y + fitted_title * 0.85
-        title_font = config.timeline_name_text_font_name or _dur_name_style.font
         show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
         if show_icon:
             icon_size = fitted_title
@@ -1436,15 +1474,17 @@ class TimelineRenderer(BaseSVGRenderer):
                     f"scale({icon_scale_x:.6f} 1) "
                     f"translate({-draw_x:.4f} {-title_y:.4f})"
                 )
+            dur_icon = _sr.icon if _sr.icon is not None else item.event.icon
+            dur_icon_color = _sr.icon_color or duration_text_color
             icon_drawn = self._draw_icon_svg(
-                item.event.icon,
+                dur_icon,
                 draw_x,
                 title_y,
                 icon_size,
                 anchor="start",
-                color=duration_text_color,
+                color=dur_icon_color,
                 fallback_name=config.default_missing_icon,
-                fallback_color=duration_text_color,
+                fallback_color=dur_icon_color,
                 transform=icon_transform,
                 css_class="ec-duration-icon",
             )
@@ -1455,8 +1495,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 title,
                 title_font,
                 fitted_title,
-                fill=duration_text_color,
-                fill_opacity=_dur_name_style.opacity,
+                fill=name_color,
+                fill_opacity=name_opacity,
                 anchor="start" if icon_drawn else "middle",
                 max_width=max(8.0, item.end_x - text_x - 2),
                 css_class="ec-event-name",
@@ -1468,23 +1508,30 @@ class TimelineRenderer(BaseSVGRenderer):
                 title,
                 title_font,
                 fitted_title,
-                fill=duration_text_color,
-                fill_opacity=_dur_name_style.opacity,
+                fill=name_color,
+                fill_opacity=name_opacity,
                 anchor="middle",
                 max_width=text_w,
                 css_class="ec-event-name",
             )
 
         if has_notes:
+            notes_color_base = config.timeline_notes_text_font_color or _dur_notes_style.color or duration_text_color
+            notes_font, _, notes_color, notes_opacity = _sr.text_override(
+                "duration_notes",
+                font=config.timeline_notes_text_font_name or _dur_notes_style.font,
+                color=notes_color_base,
+                opacity=_dur_notes_style.opacity,
+            )
             notes_y = text_top_y + line1_h + fitted_notes * 0.85
             self._draw_text(
                 (item.start_x + item.end_x) / 2,
                 notes_y,
                 notes,
-                config.timeline_notes_text_font_name or _dur_notes_style.font,
+                notes_font,
                 fitted_notes,
-                fill=config.timeline_notes_text_font_color or _dur_notes_style.color or duration_text_color,
-                fill_opacity=_dur_notes_style.opacity,
+                fill=notes_color,
+                fill_opacity=notes_opacity,
                 anchor="middle",
                 max_width=text_w,
                 css_class="ec-event-notes",
@@ -1492,16 +1539,26 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Keep start/end labels on the same Y baseline.
         _dur_date_style = config.get_text_style("ec-duration-date")
-        date_font = _dur_date_style.font or config.timeline_duration_date_font or config.timeline_date_font
-        date_color = _dur_date_style.color or config.timeline_duration_date_color or duration_text_color
+        date_font_base = _dur_date_style.font or config.timeline_duration_date_font or config.timeline_date_font
+        date_color_base = _dur_date_style.color or config.timeline_duration_date_color or duration_text_color
+        start_date_font, _, start_date_color, _ = _sr.text_override(
+            "duration_start_date",
+            font=date_font_base,
+            color=date_color_base,
+        )
+        end_date_font, _, end_date_color, _ = _sr.text_override(
+            "duration_end_date",
+            font=date_font_base,
+            color=date_color_base,
+        )
         date_y = bar_y + bar_h + (date_size * 1.1)
         self._draw_text(
             item.start_x,
             date_y,
             format_arrow_date(start_day, config.timeline_date_format),
-            date_font,
+            start_date_font,
             date_size,
-            fill=date_color,
+            fill=start_date_color,
             anchor="start",
             css_class="ec-duration-date",
         )
@@ -1509,9 +1566,9 @@ class TimelineRenderer(BaseSVGRenderer):
             item.end_x,
             date_y,
             format_arrow_date(end_day, config.timeline_date_format),
-            date_font,
+            end_date_font,
             date_size,
-            fill=date_color,
+            fill=end_date_color,
             anchor="end",
             css_class="ec-duration-date",
         )
