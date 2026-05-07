@@ -887,6 +887,36 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         return 20.0, 20.0
 
     @staticmethod
+    def _extract_pattern_inner(svg: str) -> str:
+        """
+        Return the inner content of a pattern SVG, ready to embed inside a
+        ``<pattern>`` element.
+
+        Peels off the XML prolog, doctype, and outer ``<svg>`` wrapper, then
+        removes Inkscape-specific metadata (``<sodipodi:namedview>``,
+        ``<metadata>``, and any leftover ``inkscape:`` / ``sodipodi:``
+        attributes).  Those declarations live on the source ``<svg>`` element,
+        so once that element is gone the prefixed content is no longer in
+        scope and would make the embedding document invalid XML.
+        """
+        inner = re.sub(r"<\?xml[^>]*\?>", "", svg)
+        inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner)
+        inner = re.sub(r"<svg[^>]*>", "", inner, count=1)
+        inner = inner.rsplit("</svg>", 1)[0]
+        inner = re.sub(r"<sodipodi:namedview\b[^>]*/>", "", inner)
+        inner = re.sub(
+            r"<sodipodi:namedview\b[^>]*>.*?</sodipodi:namedview>",
+            "",
+            inner,
+            flags=re.DOTALL,
+        )
+        inner = re.sub(r"<metadata\b[^>]*>.*?</metadata>", "", inner, flags=re.DOTALL)
+        inner = re.sub(r"<metadata\b[^>]*/>", "", inner)
+        inner = re.sub(r'\s+(?:inkscape|sodipodi):[a-zA-Z][\w-]*="[^"]*"', "", inner)
+        inner = re.sub(r"\s+(?:inkscape|sodipodi):[a-zA-Z][\w-]*='[^']*'", "", inner)
+        return inner.strip()
+
+    @staticmethod
     def _colorize_pattern_svg(svg: str, color: str | None) -> str:
         """
         Replace black fill declarations in a pattern SVG with *color*.
@@ -927,13 +957,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         tile_w, tile_h = self._parse_svg_tile_size(raw_svg)
         colorized = self._colorize_pattern_svg(raw_svg, color)
-
-        # Strip XML declaration and peel off the outer <svg> wrapper so that
-        # only the tile content is embedded inside the <pattern> element.
-        inner = re.sub(r"<\?xml[^>]*\?>", "", colorized)
-        inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner)
-        inner = re.sub(r"<svg[^>]*>", "", inner, count=1)
-        inner = inner.rsplit("</svg>", 1)[0].strip()
+        inner = self._extract_pattern_inner(colorized)
 
         pattern_xml = (
             f'<pattern id="{pat_id}" x="0" y="0" '

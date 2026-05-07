@@ -652,10 +652,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         tile_w, tile_h = self._parse_svg_tile_size(raw_svg)
         colorized = self._colorize_pattern_svg(raw_svg, color)
-        inner = re.sub(r"<\?xml[^>]*\?>", "", colorized)
-        inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner)
-        inner = re.sub(r"<svg[^>]*>", "", inner, count=1)
-        inner = inner.rsplit("</svg>", 1)[0].strip()
+        inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
 
         pattern_xml = (
             f'<pattern id="{pat_id}" x="0" y="0" '

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.04.0"
+__version__ = "26.05.07.0"
 
 import argparse
 import logging
@@ -2611,10 +2611,7 @@ def _generate_patternsheet_svg(
         if pat_id not in seen_ids:
             tile_w, tile_h = WeeklyCalendarRenderer._parse_svg_tile_size(raw_svg)
             colorized = WeeklyCalendarRenderer._colorize_pattern_svg(raw_svg, color)
-            inner = re.sub(r"<\?xml[^>]*\?>", "", colorized)
-            inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner)
-            inner = re.sub(r"<svg[^>]*>", "", inner, count=1)
-            inner = inner.rsplit("</svg>", 1)[0].strip()
+            inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
 
             # Scale oversized tiles down so at least one full tile fits inside
             # the swatch.  Wrap the tile content in a <g transform="scale(s)">
@@ -2651,7 +2648,9 @@ def _generate_patternsheet_svg(
 
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}"'
+        f'<svg xmlns="http://www.w3.org/2000/svg"'
+        f' xmlns:xlink="http://www.w3.org/1999/xlink"'
+        f' width="{svg_w}" height="{svg_h}"'
         f' viewBox="0 0 {svg_w} {svg_h}">',
         f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
         "  <defs>",
