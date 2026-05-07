@@ -995,7 +995,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             return
 
         # Reserve the top row (day number + holiday name) from pattern coverage.
-        # In PDF coordinates Y increases upward, so shrinking h trims the top.
+        # In SVG coordinates Y increases downward and y is the top edge of the
+        # day box, so we shift the pattern rect down by top_clearance and
+        # shrink its height to match.
         top_clearance = config.day_box_number_font_size * 1.2
         pattern_h = max(0.0, h - top_clearance)
 
@@ -1007,7 +1009,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         )
         self._draw_rect(
             x,
-            y,
+            y + top_clearance,
             w,
             pattern_h,
             fill=f"url(#{pat_id})",
