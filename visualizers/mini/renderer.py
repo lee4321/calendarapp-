@@ -995,8 +995,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 name,
                 row_font,
                 row_font_size,
-                fill=_ts_event_name.color,
-                fill_opacity=_ts_event_name.opacity,
+                fill=config.mini_details_name_text_font_color,
+                fill_opacity=config.mini_details_name_text_font_opacity,
                 max_width=name_width,
                 css_class="ec-event-name",
             )
@@ -1006,8 +1006,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 milestone,
                 row_font,
                 row_font_size,
-                fill=_ts_event_name.color,
-                fill_opacity=_ts_event_name.opacity,
+                fill=config.mini_details_text_font_color,
+                fill_opacity=config.mini_details_text_font_opacity,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -1016,8 +1016,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 priority,
                 row_font,
                 row_font_size,
-                fill=_ts_event_name.color,
-                fill_opacity=_ts_event_name.opacity,
+                fill=config.mini_details_text_font_color,
+                fill_opacity=config.mini_details_text_font_opacity,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -1026,8 +1026,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 group,
                 row_font,
                 row_font_size,
-                fill=_ts_event_name.color,
-                fill_opacity=_ts_event_name.opacity,
+                fill=config.mini_details_text_font_color,
+                fill_opacity=config.mini_details_text_font_opacity,
                 css_class="ec-event-name",
             )
 
