@@ -13,16 +13,20 @@ This guide is generated from the current codebase (`ecalendar.py`, `config/theme
 | `timeline` | Generate a timeline SVG. |
 | `blockplan` | Generate a blockplan SVG. |
 | `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
+| `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
 | `themes` | List available themes. |
 | `papersizes` | List available paper sizes from DB. |
 | `patterns` | List available SVG day-box patterns from DB. |
 | `icons` | List available icons from DB. |
 | `colors` | List available named colors from DB (includes RGB channels). |
 | `palettes` | List available color palettes from DB. |
-| `palette` | Generate an SVG swatch preview for one palette. |
+| `palettesheet` | Generate an SVG swatch preview for one named palette. |
 | `iconsheet` | Generate an SVG grid preview of icons. |
+| `patternsheet` | Generate an SVG grid preview of day-box patterns. |
 | `colorsheet` | Generate an SVG grid preview of named colors. |
 | `fonts` | List registered fonts. |
+| `fontsheet` | Generate an SVG sample sheet for all registered fonts. |
+| `exportdata` | Export filtered events/durations as a CSV compatible with `importers/import_events.py`. |
 | `help` | Show valid configurable values for a subcommand. |
 
 ## Common Workflows
@@ -32,7 +36,7 @@ This guide is generated from the current codebase (`ecalendar.py`, `config/theme
 PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 -th corporate -of weekly.svg
 
 # Mini calendar with week numbers and details page
-PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --mini-week-numbers --mini-details -of mini.svg
+PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --weeknumbers --mini-details -of mini.svg
 
 # Mini-icon calendar with squircle day-number icons, 4 columns, landscape
 PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 -mis squircles --mini-columns 4 -o landscape -of mini_icon.svg
@@ -46,23 +50,39 @@ PYTHONPATH=. uv run python ecalendar.py blockplan 20260101 20261231 -th corporat
 # Compact activities plan
 PYTHONPATH=. uv run python ecalendar.py compactplan 20260309 20260424 -th corporate -of compact.svg
 
+# Excel workbook with project-planning template
+PYTHONPATH=. uv run python ecalendar.py excelheader 20260101 20260630 -th corporate -of plan.xlsx
+
+# Export filtered events to CSV
+PYTHONPATH=. uv run python ecalendar.py exportdata 20260101 20261231 --milestones -o milestones.csv
+
 # Inspect available theme resources
 PYTHONPATH=. uv run python ecalendar.py themes
 PYTHONPATH=. uv run python ecalendar.py papersizes
 PYTHONPATH=. uv run python ecalendar.py palettes
+PYTHONPATH=. uv run python ecalendar.py patterns
+PYTHONPATH=. uv run python ecalendar.py fonts
+
+# Generate sample-sheet previews
+PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 -of set2.svg
+PYTHONPATH=. uv run python ecalendar.py patternsheet -f wave -of waves.svg
+PYTHONPATH=. uv run python ecalendar.py iconsheet -f arrow -of arrows.svg
+PYTHONPATH=. uv run python ecalendar.py colorsheet -of colors.svg
+PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 ```
 
 ## Command-Line Option Catalog (All Options)
 
 | Option(s) | Metavar | Commands | Description | Defaults/Choices |
 |---|---|---|---|---|
-| `--WBS` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
-| `--color`, `-c` | `COLOR` | `iconsheet` | Stroke color for icons (default: #333333) | `iconsheet`: default `#333333` |
-| `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Country code to filter government holidays (e.g. US, CA). If omitted, all holidays from the government table are included. |  |
-| `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palette`, `palettes`, `papersizes`, `patterns`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
+| `--WBS` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
+| `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Stroke/glyph color (icons & patterns default `#333333`; fontsheet default `#222222`) | `iconsheet`: default `#333333`; `patternsheet`: default `#333333`; `fontsheet`: default `#222222` |
+| `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `excelheader`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. `US`) or a comma-separated list (e.g. `US,CA,GB`). If omitted on render commands, all holidays from the government table are included; `exportdata` defaults to `US,CA`. |  |
+| `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
 | `--duration-fill-opacity`, `-dfo` | `0.0-1.0` | `timeline` | Fill opacity for duration bar rectangles (default: 0.25). |  |
 | `--empty`, `-e` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) | `blockplan`: default `False` |
-| `--filter`, `-f` | `TEXT` | `colorsheet`, `iconsheet` | `colorsheet`: Filter colors by name substring (case-insensitive) `iconsheet`: Filter icons by name substring (case-insensitive) |  |
+| `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter items by name substring (case-insensitive) |  |
+| `--fullset` |  | `fontsheet` | Show every glyph in the font instead of the three fixed sample rows | `fontsheet`: default `False` |
 | `--fiscal` | `TYPE` | `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period) | `weekly`: choices `nrf-454, nrf-445, nrf-544, 13-period` |
 | `--fiscal-colors` |  | `weekly` | Use fiscal period colors instead of Gregorian month colors for day box backgrounds | `weekly`: default `False` |
 | `--footercenter`, `-fc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Center footer text |  |
@@ -73,39 +93,40 @@ PYTHONPATH=. uv run python ecalendar.py palettes
 | `--headerleft`, `-hl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Left header text |  |
 | `--headerright`, `-hr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right header text |  |
 | `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
-| `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
+| `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
 | `--imagemark`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
+| `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
 | `--margin`, `-m` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Add page margins | `blockplan`: default `False` |
-| `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
 | `--mini-columns`, `-mc` | `N` | `mini`, `mini-icon`, `text-mini` | Number of months per row in mini calendar (default: 3) |  |
 | `--mini-details` |  | `mini`, `mini-icon` | Generate a second SVG with mini calendar event details | `mini`: default `False` |
 | `--mini-grid-lines` |  | `mini`, `mini-icon` | Draw grid lines between day cells | `mini`: default `False` |
 | `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (default: squares) | `mini-icon`: choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
-| `--mini-no-adjacent` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | `mini`: default `False` |
+| `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | `mini`: default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
 | `--mini-title-format` | `FMT` | `mini`, `mini-icon`, `text-mini` | Arrow format string for month title (default: MMM YY) |  |
 | `--monthnames`, `-mn` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Show month names on calendar | `blockplan`: default `False` |
-| `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
-| `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
+| `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
+| `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
-| `--outputfile`, `-of` | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `iconsheet`, `mini`, `mini-icon`, `palette`, `text-mini`, `timeline`, `weekly` | `blockplan`: Output filename (always written under output/) `colorsheet`: Output SVG path (default: output/colorsheet.svg) `compactplan`: Output filename (always written under output/) `iconsheet`: Output SVG path (default: output/iconsheet.svg) `mini`: Output filename (always written under output/) `mini-icon`: Output filename (always written under output/) `palette`: Output SVG path (default: output/<NAME>.svg) `text-mini`: Output filename (always written under output/) `timeline`: Output filename (always written under output/) `weekly`: Output filename (always written under output/) | `blockplan`: default `calendar.svg` |
+| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. | |
 | `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
-| `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `fonts`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palette`, `palettes`, `papersizes`, `patterns`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
-| `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
+| `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
+| `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
 | `--shade`, `-sh` |  | `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
 | `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
-| `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
+| `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
-| `--verbose`, `-v` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `fonts`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palette`, `palettes`, `papersizes`, `patterns`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | `blockplan`: default `0` |
+| `--verbose`, `-v` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | `blockplan`: default `0` |
 | `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise in SVG coordinates) |  |
 | `--watermark`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
 | `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
-| `--weekends`, `-we` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start | `blockplan`: default `0`; choices `0, 1, 2, 3, 4` |
+| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated ISO weekday list (`0=Mon..6=Sun`) marking non-working days for holiday/weekend classification. Overrides the implicit Sat/Sun pair selected by `--weekends`. |  |
+| `--weekends`, `-we` |  | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start | `blockplan`: default `0`; choices `0, 1, 2, 3, 4` |
 | `--weeknumbers`, `-wn` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Show week numbers | default `False` |
 
 ## Positional Arguments by Command
@@ -166,7 +187,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, text-mini, timeline, blockplan, themes, papersizes, patterns, icons, colors, palettes, fonts |
+| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, text-mini, timeline, blockplan, compactplan, themes, papersizes, patterns, icons, colors, palettes, fonts, exportdata |
 
 ### `mini`
 
@@ -221,13 +242,40 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 **Layout auto-scaling:** The grid always fits all requested rows within the available content area. When the width-derived square-cell size would cause the bottom rows to overflow the page (common in landscape orientation with many rows), the cell height is reduced to fit — cells become slightly shorter than wide but remain visually compact.
 
 **Inherited `mini` options** — all flags and config fields that apply to `mini` also apply to `mini-icon`, including:
-`--mini-columns`, `--mini-rows`, `--mini-week-numbers`, `--mini-week1-start`, `--mini-no-adjacent`, `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
+`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--weekend-days`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
 
-### `palette`
+### `palettesheet`
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `NAME` | yes | Name of the palette to preview (case-sensitive, from DB palettes table) |  |
+| `NAME` | yes | Name of the palette to preview (case-sensitive, from DB `palettes` table) |  |
+
+Renders a single named palette as an SVG swatch sheet. Run `ecalendar.py palettes` to discover palette names.
+
+### `patternsheet`
+
+No positional arguments. Use `--filter` to narrow the rendered grid by pattern name and `--color` to set the tile fill (default `#333333`). Run `ecalendar.py patterns` to discover pattern names.
+
+### `iconsheet`
+
+No positional arguments. Use `--filter` to narrow the rendered grid by icon name and `--color` to set the stroke color (default `#333333`). Run `ecalendar.py icons` to discover icon names.
+
+### `colorsheet`
+
+No positional arguments. Use `--filter` to narrow the rendered grid by color name. Run `ecalendar.py colors` to discover color names.
+
+### `fontsheet`
+
+No positional arguments. Three sample rows (uppercase, lowercase, digits/punct) are drawn for each registered font. Use `--filter` to narrow by font name, `--color` to set glyph color (default `#222222`), and `--fullset` to render every glyph in each font instead of the three fixed rows. Note that `--database` is not accepted because font files come from the `fonts/` directory rather than the DB.
+
+### `exportdata`
+
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
+
+Exports filtered events and durations as a CSV file matching the schema consumed by `importers/import_events.py`. Supports the standard content filters (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`) and `--country` for selecting which government holidays accompany the event rows. The `--outputfile` short form is `-o` (not `-of`); the default path is `output/exportdata_YYYYMMDD.csv` based on the run date.
 
 ### `text-mini`
 
@@ -291,7 +339,7 @@ In weekly, day boxes are drawn first, then events and durations are placed into 
 
 Themes control all visual styling of SVG output. Two formats are supported:
 
-- **Unified format (v2.0)**: Token-based style definitions with CSS class names on every SVG element. All 9 built-in themes use this format.
+- **Unified format (v2.0)**: Token-based style definitions with CSS class names on every SVG element. All 9 bundled themes (`default`, `corporate`, `dark`, `vibrant`, `accent`, `leemini`, `Julia`, `TJX`, `minimal`) use this format. `SAMPLE.yaml` ships as a fully annotated reference template — copy it as a starting point for new themes.
 - **Legacy format (v1.0)**: Flat per-visualizer fields. Still supported for backward compatibility.
 
 The theme engine auto-detects the format based on the presence of `text_styles` or `element_styles` top-level sections.
@@ -511,34 +559,26 @@ CSS class rules override inline SVG presentational attributes due to CSS specifi
 
 Cascade precedence for a setting: exact section key -> parent section key -> `base` key. CLI flags override theme values.
 
-Valid top-level theme sections: `theme`, `base`, `header`, `footer`, `weekly`, `events`, `durations`, `timeline`, `timeline_events`, `timeline_durations`, `watermark`, `colors`, `mini_calendar`, `fiscal`, `mini_details`, `text_mini`, `layout`, `blockplan`, `compact_plan`, `text_styles`, `box_styles`, `line_styles`, `icon_styles`, `axis`, `icons`, `patterns`, `element_styles`.
+Valid top-level theme sections (`config/theme_engine.py` `VALID_SECTIONS`): `theme`, `base`, `header`, `footer`, `weekly`, `events`, `durations`, `timeline`, `timeline_events`, `timeline_durations`, `watermark`, `colors`, `mini_calendar`, `fiscal`, `mini_details`, `text_mini`, `layout`, `blockplan`, `excelheader`, `compact_plan`, `text_styles`, `box_styles`, `line_styles`, `icon_styles`, `axis`, `icons`, `patterns`, `element_styles`, `style_rules`, `swimlane_rules`. Unknown top-level keys are reported as warnings during theme load.
 
 ### Theme Resources
 
-#### Available Fonts
+The fonts, patterns, and palettes available to themes live outside this document — fonts come from the `fonts/` directory and patterns/palettes are stored in the `calendar.db` SQLite database. Use the bundled discovery commands rather than relying on a static enumeration here:
 
-| Font name | Style |
-|---|---|
-| `Roboto-Black` | Black weight |
-| `Roboto-BlackItalic` | Black italic |
-| `Roboto-Bold` | Bold |
-| `Roboto-BoldItalic` | Bold italic |
-| `Roboto-Italic` | Italic |
-| `Roboto-Light` | Light |
-| `Roboto-LightItalic` | Light italic |
-| `Roboto-Regular` | Regular |
-| `RobotoCondensed-Bold` | Condensed bold |
-| `RobotoCondensed-BoldItalic` | Condensed bold italic |
-| `RobotoCondensed-Italic` | Condensed italic |
-| `RobotoCondensed-Light` | Condensed light |
-| `RobotoCondensed-LightItalic` | Condensed light italic |
-| `RobotoCondensed-Regular` | Condensed regular |
-| `JuliaMono-Regular` | Monospace regular |
-| `JuliaMono-RegularItalic` | Monospace italic |
-| `ClearSans-Thin` | Thin sans-serif |
-| `mplus-1m-light` | M+ monospace light |
-| `AndroidEmoji` | Emoji font |
-| `linearicons` | Icon / symbol font |
+| Resource | List command | Preview command |
+|---|---|---|
+| Fonts (~125 registered) | `ecalendar.py fonts` | `ecalendar.py fontsheet [-f NAME]` |
+| Patterns (~350 in DB) | `ecalendar.py patterns` | `ecalendar.py patternsheet [-f NAME]` |
+| Named colors | `ecalendar.py colors` | `ecalendar.py colorsheet [-f NAME]` |
+| Palettes (~600 in DB) | `ecalendar.py palettes` | `ecalendar.py palettesheet NAME` |
+| Icons | `ecalendar.py icons` | `ecalendar.py iconsheet [-f NAME]` |
+
+Common entry points to remember:
+
+- **Roboto family** (`Roboto-Regular`, `Roboto-Bold`, `RobotoCondensed-*`, …) is used as the default across themes.
+- **JuliaMono** is the default monospace font for the mini calendar day numbers.
+- Common palette names: `Greys`, `Pastel1`, `Pastel2`, `Set1`, `Set2`, `Set3`, `Dark2`, `Accent`, `Blues`, `Greens`, `Reds`, `Oranges`, `Purples`, `PuBuGn`, `YlOrRd` (run `palettes` for the full DB list).
+- Common pattern names: `diagonal-stripes`, `horizontal-stripes`, `cross-hatch`, `brick-wall`, `circuit-board`, `polka-dots`, `wiggle`, `bamboo`, `temple`, `hexagons` (run `patterns` for the full DB list).
 
 #### Color Value Formats
 
@@ -548,18 +588,6 @@ Valid top-level theme sections: `theme`, `base`, `header`, `footer`, `weekly`, `
 | Hex color | `"#1a2b3c"` | 6-digit hex |
 | Palette reference | `"palette:Blues:3"` | `palette:NAME:INDEX` from DB palettes table |
 | Transparent | `"none"` | No fill / transparent |
-
-#### Available SVG Patterns
-
-Use these names with `weekly.day_box.hash_pattern` and with `style_rules[].style.pattern` (see Complex Structures Reference). Run `ecalendar.py patterns` for the full list (35 total).
-
-`diagonal-stripes`, `horizontal-stripes`, `vertical-stripes`, `cross-hatch`, `brick-wall`, `circuit-board`, `polka-dots`, `wiggle`, `bamboo`, `temple`, `hexagons`, `triangles`, `wavy-lines`, `zigzag`, `dots-grid`
-
-#### Available Palette Names
-
-Use these names with `colors.month_palette`, `colors.fiscal_palette`, `colors.group_palette`, `blockplan.palette_name`, and `timeline.palette`. Run `ecalendar.py palettes` for the full list.
-
-`Greys`, `Pastel1`, `Pastel2`, `Set1`, `Set2`, `Set3`, `Dark2`, `Accent`, `Blues`, `Greens`, `Reds`, `Oranges`, `Purples`, `PuBuGn`, `YlOrRd`
 
 ### Complete Theme Key Reference
 
@@ -898,7 +926,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_vertical_line_fill_opacity` | `blockplan.vertical_line_fill_opacity` | `float` | `0.15` | default column fill opacity |
 | `blockplan_vertical_line_opacity` | `blockplan.vertical_line_opacity` | `float` | `0.9` | vertical line opacity |
 | `blockplan_vertical_line_width` | `blockplan.vertical_line_width` | `float` | `1.5` | vertical line width |
-| `blockplan_vertical_lines` | `blockplan.vertical_lines` | `list[dict[str, Any]]` | `field(default_factory=list)` | vertical lines |
+| *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `blockplan.vertical_lines` — see Complex Structures Reference (`apply_to: vertical_line`). |
 | `blockplan_week_start` | `blockplan.week_start` | `int` | `0` | 0=Monday |
 | `theme_blockplan_palette_name` | `blockplan.palette_name` | `str | None` | `None` | palette name |
 
@@ -930,11 +958,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 ### `style_rules` — Unified Visual Styling Rules
 
-Top-level theme key that replaces the per-visualizer `weekly.day_box.hash_rules` and `mini_calendar.day_box.hash_rules` lists. Each rule has three parts:
+Top-level theme key that replaces the per-visualizer `weekly.day_box.hash_rules`, `mini_calendar.day_box.hash_rules`, and `blockplan.vertical_lines` lists. Each rule has three parts:
 
-- **`select:`** — what to match (day context and/or event criteria)
-- **`apply_to:`** — which visual element type(s) to style: `day_box`, `event`, `duration`, or `all` (or a list mixing them)
-- **`style:`** — visual properties to apply (fill, pattern, stroke, text, icon)
+- **`select:`** — what to match (day context, event criteria, and/or band-segment criteria)
+- **`apply_to:`** — which visual element type(s) to style: `day_box`, `event`, `duration`, `vertical_line`, or `all` (or a list mixing them)
+- **`style:`** — visual properties to apply (fill, pattern, stroke, text, icon, align)
 
 Rules are evaluated **in declaration order**. Later rules **layer on top of** earlier ones — a `None` field in a later rule leaves the earlier value intact, so rules compose additively (e.g., a federal holiday rule lays down a red pattern; a "Sprint" rule on the same day adds a steelblue overlay).
 
@@ -1041,9 +1069,20 @@ Control how event criteria are tested across all events on a day.
 | `day_box` | Weekly day cell background + pattern; mini calendar cell |
 | `event` | Point event icon, name text, date text |
 | `duration` | Duration bar fill, stroke, label text |
-| `all` | All three of the above |
+| `vertical_line` | Blockplan vertical marker line + optional column fill, pinned to a time-band segment |
+| `all` | All of the above |
 
 A single rule can specify a list (e.g., `apply_to: [day_box, duration]`) to style multiple target types in one pass.
+
+#### `select:` — Band Segment Criteria (for `apply_to: vertical_line`)
+
+Used to pin a vertical line to a specific time-band segment in the blockplan. Combine with the day-context keys above to limit lines to weekends, holidays, etc.
+
+| Key | Type | Description |
+|---|---|---|
+| `band` | `str` | Time-band `label` to anchor to (case-insensitive). Required. |
+| `value` | `str` | Segment label to match (case-insensitive) when `repeat` is absent or false. |
+| `repeat` | `bool` | When `true`, every segment in the band matches; `value` is ignored. |
 
 #### `style:` — Fill and Background
 
@@ -1138,6 +1177,14 @@ style:
 |---|---|---|
 | `icon` | event | Override the event icon glyph |
 | `icon_color` | event | Icon color |
+
+#### `style:` — Vertical Line Render Hint
+
+| Property | Applies to | Notes |
+|---|---|---|
+| `align` | vertical_line | `start` (default) \| `center` \| `end` — which edge of the matched segment to pin the line to |
+
+For `apply_to: vertical_line` rules, `stroke_*` styles the line and `fill_color`/`fill_opacity` paints a column rect behind it across the full swimlane height. `fill_color` may be a list or palette name; values cycle across that rule's matched segments.
 
 #### Date Range Matching
 
@@ -1287,64 +1334,66 @@ top_time_bands:
 
 ---
 
-### `vertical_lines` — Blockplan Vertical Marker Lines
+### Blockplan Vertical Marker Lines
 
-Used in `blockplan.vertical_lines`. Each entry draws a vertical line (and optional column fill) through the swimlane area.
+Vertical marker lines (and optional column fills) in the blockplan are now expressed as top-level `style_rules` entries with `apply_to: vertical_line`. See [`style_rules` → Band Segment Criteria](#select--band-segment-criteria-for-apply_to-vertical_line) and [`style:` Vertical Line Render Hint](#style--vertical-line-render-hint).
 
 ```yaml
-vertical_lines:
-  - band:       "Month"
-    repeat:     true
-    align:      "end"
-    color:      "grey"
-    width:      1.0
-    opacity:    0.4
-    dash_array: "4,4"
-  - band:       "Fiscal Quarter"
-    align:      "end"
-    color:      "navy"
-    width:      1.5
-    fill_color: "lightyellow"
-    fill_opacity: 0.10
+style_rules:
+  # Light grey separator at the end of every Month segment.
+  - name: month_separator
+    apply_to: vertical_line
+    select:
+      band: "Month"
+      repeat: true
+    style:
+      align: end
+      stroke_color: grey
+      stroke_width: 1.0
+      stroke_opacity: 0.4
+      stroke_dasharray: "4,4"
+
+  # Heavier navy line at the end of every Fiscal Quarter, with a soft column fill.
+  - name: quarter_marker
+    apply_to: vertical_line
+    select:
+      band: "Fiscal Quarter"
+    style:
+      align: end
+      stroke_color: navy
+      stroke_width: 1.5
+      fill_color: lightyellow
+      fill_opacity: 0.10
+
+  # Highlight every weekend cell in the Date band with a soft fill (no line).
+  - name: weekend_columns
+    apply_to: vertical_line
+    select:
+      band: "Date"
+      repeat: true
+      weekend: true
+    style:
+      fill_color: "#E8E8E8"
+      fill_opacity: 0.4
 ```
 
-#### Vertical Line Fields
-
-| Key | Type | Description |
-|---|---|---|
-| `align` | `str` | `start` \| `center` \| `end` — which edge of the matched segment |
-| `band` | `str` | time-band `label` to anchor to (case-insensitive) |
-| `color` | `str` | per-line color (overrides `vertical_line_color`) |
-| `dash_array` | `str` | per-line dash pattern (overrides `vertical_line_dasharray`) |
-| `fill_color` | `str \| list` | column fill color or cycling list |
-| `fill_opacity` | `float` | fill opacity (overrides `vertical_line_fill_opacity`) |
-| `opacity` | `float` | per-line opacity (overrides `vertical_line_opacity`) |
-| `repeat` | `bool` | `true` = draw at every segment boundary in the band |
-| `value` | `str` | segment label to match when `repeat` is absent/false |
-| `width` | `float` | per-line width (overrides `vertical_line_width`) |
+The per-attribute defaults — `blockplan.vertical_line_color`, `vertical_line_width`, `vertical_line_opacity`, `vertical_line_dasharray`, `vertical_line_fill_color`, `vertical_line_fill_opacity` — still apply when a rule omits the corresponding `stroke_*` / `fill_*` key.
 
 ---
 
 ## Visualization Setting Gaps
 
-Keys present in at least one other visualization but absent in the listed one:
-
-| Visualization | Missing key count | Example missing keys |
-|---|---:|---|
-| `weekly` | 159 | `blockplan.background_color`, `blockplan.band_font`, `blockplan.band_font_size`, `blockplan.band_row_height`, `blockplan.duration_bar_height`, `blockplan.duration_color`, `blockplan.duration_fill_opacity`, `blockplan.duration_font` |
-| `mini` | 136 | `blockplan.background_color`, `blockplan.band_font`, `blockplan.band_font_size`, `blockplan.band_row_height`, `blockplan.duration_bar_height`, `blockplan.duration_color`, `blockplan.duration_fill_opacity`, `blockplan.duration_font` |
-| `text-mini` | 171 | `blockplan.background_color`, `blockplan.band_font`, `blockplan.band_font_size`, `blockplan.band_row_height`, `blockplan.duration_bar_height`, `blockplan.duration_color`, `blockplan.duration_fill_opacity`, `blockplan.duration_font` |
-| `timeline` | 128 | `blockplan.background_color`, `blockplan.band_font`, `blockplan.band_font_size`, `blockplan.band_row_height`, `blockplan.duration_bar_height`, `blockplan.duration_color`, `blockplan.duration_fill_opacity`, `blockplan.duration_font` |
-| `blockplan` | 130 | `mini_calendar.adjacent_month_color`, `mini_calendar.cell_bold_font`, `mini_calendar.cell_box_stroke_dasharray`, `mini_calendar.cell_font`, `mini_calendar.cell_font_size`, `mini_calendar.current_day_color`, `mini_calendar.day_color`, `mini_calendar.duration_bar_stroke_dasharray` |
-
-### Notable Cross-Visualization Gaps
+Each visualizer recognizes a different slice of the unified theme schema. Exact missing-key counts shift as new fields are added; rather than maintain those numbers inline, the high-level shape of each visualizer's surface area is summarized here.
 
 - `weekly` exposes unique day-box and overflow marker controls (`weekly.day_box.*`, `weekly.overflow.*`).
 - `mini` exposes grid/details controls (`mini_calendar.*`, `mini_details.*`) absent from other renderers.
+- `mini-icon` is a `mini` variant that adds icon-set selection (`mini_calendar.icon_set`) and inherits everything else from `mini`.
 - `text-mini` exposes symbol/glyph controls (`text_mini.*`) that do not apply to SVG renderers.
 - `timeline` exposes axis/callout/lane settings (`timeline.*`, `timeline_events.*`, `timeline_durations.*`).
-- `blockplan` exposes lane/band/palette/vertical-line settings (`blockplan.*`).
-- Shared typography/content sections (`header.*`, `footer.*`, `events.*`, `durations.*`) are reused by multiple visualizations.
+- `blockplan` exposes lane/band/palette/vertical-line settings (`blockplan.*`); vertical-line styling now lives in top-level `style_rules` with `apply_to: vertical_line`.
+- `compactplan` exposes axis-relative duration/legend controls (`compact_plan.*`).
+- `excelheader` mirrors the blockplan band schema under `excelheader.*` and writes to `.xlsx` instead of SVG.
+- Shared typography/content sections (`header.*`, `footer.*`, `events.*`, `durations.*`, `colors.*`) are reused by multiple visualizers.
 
 ## Notes
 
@@ -1373,8 +1422,10 @@ ecalendar.py excelheader 20260101 20260630 --theme corporate --weekends 0 --coun
 | `--outputfile` | `-of` | `output/excelheader.xlsx` | Destination `.xlsx` path |
 | `--theme` | `-th` | none | Theme name or `.yaml` path |
 | `--weekends` | `-we` | `0` | Weekend style (0 = workweek only, 1–4 = include weekends) |
-| `--country` | `-cc` | all | ISO 3166-1 alpha-2 holiday country code (e.g. `US`, `CA`) |
+| `--weekend-days` |  | — | Comma-separated ISO weekday list (`0=Mon..6=Sun`) overriding the implicit Sat/Sun pair |
+| `--country` | `-cc` | none | ISO 3166-1 alpha-2 country code(s) for government holidays. Comma-separated (e.g. `US,CA,GB`) for multi-country merging. |
 | `--database` | `-db` | `calendar.db` | SQLite database path |
+| `--verbose` | `-v` | — | Increase verbosity (`-v`, `-vv`, `-vvv`) |
 | `--quiet` | `-q` | — | Suppress output path echo |
 
 ### Workbook Layout
@@ -1482,7 +1533,7 @@ Holiday shading is applied in:
 
 ### Vertical Lines → Cell Right Borders
 
-Entries in `blockplan.vertical_lines` are translated to right-side borders on the corresponding date columns. The border is applied to the column-header row and all 100 data rows.
+ExcelHeader keeps its own list of vertical lines under `excelheader.vertical_lines` (independent of the blockplan's `style_rules`-driven vertical lines). Each entry is translated to a right-side border on the corresponding date columns. The border is applied to the column-header row and all 100 data rows.
 
 | `align` value | Border position |
 |---|---|
@@ -1490,4 +1541,14 @@ Entries in `blockplan.vertical_lines` are translated to right-side borders on th
 | `"start"` | Right border on the first column of the segment |
 | `"center"` | Right border on the middle column of the segment |
 
-Border style: `medium` (width > 1.5 pt) or `thin` (≤ 1.5 pt). Color from `color` key or `blockplan.vertical_line_color`.
+Border style: `medium` (width > 1.5 pt) or `thin` (≤ 1.5 pt). Color from `color` key or `excelheader.vertical_line_color`.
+
+```yaml
+excelheader:
+  vertical_lines:
+    - band: "Month"
+      repeat: true
+      align: "end"
+      color: "navy"
+      width: 2.0
+```
