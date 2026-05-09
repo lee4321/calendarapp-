@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.09.0"
+__version__ = "26.05.09.1"
 
 import argparse
 import logging
@@ -391,7 +391,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help="Output file path (default: output/pallet.svg)",
+        help="Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named)",
     )
 
     # iconsheet subcommand arguments
@@ -3080,7 +3080,7 @@ def run(argv: list[str] | None = None) -> int:
                 return 1
             out_path = (
                 Path(args.outputfile) if args.outputfile
-                else Path("output") / "palettes.svg"
+                else Path("output") / "palettesheet.svg"
             )
             _generate_all_palettes_svg(all_palettes, out_path)
             if not args.quiet:
