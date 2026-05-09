@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.07.0"
+__version__ = "26.05.09.0"
 
 import argparse
 import logging
@@ -377,8 +377,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     palettesheet.add_argument(
         "palette_name",
         type=str,
+        nargs="?",
+        default=None,
         metavar="NAME",
-        help="Name of the palette to preview (case-sensitive, from DB palettes table)",
+        help=(
+            "Name of the palette to preview (case-sensitive, from DB palettes "
+            "table). If omitted, every palette is rendered into a single SVG."
+        ),
     )
     palettesheet.add_argument(
         "--outputfile",
@@ -2047,6 +2052,92 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _generate_all_palettes_svg(
+    palettes: dict[str, list[str]], output_path: Path
+) -> None:
+    """
+    Write a single SVG containing every palette as a labeled section of swatches.
+
+    Palettes are rendered top-to-bottom in alphabetical order. Each section has
+    a title row (palette name + colour count) followed by a grid of swatches
+    (up to 10 per row), matching the layout used by ``_generate_palette_svg``.
+
+    Called by:
+        run() when args.command == "palettesheet" and no palette name is given.
+    """
+    import math
+
+    MARGIN = 40
+    TITLE_H = 40
+    SECTION_GAP = 24
+
+    BOX_W = 80
+    BOX_H = 80
+    LABEL_H = 26
+    GAP_X = 10
+    GAP_Y = 14
+    MAX_COLS = 10
+    CELL_W = BOX_W + GAP_X
+    CELL_H = BOX_H + LABEL_H + GAP_Y
+
+    names = sorted(palettes.keys())
+
+    max_cols_used = min(
+        MAX_COLS, max((len(palettes[n]) for n in names), default=1)
+    )
+    svg_w = MARGIN * 2 + max_cols_used * CELL_W - GAP_X
+
+    sections: list[tuple[str, list[str], int, int]] = []
+    y_cursor = MARGIN
+    for name in names:
+        colors = palettes[name]
+        n = len(colors)
+        ncols = min(n, MAX_COLS) if n else 1
+        nrows = math.ceil(n / ncols) if n else 0
+        title_y = y_cursor
+        grid_y = title_y + TITLE_H
+        sections.append((name, colors, title_y, grid_y))
+        y_cursor = grid_y + nrows * CELL_H - (GAP_Y if nrows else 0) + SECTION_GAP
+
+    svg_h = y_cursor - SECTION_GAP + MARGIN
+
+    lines: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+    ]
+
+    for name, colors, title_y, grid_y in sections:
+        n = len(colors)
+        ncols = min(n, MAX_COLS) if n else 1
+        lines.append(
+            f'  <text x="{MARGIN}" y="{title_y + 28}"'
+            f' font-family="Helvetica, Arial, sans-serif" font-size="22"'
+            f' font-weight="bold" font-style="italic" fill="#222">'
+            f'{name}  <tspan font-size="16" font-weight="normal" font-style="normal" fill="#666">({n} colors)</tspan></text>'
+        )
+        for i, color in enumerate(colors):
+            row = i // ncols
+            col = i % ncols
+            x = MARGIN + col * CELL_W
+            y = grid_y + row * CELL_H
+            hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
+            lines.append(
+                f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
+                f' fill="{color}" stroke="#bbbbbb" stroke-width="0.5"/>'
+            )
+            lines.append(
+                f'  <text x="{x + BOX_W // 2}" y="{y + BOX_H + 18}"'
+                f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
+                f' fill="#555" text-anchor="middle">{hx}</text>'
+            )
+
+    lines.append("</svg>")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def _generate_colorsheet_svg(
     colors: list[dict], output_path: "Path", title: str = "Colors"
 ) -> None:
@@ -2982,6 +3073,19 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "palettesheet":
         db = _open_calendar_db(args.database)
+        if args.palette_name is None:
+            all_palettes = db.get_all_palettes()
+            if not all_palettes:
+                print("Error: no palettes found in database.", file=sys.stderr)
+                return 1
+            out_path = (
+                Path(args.outputfile) if args.outputfile
+                else Path("output") / "palettes.svg"
+            )
+            _generate_all_palettes_svg(all_palettes, out_path)
+            if not args.quiet:
+                print(out_path)
+            return 0
         colors = db.get_palette(args.palette_name)
         if colors is None:
             print(
