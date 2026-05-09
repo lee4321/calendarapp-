@@ -1418,7 +1418,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             except KeyError:
                 name_font_path = ""
 
-        for X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty in list_of_rects:
+        last_visible_date = arrow.get(days_to_print[-1], "YYYYMMDD").date()
+        actual_end_date = arrow.get(t.end).date()
+        continues_right = actual_end_date > last_visible_date
+        cont_icon_name = "arrow-right"
+        cont_size = icon_size
+        cont_pad = 2.0
+        cont_date_str = arrow.get(t.end).format("M/D/YY")
+        last_idx = len(list_of_rects) - 1
+
+        for i_rect, (X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty) in enumerate(list_of_rects):
             self._draw_rect(
                 X,
                 Y,
@@ -1467,6 +1476,35 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-duration-icon",
+                )
+
+            if continues_right and i_rect == last_idx:
+                cont_right_x = X + Width - cont_pad
+                self._draw_icon_svg(
+                    cont_icon_name,
+                    cont_right_x,
+                    name_ty,
+                    cont_size,
+                    anchor="end",
+                    color=icon_color,
+                    fallback_name=config.default_missing_icon,
+                    fallback_color="red",
+                    css_class="ec-duration-icon",
+                )
+                if use_double_height:
+                    date_y = notes_ty
+                else:
+                    date_y = Y + Height + notes_size * 0.95
+                self._draw_text(
+                    cont_right_x,
+                    date_y,
+                    cont_date_str,
+                    notes_font,
+                    notes_size,
+                    fill=notes_color,
+                    anchor="end",
+                    max_width=Width,
+                    css_class="ec-duration-date",
                 )
 
             if use_double_height:
