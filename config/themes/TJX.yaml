@@ -37,15 +37,15 @@ text_styles:
     color: "Blue"
   caption:
     font: "PlaywriteDEGrund-VariableFont_wght"
-    size: 12
-    color: "grey"
+    size: 22
+    color: "black"
   day_number:
     font: "PlaywriteDEGrund-VariableFont_wght"
-    size: 12
-    color: "#E5E4E2"
+    size: 22
+    color: "white"
   month_title:
     font: "PlaywriteDEGrund-VariableFont_wght"
-    size: 12
+    size: 22
     color: "navy"
   holiday_title:
     font: "PlaywriteDEGrund-VariableFont_wght"
@@ -181,7 +181,7 @@ element_styles:
 
   # ── Legend elements ──
   ec-legend-swatch:  { line_style: axis }
-  ec-legend-text:    { text_style: body }
+  ec-legend-text:    { text_style: body_secondary }
   ec-legend-icon:    { icon_style: event }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -272,7 +272,7 @@ colors:
 weekly:
   day_names:
     font_family: "PlaywriteDEGrund-VariableFont_wght"
-    font_color: "grey"
+    font_color: "black"
 
   week_numbers:
     font_family: "PlaywriteDEGrund-VariableFont_wght"
@@ -282,7 +282,7 @@ weekly:
   day_box:
     stroke_color: "black"
     stroke_opacity: 0.5
-    stroke_width: 2
+    stroke_width: 1
     stroke_dasharray: null
     
     fill_color: null
@@ -295,10 +295,13 @@ weekly:
     
   name_text:
     font_name: "PlaywriteDEGrund-VariableFont_wght"
-    font_color: "blue"
+    font_color: "black"
+    font_size: 18
+    
   notes_text:
     font_name: "AlumniSansPinstripe-Italic"
     font_color: "grey"
+    font_size: 14
 
   overflow:
     icon: "overflow"
@@ -359,35 +362,7 @@ timeline:
   # the same _build_segments engine as blockplan / compactplan / excelheader.
   # Supported units: fiscal_quarter, fiscal_period, month, week, interval,
   # date, dow, countdown, countup.
-#   top_time_bands:
-#     - label: "Fiscal Quarter"
-#       unit: "fiscal_quarter"
-#       label_format: "Q{q}-FY{fy2}"
-#       fill_color: ["ghostwhite","silver"]
-#       show_every: 1
-#       row_height: 14
-#       label_color: "Black"
-#       font_color: "Black"
-# 
-#     - label: "Month"
-#       unit: "month"
-#       date_format: "MMMM"
-#       row_height: 14
-#       fill_color: ["white smoke","darkgrey"]
-#       show_every: 1
-#       label_color: "black"
-#       font_color: "black"
-# 
-#   bottom_time_bands:
-#     - label: "Date Range"
-#       unit: "week"
-#       label_format: "{start} – {end}"
-#       fill_color: "none"
-#       alt_fill_color: "#f2f2f2"
-#       row_height: 12
-#       text_align: "center"
-#       label_color: "dimgrey"
-#       font_color: "black"
+
 
   # ── Axis tick frequency ──────────────────────────────────────────────────
   # Accepts a single tick band (dict) or a list of bands. Every band draws on
@@ -540,18 +515,6 @@ blockplan:
       show_every: 1
       label_color: "Black"     # heading column label color
       font_color: "Black"      # segment content label color (e.g. "3")
-
-
-#     - label:         "Work Days to Freeze"
-#       unit:          "countdown"         # one segment per visible day, labelled with remaining count
-#       target_date:   "2019-10-31"        # required: the target date (YYYY-MM-DD)
-#       skip_weekends: true               # count Mon-Fri only (Sat/Sun not counted)
-#       skip_nonworkdays: true           # set true to also skip holidays & company non-workdays
-#       label_format:  "{n}"            # {n} = count; positive = before target, 0 = target day, negative = after
-#       row_height:    14
-#       label_color: "Black"     # heading column label color
-#       font_color: "Black"      # segment content label color (e.g. "3")
-
 
   bottom_time_bands:  # when an empty set there are no bottom time bands
     - label: "DoW"
@@ -961,100 +924,103 @@ compact_plan:
 style_rules:
   - name: weekly_hash_0
     select:
-      milestone: true
+      nonworkday: false
     apply_to: day_box
     style:
-      pattern: diagonal-stripes
-      pattern_color: gold
-      pattern_opacity: 0.15
-  - name: weekly_hash_1
+      pattern: stars74
+      pattern_color: silver
+      pattern_opacity: 0.01
+  - name: fedholidays
     select:
       federal_holiday: true
     apply_to: day_box
     style:
-      pattern: diagonal-stripes
-      pattern_color: tomato
-      pattern_opacity: 0.12
-  - name: weekly_hash_2
-    select:
-      nonworkday: true
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: silver
-      pattern_opacity: 0.08
-  - name: weekly_hash_3
-    select:
-      task_name:
-      - Release
-      - Cutover
-      event_type: event
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: gold
-      pattern_opacity: 0.1
-  - name: weekly_hash_4
-    select:
-      task_name:
-      - Sprint
-      - Freeze
-      event_type: duration
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: steelblue
-      pattern_opacity: 0.08
-  - name: weekly_hash_5
-    select:
-      percent_complete:
-        min: 100
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: mediumseagreen
-      pattern_opacity: 0.1
-  - name: weekly_hash_6
-    select:
-      notes:
-      - urgent
-      - blocker
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: orangered
-      pattern_opacity: 0.12
-  - name: weekly_hash_7
-    select:
-      wbs: '1.'
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: lightskyblue
-      pattern_opacity: 0.08
-  - name: weekly_hash_8
-    select:
-      resource_names:
-      - Alice
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: mediumpurple
-      pattern_opacity: 0.08
-  - name: weekly_hash_9
-    select:
-      resource_group:
-      - dev
-    apply_to: day_box
-    style:
-      pattern: diagonal-stripes
-      pattern_color: steelblue
-      pattern_opacity: 0.1
+      fill_color: "lightblue"
+      fill_opacity: 1.0
+      pattern: app
+      pattern_color: "tomato"
+      pattern_opacity: 0.5
+#   - name: weekly_hash_2
+#     select:
+#       nonworkday: true
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: silver
+#       pattern_opacity: 0.08
+#   - name: weekly_hash_3
+#     select:
+#       task_name:
+#       - Release
+#       - Cutover
+#       event_type: event
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: gold
+#       pattern_opacity: 0.1
+#   - name: weekly_hash_4
+#     select:
+#       task_name:
+#       - Sprint
+#       - Freeze
+#       event_type: duration
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: steelblue
+#       pattern_opacity: 0.08
+#   - name: weekly_hash_5
+#     select:
+#       percent_complete:
+#         min: 100
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: mediumseagreen
+#       pattern_opacity: 0.1
+#   - name: weekly_hash_6
+#     select:
+#       notes:
+#       - urgent
+#       - blocker
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: orangered
+#       pattern_opacity: 0.12
+#   - name: weekly_hash_7
+#     select:
+#       wbs: '1.'
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: lightskyblue
+#       pattern_opacity: 0.08
+#   - name: weekly_hash_8
+#     select:
+#       resource_names:
+#       - Alice
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: mediumpurple
+#       pattern_opacity: 0.08
+#   - name: weekly_hash_9
+#     select:
+#       resource_group:
+#       - dev
+#     apply_to: day_box
+#     style:
+#       pattern: diagonal-stripes
+#       pattern_color: steelblue
+#       pattern_opacity: 0.1
 
   # ── Banner-based duration fills ────────────────────────────────────────────
   # Marshalls: red fill when "Marshalls" appears in either the task name or
   # the notes. Two rules with the same style act as an OR across the two
   # criteria (task_name AND notes within one rule would require both to match).
+
   - name: Marshalls durations (name)
     select:
       task_name:
