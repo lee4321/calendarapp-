@@ -1418,13 +1418,18 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             except KeyError:
                 name_font_path = ""
 
+        first_visible_date = arrow.get(days_to_print[0], "YYYYMMDD").date()
         last_visible_date = arrow.get(days_to_print[-1], "YYYYMMDD").date()
+        actual_start_date = arrow.get(t.start).date()
         actual_end_date = arrow.get(t.end).date()
+        continues_left = actual_start_date < first_visible_date
         continues_right = actual_end_date > last_visible_date
-        cont_icon_name = "arrow-right"
+        cont_icon_left = "arrow-left"
+        cont_icon_right = "arrow-right"
         cont_size = icon_size
         cont_pad = 2.0
-        cont_date_str = arrow.get(t.end).format("M/D/YY")
+        cont_start_str = arrow.get(t.start).format("M/D/YY")
+        cont_end_str = arrow.get(t.end).format("M/D/YY")
         last_idx = len(list_of_rects) - 1
 
         for i_rect, (X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty) in enumerate(list_of_rects):
@@ -1478,10 +1483,39 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     css_class="ec-duration-icon",
                 )
 
+            if continues_left and i_rect == 0:
+                cont_left_x = X + cont_pad
+                self._draw_icon_svg(
+                    cont_icon_left,
+                    cont_left_x,
+                    name_ty,
+                    cont_size,
+                    anchor="start",
+                    color=icon_color,
+                    fallback_name=config.default_missing_icon,
+                    fallback_color="red",
+                    css_class="ec-duration-icon",
+                )
+                if use_double_height:
+                    date_y = notes_ty
+                else:
+                    date_y = Y + Height + notes_size * 0.95
+                self._draw_text(
+                    cont_left_x,
+                    date_y,
+                    cont_start_str,
+                    notes_font,
+                    notes_size,
+                    fill=notes_color,
+                    anchor="start",
+                    max_width=Width,
+                    css_class="ec-duration-date",
+                )
+
             if continues_right and i_rect == last_idx:
                 cont_right_x = X + Width - cont_pad
                 self._draw_icon_svg(
-                    cont_icon_name,
+                    cont_icon_right,
                     cont_right_x,
                     name_ty,
                     cont_size,
@@ -1498,7 +1532,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 self._draw_text(
                     cont_right_x,
                     date_y,
-                    cont_date_str,
+                    cont_end_str,
                     notes_font,
                     notes_size,
                     fill=notes_color,
