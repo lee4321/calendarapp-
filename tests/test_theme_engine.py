@@ -1236,7 +1236,6 @@ def test_blockplan_theme_applied():
             "vertical_line_width": 2.5,
             "vertical_line_dasharray": "4,2",
             "vertical_line_opacity": 0.6,
-            "vertical_lines": [{"band": "Date", "value": "20260205"}],
             "header_font": "Roboto-Bold",
             "header_label_align_h": "right",
             "name_text": {"font_color": "tomato"},
@@ -1268,7 +1267,7 @@ def test_blockplan_theme_applied():
     assert config.blockplan_vertical_line_width == 2.5
     assert config.blockplan_vertical_line_dasharray == "4,2"
     assert config.blockplan_vertical_line_opacity == 0.6
-    assert config.blockplan_vertical_lines == [{"band": "Date", "value": "20260205"}]
+    assert not hasattr(config, "blockplan_vertical_lines")
     assert config.blockplan_header_font == "Roboto-Bold"
     assert config.blockplan_header_label_align_h == "right"
     assert config.blockplan_name_text_font_color == "tomato"

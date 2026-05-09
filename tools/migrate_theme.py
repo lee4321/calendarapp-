@@ -7,6 +7,7 @@ Conversions performed:
   weekly.day_box.hash_rules          → style_rules (apply_to: day_box)
   mini_calendar.day_box.hash_rules   → style_rules (apply_to: day_box)
   blockplan.swimlanes[].match        → swimlane_rules
+  blockplan.vertical_lines           → style_rules (apply_to: vertical_line)
 
 Uses text-level surgery so that YAML comments in the rest of the file are
 preserved.  New rule blocks are appended at the end of the file.
@@ -222,6 +223,74 @@ def _convert_swimlane_match(lane_name: str, match_dict: dict) -> dict | None:
     }
 
 
+# ── vertical_lines conversion ─────────────────────────────────────────────────
+
+
+_VLINE_DAY_KEYS: frozenset[str] = frozenset(
+    {"weekend", "federal_holiday", "company_holiday", "nonworkday", "workday", "date"}
+)
+
+
+def _convert_vertical_lines(items: list, source: str) -> list[dict]:
+    """Convert legacy ``blockplan.vertical_lines`` entries into ``style_rules``.
+
+    Each input item maps to one rule with ``apply_to: vertical_line``.
+    Selection keys (band/value/repeat) and the day-class keys hoisted from
+    ``match:`` go into ``select:``. Rendering keys (color/width/opacity/
+    dash_array/fill_color/fill_opacity/align) go into ``style:`` using the
+    unified ``stroke_*`` / ``fill_*`` names.
+    """
+    out: list[dict] = []
+    for i, item in enumerate(items or []):
+        if not isinstance(item, dict):
+            continue
+
+        select: dict = {}
+        if item.get("band") is not None or item.get("band_label") is not None:
+            band = item.get("band") if item.get("band") is not None else item.get("band_label")
+            select["band"] = band
+        if "value" in item and item["value"] is not None:
+            select["value"] = item["value"]
+        if bool(item.get("repeat", False)):
+            select["repeat"] = True
+
+        match = item.get("match")
+        if isinstance(match, dict):
+            for k in _VLINE_DAY_KEYS:
+                if k in match:
+                    select[k] = match[k]
+
+        style: dict = {}
+        if "align" in item and item["align"] is not None:
+            style["align"] = item["align"]
+        if "color" in item and item["color"] is not None:
+            style["stroke_color"] = item["color"]
+        if "width" in item and item["width"] is not None:
+            style["stroke_width"] = item["width"]
+        if "opacity" in item and item["opacity"] is not None:
+            style["stroke_opacity"] = item["opacity"]
+        # Accept either dash_array or dasharray (renderer accepted both).
+        for k in ("dash_array", "dasharray"):
+            if k in item and item[k] is not None:
+                style["stroke_dasharray"] = item[k]
+                break
+        if "fill_color" in item and item["fill_color"] is not None:
+            style["fill_color"] = item["fill_color"]
+        if "fill_opacity" in item and item["fill_opacity"] is not None:
+            style["fill_opacity"] = item["fill_opacity"]
+
+        if not select:
+            continue
+        entry: dict = {
+            "name": f"{source}_{i}",
+            "apply_to": "vertical_line",
+            "select": select,
+            "style": style,
+        }
+        out.append(entry)
+    return out
+
+
 # ── YAML text generation ──────────────────────────────────────────────────────
 
 
@@ -339,6 +408,51 @@ def migrate_text(text: str) -> tuple[str, list[str]]:
         del lines[i:end]
         # Don't increment i
 
+    # ── blockplan.vertical_lines ──────────────────────────────────────────────
+    vlines_re = re.compile(r"^(\s+)vertical_lines:\s*(\[\]|null)?\s*$")
+    i = 0
+    while i < len(lines):
+        m = vlines_re.match(lines[i])
+        if not m:
+            i += 1
+            continue
+
+        # Confirm this is under `blockplan:` (not e.g. excelheader:).
+        in_blockplan = False
+        for j in range(i - 1, max(i - 200, -1), -1):
+            cm = re.match(r"^([a-z_][a-z_0-9]*):\s*$", lines[j])
+            if cm:
+                in_blockplan = cm.group(1) == "blockplan"
+                break
+        if not in_blockplan:
+            i += 1
+            continue
+
+        _, end = _block_extent(lines, i)
+        block_text = "".join(lines[i:end])
+        try:
+            parsed = yaml.safe_load(block_text)
+        except yaml.YAMLError:
+            parsed = None
+
+        if isinstance(parsed, dict) and "vertical_lines" in parsed:
+            items = parsed.get("vertical_lines") or []
+            if items:
+                converted = _convert_vertical_lines(items, "blockplan_vline")
+                if converted:
+                    new_style_rules.extend(converted)
+                    changes.append(
+                        f"blockplan.vertical_lines: converted {len(converted)} "
+                        "rule(s) → style_rules"
+                    )
+            else:
+                changes.append(
+                    f"blockplan.vertical_lines (line {i+1}): removed empty/null"
+                )
+
+        del lines[i:end]
+        # Don't increment i — re-check the same position.
+
     # ── Assemble output ───────────────────────────────────────────────────────
     if not changes:
         return text, []
@@ -346,11 +460,65 @@ def migrate_text(text: str) -> tuple[str, list[str]]:
     new_text = "".join(lines).rstrip("\n") + "\n"
 
     if new_style_rules:
-        new_text += "\n" + _rules_to_yaml_text(new_style_rules, "style_rules")
+        new_text = _append_to_top_level_list(
+            new_text, "style_rules", new_style_rules
+        )
     if new_swimlane_rules:
-        new_text += "\n" + _rules_to_yaml_text(new_swimlane_rules, "swimlane_rules")
+        new_text = _append_to_top_level_list(
+            new_text, "swimlane_rules", new_swimlane_rules
+        )
 
     return new_text, changes
+
+
+def _append_to_top_level_list(text: str, top_key: str, items: list[dict]) -> str:
+    """Append ``items`` to an existing top-level ``top_key:`` list block, or
+    create the block if it does not yet exist.
+
+    Avoids producing duplicate top-level keys when the migrator is run multiple
+    times (each pass needs to add to the same list, not start a new one).
+    """
+    body = yaml.dump(
+        items, default_flow_style=False, allow_unicode=True, sort_keys=False
+    )
+    indented = "".join(
+        "  " + line if line.strip() else line for line in body.splitlines(keepends=True)
+    )
+
+    pattern = re.compile(
+        rf"^{re.escape(top_key)}:\s*$", re.MULTILINE
+    )
+    matches = list(pattern.finditer(text))
+    if not matches:
+        # Block doesn't exist — create it at end.
+        sep = "" if text.endswith("\n") else "\n"
+        return f"{text}{sep}\n{top_key}:\n{indented}"
+
+    # Append into the existing block (the last occurrence, so later runs
+    # extend it rather than the empty placeholder some themes start with).
+    last = matches[-1]
+    block_end = _find_top_level_block_end(text, last.end())
+    insertion = indented if text[block_end - 1:block_end] == "\n" else "\n" + indented
+    return text[:block_end] + insertion + text[block_end:]
+
+
+def _find_top_level_block_end(text: str, start: int) -> int:
+    """Return the index in *text* just after the last line of the top-level
+    block that begins at *start*. A top-level block ends at the next line that
+    has indent == 0 and starts with a non-blank, non-comment character.
+    """
+    pos = start
+    n = len(text)
+    while pos < n:
+        nl = text.find("\n", pos)
+        if nl == -1:
+            return n
+        line = text[pos:nl]
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and not line.startswith((" ", "\t")):
+            return pos
+        pos = nl + 1
+    return n
 
 
 def migrate_file(path: Path) -> None:

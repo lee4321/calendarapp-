@@ -818,7 +818,6 @@ class CalendarConfig:
     blockplan_duration_date_font: str = Fonts.RC_LIGHT
     blockplan_duration_date_font_size: float | None = None
     blockplan_duration_date_color: str | None = None
-    blockplan_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
     blockplan_vertical_line_color: str = "red"
     blockplan_vertical_line_width: float = 1.5
     blockplan_vertical_line_dasharray: str | None = None

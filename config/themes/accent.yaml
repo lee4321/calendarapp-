@@ -409,22 +409,6 @@ blockplan:
   #   color / width / opacity / dash_array: per-line style overrides
   #   fill_color:   column fill; single color, list of colors, or palette name (cycles per segment)
   #   fill_opacity: fill opacity 0–1 (default: vertical_line_fill_opacity)
-  vertical_lines:
-    - band: "Sprint"
-      repeat: true
-      align: "end"
-      fill_color: ["palette:Accent:0", "none"]
-      fill_opacity: 0.1
-  # vertical_lines:
-  #   - band: "Sprint"
-  #     repeat: true                   # draw after every sprint
-  #     align: "end"
-  #   - band: "PI"
-  #     value: "PI 5"
-  #     align: "end"
-  #     color: "palette:Accent:3"
-  #     width: 2.0
-  #     dash_array: "8,4"
   duration_fill_opacity: 0.35
   duration_stroke_color: null         # null → falls back to duration_color
   duration_stroke_width: 1.0
@@ -533,3 +517,16 @@ compact_plan:
       label_format: "Week {n}"
       fill_color: "none"
       alt_fill_color: "none"
+
+style_rules:
+  - name: blockplan_vline_0
+    apply_to: vertical_line
+    select:
+      band: Sprint
+      repeat: true
+    style:
+      align: end
+      fill_color:
+      - palette:Accent:0
+      - none
+      fill_opacity: 0.1

@@ -617,77 +617,24 @@ blockplan:
   palette:      []     # (list[str]) explicit color list; overrides palette_name
   palette_name: null   # (str|null) DB palette name; e.g. "Set2"
 
-  # ── Vertical marker lines ─────────────────────────────────────────────────
-  # Global style defaults; each entry in vertical_lines: can override per line.
-  vertical_line_color:        "red"    # (str) default vertical line color
+  # ── Vertical marker line defaults ─────────────────────────────────────────
+  # Per-attribute defaults applied to any style_rule with apply_to: vertical_line
+  # that omits the corresponding stroke_* / fill_* key.
+  vertical_line_color:        "red"    # (str) default stroke color
   vertical_line_dasharray:    null     # (str|null) default dash pattern; e.g. "6,3"
   vertical_line_fill_color:   "none"   # (str|null) default column fill; "none" = no fill
   vertical_line_fill_opacity: 0.15     # (float 0–1) default fill opacity
   vertical_line_opacity:      0.85     # (float 0–1) default line opacity
   vertical_line_width:        1.5      # (float) default line width in points
 
-  # ── Configured vertical lines ────────────────────────────────────────────
-  # List of vertical marker lines drawn through the swimlane area.
-  # Each entry:
-  #   band        (str)         — time-band label to anchor to (case-insensitive)
-  #   align       (str)         — start | center | end  (which edge of the segment)
-  #   repeat      (bool)        — true = draw at every segment boundary in the band
-  #   value       (str)         — segment label to match when repeat is absent/false
-  #   color       (str)         — per-line color (overrides vertical_line_color)
-  #   width       (float)       — per-line width (overrides vertical_line_width)
-  #   opacity     (float)       — per-line opacity (overrides vertical_line_opacity)
-  #   dash_array  (str)         — per-line dash pattern (overrides vertical_line_dasharray)
-  #   fill_color  (str|list)    — column fill color or cycling list
-  #   fill_opacity (float)      — fill opacity (overrides vertical_line_fill_opacity)
-  vertical_lines: []
-  # Example:
-  # vertical_lines:
-  #   - band:    "Month"
-  #     repeat:  true
-  #     align:   "end"
-  #     color:   "grey"
-  #     width:   1.0
-  #     opacity: 0.4
-  #     dash_array: "4,4"
-  #   - band:    "Fiscal Quarter"
-  #     align:   "end"
-  #     color:   "navy"
-  #     width:   1.5
-
-  # ── Top time-band rows (above swimlanes) ─────────────────────────────────
-  # List of time-band row definitions drawn above the swimlane area.
-  # Each entry (keys sorted alphabetically):
-  #   anchor_date  (str YYYY-MM-DD)  — alignment anchor for interval unit
-  #   date_format  (str)             — Arrow format string for month/date/dow labels
-  #                                    common: MMM (Jan), MMMM (January), D, ddd, YYYY
-  #   fill_color   (str|list)        — segment fill; list cycles across segments
-  #   fill_palette (list[str])       — palette name(s) cycling across segments
-  #   font         (str)             — segment label font (overrides band_font)
-  #   font_color   (str)             — segment label color (overrides timeband_label_color)
-  #   font_opacity (float)           — segment label opacity (overrides timeband_label_opacity)
-  #   font_size    (float)           — segment label size (overrides band_font_size)
-  #   interval_days (int)            — segment length in days (interval unit only)
-  #   label        (str)             — text shown in the heading column cell
-  #   label_align_h (str)            — left | center | right  (heading cell alignment)
-  #   label_color  (str)             — heading cell label color (overrides header_label_color)
-  #   label_fill_color (str)         — heading cell fill (overrides header_heading_fill_color)
-  #   label_font   (str)             — heading cell font (overrides header_font)
-  #   label_font_size (float)        — heading cell font size
-  #   label_format (str)             — format string for week/fiscal_quarter segments
-  #                                    placeholders: {week} {fy} {fy2} {q}
-  #   label_opacity (float)          — heading cell label opacity (overrides header_label_opacity)
-  #   label_values (list[str|null])  — override displayed segment text; null = auto; "" = blank
-  #   max_index    (int)             — counter resets to start_index after this (interval unit)
-  #   prefix       (str)             — label prefix (interval unit); e.g. "Sprint "
-  #   row_height   (float)           — override band_row_height for this row only (pt)
-  #   show_every   (int)             — merge N consecutive segments into one cell
-  #   start_index  (int)             — first counter value (interval unit)
-  #   stroke_color (str)             — cell border color (overrides timeband_line_color)
-  #   target_date  (str YYYY-MM-DD)  — required for countdown: the date to count down to
-  #   start_date   (str YYYY-MM-DD)  — required for countup: the date to count up from (day 0)
-  #   skip_weekends (bool)           — countdown/countup: exclude Sat/Sun from day count (default false)
-  #   skip_nonworkdays (bool)        — countdown/countup: exclude holidays & company non-workdays (default false)
-  #   unit         (str)             — fiscal_quarter | month | week | interval | date | dow | countdown | countup
+  # ── Vertical lines (now style_rules) ─────────────────────────────────────
+  # Configured vertical lines live in the top-level `style_rules:` list with
+  # `apply_to: vertical_line`.  See USER_GUIDE.md → Blockplan Vertical Marker
+  # Lines for the full schema.  Sketch:
+  #   style_rules:
+  #     - apply_to: vertical_line
+  #       select: { band: "Month", repeat: true }   # band/value/repeat selectors
+  #       style:  { align: end, stroke_color: grey, fill_color: lightyellow }
   top_time_bands:
     - label:       "Fiscal Quarter"
       unit:        "fiscal_quarter"   # fiscal_quarter | month | week | interval | date | dow | countdown | countup

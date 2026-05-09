@@ -64,8 +64,9 @@ class StyleResult:
     None means "not overridden — use the renderer or theme default."
     """
 
-    # Fill
-    fill_color: str | None = None
+    # Fill — list value is allowed for vertical_line rules so callers can
+    # cycle a per-rule color sequence across matched segments.
+    fill_color: str | list | None = None
     fill_opacity: float | None = None
     # Pattern (day_box)
     pattern: str | None = None
@@ -81,6 +82,8 @@ class StyleResult:
     # Icon (event)
     icon: str | None = None
     icon_color: str | None = None
+    # Render hint (vertical_line apply_to): "start" | "center" | "end"
+    align: str | None = None
 
     def is_empty(self) -> bool:
         return all(
@@ -90,6 +93,7 @@ class StyleResult:
                 self.pattern, self.pattern_color, self.pattern_opacity,
                 self.stroke_color, self.stroke_width, self.stroke_opacity,
                 self.stroke_dasharray, self.icon, self.icon_color,
+                self.align,
             )
         ) and not self.text
 
@@ -162,6 +166,8 @@ class StyleResult:
             self.icon = other.icon
         if other.icon_color is not None:
             self.icon_color = other.icon_color
+        if other.align is not None:
+            self.align = other.align
         for key, ts in other.text.items():
             if key in self.text:
                 self.text[key].merge(ts)
@@ -351,7 +357,14 @@ def _build_style_result(rule_style: dict) -> StyleResult:
         return str(v) if v is not None else None
 
     if "fill_color" in rule_style:
-        sr.fill_color = _str_or_none(rule_style["fill_color"])
+        raw = rule_style["fill_color"]
+        # Preserve list values so vertical_line rules can cycle colors across
+        # matched segments. Other apply_to targets only ever see strings, so
+        # the renderers that expect str will already have a string here.
+        if isinstance(raw, list):
+            sr.fill_color = list(raw)
+        else:
+            sr.fill_color = _str_or_none(raw)
     if "fill_opacity" in rule_style:
         sr.fill_opacity = float(rule_style["fill_opacity"])
     if "pattern" in rule_style:
@@ -412,6 +425,9 @@ def _build_style_result(rule_style: dict) -> StyleResult:
     if "icon_color" in rule_style:
         raw = rule_style["icon_color"]
         sr.icon_color = str(raw) if raw else None
+    if "align" in rule_style:
+        raw = rule_style["align"]
+        sr.align = str(raw).strip().lower() if raw else None
 
     return sr
 
@@ -529,6 +545,70 @@ class StyleEngine:
             result.merge(_build_style_result(rule.get("style") or {}))
 
         return result
+
+
+    def evaluate_band_segment(
+        self,
+        band_name: str,
+        segment_label: str,
+        ctx: DayContext | None = None,
+    ) -> list[tuple[int, StyleResult]]:
+        """
+        Return ``(rule_index, StyleResult)`` for each matching ``vertical_line``
+        rule on a single time-band segment.  ``rule_index`` is stable across
+        segments — it identifies the rule's position within the engine's rule
+        list, so callers can group results from multiple segments by rule and
+        cycle per-rule ``fill_color`` lists independently.
+
+        Selection criteria recognized in ``select:``
+          band     – band label to pin to (case-insensitive). Required.
+          value    – segment label to match (case-insensitive) when ``repeat``
+                     is absent or false. Required when ``repeat`` is false.
+          repeat   – when true, every segment in the band matches (``value``
+                     is ignored).
+          plus all standard day-context keys (federal_holiday, company_holiday,
+          weekend, nonworkday, workday, date) which evaluate against ``ctx``.
+        """
+        out: list[tuple[int, StyleResult]] = []
+        target_band = (band_name or "").strip().lower()
+        target_value = (segment_label or "").strip().lower()
+
+        for rule_index, rule in enumerate(self._rules):
+            # Filter on apply_to here (not via _applicable_rules) so rule_index
+            # stays aligned with self._rules — the caller relies on it as a
+            # stable per-rule key across calls.
+            raw = rule.get("apply_to", [])
+            if isinstance(raw, str):
+                targets = {raw.lower()}
+            elif isinstance(raw, list):
+                targets = {str(x).lower() for x in raw}
+            else:
+                continue
+            if "vertical_line" not in targets and "all" not in targets:
+                continue
+
+            select = rule.get("select", {})
+            if not isinstance(select, dict):
+                continue
+
+            rule_band = str(select.get("band") or "").strip().lower()
+            if not rule_band or rule_band != target_band:
+                continue
+
+            repeat = bool(select.get("repeat", False))
+            if not repeat:
+                rule_value = str(select.get("value") or "").strip().lower()
+                if not rule_value or rule_value != target_value:
+                    continue
+
+            if ctx is not None:
+                day_match = _matches_day_context(select, ctx)
+                if day_match is False:
+                    continue
+
+            out.append((rule_index, _build_style_result(rule.get("style") or {})))
+
+        return out
 
 
 def _matches_date_overlap(criterion: Any, event: "Event") -> bool:

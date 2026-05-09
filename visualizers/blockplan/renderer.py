@@ -16,7 +16,7 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day, day_rule_matches
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import StyleEngine, StyleResult
+from shared.rule_engine import DayContext, StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
@@ -740,25 +740,26 @@ class BlockPlanRenderer(BaseSVGRenderer):
     ) -> None:
         """Draw vertical lines (and optional column fills) pinned to time-band segments.
 
-        Each entry in ``blockplan_vertical_lines`` supports the following keys:
-          band         – band label to pin to (required)
-          repeat       – True → apply to every segment in the band
-          value        – specific segment label to match (used when repeat is False)
-          align        – "start" (default) | "center" | "end" — where to pin the line
-          color        – line stroke color (default: blockplan_vertical_line_color)
-          width        – line stroke width (default: blockplan_vertical_line_width)
-          opacity      – line stroke opacity (default: blockplan_vertical_line_opacity)
-          dash_array   – SVG stroke-dasharray string (default: blockplan_vertical_line_dasharray)
-          fill_color   – column fill color, list of colors, or named palette; colors cycle
-                         through matched segments (default: blockplan_vertical_line_fill_color)
-          fill_opacity – fill opacity 0–1 (default: blockplan_vertical_line_fill_opacity)
-          match        – optional dict of day-class keys (weekend / federal_holiday /
-                         company_holiday / nonworkday) that filters segments to only
-                         those days whose classification matches; segments spanning
-                         multiple days use the starting day for classification
+        Driven by ``style_rules`` entries with ``apply_to: vertical_line``.
+
+        Selection (``select:``):
+          band     – band label to pin to (case-insensitive). Required.
+          value    – segment label to match (case-insensitive) when ``repeat``
+                     is absent or false. Required if ``repeat`` is false.
+          repeat   – when true, every segment in the band matches.
+          plus the standard day-context keys (weekend, federal_holiday,
+          company_holiday, nonworkday, workday, date) — evaluated against the
+          segment's first day's classification.
+
+        Rendering (``style:``):
+          align            – "start" (default) | "center" | "end"
+          stroke_color/_width/_opacity/_dasharray – the line on top
+          fill_color/_opacity – the column rect behind. ``fill_color`` may be a
+                                list or named palette; values cycle across the
+                                matching segments for each rule.
         """
-        lines = list(getattr(config, "blockplan_vertical_lines", []) or [])
-        if not lines:
+        engine = self._style_engine
+        if not engine or not bands:
             return
 
         band_segments: dict[str, list[_BandSegment]] = {}
@@ -770,64 +771,60 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 band, start, end, config, visible_days=visible_days, db=db
             )
 
-        def _segment_matches_rule(seg: "_BandSegment", match: dict) -> bool:
-            if not isinstance(match, dict) or not match:
-                return True
-            classes = classify_day(seg.start, db, config)
-            return day_rule_matches(classes, match)
-
         _vline_fill_style = config.get_box_style("ec-vline-fill")
         _vline_style = config.get_line_style("ec-vline")
-        # Warn once per misconfigured rule (by dict id) so logs aren't spammed
-        # across the two passes below.
-        _warned: set[int] = set()
 
-        def _skip_reason(line: dict, band_name: str, value: str, repeat: bool) -> str | None:
-            if not band_name:
-                return "missing 'band' key"
-            if not value and not repeat:
-                return "needs 'value' or 'repeat: true'"
-            if band_name not in band_segments:
-                return f"band '{line.get('band') or line.get('band_label')}' not found in configured time bands"
-            return None
-
-        # --- Pass 1: column fills (drawn behind lines) ---
-        for line in lines:
-            if not isinstance(line, dict):
-                continue
-            fill_color_raw = line.get(
-                "fill_color", _vline_fill_style.fill
+        def _ctx_for(seg: "_BandSegment") -> DayContext:
+            classes = classify_day(seg.start, db, config)
+            return DayContext(
+                date=seg.start.strftime("%Y%m%d"),
+                federal_holiday="federal_holiday" in classes,
+                company_holiday="company_holiday" in classes,
+                nonworkday=bool(classes),
+                workday=not bool(classes),
+                weekend="weekend" in classes,
             )
-            fill_opacity = float(
-                line.get("fill_opacity", _vline_fill_style.fill_opacity)
+
+        # Group matches by rule_index (stable across segments) so per-rule
+        # fill_color cycling works correctly.
+        from collections import defaultdict
+        per_rule_matches: dict[int, list[tuple[_BandSegment, StyleResult]]] = (
+            defaultdict(list)
+        )
+        for band_name, segments in band_segments.items():
+            for seg in segments:
+                ctx = _ctx_for(seg)
+                for rule_index, sr in engine.evaluate_band_segment(
+                    band_name, str(seg.label), ctx
+                ):
+                    per_rule_matches[rule_index].append((seg, sr))
+
+        if not per_rule_matches:
+            return
+
+        # Iterate rules in declaration order so output stacking matches the
+        # author's intent regardless of which band each rule was found through.
+        ordered_rule_keys = sorted(per_rule_matches.keys())
+
+        # ── Pass 1: column fills (drawn behind lines) ───────────────────────
+        for rule_key in ordered_rule_keys:
+            items = per_rule_matches[rule_key]
+            # Resolve the fill color list once per rule from the first match's
+            # StyleResult.  All matches for a given rule share the same style.
+            sample_sr = items[0][1]
+            fill_color_raw: Any = (
+                sample_sr.fill_color
+                if sample_sr.fill_color is not None
+                else _vline_fill_style.fill
+            )
+            fill_opacity = (
+                sample_sr.fill_opacity
+                if sample_sr.fill_opacity is not None
+                else float(_vline_fill_style.fill_opacity)
             )
             color_list = self._resolve_color_list(fill_color_raw, None, db)
 
-            band_name = (
-                str(line.get("band") or line.get("band_label") or "").strip().lower()
-            )
-            value = str(line.get("value") or "").strip()
-            repeat = bool(line.get("repeat", False))
-            reason = _skip_reason(line, band_name, value, repeat)
-            if reason is not None:
-                if id(line) not in _warned:
-                    print(
-                        f"[blockplan] vertical_lines rule skipped ({reason}): "
-                        f"{line}"
-                    )
-                    _warned.add(id(line))
-                continue
-            segments = band_segments.get(band_name, [])
-            if not segments:
-                continue
-
-            match_rule = line.get("match") if isinstance(line.get("match"), dict) else None
-            matched_idx = 0
-            for seg in segments:
-                if not repeat and str(seg.label) != value:
-                    continue
-                if match_rule is not None and not _segment_matches_rule(seg, match_rule):
-                    continue
+            for matched_idx, (seg, _sr) in enumerate(items):
                 seg_x0 = self._boundary_x(
                     seg.start, visible_days, timeline_x, timeline_w
                 )
@@ -835,54 +832,31 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     seg.end_exclusive, visible_days, timeline_x, timeline_w
                 )
                 seg_w = seg_x1 - seg_x0
-                if seg_w > 0:
-                    if color_list:
-                        fill = color_list[matched_idx % len(color_list)]
-                    elif isinstance(fill_color_raw, str):
-                        fill = fill_color_raw
-                    else:
-                        fill = "none"
-                    if not _is_none_color(fill):
-                        self._draw_rect(
-                            seg_x0,
-                            top_y,
-                            seg_w,
-                            bottom_y - top_y,
-                            fill=fill,
-                            fill_opacity=fill_opacity,
-                            css_class="ec-vline-fill",
-                        )
-                matched_idx += 1
-
-        # --- Pass 2: vertical lines (drawn on top of fills) ---
-        for line in lines:
-            if not isinstance(line, dict):
-                continue
-            band_name = (
-                str(line.get("band") or line.get("band_label") or "").strip().lower()
-            )
-            value = str(line.get("value") or "").strip()
-            repeat = bool(line.get("repeat", False))
-            reason = _skip_reason(line, band_name, value, repeat)
-            if reason is not None:
-                if id(line) not in _warned:
-                    print(
-                        f"[blockplan] vertical_lines rule skipped ({reason}): "
-                        f"{line}"
-                    )
-                    _warned.add(id(line))
-                continue
-            segments = band_segments.get(band_name, [])
-            if not segments:
-                continue
-
-            align = str(line.get("align", "start")).strip().lower()
-            match_rule = line.get("match") if isinstance(line.get("match"), dict) else None
-            for seg in segments:
-                if not repeat and str(seg.label) != value:
+                if seg_w <= 0:
                     continue
-                if match_rule is not None and not _segment_matches_rule(seg, match_rule):
+                if color_list:
+                    fill = color_list[matched_idx % len(color_list)]
+                elif isinstance(fill_color_raw, str):
+                    fill = fill_color_raw
+                else:
+                    fill = "none"
+                if _is_none_color(fill):
                     continue
+                self._draw_rect(
+                    seg_x0,
+                    top_y,
+                    seg_w,
+                    bottom_y - top_y,
+                    fill=fill,
+                    fill_opacity=fill_opacity,
+                    css_class="ec-vline-fill",
+                )
+
+        # ── Pass 2: vertical lines (drawn on top of fills) ──────────────────
+        for rule_key in ordered_rule_keys:
+            items = per_rule_matches[rule_key]
+            for seg, sr in items:
+                align = (sr.align or "start").lower()
                 if align == "center":
                     x0 = self._boundary_x(
                         seg.start, visible_days, timeline_x, timeline_w
@@ -900,16 +874,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         seg.start, visible_days, timeline_x, timeline_w
                     )
 
-                stroke = str(line.get("color", _vline_style.color))
-                width = float(line.get("width", _vline_style.width))
+                stroke = sr.stroke_color if sr.stroke_color is not None else _vline_style.color
+                width = float(
+                    sr.stroke_width if sr.stroke_width is not None else _vline_style.width
+                )
                 opacity = float(
-                    line.get("opacity", _vline_style.opacity)
+                    sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity
                 )
-                dash = line.get(
-                    "dash_array",
-                    line.get("dasharray", _vline_style.dasharray),
-                )
+                dash = sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray
                 dash_value = str(dash) if dash is not None else None
+                if _is_none_color(stroke):
+                    continue
                 self._draw_line(
                     x,
                     top_y,

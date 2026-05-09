@@ -630,62 +630,6 @@ blockplan:
   #   fill_color:   column fill; single color, list of colors, or palette name (cycles per segment)
   #   fill_opacity: fill opacity 0–1 (default: vertical_line_fill_opacity)
   
-  vertical_lines:
-    - band: "Month"
-      repeat: true
-      align: "end"
-      color: "grey"
-      width: 0.0
-      dash_array: null
-      opacity: 0.33
-      fill_color: ["#eef4ff", "white"]
-
-    - band: "Fiscal Quarter"
-      repeat: true
-      align: "end"
-      color: "navy"
-      width: 0.0
-      dash_array: null
-      fill_color: ["green","pink"]
-
-    # Non-workday highlights — pinned to the single-day "Date" band.
-    # `match` filters segments by classify_day() classes.
-    
-    - band: "Date"
-      repeat: true
-      align: "center"
-      match: {weekend: true}
-      color: "#888888"
-      width: 0.0
-      opacity: 0.05
-      dash_array: "2,3"
-      fill_color: "#E8E8E8"
-      fill_opacity: 0.4
-
-    - band: "Date"
-      repeat: true
-      align: "center"
-      match: {company_holiday: true}
-      color: "goldenrod"
-      width: 0.0
-      opacity: 0.07
-      dash_array: "4,2"
-      fill_color: "gold"
-      fill_opacity: 0.3
-
-    - band: "Date"
-      repeat: true
-      align: "center"
-      match: {federal_holiday: true}
-      color: "firebrick"
-      width: 0.0
-      opacity: 0.25
-      dash_array: null
-      fill_color: "tomato"
-      fill_opacity: 0.5
- 
-
-# ── Mini Calendar ─────────────────────────────────────────────────────────────
 mini_calendar:
   cell_font: "JuliaMono-Regular"
   cell_bold_font: "Caveat-Bold"
@@ -1056,6 +1000,72 @@ style_rules:
     style:
       fill_color: black
 
+  - name: blockplan_vline_0
+    apply_to: vertical_line
+    select:
+      band: Month
+      repeat: true
+    style:
+      align: end
+      stroke_color: grey
+      stroke_width: 0.0
+      stroke_opacity: 0.33
+      fill_color:
+      - '#eef4ff'
+      - white
+  - name: blockplan_vline_1
+    apply_to: vertical_line
+    select:
+      band: Fiscal Quarter
+      repeat: true
+    style:
+      align: end
+      stroke_color: navy
+      stroke_width: 0.0
+      fill_color:
+      - green
+      - pink
+  - name: blockplan_vline_2
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      weekend: true
+    style:
+      align: center
+      stroke_color: '#888888'
+      stroke_width: 0.0
+      stroke_opacity: 0.05
+      stroke_dasharray: 2,3
+      fill_color: '#E8E8E8'
+      fill_opacity: 0.4
+  - name: blockplan_vline_3
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      company_holiday: true
+    style:
+      align: center
+      stroke_color: goldenrod
+      stroke_width: 0.0
+      stroke_opacity: 0.07
+      stroke_dasharray: 4,2
+      fill_color: gold
+      fill_opacity: 0.3
+  - name: blockplan_vline_4
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      federal_holiday: true
+    style:
+      align: center
+      stroke_color: firebrick
+      stroke_width: 0.0
+      stroke_opacity: 0.25
+      fill_color: tomato
+      fill_opacity: 0.5
 swimlane_rules:
   - name: Route Xstore
     select:

@@ -197,24 +197,27 @@ def test_blockplan_interval_anchor_date(tmp_path):
     assert "Sprint 1" not in renderer.text_values
 
 
-def test_blockplan_vertical_line_style_from_config(tmp_path):
+def test_blockplan_vertical_line_style_from_style_rules(tmp_path):
     output = tmp_path / "blockplan_lines.svg"
     config = _base_config(output)
-    config.userstart = "20260201"
+    config.userstart = "20260202"  # Monday
     config.userend = "20260210"
-    config.adjustedstart = "20260201"
+    config.adjustedstart = "20260202"
     config.adjustedend = "20260210"
     config.blockplan_top_time_bands = [
         {"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}
     ]
-    config.blockplan_vertical_lines = [
+    config.theme_style_rules = [
         {
-            "band": "Date",
-            "value": "20260205",
-            "width": 3.0,
-            "color": "orange",
-            "dash_array": "5,2",
-            "opacity": 0.5,
+            "name": "highlight_one_day",
+            "apply_to": "vertical_line",
+            "select": {"band": "Date", "value": "20260205"},
+            "style": {
+                "stroke_color": "orange",
+                "stroke_width": 3.0,
+                "stroke_dasharray": "5,2",
+                "stroke_opacity": 0.5,
+            },
         }
     ]
     coords = BlockPlanLayout().calculate(config)
@@ -231,6 +234,78 @@ def test_blockplan_vertical_line_style_from_config(tmp_path):
     assert styled[0]["stroke_width"] == 3.0
     assert styled[0]["stroke_opacity"] == 0.5
     assert styled[0]["stroke_dasharray"] == "5,2"
+
+
+def test_blockplan_vertical_line_value_match_is_case_insensitive(tmp_path):
+    output = tmp_path / "blockplan_vline_ci.svg"
+    config = _base_config(output)
+    config.userstart = "20260202"
+    config.userend = "20260210"
+    config.adjustedstart = "20260202"
+    config.adjustedend = "20260210"
+    config.blockplan_top_time_bands = [
+        # Mon/Tue/Wed/... so segments are labeled "MON", "TUE", ...
+        {"label": "Day", "unit": "dow", "date_format": "ddd"},
+    ]
+    config.theme_style_rules = [
+        {
+            "name": "tuesday_marker",
+            "apply_to": "vertical_line",
+            # Lowercased select.value should still match the upper-case "Tue".
+            "select": {"band": "day", "value": "tue"},
+            "style": {"stroke_color": "magenta", "stroke_width": 2.0},
+        }
+    ]
+    coords = BlockPlanLayout().calculate(config)
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+
+    styled = [
+        kw for kw in renderer.line_kwargs if kw.get("stroke") == "magenta"
+    ]
+    assert styled, "Expected case-insensitive value match to draw a vertical line"
+
+
+def test_blockplan_vertical_line_repeat_with_align_and_fill_cycle(tmp_path):
+    output = tmp_path / "blockplan_vline_repeat.svg"
+    config = _base_config(output)
+    config.userstart = "20260202"
+    config.userend = "20260213"
+    config.adjustedstart = "20260202"
+    config.adjustedend = "20260213"
+    config.blockplan_top_time_bands = [
+        {"label": "Week", "unit": "week"},
+    ]
+    config.theme_style_rules = [
+        {
+            "name": "every_week_end",
+            "apply_to": "vertical_line",
+            "select": {"band": "Week", "repeat": True},
+            "style": {
+                "align": "end",
+                "stroke_color": "navy",
+                "stroke_width": 1.0,
+                "fill_color": ["red", "blue"],
+                "fill_opacity": 0.3,
+            },
+        }
+    ]
+    coords = BlockPlanLayout().calculate(config)
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+
+    # Two-week range → two matching segments → fill colors cycle red, blue.
+    fills = [
+        kw.get("fill")
+        for kw in renderer.rect_calls
+        if kw.get("css_class") == "ec-vline-fill"
+    ]
+    assert "red" in fills and "blue" in fills
+
+    strokes = [kw for kw in renderer.line_kwargs if kw.get("stroke") == "navy"]
+    assert len(strokes) >= 2
 
 
 def test_blockplan_weekends_zero_shows_only_weekdays_in_date_band(tmp_path):
