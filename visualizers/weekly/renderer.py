@@ -1405,6 +1405,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             color=_ts_notes.color,
         )
 
+        _is_di = config.get_icon_style("ec-duration-icon")
+        icon_to_draw = dur_style.icon if dur_style.icon is not None else t.icon
+        icon_color = dur_style.icon_color or _is_di.color
+        icon_size = config.event_icon_font_size
+
         for X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty in list_of_rects:
             self._draw_rect(
                 X,
@@ -1421,6 +1426,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             else:
                 display_name = t.task_name
             centerX = X + (Width / 2)
+            text_max_width = Width
+            if icon_to_draw:
+                text_max_width = max(0.0, Width - (icon_size * 3.0))
             self._draw_text(
                 centerX,
                 name_ty,
@@ -1429,9 +1437,21 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 name_size,
                 fill=name_color,
                 anchor="middle",
-                max_width=Width,
+                max_width=text_max_width,
                 css_class="ec-event-name",
             )
+
+            if icon_to_draw:
+                self._draw_icon_svg(
+                    icon_to_draw,
+                    ix,
+                    name_ty,
+                    icon_size,
+                    color=icon_color,
+                    fallback_name=config.default_missing_icon,
+                    fallback_color="red",
+                    css_class="ec-duration-icon",
+                )
 
             if use_double_height:
                 self._draw_text(
