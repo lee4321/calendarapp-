@@ -914,6 +914,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         _ts_event_name = config.get_text_style("ec-event-name")
         row_font = _ts_event_name.font
         row_font_size = config.mini_details_name_text_font_size
+        _ts_event_date = config.get_text_style("ec-event-date")
         _ts_event_notes = config.get_text_style("ec-event-notes")
         notes_font = _ts_event_notes.font
         notes_font_size = config.mini_details_notes_text_font_size
@@ -984,8 +985,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 start_fmt,
                 row_font,
                 row_font_size,
-                fill=_ts_event_name.color,
-                fill_opacity=_ts_event_name.opacity,
+                fill=_ts_event_date.color,
+                fill_opacity=_ts_event_date.opacity,
                 css_class="ec-event-date",
             )
             self._draw_text(
