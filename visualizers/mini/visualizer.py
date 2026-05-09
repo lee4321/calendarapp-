@@ -49,6 +49,7 @@ class MiniCalendarVisualizer(BaseVisualizer):
             "week_number_mode",
             "week1_start",
             "mini_details",
+            "shrink",
         ]
 
     def validate_config(self, config: CalendarConfig) -> list[str]:

@@ -155,8 +155,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     ):
         result = super().render(config, coordinates, events, db)
         if config.include_mini_details:
-            effective_events = events if config.includeevents else []
-            self._render_details_svg(config, coordinates, effective_events)
+            self._render_details_svg(config, coordinates, events)
             result.page_count += 1
         return result
 
@@ -845,8 +844,6 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         self._content_bbox_svg = None
         self._add_desc(config)
         self._inject_css()
-        if config.shrink_to_content:
-            self._shrink_drawing_to_content(coordinates)
         if config.watermark_text:
             self._render_text_watermark(config)
         if config.watermark_image:
@@ -1057,6 +1054,17 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 )
 
             current_y += row_height
+
+        if config.shrink_to_content:
+            details_bbox = {
+                "DetailsContent": (
+                    content_left,
+                    title_y - title_font_size,
+                    content_right - content_left,
+                    max(0.0, current_y - (title_y - title_font_size)),
+                ),
+            }
+            self._shrink_drawing_to_content(details_bbox)
 
         # Save details SVG
         if config.outputfile.endswith(".svg"):
