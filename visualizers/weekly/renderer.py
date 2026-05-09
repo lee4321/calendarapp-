@@ -1409,6 +1409,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         icon_to_draw = dur_style.icon if dur_style.icon is not None else t.icon
         icon_color = dur_style.icon_color or _is_di.color
         icon_size = config.event_icon_font_size
+        icon_gap = icon_size * 0.4
+
+        name_font_path = ""
+        if icon_to_draw:
+            try:
+                name_font_path = get_font_path(name_font)
+            except KeyError:
+                name_font_path = ""
 
         for X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty in list_of_rects:
             self._draw_rect(
@@ -1428,7 +1436,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             centerX = X + (Width / 2)
             text_max_width = Width
             if icon_to_draw:
-                text_max_width = max(0.0, Width - (icon_size * 3.0))
+                text_max_width = max(0.0, Width - (icon_size + icon_gap) * 2)
             self._draw_text(
                 centerX,
                 name_ty,
@@ -1442,9 +1450,17 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             )
 
             if icon_to_draw:
+                measured = (
+                    string_width(display_name or "", name_font_path, name_size)
+                    if name_font_path
+                    else 0.0
+                )
+                rendered_w = min(measured, text_max_width)
+                icon_x = centerX - (rendered_w / 2) - icon_gap - icon_size
+                icon_x = max(X + 2.0, icon_x)
                 self._draw_icon_svg(
                     icon_to_draw,
-                    ix,
+                    icon_x,
                     name_ty,
                     icon_size,
                     color=icon_color,
