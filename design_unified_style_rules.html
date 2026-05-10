@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Design — Unified style_rules in theme files</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #666;
+    --rule: #e3e3dc;
+    --accent: #2d5b8c;
+    --accent-soft: #e7f0f9;
+    --warn: #b65a1a;
+    --warn-soft: #fbf0e3;
+    --good: #2f7a4d;
+    --good-soft: #e6f3eb;
+    --code-bg: #1f2228;
+    --code-ink: #e8e6e0;
+    --kw: #e6a86b;
+    --str: #9ec99f;
+    --com: #7b8794;
+    --key: #7ab8d9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+  header.title {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+  header.title h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+  }
+  header.title .sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  h2 {
+    margin: 40px 0 12px;
+    font-size: 20px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
+  }
+  h3 {
+    margin: 24px 0 8px;
+    font-size: 16px;
+    color: var(--accent);
+  }
+  h4 {
+    margin: 16px 0 6px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  p, li { font-size: 14px; }
+  code, pre {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  code.inline {
+    background: #efece4;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #4a3a1f;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre .k { color: var(--key); }
+  pre .v { color: var(--str); }
+  pre .n { color: var(--kw); }
+  pre .c { color: var(--com); font-style: italic; }
+  pre .p { color: #c7c7c7; }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+  .card h4 { margin-top: 0; }
+  .tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tag.before { background: var(--warn-soft); color: var(--warn); }
+  .tag.after  { background: var(--good-soft); color: var(--good); }
+  .tag.note   { background: var(--accent-soft); color: var(--accent); }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0 16px;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    background: #f1efe8;
+    font-weight: 600;
+  }
+  td code.inline { font-size: 12px; }
+  .callout {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+  }
+  .callout.warn {
+    background: var(--warn-soft);
+    border-left-color: var(--warn);
+  }
+  .callout.good {
+    background: var(--good-soft);
+    border-left-color: var(--good);
+  }
+  ul.tight li { margin-bottom: 2px; }
+  .toc {
+    background: #f1efe8;
+    padding: 12px 18px 14px 32px;
+    border-radius: 6px;
+    margin-bottom: 28px;
+    font-size: 13px;
+  }
+  .toc ul { margin: 4px 0; padding-left: 18px; }
+  .schema-tree {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px 18px;
+  }
+  .schema-tree .k { color: var(--accent); font-weight: 600; }
+  .schema-tree .opt { color: var(--muted); font-style: italic; }
+  .schema-tree .ty { color: var(--good); }
+  .arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 18px;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="title">
+  <h1>Unified <code class="inline">style_rules</code>: consolidating theme styling into one section</h1>
+  <div class="sub">Design proposal · CalendarApp theme schema · 2026-05-10 (rev 11: timeband consolidation across blockplan / compactplan / excelheader)</div>
+</header>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#problem">1 · Problem</a></li>
+    <li><a href="#current">2 · Current sections at a glance</a></li>
+    <li><a href="#principles">3 · Design principles</a>
+      <ul>
+        <li><a href="#nonstyling">3.1 · What's <em>not</em> a rule — non-styling config</a></li>
+      </ul>
+    </li>
+    <li><a href="#schema">4 · Unified rule schema</a>
+      <ul>
+        <li><a href="#dayboxbox">4.1 · Why <code class="inline">day_box</code> folds into <code class="inline">box</code></a></li>
+        <li><a href="#allboxes">4.2 · Why <code class="inline">duration</code>, <code class="inline">vertical_line</code>, and swimlane regions also fold into <code class="inline">box</code></a></li>
+        <li><a href="#vocab">4.3 · Style property vocabulary by target</a></li>
+        <li><a href="#milestonesevents">4.4 · Milestones &amp; single-day events</a></li>
+        <li><a href="#multitarget">4.5 · Applying one rule to multiple targets</a></li>
+      </ul>
+    </li>
+    <li><a href="#examples">5 · Before / after</a></li>
+    <li><a href="#resolution">6 · Resolution &amp; precedence</a></li>
+    <li><a href="#migration">7 · Migration — single clean break</a>
+      <ul>
+        <li><a href="#impl-pr">7.1 · The implementation PR — what lands at once</a></li>
+        <li><a href="#conversion">7.2 · Conversion mappings</a></li>
+        <li><a href="#default-tokens">7.3 · Default-theme tokens</a></li>
+        <li><a href="#validation">7.4 · Validation strategy</a></li>
+      </ul>
+    </li>
+    <li><a href="#open">8 · Decisions</a>
+      <ul>
+        <li><a href="#axis-dissolve">8.2 · Dissolving the <code class="inline">axis:</code> stanza</a></li>
+      </ul>
+    </li>
+    <li><a href="#userguide">9 · USER_GUIDE reconciliation: "Visualization Setting Gaps"</a></li>
+    <li><a href="#timebands">10 · Consolidating timebands across visualizations</a></li>
+  </ul>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="problem">1 · Problem</h2>
+
+<p>
+Theme YAMLs currently spread styling concerns across <strong>seven</strong> top-level sections that each
+have their own grammar. <code class="inline">text_styles</code> embeds yet another rule kind
+(<code class="inline">size_rules</code>) inside the value of a single style. The result is hard to teach,
+hard to override, and forces engine code to know about each section's bespoke shape.
+</p>
+
+<div class="grid2">
+  <div class="card">
+    <h4>Concrete pain points</h4>
+    <ul class="tight">
+      <li>Five token-definition sections (<code class="inline">text_styles</code>, <code class="inline">box_styles</code>, <code class="inline">line_styles</code>, <code class="inline">icon_styles</code>, plus <code class="inline">element_styles</code> bindings) — each with its own keys.</li>
+      <li><code class="inline">size_rules</code> is a rule list nested inside a token; it cannot reuse the global selector grammar (no <code class="inline">event_type</code>, no <code class="inline">federal_holiday</code>).</li>
+      <li><code class="inline">style_rules</code>, <code class="inline">swimlane_rules</code>, and <code class="inline">base.size_rule</code> all match-and-apply, but use three different shapes.</li>
+      <li>No single place a theme author can grep for "what styles this element."</li>
+      <li><code class="inline">box_styles</code> and the <code class="inline">day_box</code> rule target are the same concept (a filled, stroked rectangle, optionally with a pattern) but use two different property vocabularies (<code class="inline">fill</code> vs <code class="inline">fill_color</code>; patterns only on day_box).</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>What "consolidate" means here</h4>
+    <ul class="tight">
+      <li>One top-level list — <code class="inline">style_rules</code> — covers <em>all</em> styling intent.</li>
+      <li>A rule has the same three parts everywhere: <code class="inline">select</code>, <code class="inline">apply_to</code>, <code class="inline">style</code>.</li>
+      <li>Named tokens (heading, cell, grid…) are still definable, but as ordinary rules with <code class="inline">define:</code>, not as a separate section.</li>
+      <li>Selectors can stack predicates: papersize <em>and</em> event_type <em>and</em> nonworkday in the same rule.</li>
+      <li><strong>The day box is just a box.</strong> No separate <code class="inline">day_box</code> target — day cells are styled as <code class="inline">box:day</code> (or via the <code class="inline">ec-day-box</code> element), with the same property vocabulary as every other box.</li>
+      <li><strong>Durations, vertical-line bands, and swimlane regions are also just boxes.</strong> They become <code class="inline">box:duration</code>, <code class="inline">box:vline</code>, <code class="inline">box:swimlane_heading</code>, <code class="inline">box:swimlane_content</code>. The only non-box thing left in the swimlane area is the <em>routing</em> rule (which row goes into which lane) — that stays as a one-property assignment.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="current">2 · Current sections at a glance</h2>
+
+<table>
+  <thead>
+    <tr><th>Section</th><th>Role</th><th>Key shape</th><th>Goes away?</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">text_styles</code></td>
+      <td>Define named text tokens (heading, body, caption…)</td>
+      <td><code class="inline">name → {font, size, color, size_rules[]}</code></td>
+      <td>Yes — becomes <code class="inline">define: text</code> rules</td>
+    </tr>
+    <tr>
+      <td><code class="inline">box_styles</code></td>
+      <td>Define named box tokens (cell, header, callout…)</td>
+      <td><code class="inline">name → {fill, stroke, …}</code></td>
+      <td>Yes — becomes <code class="inline">define: box</code> rules</td>
+    </tr>
+    <tr>
+      <td><code class="inline">line_styles</code></td>
+      <td>Define named line tokens (grid, axis, today…)</td>
+      <td><code class="inline">name → {color, width, opacity, dasharray}</code></td>
+      <td>Yes — becomes <code class="inline">define: line</code> rules</td>
+    </tr>
+    <tr>
+      <td><code class="inline">icon_styles</code></td>
+      <td>Define named icon tokens (event, duration, overflow)</td>
+      <td><code class="inline">name → {color, size, icon}</code></td>
+      <td>Yes — becomes <code class="inline">define: icon</code> rules</td>
+    </tr>
+    <tr>
+      <td><code class="inline">element_styles</code></td>
+      <td>Bind <code class="inline">ec-*</code> element classes to a token</td>
+      <td><code class="inline">ec-name → {text_style|box_style|…}</code></td>
+      <td>Yes — becomes rules with <code class="inline">select: {element: ec-name}</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">size_rules</code> (nested)</td>
+      <td>Override a token's font size by papersize</td>
+      <td>list inside a text_style</td>
+      <td>Yes — flat rules with <code class="inline">select: {papersize: …}</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">style_rules</code></td>
+      <td>Match content/context, apply day_box / duration / vline styling</td>
+      <td><code class="inline">{name, select, apply_to, style}</code></td>
+      <td><strong>Stays</strong> — this is the target shape. <code class="inline">apply_to: day_box</code> becomes <code class="inline">apply_to: box:day</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">swimlane_rules</code></td>
+      <td>Route rows to swimlanes by predicate</td>
+      <td><code class="inline">{name, select, apply_to: lane}</code></td>
+      <td>Yes — splits into <em>routing</em> (<code class="inline">apply_to: lane</code>) and <em>visual</em> (<code class="inline">box:swimlane_heading</code> / <code class="inline">box:swimlane_content</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="inline">base.size_rule</code></td>
+      <td>Global font size by papersize</td>
+      <td>list under <code class="inline">base</code></td>
+      <td>Yes — flat rule with <code class="inline">select: {scope: base, papersize: …}</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="principles">3 · Design principles</h2>
+
+<ol>
+  <li><strong>One shape, one place.</strong> Every styling decision is a rule with the same three keys: <code class="inline">select</code>, <code class="inline">apply_to</code>, <code class="inline">style</code>.</li>
+  <li><strong>Definition is just a rule.</strong> Defining the <em>heading</em> text token is a rule that selects nothing and applies to a named token slot. Overriding it for a paper size is another rule that adds a predicate.</li>
+  <li><strong>Selectors compose freely.</strong> Any selector key may combine with any other (papersize + event_type + federal_holiday). No more grammar islands.</li>
+  <li><strong>Order is the only precedence.</strong> Later rule wins. No surprise priority axes. Themes can <code class="inline">extends:</code> for layering.</li>
+  <li><strong>Non-styling config stays put.</strong> Format strings, fiscal semantics, layout dimensions, and structural declarations are not rules and remain in their existing top-level sections. See <a href="#nonstyling">§3.1</a> for the full inventory.</li>
+</ol>
+
+<h3 id="nonstyling">3.1 · What's <em>not</em> a rule — non-styling config</h3>
+
+<p>
+Not every value in a theme YAML is about appearance. Many describe what calendar to compute, how to
+label it, or how to lay it out — questions a selector and a style bag cannot sensibly answer. Trying
+to fold them into <code class="inline">style_rules</code> would either invent meaningless predicates
+("apply this fiscal year offset when…") or pollute the rule schema with one-off keys. They stay in
+their existing sections (<code class="inline">theme</code>, <code class="inline">base</code>,
+<code class="inline">events</code>, <code class="inline">fiscal</code>, <code class="inline">weekly</code>,
+<code class="inline">timeline</code>, <code class="inline">blockplan</code>,
+<code class="inline">mini_calendar</code>, …) under the same keys.
+</p>
+
+<div class="callout">
+  <strong>Test for whether a value belongs in <code class="inline">style_rules</code>:</strong> can you
+  finish the sentence <em>"draw this surface with…"</em>? If yes, it's a rule. If instead the value
+  answers <em>what to compute</em>, <em>what to label</em>, <em>what to lay out</em>, <em>what
+  structures exist</em>, or <em>which algorithm to run</em>, it's non-styling config.
+</div>
+
+<h4>Categories &amp; examples</h4>
+
+<table>
+  <thead><tr><th style="width: 22%;">Category</th><th>Purpose</th><th>Example keys (and values)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Theme metadata</strong></td>
+      <td>Identification used by the loader and embedded in the SVG <code class="inline">&lt;desc&gt;</code>.</td>
+      <td>
+        <code class="inline">theme.name: "TJX"</code><br>
+        <code class="inline">theme.version: "2.0"</code><br>
+        <code class="inline">theme.description: "TJX colors and style — weekly only"</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Format strings</strong></td>
+      <td>Templates the renderer interpolates at runtime. A rule may restyle the resulting text; the template itself isn't a style.</td>
+      <td>
+        <code class="inline">fiscal.label_format: "{prefix}{period_short}"</code><br>
+        <code class="inline">fiscal.end_label_format: "{period_short} End"</code><br>
+        <code class="inline">weekly.week_numbers.label_format: "W{num:02d}"</code><br>
+        <code class="inline">mini_calendar.title_format: "MMMM YYYY"</code><br>
+        <code class="inline">timeline.date_format: "M/D"</code><br>
+        <code class="inline">timeline.tick_label_format: "M/D"</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Calendar / fiscal semantics</strong></td>
+      <td>Affect what data is computed, not how it's drawn.</td>
+      <td>
+        <code class="inline">fiscal.year_offset: +1</code><br>
+        <code class="inline">blockplan.fiscal_year_start_month: 2</code><br>
+        <code class="inline">blockplan.week_start: 0</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Item ordering &amp; placement policy</strong></td>
+      <td>Algorithmic choices about which content claims which slot.</td>
+      <td>
+        <code class="inline">events.item_placement_order: ["priority"]</code><br>
+        <code class="inline">blockplan.item_placement_order: ["events", "milestones", "durations"]</code><br>
+        <code class="inline">blockplan.lane_match_mode: "first"</code><br>
+        <code class="inline">blockplan.show_unmatched_lane: true</code><br>
+        <code class="inline">blockplan.unmatched_lane_name: "Other"</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Layout dimensions &amp; geometry</strong></td>
+      <td>Spatial parameters consumed by the layout engine before the renderer ever runs.</td>
+      <td>
+        <code class="inline">blockplan.label_column_ratio: 0.08</code><br>
+        <code class="inline">blockplan.band_row_height: 10.0</code><br>
+        <code class="inline">blockplan.lane_split_ratio: 0.5</code><br>
+        <code class="inline">timeline.callout_offset_y: 30.0</code><br>
+        <code class="inline">timeline.duration_offset_y: 30</code><br>
+        <code class="inline">timeline.duration_lane_gap_y: 8.0</code><br>
+        <code class="inline">timeline.marker_radius: 4.2</code><br>
+        <code class="inline">timeline.icon_size: 8</code><br>
+        <code class="inline">timeline_events.box_height: 24</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Structural declarations</strong></td>
+      <td>Lists of what exists. The <em>visual</em> styling of each item lives in <code class="inline">style_rules</code>, keyed by <code class="inline">select.swimlane</code> / <code class="inline">select.band</code> / etc.</td>
+      <td>
+        <code class="inline">blockplan.swimlanes: [{name: Engineering}, {name: Operations}]</code><br>
+        <code class="inline">blockplan.top_time_bands: [...]</code><br>
+        <code class="inline">blockplan.bottom_time_bands: [...]</code><br>
+        <code class="inline">blockplan.time_bands: [...]</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Palette references</strong></td>
+      <td>Names that token <code class="inline">style</code> bags resolve at render time. The palette is a name, not a color value — the actual colors come from the matplotlib palette registry.</td>
+      <td>
+        <code class="inline">colors.month_palette: "viridis"</code><br>
+        <code class="inline">colors.fiscal_palette: "Greys"</code><br>
+        <code class="inline">colors.group_palette: "Pastel1"</code>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Content references / runtime values</strong></td>
+      <td>String literals the renderer consumes as data, not as style.</td>
+      <td>
+        <code class="inline">watermark.text: "DRAFT"</code><br>
+        <code class="inline">timeline.today_date: ""</code><br>
+        <code class="inline">timeline.today_label_text: "Today"</code><br>
+        <code class="inline">base.default_missing_icon: "applet-closed"</code>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>Boundary cases — what looks like config but is actually styling</h4>
+
+<p>A few keys in legacy themes <em>look</em> like config because of where they sit in the YAML, but
+they are styling and migrate into <code class="inline">style_rules</code>:</p>
+
+<ul class="tight">
+  <li><code class="inline">colors.federal_holiday.color</code> / <code class="inline">colors.company_holiday.color</code> — styling. Becomes a <code class="inline">style_rules</code> entry on <code class="inline">box:day</code> with <code class="inline">select: { federal_holiday: true }</code>.</li>
+  <li><code class="inline">weekly.day_box.stroke_color</code>, <code class="inline">.fill_color</code>, <code class="inline">.number_color</code>, etc. — styling. Captured by the <code class="inline">define: box, as: day</code> rule and a <code class="inline">define: text, as: day_number</code> rule.</li>
+  <li><code class="inline">timeline.today_line_color</code> / <code class="inline">today_label_color</code> / <code class="inline">axis_color</code> / <code class="inline">tick_color</code> — styling. Move to <code class="inline">box:vline</code> / <code class="inline">text:today_label</code> / <code class="inline">line:axis</code> tokens (or scoped rules).</li>
+  <li><code class="inline">blockplan.timeband_fill_color</code>, <code class="inline">timeband_label_color</code>, etc. — styling. Move to per-band <code class="inline">style_rules</code> keyed by <code class="inline">select.band</code>.</li>
+</ul>
+
+<p>The structural mate of each item — e.g. <code class="inline">timeline.today_date: "20260315"</code>,
+<code class="inline">blockplan.timebands[i].label</code>, the swimlane <em>name</em> — stays put.
+Style and structure separate cleanly along the test in the callout above.</p>
+
+<div class="callout good">
+  <strong>Net result:</strong> after migration, <code class="inline">weekly</code>,
+  <code class="inline">timeline</code>, and <code class="inline">blockplan</code> shrink to small,
+  config-only sections — format strings, fiscal semantics, geometry, and the lists of bands and
+  swimlanes. Anything that controls appearance lives in one place: <code class="inline">style_rules</code>.
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="schema">4 · Unified rule schema</h2>
+
+<div class="schema-tree">
+<span class="k">style_rules:</span> <span class="ty">list&lt;Rule&gt;</span>
+<br>
+<br><span class="k">Rule</span>:
+<br>&nbsp;&nbsp;<span class="k">name</span>: <span class="ty">str</span>                          <span class="opt"># human label, used in error messages</span>
+<br>&nbsp;&nbsp;<span class="k">define</span>: <span class="ty">text | box | line | icon</span>      <span class="opt"># optional: declare a named token</span>
+<br>&nbsp;&nbsp;<span class="k">as</span>: <span class="ty">str</span>                            <span class="opt"># required when `define` set; the token name</span>
+<br>&nbsp;&nbsp;<span class="k">select</span>: <span class="ty">Selector</span>                    <span class="opt"># optional: empty match = always</span>
+<br>&nbsp;&nbsp;<span class="k">apply_to</span>: <span class="ty">Target | list&lt;Target&gt;</span>      <span class="opt"># required (unless `define` is set). List form fans out — see §4.5</span>
+<br>&nbsp;&nbsp;<span class="k">style</span>: <span class="ty">map&lt;str, any&gt;</span>                <span class="opt"># the property bag</span>
+<br>
+<br><span class="k">Selector</span>:
+<br>&nbsp;&nbsp;<span class="opt"># context</span>
+<br>&nbsp;&nbsp;<span class="k">papersize</span>:    <span class="ty">str | list&lt;str&gt;</span>
+<br>&nbsp;&nbsp;<span class="k">visualizer</span>:   <span class="ty">weekly | timeline | blockplan | mini | …</span>
+<br>&nbsp;&nbsp;<span class="k">scope</span>:        <span class="ty">base | header | footer | watermark | …</span>
+<br>&nbsp;&nbsp;<span class="opt"># element identity</span>
+<br>&nbsp;&nbsp;<span class="k">element</span>:      <span class="ty">str | list&lt;str&gt;</span>            <span class="opt"># ec-heading, ec-day-box, …</span>
+<br>&nbsp;&nbsp;<span class="opt"># content predicates (existing style_rules vocabulary)</span>
+<br>&nbsp;&nbsp;<span class="k">event_type</span>, <span class="k">task_name</span>, <span class="k">notes</span>, <span class="k">resource_group</span>,
+<br>&nbsp;&nbsp;<span class="k">resource_names</span>, <span class="k">wbs</span>, <span class="k">milestone</span>, <span class="k">rollup</span>,
+<br>&nbsp;&nbsp;<span class="k">federal_holiday</span>, <span class="k">company_holiday</span>, <span class="k">nonworkday</span>,
+<br>&nbsp;&nbsp;<span class="k">priority</span> | <span class="k">priority_min</span> | <span class="k">priority_max</span>,
+<br>&nbsp;&nbsp;<span class="k">percent_complete</span>: <span class="ty">{min, max}</span>, <span class="k">band</span>, <span class="k">value</span>, <span class="k">repeat</span>
+<br>
+<br><span class="k">Target</span> (<span class="k">apply_to</span>): one of
+<br>&nbsp;&nbsp;<span class="opt"># token slots (replaces text_styles / box_styles / …)</span>
+<br>&nbsp;&nbsp;<span class="ty">text:&lt;name&gt;</span> · <span class="ty">box:&lt;name&gt;</span> · <span class="ty">line:&lt;name&gt;</span> · <span class="ty">icon:&lt;name&gt;</span>
+<br>&nbsp;&nbsp;<span class="opt"># element classes (replaces element_styles)</span>
+<br>&nbsp;&nbsp;<span class="ty">element</span>
+<br>&nbsp;&nbsp;<span class="opt"># non-styling assignments (still rules, but no `style:` properties drawn)</span>
+<br>&nbsp;&nbsp;<span class="ty">lane</span>                                  <span class="opt"># routing: style: { swimlane: &lt;name&gt; }</span>
+<br>&nbsp;&nbsp;<span class="opt"># everything visual is a box. Stock token names:</span>
+<br>&nbsp;&nbsp;<span class="opt">#   box:day · box:duration · box:vline</span>
+<br>&nbsp;&nbsp;<span class="opt">#   box:swimlane_heading · box:swimlane_content</span>
+<br>&nbsp;&nbsp;<span class="opt">#   box:cell · box:header · box:callout · box:highlight · …</span>
+</div>
+
+<div class="callout">
+  <strong>The single mental model:</strong> a rule is a <code class="inline">select → apply_to → style</code>
+  triple. <code class="inline">define:</code> is a shorthand that creates a token slot; everything else
+  references that slot or applies styling directly to a target.
+</div>
+
+<h3 id="dayboxbox">4.1 · Why <code class="inline">day_box</code> folds into <code class="inline">box</code></h3>
+
+<p>
+A day cell is a rectangle with a fill, a stroke, an optional pattern overlay, and a content payload —
+the same primitive as every other box token. Yet the legacy schema models it as a fourth target type
+with its own property names (<code class="inline">fill_color</code> / <code class="inline">pattern_*</code>) that
+diverge from <code class="inline">box_styles</code> (<code class="inline">fill</code>, no patterns). That divergence
+is the source of three real problems:
+</p>
+
+<ul class="tight">
+  <li><strong>Patterns are box-shaped, but only day boxes can have them.</strong> A theme author who
+    wants a striped header cell or a hatched callout has no path; the property simply isn't recognized
+    on <code class="inline">box_styles</code>.</li>
+  <li><strong>Two name spellings for the same concept.</strong> <code class="inline">fill</code> in token
+    definitions, <code class="inline">fill_color</code> in day-box rules. Theme authors hit this every time
+    they copy a value from one section to another.</li>
+  <li><strong>Two code paths in the renderer.</strong> Day-box drawing has its own decoration pipeline;
+    other boxes go through the element-style path. Bug fixes have to land in both.</li>
+</ul>
+
+<h4>The unification</h4>
+<ol>
+  <li><strong>Pattern properties become box properties.</strong> Every <code class="inline">box:&lt;n&gt;</code>
+    accepts <code class="inline">pattern</code>, <code class="inline">pattern_color</code>,
+    <code class="inline">pattern_opacity</code>. The day box loses no expressive power; every other box gains
+    pattern support.</li>
+  <li><strong>The day cell is a named token: <code class="inline">box:day</code>.</strong> Default themes ship
+    with <code class="inline">define: box, as: day</code> setting the baseline fill/stroke that
+    <code class="inline">weekly.day_box.*</code> used to control. The <code class="inline">ec-day-box</code>
+    element class binds to it.</li>
+  <li><strong>Existing day-box content rules retarget to <code class="inline">box:day</code>.</strong> A rule
+    like "federal holidays get a tomato pattern" now reads <code class="inline">apply_to: box:day</code> with
+    a content selector — same predicate vocabulary, no special target.</li>
+  <li><strong>Property names harmonize on <code class="inline">fill</code>/<code class="inline">stroke</code>.</strong>
+    The loader accepts the legacy <code class="inline">fill_color</code> and <code class="inline">stroke_color</code>
+    spellings as aliases for one release, then deprecates them.</li>
+</ol>
+
+<div class="callout good">
+  <strong>Net effect:</strong> the target list drops from <em>four target families</em> (token, element,
+  day_box, content surfaces) to <em>three</em> (token, element, content surface). Patterns become a
+  first-class box feature usable on cells, callouts, headings — anywhere a box is drawn.
+</div>
+
+<h4>Before / after — federal-holiday day-box rule</h4>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">fedholidays</span>
+    <span class="k">apply_to:</span> <span class="v">day_box</span>
+    <span class="k">select:</span> { <span class="k">federal_holiday:</span> <span class="n">true</span> }
+    <span class="k">style:</span>
+      <span class="k">fill_color:</span> <span class="v">lightblue</span>
+      <span class="k">fill_opacity:</span> <span class="n">1.0</span>
+      <span class="k">pattern:</span> <span class="v">app</span>
+      <span class="k">pattern_color:</span> <span class="v">tomato</span>
+      <span class="k">pattern_opacity:</span> <span class="n">0.5</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">fedholidays</span>
+    <span class="k">apply_to:</span> <span class="v">box:day</span>
+    <span class="k">select:</span> { <span class="k">federal_holiday:</span> <span class="n">true</span> }
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">lightblue</span>
+      <span class="k">fill_opacity:</span> <span class="n">1.0</span>
+      <span class="k">pattern:</span> <span class="v">app</span>
+      <span class="k">pattern_color:</span> <span class="v">tomato</span>
+      <span class="k">pattern_opacity:</span> <span class="n">0.5</span></pre>
+  </div>
+</div>
+
+<h4>New capability — patterns on a non-day box</h4>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">callout</span>
+    <span class="k">define:</span> <span class="v">box</span>
+    <span class="k">as:</span> <span class="v">callout</span>
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">white</span>
+      <span class="k">stroke:</span> <span class="v">grey</span>
+      <span class="k">stroke_width:</span> <span class="n">1.0</span>
+      <span class="k">pattern:</span> <span class="v">diagonal-stripes</span>     <span class="c"># now allowed on any box</span>
+      <span class="k">pattern_color:</span> <span class="v">"#ddd"</span>
+      <span class="k">pattern_opacity:</span> <span class="n">0.25</span></pre>
+
+<h3 id="allboxes">4.2 · Why <code class="inline">duration</code>, <code class="inline">vertical_line</code>, and swimlane regions also fold into <code class="inline">box</code></h3>
+
+<p>
+The same argument that retired <code class="inline">day_box</code> applies to the remaining content
+surfaces. Each one is, visually, a filled-and-stroked rectangle that happens to be drawn in a
+different layout slot. Their schemas diverged only because each was added independently.
+</p>
+
+<table>
+  <thead><tr><th>Old target</th><th>What it actually draws</th><th>New target</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">duration</code></td>
+      <td>A horizontal bar with a fill, stroke, optional dash, and a date label hanging off the end</td>
+      <td><code class="inline">box:duration</code> (+ <code class="inline">text:duration_date</code> for the label)</td>
+    </tr>
+    <tr>
+      <td><code class="inline">vertical_line</code></td>
+      <td>A vertical band with a stroke on one edge and a (possibly alternating) fill</td>
+      <td><code class="inline">box:vline</code> — the "line" is just a stroke on a thin box</td>
+    </tr>
+    <tr>
+      <td><code class="inline">swimlane</code> (visual)</td>
+      <td>A heading cell + a content area, separated by a divider, with a label inside</td>
+      <td><code class="inline">box:swimlane_heading</code> + <code class="inline">box:swimlane_content</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">swimlane</code> (routing)</td>
+      <td>"This row belongs to lane Engineering" — no visual output</td>
+      <td><code class="inline">apply_to: lane</code> with <code class="inline">style: { swimlane: Engineering }</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>Property mapping</h4>
+<p>The legacy keys map onto the unified box vocabulary cleanly. The loader accepts both spellings
+during the deprecation window:</p>
+
+<table>
+  <thead><tr><th>Old key</th><th>New key</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">fill_color</code></td><td><code class="inline">fill</code></td><td>scalar or list (lists drive alternation, see below)</td></tr>
+    <tr><td><code class="inline">stroke_color</code></td><td><code class="inline">stroke</code></td><td></td></tr>
+    <tr><td><code class="inline">stroke_dasharray</code></td><td><code class="inline">dasharray</code></td><td>same SVG syntax</td></tr>
+    <tr><td><code class="inline">timeline_fill_color</code></td><td><code class="inline">fill</code> on <code class="inline">box:swimlane_content</code></td><td>was a separate field only because it lived inside the swimlane definition</td></tr>
+    <tr><td><code class="inline">label_color</code>, <code class="inline">label_align_h/v</code></td><td>on <code class="inline">text:swimlane_label</code></td><td>label styling is a text token, not a box property</td></tr>
+    <tr><td><code class="inline">align</code> (vline: <code class="inline">start</code>/<code class="inline">end</code>)</td><td><code class="inline">align</code> on <code class="inline">box:vline</code></td><td>retained as a placement hint, not a styling property — see note below</td></tr>
+    <tr><td><code class="inline">fill</code> as list (alternation)</td><td><code class="inline">fill</code> as list</td><td>matches existing <code class="inline">box_styles.timeband.fill_colors</code> behavior; renderer alternates per repeat</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Placement vs. styling.</strong> A handful of keys (<code class="inline">align</code> on
+  vlines, <code class="inline">split_ratio</code> on swimlanes) describe <em>where</em> the box is drawn,
+  not what it looks like. They live alongside style properties in the same rule's
+  <code class="inline">style:</code> bag for now — a future cleanup can promote them to a
+  <code class="inline">placement:</code> sub-key if the distinction earns its keep.
+</div>
+
+<h4>What this buys</h4>
+<ul class="tight">
+  <li><strong>One renderer primitive.</strong> <code class="inline">_draw_box(target, ctx)</code> is the
+    only path for any rectangular fill+stroke+pattern surface. Day cells, duration bars, vline bands,
+    swimlane headings — all collapse into one code path.</li>
+  <li><strong>Patterns everywhere.</strong> Hatched duration bars, striped swimlane headings, dotted
+    vline bands — all become trivial since pattern properties live on the box vocabulary.</li>
+  <li><strong>Symmetric rule shapes.</strong> Every visual content rule reads
+    <code class="inline">apply_to: box:&lt;name&gt;</code> + <code class="inline">select: …</code> +
+    <code class="inline">style: {fill, stroke, pattern, …}</code>. There is no second grammar to learn.</li>
+  <li><strong>Routing is the only non-box concern in the swimlane area</strong>, and it surfaces as
+    a single <code class="inline">apply_to: lane</code> target with one property
+    (<code class="inline">swimlane:</code>) — clearly separated from styling.</li>
+</ul>
+
+<h4>Before / after — duration coloring</h4>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Marshalls durations</span>
+    <span class="k">apply_to:</span> <span class="v">duration</span>
+    <span class="k">select:</span>
+      <span class="k">task_name:</span> [<span class="v">Marshalls</span>]
+      <span class="k">event_type:</span> <span class="v">duration</span>
+    <span class="k">style:</span>
+      <span class="k">fill_color:</span> <span class="v">red</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Marshalls durations</span>
+    <span class="k">apply_to:</span> <span class="v">box:duration</span>
+    <span class="k">select:</span>
+      <span class="k">task_name:</span> [<span class="v">Marshalls</span>]
+      <span class="k">event_type:</span> <span class="v">duration</span>
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">red</span></pre>
+  </div>
+</div>
+
+<h4>Before / after — vertical-line band</h4>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">blockplan_vline_0</span>
+    <span class="k">apply_to:</span> <span class="v">vertical_line</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">Sprint</span>, <span class="k">repeat:</span> <span class="n">true</span> }
+    <span class="k">style:</span>
+      <span class="k">align:</span> <span class="v">end</span>
+      <span class="k">stroke_color:</span> <span class="v">grey</span>
+      <span class="k">stroke_width:</span> <span class="n">1</span>
+      <span class="k">stroke_opacity:</span> <span class="n">0.33</span>
+      <span class="k">stroke_dasharray:</span> <span class="v">5,5</span>
+      <span class="k">fill_color:</span> [<span class="v">'#f5f5f5'</span>, <span class="v">'#ebebeb'</span>]</pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">blockplan_vline_0</span>
+    <span class="k">apply_to:</span> <span class="v">box:vline</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">Sprint</span>, <span class="k">repeat:</span> <span class="n">true</span> }
+    <span class="k">style:</span>
+      <span class="k">align:</span> <span class="v">end</span>          <span class="c"># placement hint</span>
+      <span class="k">stroke:</span> <span class="v">grey</span>
+      <span class="k">stroke_width:</span> <span class="n">1</span>
+      <span class="k">stroke_opacity:</span> <span class="n">0.33</span>
+      <span class="k">dasharray:</span> <span class="v">5,5</span>
+      <span class="k">fill:</span> [<span class="v">'#f5f5f5'</span>, <span class="v">'#ebebeb'</span>]   <span class="c"># list → alternates</span></pre>
+  </div>
+</div>
+
+<h4>Before / after — swimlane heading + content + routing</h4>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="c"># inside blockplan.swimlanes (config island)</span>
+<span class="k">- name:</span> <span class="v">Engineering</span>
+  <span class="k">match:</span>
+    <span class="k">resource_groups:</span> [<span class="v">eng</span>, <span class="v">dev</span>]
+  <span class="k">fill_color:</span> <span class="v">"#eef"</span>
+  <span class="k">label_color:</span> <span class="v">navy</span>
+  <span class="k">timeline_fill_color:</span> <span class="v">"#fafbff"</span>
+  <span class="k">label_align_h:</span> <span class="v">right</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Engineering — heading box</span>
+    <span class="k">apply_to:</span> <span class="v">box:swimlane_heading</span>
+    <span class="k">select:</span> { <span class="k">swimlane:</span> <span class="v">Engineering</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#eef"</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Engineering — content tint</span>
+    <span class="k">apply_to:</span> <span class="v">box:swimlane_content</span>
+    <span class="k">select:</span> { <span class="k">swimlane:</span> <span class="v">Engineering</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#fafbff"</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Engineering — label</span>
+    <span class="k">apply_to:</span> <span class="v">text:swimlane_label</span>
+    <span class="k">select:</span> { <span class="k">swimlane:</span> <span class="v">Engineering</span> }
+    <span class="k">style:</span> { <span class="k">color:</span> <span class="v">navy</span>, <span class="k">align_h:</span> <span class="v">right</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Route engineers to Engineering</span>
+    <span class="k">apply_to:</span> <span class="v">lane</span>
+    <span class="k">select:</span> { <span class="k">resource_group:</span> [<span class="v">eng</span>, <span class="v">dev</span>] }
+    <span class="k">style:</span> { <span class="k">swimlane:</span> <span class="v">Engineering</span> }</pre>
+  </div>
+</div>
+
+<div class="callout good">
+  <strong>The lane <em>list</em> is still config, not rules.</strong> <code class="inline">blockplan.swimlanes: [Engineering, Operations, …]</code>
+  declares which lanes exist (and their order). What used to be styling and matching <em>inside</em> each
+  lane entry now lives in <code class="inline">style_rules</code>, keyed by
+  <code class="inline">select.swimlane</code>.
+</div>
+
+<h3 id="vocab">4.3 · Style property vocabulary by target</h3>
+
+<table>
+  <thead><tr><th>Target</th><th>Recognized <code class="inline">style</code> keys</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">text:&lt;n&gt;</code></td><td><code class="inline">font</code>, <code class="inline">size</code>, <code class="inline">color</code>, <code class="inline">weight</code>, <code class="inline">italic</code></td></tr>
+    <tr><td><code class="inline">box:&lt;n&gt;</code></td><td><code class="inline">fill</code>, <code class="inline">fill_opacity</code>, <code class="inline">stroke</code>, <code class="inline">stroke_width</code>, <code class="inline">stroke_opacity</code>, <code class="inline">stroke_dasharray</code>, <code class="inline">fill_palette</code>, <code class="inline">fill_colors</code>, <code class="inline">pattern</code>, <code class="inline">pattern_color</code>, <code class="inline">pattern_opacity</code></td></tr>
+    <tr><td><code class="inline">line:&lt;n&gt;</code></td><td><code class="inline">color</code>, <code class="inline">width</code>, <code class="inline">opacity</code>, <code class="inline">dasharray</code></td></tr>
+    <tr><td><code class="inline">icon:&lt;n&gt;</code></td><td><code class="inline">icon</code>, <code class="inline">color</code>, <code class="inline">size</code></td></tr>
+    <tr><td><code class="inline">element</code></td><td><code class="inline">use: text:heading | box:cell | …</code> &nbsp; (+ same property keys to override token values; legacy aliases <code class="inline">fill_color</code>/<code class="inline">stroke_color</code> accepted)</td></tr>
+    <tr><td><code class="inline">lane</code></td><td><code class="inline">swimlane: &lt;name&gt;</code> (routing only — no visual properties)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="milestonesevents">4.4 · Milestones &amp; single-day events</h3>
+
+<p>
+The day box, the duration bar, the vline band, and the swimlane region cover the <em>container</em>
+surfaces. Two content types still need a styling story: <strong>single-day events</strong> (the row
+inside a day cell on weekly, or the callout on a timeline) and <strong>milestones</strong> (the
+diamond/flag marker plus its label). Today these are reachable only through generic element
+bindings (<code class="inline">ec-event-name</code>, <code class="inline">ec-milestone-marker</code>, etc.) — there is no
+way to say <em>"this milestone gets a red flag and bold label"</em> without forking the renderer.
+</p>
+
+<h4>The new tokens</h4>
+
+<table>
+  <thead><tr><th>Token</th><th>What it styles</th><th>Property family</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">box:event</code></td>
+      <td>Single-day event row inside a day cell · timeline event callout</td>
+      <td>full box vocab (fill, stroke, pattern, dasharray, fill_opacity, …)</td>
+    </tr>
+    <tr>
+      <td><code class="inline">box:milestone</code></td>
+      <td>Optional halo / background box behind a milestone marker</td>
+      <td>full box vocab</td>
+    </tr>
+    <tr>
+      <td><code class="inline">icon:event</code> <span style="color: var(--muted);">(existing)</span></td>
+      <td>The leading icon on an event row</td>
+      <td><code class="inline">icon</code>, <code class="inline">color</code>, <code class="inline">size</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">icon:milestone</code></td>
+      <td>The milestone marker glyph itself (diamond, flag, star, …)</td>
+      <td><code class="inline">icon</code>, <code class="inline">color</code>, <code class="inline">size</code>, <code class="inline">rotation</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">text:event_name</code> <span style="color: var(--muted);">(existing token)</span></td>
+      <td>Event name label</td>
+      <td>text vocab</td>
+    </tr>
+    <tr>
+      <td><code class="inline">text:event_notes</code> <span style="color: var(--muted);">(existing token)</span></td>
+      <td>Event secondary text</td>
+      <td>text vocab</td>
+    </tr>
+    <tr>
+      <td><code class="inline">text:milestone_label</code></td>
+      <td>Text rendered next to a milestone marker</td>
+      <td>text vocab</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Why a <code class="inline">box:milestone</code> at all?</strong> The marker glyph is an icon, but
+  themes often want a tinted halo or a colored callout behind it (e.g. red background for a critical
+  milestone). Modeling that as a separate <code class="inline">box:milestone</code> keeps the marker glyph and
+  its background independently overridable, with no special grammar.
+</div>
+
+<h4>Selectors that apply to events &amp; milestones</h4>
+
+<p>
+The same selector grammar from existing day-box rules carries over — no new keys. The renderer simply
+matches against the data attached to the event/milestone being drawn:
+</p>
+
+<table>
+  <thead><tr><th>Selector</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">event_type: event | milestone | duration</code></td><td>Discriminates the three content kinds.</td></tr>
+    <tr><td><code class="inline">milestone: true | false</code></td><td>Shorthand for <code class="inline">event_type: milestone</code>.</td></tr>
+    <tr><td><code class="inline">task_name</code>, <code class="inline">notes</code></td><td>Substring match against the event's name / notes.</td></tr>
+    <tr><td><code class="inline">priority</code> · <code class="inline">priority_min</code> · <code class="inline">priority_max</code></td><td>Numeric. Supports the same int-or-list / range form as blockplan swimlanes.</td></tr>
+    <tr><td><code class="inline">resource_group</code>, <code class="inline">resource_names</code>, <code class="inline">wbs</code></td><td>Routing-style metadata on the event.</td></tr>
+    <tr><td><code class="inline">percent_complete: {min, max}</code></td><td>Range match (e.g. <code class="inline">{min: 100}</code> → completed).</td></tr>
+    <tr><td><code class="inline">rollup: true</code></td><td>Match rollup/parent tasks vs. leaves.</td></tr>
+  </tbody>
+</table>
+
+<h4>Worked examples</h4>
+
+<p><strong>1 · All milestones get a gold diamond:</strong></p>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">milestone marker — default</span>
+    <span class="k">define:</span> <span class="v">icon</span>
+    <span class="k">as:</span> <span class="v">milestone</span>
+    <span class="k">style:</span> { <span class="k">icon:</span> <span class="v">diamond</span>, <span class="k">color:</span> <span class="v">gold</span>, <span class="k">size:</span> <span class="n">12</span> }</pre>
+
+<p><strong>2 · Critical milestones swap to a red flag with a bold label:</strong></p>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">critical milestone — marker</span>
+    <span class="k">apply_to:</span> <span class="v">icon:milestone</span>
+    <span class="k">select:</span> { <span class="k">priority_min:</span> <span class="n">1</span> }
+    <span class="k">style:</span> { <span class="k">icon:</span> <span class="v">flag</span>, <span class="k">color:</span> <span class="v">red</span>, <span class="k">size:</span> <span class="n">14</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">critical milestone — label</span>
+    <span class="k">apply_to:</span> <span class="v">text:milestone_label</span>
+    <span class="k">select:</span> { <span class="k">priority_min:</span> <span class="n">1</span> }
+    <span class="k">style:</span> { <span class="k">color:</span> <span class="v">red</span>, <span class="k">weight:</span> <span class="v">bold</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">critical milestone — halo</span>
+    <span class="k">apply_to:</span> <span class="v">box:milestone</span>
+    <span class="k">select:</span> { <span class="k">priority_min:</span> <span class="n">1</span> }
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">"#fde0e0"</span>
+      <span class="k">fill_opacity:</span> <span class="n">0.6</span>
+      <span class="k">stroke:</span> <span class="v">red</span>
+      <span class="k">stroke_width:</span> <span class="n">0.5</span></pre>
+
+<p><strong>3 · Single-day "Release" events get a striped background:</strong></p>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">release event — row</span>
+    <span class="k">apply_to:</span> <span class="v">box:event</span>
+    <span class="k">select:</span>
+      <span class="k">event_type:</span> <span class="v">event</span>
+      <span class="k">task_name:</span> [<span class="v">Release</span>, <span class="v">Cutover</span>]
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">"#fff5e0"</span>
+      <span class="k">pattern:</span> <span class="v">diagonal-stripes</span>
+      <span class="k">pattern_color:</span> <span class="v">gold</span>
+      <span class="k">pattern_opacity:</span> <span class="n">0.35</span>
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">release event — name</span>
+    <span class="k">apply_to:</span> <span class="v">text:event_name</span>
+    <span class="k">select:</span>
+      <span class="k">event_type:</span> <span class="v">event</span>
+      <span class="k">task_name:</span> [<span class="v">Release</span>, <span class="v">Cutover</span>]
+    <span class="k">style:</span> { <span class="k">color:</span> <span class="v">"#7a4a00"</span>, <span class="k">weight:</span> <span class="v">bold</span> }</pre>
+
+<p><strong>4 · Completed events get a low-key strikethrough look:</strong></p>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">completed event</span>
+    <span class="k">apply_to:</span> [<span class="v">box:event</span>, <span class="v">text:event_name</span>]
+    <span class="k">select:</span>
+      <span class="k">event_type:</span> <span class="v">event</span>
+      <span class="k">percent_complete:</span> { <span class="k">min:</span> <span class="n">100</span> }
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">"#f4f4f4"</span>           <span class="c"># applies to box:event</span>
+      <span class="k">color:</span> <span class="v">grey</span>             <span class="c"># applies to text:event_name</span>
+      <span class="k">italic:</span> <span class="n">true</span>            <span class="c"># applies to text:event_name</span></pre>
+
+<p style="font-size: 13px; color: var(--muted); margin-top: -4px;">
+  When <code class="inline">apply_to</code> is a list, the engine fans the rule out and routes each style
+  property to every target that recognizes it. See <a href="#multitarget">§4.5</a> for the full
+  semantics, precedence, and load-time validation rules.
+</p>
+
+<p><strong>5 · Different visualizers, different event styles:</strong></p>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">timeline events use a callout look</span>
+    <span class="k">apply_to:</span> <span class="v">box:event</span>
+    <span class="k">select:</span> { <span class="k">visualizer:</span> <span class="v">timeline</span> }
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">white</span>
+      <span class="k">fill_opacity:</span> <span class="n">0.85</span>
+      <span class="k">stroke:</span> <span class="v">grey</span>
+      <span class="k">stroke_width:</span> <span class="n">0.5</span>
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">weekly event rows are flat</span>
+    <span class="k">apply_to:</span> <span class="v">box:event</span>
+    <span class="k">select:</span> { <span class="k">visualizer:</span> <span class="v">weekly</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"none"</span>, <span class="k">stroke:</span> <span class="v">"none"</span> }</pre>
+
+<div class="callout good">
+  <strong>What this unlocks:</strong> theme authors can decorate any subset of milestones or single-day
+  events — by name, priority, completion state, resource group, or visualizer context — using the same
+  selector grammar already used for day boxes. No new keys, no new sections.
+</div>
+
+<h4>Day-box rules vs. event/milestone rules — keeping them straight</h4>
+
+<p>
+Both can use the predicate <code class="inline">milestone: true</code>. The difference is the target:
+</p>
+
+<ul class="tight">
+  <li><code class="inline">apply_to: box:day</code>, <code class="inline">select: { milestone: true }</code> — styles the
+    <em>host day cell</em> on a day that contains a milestone (e.g. tint the day gold).</li>
+  <li><code class="inline">apply_to: icon:milestone</code>, <code class="inline">select: { … }</code> — styles the
+    <em>milestone marker</em> itself.</li>
+  <li><code class="inline">apply_to: text:milestone_label</code> — styles the <em>label text</em> next to the marker.</li>
+  <li><code class="inline">apply_to: box:milestone</code> — styles the optional <em>halo</em> behind the marker.</li>
+</ul>
+
+<p>
+The selector grammar is identical; the target picks the surface. This is the same pattern used for
+durations: <code class="inline">box:day</code> tints the host cell, <code class="inline">box:duration</code> styles
+the bar.
+</p>
+
+<h3 id="multitarget">4.5 · Applying one rule to multiple targets</h3>
+
+<p>
+Several earlier examples (completed events, day-box + cell binding, etc.) used a list-valued
+<code class="inline">apply_to:</code>. This subsection formalizes that mechanism — what it means, when to
+use it, and what it doesn't do.
+</p>
+
+<h4>Syntax</h4>
+<p><code class="inline">apply_to:</code> accepts <strong>either</strong> a single target string
+<strong>or</strong> a list of target strings. Both forms are first-class — the list form is sugar for
+N copies of the same rule, one per target:</p>
+
+<div class="grid2">
+  <div>
+    <span class="tag note">list form (sugar)</span>
+<pre><span class="p">-</span> <span class="k">name:</span> <span class="v">muted completed items</span>
+  <span class="k">apply_to:</span> [<span class="v">box:event</span>, <span class="v">box:duration</span>, <span class="v">text:event_name</span>]
+  <span class="k">select:</span> { <span class="k">percent_complete:</span> { <span class="k">min:</span> <span class="n">100</span> } }
+  <span class="k">style:</span>
+    <span class="k">fill:</span> <span class="v">"#f4f4f4"</span>
+    <span class="k">color:</span> <span class="v">grey</span>
+    <span class="k">italic:</span> <span class="n">true</span></pre>
+  </div>
+  <div>
+    <span class="tag note">expanded equivalent</span>
+<pre><span class="p">-</span> <span class="k">name:</span> <span class="v">muted completed items (1/3)</span>
+  <span class="k">apply_to:</span> <span class="v">box:event</span>
+  <span class="k">select:</span> { <span class="k">percent_complete:</span> { <span class="k">min:</span> <span class="n">100</span> } }
+  <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#f4f4f4"</span>, <span class="k">color:</span> <span class="v">grey</span>, <span class="k">italic:</span> <span class="n">true</span> }
+<span class="p">-</span> <span class="k">name:</span> <span class="v">muted completed items (2/3)</span>
+  <span class="k">apply_to:</span> <span class="v">box:duration</span>
+  <span class="k">select:</span> { <span class="k">percent_complete:</span> { <span class="k">min:</span> <span class="n">100</span> } }
+  <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#f4f4f4"</span>, <span class="k">color:</span> <span class="v">grey</span>, <span class="k">italic:</span> <span class="n">true</span> }
+<span class="p">-</span> <span class="k">name:</span> <span class="v">muted completed items (3/3)</span>
+  <span class="k">apply_to:</span> <span class="v">text:event_name</span>
+  <span class="k">select:</span> { <span class="k">percent_complete:</span> { <span class="k">min:</span> <span class="n">100</span> } }
+  <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#f4f4f4"</span>, <span class="k">color:</span> <span class="v">grey</span>, <span class="k">italic:</span> <span class="n">true</span> }</pre>
+  </div>
+</div>
+
+<h4>Property routing across targets</h4>
+<p>
+Not every key in <code class="inline">style:</code> applies to every target. <code class="inline">fill</code> is
+meaningful for a <code class="inline">box</code> but not for a <code class="inline">text</code>;
+<code class="inline">italic</code> is meaningful for <code class="inline">text</code> but not for
+<code class="inline">box</code> or <code class="inline">icon</code>. The rule is:
+</p>
+
+<ul class="tight">
+  <li><strong>Each target consumes only the keys it recognizes.</strong> Unknown keys are silently dropped <em>per target</em>, not for the whole rule.</li>
+  <li><strong>Load-time validation.</strong> Every key in <code class="inline">style:</code> must be recognized by <em>at least one</em> target in the list. A key recognized by none is a typo — the loader emits a warning and (in strict mode) fails.</li>
+  <li><strong>No silent shadowing.</strong> If two listed targets both recognize a key (e.g. both <code class="inline">box:event</code> and <code class="inline">box:duration</code> consume <code class="inline">fill</code>), they each apply it independently. Fan-out is per-target, not first-wins.</li>
+</ul>
+
+<div class="callout">
+  <strong>Why this works:</strong> the property vocabularies for <code class="inline">box</code>,
+  <code class="inline">text</code>, <code class="inline">icon</code>, and <code class="inline">line</code> are
+  <em>nearly disjoint</em> by design. The handful of overlaps (<code class="inline">color</code> on text
+  and icon; <code class="inline">size</code> on text and icon) carry the same intent across both. So the
+  routing rule is "send each key to every target that knows it" — no per-target sub-bag is needed for
+  the common case.
+</div>
+
+<h4>Precedence: a fanned-out rule counts as N applications</h4>
+
+<p>
+The Pass-3 resolver from <a href="#resolution">§6</a> walks <code class="inline">style_rules</code> in order and
+applies each match to the rendered surface. A list-valued rule contributes <em>one</em> application
+per (target, position) pair. Concretely:
+</p>
+
+<ul class="tight">
+  <li>Two rules — rule A with <code class="inline">apply_to: [box:event, text:event_name]</code> followed by
+    rule B with <code class="inline">apply_to: text:event_name</code> — produce three applications:
+    A→box:event, A→text:event_name, B→text:event_name. B wins on text:event_name (later); A is the
+    only rule on box:event.</li>
+  <li>Within a single rule, the order of the target list does not matter — the targets do not collide
+    with each other (they are different surfaces).</li>
+</ul>
+
+<h4>Multi-target vs. multi-selector — keep them straight</h4>
+
+<p>Two superficially similar shapes solve different problems:</p>
+
+<table>
+  <thead><tr><th>Goal</th><th>Mechanism</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>One style, several <em>surfaces</em></td>
+      <td>List-valued <code class="inline">apply_to</code></td>
+      <td><code class="inline">apply_to: [box:event, text:event_name]</code></td>
+    </tr>
+    <tr>
+      <td>One style, several <em>element classes</em> (CSS-like)</td>
+      <td>Single target <code class="inline">element</code> + list-valued <code class="inline">select.element</code></td>
+      <td><code class="inline">apply_to: element, select: { element: [ec-day-box, ec-cell] }</code></td>
+    </tr>
+    <tr>
+      <td>One style, several <em>matching values</em> on one selector</td>
+      <td>Single target + list-valued selector predicate</td>
+      <td><code class="inline">select: { task_name: [Release, Cutover] }</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+The first writes to multiple <em>kinds</em> of surface in one breath. The second and third match
+multiple <em>data items</em> against a single surface. They compose freely: a list-valued
+<code class="inline">apply_to</code> alongside a list-valued selector simply fans out the cross-product.
+</p>
+
+<h4>Restrictions</h4>
+
+<ul class="tight">
+  <li><strong>No list with <code class="inline">define:</code>.</strong> A definition rule registers exactly one
+    token, so <code class="inline">apply_to</code> is implicit and a list is meaningless. The loader rejects
+    <code class="inline">define:</code> + list <code class="inline">apply_to:</code>.</li>
+  <li><strong>No wildcards (yet).</strong> <code class="inline">box:*</code> or <code class="inline">text:*</code>
+    is not accepted. Listing the targets explicitly keeps the impact of a rule grep-able.</li>
+  <li><strong>Mixing <code class="inline">lane</code> with visual targets is allowed but unusual.</strong>
+    A list of <code class="inline">[lane, box:swimlane_heading]</code> would assign routing <em>and</em> tint
+    the heading in one rule; readable for some authors, opaque for others. Allowed; not recommended.</li>
+</ul>
+
+<h4>What you cannot do — and the future-work alternative</h4>
+
+<p>
+There is no per-target <code class="inline">style</code> sub-bag in v1. If you need to send <em>different</em>
+property values to different targets, write separate rules. A heavier alternative — keyed style bags
+like <code class="inline">style: { box:event: { fill: red }, text:event_name: { color: red } }</code> — is
+deferred; the property-routing rule covers all observed real-world cases in the existing themes, and
+the keyed form would muddy the otherwise-flat <code class="inline">style:</code> shape.
+</p>
+
+<div class="callout good">
+  <strong>Rule of thumb:</strong> reach for list-valued <code class="inline">apply_to</code> when the same
+  visual treatment (a tint, a fade, a state indicator) needs to land on more than one surface
+  simultaneously. Reach for separate rules when each surface needs a different property value, even if
+  the predicate is shared.
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="examples">5 · Before / after</h2>
+
+<h3>5.1 · A text token with a paper-size override</h3>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">text_styles:</span>
+  <span class="k">heading:</span>
+    <span class="k">font:</span> <span class="v">"RobotoCondensed-Light"</span>
+    <span class="k">size:</span> <span class="n">10</span>
+    <span class="k">color:</span> <span class="v">"grey"</span>
+    <span class="k">size_rules:</span>
+      <span class="p">-</span> <span class="k">font_size:</span> <span class="n">10</span>
+        <span class="k">when:</span> { <span class="k">papersize:</span> [<span class="v">letter</span>, <span class="v">tabloid</span>] }
+      <span class="p">-</span> <span class="k">font_size:</span> <span class="n">8</span>
+        <span class="k">when:</span> { <span class="k">papersize:</span> [<span class="v">3x5</span>, <span class="v">5x8</span>] }</pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">heading (default)</span>
+    <span class="k">define:</span> <span class="v">text</span>
+    <span class="k">as:</span> <span class="v">heading</span>
+    <span class="k">style:</span>
+      <span class="k">font:</span> <span class="v">"RobotoCondensed-Light"</span>
+      <span class="k">size:</span> <span class="n">10</span>
+      <span class="k">color:</span> <span class="v">"grey"</span>
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">heading (small paper)</span>
+    <span class="k">apply_to:</span> <span class="v">text:heading</span>
+    <span class="k">select:</span> { <span class="k">papersize:</span> [<span class="v">3x5</span>, <span class="v">5x8</span>] }
+    <span class="k">style:</span> { <span class="k">size:</span> <span class="n">8</span> }</pre>
+  </div>
+</div>
+<p class="arrow">▼</p>
+<div class="callout good">
+  <strong>What it buys you:</strong> the override rule is now a peer of every other rule. You can add
+  <code class="inline">visualizer: weekly</code> or <code class="inline">event_type: duration</code> to
+  the same predicate without inventing a new key shape.
+</div>
+
+<h3>5.2 · A box token plus an element binding</h3>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">box_styles:</span>
+  <span class="k">cell:</span>
+    <span class="k">fill:</span> <span class="v">"grey"</span>
+    <span class="k">fill_opacity:</span> <span class="n">0.25</span>
+    <span class="k">stroke:</span> <span class="v">"grey"</span>
+    <span class="k">stroke_width:</span> <span class="n">2</span>
+
+<span class="k">element_styles:</span>
+  <span class="k">ec-day-box:</span> { <span class="k">box_style:</span> <span class="v">cell</span> }
+  <span class="k">ec-cell:</span>    { <span class="k">box_style:</span> <span class="v">cell</span> }</pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">cell</span>
+    <span class="k">define:</span> <span class="v">box</span>
+    <span class="k">as:</span> <span class="v">cell</span>
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">"grey"</span>
+      <span class="k">fill_opacity:</span> <span class="n">0.25</span>
+      <span class="k">stroke:</span> <span class="v">"grey"</span>
+      <span class="k">stroke_width:</span> <span class="n">2</span>
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">bind day-box and cell elements</span>
+    <span class="k">apply_to:</span> <span class="v">element</span>
+    <span class="k">select:</span> { <span class="k">element:</span> [<span class="v">ec-day-box</span>, <span class="v">ec-cell</span>] }
+    <span class="k">style:</span> { <span class="k">use:</span> <span class="v">box:cell</span> }</pre>
+  </div>
+</div>
+
+<h3>5.3 · An icon style — and a contextual override</h3>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">icon_styles:</span>
+  <span class="k">overflow:</span>
+    <span class="k">icon:</span> <span class="v">"overflow"</span>
+    <span class="k">color:</span> <span class="v">"red"</span>
+
+<span class="c"># no native way to make overflow gold on tabloid only —</span>
+<span class="c"># would have to fork the theme</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">overflow icon</span>
+    <span class="k">define:</span> <span class="v">icon</span>
+    <span class="k">as:</span> <span class="v">overflow</span>
+    <span class="k">style:</span> { <span class="k">icon:</span> <span class="v">overflow</span>, <span class="k">color:</span> <span class="v">red</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">overflow icon — tabloid</span>
+    <span class="k">apply_to:</span> <span class="v">icon:overflow</span>
+    <span class="k">select:</span> { <span class="k">papersize:</span> <span class="v">tabloid</span> }
+    <span class="k">style:</span> { <span class="k">color:</span> <span class="v">gold</span> }</pre>
+  </div>
+</div>
+
+<h3>5.4 · A content rule — retargeted to <code class="inline">box:day</code></h3>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">federal holidays</span>
+    <span class="k">apply_to:</span> <span class="v">box:day</span>     <span class="c"># was: day_box</span>
+    <span class="k">select:</span> { <span class="k">federal_holiday:</span> <span class="n">true</span> }
+    <span class="k">style:</span>
+      <span class="k">fill:</span> <span class="v">lightblue</span>     <span class="c"># was: fill_color</span>
+      <span class="k">pattern:</span> <span class="v">app</span>
+      <span class="k">pattern_color:</span> <span class="v">tomato</span>
+      <span class="k">pattern_opacity:</span> <span class="n">0.5</span></pre>
+
+<p style="font-size: 13px; color: var(--muted); margin-top: -4px;">
+  Same predicate, same intent — but the rule now uses the universal box vocabulary. See
+  <a href="#dayboxbox">§4.1</a> for the rationale.
+</p>
+
+<h3>5.5 · A swimlane routing rule</h3>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">swimlane_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Route Engineering</span>
+    <span class="k">select:</span>
+      <span class="k">resource_group:</span> [<span class="v">engineering</span>, <span class="v">dev</span>]
+    <span class="k">apply_to:</span> <span class="v">Engineering</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Route Engineering</span>
+    <span class="k">apply_to:</span> <span class="v">lane</span>          <span class="c"># non-styling assignment</span>
+    <span class="k">select:</span>
+      <span class="k">resource_group:</span> [<span class="v">engineering</span>, <span class="v">dev</span>]
+    <span class="k">style:</span> { <span class="k">swimlane:</span> <span class="v">Engineering</span> }</pre>
+  </div>
+</div>
+<p style="font-size: 13px; color: var(--muted); margin-top: -4px;">
+  Visual styling for the lane (heading fill, content tint, label color) is separate — see
+  <a href="#allboxes">§4.2</a> for the full split.
+</p>
+
+<h3>5.6 · The global base font size</h3>
+<div class="grid2">
+  <div>
+    <span class="tag before">before</span>
+<pre><span class="k">base:</span>
+  <span class="k">font_family:</span> <span class="v">"RobotoCondensed-Light"</span>
+  <span class="k">size_rule:</span>
+    <span class="p">-</span> <span class="k">font_size:</span> <span class="n">10</span>
+      <span class="k">when:</span> { <span class="k">papersize:</span> [<span class="v">letter</span>, <span class="v">tabloid</span>] }
+    <span class="p">-</span> <span class="k">font_size:</span> <span class="n">8</span>
+      <span class="k">when:</span> { <span class="k">papersize:</span> [<span class="v">3x5</span>, <span class="v">5x8</span>] }</pre>
+  </div>
+  <div>
+    <span class="tag after">after</span>
+<pre><span class="k">base:</span>
+  <span class="k">font_family:</span> <span class="v">"RobotoCondensed-Light"</span>
+
+<span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">base font — small paper</span>
+    <span class="k">apply_to:</span> <span class="v">text:base</span>
+    <span class="k">select:</span> { <span class="k">papersize:</span> [<span class="v">3x5</span>, <span class="v">5x8</span>] }
+    <span class="k">style:</span> { <span class="k">size:</span> <span class="n">8</span> }</pre>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="resolution">6 · Resolution &amp; precedence</h2>
+
+<p>The theme engine builds the resolved style for any (element, context, content) tuple in three passes:</p>
+
+<ol>
+  <li>
+    <strong>Pass 1 — token registry.</strong> Walk <code class="inline">style_rules</code> in order. For
+    every rule with <code class="inline">define:</code>, register the token under
+    <code class="inline">&lt;kind&gt;:&lt;as&gt;</code> with its <code class="inline">style</code> bag. Definitions
+    with a <code class="inline">select</code> are stored as conditional layers; later definitions of the
+    same name simply append.
+  </li>
+  <li>
+    <strong>Pass 2 — token resolution.</strong> For each requested token (e.g.
+    <code class="inline">text:heading</code> at papersize=letter), merge the matching layers
+    in order. This collapses the old <code class="inline">size_rules</code> behavior with no special case.
+  </li>
+  <li>
+    <strong>Pass 3 — application.</strong> For the current draw call, walk all rules whose
+    <code class="inline">apply_to</code> matches the surface (element, day_box, swimlane, …) and whose
+    <code class="inline">select</code> matches the context. Rules with <code class="inline">style.use:</code>
+    pull from the resolved token; rules with raw properties override them. Last match wins.
+  </li>
+</ol>
+
+<div class="callout">
+  <strong>Determinism:</strong> a single ordered list means no priority field, no ambiguity from
+  cross-section interaction. To override a base theme value, append a rule.
+  <code class="inline">extends:</code> simply prepends the parent theme's rules to the child's.
+</div>
+
+<h3>6.1 · An empty <code class="inline">select</code> matches always</h3>
+<p>This makes "definition" a degenerate case of "application" — no special grammar.</p>
+
+<h3>6.2 · What if I just want to read the heading style?</h3>
+<p>
+The engine exposes <code class="inline">theme.resolve(token, context)</code>. Renderer code calls
+<code class="inline">theme.resolve("text:heading", ctx)</code> and gets a fully merged dict — same API
+it uses today against <code class="inline">text_styles</code>.
+</p>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="migration">7 · Migration — single clean break</h2>
+
+<p>
+There is no phased rollout, no parallel legacy parser, and no deprecation window. After this design
+ships, the only theme schema the engine recognizes is the unified one. All in-tree themes are
+converted as part of the implementation PR; any external themes are converted by running the
+one-shot converter once.
+</p>
+
+<div class="callout">
+  <strong>Why a clean break.</strong> A dual-path loader doubles the surface area we have to test, and
+  the legacy schema is the very thing this design exists to retire. Carrying it forward as
+  "supported but discouraged" preserves all the cost (two grammars, two code paths, two sets of
+  tests) and keeps the consolidation from finishing. We take the cost once, in one PR.
+</div>
+
+<h3 id="impl-pr">7.1 · The implementation PR — what lands at once</h3>
+<ol>
+  <li><strong>New loader.</strong> Parses unified <code class="inline">style_rules</code> only. Legacy
+    section names (<code class="inline">text_styles</code>, <code class="inline">box_styles</code>,
+    <code class="inline">line_styles</code>, <code class="inline">icon_styles</code>,
+    <code class="inline">element_styles</code>, <code class="inline">swimlane_rules</code>, embedded
+    <code class="inline">size_rules</code>, <code class="inline">base.size_rule</code>) become hard
+    parse errors with a message that points at the converter.</li>
+  <li><strong>New target/property vocabulary only.</strong> No property aliases —
+    <code class="inline">fill_color</code>, <code class="inline">stroke_color</code>,
+    <code class="inline">stroke_dasharray</code>, <code class="inline">timeline_fill_color</code> are
+    not recognized anywhere in the codebase. Same for the retired targets
+    (<code class="inline">day_box</code>, <code class="inline">duration</code>,
+    <code class="inline">vertical_line</code>, <code class="inline">swimlane</code>): unrecognized.</li>
+  <li><strong>Renderer collapse.</strong> One <code class="inline">_draw_box(target, ctx)</code>
+    primitive handles fill, stroke, dash, pattern, and (via list-valued <code class="inline">fill</code>)
+    alternation. The day-cell, duration-bar, vline-band, and swimlane heading/content draw sites all
+    funnel through it. The legacy day-box decoration pipeline, the duration-specific draw path, and
+    the milestone-marker line-style fallback are deleted.</li>
+  <li><strong>All 17 in-tree themes converted.</strong> The 17 YAMLs under
+    <code class="inline">config/themes/</code> are rewritten as unified
+    <code class="inline">style_rules</code> and committed in the same PR.</li>
+  <li><strong>Docs and SAMPLE.yaml rewritten.</strong> Every example switches to the unified form. No
+    "legacy reference" appendix.</li>
+  <li><strong>One-shot converter.</strong> <code class="inline">tools/migrate_theme.py</code> reads a
+    legacy YAML and emits the unified form. Used to produce the conversions in step 4 and shipped for
+    external consumers to run once. Not wired into the loader and not depended on at runtime.</li>
+</ol>
+
+<h3 id="conversion">7.2 · Conversion mappings (used once, by the converter)</h3>
+
+<p>These mappings live <em>only</em> in <code class="inline">tools/migrate_theme.py</code>. The runtime
+loader has no knowledge of them.</p>
+
+<h4>Section &amp; target rewrites</h4>
+<table>
+  <thead><tr><th>Legacy</th><th>Unified</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">text_styles.&lt;n&gt;</code></td><td><code class="inline">{define: text, as: &lt;n&gt;, style: …}</code></td></tr>
+    <tr><td><code class="inline">box_styles.&lt;n&gt;</code></td><td><code class="inline">{define: box, as: &lt;n&gt;, style: …}</code></td></tr>
+    <tr><td><code class="inline">line_styles.&lt;n&gt;</code></td><td><code class="inline">{define: line, as: &lt;n&gt;, style: …}</code></td></tr>
+    <tr><td><code class="inline">icon_styles.&lt;n&gt;</code></td><td><code class="inline">{define: icon, as: &lt;n&gt;, style: …}</code></td></tr>
+    <tr><td>embedded <code class="inline">size_rules</code> on a text style</td><td>flat rules with <code class="inline">apply_to: text:&lt;n&gt;</code> + <code class="inline">select.papersize</code></td></tr>
+    <tr><td><code class="inline">base.size_rule</code></td><td><code class="inline">apply_to: text:base</code> + <code class="inline">select.papersize</code></td></tr>
+    <tr><td><code class="inline">element_styles.&lt;ec-name&gt;</code></td><td><code class="inline">apply_to: element, select: {element: ec-name}, style: {use: …}</code></td></tr>
+    <tr><td><code class="inline">apply_to: day_box</code></td><td><code class="inline">apply_to: box:day</code></td></tr>
+    <tr><td><code class="inline">apply_to: duration</code></td><td><code class="inline">apply_to: box:duration</code></td></tr>
+    <tr><td><code class="inline">apply_to: vertical_line</code></td><td><code class="inline">apply_to: box:vline</code></td></tr>
+    <tr><td><code class="inline">swimlane_rules</code> entry</td><td><code class="inline">apply_to: lane, style: {swimlane: &lt;name&gt;}</code></td></tr>
+    <tr><td><code class="inline">blockplan.swimlanes[i].fill_color</code></td><td><code class="inline">apply_to: box:swimlane_heading, select: {swimlane: &lt;name&gt;}</code></td></tr>
+    <tr><td><code class="inline">blockplan.swimlanes[i].timeline_fill_color</code></td><td><code class="inline">apply_to: box:swimlane_content, select: {swimlane: &lt;name&gt;}</code></td></tr>
+    <tr><td><code class="inline">blockplan.swimlanes[i].label_color</code> / <code class="inline">label_align_*</code></td><td><code class="inline">apply_to: text:swimlane_label, select: {swimlane: &lt;name&gt;}</code></td></tr>
+    <tr><td><code class="inline">blockplan.swimlanes[i].match</code></td><td><code class="inline">apply_to: lane</code> with the same predicates</td></tr>
+  </tbody>
+</table>
+
+<h4>Property renames (converter only)</h4>
+<ul class="tight">
+  <li><code class="inline">fill_color</code> → <code class="inline">fill</code></li>
+  <li><code class="inline">stroke_color</code> → <code class="inline">stroke</code></li>
+  <li><code class="inline">stroke_dasharray</code> → <code class="inline">dasharray</code></li>
+  <li><code class="inline">timeline_fill_color</code> → <code class="inline">fill</code> on <code class="inline">box:swimlane_content</code></li>
+  <li><code class="inline">font_size</code> (in embedded <code class="inline">size_rules</code>) → <code class="inline">size</code></li>
+</ul>
+
+<h4>Element-binding rewrites for events &amp; milestones</h4>
+<table>
+  <thead><tr><th>Legacy</th><th>Unified</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">ec-event-name: {text_style: body}</code></td><td><code class="inline">apply_to: element, select: {element: ec-event-name}, style: {use: text:event_name}</code></td></tr>
+    <tr><td><code class="inline">ec-event-notes: {text_style: body_secondary}</code></td><td><code class="inline">use: text:event_notes</code></td></tr>
+    <tr><td><code class="inline">ec-event-icon: {icon_style: event}</code></td><td><code class="inline">use: icon:event</code></td></tr>
+    <tr><td><code class="inline">ec-milestone-marker: {line_style: axis}</code></td><td><code class="inline">use: icon:milestone</code></td></tr>
+    <tr><td><code class="inline">ec-milestone-flag: {line_style: axis}</code></td><td><code class="inline">use: icon:milestone</code> + <code class="inline">style: {icon: flag}</code></td></tr>
+  </tbody>
+</table>
+<p style="font-size: 13px; color: var(--muted);">
+  The milestone-marker rewrite is a semantic shift: the legacy theme exposed only stroke properties
+  via <code class="inline">line_style</code>, while the new <code class="inline">icon:milestone</code> exposes
+  <code class="inline">color</code> / <code class="inline">size</code>. The converter maps
+  <code class="inline">line.color</code> → <code class="inline">icon.color</code>; if any other line
+  property is set, the converter prints the source line and exits non-zero so the author can decide
+  what the new value should be. There is no runtime fallback.
+</p>
+
+<h3 id="default-tokens">7.3 · Default-theme tokens</h3>
+<p>The converted default theme contains <code class="inline">define</code> rules for the canonical
+tokens: <code class="inline">box:day</code>, <code class="inline">box:duration</code>,
+<code class="inline">box:vline</code>, <code class="inline">box:swimlane_heading</code>,
+<code class="inline">box:swimlane_content</code>, <code class="inline">box:event</code>,
+<code class="inline">box:milestone</code>, <code class="inline">icon:milestone</code>,
+<code class="inline">text:milestone_label</code> (alongside the previously existing text/box/icon
+tokens). These capture what <code class="inline">weekly.day_box.*</code>,
+<code class="inline">durations.*</code>, the inline blockplan swimlane defaults, and the
+<code class="inline">ec-event-*</code> / <code class="inline">ec-milestone-*</code> bindings used to
+provide. The legacy non-style config keys themselves
+(<code class="inline">weekly.day_box.stroke_color</code> etc.) are removed from
+<code class="inline">CalendarConfig</code> in the same PR.</p>
+
+<h3 id="validation">7.4 · Validation strategy</h3>
+<ul class="tight">
+  <li><strong>Round-trip rendering test.</strong> For each of the 17 in-tree themes: render a
+    representative calendar with the converter's output and compare the SVG to a frozen baseline
+    captured from the current code <em>before</em> the migration PR. Pixel-level diff via the existing
+    SVG comparison harness; non-trivial diffs are reviewed by hand and either accepted as intentional
+    (e.g. milestone markers gaining a color from <code class="inline">icon:milestone</code>) or fixed
+    in the converter.</li>
+  <li><strong>List-valued <code class="inline">fill</code> coverage.</strong> The legacy vline rule used a
+    list <code class="inline">fill_color</code> for alternation; the unified <code class="inline">box</code> vocabulary
+    accepts list <code class="inline">fill</code> with the same semantics. The converter test must include
+    at least one list-valued case so a scalar/list confusion fails loudly.</li>
+  <li><strong>Loader rejects legacy.</strong> A unit test feeds each retired section name to the
+    loader and asserts the parse error names the converter.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="open">8 · Decisions</h2>
+
+<p>All open questions from earlier revisions are now resolved. None of the deferred shortcuts are
+adopted; the schema stays a single uniform grammar.</p>
+
+<h3>8.1 · Resolved</h3>
+
+<table>
+  <thead><tr><th style="width: 22%;">Question</th><th style="width: 12%;">Decision</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Inline shorthand</strong> (<code class="inline">apply_to: text:heading@small</code>)</td>
+      <td><span class="tag before">no</span></td>
+      <td>Adding a second grammar to express what <code class="inline">select</code> already expresses. The shorthand would only save one line in a small subset of rules, in exchange for a parser that has to recognize a parallel form everywhere <code class="inline">apply_to</code> appears. Authors write <code class="inline">apply_to: text:heading</code> + <code class="inline">select: { papersize: small }</code> — explicit, greppable, identical to every other rule in the file.</td>
+    </tr>
+    <tr>
+      <td><strong>Per-rule disable</strong> (<code class="inline">enabled: false</code>)</td>
+      <td><span class="tag before">no</span></td>
+      <td>YAML comments already do this. Adding a runtime flag invites half-disabled rules sitting in production themes; commented-out rules are visually obvious in a diff.</td>
+    </tr>
+    <tr>
+      <td><strong>Element wildcards</strong> (<code class="inline">element: ec-*-icon</code>)</td>
+      <td><span class="tag before">no</span></td>
+      <td>The list-valued <code class="inline">select.element</code> form (see <a href="#multitarget">§4.5</a>) already handles "match several element classes" without a glob grammar. Wildcards would invite surprise matches when new <code class="inline">ec-*</code> elements are added; explicit lists stay grep-able and intentional.</td>
+    </tr>
+    <tr>
+      <td><strong>Visualizer scoping shorthand</strong> (top-level <code class="inline">when: { visualizer: weekly }</code> wrapper)</td>
+      <td><span class="tag before">no</span></td>
+      <td>Same argument as the inline-shorthand decision: adding a second grammar to express what <code class="inline">select.visualizer</code> already expresses. The supposed readability win is a few saved lines per file in exchange for a wrapper form that has to be recognized everywhere a rule list appears, plus a question every reader asks ("does this rule still match if I move it?"). Authors write <code class="inline">select: { visualizer: weekly }</code> on each rule that needs it — explicit, local, identical to every other selector.</td>
+    </tr>
+    <tr>
+      <td><strong>Where does <code class="inline">axis:</code> live?</strong></td>
+      <td><span class="tag after">dissolved</span></td>
+      <td>Every key in the legacy <code class="inline">axis:</code> stanza either migrates to <code class="inline">style_rules</code> or duplicates a key already living elsewhere. The stanza disappears. See §8.2 below for the full mapping.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="axis-dissolve">8.2 · Dissolving the <code class="inline">axis:</code> stanza</h3>
+
+<p>The legacy default.yaml axis stanza:</p>
+
+<pre><span class="k">axis:</span>
+  <span class="k">line_style:</span> <span class="v">axis</span>
+  <span class="k">tick:</span>
+    <span class="k">color:</span> <span class="v">"grey"</span>
+    <span class="k">label_style:</span> <span class="v">caption</span>
+    <span class="k">date_format:</span> <span class="v">"M/D"</span>
+  <span class="k">today:</span>
+    <span class="k">line_style:</span> <span class="v">today</span>
+    <span class="k">label_color:</span> <span class="v">"grey"</span>
+    <span class="k">label_text:</span> <span class="v">"Today"</span></pre>
+
+<p>splits cleanly:</p>
+
+<table>
+  <thead><tr><th>Legacy key</th><th>Where it lands</th><th>Form</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">axis.line_style: axis</code></td>
+      <td><code class="inline">style_rules</code> (binding)</td>
+      <td><code class="inline">apply_to: element, select: { element: ec-axis-line }, style: { use: line:axis }</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.tick.color: "grey"</code></td>
+      <td><code class="inline">style_rules</code> (token)</td>
+      <td><code class="inline">define: line, as: tick, style: { color: grey, width: 0.5, opacity: 1.0 }</code> — bound to <code class="inline">ec-axis-tick</code> via element rule</td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.tick.label_style: caption</code></td>
+      <td><code class="inline">style_rules</code> (binding)</td>
+      <td><code class="inline">apply_to: element, select: { element: ec-tick-label }, style: { use: text:caption }</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.tick.date_format: "M/D"</code></td>
+      <td><span class="tag note">duplicate — drop</span></td>
+      <td>Same value already lives at <code class="inline">timeline.tick_label_format</code>. The axis-stanza copy is removed; the timeline key remains as the single source.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.today.line_style: today</code></td>
+      <td><code class="inline">style_rules</code> (binding)</td>
+      <td><code class="inline">apply_to: element, select: { element: ec-today-line }, style: { use: line:today }</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.today.label_color: "grey"</code></td>
+      <td><code class="inline">style_rules</code> (rule)</td>
+      <td><code class="inline">apply_to: text:today_label, style: { color: grey }</code></td>
+    </tr>
+    <tr>
+      <td><code class="inline">axis.today.label_text: "Today"</code></td>
+      <td><span class="tag note">duplicate — drop</span></td>
+      <td>Same value already lives at <code class="inline">timeline.today_label_text</code>. The axis-stanza copy is removed; the timeline key remains as the single source.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+After conversion, the top-level <code class="inline">axis:</code> key does not exist. Tick and today-line
+appearance live in <code class="inline">style_rules</code>; the two strings (<code class="inline">tick_label_format</code>,
+<code class="inline">today_label_text</code>) live in <code class="inline">timeline:</code> as before. The
+converter emits the new bindings into <code class="inline">style_rules</code> and prints a warning if it sees an
+<code class="inline">axis.tick.date_format</code> or <code class="inline">axis.today.label_text</code>
+whose value disagrees with its <code class="inline">timeline:</code> twin (so the author can decide which
+one was authoritative).
+</p>
+
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="userguide">9 · USER_GUIDE reconciliation: "Visualization Setting Gaps"</h2>
+
+<p>
+<a href="USER_GUIDE.md#L1384"><code class="inline">USER_GUIDE.md §"Visualization Setting Gaps"</code></a>
+summarizes which top-level YAML sections each visualizer reads. The framing — "each visualizer
+recognizes a different slice of the unified theme schema" — survives the migration, but the slicing
+changes shape: styling is no longer per-visualizer at the YAML level, only the residual non-styling
+config still varies per renderer. This section spells out what the page should say after migration,
+and the one place it gets mechanically wrong today.
+</p>
+
+<h3>9.1 · What needs to change</h3>
+
+<table>
+  <thead><tr><th>Current claim</th><th>After migration</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">weekly</code> exposes <code class="inline">weekly.day_box.*</code>, <code class="inline">weekly.overflow.*</code></td>
+      <td><code class="inline">weekly.day_box</code> is gone. Its content is a <code class="inline">define: box, as: day</code> rule (with optional <code class="inline">select.visualizer: weekly</code> overrides). Overflow icon name remains as non-styling config; overflow color/size moves to <code class="inline">icon:overflow</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">mini</code> exposes <code class="inline">mini_calendar.*</code>, <code class="inline">mini_details.*</code></td>
+      <td>Format strings (<code class="inline">title_format</code>) and layout dimensions stay. Cell/title/header styling moves to scoped <code class="inline">style_rules</code> (e.g. <code class="inline">apply_to: text:mini_title, select: { visualizer: mini }</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="inline">mini-icon</code> adds <code class="inline">mini_calendar.icon_set</code></td>
+      <td>Unchanged — <code class="inline">icon_set</code> is a name reference, not styling.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">text-mini</code> exposes <code class="inline">text_mini.*</code> glyph controls</td>
+      <td>Symbol/glyph name registry stays in <code class="inline">text_mini.*</code>. Color/font (where applicable) moves to scoped <code class="inline">style_rules</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">timeline</code> exposes <code class="inline">timeline.*</code>, <code class="inline">timeline_events.*</code>, <code class="inline">timeline_durations.*</code></td>
+      <td><code class="inline">timeline.*</code> shrinks to format strings, geometry, and the today-line content (<code class="inline">today_date</code>, <code class="inline">today_label_text</code>). All <code class="inline">*_color</code> / dasharray / opacity keys move to <code class="inline">style_rules</code>. The legacy <code class="inline">axis:</code> stanza disappears (see <a href="#axis-dissolve">§8.2</a>).</td>
+    </tr>
+    <tr>
+      <td><code class="inline">blockplan</code> exposes <code class="inline">blockplan.*</code>; <strong>vertical-line styling lives in top-level <code class="inline">style_rules</code> with <code class="inline">apply_to: vertical_line</code></strong></td>
+      <td><strong>Mechanical rename: <code class="inline">apply_to: vertical_line</code> → <code class="inline">apply_to: box:vline</code>.</strong> The rest of <code class="inline">blockplan.*</code> shrinks to lane/band lists, label-column ratio, lane match policy, and similar non-styling config.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">compactplan</code> exposes <code class="inline">compact_plan.*</code></td>
+      <td>Axis-relative duration/legend geometry remains. Color/stroke keys move to scoped rules.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">excelheader</code> mirrors blockplan band schema under <code class="inline">excelheader.*</code></td>
+      <td><strong>Excelheader is the deliberate exception.</strong> Its band schema and <code class="inline">excelheader.vertical_lines</code> map to XLSX cell formatting and cell-border properties — not SVG drawing. They do not flow through <code class="inline">style_rules</code>. The reconciled section must call this out so readers don't expect <code class="inline">box:vline</code> rules to affect <code class="inline">.xlsx</code> output. (USER_GUIDE §"Vertical Lines → Cell Right Borders" already notes the independence; the gaps section should mirror that wording.)</td>
+    </tr>
+    <tr>
+      <td>Shared sections: <code class="inline">header.*</code>, <code class="inline">footer.*</code>, <code class="inline">events.*</code>, <code class="inline">durations.*</code>, <code class="inline">colors.*</code></td>
+      <td>Each shrinks to non-styling config: <code class="inline">events.item_placement_order</code>, <code class="inline">durations</code> placement geometry, <code class="inline">colors.*_palette</code> name references, holiday <em>structural</em> facts. All <code class="inline">font_color</code> / <code class="inline">icon_color</code> / <code class="inline">color</code> keys move to scoped rules and tokens.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>9.2 · Proposed rewrite of "Visualization Setting Gaps"</h3>
+
+<p>The section is reframed around a single idea: <strong>styling is shared, non-styling config is
+per-visualizer.</strong> A drop-in replacement that USER_GUIDE.md can use verbatim:</p>
+
+<pre><span class="c">## Visualization Setting Gaps</span>
+
+Each visualizer reads two kinds of theme content:
+
+1. <span class="c">**Shared `style_rules`**</span> — every visualizer consults the same top-level rule
+   list. Rules scope themselves to a visualizer with `select.visualizer: weekly | mini |
+   timeline | blockplan | compactplan | text-mini` or apply globally.
+
+2. <span class="c">**Per-visualizer non-styling config**</span> — format strings, geometry, fiscal
+   semantics, and structural declarations remain in their own sections.
+
+Per-visualizer non-styling surfaces:
+
+- `weekly` — week-number format, day-name format, overflow icon name.
+- `mini` — `mini_calendar.title_format`, layout dimensions; `mini_calendar.icon_set` name (mini-icon variant).
+- `text-mini` — symbol/glyph name registry; not an SVG renderer.
+- `timeline` — `timeline.tick_label_format`, axis/callout/lane geometry,
+  `today_date` / `today_label_text` content references.
+- `blockplan` — swimlane and timeband lists, `label_column_ratio`, lane match policy,
+  vertical-line and band declarations (visual styling lives in `style_rules`,
+  e.g. `apply_to: box:vline`).
+- `compactplan` — axis-relative duration/legend geometry.
+- `excelheader` — XLSX-specific band schema and `excelheader.vertical_lines`.
+  These are <strong>not</strong> reached by `style_rules`: they map to Excel cell formatting and cell
+  borders, not SVG primitives. See "Vertical Lines → Cell Right Borders" below.
+
+Shared non-styling sections:
+
+- `theme.*` — metadata.
+- `base.*` — default font family, default missing-icon name.
+- `events.*` — `item_placement_order` (algorithm; no styling).
+- `durations.*` — placement / geometry only.
+- `fiscal.*` — label format, year offset.
+- `colors.*_palette` — palette names referenced by token style bags.
+
+Anything that controls <em>appearance</em> — fills, strokes, fonts, colors, patterns, line widths,
+opacities, dasharrays — lives in `style_rules`, not in any per-visualizer section.</pre>
+
+<h3>9.3 · Other USER_GUIDE pages affected by the migration</h3>
+
+<p>The "Visualization Setting Gaps" rewrite is not the only doc edit landing in the same PR. The
+loader-rejection behavior in <a href="#impl-pr">§7.1</a> means anything that documents the legacy
+shape needs a touch:</p>
+
+<ul class="tight">
+  <li><strong>§"Unified Theme Format"</strong> (line 347) — the structure-of-a-theme-file overview should be regenerated against the converted <code class="inline">SAMPLE.yaml</code>.</li>
+  <li><strong>§"Legacy Theme Format"</strong> (line 558) — deleted. The clean-break migration retires legacy parsing entirely.</li>
+  <li><strong>§"Complete Theme Key Reference"</strong> (line 592) — regenerated from the unified schema. Tokens and rules replace the per-section enumerations of <code class="inline">text_styles</code>, <code class="inline">box_styles</code>, etc.</li>
+  <li><strong>§"<code class="inline">style_rules</code> — Unified Visual Styling Rules"</strong> (line 959) — the existing prose is the closest match to the unified vocabulary, but needs updates: rename <code class="inline">apply_to: day_box | duration | vertical_line</code> to the <code class="inline">box:*</code> targets, document <code class="inline">define:</code>, document list-valued <code class="inline">apply_to</code>, document the new <code class="inline">box:event</code> / <code class="inline">box:milestone</code> / <code class="inline">icon:milestone</code> / <code class="inline">text:milestone_label</code> tokens.</li>
+  <li><strong>§"<code class="inline">swimlane_rules</code> — Blockplan Lane Routing"</strong> (line 1201) — rewritten to show the unified form: <code class="inline">apply_to: lane, style: { swimlane: &lt;name&gt; }</code>.</li>
+  <li><strong>§"<code class="inline">swimlanes</code> — Blockplan Lane Visual Definitions"</strong> (line 1235) — the <em>visual</em> half is removed (now in <code class="inline">style_rules</code> via <code class="inline">box:swimlane_heading</code> / <code class="inline">box:swimlane_content</code> / <code class="inline">text:swimlane_label</code>); the <em>structural</em> half (the lane name list) stays.</li>
+  <li><strong>§"Blockplan Vertical Marker Lines"</strong> (line 1337) — examples retargeted from <code class="inline">apply_to: vertical_line</code> to <code class="inline">apply_to: box:vline</code>; property names harmonized to <code class="inline">fill</code> / <code class="inline">stroke</code> / <code class="inline">dasharray</code>.</li>
+  <li><strong>§"CSS Element Catalog"</strong> (line 483) — element-class list unchanged; the binding-syntax examples (<code class="inline">{ text_style: heading }</code>) update to the unified rule form.</li>
+</ul>
+
+<div class="callout">
+  These edits land in the same PR as the loader and converter (per <a href="#impl-pr">§7.1</a>) so the
+  documentation never describes a state that doesn't exist in the code.
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="timebands">10 · Consolidating timebands across visualizations</h2>
+
+<p>
+The same timeband shape is declared three times in every theme that uses more than one visualizer:
+<code class="inline">blockplan.top_time_bands</code>,
+<code class="inline">blockplan.bottom_time_bands</code>,
+<code class="inline">compact_plan.time_bands</code>, and
+<code class="inline">excelheader.top_time_bands</code>. The SAMPLE.yaml comments and several theme files
+explicitly say "Same schema as <code class="inline">blockplan.top_time_bands</code>" — copy-paste is the
+documented contract. This is an opportunity worth taking alongside the styling consolidation, because
+the shape splits along the same lines as the rest of the design: structural declarations vs. styling.
+</p>
+
+<h3>10.1 · The duplication today</h3>
+
+<p>A single band entry mixes three concerns:</p>
+
+<table>
+  <thead><tr><th>Concern</th><th>Keys (per band)</th><th>Per §3.1, this is…</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Structural</strong> — what time unit, how to label it, what range to cover</td>
+      <td><code class="inline">label</code>, <code class="inline">unit</code>, <code class="inline">label_format</code>, <code class="inline">date_format</code>, <code class="inline">interval_days</code>, <code class="inline">prefix</code>, <code class="inline">start_index</code>, <code class="inline">max_index</code>, <code class="inline">anchor_date</code>, <code class="inline">target_date</code>, <code class="inline">start_date</code>, <code class="inline">skip_weekends</code>, <code class="inline">skip_nonworkdays</code>, <code class="inline">label_values</code>, <code class="inline">show_every</code></td>
+      <td>Non-styling config — stays in the theme.</td>
+    </tr>
+    <tr>
+      <td><strong>Geometry</strong> — vertical size in the layout</td>
+      <td><code class="inline">row_height</code></td>
+      <td>Non-styling config — stays in the theme.</td>
+    </tr>
+    <tr>
+      <td><strong>SVG styling</strong> — fill, label color, alternation</td>
+      <td><code class="inline">fill_color</code>, <code class="inline">alt_fill_color</code>, <code class="inline">font_color</code>, <code class="inline">font_size</code>, <code class="inline">label_color</code>, <code class="inline">label_fill_color</code>, <code class="inline">label_align_h</code></td>
+      <td>Styling — moves to <code class="inline">style_rules</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>XLSX styling</strong> — system-font name and Excel font size</td>
+      <td><code class="inline">excel_font_name</code>, <code class="inline">excel_font_size</code></td>
+      <td>Excel-specific — stays in <code class="inline">excelheader</code> (deliberate exception, like <code class="inline">excelheader.vertical_lines</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The same "Fiscal Quarter" band, identical in everything but a few styling tweaks, ends up written
+out three or four times in a typical theme. Adding a new band means editing each location.</p>
+
+<h3>10.2 · The two consolidation moves</h3>
+
+<ol>
+  <li><strong>Promote the band catalog to a single shared declaration.</strong> A theme defines its
+    bands once under a top-level <code class="inline">time_bands:</code> map. Each visualizer's
+    placement list is a list of <em>references</em> by name, with optional per-placement overrides
+    of geometry-only keys (<code class="inline">row_height</code>, <code class="inline">show_every</code>).</li>
+  <li><strong>Move band styling into <code class="inline">style_rules</code>.</strong> A new pair of
+    targets — <code class="inline">box:band</code> (the segment cell) and <code class="inline">text:band_label</code>
+    (the segment text) — joins the existing box/text vocabulary. A new
+    <code class="inline">select.band: &lt;name&gt;</code> predicate lets rules target one band; the existing
+    <code class="inline">select.visualizer</code> predicate lets a theme tweak the same band differently in
+    blockplan vs. compactplan when needed.</li>
+</ol>
+
+<h3>10.3 · Proposed shape</h3>
+
+<h4>Top-level band catalog</h4>
+<pre><span class="k">time_bands:</span>
+  <span class="k">fiscal_quarter:</span>
+    <span class="k">label:</span> <span class="v">"Fiscal Quarter"</span>
+    <span class="k">unit:</span> <span class="v">"fiscal_quarter"</span>
+    <span class="k">label_format:</span> <span class="v">"FY{fy2} Q{q}"</span>
+    <span class="k">show_every:</span> <span class="n">1</span>
+  <span class="k">month:</span>
+    <span class="k">label:</span> <span class="v">"Month"</span>
+    <span class="k">unit:</span> <span class="v">"month"</span>
+    <span class="k">date_format:</span> <span class="v">"MMM"</span>
+    <span class="k">show_every:</span> <span class="n">1</span>
+  <span class="k">week:</span>
+    <span class="k">label:</span> <span class="v">"Week"</span>
+    <span class="k">unit:</span> <span class="v">"week"</span>
+    <span class="k">label_format:</span> <span class="v">"W{week:02d}"</span>
+  <span class="k">date_range:</span>
+    <span class="k">label:</span> <span class="v">"Date Range"</span>
+    <span class="k">unit:</span> <span class="v">"week"</span>
+    <span class="k">label_format:</span> <span class="v">"{start} – {end}"</span>
+    <span class="k">text_align:</span> <span class="v">"left"</span></pre>
+
+<h4>Per-visualizer placement (lists of references)</h4>
+<pre><span class="k">blockplan:</span>
+  <span class="k">top_bands:</span> [<span class="v">fiscal_quarter</span>, <span class="v">month</span>]
+  <span class="k">bottom_bands:</span> []
+
+<span class="k">compact_plan:</span>
+  <span class="k">bands:</span> [<span class="v">date_range</span>, <span class="v">week</span>]
+
+<span class="k">excelheader:</span>
+  <span class="k">top_bands:</span> [<span class="v">fiscal_quarter</span>, <span class="v">month</span>]
+  <span class="c"># excelheader-specific font overrides (XLSX exception, see §10.4)</span>
+  <span class="k">band_fonts:</span>
+    <span class="k">fiscal_quarter:</span> { <span class="k">excel_font_name:</span> <span class="v">"Arial Narrow"</span>, <span class="k">excel_font_size:</span> <span class="n">10</span> }</pre>
+
+<p>A placement entry can also be a small mapping when the visualizer needs to override geometry
+without forking the catalog entry:</p>
+
+<pre><span class="k">blockplan:</span>
+  <span class="k">top_bands:</span>
+    <span class="p">-</span> { <span class="k">band:</span> <span class="v">fiscal_quarter</span>, <span class="k">row_height:</span> <span class="n">25</span> }
+    <span class="p">-</span> { <span class="k">band:</span> <span class="v">month</span>,           <span class="k">row_height:</span> <span class="n">20</span>, <span class="k">show_every:</span> <span class="n">1</span> }</pre>
+
+<h4>Styling via <code class="inline">style_rules</code></h4>
+<pre><span class="k">style_rules:</span>
+  <span class="c"># Fiscal Quarter — the same look in both blockplan and compactplan</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">fiscal-quarter band — segment</span>
+    <span class="k">apply_to:</span> <span class="v">box:band</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">fiscal_quarter</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> [<span class="v">steelblue</span>, <span class="v">deepskyblue</span>] }   <span class="c"># list = alternation</span>
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">fiscal-quarter band — label</span>
+    <span class="k">apply_to:</span> <span class="v">text:band_label</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">fiscal_quarter</span> }
+    <span class="k">style:</span> { <span class="k">color:</span> <span class="v">white</span>, <span class="k">weight:</span> <span class="v">bold</span> }
+
+  <span class="c"># Month band — different fill in compactplan than blockplan</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">month band (blockplan)</span>
+    <span class="k">apply_to:</span> <span class="v">box:band</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">month</span>, <span class="k">visualizer:</span> <span class="v">blockplan</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> [<span class="v">lightblue</span>, <span class="v">lightyellow</span>], <span class="k">color:</span> <span class="v">navy</span> }
+
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">month band (compactplan)</span>
+    <span class="k">apply_to:</span> <span class="v">box:band</span>
+    <span class="k">select:</span> { <span class="k">band:</span> <span class="v">month</span>, <span class="k">visualizer:</span> <span class="v">compactplan</span> }
+    <span class="k">style:</span> { <span class="k">fill:</span> <span class="v">"#fafafa"</span>, <span class="k">color:</span> <span class="v">grey</span> }</pre>
+
+<h4>New tokens, predicates, and bindings</h4>
+<table>
+  <thead><tr><th>Addition</th><th>Where</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code class="inline">box:band</code></td>
+      <td>Box token vocabulary (<a href="#vocab">§4.3</a>)</td>
+      <td>Segment cell. Inherits the full box property bag — including <code class="inline">fill</code> as list (alternation across segments) and <code class="inline">pattern</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">text:band_label</code></td>
+      <td>Text token vocabulary</td>
+      <td>The label drawn in each segment. <code class="inline">align_h</code> retains the same meaning as the legacy <code class="inline">label_align_h</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">box:band_heading</code></td>
+      <td>Box token vocabulary</td>
+      <td>The heading-column cell that holds the band's label (e.g. "Month") at the left edge of the SVG. Same role <code class="inline">box:swimlane_heading</code> plays for swimlanes.</td>
+    </tr>
+    <tr>
+      <td><code class="inline">select.band: &lt;name&gt;</code></td>
+      <td>Selector grammar (§4 schema tree)</td>
+      <td>Matches by the band's catalog key (e.g. <code class="inline">fiscal_quarter</code>), not its display label.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Why catalog keys, not display labels:</strong> the existing <code class="inline">style_rules</code>
+  vocabulary uses keys like <code class="inline">milestone: true</code> — short, stable, identifier-like.
+  Selecting on a band's <em>display</em> label ("Fiscal Quarter") would be fragile across
+  internationalization and minor wording tweaks. The catalog key (<code class="inline">fiscal_quarter</code>) is
+  the stable handle.
+</div>
+
+<h3>10.4 · ExcelHeader, again the exception</h3>
+
+<p>
+ExcelHeader's font knobs (<code class="inline">excel_font_name</code>, <code class="inline">excel_font_size</code>)
+are not SVG concepts. They map to XLSX cell formatting using system-installed fonts, not the
+ecalendar font registry. They stay in the theme under
+<code class="inline">excelheader.band_fonts</code> as shown above (a small map keyed by band name) — they
+do not flow through <code class="inline">style_rules</code>.
+</p>
+
+<p>
+This mirrors the prior decision for <code class="inline">excelheader.vertical_lines</code> (see <a href="#userguide">§9.1</a>): the SVG-only output formats reach band visuals via
+<code class="inline">style_rules</code>; XLSX has its own narrow band-styling slot for the two keys that
+genuinely don't have an SVG equivalent.
+</p>
+
+<h3>10.5 · Migration impact</h3>
+
+<ul class="tight">
+  <li><strong>Converter responsibilities</strong> (in <code class="inline">tools/migrate_theme.py</code>, alongside the
+    rewrites in <a href="#conversion">§7.2</a>):
+    <ul>
+      <li>Walk each of <code class="inline">blockplan.top_time_bands</code>, <code class="inline">.bottom_time_bands</code>, <code class="inline">compact_plan.time_bands</code>, and <code class="inline">excelheader.top_time_bands</code>; <strong>de-duplicate</strong> bands across visualizers by their structural keys (<code class="inline">unit</code>, <code class="inline">label</code>, <code class="inline">label_format</code>, etc.) and emit one entry per unique structural shape under the new top-level <code class="inline">time_bands:</code> map. The catalog key is generated from <code class="inline">label</code> (snake-cased) with a numeric suffix on collision.</li>
+      <li>Replace each per-visualizer band list with a list of catalog references, preserving order. Geometry overrides (<code class="inline">row_height</code>, <code class="inline">show_every</code>) become inline mappings on the reference when they differ from the catalog default.</li>
+      <li>Lift each band's SVG styling into <code class="inline">style_rules</code> entries on <code class="inline">box:band</code> / <code class="inline">text:band_label</code> with <code class="inline">select.band</code> set to the catalog key. When two visualizers had divergent styling for the "same" band, emit two rules with <code class="inline">select.visualizer</code> disambiguating.</li>
+      <li>Move <code class="inline">excel_font_name</code> / <code class="inline">excel_font_size</code> into the new <code class="inline">excelheader.band_fonts</code> map keyed by catalog name.</li>
+    </ul>
+  </li>
+  <li><strong>Loader changes:</strong> the theme parser learns the top-level <code class="inline">time_bands:</code> map and resolves placement-list references against it. A reference to an undefined band is a hard error naming the offending band and the visualizer it appeared under. The legacy inline-list shape is rejected with the same converter-pointing message used for retired sections in <a href="#impl-pr">§7.1</a>.</li>
+  <li><strong>Renderer changes:</strong> the existing band drawing code (already shared at the layout-engine level under <code class="inline">visualizers/base.py</code> for the three-column coords and elsewhere) consults <code class="inline">style_rules</code> via the same resolver path used by every other box. The legacy per-band styling lookup is deleted.</li>
+  <li><strong>USER_GUIDE impact:</strong> the band-schema documentation (currently triplicated under blockplan, compactplan, and excelheader sections) collapses to a single canonical entry. The §9 USER_GUIDE rewrite already lists "swimlane and timeband lists" as residual non-styling config under blockplan — this becomes more accurate after consolidation: <em>references</em> to the shared catalog.</li>
+</ul>
+
+<div class="callout good">
+  <strong>Net effect:</strong> defining "Fiscal Quarter" once. Adding a new band is a single edit.
+  Theming the same band consistently across visualizers is the default, and per-visualizer divergence
+  is a single explicit <code class="inline">select.visualizer</code> rule rather than a fork of the
+  structural definition.
+</div>
+
+<hr style="margin: 48px 0 16px; border: none; border-top: 1px solid var(--rule);">
+<p style="color: var(--muted); font-size: 12px;">
+End of design. Next step: implement the unified loader, write the one-shot converter, run it against
+all 17 themes, capture pre-migration SVG baselines for the round-trip diff in §7.4, and apply the
+USER_GUIDE rewrites in §9 alongside the code changes. The timeband-catalog change in §10 is part of
+the same single PR.
+</p>
+
+</div>
+</body>
+</html>
