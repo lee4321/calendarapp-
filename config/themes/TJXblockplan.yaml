@@ -1,0 +1,479 @@
+# TJX theme — blockplan visualization only.
+# Self-contained: every value the blockplan renderer needs is set here so the
+# visualization output never depends on hardcoded fallbacks in config.py.
+
+theme:
+  name: "TJXblockplan"
+  version: "2.0"
+  description: "TJX colors and style — blockplan only"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Unified Style Tokens
+# ══════════════════════════════════════════════════════════════════════════════
+
+text_styles:
+  heading:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 14
+    color: "grey"
+    size_rules:
+      - font_size: 10
+        when: { papersize: ["letter", "ledger", "tabloid"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "white"
+  body_secondary:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  label:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  caption:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 22
+    color: "black"
+
+box_styles:
+  default:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "none"
+  header:
+    fill: "none"
+    stroke: "none"
+  timeband:
+    fill: "none"
+    fill_opacity: 1.0
+    stroke: "none"
+  highlight:
+    fill: "lightblue"
+    fill_opacity: 0.3
+    stroke: "none"
+
+line_styles:
+  grid:
+    color: "grey"
+    width: 0.5
+    opacity: 0.3
+  axis:
+    color: "lightgrey"
+    width: 3
+    opacity: 0.9
+  separator:
+    color: "grey"
+    width: 0.5
+    opacity: 0.5
+
+icon_styles:
+  event:
+    color: "yellow"
+    size: 10
+  duration:
+    color: "navy"
+  overflow:
+    icon: "overflow"
+    color: "red"
+
+element_styles:
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-event-date:     { text_style: caption }
+  ec-duration-date:  { text_style: caption }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+  ec-background:     { box_style: default }
+  ec-heading-cell:   { box_style: header }
+  ec-band-cell:      { box_style: timeband }
+  ec-vline-fill:     { box_style: highlight }
+  ec-grid-line:      { line_style: grid }
+  ec-axis-line:      { line_style: axis }
+  ec-separator:      { line_style: separator }
+  ec-vline:          { line_style: grid }
+  ec-duration-bar:   { line_style: axis }
+  ec-milestone-marker: { line_style: axis }
+  ec-milestone-flag:   { line_style: axis }
+  ec-duration-marker:  { line_style: axis }
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: duration }
+  ec-overflow-icon:  { icon_style: overflow }
+  ec-legend-swatch:  { line_style: axis }
+  ec-legend-text:    { text_style: body_secondary }
+  ec-legend-icon:    { icon_style: event }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# General Settings
+# ══════════════════════════════════════════════════════════════════════════════
+
+base:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+  default_missing_icon: applet-closed
+  size_rule:
+    - font_size: 14
+      when:
+        papersize: ["letter", "ledger", "tabloid"]
+    - font_size: 12
+      when:
+        papersize: ["3x5", "5x8"]
+
+header:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+footer:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+watermark:
+  text: null
+  color: "blue"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  opacity: 0.5
+  font_size: null
+  resize_mode: "fit"
+  rotation_angle: 45.0
+  image_rotation_angle: 45.0
+
+events:
+  icon_color: "blue"
+  item_placement_order: ["priority"]
+
+durations:
+  icon_color: "navy"
+  stroke_dasharray: null
+
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  year_offset: +1
+
+colors:
+  month_palette: "viridis"
+  fiscal_palette: "Greys"
+  group_palette: "Pastel1"
+  hash_lines: "black"
+  resource_groups:
+    a: "black"
+    b: "yellow"
+    c: "red"
+    d: "grey"
+  company_holiday:
+    alpha: 0.25
+    color: "gold"
+  federal_holiday:
+    alpha: 0.10
+    color: "tomato"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Block Plan
+# ══════════════════════════════════════════════════════════════════════════════
+
+blockplan:
+  background_color: "none"
+  grid_color: "black"
+  grid_opacity: 1.0
+  grid_line_width: 1.0
+  grid_dasharray: null
+  timeband_fill_color: ["iron","ivory","old silver","nickel","honeydew","smoke","bubbles","bondi blue","anti-flash white","roman silver"]
+  timeband_fill_opacity: 1.0
+  timeband_line_color: "black"
+  timeband_line_width: 0.75
+  timeband_line_opacity: 1.0
+  timeband_line_dasharray: null
+  label_column_ratio: 0.05
+  band_row_height: 40.0
+  fiscal_year_start_month: 2
+  week_start: 0
+  duration_date_font_size: 8
+  federal_holiday_icon: flag-us
+  federal_holiday_fill_color: "tomato"
+  federal_holiday_fill_opacity: 1.0
+  company_holiday_fill_color: "gold"
+  weekend_fill_color: "#E8E8E8"
+
+  show_unmatched_lane: false
+  unmatched_lane_name: "Other"
+  lane_match_mode: "first"
+
+  header_font: "PlaywriteDEGrund-VariableFont_wght"
+  header_font_size: 11
+  header_label_color: "Green"
+  header_label_opacity: 1.0
+  header_label_align_h: "right"
+  header_heading_fill_color: "none"
+
+  band_font: "PlaywriteDEGrund-VariableFont_wght"
+  band_font_size: 14
+
+  timeband_label_opacity: 1.0
+
+  top_time_bands:
+    - label: "Fiscal Quarter"
+      unit: "fiscal_quarter"
+      label_format: "Q{q}-FY{fy2}"
+      fill_color: ["ghostwhite","silver"]
+      show_every: 1
+      row_height: 14
+      label_color: "Black"
+      font_color: "Black"
+
+    - label: "Month"
+      unit: "month"
+      date_format: "MMMM"
+      row_height: 14
+      fill_color: ["white smoke","darkgrey"]
+      show_every: 1
+      label_color: "black"
+      font_color: "black"
+
+    - label: "Date"
+      unit: "date"
+      date_format: "D"
+      fill_color: "white"
+      row_height: 14
+      show_every: 1
+      label_color: "Black"
+      font_color: "Black"
+
+    - label: "DoW"
+      unit: "date"
+      date_format: "dd"
+      fill_color: "white"
+      row_height: 14
+      show_every: 1
+      label_color: "Black"
+      font_color: "Black"
+
+  bottom_time_bands:
+    - label: "DoW"
+      unit: "date"
+      date_format: "dd"
+      fill_color: null
+      row_height: 14
+      show_every: 1
+      label_color: "Black"
+      font_color: "Black"
+
+    - label: "Date"
+      unit: "date"
+      date_format: "D"
+      fill_color: null
+      row_height: 14
+      show_every: 1
+      label_color: "Black"
+      font_color: "Black"
+
+    - label: "Month"
+      unit: "month"
+      date_format: "MMMM"
+      row_height: 14
+      fill_color: ["white smoke","darkgrey"]
+      show_every: 1
+      label_color: "black"
+      font_color: "black"
+
+  lane_heading_fill_color: "none"
+  lane_label_font_size: 14
+  lane_label_color: "Red"
+  lane_label_align_h: "center"
+  lane_label_align_v: "middle"
+  lane_label_rotation: -90
+
+  lane_split_ratio: 0.0
+
+  swimlanes:
+    - name: "Xstore\nConversions"
+    - name: "Triversity\nPOSReady7"
+    - name: "15.0.2"
+    - name: "IC Fix"
+    - name: "Post PI6"
+
+  duration_date_font: "PlaywriteDEGrund-VariableFont_wght"
+  duration_fill_opacity: 1.0
+  duration_stroke_color: "white"
+  duration_stroke_width: 1.0
+  duration_stroke_opacity: 1.0
+  duration_stroke_dasharray: null
+  duration_bar_height: 40
+  duration_icon_visible: true
+  show_continuation_icon: true
+  continuation_icon_right: "move-right"
+  continuation_icon_left: "move-left"
+  continuation_icon_height: 12.0
+  continuation_icon_color: "white"
+  name_text:
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "grey"
+  notes_text:
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "grey"
+  duration_show_start_date: true
+  duration_show_end_date: true
+  duration_date_format: "M/D"
+  duration_date_color: "Black"
+
+  event_show_date: false
+  event_date_font: "PlaywriteDEGrund-VariableFont_wght"
+  event_date_font_size: null
+  event_date_color: "Black"
+  event_date_format: "MM/DD"
+  marker_radius: 2.0
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Style Rules — duration fills and vertical-line decorations
+# ══════════════════════════════════════════════════════════════════════════════
+
+style_rules:
+  - name: Marshalls durations (name)
+    select:
+      task_name:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Marshalls durations (notes)
+    select:
+      notes:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Maxx durations
+    select:
+      task_name:
+      - Maxx
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: blue
+
+  - name: Canada durations
+    select:
+      task_name:
+      - Canada
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: black
+
+  - name: blockplan_vline_0
+    apply_to: vertical_line
+    select:
+      band: Month
+      repeat: true
+    style:
+      align: end
+      stroke_color: grey
+      stroke_width: 0.0
+      stroke_opacity: 0.33
+      fill_color:
+      - '#eef4ff'
+      - white
+
+  - name: blockplan_vline_1
+    apply_to: vertical_line
+    select:
+      band: Fiscal Quarter
+      repeat: true
+    style:
+      align: end
+      stroke_color: navy
+      stroke_width: 0.0
+      fill_color:
+      - green
+      - pink
+
+  - name: blockplan_vline_2
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      weekend: true
+    style:
+      align: center
+      stroke_color: '#888888'
+      stroke_width: 0.0
+      stroke_opacity: 0.05
+      stroke_dasharray: 2,3
+      fill_color: '#E8E8E8'
+      fill_opacity: 0.4
+
+  - name: blockplan_vline_3
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      company_holiday: true
+    style:
+      align: center
+      stroke_color: goldenrod
+      stroke_width: 0.0
+      stroke_opacity: 0.07
+      stroke_dasharray: 4,2
+      fill_color: gold
+      fill_opacity: 0.3
+
+  - name: blockplan_vline_4
+    apply_to: vertical_line
+    select:
+      band: Date
+      repeat: true
+      federal_holiday: true
+    style:
+      align: center
+      stroke_color: firebrick
+      stroke_width: 0.0
+      stroke_opacity: 0.25
+      fill_color: tomato
+      fill_opacity: 0.5
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Swimlane Routing
+# ══════════════════════════════════════════════════════════════════════════════
+
+swimlane_rules:
+  - name: Route Xstore
+    select:
+      resource_group:
+      - Xstore
+    apply_to: 'Xstore
+
+      Conversions'
+
+  - name: Route Triversity
+    select:
+      resource_group:
+      - Triversity
+    apply_to: 'Triversity
+
+      POSReady7'
+
+  - name: Route 15.0.2
+    select:
+      resource_group:
+      - 15.0.2
+    apply_to: 15.0.2
+
+  - name: Route IC Fix
+    select:
+      resource_group:
+      - ICFix
+    apply_to: IC Fix
+
+  - name: Route Post PI6
+    select:
+      resource_group:
+      - PostPI6
+    apply_to: Post PI6

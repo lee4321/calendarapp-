@@ -1,0 +1,348 @@
+# TJX theme — compactplan visualization only.
+# Self-contained: every value the compact-plan renderer needs is set here so
+# the visualization output never depends on hardcoded fallbacks in config.py.
+
+theme:
+  name: "TJXcompactplan"
+  version: "2.0"
+  description: "TJX colors and style — compact activities plan only"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Unified Style Tokens
+# ══════════════════════════════════════════════════════════════════════════════
+
+text_styles:
+  heading:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 14
+    color: "grey"
+    size_rules:
+      - font_size: 10
+        when: { papersize: ["letter", "ledger", "tabloid"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "white"
+  body_secondary:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  label:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  caption:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 22
+    color: "black"
+
+box_styles:
+  default:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "none"
+  header:
+    fill: "none"
+    stroke: "none"
+  timeband:
+    fill: "none"
+    fill_opacity: 1.0
+    stroke: "none"
+  highlight:
+    fill: "lightblue"
+    fill_opacity: 0.3
+    stroke: "none"
+
+line_styles:
+  axis:
+    color: "lightgrey"
+    width: 3
+    opacity: 0.9
+  grid:
+    color: "grey"
+    width: 0.5
+    opacity: 0.3
+  separator:
+    color: "grey"
+    width: 0.5
+    opacity: 0.5
+
+icon_styles:
+  event:
+    color: "yellow"
+    size: 10
+  duration:
+    color: "navy"
+
+element_styles:
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+  ec-background:     { box_style: default }
+  ec-heading-cell:   { box_style: header }
+  ec-band-cell:      { box_style: timeband }
+  ec-vline-fill:     { box_style: highlight }
+  ec-axis-line:      { line_style: axis }
+  ec-vline:          { line_style: grid }
+  ec-separator:      { line_style: separator }
+  ec-duration-bar:   { line_style: axis }
+  ec-milestone-marker: { line_style: axis }
+  ec-milestone-flag:   { line_style: axis }
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: duration }
+  ec-legend-swatch:  { line_style: axis }
+  ec-legend-text:    { text_style: body_secondary }
+  ec-legend-icon:    { icon_style: event }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# General Settings
+# ══════════════════════════════════════════════════════════════════════════════
+
+base:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+  default_missing_icon: applet-closed
+  size_rule:
+    - font_size: 14
+      when:
+        papersize: ["letter", "ledger", "tabloid"]
+    - font_size: 12
+      when:
+        papersize: ["3x5", "5x8"]
+
+header:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+footer:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+watermark:
+  text: null
+  color: "blue"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  opacity: 0.5
+  font_size: null
+  resize_mode: "fit"
+  rotation_angle: 45.0
+  image_rotation_angle: 45.0
+
+events:
+  icon_color: "blue"
+  item_placement_order: ["priority"]
+
+durations:
+  icon_color: "navy"
+  stroke_dasharray: null
+
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  year_offset: +1
+
+colors:
+  month_palette: "viridis"
+  fiscal_palette: "Greys"
+  group_palette: "Pastel1"
+  hash_lines: "black"
+  resource_groups:
+    a: "black"
+    b: "yellow"
+    c: "red"
+    d: "grey"
+  company_holiday:
+    alpha: 0.25
+    color: "gold"
+  federal_holiday:
+    alpha: 0.10
+    color: "tomato"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Compact Activities Plan
+# ══════════════════════════════════════════════════════════════════════════════
+
+compact_plan:
+  palette: ["deepskyblue", "gold", "tomato", "grey", "mediumseagreen", "mediumpurple"]
+  axis_color: "#7f7f7f"
+  axis_dasharray: "4.0,1.0"
+  axis_opacity: 0.5
+  axis_padding: 5.0
+  axis_width: 1.0
+  show_axis: false
+  milestone_color: "#333333"
+  header_bottom_y: 8
+  key_top_y: 8
+  band_row_height: 10.0
+
+  federal_holiday_fill_color: "tomato"
+  federal_holiday_fill_opacity: 1.0
+  company_holiday_fill_color: "gold"
+  company_holiday_fill_opacity: 1.0
+  weekend_fill_color: "#E8E8E8"
+  weekend_fill_opacity: 1.0
+  federal_holiday_icon: flag-us
+
+  text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "black"
+    font_opacity: 1.0
+
+  time_bands:
+    - label: "Month"
+      unit: "month"
+      date_format: "MMM YYYY"
+      row_height: 25
+      fill_color: ["lightblue","grey"]
+      show_every: 1
+      label_color: "dimgrey"
+      font_color: "black"
+
+    - label:          "Date Range"
+      unit:           "week"
+      label_format:   "{start} – {end}"
+      fill_color:     "none"
+      alt_fill_color: "#f2f2f2"
+      text_align:     "center"
+
+    - label: "DoW"
+      unit: "date"
+      date_format: "ddd"
+      fill_color: "pink"
+      show_every: 1
+      label_color: "dimgrey"
+      font_color: "white"
+      text_align:     "center"
+
+  duration_line_width:       9.0
+  duration_opacity:          1.0
+  duration_stroke_dasharray: null
+  lane_spacing:              9.0
+
+  show_duration_icons:   true
+  duration_icon_list:    "darksquare"
+  duration_icon_height:  8.0
+  duration_icon_color:   "white"
+
+  palette_name: null
+
+  milestone_flag_height: 9.0
+  milestone_flag_width:  7.0
+  milestone_icon:        null
+  show_milestone_labels: false
+
+  name_text:
+    font_name: "RobotoCondensed-Light"
+    font_color: "#595959"
+    font_opacity: 1.0
+
+  legend_column_split:  0.5
+
+  show_legend:          true
+  legend_row_height:    10.0
+  legend_swatch_width:  10.0
+
+  show_milestone_list:           true
+  milestone_list_date_format:    "M/D"
+  milestone_list_date_color:     "#333333"
+  milestone_list_row_height:     10.0
+  milestone_list_date_col_width: 32.0
+  milestone_list_section_gap:    6.0
+
+  show_continuation_icon:      true
+  continuation_icon:           "move-right"
+  continuation_icon_height:    8.0
+  continuation_icon_color:     "white"
+  continuation_legend_text:    "activity continues"
+  continuation_section_gap:    4.0
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Style Rules — duration fills and vertical-line decorations
+# ══════════════════════════════════════════════════════════════════════════════
+
+style_rules:
+  - name: Marshalls durations (name)
+    select:
+      task_name:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Marshalls durations (notes)
+    select:
+      notes:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Maxx durations
+    select:
+      task_name:
+      - Maxx
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: blue
+
+  - name: Canada durations
+    select:
+      task_name:
+      - Canada
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: black
+
+  - name: compactplan_vline_weekend
+    apply_to: vertical_line
+    select:
+      band: DoW
+      repeat: true
+      weekend: true
+    style:
+      align: center
+      stroke_color: '#888888'
+      stroke_width: 0.0
+      stroke_opacity: 0.05
+      stroke_dasharray: 2,3
+      fill_color: '#E8E8E8'
+      fill_opacity: 0.4
+
+  - name: compactplan_vline_company_holiday
+    apply_to: vertical_line
+    select:
+      band: DoW
+      repeat: true
+      company_holiday: true
+    style:
+      align: center
+      stroke_color: goldenrod
+      stroke_width: 0.0
+      stroke_opacity: 0.07
+      stroke_dasharray: 4,2
+      fill_color: gold
+      fill_opacity: 0.3
+
+  - name: compactplan_vline_federal_holiday
+    apply_to: vertical_line
+    select:
+      band: DoW
+      repeat: true
+      federal_holiday: true
+    style:
+      align: center
+      stroke_color: firebrick
+      stroke_width: 0.0
+      stroke_opacity: 0.25
+      fill_color: tomato
+      fill_opacity: 0.5

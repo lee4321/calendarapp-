@@ -1,0 +1,306 @@
+# TJX theme — weekly visualization only.
+# Self-contained: every value the weekly renderer needs is set here so the
+# visualization output never depends on hardcoded fallbacks in config.py.
+
+theme:
+  name: "TJXweekly"
+  version: "2.0"
+  description: "TJX colors and style — weekly calendar only"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Unified Style Tokens
+# ══════════════════════════════════════════════════════════════════════════════
+
+text_styles:
+  heading:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 14
+    color: "grey"
+    size_rules:
+      - font_size: 10
+        when: { papersize: ["letter", "ledger", "tabloid"] }
+      - font_size: 8
+        when: { papersize: ["3x5", "5x8"] }
+  body:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "white"
+  body_secondary:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  label:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "grey"
+  label_bold:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "Blue"
+  caption:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 22
+    color: "black"
+  day_number:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 22
+    color: "white"
+  month_title:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 22
+    color: "navy"
+  holiday_title:
+    font: "PlaywriteDEGrund-VariableFont_wght"
+    size: 12
+    color: "black"
+
+box_styles:
+  default:
+    fill: "white"
+    fill_opacity: 1.0
+    stroke: "none"
+  cell:
+    fill: "#F8F8FF"
+    fill_opacity: 0.25
+    stroke: "none"
+    stroke_width: 0.5
+    stroke_opacity: 0.5
+  header:
+    fill: "none"
+    stroke: "none"
+  highlight:
+    fill: "lightblue"
+    fill_opacity: 0.3
+    stroke: "none"
+  callout:
+    fill: "white"
+    fill_opacity: 0.25
+    stroke: "grey"
+    stroke_width: 1.0
+
+line_styles:
+  grid:
+    color: "grey"
+    width: 0.5
+    opacity: 0.3
+  separator:
+    color: "grey"
+    width: 0.5
+    opacity: 0.5
+  today:
+    color: "grey"
+    width: 1.5
+    opacity: 1.0
+  axis:
+    color: "lightgrey"
+    width: 3
+    opacity: 0.9
+
+icon_styles:
+  event:
+    color: "yellow"
+    size: 10
+  duration:
+    color: "navy"
+  overflow:
+    icon: "overflow"
+    color: "red"
+
+element_styles:
+  ec-heading:        { text_style: heading }
+  ec-label:          { text_style: label }
+  ec-day-number:     { text_style: day_number }
+  ec-month-title:    { text_style: month_title }
+  ec-week-number:    { text_style: label_bold }
+  ec-fiscal-label:   { text_style: caption }
+  ec-event-name:     { text_style: body }
+  ec-event-notes:    { text_style: body_secondary }
+  ec-event-date:     { text_style: caption }
+  ec-duration-date:  { text_style: caption }
+  ec-holiday-title:  { text_style: holiday_title }
+  ec-today-label:    { text_style: label, color: "grey" }
+  ec-header-text:    { text_style: heading }
+  ec-footer-text:    { text_style: caption }
+  ec-watermark:      { text_style: heading }
+  ec-background:     { box_style: default }
+  ec-cell:           { box_style: cell }
+  ec-heading-cell:   { box_style: header }
+  ec-callout-box:    { box_style: callout }
+  ec-vline-fill:     { box_style: highlight }
+  ec-day-box:        { box_style: cell }
+  ec-pattern-fill:   { box_style: default }
+  ec-grid-line:      { line_style: grid }
+  ec-today-line:     { line_style: today }
+  ec-separator:      { line_style: separator }
+  ec-vline:          { line_style: grid }
+  ec-hash-line:      { line_style: grid }
+  ec-strikethrough:  { line_style: grid }
+  ec-event-icon:     { icon_style: event }
+  ec-duration-icon:  { icon_style: duration }
+  ec-overflow-icon:  { icon_style: overflow }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# General Settings
+# ══════════════════════════════════════════════════════════════════════════════
+
+base:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+  default_missing_icon: applet-closed
+  size_rule:
+    - font_size: 14
+      when:
+        papersize: ["letter", "ledger", "tabloid"]
+    - font_size: 12
+      when:
+        papersize: ["3x5", "5x8"]
+
+header:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+footer:
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  font_color: "grey"
+
+watermark:
+  text: null
+  color: "blue"
+  font_family: "PlaywriteDEGrund-VariableFont_wght"
+  opacity: 0.5
+  font_size: null
+  resize_mode: "fit"
+  rotation_angle: 45.0
+  image_rotation_angle: 45.0
+
+events:
+  icon_color: "blue"
+  item_placement_order: ["priority"]
+
+durations:
+  icon_color: "navy"
+  stroke_dasharray: null
+
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  year_offset: +1
+
+colors:
+  month_palette: "viridis"
+  fiscal_palette: "Greys"
+  group_palette: "Pastel1"
+  hash_lines: "black"
+  resource_groups:
+    a: "black"
+    b: "yellow"
+    c: "red"
+    d: "grey"
+  company_holiday:
+    alpha: 0.25
+    color: "gold"
+  federal_holiday:
+    alpha: 0.10
+    color: "tomato"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Weekly Calendar
+# ══════════════════════════════════════════════════════════════════════════════
+
+weekly:
+  day_names:
+    font_family: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "black"
+
+  week_numbers:
+    font_family: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "yellow"
+    label_format: "W{num:02d}"
+
+  day_box:
+    stroke_color: "black"
+    stroke_opacity: 0.5
+    stroke_width: 1
+    stroke_dasharray: null
+    fill_color: null
+    fill_opacity: 0.25
+    number_font: "PlaywriteDEGrund-VariableFont_wght"
+    number_color: "#FF7800"
+    icon_color: "red"
+    font_color: "black"
+    hash_pattern_opacity: 0.10
+
+  name_text:
+    font_name: "PlaywriteDEGrund-VariableFont_wght"
+    font_color: "black"
+    font_size: 18
+
+  notes_text:
+    font_name: "AlumniSansPinstripe-Italic"
+    font_color: "grey"
+    font_size: 14
+
+  overflow:
+    icon: "overflow"
+    color: "red"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Style Rules — day-box decoration and duration fills
+# ══════════════════════════════════════════════════════════════════════════════
+
+style_rules:
+  - name: weekly_hash_0
+    select:
+      nonworkday: false
+    apply_to: day_box
+    style:
+      pattern: stars74
+      pattern_color: silver
+      pattern_opacity: 0.01
+
+  - name: fedholidays
+    select:
+      federal_holiday: true
+    apply_to: day_box
+    style:
+      fill_color: "lightblue"
+      fill_opacity: 1.0
+      pattern: app
+      pattern_color: "tomato"
+      pattern_opacity: 0.5
+
+  - name: Marshalls durations (name)
+    select:
+      task_name:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Marshalls durations (notes)
+    select:
+      notes:
+      - Marshalls
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: red
+
+  - name: Maxx durations
+    select:
+      task_name:
+      - Maxx
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: blue
+
+  - name: Canada durations
+    select:
+      task_name:
+      - Canada
+      event_type: duration
+    apply_to: duration
+    style:
+      fill_color: black
