@@ -1,0 +1,540 @@
+# Generated as part of the unified style_rules migration.
+# See design_unified_style_rules.html §11.4.
+#
+# basic.yaml is the absolute minimum theme: every key required by at least
+# one visualizer is present exactly once, with a deliberately plain value.
+# It exists for three jobs:
+#
+#   1. A known-complete starting point for new themes.
+#      cp config/themes/basic.yaml config/themes/mytheme.yaml
+#
+#   2. The source of example values used in missing-key error messages.
+#      When the loader complains a setting is missing, the snippet it prints
+#      is read from this file.
+#
+#   3. A CI completeness probe.  Every subcommand renders against this theme;
+#      if any of them errors with "missing key", either this file is out of
+#      date or a default crept back into config/config.py.
+#
+# No optional features, no commented-out examples — those live in SAMPLE.yaml.
+
+# ─── theme ─────────────────────────────────────────────────────────────────
+# Theme metadata: name, version, description; surfaced by --theme lookup
+# and the SVG <desc> element.
+theme:
+  name: basic
+  version: "3.0"
+  description: Absolute minimum viable theme. See design §11.4.
+
+# ─── base ──────────────────────────────────────────────────────────────────
+# Theme-wide defaults: default font family and default missing-icon name.
+base:
+  font_family: Roboto-Regular
+  default_missing_icon: applet-closed
+
+# ─── layout ────────────────────────────────────────────────────────────────
+# Page margins (numeric points or unit-suffixed values like 0.5in).
+layout:
+  margin:
+    top: 0.5in
+    right: 0.5in
+    bottom: 0.5in
+    left: 0.5in
+
+# ─── events ────────────────────────────────────────────────────────────────
+# Event placement policy (item_placement_order); no styling.
+events:
+  item_placement_order: [priority]
+
+# ─── durations ─────────────────────────────────────────────────────────────
+# Duration placement / geometry; no styling.
+durations:
+  stroke_dasharray: null
+
+# ─── fiscal ────────────────────────────────────────────────────────────────
+# Fiscal calendar semantics: label format and year offset.
+fiscal:
+  label_format: "{prefix}{period_short}"
+  end_label_format: "{period_short} End"
+  year_offset: null
+
+# ─── colors ────────────────────────────────────────────────────────────────
+# Palette name references (month_palette, fiscal_palette, group_palette)
+# and structural holiday attributes.
+colors:
+  month_palette: Greys
+  fiscal_palette: Greys
+  group_palette: Greys
+  federal_holiday:
+    alpha: 0.25
+  company_holiday:
+    alpha: 0.25
+
+# ─── weekly ────────────────────────────────────────────────────────────────
+# Weekly visualizer non-styling config: week-number format, day-name
+# format, overflow icon name.
+weekly:
+  week_numbers:
+    label_format: "W{num:02d}"
+  overflow:
+    icon: overflow
+
+# ─── mini_calendar ─────────────────────────────────────────────────────────
+# Mini visualizer non-styling config: title format, layout dimensions,
+# icon-set name.
+mini_calendar:
+  title_format: "MMMM YYYY"
+  week_number_label_format: "W{num}"
+  icon_set: squares
+
+# ─── mini_details ──────────────────────────────────────────────────────────
+# Mini-details non-styling config: column widths, header text,
+# output suffix.
+mini_details:
+  output_suffix: _details
+  title_text: Event Details
+  headers: [Start Date, Name / Description, Milestone, Days, Group]
+  column_widths: [0.16, 0.52, 0.10, 0.10, 0.12]
+
+# ─── text_mini ─────────────────────────────────────────────────────────────
+# text-mini glyph-set declarations; not an SVG renderer.
+text_mini:
+  cell_width: 2
+  month_gap: 4
+  duration_fill: "■"
+  event_symbols: ["•"]
+  milestone_symbols: ["◆"]
+  holiday_symbols: ["✕"]
+  nonworkday_symbols: ["·"]
+
+# ─── timeline ──────────────────────────────────────────────────────────────
+# Timeline non-styling config: tick-label format, axis/callout/lane
+# geometry, today-line content.
+timeline:
+  tick_label_format: "M/D"
+  today_date: ""
+  today_label_text: Today
+  marker_radius: 4.0
+  icon_size: 8
+  callout_offset_y: 30.0
+  duration_offset_y: 30.0
+  duration_lane_gap_y: 8.0
+
+# ─── compact_plan ──────────────────────────────────────────────────────────
+# compactplan non-styling config: axis-relative duration/legend geometry.
+compact_plan:
+  legend_area_ratio: 0.25
+  bands: [date_range]
+
+# ─── blockplan ─────────────────────────────────────────────────────────────
+# Blockplan non-styling config: swimlane name list, label-column ratio,
+# lane match policy, fiscal-year start.
+blockplan:
+  fiscal_year_start_month: 1
+  week_start: 0
+  label_column_ratio: 0.10
+  band_row_height: 12.0
+  lane_match_mode: first
+  show_unmatched_lane: true
+  unmatched_lane_name: Other
+  swimlanes:
+    - name: Other
+  top_bands: []
+  bottom_bands: []
+
+# ─── excelheader ───────────────────────────────────────────────────────────
+# XLSX-only config: band-row geometry, system-font names per band
+# (deliberate exception, not style_rules), and Excel cell-border
+# vertical lines.
+excelheader:
+  font_name: Calibri
+  font_size: 9
+  band_row_height: 18.0
+  top_bands: []
+  vertical_lines: []
+
+# ─── time_bands ────────────────────────────────────────────────────────────
+# Shared band catalog referenced by blockplan / compactplan / excelheader
+# placement lists. See design §10.
+time_bands:
+  date_range:
+    unit: week
+    label: Date Range
+    label_format: "{start} – {end}"
+
+# ─── style_rules ───────────────────────────────────────────────────────────
+# All visual styling.  Each rule has a select + apply_to + style triple.
+# See design §4 (Unified rule schema) and USER_GUIDE.md Complex Structures
+# Reference for the full vocabulary.
+style_rules:
+
+  # ── Text tokens ──────────────────────────────────────────────────────────
+  - name: define text:base
+    define: text
+    as: base
+    style: { font: Roboto-Regular, size: 9, color: black }
+
+  - name: define text:heading
+    define: text
+    as: heading
+    style: { font: Roboto-Regular, size: 10, color: black }
+
+  - name: define text:body
+    define: text
+    as: body
+    style: { font: Roboto-Regular, size: 8, color: black }
+
+  - name: define text:caption
+    define: text
+    as: caption
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:label
+    define: text
+    as: label
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:day_number
+    define: text
+    as: day_number
+    style: { font: Roboto-Regular, size: 10, color: black }
+
+  - name: define text:month_title
+    define: text
+    as: month_title
+    style: { font: Roboto-Regular, size: 8, color: black }
+
+  - name: define text:week_number
+    define: text
+    as: week_number
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:event_name
+    define: text
+    as: event_name
+    style: { font: Roboto-Regular, size: 8, color: black }
+
+  - name: define text:event_notes
+    define: text
+    as: event_notes
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:event_date
+    define: text
+    as: event_date
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:duration_date
+    define: text
+    as: duration_date
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:holiday_title
+    define: text
+    as: holiday_title
+    style: { font: Roboto-Regular, size: 7, color: black }
+
+  - name: define text:today_label
+    define: text
+    as: today_label
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:fiscal_label
+    define: text
+    as: fiscal_label
+    style: { font: Roboto-Regular, size: 7, color: grey }
+
+  - name: define text:swimlane_label
+    define: text
+    as: swimlane_label
+    style: { font: Roboto-Regular, size: 8, color: black }
+
+  - name: define text:band_label
+    define: text
+    as: band_label
+    style: { font: Roboto-Regular, size: 7, color: black }
+
+  - name: define text:milestone_label
+    define: text
+    as: milestone_label
+    style: { font: Roboto-Regular, size: 7, color: black }
+
+  # ── Box tokens ───────────────────────────────────────────────────────────
+  - name: define box:default
+    define: box
+    as: default
+    style: { fill: white, fill_opacity: 1.0, stroke: none }
+
+  - name: define box:cell
+    define: box
+    as: cell
+    style: { fill: white, stroke: lightgrey, stroke_width: 0.5 }
+
+  - name: define box:header
+    define: box
+    as: header
+    style: { fill: none, stroke: none }
+
+  - name: define box:callout
+    define: box
+    as: callout
+    style: { fill: white, stroke: grey, stroke_width: 0.5 }
+
+  - name: define box:highlight
+    define: box
+    as: highlight
+    style: { fill: "#f0f0f0", fill_opacity: 0.5, stroke: none }
+
+  - name: define box:day
+    define: box
+    as: day
+    style: { fill: white, stroke: lightgrey, stroke_width: 0.5 }
+
+  - name: define box:event
+    define: box
+    as: event
+    style: { fill: none, stroke: none }
+
+  - name: define box:duration
+    define: box
+    as: duration
+    style: { fill: lightgrey, stroke: grey, stroke_width: 0.5 }
+
+  - name: define box:milestone
+    define: box
+    as: milestone
+    style: { fill: none, stroke: none }
+
+  - name: define box:vline
+    define: box
+    as: vline
+    style: { fill: none, stroke: grey, stroke_width: 0.5 }
+
+  - name: define box:swimlane_heading
+    define: box
+    as: swimlane_heading
+    style: { fill: "#fafafa", stroke: lightgrey, stroke_width: 0.5 }
+
+  - name: define box:swimlane_content
+    define: box
+    as: swimlane_content
+    style: { fill: none, stroke: none }
+
+  - name: define box:band
+    define: box
+    as: band
+    style: { fill: none, stroke: lightgrey, stroke_width: 0.5 }
+
+  - name: define box:band_heading
+    define: box
+    as: band_heading
+    style: { fill: none, stroke: none }
+
+  # ── Line tokens ──────────────────────────────────────────────────────────
+  - name: define line:grid
+    define: line
+    as: grid
+    style: { color: lightgrey, width: 0.5, opacity: 1.0 }
+
+  - name: define line:axis
+    define: line
+    as: axis
+    style: { color: grey, width: 1.0, opacity: 1.0 }
+
+  - name: define line:tick
+    define: line
+    as: tick
+    style: { color: grey, width: 0.5, opacity: 1.0 }
+
+  - name: define line:today
+    define: line
+    as: today
+    style: { color: grey, width: 1.0, opacity: 1.0 }
+
+  - name: define line:separator
+    define: line
+    as: separator
+    style: { color: lightgrey, width: 0.5, opacity: 1.0 }
+
+  - name: define line:connector
+    define: line
+    as: connector
+    style: { color: lightgrey, width: 0.5, opacity: 1.0, dasharray: "4 2" }
+
+  # ── Icon tokens ──────────────────────────────────────────────────────────
+  - name: define icon:event
+    define: icon
+    as: event
+    style: { color: black, size: 8 }
+
+  - name: define icon:duration
+    define: icon
+    as: duration
+    style: { color: black, size: 8 }
+
+  - name: define icon:milestone
+    define: icon
+    as: milestone
+    style: { icon: diamond, color: black, size: 10 }
+
+  - name: define icon:overflow
+    define: icon
+    as: overflow
+    style: { icon: overflow, color: grey, size: 8 }
+
+  # ── Element bindings ─────────────────────────────────────────────────────
+  - name: bind ec-heading
+    apply_to: element
+    select: { element: ec-heading }
+    style: { use: text:heading }
+
+  - name: bind ec-label
+    apply_to: element
+    select: { element: ec-label }
+    style: { use: text:label }
+
+  - name: bind ec-day-number
+    apply_to: element
+    select: { element: ec-day-number }
+    style: { use: text:day_number }
+
+  - name: bind ec-month-title
+    apply_to: element
+    select: { element: ec-month-title }
+    style: { use: text:month_title }
+
+  - name: bind ec-week-number
+    apply_to: element
+    select: { element: ec-week-number }
+    style: { use: text:week_number }
+
+  - name: bind ec-fiscal-label
+    apply_to: element
+    select: { element: ec-fiscal-label }
+    style: { use: text:fiscal_label }
+
+  - name: bind ec-event-name
+    apply_to: element
+    select: { element: ec-event-name }
+    style: { use: text:event_name }
+
+  - name: bind ec-event-notes
+    apply_to: element
+    select: { element: ec-event-notes }
+    style: { use: text:event_notes }
+
+  - name: bind ec-event-date
+    apply_to: element
+    select: { element: ec-event-date }
+    style: { use: text:event_date }
+
+  - name: bind ec-duration-date
+    apply_to: element
+    select: { element: ec-duration-date }
+    style: { use: text:duration_date }
+
+  - name: bind ec-holiday-title
+    apply_to: element
+    select: { element: ec-holiday-title }
+    style: { use: text:holiday_title }
+
+  - name: bind ec-today-label
+    apply_to: element
+    select: { element: ec-today-label }
+    style: { use: text:today_label }
+
+  - name: bind ec-header-text
+    apply_to: element
+    select: { element: ec-header-text }
+    style: { use: text:heading }
+
+  - name: bind ec-footer-text
+    apply_to: element
+    select: { element: ec-footer-text }
+    style: { use: text:caption }
+
+  - name: bind ec-watermark
+    apply_to: element
+    select: { element: ec-watermark }
+    style: { use: text:heading }
+
+  - name: bind ec-background
+    apply_to: element
+    select: { element: ec-background }
+    style: { use: box:default }
+
+  - name: bind ec-cell
+    apply_to: element
+    select: { element: ec-cell }
+    style: { use: box:cell }
+
+  - name: bind ec-heading-cell
+    apply_to: element
+    select: { element: ec-heading-cell }
+    style: { use: box:header }
+
+  - name: bind ec-callout-box
+    apply_to: element
+    select: { element: ec-callout-box }
+    style: { use: box:callout }
+
+  - name: bind ec-day-box
+    apply_to: element
+    select: { element: ec-day-box }
+    style: { use: box:day }
+
+  - name: bind ec-band-cell
+    apply_to: element
+    select: { element: ec-band-cell }
+    style: { use: box:band }
+
+  - name: bind ec-grid-line
+    apply_to: element
+    select: { element: ec-grid-line }
+    style: { use: line:grid }
+
+  - name: bind ec-axis-line
+    apply_to: element
+    select: { element: ec-axis-line }
+    style: { use: line:axis }
+
+  - name: bind ec-axis-tick
+    apply_to: element
+    select: { element: ec-axis-tick }
+    style: { use: line:tick }
+
+  - name: bind ec-today-line
+    apply_to: element
+    select: { element: ec-today-line }
+    style: { use: line:today }
+
+  - name: bind ec-separator
+    apply_to: element
+    select: { element: ec-separator }
+    style: { use: line:separator }
+
+  - name: bind ec-connector
+    apply_to: element
+    select: { element: ec-connector }
+    style: { use: line:connector }
+
+  - name: bind ec-event-icon
+    apply_to: element
+    select: { element: ec-event-icon }
+    style: { use: icon:event }
+
+  - name: bind ec-duration-icon
+    apply_to: element
+    select: { element: ec-duration-icon }
+    style: { use: icon:duration }
+
+  - name: bind ec-overflow-icon
+    apply_to: element
+    select: { element: ec-overflow-icon }
+    style: { use: icon:overflow }
+
+  # ── Routing: catch-all lane for blockplan ────────────────────────────────
+  - name: route everything to Other
+    apply_to: lane
+    select: {}
+    style: { swimlane: Other }
