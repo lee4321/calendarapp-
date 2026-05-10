@@ -20,3 +20,7 @@ output/
 
 # Logs
 *.log
+
+# Theme migration converter output (regenerate with tools/migrate_theme.py)
+config/themes/*.converted.yaml
+config/themes/*.yaml.bak
