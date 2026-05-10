@@ -180,7 +180,7 @@
 
 <header class="title">
   <h1>Unified <code class="inline">style_rules</code>: consolidating theme styling into one section</h1>
-  <div class="sub">Design proposal · CalendarApp theme schema · 2026-05-10 (rev 12: complete USER_GUIDE.md reconciliation, page by page)</div>
+  <div class="sub">Design proposal · CalendarApp theme schema · 2026-05-10 (rev 13: no hardcoded defaults; SAMPLE.yaml + new basic.yaml; section-purpose comments)</div>
 </header>
 
 <div class="toc">
@@ -234,6 +234,15 @@
       </ul>
     </li>
     <li><a href="#timebands">10 · Consolidating timebands across visualizations</a></li>
+    <li><a href="#defaults">11 · No hardcoded defaults; reference themes; section comments</a>
+      <ul>
+        <li><a href="#no-defaults">11.1 · Removing hardcoded defaults from <code class="inline">config.py</code></a></li>
+        <li><a href="#missing-key-error">11.2 · Error reporting for missing required settings</a></li>
+        <li><a href="#sample-yaml">11.3 · <code class="inline">SAMPLE.yaml</code> — complete reference theme</a></li>
+        <li><a href="#basic-yaml">11.4 · <code class="inline">basic.yaml</code> — minimum viable theme</a></li>
+        <li><a href="#section-comments">11.5 · Section-purpose comments in every migrated theme</a></li>
+      </ul>
+    </li>
   </ul>
 </div>
 
@@ -2300,12 +2309,261 @@ genuinely don't have an SVG equivalent.
   structural definition.
 </div>
 
+<!-- ─────────────────────────────────────────────────────── -->
+<h2 id="defaults">11 · No hardcoded defaults; reference themes; section comments</h2>
+
+<p>
+Once the theme schema is consolidated, two operational rules become workable for the first time:
+<strong>themes must be complete</strong>, and <strong>themes should be self-documenting</strong>.
+This section spells out the implications: dropping the fallback defaults baked into
+<code class="inline">CalendarConfig</code>, defining the missing-key error format, designating two
+reference themes (one comprehensive, one minimal) as the source of truth for what a complete theme
+looks like, and adding section-purpose comments to every migrated theme.
+</p>
+
+<h3 id="no-defaults">11.1 · Removing hardcoded defaults from <code class="inline">config.py</code></h3>
+
+<p>
+<code class="inline">CalendarConfig</code> currently carries roughly 100+ fields with non-<code class="inline">None</code>
+defaults — colors, font names, numeric geometry, format strings. The styling fields go away with the
+<code class="inline">style_rules</code> migration (<a href="#impl-pr">§7.1</a>). Of what remains —
+non-styling config — every default is also removed. The dataclass declares the field's <em>type</em>
+and <em>required visualizers</em>; it never declares a fallback value.
+</p>
+
+<h4>Why drop them</h4>
+
+<ul class="tight">
+  <li><strong>Hidden defaults make themes ambiguous.</strong> A theme that doesn't set
+    <code class="inline">mini_calendar.title_format</code> renders as <code class="inline">"MMMM YYYY"</code> today
+    because the dataclass says so. A reader of the theme file has no way to know what they'll get
+    without consulting the source. Removing the default makes the theme either explicit or invalid.</li>
+  <li><strong>The reference themes become the source of truth.</strong> When the dataclass is silent,
+    <code class="inline">SAMPLE.yaml</code> (complete) and <code class="inline">basic.yaml</code> (minimal) are
+    the only places to look up a sensible value. That's a documentation boundary that doesn't drift.</li>
+  <li><strong>Validation gets sharper.</strong> The loader can statically prove a theme is complete
+    for a given visualizer before any rendering work begins — no surprise mid-render fallbacks.</li>
+  <li><strong>Theme inheritance is honest.</strong> A theme that <code class="inline">extends:</code> the
+    default theme inherits exactly what's written in the parent, not a phantom dataclass layer
+    underneath.</li>
+</ul>
+
+<h4>What changes in <code class="inline">CalendarConfig</code></h4>
+
+<ul class="tight">
+  <li>Every field's <code class="inline">field(default=…)</code> / <code class="inline">field(default_factory=…)</code> is replaced with no default. In a frozen dataclass: the field is required at construction.</li>
+  <li>Each field is annotated with the visualizers that consume it (a small set / enum). The loader uses this to scope the missing-key check by visualizer (see <a href="#missing-key-error">§11.2</a>).</li>
+  <li>Initialization stops being "instantiate <code class="inline">CalendarConfig()</code> with defaults, then overlay theme values." Instead, the loader builds the config <em>from</em> the theme YAML directly, raising on missing required keys before any field is read.</li>
+</ul>
+
+<h3 id="missing-key-error">11.2 · Error reporting for missing required settings</h3>
+
+<p>
+A missing required key produces a single, actionable error that names the key, gives an example
+value, says which visualizer needs it, and points at the reference theme that demonstrates it. The
+format is fixed:
+</p>
+
+<pre style="background: #2b1f1f; color: #f4d6d6;"><span style="color: #ff8a8a;">error: theme is missing a required setting for visualizer 'mini'</span>
+
+  missing key:   mini_calendar.title_format
+  type:          str
+  example value: "MMMM YYYY"
+  used by:       mini, mini-icon
+  reference:     config/themes/SAMPLE.yaml line 749
+                 config/themes/basic.yaml  line 41
+
+  add to your theme:
+
+    mini_calendar:
+      title_format: "MMMM YYYY"</pre>
+
+<h4>Behaviors</h4>
+
+<ul class="tight">
+  <li><strong>Lazy by visualizer.</strong> A theme used only with <code class="inline">weekly</code> never
+    has to satisfy <code class="inline">compact_plan.*</code> keys. The loader knows the active subcommand
+    and only checks fields whose <code class="inline">used_by</code> set intersects it. The catalog of
+    keys per visualizer comes from the dataclass annotations.</li>
+  <li><strong>All missing keys at once.</strong> The loader does not stop at the first error — it
+    collects every missing key for the active visualizer and reports them together, so an author
+    fixing a theme makes a complete pass instead of a play-debug-rerun loop.</li>
+  <li><strong>Example values come from <code class="inline">basic.yaml</code>.</strong> The example shown in the
+    error is the literal value at the same key in <code class="inline">basic.yaml</code> — keeping the error
+    message and the reference theme in sync without a parallel registry.</li>
+  <li><strong>Style-rule keys are checked separately.</strong> If a theme is missing a token the
+    renderer expects (e.g. no <code class="inline">define: text, as: day_number</code> when a weekly render is
+    asked for), the same error format applies, with the missing target written as the key
+    (<code class="inline">style_rules: missing definition of text:day_number</code>).</li>
+  <li><strong>Pure schema errors are distinguishable from value errors.</strong> A missing key, an
+    unknown key, and a type mismatch all use the same error template but with a different leading
+    word: <em>missing</em>, <em>unknown</em>, <em>invalid</em>. This is what the
+    <a href="#impl-pr">§7.1</a> loader-rejection behavior promises in concrete form.</li>
+</ul>
+
+<h3 id="sample-yaml">11.3 · <code class="inline">SAMPLE.yaml</code> — complete reference theme</h3>
+
+<p>
+The current <code class="inline">SAMPLE.yaml</code> is a partial reference; some sections are commented out
+or omitted, and the theme cannot drive every subcommand by itself. After migration:
+</p>
+
+<ul class="tight">
+  <li><strong>Every required key for every visualizer is present and uncommented.</strong> A user can
+    run <code class="inline">ecalendar.py weekly … --theme SAMPLE</code>, <code class="inline">… mini</code>,
+    <code class="inline">… mini-icon</code>, <code class="inline">… text-mini</code>,
+    <code class="inline">… timeline</code>, <code class="inline">… blockplan</code>,
+    <code class="inline">… compactplan</code>, and <code class="inline">… excelheader</code> against the same
+    <code class="inline">SAMPLE.yaml</code> and get a rendered output for each — no missing-key errors.</li>
+  <li><strong>Every <code class="inline">style_rules</code> token used by any renderer is defined.</strong>
+    The defaults are conservative: neutral colors, sensible fonts, no decorative patterns. The
+    intent is "demonstrably complete," not "stylistically opinionated."</li>
+  <li><strong>Optional features have a commented example, not silence.</strong> Patterns, hash rules,
+    swimlane fills, milestone halos — present as commented examples that show the shape and key set,
+    so a reader doesn't have to discover them from this design document.</li>
+  <li><strong>Every section gets a purpose comment.</strong> See <a href="#section-comments">§11.5</a>.</li>
+  <li><strong>Validation in CI:</strong> a test invokes every subcommand against <code class="inline">SAMPLE.yaml</code>
+    over a small fixture date range; any missing-key error fails the build. This guarantees the
+    "complete" claim doesn't drift as new keys are added.</li>
+</ul>
+
+<h3 id="basic-yaml">11.4 · <code class="inline">basic.yaml</code> — minimum viable theme</h3>
+
+<p>
+A new file added in the same migration PR. <code class="inline">basic.yaml</code> contains the
+<em>absolute minimum</em> set of values — and only those values — required for every visualizer to
+produce a non-erroring output. It complements <code class="inline">SAMPLE.yaml</code> at the opposite end of
+the completeness spectrum.
+</p>
+
+<h4>Construction rules</h4>
+
+<ul class="tight">
+  <li><strong>One value per required key, period.</strong> No commented-out optional examples, no
+    duplicate alternatives, no decoration. If a key isn't required by any visualizer, it isn't
+    present.</li>
+  <li><strong>Values are deliberately plain.</strong> Black text, white fills, single-color palettes,
+    standard system fonts (<code class="inline">Roboto-Regular</code> family). The output looks intentionally
+    austere — that's the point. A theme author copying <code class="inline">basic.yaml</code> as a starting
+    point sees clearly which lines they need to change to develop a visual identity.</li>
+  <li><strong>Section-purpose comments only.</strong> Per <a href="#section-comments">§11.5</a> — no
+    other commentary. The file is short enough that the YAML is its own documentation.</li>
+  <li><strong>Doubles as the example-value source for §11.2 errors.</strong> When the loader emits a
+    missing-key error, the example value it prints is read from <code class="inline">basic.yaml</code>.
+    Editing <code class="inline">basic.yaml</code> updates the help text — no parallel string table.</li>
+</ul>
+
+<h4>Approximate size</h4>
+
+<p>
+Estimated 80–120 lines: roughly the count of required non-styling keys across all visualizers, plus
+~15 <code class="inline">style_rules</code> entries (the minimum token definitions and element bindings),
+plus the section-purpose comment headers. For comparison, <code class="inline">SAMPLE.yaml</code> after
+migration sits in the 600–900-line range — it carries the same baseline plus annotated examples for
+every optional feature.
+</p>
+
+<h4>Use cases</h4>
+
+<ol>
+  <li><strong>New theme starter.</strong> <code class="inline">cp config/themes/basic.yaml config/themes/mytheme.yaml</code> — a known-complete starting point.</li>
+  <li><strong>Bug-report repro.</strong> The shortest theme that exhibits the problem; reduces noise in issue triage.</li>
+  <li><strong>Schema-completeness test.</strong> CI invokes every subcommand against <code class="inline">basic.yaml</code>; if anything fails, either the theme is missing a key (fix the theme) or a default crept back into the dataclass (fix the code).</li>
+  <li><strong>Loader error help.</strong> The example value in §11.2's error message is read from this file.</li>
+</ol>
+
+<h3 id="section-comments">11.5 · Section-purpose comments in every migrated theme</h3>
+
+<p>
+The converter (<a href="#conversion">§7.2</a>) emits section-purpose comments at the top of each
+top-level section in every migrated theme — not just <code class="inline">SAMPLE.yaml</code> and
+<code class="inline">basic.yaml</code>, but all 17 in-tree themes. The comments are short, fixed across
+themes, and describe the section's purpose, not its contents.
+</p>
+
+<h4>Comment template</h4>
+
+<p>Each top-level section is preceded by a one-line divider, a one-sentence purpose, and a pointer
+into the design / USER_GUIDE.md for further detail. The form is fixed so the comments stay grep-able
+and uniform across themes:</p>
+
+<pre><span class="c"># ─── theme ──────────────────────────────────────────────────────────────────</span>
+<span class="c"># Theme metadata: identification used by --theme lookup and embedded in</span>
+<span class="c"># the SVG &lt;desc&gt; element. See USER_GUIDE.md "Theme System".</span>
+<span class="k">theme:</span>
+  <span class="k">name:</span> <span class="v">"My Theme"</span>
+  <span class="k">version:</span> <span class="v">"3.0"</span>
+  <span class="k">description:</span> <span class="v">"…"</span>
+
+<span class="c"># ─── base ───────────────────────────────────────────────────────────────────</span>
+<span class="c"># Theme-wide defaults consumed by every visualizer: default font family</span>
+<span class="c"># and the icon shown when an event references an unknown icon name.</span>
+<span class="k">base:</span>
+  <span class="k">font_family:</span> <span class="v">"Roboto-Regular"</span>
+  <span class="k">default_missing_icon:</span> <span class="v">"applet-closed"</span>
+
+<span class="c"># ─── style_rules ────────────────────────────────────────────────────────────</span>
+<span class="c"># All visual styling. Each rule has a select + apply_to + style triple.</span>
+<span class="c"># See design §4 (Unified rule schema) and USER_GUIDE.md Complex Structures</span>
+<span class="c"># Reference for the full vocabulary.</span>
+<span class="k">style_rules:</span>
+  <span class="p">-</span> …</pre>
+
+<h4>Comment catalog</h4>
+
+<p>The converter draws from a fixed catalog so every theme uses identical wording for identical
+sections. Authors editing a theme don't end up rewriting these — they're documentation, not
+configuration. The catalog (one entry per top-level section):</p>
+
+<table>
+  <thead><tr><th>Section</th><th>Purpose comment (one sentence)</th></tr></thead>
+  <tbody>
+    <tr><td><code class="inline">theme</code></td><td>Theme metadata: name, version, description; surfaced by <code class="inline">--theme</code> lookup and the SVG <code class="inline">&lt;desc&gt;</code>.</td></tr>
+    <tr><td><code class="inline">base</code></td><td>Theme-wide defaults: default font family and default missing-icon name.</td></tr>
+    <tr><td><code class="inline">events</code></td><td>Event placement policy (<code class="inline">item_placement_order</code>); no styling.</td></tr>
+    <tr><td><code class="inline">durations</code></td><td>Duration placement / geometry; no styling.</td></tr>
+    <tr><td><code class="inline">fiscal</code></td><td>Fiscal calendar semantics: label format and year offset.</td></tr>
+    <tr><td><code class="inline">colors</code></td><td>Palette name references (<code class="inline">month_palette</code>, <code class="inline">fiscal_palette</code>, <code class="inline">group_palette</code>) and structural holiday attributes.</td></tr>
+    <tr><td><code class="inline">layout</code></td><td>Page margins (numeric points or unit-suffixed values like <code class="inline">0.5in</code>).</td></tr>
+    <tr><td><code class="inline">watermark</code></td><td>Watermark text content and rotation; styling lives in <code class="inline">style_rules</code>.</td></tr>
+    <tr><td><code class="inline">weekly</code></td><td>Weekly visualizer non-styling config: week-number format, day-name format, overflow icon name.</td></tr>
+    <tr><td><code class="inline">mini_calendar</code></td><td>Mini visualizer non-styling config: title format, layout dimensions, icon-set name.</td></tr>
+    <tr><td><code class="inline">mini_details</code></td><td>Mini-details non-styling config: column widths, header text, output suffix.</td></tr>
+    <tr><td><code class="inline">text_mini</code></td><td>text-mini glyph-set declarations; not an SVG renderer.</td></tr>
+    <tr><td><code class="inline">timeline</code></td><td>Timeline non-styling config: tick-label format, axis/callout/lane geometry, today-line content.</td></tr>
+    <tr><td><code class="inline">blockplan</code></td><td>Blockplan non-styling config: swimlane name list, label-column ratio, lane match policy, fiscal-year start.</td></tr>
+    <tr><td><code class="inline">compact_plan</code></td><td>compactplan non-styling config: axis-relative duration/legend geometry.</td></tr>
+    <tr><td><code class="inline">excelheader</code></td><td>XLSX-only config: band-row geometry, system-font names per band (deliberate exception, not <code class="inline">style_rules</code>), and Excel cell-border vertical lines.</td></tr>
+    <tr><td><code class="inline">time_bands</code></td><td>Shared band catalog referenced by blockplan / compactplan / excelheader placement lists. See design §10.</td></tr>
+    <tr><td><code class="inline">style_rules</code></td><td>All visual styling. <code class="inline">select</code> + <code class="inline">apply_to</code> + <code class="inline">style</code> per rule. See design §4 and USER_GUIDE.md Complex Structures Reference.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Convention vs. content.</strong> The comments are part of the file format only as a
+  convention — they are pure YAML comments and the parser ignores them. A theme without comments
+  still loads fine. The convention exists so that a developer reading any theme file gets the same
+  orientation cues, regardless of which theme they opened.
+</div>
+
+<h4>Migration checklist additions</h4>
+
+<p>This section adds three deliverables to <a href="#impl-pr">§7.1</a>'s implementation PR:</p>
+
+<ul class="tight">
+  <li>Strip every <code class="inline">field(default=…)</code> / <code class="inline">field(default_factory=…)</code> from <code class="inline">config.py</code>; replace with required fields plus a <code class="inline">used_by</code> annotation per field.</li>
+  <li>Implement the missing-key error path with the format in <a href="#missing-key-error">§11.2</a>; collect all missing keys per render rather than fail-fast.</li>
+  <li>Add <code class="inline">config/themes/basic.yaml</code> as a new file; rewrite <code class="inline">config/themes/SAMPLE.yaml</code> to be complete; emit section-purpose comments for all 17 in-tree themes via the converter.</li>
+  <li>Add CI tests: invoke every subcommand against <code class="inline">SAMPLE.yaml</code> and <code class="inline">basic.yaml</code>; both must produce output with no missing-key errors.</li>
+</ul>
+
 <hr style="margin: 48px 0 16px; border: none; border-top: 1px solid var(--rule);">
 <p style="color: var(--muted); font-size: 12px;">
 End of design. Next step: implement the unified loader, write the one-shot converter, run it against
-all 17 themes, capture pre-migration SVG baselines for the round-trip diff in §7.4, and apply the
-USER_GUIDE rewrites in §9 alongside the code changes. The timeband-catalog change in §10 is part of
-the same single PR.
+all 17 themes, capture pre-migration SVG baselines for the round-trip diff in §7.4, apply the
+USER_GUIDE rewrites in §9 alongside the code changes, land the timeband-catalog change in §10, strip
+defaults from <code class="inline">CalendarConfig</code> per §11, ship <code class="inline">basic.yaml</code>, and
+rewrite <code class="inline">SAMPLE.yaml</code> as a complete reference. All in the same single PR.
 </p>
 
 </div>
