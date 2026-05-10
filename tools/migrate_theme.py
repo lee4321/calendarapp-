@@ -941,7 +941,151 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
         _warn(f"unknown top-level key '{k}' carried through unchanged", fname=fname)
         out[k] = src[k]
 
+    # Final pass: backfill any missing required keys from basic.yaml so the
+    # converted theme is complete enough to load under the unified parser.
+    # See design §11.4 — basic.yaml is the single source of truth for
+    # "what's required, with a sensible default."
+    _backfill_from_basic(out, fname=fname)
+
     return out
+
+
+# ─── Backfill missing required keys from basic.yaml ─────────────────────────
+
+
+_BASIC_CACHE: dict[str, Any] | None = None
+_BASIC_TOKEN_CACHE: dict[str, dict[str, Any]] | None = None
+
+
+def _basic_theme_data() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Load basic.yaml once and cache the section dict + token style map."""
+    global _BASIC_CACHE, _BASIC_TOKEN_CACHE
+    if _BASIC_CACHE is None or _BASIC_TOKEN_CACHE is None:
+        basic_path = Path(__file__).resolve().parent.parent / "config" / "themes" / "basic.yaml"
+        raw = yaml.load(basic_path.read_text(), Loader=_OrderedLoader) or {}
+        # Build a token map: "<kind>:<name>" -> style bag (last-write-wins; basic.yaml
+        # only has unconditional definitions so this is fine).
+        tokens: dict[str, dict[str, Any]] = {}
+        for rule in (raw.get("style_rules") or []):
+            if not isinstance(rule, dict):
+                continue
+            kind = rule.get("define")
+            name = rule.get("as")
+            style = rule.get("style") or {}
+            if kind and name and isinstance(style, dict):
+                tokens[f"{kind}:{name}"] = dict(style)
+        _BASIC_CACHE = raw
+        _BASIC_TOKEN_CACHE = tokens
+    return _BASIC_CACHE, _BASIC_TOKEN_CACHE
+
+
+def _ensure_nested_path(out: OrderedDict, path: str, value: Any) -> None:
+    """Insert ``value`` at the dotted ``path`` in ``out``, creating parent maps."""
+    parts = path.split(".")
+    cur: Any = out
+    for part in parts[:-1]:
+        existing = cur.get(part)
+        if not isinstance(existing, (dict, OrderedDict)):
+            new_map: OrderedDict[str, Any] = OrderedDict()
+            cur[part] = new_map
+            cur = new_map
+        else:
+            cur = existing
+    cur[parts[-1]] = value
+
+
+def _read_path(d: dict[str, Any], path: str) -> Any:
+    cur: Any = d
+    for part in path.split("."):
+        if not isinstance(cur, dict):
+            return None
+        if part not in cur:
+            return None
+        cur = cur[part]
+    return cur
+
+
+def _path_has_value(d: dict[str, Any], path: str) -> bool:
+    """True if ``path`` exists AND its value is not None.
+
+    Explicit ``null`` values in legacy themes (``base.default_missing_icon: null``,
+    ``text_mini.event_symbols: null``) are treated as "absent" so the backfill
+    replaces them — None is never a useful runtime value for a required key.
+    """
+    cur: Any = d
+    for part in path.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return False
+        cur = cur[part]
+    return cur is not None
+
+
+def _backfill_from_basic(out: OrderedDict, *, fname: str) -> None:
+    """Fill any required key still missing in ``out`` with the value from basic.yaml.
+
+    Imports the required-keys registry from config.required_keys at call time
+    to avoid a hard import cycle (config.required_keys imports unified_theme,
+    not this module).
+    """
+    try:
+        from config.required_keys import REQUIRED_KEYS  # type: ignore[import-not-found]
+    except Exception as exc:  # noqa: BLE001
+        _warn(f"could not load required-keys registry for backfill: {exc}", fname=fname)
+        return
+
+    basic_sections, basic_tokens = _basic_theme_data()
+
+    # Build the set of tokens already defined in out['style_rules'].
+    defined_tokens: set[str] = set()
+    for rule in out.get("style_rules", []) or []:
+        if isinstance(rule, dict) and rule.get("define") and rule.get("as"):
+            defined_tokens.add(f"{rule['define']}:{rule['as']}")
+
+    style_rules = out.setdefault("style_rules", [])
+
+    backfilled_settings: list[str] = []
+    backfilled_tokens: list[str] = []
+    for req in REQUIRED_KEYS:
+        if req.kind == "setting":
+            if _path_has_value(out, req.path):
+                continue
+            value = _read_path(basic_sections, req.path)
+            if value is None:
+                continue
+            _ensure_nested_path(out, req.path, value)
+            backfilled_settings.append(req.path)
+        elif req.kind == "token":
+            # path like "style_rules:text:day_number"
+            _, _, token = req.path.partition(":")
+            if token in defined_tokens:
+                continue
+            style = basic_tokens.get(token)
+            if style is None:
+                continue
+            kind, _, name = token.partition(":")
+            style_rules.append({
+                "name": f"define {token}  # backfilled from basic.yaml",
+                "define": kind,
+                "as": name,
+                "style": dict(style),
+            })
+            defined_tokens.add(token)
+            backfilled_tokens.append(token)
+
+    if backfilled_settings:
+        _warn(
+            f"backfilled {len(backfilled_settings)} required setting(s) from basic.yaml: "
+            f"{', '.join(backfilled_settings[:6])}"
+            + (f" (+{len(backfilled_settings) - 6} more)" if len(backfilled_settings) > 6 else ""),
+            fname=fname,
+        )
+    if backfilled_tokens:
+        _warn(
+            f"backfilled {len(backfilled_tokens)} token(s) from basic.yaml: "
+            f"{', '.join(backfilled_tokens[:6])}"
+            + (f" (+{len(backfilled_tokens) - 6} more)" if len(backfilled_tokens) > 6 else ""),
+            fname=fname,
+        )
 
 
 # ─── Emission with section-purpose comments ─────────────────────────────────
