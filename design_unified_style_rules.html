@@ -180,7 +180,7 @@
 
 <header class="title">
   <h1>Unified <code class="inline">style_rules</code>: consolidating theme styling into one section</h1>
-  <div class="sub">Design proposal · CalendarApp theme schema · 2026-05-10 (rev 11: timeband consolidation across blockplan / compactplan / excelheader)</div>
+  <div class="sub">Design proposal · CalendarApp theme schema · 2026-05-10 (rev 12: complete USER_GUIDE.md reconciliation, page by page)</div>
 </header>
 
 <div class="toc">
@@ -217,7 +217,22 @@
         <li><a href="#axis-dissolve">8.2 · Dissolving the <code class="inline">axis:</code> stanza</a></li>
       </ul>
     </li>
-    <li><a href="#userguide">9 · USER_GUIDE reconciliation: "Visualization Setting Gaps"</a></li>
+    <li><a href="#userguide">9 · USER_GUIDE.md — complete reconciliation</a>
+      <ul>
+        <li><a href="#ug-overview">9.1 · Section status overview</a></li>
+        <li><a href="#ug-vsg">9.2 · "Visualization Setting Gaps" — what changes</a></li>
+        <li><a href="#ug-vsg-rewrite">9.3 · "Visualization Setting Gaps" — proposed rewrite</a></li>
+        <li><a href="#ug-theme-system">9.4 · "Theme System" / "Unified Theme Format" — full rewrite</a></li>
+        <li><a href="#ug-css-catalog">9.5 · "CSS Element Catalog" — surgical updates</a></li>
+        <li><a href="#ug-create">9.6 · "Creating a New Theme" — new recipe</a></li>
+        <li><a href="#ug-legacy">9.7 · "Legacy Theme Format" — deleted</a></li>
+        <li><a href="#ug-keyref">9.8 · "Complete Theme Key Reference" — regeneration</a></li>
+        <li><a href="#ug-complex">9.9 · "Complex Structures Reference" — retargeted</a></li>
+        <li><a href="#ug-notes">9.10 · "Notes" — small updates</a></li>
+        <li><a href="#ug-excel">9.11 · "ExcelHeader Subcommand" — what stays, what changes</a></li>
+        <li><a href="#ug-textbag">9.12 · Reconciling the per-element <code class="inline">text:</code> sub-bag</a></li>
+      </ul>
+    </li>
     <li><a href="#timebands">10 · Consolidating timebands across visualizations</a></li>
   </ul>
 </div>
@@ -1580,18 +1595,42 @@ one was authoritative).
 
 
 <!-- ─────────────────────────────────────────────────────── -->
-<h2 id="userguide">9 · USER_GUIDE reconciliation: "Visualization Setting Gaps"</h2>
+<h2 id="userguide">9 · USER_GUIDE.md — complete reconciliation</h2>
 
 <p>
-<a href="USER_GUIDE.md#L1384"><code class="inline">USER_GUIDE.md §"Visualization Setting Gaps"</code></a>
-summarizes which top-level YAML sections each visualizer reads. The framing — "each visualizer
-recognizes a different slice of the unified theme schema" — survives the migration, but the slicing
-changes shape: styling is no longer per-visualizer at the YAML level, only the residual non-styling
-config still varies per renderer. This section spells out what the page should say after migration,
-and the one place it gets mechanically wrong today.
+This section is a page-by-page review of <code class="inline">USER_GUIDE.md</code> against the
+unified design. The file is currently 1,554 lines and roughly half of it documents the legacy
+schema; almost every styling table and example needs surgery. The goal here is to produce a
+self-contained punch list the implementation PR can work from — so the doc lands in the same commit
+as the loader and converter, never describing a state that doesn't exist in the code.
 </p>
 
-<h3>9.1 · What needs to change</h3>
+<h3 id="ug-overview">9.1 · Section status overview</h3>
+
+<table>
+  <thead><tr><th style="width: 35%;">USER_GUIDE.md section</th><th style="width: 12%;">Lines</th><th style="width: 14%;">Status</th><th>Summary of change</th></tr></thead>
+  <tbody>
+    <tr><td>Commands · Common Workflows · CLI Option Catalog · Positional Arguments</td><td>5–336</td><td><span class="tag after">keep</span></td><td>CLI surface unchanged by the migration.</td></tr>
+    <tr><td>Theme System (intro)</td><td>338–346</td><td><span class="tag before">rewrite</span></td><td>Drop the "two formats supported" framing and the auto-detect mechanism.</td></tr>
+    <tr><td>Unified Theme Format (whole subsection — Theme YAML Structure, Text Styles, Box Styles, Line Styles, Icon Styles, Axis Definition, Element Styles)</td><td>347–481</td><td><span class="tag before">rewrite</span></td><td>Replaced by the unified <code class="inline">style_rules</code> structure (<a href="#schema">§4</a>); section becomes a brief overview that defers to the Complex Structures Reference for syntax.</td></tr>
+    <tr><td>CSS Element Catalog</td><td>483–532</td><td><span class="tag note">surgical</span></td><td>Class list mostly stays; binding-syntax examples and the "marker" rows update.</td></tr>
+    <tr><td>Creating a New Theme</td><td>534–543</td><td><span class="tag before">rewrite</span></td><td>5-step recipe rebuilt around <code class="inline">style_rules</code> with <code class="inline">define</code>.</td></tr>
+    <tr><td>External CSS Overrides</td><td>544–556</td><td><span class="tag after">keep</span></td><td>SVG output still carries <code class="inline">ec-*</code> classes; the examples remain valid.</td></tr>
+    <tr><td>Legacy Theme Format</td><td>558–562</td><td><span class="tag before">delete</span></td><td>The whole subsection goes; the VALID_SECTIONS list is replaced by a post-migration enumeration.</td></tr>
+    <tr><td>Theme Resources · Color Value Formats</td><td>564–590</td><td><span class="tag after">keep</span></td><td>Resource discovery and color formats unaffected.</td></tr>
+    <tr><td>Complete Theme Key Reference (all sub-tables: shared, weekly, mini, mini-icon, text-mini, timeline, blockplan, excelheader)</td><td>592–955</td><td><span class="tag before">regenerate</span></td><td>~360 line table is auto-generated from the schema; the post-migration generator drops every styling key and surfaces only the non-styling config that remains.</td></tr>
+    <tr><td>Complex Structures Reference — <code class="inline">style_rules</code></td><td>959–1199</td><td><span class="tag note">surgical</span></td><td>The closest existing match for the unified vocabulary. Targets, property names, and the per-element <code class="inline">text:</code> sub-bag all update.</td></tr>
+    <tr><td>Complex Structures Reference — <code class="inline">swimlane_rules</code></td><td>1201–1232</td><td><span class="tag before">rewrite</span></td><td>Folded into <code class="inline">style_rules</code> as <code class="inline">apply_to: lane</code> rules.</td></tr>
+    <tr><td>Complex Structures Reference — <code class="inline">swimlanes</code> (lane visual definitions)</td><td>1235–1259</td><td><span class="tag before">rewrite</span></td><td>Visual half moves to <code class="inline">style_rules</code>; structural half (lane name list) stays.</td></tr>
+    <tr><td>Complex Structures Reference — <code class="inline">top_time_bands</code> / <code class="inline">bottom_time_bands</code></td><td>1261–1335</td><td><span class="tag before">rewrite</span></td><td>Per <a href="#timebands">§10</a>: catalog moves to top-level <code class="inline">time_bands:</code>; placement lists become references; styling lifts to <code class="inline">style_rules</code>.</td></tr>
+    <tr><td>Complex Structures Reference — Blockplan Vertical Marker Lines</td><td>1337–1382</td><td><span class="tag note">surgical</span></td><td>Examples retargeted from <code class="inline">apply_to: vertical_line</code> to <code class="inline">apply_to: box:vline</code>; property names harmonized.</td></tr>
+    <tr><td>Visualization Setting Gaps</td><td>1384–1396</td><td><span class="tag before">rewrite</span></td><td>Reframed as "styling is shared, non-styling config is per-visualizer" — see §9.2 / §9.3.</td></tr>
+    <tr><td>Notes</td><td>1398–1404</td><td><span class="tag note">surgical</span></td><td>The <code class="inline">size_rule</code> note becomes obsolete; the others survive.</td></tr>
+    <tr><td>ExcelHeader Subcommand (Usage, Options, Workbook Layout, Holiday Decoration, Vertical Lines → Cell Right Borders)</td><td>1407–1554</td><td><span class="tag note">surgical</span></td><td>Most prose stays; the Timeband Configuration block updates around <code class="inline">band_fonts</code> and the catalog reference (<a href="#timebands">§10.4</a>).</td></tr>
+  </tbody>
+</table>
+
+<h3 id="ug-vsg">9.2 · "Visualization Setting Gaps" — what changes</h3>
 
 <table>
   <thead><tr><th>Current claim</th><th>After migration</th></tr></thead>
@@ -1635,7 +1674,7 @@ and the one place it gets mechanically wrong today.
   </tbody>
 </table>
 
-<h3>9.2 · Proposed rewrite of "Visualization Setting Gaps"</h3>
+<h3 id="ug-vsg-rewrite">9.3 · "Visualization Setting Gaps" — proposed rewrite</h3>
 
 <p>The section is reframed around a single idea: <strong>styling is shared, non-styling config is
 per-visualizer.</strong> A drop-in replacement that USER_GUIDE.md can use verbatim:</p>
@@ -1678,22 +1717,376 @@ Shared non-styling sections:
 Anything that controls <em>appearance</em> — fills, strokes, fonts, colors, patterns, line widths,
 opacities, dasharrays — lives in `style_rules`, not in any per-visualizer section.</pre>
 
-<h3>9.3 · Other USER_GUIDE pages affected by the migration</h3>
+<h3 id="ug-theme-system">9.4 · "Theme System" / "Unified Theme Format" — full rewrite</h3>
 
-<p>The "Visualization Setting Gaps" rewrite is not the only doc edit landing in the same PR. The
-loader-rejection behavior in <a href="#impl-pr">§7.1</a> means anything that documents the legacy
-shape needs a touch:</p>
+<p>
+USER_GUIDE.md lines 338–481 currently open with: <em>"Themes control all visual styling of SVG
+output. Two formats are supported: Unified format (v2.0) … Legacy format (v1.0) … The theme engine
+auto-detects the format based on the presence of <code class="inline">text_styles</code> or
+<code class="inline">element_styles</code> top-level sections."</em> All of that paragraph goes away.
+After migration there is one schema, one parser, no auto-detect.
+</p>
+
+<h4>What the new prose says</h4>
+
+<ol>
+  <li><strong>One-paragraph intro:</strong> "Themes are YAML files describing the visual style of SVG
+    output via a single ordered <code class="inline">style_rules</code> list. Each rule selects a target
+    surface (day cell, event row, swimlane heading, milestone marker, …) and applies a property bag.
+    Non-styling config — format strings, geometry, fiscal semantics, structural lane and band
+    declarations — lives in dedicated top-level sections."</li>
+  <li><strong>YAML structure block:</strong> the legacy block (with <code class="inline">text_styles</code>,
+    <code class="inline">box_styles</code>, …, <code class="inline">element_styles</code>,
+    <code class="inline">axis</code>, …) is replaced by:
+<pre><span class="k">theme:</span>           <span class="c"># metadata: name, version, description</span>
+<span class="k">base:</span>            <span class="c"># default font_family, default_missing_icon</span>
+<span class="k">events:</span>          <span class="c"># item_placement_order — non-styling</span>
+<span class="k">durations:</span>       <span class="c"># geometry / placement only</span>
+<span class="k">fiscal:</span>          <span class="c"># label_format, year_offset</span>
+<span class="k">colors:</span>          <span class="c"># palette references; holiday structural attrs</span>
+<span class="k">weekly:</span>          <span class="c"># week_number / day_name format strings</span>
+<span class="k">mini_calendar:</span>   <span class="c"># title_format, layout dimensions, icon_set</span>
+<span class="k">timeline:</span>        <span class="c"># tick_label_format, geometry, today_date</span>
+<span class="k">blockplan:</span>       <span class="c"># swimlanes (names), label_column_ratio, lane policy</span>
+<span class="k">compact_plan:</span>    <span class="c"># axis-relative geometry</span>
+<span class="k">excelheader:</span>     <span class="c"># XLSX-specific (band_fonts, vertical_lines)</span>
+<span class="k">time_bands:</span>      <span class="c"># shared band catalog (see §10)</span>
+<span class="k">style_rules:</span>     <span class="c"># the only styling section</span></pre>
+  </li>
+  <li><strong>Subsections to delete:</strong> "Theme YAML Structure" (legacy structure block),
+    "Text Styles", "Box Styles", "Line Styles", "Icon Styles", "Axis Definition", "Element Styles
+    (Binding Map)" — every example in these subsections describes a structure that no longer parses.
+    The replacement points readers at <a href="#schema">§4 Unified rule schema</a> and
+    <a href="#examples">§5 Before / after</a> in this design (rendered into the doc as a Complex
+    Structures Reference subsection — see §9.9 below).</li>
+  <li><strong>One worked example</strong> at the end of the rewritten section: a minimal theme that
+    defines two text tokens, one box token, and a content rule, drawn straight from
+    <a href="#examples">§5</a> of this design.</li>
+</ol>
+
+<h3 id="ug-css-catalog">9.5 · "CSS Element Catalog" — surgical updates</h3>
+
+<p>
+USER_GUIDE.md lines 483–532 list every <code class="inline">ec-*</code> CSS class that lands on SVG
+elements. The classes themselves remain — they are how external CSS overrides reach the SVG (see line
+544 § "External CSS Overrides", which stays valid). Two specific edits:
+</p>
+
+<ol>
+  <li><strong>Marker rows shift category.</strong> The current table classifies
+    <code class="inline">ec-milestone-marker</code>, <code class="inline">ec-milestone-flag</code>, and
+    <code class="inline">ec-duration-marker</code> as type "marker". Per <a href="#milestonesevents">§4.4</a>,
+    milestone markers are now icons, not lines. Update those rows to type "icon".</li>
+  <li><strong>Add new band-related classes</strong> introduced by <a href="#timebands">§10</a>:
+    <code class="inline">ec-band-cell</code> (already present), plus <code class="inline">ec-band-label</code>
+    (segment text inside a band) and <code class="inline">ec-band-heading-cell</code> (the heading-column
+    cell carrying the band's label). The existing <code class="inline">ec-band-cell</code> binds to
+    <code class="inline">box:band</code>; the two new classes bind to <code class="inline">text:band_label</code>
+    and <code class="inline">box:band_heading</code> respectively.</li>
+  <li><strong>Remove the modifier-class line.</strong> "Modifier classes (added alongside element
+    class): <code class="inline">ec-holiday</code>, <code class="inline">ec-nonworkday</code>,
+    <code class="inline">ec-current-day</code>, <code class="inline">ec-adjacent</code>" — these stay on the
+    SVG and stay in the doc; no edit. Confirmed in place.</li>
+</ol>
+
+<h3 id="ug-create">9.6 · "Creating a New Theme" — new recipe</h3>
+
+<p>
+The current 5-step recipe at lines 534–543 reads: "Define the <code class="inline">text_styles</code>
+you need… Define <code class="inline">box_styles</code>, <code class="inline">line_styles</code>,
+<code class="inline">icon_styles</code>… Create the <code class="inline">element_styles</code> binding
+map…" None of those sections exist after migration. The replacement:
+</p>
+
+<pre>1. Start with a <span class="k">theme:</span> metadata block (name, version, description).
+
+2. Define the <span class="k">style_rules</span> tokens you need with <span class="k">define:</span> entries — typically a few
+   <span class="k">text:</span> tokens (heading, body, day_number…), one or two <span class="k">box:</span> tokens
+   (cell, header), and any <span class="k">icon:</span> tokens you reference.
+
+3. Bind tokens to the <span class="k">ec-*</span> element classes that need them via rules of the form:
+     <span class="k">apply_to: element</span>
+     <span class="k">select: { element: ec-name }</span>
+     <span class="k">style: { use: text:heading }</span>
+
+4. Add content rules that should override the defaults — federal-holiday tinting,
+   high-priority highlighting, sprint hatching — by appending <span class="k">apply_to: box:day</span>
+   (or <span class="k">box:event</span>, etc.) entries with <span class="k">select:</span> predicates.
+
+5. Add any non-styling configuration sections you need: format strings under
+   <span class="k">weekly</span> / <span class="k">mini_calendar</span> / <span class="k">timeline</span> / <span class="k">fiscal</span>; structural lists under
+   <span class="k">blockplan.swimlanes</span> and the shared <span class="k">time_bands:</span> catalog;
+   <span class="k">colors.*_palette</span> palette names.
+
+Override existing themes by extending them and appending rules — order is the
+only precedence (see §6 of the design / Complex Structures Reference).</pre>
+
+<h3 id="ug-legacy">9.7 · "Legacy Theme Format" — deleted</h3>
+
+<p>
+USER_GUIDE.md lines 558–562 are deleted. The VALID_SECTIONS list it carries is replaced by a single
+post-migration enumeration printed in §9.4's structure block. The "Cascade precedence for a setting"
+sentence is also gone — <em>order is the only precedence</em> (<a href="#resolution">§6</a>) replaces the
+exact-section → parent → base cascade.
+</p>
+
+<h3 id="ug-keyref">9.8 · "Complete Theme Key Reference" — regeneration</h3>
+
+<p>
+The reference table (lines 592–955) is generated from <code class="inline">CalendarConfig</code>
+docstrings; it isn't hand-written. After migration the generator's input is much smaller because the
+styling fields are gone from the dataclass. The post-migration table:
+</p>
 
 <ul class="tight">
-  <li><strong>§"Unified Theme Format"</strong> (line 347) — the structure-of-a-theme-file overview should be regenerated against the converted <code class="inline">SAMPLE.yaml</code>.</li>
-  <li><strong>§"Legacy Theme Format"</strong> (line 558) — deleted. The clean-break migration retires legacy parsing entirely.</li>
-  <li><strong>§"Complete Theme Key Reference"</strong> (line 592) — regenerated from the unified schema. Tokens and rules replace the per-section enumerations of <code class="inline">text_styles</code>, <code class="inline">box_styles</code>, etc.</li>
-  <li><strong>§"<code class="inline">style_rules</code> — Unified Visual Styling Rules"</strong> (line 959) — the existing prose is the closest match to the unified vocabulary, but needs updates: rename <code class="inline">apply_to: day_box | duration | vertical_line</code> to the <code class="inline">box:*</code> targets, document <code class="inline">define:</code>, document list-valued <code class="inline">apply_to</code>, document the new <code class="inline">box:event</code> / <code class="inline">box:milestone</code> / <code class="inline">icon:milestone</code> / <code class="inline">text:milestone_label</code> tokens.</li>
-  <li><strong>§"<code class="inline">swimlane_rules</code> — Blockplan Lane Routing"</strong> (line 1201) — rewritten to show the unified form: <code class="inline">apply_to: lane, style: { swimlane: &lt;name&gt; }</code>.</li>
-  <li><strong>§"<code class="inline">swimlanes</code> — Blockplan Lane Visual Definitions"</strong> (line 1235) — the <em>visual</em> half is removed (now in <code class="inline">style_rules</code> via <code class="inline">box:swimlane_heading</code> / <code class="inline">box:swimlane_content</code> / <code class="inline">text:swimlane_label</code>); the <em>structural</em> half (the lane name list) stays.</li>
-  <li><strong>§"Blockplan Vertical Marker Lines"</strong> (line 1337) — examples retargeted from <code class="inline">apply_to: vertical_line</code> to <code class="inline">apply_to: box:vline</code>; property names harmonized to <code class="inline">fill</code> / <code class="inline">stroke</code> / <code class="inline">dasharray</code>.</li>
-  <li><strong>§"CSS Element Catalog"</strong> (line 483) — element-class list unchanged; the binding-syntax examples (<code class="inline">{ text_style: heading }</code>) update to the unified rule form.</li>
+  <li><strong>Drops every key flagged "styling" in <a href="#nonstyling">§3.1's boundary cases</a></strong> — fills, strokes, fonts (other than per-section <code class="inline">font_family</code> defaults), colors, opacities, dasharrays. These rows go to zero.</li>
+  <li><strong>Surfaces only non-styling config</strong> — format strings, geometry, fiscal/calendar semantics, item placement policy, palette references, structural declarations. The shared section keeps roughly: <code class="inline">theme.name</code>, <code class="inline">theme.description</code>, <code class="inline">base.default_missing_icon</code>, <code class="inline">durations.stroke_dasharray</code> (config-shaped, not styling), <code class="inline">events.item_placement_order</code>, the <code class="inline">fiscal.*</code> formats, <code class="inline">layout.margin.*</code>, all <code class="inline">colors.*_palette</code> name references, <code class="inline">watermark.text</code> / <code class="inline">.rotation_angle</code> / <code class="inline">.resize_mode</code>.</li>
+  <li><strong>Adds a separate "Style Tokens &amp; Targets" subsection</strong> — not generated from the dataclass, but a hand-curated reference of the canonical token names a default theme defines (<code class="inline">text:heading</code>, <code class="inline">text:body</code>, <code class="inline">text:day_number</code>, …, <code class="inline">box:day</code>, <code class="inline">box:event</code>, <code class="inline">box:duration</code>, <code class="inline">box:vline</code>, <code class="inline">box:swimlane_heading</code>, <code class="inline">box:swimlane_content</code>, <code class="inline">box:band</code>, <code class="inline">box:milestone</code>, <code class="inline">icon:event</code>, <code class="inline">icon:milestone</code>, <code class="inline">icon:overflow</code>) and the targets <code class="inline">style_rules</code> can apply to.</li>
 </ul>
+
+<div class="callout">
+  <strong>Estimated size:</strong> the current reference table is roughly 360 lines; after the
+  styling drop the auto-generated portion shrinks to 80–100 lines. The "Style Tokens &amp; Targets"
+  subsection adds ~50 lines. Net file change: ~200 lines smaller.
+</div>
+
+<h3 id="ug-complex">9.9 · "Complex Structures Reference" — retargeted</h3>
+
+<p>
+This is the one place in USER_GUIDE.md where the prose is closest to the unified design. Most of the
+edits are mechanical renames; the three substantive ones are flagged separately.
+</p>
+
+<h4><code class="inline">style_rules</code> subsection (lines 959–1199)</h4>
+
+<table>
+  <thead><tr><th>Current</th><th>Replacement</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>"<code class="inline">apply_to:</code> — which visual element type(s) to style: <code class="inline">day_box</code>, <code class="inline">event</code>, <code class="inline">duration</code>, <code class="inline">vertical_line</code>, or <code class="inline">all</code>"</td>
+      <td>Replace target enumeration with <code class="inline">box:&lt;n&gt;</code> · <code class="inline">text:&lt;n&gt;</code> · <code class="inline">line:&lt;n&gt;</code> · <code class="inline">icon:&lt;n&gt;</code> · <code class="inline">element</code> · <code class="inline">lane</code>. Drop <code class="inline">all</code> — list-valued <code class="inline">apply_to</code> covers it (<a href="#multitarget">§4.5</a>).</td>
+    </tr>
+    <tr>
+      <td>"<code class="inline">apply_to:</code> Style Targets" table (line 1067) showing day_box / event / duration / vertical_line / all</td>
+      <td>Replaced by <a href="#vocab">§4.3 vocabulary table</a> from this design.</td>
+    </tr>
+    <tr>
+      <td>"<code class="inline">style:</code> Fill and Background" / "Stroke and Border" tables — keys <code class="inline">fill_color</code>, <code class="inline">stroke_color</code>, <code class="inline">stroke_dasharray</code></td>
+      <td>Renamed to <code class="inline">fill</code>, <code class="inline">stroke</code>, <code class="inline">dasharray</code>. Pattern keys (<code class="inline">pattern</code>, <code class="inline">pattern_color</code>, <code class="inline">pattern_opacity</code>) now apply to <em>any</em> <code class="inline">box:&lt;n&gt;</code>, not just day boxes — table updated accordingly.</td>
+    </tr>
+    <tr>
+      <td>"Per-Element Text (<code class="inline">text:</code> block)" subsection (lines 1117–1173) — nested text-by-element-role sub-bag</td>
+      <td><strong>Substantive change.</strong> See <a href="#ug-textbag">§9.12</a> below — the nested form is replaced by separate rules with <code class="inline">apply_to: text:&lt;role&gt;</code>.</td>
+    </tr>
+    <tr>
+      <td>"Vertical Line Render Hint" (line 1181) — <code class="inline">align: start | center | end</code></td>
+      <td>Stays. Documented under <code class="inline">box:vline</code> in <a href="#vocab">§4.3</a>.</td>
+    </tr>
+    <tr>
+      <td>"Date Range Matching" (lines 1189–1198) — <code class="inline">date</code> selector formats</td>
+      <td>Stays. Selector grammar unchanged.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4><code class="inline">swimlane_rules</code> subsection (lines 1201–1232)</h4>
+
+<p>Rewritten to show the unified form. The opening sentence
+<em>"Top-level theme key controlling which lane each blockplan event/duration is placed into"</em>
+becomes: <em>"Lane routing is expressed in <code class="inline">style_rules</code> with
+<code class="inline">apply_to: lane</code> and <code class="inline">style: { swimlane: &lt;name&gt; }</code>.
+First match wins."</em> The example block updates accordingly:</p>
+
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">"Route Xstore"</span>
+    <span class="k">apply_to:</span> <span class="v">lane</span>
+    <span class="k">select:</span> { <span class="k">resource_group:</span> [<span class="v">Xstore</span>] }
+    <span class="k">style:</span>   { <span class="k">swimlane:</span> <span class="v">"Xstore\nConversions"</span> }
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">"Catch-all"</span>
+    <span class="k">apply_to:</span> <span class="v">lane</span>
+    <span class="k">select:</span>   {}
+    <span class="k">style:</span>   { <span class="k">swimlane:</span> <span class="v">"Other"</span> }</pre>
+
+<p>The "first match wins" semantics need a callout in the rewritten section: <code class="inline">apply_to: lane</code>
+diverges from every other rule in <code class="inline">style_rules</code>, where <em>last</em> match wins. The
+divergence is intrinsic — a lane assignment is a discrete choice, not a layered attribute. Document
+this explicitly in the rewritten subsection.</p>
+
+<h4><code class="inline">swimlanes</code> subsection (lines 1235–1259)</h4>
+
+<p>The current example shows a list of dicts mixing structural and visual properties:
+<code class="inline">name</code>, <code class="inline">fill_color</code>, <code class="inline">label_color</code>,
+<code class="inline">timeline_fill_color</code>, <code class="inline">split_ratio</code>,
+<code class="inline">label_align_h</code>, <code class="inline">label_align_v</code>,
+<code class="inline">label_rotation</code>. After migration:</p>
+
+<ul class="tight">
+  <li><strong>Stays in <code class="inline">blockplan.swimlanes</code>:</strong> <code class="inline">name</code> (the lane identifier — the structural fact that this lane exists), <code class="inline">split_ratio</code> (geometry — divider position).</li>
+  <li><strong>Moves to <code class="inline">style_rules</code>:</strong> <code class="inline">fill_color</code> → <code class="inline">box:swimlane_heading</code>, <code class="inline">timeline_fill_color</code> → <code class="inline">box:swimlane_content</code>, <code class="inline">label_color</code> / <code class="inline">label_align_h</code> / <code class="inline">label_align_v</code> / <code class="inline">label_rotation</code> → <code class="inline">text:swimlane_label</code>, all keyed by <code class="inline">select.swimlane: &lt;name&gt;</code>.</li>
+</ul>
+
+<p>The rewritten example is the one already shown in <a href="#allboxes">§4.2</a> "Before / after — swimlane heading + content + routing".</p>
+
+<h4><code class="inline">top_time_bands</code> / <code class="inline">bottom_time_bands</code> subsection (lines 1261–1335)</h4>
+
+<p>
+Rewritten to <a href="#timebands">§10</a>'s shape: a top-level <code class="inline">time_bands:</code>
+catalog plus per-visualizer placement lists that reference catalog keys. The "Time-Band Fields"
+table (lines 1297–1330) keeps its structural rows (<code class="inline">unit</code>,
+<code class="inline">label</code>, <code class="inline">label_format</code>,
+<code class="inline">date_format</code>, <code class="inline">interval_days</code>,
+<code class="inline">prefix</code>, <code class="inline">start_index</code>,
+<code class="inline">max_index</code>, <code class="inline">anchor_date</code>,
+<code class="inline">target_date</code>, <code class="inline">start_date</code>,
+<code class="inline">skip_weekends</code>, <code class="inline">skip_nonworkdays</code>,
+<code class="inline">label_values</code>, <code class="inline">show_every</code>,
+<code class="inline">row_height</code>) and drops the styling rows
+(<code class="inline">fill_color</code>, <code class="inline">fill_palette</code>,
+<code class="inline">font</code>, <code class="inline">font_color</code>,
+<code class="inline">font_opacity</code>, <code class="inline">font_size</code>,
+<code class="inline">label_align_h</code>, <code class="inline">label_color</code>,
+<code class="inline">label_fill_color</code>, <code class="inline">label_font</code>,
+<code class="inline">label_font_size</code>, <code class="inline">label_opacity</code>,
+<code class="inline">stroke_color</code>). The two countdown/countup callout boxes survive verbatim.
+</p>
+
+<h4>"Blockplan Vertical Marker Lines" subsection (lines 1337–1382)</h4>
+
+<p>Mechanical: every <code class="inline">apply_to: vertical_line</code> in the example becomes
+<code class="inline">apply_to: box:vline</code>; <code class="inline">stroke_color</code> →
+<code class="inline">stroke</code>; <code class="inline">stroke_dasharray</code> →
+<code class="inline">dasharray</code>; <code class="inline">fill_color</code> →
+<code class="inline">fill</code>. Selector grammar (<code class="inline">band</code>,
+<code class="inline">value</code>, <code class="inline">repeat</code>) unchanged.</p>
+
+<h3 id="ug-notes">9.10 · "Notes" — small updates</h3>
+
+<table>
+  <thead><tr><th>Current note (line 1400–1403)</th><th>After migration</th></tr></thead>
+  <tbody>
+    <tr><td>"Theme <code class="inline">size_rule</code> blocks match papersize case-insensitively and use first matching rule."</td><td><span class="tag before">delete</span> — <code class="inline">size_rule</code> blocks no longer exist; the equivalent is a <code class="inline">style_rules</code> entry with <code class="inline">select.papersize</code>, and "first matching rule" is replaced by the global "later rule wins" precedence (<a href="#resolution">§6</a>).</td></tr>
+    <tr><td>"<code class="inline">layout.margin.*</code> accepts numeric points or values with units such as <code class="inline">0.5in</code> and <code class="inline">10mm</code>."</td><td><span class="tag after">keep</span></td></tr>
+    <tr><td>"<code class="inline">colors.*_palette</code> keys reference DB palette names and resolve during render."</td><td><span class="tag after">keep</span></td></tr>
+    <tr><td>"Run <code class="inline">ecalendar.py help &lt;subcommand&gt;</code> for allowed values and focused help output."</td><td><span class="tag after">keep</span></td></tr>
+  </tbody>
+</table>
+
+<h3 id="ug-excel">9.11 · "ExcelHeader Subcommand" — what stays, what changes</h3>
+
+<p>
+Most of lines 1407–1554 describes XLSX-specific behavior that doesn't intersect with SVG styling and
+therefore stays intact. The narrow changes:
+</p>
+
+<ul class="tight">
+  <li><strong>Stays unchanged:</strong> Usage, Options, Workbook Layout, Excel Font Settings (lines 1501–1520), Holiday Decoration (lines 1522–1532), and the entire "Vertical Lines → Cell Right Borders" subsection (lines 1534–1554). The vertical-lines exception was the original motivating example for §9 and §10.4.</li>
+  <li><strong>Timeband Configuration (lines 1443–1499):</strong> the example block updates around the new shape. The structural part (<code class="inline">excelheader.top_time_bands</code> entries) becomes a list of references into the top-level <code class="inline">time_bands:</code> catalog, exactly as in <a href="#timebands">§10.3</a>. The Excel-specific font overrides move out of inline band entries into <code class="inline">excelheader.band_fonts</code> keyed by catalog name (per <a href="#timebands">§10.4</a>). Holiday-decoration prose, freeze-panes prose, and the supported-units list are unchanged.</li>
+  <li><strong>Per-band <code class="inline">excel_font_name</code> / <code class="inline">excel_font_size</code> example (lines 1511–1520):</strong> updated to show the new per-band font shape:
+    <pre><span class="k">excelheader:</span>
+  <span class="k">band_fonts:</span>
+    <span class="k">fiscal_quarter:</span> { <span class="k">excel_font_name:</span> <span class="v">"Arial Narrow"</span>, <span class="k">excel_font_size:</span> <span class="n">10</span> }</pre>
+  </li>
+</ul>
+
+<h3 id="ug-textbag">9.12 · Reconciling the per-element <code class="inline">text:</code> sub-bag</h3>
+
+<p>
+USER_GUIDE.md lines 1117–1173 document a feature the unified design needs to retire deliberately —
+not silently. The current style_rules accepts a nested <code class="inline">text:</code> block
+<em>inside</em> a content rule's <code class="inline">style:</code> bag, keyed by the role of the text
+within the matched target:
+</p>
+
+<pre><span class="k">style_rules:</span>
+  <span class="p">-</span> <span class="k">name:</span> <span class="v">Priority 1</span>
+    <span class="k">apply_to:</span> [<span class="v">event</span>, <span class="v">duration</span>]
+    <span class="k">select:</span> { <span class="k">priority:</span> <span class="n">1</span> }
+    <span class="k">style:</span>
+      <span class="k">stroke_color:</span> <span class="v">crimson</span>
+      <span class="k">text:</span>
+        <span class="k">event_name:</span>     { <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>, <span class="k">font_color:</span> <span class="v">crimson</span> }
+        <span class="k">duration_name:</span>  { <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>, <span class="k">font_color:</span> <span class="v">white</span> }</pre>
+
+<p>
+This nested form was one rule with three internal property bags (one for the box, one for
+<code class="inline">event_name</code> text, one for <code class="inline">duration_name</code> text).
+<a href="#multitarget">§4.5</a> of this design explicitly defers per-target style sub-bags — so the
+nested shape doesn't fit the unified grammar.
+</p>
+
+<h4>Decision</h4>
+
+<p>
+<strong>The nested <code class="inline">text:</code> sub-bag is removed.</strong> It rewrites cleanly into
+multiple peer rules with the same selector — exactly the "rule of thumb" called out in §4.5: when each
+surface needs different property values, write separate rules even if the predicate is shared.
+</p>
+
+<h4>Before / after</h4>
+
+<div class="grid2">
+  <div>
+    <span class="tag before">before (one rule, nested)</span>
+<pre><span class="p">-</span> <span class="k">name:</span> <span class="v">Priority 1</span>
+  <span class="k">apply_to:</span> [<span class="v">event</span>, <span class="v">duration</span>]
+  <span class="k">select:</span> { <span class="k">priority:</span> <span class="n">1</span> }
+  <span class="k">style:</span>
+    <span class="k">stroke:</span> <span class="v">crimson</span>
+    <span class="k">text:</span>
+      <span class="k">event_name:</span>
+        <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>
+        <span class="k">color:</span> <span class="v">crimson</span>
+      <span class="k">duration_name:</span>
+        <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>
+        <span class="k">color:</span> <span class="v">white</span></pre>
+  </div>
+  <div>
+    <span class="tag after">after (peer rules, flat)</span>
+<pre><span class="p">-</span> <span class="k">name:</span> <span class="v">Priority 1 — boxes</span>
+  <span class="k">apply_to:</span> [<span class="v">box:event</span>, <span class="v">box:duration</span>]
+  <span class="k">select:</span> { <span class="k">priority:</span> <span class="n">1</span> }
+  <span class="k">style:</span> { <span class="k">stroke:</span> <span class="v">crimson</span> }
+
+<span class="p">-</span> <span class="k">name:</span> <span class="v">Priority 1 — event name</span>
+  <span class="k">apply_to:</span> <span class="v">text:event_name</span>
+  <span class="k">select:</span> { <span class="k">priority:</span> <span class="n">1</span> }
+  <span class="k">style:</span> { <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>, <span class="k">color:</span> <span class="v">crimson</span> }
+
+<span class="p">-</span> <span class="k">name:</span> <span class="v">Priority 1 — duration name</span>
+  <span class="k">apply_to:</span> <span class="v">text:duration_name</span>
+  <span class="k">select:</span> { <span class="k">priority:</span> <span class="n">1</span> }
+  <span class="k">style:</span> { <span class="k">font:</span> <span class="v">OfficinaSans-Bold</span>, <span class="k">color:</span> <span class="v">white</span> }</pre>
+  </div>
+</div>
+
+<h4>Converter responsibility</h4>
+
+<p>
+<code class="inline">tools/migrate_theme.py</code> walks every <code class="inline">style_rules</code> entry
+that contains a nested <code class="inline">style.text</code> block and emits one peer rule per inner
+key. The flat box/stroke/fill keys at the rule's top level become the original rule's
+<code class="inline">style:</code> (with the <code class="inline">box:</code> target list); each inner text-role
+key becomes a new rule targeting <code class="inline">text:&lt;role&gt;</code> with the same selector.
+The mapping from text-role to target uses the existing role-to-element table at USER_GUIDE.md lines
+1158–1172 (the "Text Element Reference" table — <code class="inline">event_name</code> →
+<code class="inline">text:event_name</code>, <code class="inline">day_number</code> →
+<code class="inline">text:day_number</code>, etc.).
+</p>
+
+<h4>The "Text Shorthand" flat keys (USER_GUIDE.md lines 1106–1115)</h4>
+
+<p>
+The same subsection documents another shape: flat keys <code class="inline">font</code>,
+<code class="inline">font_size</code>, <code class="inline">font_color</code>,
+<code class="inline">font_opacity</code> at the rule's <code class="inline">style:</code> top level that
+"apply to <em>all</em> text elements rendered for the matched target." This shorthand is
+<strong>also removed</strong> — under the unified grammar it would have to silently route to multiple
+text targets, a behavior §4.5 specifically rejects. The converter expands it the same way: one peer
+text-target rule per element role that the matched <code class="inline">apply_to</code> would have
+emitted text for. In the rewritten USER_GUIDE.md the "Text Shorthand" subsection is deleted; the
+"Per-Element Text (<code class="inline">text:</code> block)" subsection is replaced by a short
+note pointing at the peer-rule pattern.
+</p>
 
 <div class="callout">
   These edits land in the same PR as the loader and converter (per <a href="#impl-pr">§7.1</a>) so the
