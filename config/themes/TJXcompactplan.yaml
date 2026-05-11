@@ -15,35 +15,48 @@ base:
   default_missing_icon: applet-closed
 
 # ─── header ────────────────────────────────────────────────────────────────
-# Header non-styling config (text content references); styling lives in style_rules.
-header:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
+# Header non-styling config (text content references); styling lives in
+# style_rules → text:heading bound to ec-header-text below.
+# header.font_family / font_color have no SECTION_MAPPINGS entry under
+# theme_engine, so the values below were already inert; they are removed
+# now to make the no-op explicit.  Re-add header.left.* / center.* / right.*
+# blocks only if a slot needs a per-slot legacy override.
+#header:
+#  font_family: PlaywriteDEGrund-VariableFont_wght
+#  font_color: grey
 
 # ─── footer ────────────────────────────────────────────────────────────────
-# Footer non-styling config (text content references); styling lives in style_rules.
-footer:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
+# Same story as header — styling now comes from style_rules → text:caption
+# bound to ec-footer-text below.  The plain footer.font_* keys never had
+# a mapping.
+#footer:
+#  font_family: PlaywriteDEGrund-VariableFont_wght
+#  font_color: grey
 
 # ─── events ────────────────────────────────────────────────────────────────
 # Event placement policy (item_placement_order); no styling.
 events:
-  icon_color: blue
+  # icon_color superseded by style_rules → icon:event bound to ec-event-icon.
+  #icon_color: blue
   item_placement_order:
     - priority
 
 # ─── durations ─────────────────────────────────────────────────────────────
 # Duration placement / geometry; no styling.
 durations:
-  icon_color: navy
-  stroke_dasharray: null
+  # icon_color superseded by style_rules → icon:duration bound to ec-duration-icon.
+  #icon_color: navy
+  # stroke_dasharray superseded by style_rules → line:axis bound to ec-duration-bar.
+  #stroke_dasharray: null
+  {}
 
 # ─── watermark ─────────────────────────────────────────────────────────────
-# Watermark text content and rotation; styling lives in style_rules.
+# Watermark text content and rotation; text color now flows through
+# style_rules → text:heading bound to ec-watermark below.
 watermark:
   text: null
-  color: blue
+  # color superseded by style_rules → text:heading bound to ec-watermark.
+  #color: blue
   font_family: PlaywriteDEGrund-VariableFont_wght
   opacity: 0.5
   font_size: null
@@ -62,9 +75,9 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
-  fiscal_palette: Greys
-  group_palette: Pastel1
+  month_palette: oranges
+  fiscal_palette: blues
+  group_palette: pastel1
   hash_lines: black
   resource_groups:
     a: black
@@ -80,6 +93,7 @@ colors:
 
 # ─── compact_plan ──────────────────────────────────────────────────────────
 # compactplan non-styling config: axis-relative duration/legend geometry.
+# Most styling-flavored knobs are now driven by style_rules — see comments.
 compact_plan:
   palette:
     - deepskyblue
@@ -88,13 +102,17 @@ compact_plan:
     - grey
     - mediumseagreen
     - mediumpurple
-  axis_color: '#7f7f7f'
-  axis_dasharray: 4.0,1.0
-  axis_opacity: 0.5
+  # axis_color / axis_dasharray / axis_opacity superseded by style_rules →
+  # line:axis bound to ec-axis-line.
+  #axis_color: '#7f7f7f'
+  #axis_dasharray: 4.0,1.0
+  #axis_opacity: 0.5
   axis_padding: 5.0
   axis_width: 1.0
   show_axis: false
-  milestone_color: '#333333'
+  # milestone_color superseded by style_rules → bind ec-milestone-marker /
+  # ec-milestone-flag to icon:milestone (color is taken from the token).
+  #milestone_color: '#333333'
   header_bottom_y: 8
   key_top_y: 8
   band_row_height: 10.0
@@ -107,41 +125,56 @@ compact_plan:
   federal_holiday_icon: flag-us
   text:
     font_name: RobotoCondensed-Light
-    font_color: black
-    font_opacity: 1.0
+    # text.font_color / font_opacity superseded by style_rules → text:label
+    # bound to ec-label (and text:body bound to ec-event-name etc.).
+    #font_color: black
+    #font_opacity: 1.0
   duration_line_width: 9.0
-  duration_opacity: 1.0
-  duration_stroke_dasharray: null
+  # duration_opacity / duration_stroke_dasharray superseded by style_rules →
+  # line:axis bound to ec-duration-bar.
+  #duration_opacity: 1.0
+  #duration_stroke_dasharray: null
   lane_spacing: 9.0
   show_duration_icons: true
   duration_icon_list: darksquare
   duration_icon_height: 8.0
-  duration_icon_color: white
-  palette_name: null
+  # duration_icon_color superseded by style_rules → icon:duration bound to
+  # ec-duration-icon.
+  #duration_icon_color: white
+  # palette_name is unused by the compactplan renderer (palette is read
+  # directly from `palette` above).
+  #palette_name: null
   milestone_flag_height: 9.0
   milestone_flag_width: 7.0
   milestone_icon: null
   show_milestone_labels: false
   name_text:
     font_name: RobotoCondensed-Light
-    font_color: '#595959'
-    font_opacity: 1.0
+    # name_text.font_color / font_opacity superseded by style_rules →
+    # text:body_secondary bound to ec-event-name (milestone label) and
+    # ec-legend-text.
+    #font_color: '#595959'
+    #font_opacity: 1.0
   legend_column_split: 0.5
   show_legend: true
   legend_row_height: 10.0
   legend_swatch_width: 10.0
   show_milestone_list: true
   milestone_list_date_format: M/D
-  milestone_list_date_color: '#333333'
+  # milestone_list_date_color superseded by the ec-event-date text style
+  # (fallback path via get_text_style); the legacy field is never read.
+  #milestone_list_date_color: '#333333'
   milestone_list_row_height: 10.0
   milestone_list_date_col_width: 32.0
-  milestone_list_section_gap: 6.0
+  # milestone_list_section_gap / continuation_section_gap are not read by
+  # the compactplan renderer.
+  #milestone_list_section_gap: 6.0
   show_continuation_icon: true
   continuation_icon: move-right
   continuation_icon_height: 8.0
   continuation_icon_color: white
   continuation_legend_text: activity continues
-  continuation_section_gap: 4.0
+  #continuation_section_gap: 4.0
   bands:
     - band: month
       row_height: 25
