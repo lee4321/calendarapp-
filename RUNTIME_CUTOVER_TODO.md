@@ -25,29 +25,210 @@ swaps reads from one source to the other.
 
 ---
 
+## Status — 2026-05-11
+
+### Done
+
+| Renderer | Commit | Notes |
+|---|---|---|
+| compactplan | `02ad87fe` | Sole `theme_style_rules` read sourced from `config.theme.sections`. SVG byte-identical. |
+| mini-icon | `a416c0a9` | 10 reads (day/grid/milestone) on tokens. SVG byte-identical on SAMPLE + basic. |
+| text-mini | n/a | Confirmed zero styling reads (all 12 are geometry / formatting / symbol declarations). |
+| svg_base helper hoist | `6a2f4244` | Added `BaseSVGRenderer._resolve_token(config, token, ctx)` for reuse. Not a migration of svg_base's own 10 reads. |
+| mini family | `8f0ce7b5` | 83 reads across `renderer.py` + `day_styles.py`. SVG **NOT** byte-identical — see Open issues §1 and §2. |
+
+### Pattern that emerged from the mini migration
+
+Apply this template when picking up weekly / timeline / blockplan:
+
+- **Token cache per render.** Add a `_populate_<viz>_tokens(config)` method
+  called at the top of `_render_content` that pre-resolves every token the
+  visualizer needs into `self._<viz>_tokens`. Per-cell draw code reads via
+  a small `self._tk("text:day_number")` accessor — dict lookups, not rule
+  walks per cell.
+
+- **Token-first, legacy-fallback at every read site.** Each replacement
+  takes the shape:
+
+  ```python
+  font  = tk.get("font")  or _ts.font
+  size  = tk.get("size")  or config.<legacy_field>
+  color = tk.get("color") or _ts.color
+  ```
+
+  The legacy field stays as the fallback chain so the no-theme path still
+  works. Phase 2 stripping then runs grep over the renderer and removes
+  fields with zero remaining references.
+
+- **`find_rules` for content rules.** When the renderer needs to react to
+  per-day / per-event predicates (federal_holiday tint, sprint highlight,
+  etc.), call `theme.find_rules("box:day", ctx)` (or the relevant target)
+  and layer each returned rule's `style` bag onto the in-progress draw
+  state. See `mini/day_styles.py::_apply_box_day_rules` for the shape.
+
+- **StyleEngine input rerouted.** Replace `config.theme_style_rules` reads
+  with a per-package `_<viz>_style_rules(config)` helper that prefers
+  `config.theme.sections["style_rules"]` and falls back to the legacy
+  field. See `compactplan/renderer.py::_resolve_style_rules` and
+  `mini/renderer.py::_mini_style_rules`.
+
+- **Mini-specific / page-specific reads stay.** When a field has no
+  unified-token analogue (e.g. `mini_month_outline_*` for the month grid
+  border, `mini_details_output_suffix` for the second SVG filename),
+  leave it on CalendarConfig and add a one-line comment naming why. These
+  get reconsidered in Phase 2.
+
+---
+
+## Open issues — must resolve before continuing
+
+The mini migration surfaced these. Each affects rendered output, future
+migrations, or the Phase 2/3 cleanup story. Resolve before applying the
+pattern to weekly / timeline / blockplan.
+
+### 1. Theme-defined text sizes now override `setfontsizes` output
+
+**What changed.** `text:day_number`, `text:month_title`, `text:label`,
+`text:week_number`, `text:fiscal_label` sizes in basic.yaml and SAMPLE.yaml
+now take effect. Previously the renderer read `config.mini_<x>_font_size`
+(computed by `setfontsizes()` based on page height) and silently ignored
+the theme's `size:` field. After the migration the theme wins.
+
+**Concrete effect.** On letter paper, mini headers shrink from ~9.5pt
+(setfontsizes) to 7pt (basic.yaml `text:label size: 7`), and mini day
+numbers grow from ~9.5pt to 11pt (SAMPLE.yaml `text:day_number size: 11`).
+The render completeness probe still passes — it only checks exit code —
+but the page looks different.
+
+**Why this matters.** Three of the remaining migrations (weekly, timeline,
+blockplan) have the same coupling between `setfontsizes()` field
+assignments and theme token sizes. Applying the same pattern multiplies
+the rendering shifts across every visualizer.
+
+**Options.**
+
+- **(a) Accept it as the design intent.** Themes are authoritative.
+  Audit every theme YAML and add explicit per-papersize `size_rules` for
+  the tokens that need to scale. Update `setfontsizes()` to write to
+  tokens, not legacy fields.
+
+- **(b) Invert precedence — legacy field wins.** Change the migration to
+  `config.<legacy> or tk.get("size")`. Preserves rendering but defeats the
+  migration's purpose: themes' `size:` keys remain dead until Phase 2
+  strips the legacy fields, at which point precedence flips silently.
+
+- **(c) `setfontsizes()` consults tokens.** Have `setfontsizes()` read
+  `theme.resolve_token("text:day_number")["size"]` and *only* fall back to
+  the page-height heuristic when the token is unset. Single source of
+  truth; legacy fields go away cleanly in Phase 2.
+
+Recommendation: **(c)**. Migrates the "what size?" decision to one place
+and makes Phase 2 stripping safe.
+
+### 2. `box:day` content rules now fire in addition to legacy holiday chains
+
+**What changed.** `mini/day_styles.py::_apply_box_day_rules` now walks
+`theme.find_rules("box:day", ctx)` and overlays each matching rule's
+`style` bag onto the `DayStyle`. Previously the legacy `StyleEngine` only
+matched `apply_to: day_box` rules; the unified `apply_to: box:day` form
+was silently dropped.
+
+**Concrete effect.** SAMPLE's federal-holiday rule
+(`fill: tomato`, `pattern: diagonal-stripes`) now overrides the
+`theme_federal_holiday_color` (`lightblue`) that the legacy
+`_apply_holidays` chain sets first. Two layers run; the second wins.
+
+**Why this matters.** The two-layer approach (legacy hardcoded chain +
+new find_rules pass) is in place to be conservative, but it's confusing:
+the visible output depends on which layer's data is present in the theme.
+Themes that define *both* a `colors.federal_holiday.color` and a
+`box:day` rule will see the box:day rule win — sometimes silently
+surprising the theme author.
+
+**Options.**
+
+- **(a) Delete the legacy chains.** Remove the
+  `theme_federal_holiday_color` / `theme_mini_holiday_color` /
+  `mini_holiday_color` resolution in `_apply_holidays` and
+  `_apply_special_days` entirely; `box:day` rules become the only path
+  for holiday tinting. Themes without box:day rules lose holiday tints.
+
+- **(b) Keep both layers, document the order.** Leave the current shape;
+  add a comment block in `day_styles.py` describing the precedence and a
+  release note flagging the change for theme authors.
+
+- **(c) Convert legacy chains to synthesized box:day rules.** Have
+  `theme_engine.apply()` emit equivalent `box:day` rules from the
+  `colors.federal_holiday` section, so there's only one runtime path.
+  Requires deciding what happens when a theme defines both.
+
+Recommendation: **(c)**. Removes the dual code path while preserving
+backward-compatible rendering for themes that haven't migrated their
+color-section conventions to style_rules.
+
+### 3. Pre-existing failure in `tests/test_theme_engine.py`
+
+The full migration has been running `--ignore=tests/test_theme_engine.py`
+since the branch started; the failure pre-dates this work. Before Phase 4
+(`uv run python -m pytest tests/` exit 0), this needs to be either fixed
+or explicitly retired.
+
+### 4. Mini renderer leaves residual legacy reads in place
+
+`mini/renderer.py` still reads `config.mini_month_outline_*`,
+`config.mini_details_*`, `config.fiscal_period_label_font_size`,
+`config.mini_cell_bold_font`, and the legacy day_styles color chains.
+These are documented as "no clean token analogue" or "shared field, awaits
+sibling-renderer migration." Until they're addressed (Phase 2 stripping
+or token invention), `CalendarConfig` cannot drop those fields.
+
+Decisions needed before Phase 2:
+
+- `mini_month_outline_*` → invent `box:month_outline` token, or accept as
+  permanent CalendarConfig (mini-specific layout, not styling).
+- `mini_details_*` (color/opacity/font-size) → bind to `text:event_name`
+  / `text:event_notes` / `text:label`, or leave as page-specific.
+- `fiscal_period_label_font_size` is shared with weekly; coordinate the
+  two renderers' migrations so the field can be stripped at the same time.
+- The legacy holiday color chains in `day_styles.py` (lines 123, 166,
+  181, 188, 204, 232) — resolved together with Open issue §2.
+
+### 5. `_resolve_token` cache shape is per-visualizer
+
+`MiniCalendarRenderer._populate_mini_tokens` hardcodes the list of tokens
+the renderer queries. As each migration lands, every visualizer adds its
+own similar method. This is fine for the first few; if patterns repeat,
+consider hoisting to `BaseSVGRenderer` with a per-subclass declarative
+list.
+
+---
+
 ## Phase 1 — per-renderer migration
 
 Renderer files and their CalendarConfig-styling-field reference counts (from
 `grep -rE "config\.(day_box|mini_|timeline_|blockplan_|weekly_|compact_plan_|theme_|fiscal_period_)\w+"`):
 
-| Renderer | File | Field reads | Token mapping |
-|---|---|---|---|
-| timeline | `visualizers/timeline/renderer.py` | 96 | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
-| blockplan | `visualizers/blockplan/renderer.py` | 95 | `text:band_label`, `text:swimlane_label`, `text:event_name`, `text:event_notes`, `text:duration_date`, `box:band`, `box:band_heading`, `box:swimlane_heading`, `box:swimlane_content`, `box:duration`, `box:event`, `box:milestone`, `box:vline`, `line:grid`, `icon:event`, `icon:milestone` |
-| mini | `visualizers/mini/renderer.py` | 47 | `text:day_number`, `text:month_title`, `text:week_number`, `text:holiday_title`, `box:day`, `box:cell`, `line:grid`, `icon:milestone` |
-| weekly | `visualizers/weekly/renderer.py` | 37 | `text:day_number`, `text:month_title`, `text:week_number`, `text:event_name`, `text:event_notes`, `text:event_date`, `text:holiday_title`, `box:day`, `box:cell`, `line:grid`, `icon:event`, `icon:overflow` |
-| mini (day_styles) | `visualizers/mini/day_styles.py` | 19 | `box:day` (federal/company-holiday content rules); follow the existing `find_rules` pattern |
-| mini (layout) | `visualizers/mini/layout.py` | 17 | geometry only — most reads stay on CalendarConfig non-styling fields |
-| text-mini | `visualizers/text_mini/renderer.py` | 12 | `text_mini.*` glyph-set fields stay (these aren't styling — they're symbol declarations) |
-| mini-icon | `visualizers/mini_icon/renderer.py` | 10 | inherits from mini; mostly `mini_calendar.icon_set` (non-styling) |
-| svg_base | `renderers/svg_base.py` | 10 | shared base — migrate after at least one visualizer is on the new path |
-| compactplan | `visualizers/compactplan/renderer.py` | 1 | minimal — start here for the easiest first migration |
+| Renderer | File | Field reads | Status | Token mapping |
+|---|---|---|---|---|
+| compactplan | `visualizers/compactplan/renderer.py` | 1 | **done** (`02ad87fe`) | `style_rules` |
+| mini-icon | `visualizers/mini_icon/renderer.py` | 10 | **done** (`a416c0a9`) | `text:day_number`, `line:grid`, `icon:milestone` |
+| text-mini | `visualizers/text_mini/renderer.py` | 12 | **done** (no-op) | symbols only, no styling reads |
+| mini | `visualizers/mini/renderer.py` | 47 | **done** (`8f0ce7b5`) | full set per pattern above |
+| mini (day_styles) | `visualizers/mini/day_styles.py` | 19 | **done** (`8f0ce7b5`) | `find_rules("box:day", ctx)` pass added; legacy chains remain (see Open issue §2) |
+| mini (layout) | `visualizers/mini/layout.py` | 17 | **skipped** | geometry only; no styling reads requiring migration |
+| weekly | `visualizers/weekly/renderer.py` | 37 | pending | `text:day_number`, `text:month_title`, `text:week_number`, `text:event_name`, `text:event_notes`, `text:event_date`, `text:holiday_title`, `box:day`, `box:cell`, `line:grid`, `icon:event`, `icon:overflow` |
+| timeline | `visualizers/timeline/renderer.py` | 96 | pending | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
+| blockplan | `visualizers/blockplan/renderer.py` | 95 | pending | `text:band_label`, `text:swimlane_label`, `text:event_name`, `text:event_notes`, `text:duration_date`, `box:band`, `box:band_heading`, `box:swimlane_heading`, `box:swimlane_content`, `box:duration`, `box:event`, `box:milestone`, `box:vline`, `line:grid`, `icon:event`, `icon:milestone` |
+| svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
+| excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
 
-Recommended order: compactplan → mini-icon → text-mini → mini → weekly →
-timeline → blockplan. Smaller-impact first, biggest last. Each visualizer is
-its own commit.
+Recommended order for the remaining work: **resolve Open issues §1 and §2
+first**, then weekly → timeline → blockplan → svg_base → excelheader.
 
 ### Per-renderer migration recipe
+
+(Unchanged — apply the same recipe as before, but with the pattern
+section above guiding shape decisions.)
 
 For each renderer (one commit each):
 
@@ -78,38 +259,7 @@ For each renderer (one commit each):
 - [ ] **Commit** with a message that lists the fields migrated and the
       visualizer/theme combinations the diffs covered.
 
-### Per-renderer punch list
-
-#### compactplan (1 field read, smallest)
-- [ ] `visualizers/compactplan/renderer.py` — replace 1 reference
-- [ ] Verify against `default`, `TJX` themes
-- [ ] Commit
-
-#### mini-icon (10 reads)
-- [ ] `visualizers/mini_icon/renderer.py` — separate `mini_calendar.icon_set`
-      reads (non-styling, stays) from styling reads (token queries)
-- [ ] `visualizers/mini_icon/visualizer.py` — verify it only reads
-      non-styling config; if so, no change needed
-- [ ] Commit
-
-#### text-mini (12 reads, non-themed glyph renderer)
-- [ ] `visualizers/text_mini/renderer.py` — `text_mini.*` glyph-set fields
-      stay on CalendarConfig (they're symbol declarations, not styling).
-      Only the few color/font-family reads need migrating.
-- [ ] Commit
-
-#### mini (47 + 19 + 17 = 83 reads)
-- [ ] `visualizers/mini/renderer.py` — text:day_number, text:month_title,
-      text:week_number, text:holiday_title, box:day, box:cell, line:grid,
-      icon:milestone
-- [ ] `visualizers/mini/day_styles.py` — content rules on `box:day` via
-      `find_rules`; existing federal/company-holiday logic translates
-      cleanly
-- [ ] `visualizers/mini/layout.py` — most reads are geometry
-      (`mini_columns`, `mini_rows`, etc.); only `_color` and `_font` reads
-      need migrating
-- [ ] `visualizers/mini/visualizer.py` — should be minimal styling reads
-- [ ] Commit
+### Per-renderer punch list (remaining)
 
 #### weekly (37 reads)
 - [ ] `visualizers/weekly/renderer.py` — text:day_number, text:month_title,
@@ -117,6 +267,8 @@ For each renderer (one commit each):
       text:holiday_title, box:day, box:cell, line:grid, icon:event,
       icon:overflow
 - [ ] `visualizers/weekly/layout.py` — geometry only; verify no styling reads
+- [ ] Coordinate `fiscal_period_label_font_size` migration with mini (Open
+      issue §4) so the field can be stripped in Phase 2
 - [ ] Commit
 
 #### timeline (96 reads, largest)
@@ -135,9 +287,10 @@ For each renderer (one commit each):
 - [ ] Commit
 
 #### svg_base (10 reads)
-- [ ] `renderers/svg_base.py` — shared rendering primitives. Migrate after
-      at least two visualizers are on the new path so the migration pattern
-      is established.
+- [ ] `renderers/svg_base.py` — shared rendering primitives. Already has
+      `_resolve_token()` helper from the mini-icon prep commit. Migrate
+      after weekly + timeline are on the new path so the pattern is
+      fully established.
 - [ ] Commit
 
 #### excelheader (XLSX path)
@@ -154,6 +307,10 @@ After every renderer is on `config.theme`, the corresponding CalendarConfig
 fields become dead — they're populated by `ThemeEngine.apply()` from the
 decompiled legacy sections but nothing reads them. Stripping them is safe
 and reveals any consumer the migration missed.
+
+**Blocker:** Open issues §1 and §4 must be resolved first, or stripping
+will silently invert the legacy-vs-token precedence built into the
+current `tk.get(x) or config.<legacy>` shape.
 
 - [ ] **Identify candidate fields.** A field is a candidate if every
       `grep` for `config.<field>` (excluding tests and theme_engine itself)
@@ -201,8 +358,8 @@ synthesized legacy sections.
       the pre-migration baseline saved at the start of Phase 1. Visual
       regressions must be explained.
 - [ ] **Run the full test suite** — `uv run python -m pytest tests/` —
-      including `tests/test_theme_engine.py` (which had a pre-existing sort
-      failure on `main` that may or may not still apply).
+      including `tests/test_theme_engine.py` (Open issue §3 — fix or
+      retire the pre-existing failure before this gate).
 - [ ] **Run the render completeness probe** —
       `tests/test_render_completeness.py` — exit 0.
 - [ ] **Run `tools/validate_theme.py`** against every in-tree theme; all
@@ -213,29 +370,27 @@ synthesized legacy sections.
 
 ---
 
-## Estimated effort
+## Estimated effort (revised)
 
 The renderer migration is mechanical but voluminous. Time estimates per
 visualizer (assuming careful work, SVG diffing, and test runs):
 
-| Step | Estimated time |
-|---|---|
-| compactplan | 30 minutes |
-| mini-icon | 30 minutes |
-| text-mini | 1 hour |
-| mini | 3-4 hours |
-| weekly | 2-3 hours |
-| timeline | 5-6 hours |
-| blockplan | 5-6 hours |
-| svg_base | 1-2 hours |
-| excelheader | 1-2 hours |
-| Phase 2 (strip) | 2-3 hours |
-| Phase 3 (delete bridge) | 1 hour |
-| Phase 4 (validation) | 2-3 hours |
-| **Total** | **25-32 hours** |
-
-This is genuinely multi-day work — at a focused 4-hour daily pace, the
-remaining cutover is roughly a working week.
+| Step | Estimated time | Status |
+|---|---|---|
+| compactplan | 30 minutes | **done** |
+| mini-icon | 30 minutes | **done** |
+| text-mini | 1 hour | **done** (no-op) |
+| mini | 3-4 hours | **done** |
+| **Open issues §1, §2 resolution** | **2-4 hours** | **blocker** |
+| weekly | 2-3 hours | pending |
+| timeline | 5-6 hours | pending |
+| blockplan | 5-6 hours | pending |
+| svg_base | 1-2 hours | pending |
+| excelheader | 1-2 hours | pending |
+| Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |
+| Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
+| Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
+| **Remaining total** | **~20-30 hours** | |
 
 ---
 
@@ -258,4 +413,11 @@ grep -nE "config\.(day_box|mini_|timeline_|blockplan_|weekly_|compact_plan_|them
 
 # Full suite (skipping the pre-existing failure on main):
 uv run python -m pytest tests/ --ignore=tests/test_theme_engine.py
+
+# SVG diff a pre/post change for one theme:
+git stash && uv run python ecalendar.py mini 20260101 20260131 \
+    --theme SAMPLE -of mini_pre.svg --quiet && cp output/mini_pre.svg /tmp/ \
+    && git stash pop && uv run python ecalendar.py mini 20260101 20260131 \
+    --theme SAMPLE -of mini_post.svg --quiet \
+    && diff /tmp/mini_pre.svg output/mini_post.svg | head -60
 ```
