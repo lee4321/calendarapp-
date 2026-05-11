@@ -201,6 +201,90 @@ own similar method. This is fine for the first few; if patterns repeat,
 consider hoisting to `BaseSVGRenderer` with a per-subclass declarative
 list.
 
+### 6. Icon halo / background tokens are defined but never drawn
+
+The design ([design_unified_style_rules.html](design_unified_style_rules.html) §10.3 / §11.4)
+specifies that each icon glyph token is paired with an optional `box:`
+token for a halo or background rect behind the glyph:
+
+| Icon token (glyph) | Halo token (background) |
+|---|---|
+| `icon:milestone` | `box:milestone` |
+| `icon:event` | `box:event` |
+| `icon:duration` | `box:duration` |
+
+Worked example from the design (critical-milestone halo):
+
+```yaml
+- name: critical milestone — halo
+  apply_to: box:milestone
+  select: { priority_min: 1 }
+  style:
+    fill: "#fde0e0"
+    fill_opacity: 0.6
+    stroke: red
+    stroke_width: 0.5
+```
+
+**Where it stands today.**
+
+- Every reference theme defines `box:milestone` (basic.yaml / SAMPLE.yaml
+  ship it as the no-op `fill: none, stroke: none`; other themes pick it
+  up via `_backfill_from_basic` in `tools/migrate_theme.py`).
+- A grep across all renderers turns up exactly one consumer of any
+  `box:` content-rule token — `mini/day_styles.py::_apply_box_day_rules`
+  reading `box:day` — and that wiring landed only in commit `8f0ce7b5`.
+  `box:milestone`, `box:event`, `box:duration` have zero readers.
+- Every icon-drawing site in the compactplan renderer (and weekly,
+  timeline, blockplan, mini) calls `_draw_icon_svg(...)` directly with
+  no preceding rect, so a theme that sets `box:milestone.fill: gold`
+  today parses cleanly, validates, binds, and renders nothing.
+
+**Wiring required.** Two pieces:
+
+1. **`_draw_icon_svg` (or a wrapper) draws the halo rect first.**
+   When a paired `box:` token resolves to a non-empty style bag for the
+   current context, paint a rect at the icon's bounding box before the
+   glyph. Honour `fill` / `fill_opacity` / `stroke` / `stroke_width` /
+   `pattern` / `pattern_color` / `pattern_opacity` / `dasharray` — the
+   same vocabulary as `box:day`. Decide whether the rect inflates
+   beyond the glyph (a true halo) or hugs it; either way, expose a
+   small `padding` (or radius) override on the token.
+
+2. **Each icon call-site forwards the halo token name.** The cleanest
+   shape is to extend `_draw_icon_svg` with a `box_token: str | None`
+   kwarg; the icon-call-site sites pass `"box:milestone"` etc., and
+   the helper does the `find_rules` / `resolve_token` lookup itself.
+   Five compactplan sites to update (duration start, continuation,
+   non-workday band cell, legend, milestone marker), plus the
+   equivalents in weekly / timeline / blockplan / mini.
+
+**Decisions needed before implementation.**
+
+- *Per-icon-context routing.* `box:milestone` is the same token for
+  every milestone everywhere. Should compactplan's duration-start icons
+  consult `box:duration` even though they're inside a duration row, or
+  is the halo concept reserved for milestones (per the design example)?
+  Either is defensible; pick one before writing the call-sites.
+- *Halo geometry.* The design's example sets only `fill` / `stroke`;
+  it doesn't say whether the rect is the same dimensions as the icon
+  or inflated. Probably want a default of `icon_size * 1.2` square,
+  with a token-level `padding` override.
+- *Selector context for `find_rules("box:milestone", ctx)`.* The
+  context dict needs to carry the same event-attribute predicates
+  that the design's worked example uses (`priority_min`, `task_name`,
+  `percent_complete`, etc.). The mini `_apply_box_day_rules` ctx is a
+  day-context (federal_holiday / company_holiday / workday); icon
+  halo ctx would mirror what `StyleEngine.evaluate_event` already
+  matches against. Likely needs a small `_event_ctx(event)` helper
+  alongside the existing day-context builder.
+
+Treat this as a Phase 1.5 deliverable — best done once at least one
+of weekly / timeline / blockplan is on the new token path so the
+helper can land on `BaseSVGRenderer` with two or three callers
+already exercising the pattern, rather than on `MiniCalendarRenderer`
+alone.
+
 ---
 
 ## Phase 1 — per-renderer migration
@@ -301,6 +385,74 @@ For each renderer (one commit each):
 
 ---
 
+## Phase 1.5 — wire icon halo / background tokens
+
+The `box:<icon-token>` halo design (Open issue §6) is independent
+from the per-renderer field migrations and can land in parallel.
+Land it after at least one of weekly / timeline / blockplan is on
+the new token path so the helper can live on `BaseSVGRenderer` with
+multiple existing callers, rather than being scaffolded on
+`MiniCalendarRenderer` alone.
+
+Token pairs to wire:
+
+| Glyph | Halo |
+|---|---|
+| `icon:milestone` | `box:milestone` |
+| `icon:event`     | `box:event`     |
+| `icon:duration`  | `box:duration`  |
+
+### Recipe
+
+- [ ] **Event/context builder.** Add a `_event_ctx(event)` helper
+      (next to the existing day-context builder in
+      `shared/rule_engine.py` or as a new staticmethod on
+      `BaseSVGRenderer`) that produces the selector dict
+      `find_rules("box:milestone", ctx)` needs — `event_type`,
+      `milestone`, `task_name`, `notes`, `resource_group`,
+      `resource_names`, `wbs`, `priority`, `percent_complete`,
+      `rollup`, plus the ambient `visualizer` / `papersize` tags.
+- [ ] **`_draw_icon_svg` halo support.** Extend the signature with
+      a `box_token: str | None = None` kwarg.  When set, the helper
+      itself calls `find_rules(box_token, ctx)` (passing the icon
+      bounding box + ctx through), and paints a rect with the
+      merged style bag before the glyph.  Honour the full box
+      vocabulary: `fill`, `fill_opacity`, `stroke`, `stroke_width`,
+      `stroke_opacity`, `dasharray`, `pattern`, `pattern_color`,
+      `pattern_opacity`, plus a token-level `padding` (default 0)
+      that inflates the rect beyond the glyph for a true halo
+      effect.
+- [ ] **Compactplan call-sites — five.**
+      `visualizers/compactplan/renderer.py`:
+      duration start icon (line ~286), continuation icon (~309),
+      non-workday band-cell icon (~519), legend icon (~944), and
+      milestone marker (~746 — uses `drawsvg.Raw`; needs a small
+      refactor to go through `_draw_icon_svg`).  Each gets
+      `box_token="box:duration"` / `"box:milestone"` /
+      `"box:event"` per the routing decision below.
+- [ ] **Weekly / timeline / blockplan / mini call-sites.** Audit
+      every `_draw_icon_svg` call in each renderer and add the
+      paired `box_token` argument.
+- [ ] **Routing decision — settle two questions before writing
+      call-sites:**
+      * Do duration-start icons consult `box:duration` (matches
+        the row's data) or stay un-haloed?
+      * Does the non-workday band-cell icon consult any halo token,
+        or is its band-cell fill considered sufficient background?
+- [ ] **Reference theme example.** Add an annotated `box:milestone`
+      rule (or `box:event` for compactplan) to `SAMPLE.yaml` so
+      theme authors can copy-paste a working halo without re-reading
+      the design doc.
+- [ ] **Validation.** Render `compactplan 20190401 20190731
+      --theme TJXcompactplan` (or the SAMPLE equivalent) with a
+      temporarily uncommented `box:milestone.fill: gold` rule and
+      confirm a gold rect appears behind every milestone glyph.
+      Then put it back to `fill: none` and confirm the rect is
+      gone (no zero-opacity ghost rects in the SVG).
+- [ ] **Commit.**
+
+---
+
 ## Phase 2 — strip `CalendarConfig` styling defaults
 
 After every renderer is on `config.theme`, the corresponding CalendarConfig
@@ -387,10 +539,11 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | blockplan | 5-6 hours | pending |
 | svg_base | 1-2 hours | pending |
 | excelheader | 1-2 hours | pending |
+| Phase 1.5 (icon halo wiring) | 3-4 hours | parallel to Phase 1; lands after first non-mini renderer migrates |
 | Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |
 | Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
-| **Remaining total** | **~20-30 hours** | |
+| **Remaining total** | **~25-35 hours** | |
 
 ---
 
