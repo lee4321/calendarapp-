@@ -585,6 +585,16 @@ class ThemeEngine:
         except yaml.YAMLError as e:
             raise ThemeError(f"Invalid YAML in theme file '{path}': {e}")
 
+        # Unified-schema themes contain style_rules but no text_styles /
+        # box_styles / line_styles / icon_styles / element_styles.
+        # The legacy parser still expects those sections, so synthesize
+        # them in place from the style_rules `define:` and element-binding
+        # entries.  See config/style_rules_decompiler.py.  This bridge
+        # disappears once the renderer is migrated to query UnifiedTheme
+        # directly (design §7.1).
+        from config.style_rules_decompiler import decompile_style_rules
+        decompile_style_rules(self._theme_data)
+
         meta = self._theme_data.get("theme", {})
         self._theme_name = (
             meta.get("name", path.stem) if isinstance(meta, dict) else path.stem
