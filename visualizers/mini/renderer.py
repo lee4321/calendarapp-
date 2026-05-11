@@ -1218,18 +1218,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if db is not None:
             extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
             if extra_rows and current_y + row_height <= content_bottom:
-                # Sub-header separator + label
-                section_y = current_y + row_font_size
-                self._draw_line(
-                    content_left,
-                    section_y - row_font_size * 0.7,
-                    content_right,
-                    section_y - row_font_size * 0.7,
-                    stroke="grey",
-                    stroke_opacity=0.5,
-                    stroke_dasharray=_ls_sep.dasharray or None,
-                    css_class="ec-separator",
-                )
+                # Section heading, mirroring the top column-header shape:
+                # heading text first, separator line below it, rows below that.
+                section_y = current_y + header_font_size
                 self._draw_text(
                     col_x[0] + 4,
                     section_y,
@@ -1239,7 +1230,18 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     fill=tk_det_label.get("color") or _ts_det_label.color,
                     css_class="ec-label",
                 )
-                current_y = section_y + row_height
+                section_sep_y = section_y + header_font_size * 0.6
+                self._draw_line(
+                    content_left,
+                    section_sep_y,
+                    content_right,
+                    section_sep_y,
+                    stroke="grey",
+                    stroke_opacity=0.5,
+                    stroke_dasharray=_ls_sep.dasharray or None,
+                    css_class="ec-separator",
+                )
+                current_y = section_sep_y + 15
 
                 for row in extra_rows:
                     if current_y + row_height > content_bottom:
