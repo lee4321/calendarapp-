@@ -26,6 +26,142 @@ from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
+# ─── Color helpers (named + hex → RGB → luminance) ──────────────────────────
+# A small CSS-named-color → RGB table covering the values that turn up in the
+# in-tree themes (palettes + theme.colors).  Anything outside this table that
+# isn't a hex literal is treated as "unknown" — the contrast code then leaves
+# the icon color alone, which preserves backward behaviour for exotic names.
+
+_NAMED_COLORS: dict[str, tuple[int, int, int]] = {
+    "black": (0, 0, 0),                "white": (255, 255, 255),
+    "grey": (128, 128, 128),           "gray": (128, 128, 128),
+    "lightgrey": (211, 211, 211),      "lightgray": (211, 211, 211),
+    "darkgrey": (169, 169, 169),       "darkgray": (169, 169, 169),
+    "dimgrey": (105, 105, 105),        "dimgray": (105, 105, 105),
+    "slategrey": (112, 128, 144),      "slategray": (112, 128, 144),
+    "navy": (0, 0, 128),               "midnightblue": (25, 25, 112),
+    "blue": (0, 0, 255),               "darkblue": (0, 0, 139),
+    "steelblue": (70, 130, 180),       "lightsteelblue": (176, 196, 222),
+    "dodgerblue": (30, 144, 255),      "deepskyblue": (0, 191, 255),
+    "lightblue": (173, 216, 230),      "powderblue": (176, 224, 230),
+    "red": (255, 0, 0),                "darkred": (139, 0, 0),
+    "firebrick": (178, 34, 34),        "tomato": (255, 99, 71),
+    "coral": (255, 127, 80),           "salmon": (250, 128, 114),
+    "pink": (255, 192, 203),
+    "gold": (255, 215, 0),             "goldenrod": (218, 165, 32),
+    "yellow": (255, 255, 0),
+    "orange": (255, 165, 0),           "darkorange": (255, 140, 0),
+    "green": (0, 128, 0),              "darkgreen": (0, 100, 0),
+    "limegreen": (50, 205, 50),        "mediumseagreen": (60, 179, 113),
+    "springgreen": (0, 255, 127),      "bisque": (255, 228, 196),
+    "purple": (128, 0, 128),           "darkmagenta": (139, 0, 139),
+    "deeppink": (255, 20, 147),        "mediumpurple": (147, 112, 219),
+    "none": None,                       "transparent": None,
+}
+
+
+def _color_to_rgb(value: str | None) -> tuple[int, int, int] | None:
+    """Resolve a CSS color string to (r, g, b) ints; return ``None`` for unknown.
+
+    Accepts ``#rgb``, ``#rrggbb``, and the named-color subset above.  Case
+    insensitive; whitespace is stripped.
+    """
+    if not value:
+        return None
+    s = str(value).strip().lower()
+    if not s:
+        return None
+    if s.startswith("#"):
+        h = s[1:]
+        if len(h) == 3:
+            try:
+                return (int(h[0] * 2, 16), int(h[1] * 2, 16), int(h[2] * 2, 16))
+            except ValueError:
+                return None
+        if len(h) == 6:
+            try:
+                return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+            except ValueError:
+                return None
+        return None
+    return _NAMED_COLORS.get(s)
+
+
+def _colors_equivalent(a: str | None, b: str | None) -> bool:
+    """True when ``a`` and ``b`` resolve to the same RGB tuple.
+
+    Returns False whenever either color is unknown to ``_color_to_rgb`` —
+    callers should treat the colors as distinct in that case to preserve
+    existing rendering.
+    """
+    ra = _color_to_rgb(a)
+    rb = _color_to_rgb(b)
+    return ra is not None and rb is not None and ra == rb
+
+
+def _contrast_color(bg: str | None, *, dark: str = "black", light: str = "white") -> str:
+    """Pick a foreground color (``dark`` or ``light``) that contrasts ``bg``.
+
+    Uses the standard 0.2126 R + 0.7152 G + 0.0722 B luminance formula on the
+    8-bit RGB values.  Unknown / transparent backgrounds default to ``dark``
+    (same as picking against white).
+    """
+    rgb = _color_to_rgb(bg)
+    if rgb is None:
+        return dark
+    r, g, b = rgb
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return light if luminance < 128 else dark
+
+
+def _resolve_icon_on_bar(
+    *,
+    style_override: str | None,
+    configured: str,
+    bar_color: str,
+) -> str:
+    """Pick an icon color that won't disappear against its bar background.
+
+    Precedence:
+      1. ``style_override`` (a rule-engine explicit color) always wins.
+      2. ``configured`` (the theme's icon:duration color) is used when set —
+         unless it matches the bar color, in which case we swap to a
+         contrasting color so the glyph stays visible.
+      3. Bar color as a last resort, swapped to a contrasting color so the
+         glyph never paints navy-on-navy.
+    """
+    if style_override:
+        return style_override
+    candidate = configured if configured else bar_color
+    if _colors_equivalent(candidate, bar_color):
+        return _contrast_color(bar_color)
+    return candidate
+
+
+def _dominant_bar_color(group_placed: "list[_PlacedDuration]") -> str | None:
+    """Return the most common ``p.color`` across a group, or ``None`` if empty.
+
+    Used to make the legend's group-header swatch reflect the bars actually
+    drawn for that group instead of the palette-cycled color from
+    ``_assign_group_colors`` — when per-event DB colors override the group
+    palette, the two disagree and the swatch loses its labelling function.
+    Ties are broken by first-seen order so the result is deterministic.
+    """
+    if not group_placed:
+        return None
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for p in group_placed:
+        c = p.color
+        if c in counts:
+            counts[c] += 1
+        else:
+            counts[c] = 1
+            order.append(c)
+    # max() over the order list keeps ties stable on first occurrence.
+    return max(order, key=lambda c: counts[c])
+
+
 def _resolve_style_rules(config: "CalendarConfig") -> list:
     """Source the raw style_rules list for StyleEngine.
 
@@ -292,10 +428,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     # continuation icons: baseline = row_y + 0.3 * icon_h).
                     icon_baseline = p.row_y + 0.3 * dur_icon_h
                     icon_to_draw = _ps.icon if _ps.icon is not None else p.icon_name
-                    icon_color = (
-                        _ps.icon_color
-                        if _ps.icon_color
-                        else (dur_icon_color_cfg if dur_icon_color_cfg else p.color)
+                    # Contrast-swap when the configured icon color matches the
+                    # bar color, otherwise the glyph paints invisibly against
+                    # its own bar (the user-reported navy-on-navy case).
+                    icon_color = _resolve_icon_on_bar(
+                        style_override=_ps.icon_color,
+                        configured=dur_icon_color_cfg,
+                        bar_color=p.color,
                     )
                     self._draw_icon_svg(
                         icon_to_draw, p.x1, icon_baseline, dur_icon_h,
@@ -313,8 +452,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
             cont_icon_color_cfg = (config.compactplan_continuation_icon_color or "").strip()
             for p in placed:
                 if p.continues:
-                    # Use configured color if set, otherwise inherit the line color.
-                    icon_color = cont_icon_color_cfg if cont_icon_color_cfg else p.color
+                    # Contrast-swap when the configured continuation-icon color
+                    # matches the bar color (same fix as the start icons above).
+                    icon_color = _resolve_icon_on_bar(
+                        style_override=None,
+                        configured=cont_icon_color_cfg,
+                        bar_color=p.color,
+                    )
                     # Center icon vertically on the duration row.
                     # _draw_icon_svg places top at baseline_y - 0.8*size, so:
                     #   center = baseline_y - 0.8*h + h/2 = baseline_y - 0.3*h
@@ -924,7 +1068,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
             cur_y = legend_y + row_h
 
             for group, group_placed in groups_in_col:
-                group_color = group_color_map.get(group, "steelblue")
+                # Derive the swatch color from the durations actually drawn
+                # for this group so the legend matches the bars on the
+                # timeline.  Picks the most common p.color in the group
+                # (ties broken by first occurrence); falls back to the
+                # palette-cycle color when the group is empty.
+                group_color = _dominant_bar_color(group_placed) or group_color_map.get(
+                    group, "steelblue"
+                )
                 display_group = group if group else "(unassigned)"
 
                 # ── Group header: colored swatch + group name ──────────────
