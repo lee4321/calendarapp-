@@ -494,6 +494,9 @@ VALID_SECTIONS = frozenset(
         "blockplan",
         "excelheader",
         "compact_plan",
+        # Shared band catalog referenced by blockplan / compactplan /
+        # excelheader placement lists (design §10).
+        "time_bands",
         # New unified theme format sections
         "text_styles",
         "box_styles",
