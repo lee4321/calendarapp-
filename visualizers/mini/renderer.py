@@ -218,7 +218,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     ):
         result = super().render(config, coordinates, events, db)
         if config.include_mini_details:
-            self._render_details_svg(config, coordinates, events)
+            self._render_details_svg(config, coordinates, events, db)
             result.page_count += 1
         return result
 
@@ -965,6 +965,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         coordinates: CoordinateDict,
         events: list,
+        db: "CalendarDB | None" = None,
     ) -> None:
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)
@@ -1095,6 +1096,21 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             ),
         )
 
+        # Hoisted out of the per-event loop so the trailing holiday/special-day
+        # section can reuse the same colors and opacities.
+        name_fill = tk_event_name.get("color") or config.mini_details_name_text_font_color
+        name_opacity = (
+            tk_event_name.get("opacity")
+            if tk_event_name.get("opacity") is not None
+            else config.mini_details_name_text_font_opacity
+        )
+        text_fill = tk_event_name.get("color") or config.mini_details_text_font_color
+        text_opacity_det = (
+            tk_event_name.get("opacity")
+            if tk_event_name.get("opacity") is not None
+            else config.mini_details_text_font_opacity
+        )
+
         for event in events_sorted:
             if current_y + row_height > content_bottom:
                 break
@@ -1110,19 +1126,6 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             group = str(event.get("Resource_Group") or "")
 
             name_width = col_widths[1] - 8
-
-            name_fill = tk_event_name.get("color") or config.mini_details_name_text_font_color
-            name_opacity = (
-                tk_event_name.get("opacity")
-                if tk_event_name.get("opacity") is not None
-                else config.mini_details_name_text_font_opacity
-            )
-            text_fill = tk_event_name.get("color") or config.mini_details_text_font_color
-            text_opacity_det = (
-                tk_event_name.get("opacity")
-                if tk_event_name.get("opacity") is not None
-                else config.mini_details_text_font_opacity
-            )
 
             self._draw_text(
                 col_x[0] + 4,
@@ -1209,6 +1212,91 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
             current_y += row_height
 
+        # Holidays + company special days that appear on the visualization.
+        # Collect by walking the primary cell daykeys (one row per unique
+        # name across the visible range), then render after the events.
+        if db is not None:
+            extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
+            if extra_rows and current_y + row_height <= content_bottom:
+                # Sub-header separator + label
+                section_y = current_y + row_font_size
+                self._draw_line(
+                    content_left,
+                    section_y - row_font_size * 0.7,
+                    content_right,
+                    section_y - row_font_size * 0.7,
+                    stroke="grey",
+                    stroke_opacity=0.5,
+                    stroke_dasharray=_ls_sep.dasharray or None,
+                    css_class="ec-separator",
+                )
+                self._draw_text(
+                    col_x[0] + 4,
+                    section_y,
+                    "Holidays & Special Days",
+                    tk_det_label.get("font") or _ts_det_label.font,
+                    header_font_size,
+                    fill=tk_det_label.get("color") or _ts_det_label.color,
+                    css_class="ec-label",
+                )
+                current_y = section_y + row_height
+
+                for row in extra_rows:
+                    if current_y + row_height > content_bottom:
+                        break
+                    self._draw_text(
+                        col_x[0] + 4,
+                        current_y,
+                        row["date_label"],
+                        row_font,
+                        row_font_size,
+                        fill=tk_event_date.get("color") or _ts_event_date.color,
+                        fill_opacity=(
+                            tk_event_date.get("opacity")
+                            if tk_event_date.get("opacity") is not None
+                            else _ts_event_date.opacity
+                        ),
+                        css_class="ec-event-date",
+                    )
+                    self._draw_text(
+                        col_x[1] + 4,
+                        current_y,
+                        row["name"],
+                        row_font,
+                        row_font_size,
+                        fill=name_fill,
+                        fill_opacity=name_opacity,
+                        max_width=col_widths[1] - 8,
+                        css_class="ec-event-name",
+                    )
+                    self._draw_text(
+                        col_x[4] + 4,
+                        current_y,
+                        row["kind"],
+                        row_font,
+                        row_font_size,
+                        fill=text_fill,
+                        fill_opacity=text_opacity_det,
+                        css_class="ec-event-name",
+                    )
+                    if row.get("notes"):
+                        self._draw_text(
+                            col_x[1] + 4,
+                            current_y + (notes_font_size + 2),
+                            row["notes"],
+                            notes_font,
+                            notes_font_size,
+                            fill=tk_event_notes.get("color") or _ts_event_notes.color,
+                            fill_opacity=(
+                                tk_event_notes.get("opacity")
+                                if tk_event_notes.get("opacity") is not None
+                                else _ts_event_notes.opacity
+                            ),
+                            max_width=col_widths[1] - 8,
+                            css_class="ec-event-notes",
+                        )
+                    current_y += row_height
+
         if config.shrink_to_content:
             details_bbox = {
                 "DetailsContent": (
@@ -1229,3 +1317,74 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             details_path = f"{config.outputfile}{config.mini_details_output_suffix}.svg"
         self._drawing.save_svg(details_path)
         self._drawing = saved_drawing
+
+    @staticmethod
+    def _collect_holiday_special_rows(
+        coordinates: "CoordinateDict",
+        config: "CalendarConfig",
+        db: "CalendarDB",
+    ) -> list[dict]:
+        """Build the deduplicated holiday + special-day entries for the details page.
+
+        Walks the primary day-cell coordinates so the result matches what's
+        visible on the calendar.  A holiday or special day that recurs across
+        multiple visible days is collapsed into a single row labelled with the
+        date range it covers.
+        """
+        # Primary daykeys only — adjacent-month cells share dates with their
+        # owning month elsewhere in the grid and should not double-count.
+        daykeys = sorted({
+            key[len("Cell_") :]
+            for key in coordinates
+            if key.startswith("Cell_") and not key.endswith("__adj")
+        })
+        if not daykeys:
+            return []
+
+        def fmt(d: str) -> str:
+            return f"{d[:4]}-{d[4:6]}-{d[6:8]}" if d and len(d) >= 8 else d
+
+        def date_label(first: str, last: str) -> str:
+            return fmt(first) if first == last else f"{fmt(first)} – {fmt(last)}"
+
+        # name → {"first": daykey, "last": daykey, "notes": str}
+        holidays_seen: dict[str, dict[str, str]] = {}
+        specials_seen: dict[str, dict[str, str]] = {}
+
+        for dk in daykeys:
+            for h in db.get_holidays_for_date(dk, config.country):
+                name = (h.get("displayname") or h.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = holidays_seen.setdefault(name, {"first": dk, "last": dk, "notes": ""})
+                entry["last"] = dk
+                country = (h.get("country") or "").strip()
+                if country and country not in entry["notes"]:
+                    entry["notes"] = (
+                        f"{entry['notes']}, {country}" if entry["notes"] else country
+                    )
+            for sd in db.get_special_days_for_date(dk):
+                name = (sd.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = specials_seen.setdefault(
+                    name, {"first": dk, "last": dk, "notes": (sd.get("notes") or "").strip()}
+                )
+                entry["last"] = dk
+
+        rows: list[dict] = []
+        for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
+            rows.append({
+                "date_label": date_label(info["first"], info["last"]),
+                "name": name,
+                "kind": "Federal Holiday",
+                "notes": info["notes"],
+            })
+        for name, info in sorted(specials_seen.items(), key=lambda kv: kv[1]["first"]):
+            rows.append({
+                "date_label": date_label(info["first"], info["last"]),
+                "name": name,
+                "kind": "Special Day",
+                "notes": info["notes"],
+            })
+        return rows
