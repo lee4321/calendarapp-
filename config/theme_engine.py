@@ -996,6 +996,15 @@ class ThemeEngine:
         # Apply color maps
         self._apply_color_maps(config)
 
+        # Resolve band placement lists against the top-level time_bands catalog.
+        # Post-migration themes ship a catalog of named bands at the top level
+        # and per-visualizer placement lists (compact_plan.bands,
+        # blockplan.top_bands, etc.) that reference catalog entries by name.
+        # The renderers still read flat lists of band dicts from
+        # config.compactplan_time_bands / blockplan_top_time_bands / etc., so
+        # this expands the references into those flat lists.
+        self._apply_band_placements(config)
+
         # Build unified ThemeStyles if the theme uses the new format
         if self._is_new_format():
             self._build_theme_styles(config)
@@ -1019,6 +1028,104 @@ class ThemeEngine:
             config.theme = None
 
         return config
+
+    # Placement-list locations in a theme, paired with the target CalendarConfig
+    # field that each visualizer's renderer reads.  Each entry may be a string
+    # (catalog name) or a dict with ``band: <name>`` plus per-placement
+    # overrides.
+    _BAND_PLACEMENTS: tuple[tuple[str, str, str], ...] = (
+        ("compact_plan", "bands",         "compactplan_time_bands"),
+        ("blockplan",    "top_bands",     "blockplan_top_time_bands"),
+        ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
+        ("excelheader",  "top_bands",     "excelheader_top_time_bands"),
+        ("timeline",     "top_bands",     "timeline_top_time_bands"),
+        ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
+    )
+
+    def _apply_band_placements(self, config: "CalendarConfig") -> None:
+        """Expand placement-list references against the top-level time_bands catalog.
+
+        Each placement entry is one of:
+
+        * A string — looked up in the catalog as-is.  Unknown names are
+          dropped with a warning.
+        * A dict carrying ``band: <name>`` plus per-placement overrides —
+          the overrides are merged on top of the catalog entry.
+        * A bare dict with ``unit:`` (etc.) — passed through unchanged, so
+          inline-only placements still work.
+        """
+        catalog = self._theme_data.get("time_bands")
+        if not isinstance(catalog, dict):
+            catalog = {}
+
+        for section, key, config_field in self._BAND_PLACEMENTS:
+            section_data = self._theme_data.get(section)
+            if not isinstance(section_data, dict):
+                continue
+            placements = section_data.get(key)
+            if not isinstance(placements, list):
+                continue
+
+            resolved: list[dict] = []
+            for entry in placements:
+                resolved_entry = self._resolve_band_placement(
+                    entry, catalog, section=section, key=key,
+                )
+                if resolved_entry is not None:
+                    resolved.append(resolved_entry)
+
+            if resolved:
+                try:
+                    setattr(config, config_field, resolved)
+                except (TypeError, ValueError) as exc:
+                    logger.warning(
+                        "Theme: could not set %s=%r: %s",
+                        config_field, resolved, exc,
+                    )
+
+    def _resolve_band_placement(
+        self,
+        entry: Any,
+        catalog: dict,
+        *,
+        section: str,
+        key: str,
+    ) -> dict | None:
+        """Resolve one placement entry against the catalog.  Returns None on miss."""
+        if isinstance(entry, str):
+            cat = catalog.get(entry)
+            if not isinstance(cat, dict):
+                logger.warning(
+                    "Theme: %s.%s references unknown time_band '%s'",
+                    section, key, entry,
+                )
+                return None
+            return dict(cat)
+
+        if isinstance(entry, dict):
+            name = entry.get("band")
+            if isinstance(name, str):
+                cat = catalog.get(name)
+                if not isinstance(cat, dict):
+                    logger.warning(
+                        "Theme: %s.%s references unknown time_band '%s'",
+                        section, key, name,
+                    )
+                    return None
+                merged = dict(cat)
+                for k, v in entry.items():
+                    if k == "band":
+                        continue
+                    merged[k] = v
+                return merged
+            # Bare inline band definition (no catalog reference) — pass through.
+            return dict(entry)
+
+        logger.warning(
+            "Theme: %s.%s contains a non-string/non-dict entry %r — skipped",
+            section, key, entry,
+        )
+        return None
 
     def _apply_color_maps(self, config: "CalendarConfig") -> None:
         """Apply the colors: section to theme override fields on config."""
