@@ -266,6 +266,78 @@ BASE_RETAINED_KEYS: set[str] = {
     "default_missing_icon",
 }
 
+# Section keys that legacy themes set but the unified runtime never reads —
+# either because no SECTION_MAPPINGS entry exists for them, or because the
+# unified element-binding rules emitted by this migrator (e.g. icon:event
+# bound to ec-event-icon) supersede them.  Stripping them at migration time
+# keeps the converted YAML legible and matches the post-audit shape of
+# TJXcompactplan.yaml (commit 5dce0a66).
+#
+# Each entry is a leaf key, optionally with a one-level dotted parent
+# ("text.font_color") for keys nested inside a sub-bag.
+_DEAD_LEGACY_KEYS: dict[str, frozenset[str]] = {
+    # No SECTION_MAPPINGS entry under theme_engine — only header.left.* /
+    # center.* / right.* (and the footer equivalents) are mapped.  Top-level
+    # font_family / font_color on header/footer were always inert.
+    "header":       frozenset({"font_family", "font_color"}),
+    "footer":       frozenset({"font_family", "font_color"}),
+    # Superseded by element bindings in style_rules.
+    "events":       frozenset({"icon_color"}),
+    "durations":    frozenset({"icon_color", "stroke_dasharray"}),
+    "watermark":    frozenset({"color"}),
+    "compact_plan": frozenset({
+        # → line:axis bound to ec-axis-line
+        "axis_color", "axis_dasharray", "axis_opacity",
+        # → icon:milestone bound to ec-milestone-marker / ec-milestone-flag
+        "milestone_color",
+        # → line:axis bound to ec-duration-bar
+        "duration_opacity", "duration_stroke_dasharray",
+        # → icon:duration bound to ec-duration-icon
+        "duration_icon_color",
+        # → text:label bound to ec-label
+        "text.font_color", "text.font_opacity",
+        # → text:body_secondary bound to ec-event-name
+        "name_text.font_color", "name_text.font_opacity",
+        # Unread by the renderer.
+        "palette_name",
+        "milestone_list_date_color",
+        "milestone_list_section_gap", "continuation_section_gap",
+    }),
+}
+
+
+def _strip_dead_keys(section: str, data: Any) -> Any:
+    """Return ``data`` with keys listed in :data:`_DEAD_LEGACY_KEYS` removed.
+
+    Supports one-level dotted entries (``text.font_color``) so a nested
+    sub-bag can be pruned without dropping the whole sub-bag.  Non-dict
+    inputs pass through unchanged.  Returns ``None`` when stripping leaves
+    nothing meaningful behind, so the caller can skip writing an empty
+    section header.
+    """
+    dead = _DEAD_LEGACY_KEYS.get(section)
+    if not isinstance(data, dict):
+        return data
+    if not dead:
+        return data
+    leaf_drops: set[str] = {k for k in dead if "." not in k}
+    nested_drops: dict[str, set[str]] = {}
+    for k in dead:
+        if "." in k:
+            parent, _, child = k.partition(".")
+            nested_drops.setdefault(parent, set()).add(child)
+    out: dict[str, Any] = {}
+    for k, v in data.items():
+        if k in leaf_drops:
+            continue
+        if k in nested_drops and isinstance(v, dict):
+            sub = {sk: sv for sk, sv in v.items() if sk not in nested_drops[k]}
+            if sub:
+                out[k] = sub
+            continue
+        out[k] = v
+    return out if out else None
+
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -847,9 +919,13 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
 
     # 3. layout / header / footer / events / durations / watermark / fiscal / colors
     #    Non-styling content carries through; styling lifts into style_rules.
+    #    _strip_dead_keys drops keys the unified runtime no longer reads
+    #    (see _DEAD_LEGACY_KEYS); a section that empties out is skipped.
     for sec in ("layout", "header", "footer", "events", "durations", "watermark", "fiscal", "colors"):
         if sec in src and src[sec] is not None:
-            out[sec] = src[sec]
+            stripped = _strip_dead_keys(sec, src[sec])
+            if stripped is not None:
+                out[sec] = stripped
 
     # 4. Token definitions (text_styles, box_styles, line_styles, icon_styles)
     style_rules.extend(_convert_text_styles(src.get("text_styles") or {}))
@@ -866,11 +942,16 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     # 7. Per-visualizer non-styling config (weekly, mini_calendar, …) carries through
     #    minus its styling keys; the per-visualizer keys are very heterogeneous so
     #    we copy as-is and rely on the live loader's validation to catch the diff.
+    #    _strip_dead_keys removes unified-runtime-superseded keys (see
+    #    _DEAD_LEGACY_KEYS); compact_plan gets a second strip pass below
+    #    after band-placement assembly, because its loop also drops time_bands.
     for sec in ("weekly", "mini_calendar", "mini_details", "text_mini",
                 "timeline", "timeline_events", "timeline_durations",
                 "compact_plan"):
         if sec in src and src[sec] is not None:
-            out[sec] = src[sec]
+            stripped = _strip_dead_keys(sec, src[sec])
+            if stripped is not None:
+                out[sec] = stripped
 
     # 8. Blockplan — split swimlane visuals out, then keep the rest (sans timebands)
     blockplan_in = src.get("blockplan") if isinstance(src.get("blockplan"), dict) else None
@@ -911,8 +992,12 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
         out["excelheader"] = eh_out
 
     if compact_in is not None and cp_placements is not None:
+        # _strip_dead_keys removes superseded-by-style_rules and unread keys;
+        # we additionally drop the legacy time_bands sub-bag because the
+        # placements are emitted as `bands:` below.
+        stripped = _strip_dead_keys("compact_plan", compact_in) or {}
         cp_out = OrderedDict()
-        for k, v in compact_in.items():
+        for k, v in stripped.items():
             if k == "time_bands":
                 continue
             cp_out[k] = v
