@@ -1079,15 +1079,24 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 display_group = group if group else "(unassigned)"
 
                 # ── Group header: colored swatch + group name ──────────────
+                # Emit the swatch as a raw <line> with inline style="..." so
+                # the per-group color survives any .ec-legend-swatch CSS rule
+                # in the SVG <style> block (themes that bind
+                # ec-legend-swatch -> line:axis would otherwise override the
+                # presentation attribute with the axis color via CSS class
+                # specificity, hiding the per-group swatch color entirely).
                 swatch_y = cur_y - font_size * 0.3
                 _swatch_dur_style = config.get_line_style("ec-duration-bar")
-                self._draw_line(
-                    sub_x, swatch_y, sub_x + swatch_w, swatch_y,
-                    stroke=group_color,
-                    stroke_width=line_w,
-                    stroke_opacity=_swatch_dur_style.opacity,
-                    css_class="ec-legend-swatch",
+                swatch_opacity = _swatch_dur_style.opacity
+                swatch_style = (
+                    f"stroke:{group_color};stroke-width:{line_w};"
+                    f"stroke-opacity:{swatch_opacity}"
                 )
+                self._drawing.append(drawsvg.Raw(
+                    f'<line x1="{sub_x:.2f}" y1="{swatch_y:.2f}" '
+                    f'x2="{(sub_x + swatch_w):.2f}" y2="{swatch_y:.2f}" '
+                    f'style="{swatch_style}" class="ec-legend-swatch" />'
+                ))
                 self._draw_text(
                     sub_x + text_offset, cur_y, display_group,
                     font_name, font_size,
