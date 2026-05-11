@@ -26,6 +26,15 @@ from config.config import (
 if TYPE_CHECKING:
     from config.config import CalendarConfig
 
+
+def _token(config: "CalendarConfig", token: str, ctx: dict | None = None) -> dict:
+    """Resolve a unified-theme token, returning ``{}`` when no theme is loaded."""
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        return {}
+    return theme.resolve_token(token, ctx or {})
+
+
 # Mapping from icon set name (CLI value) → list of 31 icon name strings.
 ICON_SETS: dict[str, list[str]] = {
     "squares": squares,
@@ -81,7 +90,16 @@ class MiniIconRenderer(MiniCalendarRenderer):
         5. Circle (if milestone)
         6. Icon (cell-height based size; falls back to text if icon missing)
         """
-        default_color = config.theme_mini_day_color or config.mini_day_color
+        ctx = {"visualizer": "mini", "papersize": config.papersize}
+        day_text = _token(config, "text:day_number", ctx)
+        grid_line = _token(config, "line:grid", ctx)
+        milestone_icon = _token(config, "icon:milestone", ctx)
+
+        default_color = (
+            day_text.get("color")
+            or config.theme_mini_day_color
+            or config.mini_day_color
+        )
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -104,17 +122,27 @@ class MiniIconRenderer(MiniCalendarRenderer):
 
         # 4. Grid lines
         if config.mini_grid_lines:
-            grid_stroke_width = config.mini_grid_line_width
+            grid_stroke_width = float(
+                grid_line.get("width") if grid_line.get("width") is not None
+                else config.mini_grid_line_width
+            )
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset, y + inset,
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
-                stroke=config.mini_grid_line_color,
+                stroke=grid_line.get("color") or config.mini_grid_line_color,
                 stroke_width=grid_stroke_width,
-                stroke_opacity=config.mini_grid_line_opacity,
-                stroke_dasharray=config.mini_grid_line_dasharray or None,
+                stroke_opacity=float(
+                    grid_line.get("opacity") if grid_line.get("opacity") is not None
+                    else config.mini_grid_line_opacity
+                ),
+                stroke_dasharray=(
+                    grid_line.get("dasharray")
+                    or config.mini_grid_line_dasharray
+                    or None
+                ),
             )
 
         text_color = style.text_color or default_color
@@ -128,8 +156,16 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 cx, cy, radius,
                 stroke=style.circle_color,
                 fill=style.circle_fill or "none",
-                stroke_width=config.mini_milestone_stroke_width,
-                stroke_opacity=config.mini_milestone_stroke_opacity,
+                stroke_width=float(
+                    milestone_icon.get("stroke_width")
+                    if milestone_icon.get("stroke_width") is not None
+                    else config.mini_milestone_stroke_width
+                ),
+                stroke_opacity=float(
+                    milestone_icon.get("stroke_opacity")
+                    if milestone_icon.get("stroke_opacity") is not None
+                    else config.mini_milestone_stroke_opacity
+                ),
             )
 
         # 6. Determine which icon to draw.
@@ -163,8 +199,14 @@ class MiniIconRenderer(MiniCalendarRenderer):
         # as plain text so the calendar is still usable.
         if not drawn:
             display_text = self._format_day_number(day_num, config)
-            font = config.mini_cell_bold_font if style.bold else config.mini_cell_font
-            font_size = config.mini_cell_font_size
+            font = (
+                config.mini_cell_bold_font if style.bold
+                else (day_text.get("font") or config.mini_cell_font)
+            )
+            font_size = float(
+                day_text.get("size") if day_text.get("size") is not None
+                else config.mini_cell_font_size
+            )
             text_y = cy + (font_size / 3)
             self._draw_text(
                 cx, text_y, display_text,
