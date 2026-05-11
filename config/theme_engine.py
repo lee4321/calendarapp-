@@ -585,6 +585,13 @@ class ThemeEngine:
         except yaml.YAMLError as e:
             raise ThemeError(f"Invalid YAML in theme file '{path}': {e}")
 
+        # Preserve the original (pre-decompile) theme data so that apply()
+        # can hand a clean unified-schema dict to config.unified_theme.
+        # parse_theme — which rejects the synthesized legacy sections the
+        # decompiler is about to add.
+        import copy
+        self._unified_theme_data = copy.deepcopy(self._theme_data)
+
         # Unified-schema themes contain style_rules but no text_styles /
         # box_styles / line_styles / icon_styles / element_styles.
         # The legacy parser still expects those sections, so synthesize
@@ -989,6 +996,24 @@ class ThemeEngine:
         # Build unified ThemeStyles if the theme uses the new format
         if self._is_new_format():
             self._build_theme_styles(config)
+
+        # Build the parsed UnifiedTheme for the post-migration runtime API
+        # (design §6).  This is parallel to theme_styles for now — renderer
+        # consumers gradually migrate from CalendarConfig styling fields to
+        # config.theme.resolve_token() / .find_rules(); the decompiler bridge
+        # keeps the legacy fields populated in the meantime.  parse_theme()
+        # rejects the synthesized legacy sections the decompiler added in
+        # load(), so we hand it the pre-decompile snapshot.
+        try:
+            from config.unified_theme import parse_theme  # local import to avoid cycles
+            config.theme = parse_theme(self._unified_theme_data)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Theme '%s' could not be parsed as a unified theme: %s. "
+                "Legacy code paths still work via theme_styles.",
+                self._theme_name, exc,
+            )
+            config.theme = None
 
         return config
 

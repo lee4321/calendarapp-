@@ -79,6 +79,14 @@ class CalendarConfig:
     # Unified theme styles (new system — populated by theme engine for new-format themes)
     theme_styles: Any = None  # config.styles.ThemeStyles | None
 
+    # Parsed unified-schema theme (post-migration runtime API).  Populated by
+    # ThemeEngine.load() alongside theme_styles.  Renderer consumers should
+    # query this directly via .resolve_token() / .find_rules() instead of
+    # reading legacy CalendarConfig styling fields; once every consumer has
+    # migrated, the legacy fields and the decompiler bridge can be removed.
+    # See config/unified_theme.py and design §6.
+    theme: Any = None  # config.unified_theme.UnifiedTheme | None
+
     # Data source description (for header/footer expansion)
     events: str = ""
 
