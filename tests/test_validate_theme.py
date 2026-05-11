@@ -29,9 +29,15 @@ def test_sample_yaml_passes() -> None:
 
 
 def test_legacy_theme_without_convert_fails_with_hint(
-    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc = main([str(THEMES_DIR / "default.yaml")])
+    """Synthesize a legacy theme; the parser should reject it with a converter hint."""
+    legacy = tmp_path / "legacy.yaml"
+    legacy.write_text(yaml.safe_dump({
+        "theme": {"name": "legacy", "version": "2.0"},
+        "text_styles": {"heading": {"font": "Roboto", "size": 10, "color": "black"}},
+    }))
+    rc = main([str(legacy)])
     captured = capsys.readouterr()
     assert rc == 2
     err = captured.err
@@ -40,8 +46,14 @@ def test_legacy_theme_without_convert_fails_with_hint(
     assert "--convert" in err
 
 
-def test_legacy_theme_with_convert_passes() -> None:
-    rc = main([str(THEMES_DIR / "default.yaml"), "--convert", "--quiet"])
+def test_legacy_theme_with_convert_passes(tmp_path: Path) -> None:
+    """The same synthetic legacy theme should pass with --convert."""
+    legacy = tmp_path / "legacy.yaml"
+    legacy.write_text(yaml.safe_dump({
+        "theme": {"name": "legacy", "version": "2.0"},
+        "text_styles": {"heading": {"font": "Roboto-Regular", "size": 10, "color": "black"}},
+    }))
+    rc = main([str(legacy), "--convert", "--quiet"])
     assert rc == 0
 
 
