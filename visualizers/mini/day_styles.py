@@ -26,6 +26,16 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
 
+
+def _mini_style_rules(config: "CalendarConfig") -> list:
+    """Return the raw style_rules list (UnifiedTheme-preferred, legacy fallback)."""
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        rules = theme.sections.get("style_rules")
+        if isinstance(rules, list):
+            return rules
+    return list(getattr(config, "theme_style_rules", None) or [])
+
 logger = logging.getLogger(__name__)
 
 
@@ -281,14 +291,32 @@ class DayStyleResolver:
         - ``pattern`` / ``pattern_color`` / ``pattern_opacity`` → hash decoration
         - ``icon`` → ``icon_replace``
         - ``text["day_number"]`` font / color → text style fields
-        """
-        style_rules = self._config.theme_style_rules or []
-        if not style_rules:
-            return
 
+        Two rule sources are consulted in order: the parsed UnifiedTheme's
+        ``box:day`` rules (when present), then the legacy StyleEngine for
+        ``apply_to: day_box`` rules (still consumed by some pre-migration
+        themes).  Both layers are additive — later rules override earlier ones.
+        """
         federal_holiday = bool(holidays)
         company_holiday = any(bool(sd.get("nonworkday")) for sd in special_days)
         nonworkday = federal_holiday or company_holiday
+
+        # Pass 1 — UnifiedTheme box:day rules
+        self._apply_box_day_rules(
+            style,
+            federal_holiday=federal_holiday,
+            company_holiday=company_holiday,
+            nonworkday=nonworkday,
+            events=events,
+        )
+
+        # Pass 2 — legacy StyleEngine (apply_to: day_box).  Sourced from the
+        # same style_rules list; rules with the new ``box:day`` apply_to form
+        # are ignored by _applicable_rules("day_box") so this only handles
+        # any pre-migration themes that still ship the old form.
+        style_rules = _mini_style_rules(self._config)
+        if not style_rules:
+            return
 
         ctx = DayContext(
             federal_holiday=federal_holiday,
@@ -296,7 +324,6 @@ class DayStyleResolver:
             nonworkday=nonworkday,
             workday=not nonworkday,
         )
-
         event_objects = [self._dict_to_event(e) for e in events]
         style_result = StyleEngine(style_rules).evaluate_day(ctx, event_objects)
 
@@ -323,6 +350,53 @@ class DayStyleResolver:
                 style.text_opacity = float(day_text.font_opacity)
             if day_text.font is not None:
                 style.font_name = day_text.font
+
+    def _apply_box_day_rules(
+        self,
+        style: DayStyle,
+        *,
+        federal_holiday: bool,
+        company_holiday: bool,
+        nonworkday: bool,
+        events: list[dict],
+    ) -> None:
+        """Apply every UnifiedTheme ``apply_to: box:day`` rule matching this day.
+
+        ``find_rules`` already filters by selector against the context dict;
+        each matching rule's ``style`` bag is layered onto ``style`` in
+        declaration order (later overrides earlier), mirroring the unified
+        resolver semantics from design §6.
+        """
+        theme = getattr(self._config, "theme", None)
+        if theme is None:
+            return
+        ctx = {
+            "visualizer": "mini",
+            "papersize": getattr(self._config, "papersize", ""),
+            "federal_holiday": federal_holiday,
+            "company_holiday": company_holiday,
+            "nonworkday": nonworkday,
+            "workday": not nonworkday,
+        }
+        rules = theme.find_rules("box:day", ctx)
+        for rule in rules:
+            sty = rule.style or {}
+            fill = sty.get("fill")
+            if fill:
+                style.shade_color = fill
+                fop = sty.get("fill_opacity")
+                if fop is not None:
+                    style.shade_opacity = float(fop)
+            pattern = sty.get("pattern")
+            if pattern:
+                style.hash_decorations = [HashDecoration(
+                    pattern=pattern,
+                    color=sty.get("pattern_color"),
+                    opacity=sty.get("pattern_opacity"),
+                )]
+            icon = sty.get("icon")
+            if icon:
+                style.icon_replace = icon
 
     @staticmethod
     def _dict_to_event(d: dict):
