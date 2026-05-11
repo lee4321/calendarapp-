@@ -193,6 +193,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
             icon_size,
             anchor="middle",
             color=text_color,
+            fallback_name=config.default_missing_icon,
+            fallback_color=text_color,
         )
 
         # Fallback: if the icon was not found in the DB, render the day number

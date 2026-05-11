@@ -501,7 +501,15 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # Determine text to display
         display_text = self._format_day_number(day_num, config)
         replace_icon_name = style.icon_replace or style.icon_append
-        has_replace_icon = bool(self._resolve_icon_svg(replace_icon_name))
+        # An icon will be drawn either when the requested icon resolves OR
+        # when the theme's default_missing_icon resolves as a fallback for a
+        # requested-but-missing icon.  In both cases the day-number text is
+        # suppressed so the icon stands in its place.
+        has_replace_icon = bool(self._resolve_icon_svg(replace_icon_name)) or (
+            bool(replace_icon_name)
+            and bool(config.default_missing_icon)
+            and bool(self._resolve_icon_svg(config.default_missing_icon))
+        )
         if has_replace_icon:
             display_text = ""
 
@@ -585,6 +593,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 icon_size,
                 anchor="middle",
                 color=text_color,
+                fallback_name=config.default_missing_icon,
+                fallback_color=text_color,
                 css_class="ec-event-icon",
             )
         elif style.outlined:
