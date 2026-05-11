@@ -26,6 +26,20 @@ from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
 
 
+def _resolve_style_rules(config: "CalendarConfig") -> list:
+    """Source the raw style_rules list for StyleEngine.
+
+    Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
+    longer depends on the legacy ``theme_style_rules`` decompiler bridge.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        rules = theme.sections.get("style_rules")
+        if isinstance(rules, list):
+            return rules
+    return list(getattr(config, "theme_style_rules", None) or [])
+
+
 def _nwd_fill_for_classes(
     classes: frozenset[str],
     config: "CalendarConfig",
@@ -177,7 +191,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
-        self._style_engine = StyleEngine(config.theme_style_rules or [])
+        self._style_engine = StyleEngine(_resolve_style_rules(config))
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
