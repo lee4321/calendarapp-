@@ -27,14 +27,6 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
 
 
-def _token(config: "CalendarConfig", token: str, ctx: dict | None = None) -> dict:
-    """Resolve a unified-theme token, returning ``{}`` when no theme is loaded."""
-    theme = getattr(config, "theme", None)
-    if theme is None:
-        return {}
-    return theme.resolve_token(token, ctx or {})
-
-
 # Mapping from icon set name (CLI value) → list of 31 icon name strings.
 ICON_SETS: dict[str, list[str]] = {
     "squares": squares,
@@ -91,9 +83,9 @@ class MiniIconRenderer(MiniCalendarRenderer):
         6. Icon (cell-height based size; falls back to text if icon missing)
         """
         ctx = {"visualizer": "mini", "papersize": config.papersize}
-        day_text = _token(config, "text:day_number", ctx)
-        grid_line = _token(config, "line:grid", ctx)
-        milestone_icon = _token(config, "icon:milestone", ctx)
+        day_text = self._resolve_token(config, "text:day_number", ctx)
+        grid_line = self._resolve_token(config, "line:grid", ctx)
+        milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
 
         default_color = (
             day_text.get("color")

@@ -58,6 +58,27 @@ class BaseSVGRenderer(ABC):
         self._icon_svg_map: dict[str, str] = {}
 
     # =========================================================================
+    # Unified-theme token resolution
+    # =========================================================================
+
+    @staticmethod
+    def _resolve_token(
+        config: "CalendarConfig",
+        token: str,
+        ctx: dict | None = None,
+    ) -> dict:
+        """Resolve a UnifiedTheme token; returns ``{}`` when no theme is loaded.
+
+        The returned dict carries the merged style bag for ``token`` (e.g.
+        ``"text:day_number"``).  Callers read individual properties with
+        ``.get("color")`` etc. and supply their own legacy-field fallback.
+        """
+        theme = getattr(config, "theme", None)
+        if theme is None:
+            return {}
+        return theme.resolve_token(token, ctx or {})
+
+    # =========================================================================
     # Drawing helper methods
     # =========================================================================
 
