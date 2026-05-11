@@ -61,37 +61,21 @@ class MiniIconRenderer(MiniCalendarRenderer):
             return icon_list[day_num - 1]
         return None
 
-    def _draw_day_cell(
+    def _draw_day_cell_background(
         self,
         config: "CalendarConfig",
         x: float,
         y: float,
         w: float,
         h: float,
-        day_num: int,
         style: DayStyle,
     ) -> None:
-        """
-        Draw a day cell using an icon instead of a day-number text glyph.
+        """Draw the layers that belong *under* duration bars.
 
-        Rendering order (back to front):
-        1. Background shade
-        2. SVG pattern decorations
-        3. Legacy hash pattern
-        4. Grid line (if enabled)
-        5. Circle (if milestone)
-        6. Icon (cell-height based size; falls back to text if icon missing)
+        Order (back to front): shade → SVG patterns → legacy hash → grid line.
         """
         ctx = {"visualizer": "mini", "papersize": config.papersize}
-        day_text = self._resolve_token(config, "text:day_number", ctx)
         grid_line = self._resolve_token(config, "line:grid", ctx)
-        milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
-
-        default_color = (
-            day_text.get("color")
-            or config.theme_mini_day_color
-            or config.mini_day_color
-        )
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -136,6 +120,30 @@ class MiniIconRenderer(MiniCalendarRenderer):
                     or None
                 ),
             )
+
+    def _draw_day_cell_foreground(
+        self,
+        config: "CalendarConfig",
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        day_num: int,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *over* duration bars.
+
+        Order: milestone circle → day-number icon (with text fallback).
+        """
+        ctx = {"visualizer": "mini", "papersize": config.papersize}
+        day_text = self._resolve_token(config, "text:day_number", ctx)
+        milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
+
+        default_color = (
+            day_text.get("color")
+            or config.theme_mini_day_color
+            or config.mini_day_color
+        )
 
         text_color = style.text_color or default_color
         cx = x + w / 2

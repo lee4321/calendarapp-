@@ -170,11 +170,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 if wn_value is not None:
                     self._draw_week_number(config, x, y, w, h, wn_value)
 
-        # Third pass: duration bars (behind day numbers and icons)
-        if config.includedurations:
-            self._draw_all_duration_bars(config, coordinates, events)
-
-        # Fourth pass: day cells (day numbers, icons, backgrounds)
+        # Resolve every cell's DayStyle once, then render in three sub-passes
+        # so duration bars land between the day-cell background (shade,
+        # patterns, grid lines) and the foreground (numbers, circles, icons).
+        # Drawing patterns inside _draw_day_cell after _draw_all_duration_bars
+        # painted the bars on top of the duration line.
+        cell_render_state: list[tuple[float, float, float, float, int, DayStyle]] = []
         for key in sorted(coordinates):
             if not key.startswith("Cell_"):
                 continue
@@ -191,9 +192,20 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
             day_events = events_by_day.get(daykey, [])
             style = resolver.resolve(daykey, day_events, is_adjacent)
-
             day_num = int(daykey[6:8])
-            self._draw_day_cell(config, x, y, w, h, day_num, style)
+            cell_render_state.append((x, y, w, h, day_num, style))
+
+        # Pass 3a: day-cell backgrounds (shade, SVG patterns, hash, grid lines)
+        for x, y, w, h, day_num, style in cell_render_state:
+            self._draw_day_cell_background(config, x, y, w, h, style)
+
+        # Pass 3b: duration bars (drawn over backgrounds, under foregrounds)
+        if config.includedurations:
+            self._draw_all_duration_bars(config, coordinates, events)
+
+        # Pass 3c: day-cell foregrounds (numbers, circles, boxes, icons)
+        for x, y, w, h, day_num, style in cell_render_state:
+            self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
 
         return 0, []
 
@@ -379,25 +391,33 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         Draw a single day cell with all visual treatments from DayStyle.
 
-        Rendering order (back to front):
-        1. Background shade
-        2. Hash pattern
-        3. SVG pattern decorations
-        4. Legacy hash pattern
-        5. Grid line (if enabled)
-        6. Circle (if milestone)
-        7. Box (if boxed)
-        8. Day number text (with bold/outlined/color/font overrides)
-        9. Strikethrough line
-        10. Icon (append or replace)
+        Combines the background pass (shade, patterns, grid lines) with the
+        foreground pass (numbers, circles, icons, etc.).  Callers wanting to
+        sandwich other artwork between them should call
+        :meth:`_draw_day_cell_background` and :meth:`_draw_day_cell_foreground`
+        directly — see :meth:`_render_content` for the layered ordering.
         """
-        tk_day = self._tk("text:day_number")
+        self._draw_day_cell_background(config, x, y, w, h, style)
+        self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
+
+    def _draw_day_cell_background(
+        self,
+        config: CalendarConfig,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *under* duration bars.
+
+        Order (back to front):
+        1. Background shade
+        2. SVG pattern decorations
+        3. Legacy hash pattern
+        4. Grid line (if enabled)
+        """
         tk_grid = self._tk("line:grid")
-        tk_milestone = self._tk("icon:milestone")
-        default_color = (
-            tk_day.get("color")
-            or config.get_element_color("ec-day-number", config.mini_day_color)
-        )
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -451,6 +471,32 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 stroke_dasharray=tk_grid.get("dasharray") or _ls_grid.dasharray or None,
                 css_class="ec-day-box",
             )
+
+    def _draw_day_cell_foreground(
+        self,
+        config: CalendarConfig,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        day_num: int,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *over* duration bars.
+
+        Order (back to front):
+        5. Circle (if milestone)
+        6. Box around number (if boxed)
+        7. Day number text or replacement icon
+        7b. Fiscal period start label
+        8. Strikethrough line
+        """
+        tk_day = self._tk("text:day_number")
+        tk_milestone = self._tk("icon:milestone")
+        default_color = (
+            tk_day.get("color")
+            or config.get_element_color("ec-day-number", config.mini_day_color)
+        )
 
         # Determine text to display
         display_text = self._format_day_number(day_num, config)
