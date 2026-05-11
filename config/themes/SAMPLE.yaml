@@ -11,7 +11,7 @@ theme:
 # ─── base ──────────────────────────────────────────────────────────────────
 # Theme-wide defaults: default font family and default missing-icon name.
 base:
-  font_family: FiraSans-ExtraLight
+  font_family: FiraSans-Light
   default_missing_icon: applet-closed
 
 # ─── layout ────────────────────────────────────────────────────────────────
@@ -209,7 +209,7 @@ style_rules:
     define: text
     as: base
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 9
       color: black
   - name: define text:heading
@@ -223,21 +223,21 @@ style_rules:
     define: text
     as: body
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 8
       color: black
   - name: define text:caption
     define: text
     as: caption
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: dimgrey
   - name: define text:label
     define: text
     as: label
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: grey
   - name: define text:day_number
@@ -258,56 +258,56 @@ style_rules:
     define: text
     as: week_number
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: grey
   - name: define text:event_name
     define: text
     as: event_name
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 8
       color: navy
   - name: define text:event_notes
     define: text
     as: event_notes
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: darkgrey
   - name: define text:event_date
     define: text
     as: event_date
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: darkgrey
   - name: define text:duration_date
     define: text
     as: duration_date
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: darkgrey
   - name: define text:holiday_title
     define: text
     as: holiday_title
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: black
   - name: define text:today_label
     define: text
     as: today_label
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: tomato
   - name: define text:fiscal_label
     define: text
     as: fiscal_label
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: navy
   - name: define text:swimlane_label
@@ -321,7 +321,7 @@ style_rules:
     define: text
     as: band_label
     style:
-      font: FiraSans-ExtraLight
+      font: FiraSans-Light
       size: 7
       color: black
   - name: define text:milestone_label
