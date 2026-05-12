@@ -643,6 +643,10 @@ class CalendarDB:
         """
         Return the color list for a named palette, or None if not found.
 
+        Name matching is case-insensitive — themes pass values like
+        ``"Greys"``, ``"greys"``, ``"GREYS"``, ``"Pastel1"``, or ``"pastel1"``
+        interchangeably and all resolve to the same palette row.
+
         Args:
             name: Palette name (e.g. "Accent", "afmhot")
 
@@ -651,7 +655,10 @@ class CalendarDB:
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT palette FROM palettes WHERE name = ?", (name,))
+            cursor.execute(
+                "SELECT palette FROM palettes WHERE name = ? COLLATE NOCASE",
+                (name,),
+            )
             row = cursor.fetchone()
             if row is None:
                 return None
