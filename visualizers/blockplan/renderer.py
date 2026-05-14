@@ -339,6 +339,36 @@ class BlockPlanRenderer(BaseSVGRenderer):
         font_size = float(band.get("font_size") or config.blockplan_band_font_size)
         return font_size * 1.01
 
+    def _resolve_box_band_fill(self, band: dict[str, Any]) -> Any:
+        """Return the fill from a matching ``box:band`` style_rule, or None.
+
+        Bands can be referenced by either the time-band ``unit`` (e.g.
+        ``fiscal_quarter``) or the human-readable ``label`` (e.g.
+        ``Fiscal Quarter``).  The migrator emits the slugified label as the
+        rule key, so accept all three spellings.
+        """
+        engine = getattr(self, "_style_engine", None)
+        if engine is None:
+            return None
+        label = str(band.get("label") or "").strip()
+        unit = str(band.get("unit") or "").strip()
+        candidates = {s.lower() for s in (label, unit) if s}
+        if label:
+            candidates.add(label.lower().replace(" ", "_"))
+        if not candidates:
+            return None
+        for rule in engine._applicable_rules("band"):
+            select = rule.get("select") or {}
+            sel_band = str(select.get("band") or "").strip().lower()
+            if not sel_band or sel_band not in candidates:
+                continue
+            style = rule.get("style") or {}
+            if "fill" in style:
+                return style["fill"]
+            if "fill_color" in style:
+                return style["fill_color"]
+        return None
+
     @staticmethod
     def _resolve_color_list(
         fill_color: Any,
@@ -521,6 +551,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             band_palette = band.get(
                 "fill_palette", config.blockplan_timeband_fill_palette
             )
+            _box_band_fill = self._resolve_box_band_fill(band)
+            if _box_band_fill is not None:
+                band_fill = _box_band_fill
             color_list = self._resolve_color_list(band_fill, band_palette, db)
             band_label_color = band.get(
                 "font_color", _label_text_style.color
@@ -1445,7 +1478,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _dur_date_style = config.get_text_style("ec-duration-date")
             if has_dates:
                 date_font_size = float(config.blockplan_duration_date_font_size)
-                date_baseline_y = y + bar_h + date_font_size
+                date_baseline_y = y + bar_h - float(config.blockplan_duration_date_inset)
                 date_color = (
                     config.blockplan_duration_date_color
                     if config.blockplan_duration_date_color is not None

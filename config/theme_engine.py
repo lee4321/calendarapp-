@@ -227,6 +227,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "duration_date_font"): "blockplan_duration_date_font",
     ("blockplan", "duration_date_font_size"): "blockplan_duration_date_font_size",
     ("blockplan", "duration_date_color"): "blockplan_duration_date_color",
+    ("blockplan", "duration_date_inset"): "blockplan_duration_date_inset",
     ("blockplan", "marker_radius"): "blockplan_marker_radius",
     ("blockplan", "vertical_line_color"): "blockplan_vertical_line_color",
     ("blockplan", "vertical_line_width"): "blockplan_vertical_line_width",
