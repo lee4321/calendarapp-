@@ -582,33 +582,64 @@ Token pairs to wire:
 
 ## Phase 2 — strip `CalendarConfig` styling defaults
 
-After every renderer is on `config.theme`, the corresponding CalendarConfig
-fields become dead — they're populated by `ThemeEngine.apply()` from the
-decompiled legacy sections but nothing reads them. Stripping them is safe
-and reveals any consumer the migration missed.
+Phase 2 splits into two waves:
 
-**Blocker:** Open issue §4 must be resolved first.  (§1 is done — the
-precedence story is now consistent: tokens win when defined, heuristic
-falls back when not, and the renderer's `tk.get(x) or config.<legacy>`
-shape returns the same value either way.)  For Phase 2 to also strip
-the page-aware `setfontsizes` heuristic safely, `setfontsizes` will
-need to *write* its computed sizes back into the unified-theme token
-registry (so the renderer's direct `tk.get("size")` read still gets a
-value when no theme defines `size:`).  That's a Phase 2 design decision
-the strip pass needs to settle.
+### Wave 1 (this session) — strip purely-dead fields
 
-- [ ] **Identify candidate fields.** A field is a candidate if every
-      `grep` for `config.<field>` (excluding tests and theme_engine itself)
-      returns nothing.
-- [ ] **Strip in batches** by family — all `day_box_*` together, all
-      `mini_*` together, etc. Each batch is one commit.
-- [ ] **For each batch:** delete the `field(default=...)` (move to
-      `field(default=None)` first if the field is still legally referenced
-      from `ThemeEngine.apply()` populating it), run the full suite.
-- [ ] **Once a field has no `setattr(config, <field>, ...)` in
-      theme_engine.py either**, delete the field from the dataclass
-      entirely. The `_setattr_from_theme` paths in
-      `theme_engine._apply_color_maps()`, `apply()`, etc. also delete.
+Fields whose only writer was `ThemeEngine.apply()` (via `THEME_TO_CONFIG_MAP`)
+and whose only "consumer" was the dataclass declaration itself — i.e.
+fields that the decompile bridge populated but no code read post-Phase-1.
+
+**Done.**  89 fields stripped across 6 commits, by family:
+
+| Batch | Commit | Fields | Notes |
+|---|---|---|---|
+| theme_mini_*_color | `7f55ef84` | 3 | title/header/week_number color slots subsumed by tokens |
+| excelheader_* | `63034253` | 7 | XLSX-API-incompatible vline extras + holiday icon overrides |
+| compactplan_* | `e9862c78` | 21 | text_*/name_text_*/notes_text_* color/opacity/alignment trios |
+| blockplan_* | `30d8bef3` | 22 | same trios + lane/event_date/header/band font fields |
+| timeline_* | `b577f307` | 11 | text_* + name_text_*/notes_text_* alignment/opacity |
+| weekly_/mini_/day_box_ | `a79e9705` | 25 | weekly_text_*, mini_details_*, mini_header_color/font, etc. |
+
+Each batch:
+1. Identified via `grep -rE "(config\.${f}\b|self\.${f}\b|\"${f}\")"`,
+   filtered to exclude tests/, theme_engine.py, and the dataclass
+   declaration line itself.  **Important caveat**: cross-check matches
+   against `config/config.py`'s BoxStyle/LineStyle/IconStyle/TextStyle
+   factory dicts — the blockplan batch caught one false-dead
+   (`blockplan_timeband_fill_color`, kept by the `ec-band-cell` factory)
+   only at test-suite time.
+2. Drop the dataclass field declaration in `config/config.py`.
+3. Drop the matching entry from `theme_engine.THEME_TO_CONFIG_MAP`.
+4. Drop any setfontsizes write to the now-stripped field
+   (e.g. `config.blockplan_text_font_size = ...`).
+5. Run the full test suite (`pytest tests/ --ignore=tests/test_theme_engine.py`)
+   plus render-completeness; both must stay green.
+
+### Wave 2 (deferred) — strip the `or config.<legacy>` fallback chain
+
+After Wave 1, the renderers still read styling via the
+`tk.get(x) or config.<legacy>` shape established in Phase 1.  Wave 2
+flips that to `tk.get(x)` directly and strips the surviving
+CalendarConfig fields.
+
+**Blocker:** `setfontsizes` writes the page-height heuristic into
+CalendarConfig fields today; for Wave 2 to be safe, `setfontsizes` (or
+a sibling pass) needs to *write* its computed sizes back into the
+unified-theme token registry, so `theme.resolve_token("text:foo")["size"]`
+returns a value even when no theme defines `size:`.  Without that, a
+no-`size`-defined theme would render text at None pt.
+
+The simplest design: a new pass that runs after the second
+`theme_engine.apply()` and walks the existing `_size(token, fallback,
+visualizer)` map, injecting a synthesized rule into `config.theme.rules`
+for every token whose resolved style lacks `size:`.  Renderers can then
+drop their `or config.<legacy>` fallbacks and the legacy fields can
+follow.
+
+- [ ] Design + implement `_inject_heuristic_size_tokens(config)`.
+- [ ] Strip `or config.<legacy>` from each renderer's read sites.
+- [ ] Strip the now-truly-dead legacy fields family by family.
 
 The end state: `CalendarConfig` has only non-styling fields — geometry,
 format strings, palette references, fiscal semantics, the loaded
@@ -674,7 +705,8 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | svg_base | 1-2 hours | **done** |
 | excelheader | 1-2 hours | **done** |
 | Phase 1.5 (icon halo wiring) | 3-4 hours | **done** |
-| Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |
+| Phase 2 wave 1 (strip purely-dead) | 2-3 hours | **done** (89 fields across 6 commits) |
+| Phase 2 wave 2 (strip fallbacks) | 4-6 hours | pending — needs setfontsizes-writes-tokens design |
 | Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
 | **Remaining total** | **~25-35 hours** | |
