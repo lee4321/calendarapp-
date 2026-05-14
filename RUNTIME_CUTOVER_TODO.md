@@ -39,6 +39,7 @@ swaps reads from one source to the other.
 | weekly | (this commit) | 37 reads. SVG byte-identical (modulo timestamp) for default / corporate / dark; TJX shows expected diffs where its `box:cell stroke: none, stroke_width: 0.5` and `text:holiday_title size: 12` tokens now win over the renderer's hardcoded defaults — same shape as Open Issue §1. |
 | blockplan | (this commit) | 96 reads. SVG diffs across all 4 reference themes are token-driven precedence shifts: default.yaml's `text:heading color: grey` and `line:grid width: 0.5` now drive the heading-text color and grid-line stroke width (were silently ignored pre-migration); TJX's `header_label_color: Green` legacy field is now overridden by its global `text:heading color: grey` token. Same shape as Open Issue §1's design-intent precedence. |
 | svg_base | (this commit) | 9 reads in the overflow-table helpers. `text:day_number color` now drives the table text color (and the "Overflow Events" title), `text:event_name font/size` now drives the table body font.  Helper signatures grew a `text_color` param so the lookup happens once at the caller; no per-row token resolution. |
+| timeline | (this commit) | 96 reads.  All 4 reference themes' SVGs are byte-identical (modulo timestamp + command-line) — the unified theme tokens that timeline queries (`text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:label`, `text:today_label`) are not defined by any reference theme today, so the legacy heuristic chain still drives every value.  Migration is structural: token-first precedence is wired so any future theme that ships timeline-specific tokens will have them respected.  Also removed a duplicate `_callout_metrics` definition that pre-dated the migration (Python silently overrode it). |
 
 ### Pattern that emerged from the mini migration
 
@@ -324,7 +325,7 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | mini (day_styles) | `visualizers/mini/day_styles.py` | 19 | **done** (`8f0ce7b5`) | `find_rules("box:day", ctx)` pass added; legacy chains remain (see Open issue §2) |
 | mini (layout) | `visualizers/mini/layout.py` | 17 | **skipped** | geometry only; no styling reads requiring migration |
 | weekly | `visualizers/weekly/renderer.py` | 37 | **done** | `text:day_number`, `text:event_name`, `text:event_notes`, `text:fiscal_label`, `text:week_number`, `text:holiday_title`, `box:cell`, `line:hash`, `icon:event`, `icon:overflow` |
-| timeline | `visualizers/timeline/renderer.py` | 96 | pending | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
+| timeline | `visualizers/timeline/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:label`, `text:today_label`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
 | blockplan | `visualizers/blockplan/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:band_label`, `text:swimlane_label`, `text:label`, `text:heading`, `box:band`, `box:duration`, `line:grid`, `icon:event`, `icon:milestone` |
 | svg_base | `renderers/svg_base.py` | 10 | **done** | overflow-table only: `text:day_number` (color) + `text:event_name` (font, size) |
 | excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
@@ -382,11 +383,19 @@ For each renderer (one commit each):
       issue §4 is resolved.
 - [x] Commit
 
-#### timeline (96 reads, largest)
-- [ ] `visualizers/timeline/renderer.py` — full token set (events,
-      durations, callouts, axis, today, ticks, milestones)
-- [ ] `visualizers/timeline/layout.py` — geometry only
-- [ ] Commit
+#### timeline (96 reads) — DONE
+- [x] `visualizers/timeline/renderer.py` — text:event_name,
+      text:event_notes, text:event_date, text:duration_date, text:label,
+      text:today_label, line:axis, line:today, line:tick, icon:event,
+      icon:milestone.  Module-level `_timeline_style_rules(config)`
+      helper sources `style_rules` from UnifiedTheme.  `__init__` /
+      `_populate_timeline_tokens` / `_tk()` cache mirror weekly +
+      blockplan.  `_callout_metrics` and `_duration_metrics` converted
+      from staticmethods to instance methods so they can read the
+      cache.  Removed a duplicate `_callout_metrics` definition that
+      pre-dated the migration (Python silently overrode it).
+- [x] `visualizers/timeline/layout.py` — verified, no styling reads.
+- [x] Commit
 
 #### blockplan (96 reads) — DONE
 - [x] `visualizers/blockplan/renderer.py` — text:event_name,
@@ -587,7 +596,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | Open issue §1 resolution (font-size precedence) | 1 hour | **done** |
 | Open issue §2 resolution (dual box:day chain) | 1 hour | **done** |
 | weekly | 2-3 hours | **done** |
-| timeline | 5-6 hours | pending |
+| timeline | 5-6 hours | **done** |
 | blockplan | 5-6 hours | **done** |
 | svg_base | 1-2 hours | **done** |
 | excelheader | 1-2 hours | pending |
