@@ -51,9 +51,9 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
-  fiscal_palette: Greys
-  group_palette: Pastel1
+  month_palette: oranges
+  fiscal_palette: blues
+  group_palette: pastel1
   hash_lines: black
   resource_groups:
     a: black
@@ -66,68 +66,6 @@ colors:
   federal_holiday:
     alpha: 0.1
     color: tomato
-
-# ─── weekly ────────────────────────────────────────────────────────────────
-# Weekly visualizer non-styling config: week-number format, day-name
-# format, overflow icon name.
-weekly:
-  week_numbers:
-    label_format: W{num:02d}
-  overflow:
-    icon: overflow
-
-# ─── mini_calendar ─────────────────────────────────────────────────────────
-# Mini visualizer non-styling config: title format, layout dimensions,
-# icon-set name.
-mini_calendar:
-  title_format: MMMM YYYY
-  week_number_label_format: W{num}
-  icon_set: squares
-
-# ─── mini_details ──────────────────────────────────────────────────────────
-# Mini-details non-styling config: column widths, header text,
-# output suffix.
-mini_details:
-  output_suffix: _details
-  title_text: Event Details
-  headers:
-    - Start Date
-    - Name / Description
-    - Milestone
-    - Days
-    - Group
-  column_widths:
-    - 0.16
-    - 0.52
-    - 0.1
-    - 0.1
-    - 0.12
-
-# ─── text_mini ─────────────────────────────────────────────────────────────
-# text-mini glyph-set declarations; not an SVG renderer.
-text_mini:
-  cell_width: 2
-  month_gap: 4
-  event_symbols:
-    - •
-  milestone_symbols:
-    - ◆
-  holiday_symbols:
-    - ✕
-  nonworkday_symbols:
-    - ·
-
-# ─── timeline ──────────────────────────────────────────────────────────────
-# Timeline non-styling config: tick-label format, axis/callout/lane
-# geometry, today-line content.
-timeline:
-  tick_label_format: M/D
-  today_label_text: Today
-  marker_radius: 4.0
-  icon_size: 8
-  callout_offset_y: 30.0
-  duration_offset_y: 30.0
-  duration_lane_gap_y: 8.0
 
 # ─── compact_plan ──────────────────────────────────────────────────────────
 # compactplan non-styling config: axis-relative duration/legend geometry.
@@ -155,9 +93,9 @@ compact_plan:
   text:
     font_name: RobotoCondensed-Light
   duration_line_width: 9.0
-  lane_spacing: 9.0
+  lane_spacing: 12.0
   show_duration_icons: true
-  duration_icon_list: darksquare
+  duration_icon_list: squircles
   duration_icon_height: 8.0
   milestone_flag_height: 9.0
   milestone_flag_width: 7.0
@@ -168,7 +106,7 @@ compact_plan:
   legend_column_split: 0.5
   show_legend: true
   legend_row_height: 10.0
-  legend_swatch_width: 10.0
+  legend_swatch_width: 20.0
   show_milestone_list: true
   milestone_list_date_format: M/D
   milestone_list_row_height: 10.0
@@ -176,7 +114,7 @@ compact_plan:
   show_continuation_icon: true
   continuation_icon: move-right
   continuation_icon_height: 8.0
-  continuation_icon_color: white
+  continuation_icon_color: grey
   continuation_legend_text: activity continues
   bands:
     - band: month
@@ -185,28 +123,6 @@ compact_plan:
     - dow
   legend_area_ratio: 0.25
 
-# ─── blockplan ─────────────────────────────────────────────────────────────
-# Blockplan non-styling config: swimlane name list, label-column ratio,
-# lane match policy, fiscal-year start.
-blockplan:
-  fiscal_year_start_month: 1
-  week_start: 0
-  label_column_ratio: 0.1
-  band_row_height: 12.0
-  lane_match_mode: first
-  show_unmatched_lane: true
-  unmatched_lane_name: Other
-  swimlanes:
-    - name: Other
-
-# ─── excelheader ───────────────────────────────────────────────────────────
-# XLSX-only config: band-row geometry, system-font names per band
-# (deliberate exception, not style_rules), and Excel cell-border
-# vertical lines.
-excelheader:
-  font_name: Calibri
-  font_size: 9
-  band_row_height: 18.0
 
 # ─── time_bands ────────────────────────────────────────────────────────────
 # Shared band catalog referenced by blockplan / compactplan / excelheader
@@ -217,15 +133,18 @@ time_bands:
     label: Month
     date_format: MMM YYYY
     show_every: 1
+    text_align: center
   date_range:
     unit: week
     label: Date Range
     label_format: '{start} – {end}'
+    text_align: center
   dow:
     unit: date
     label: DoW
     date_format: ddd
     show_every: 1
+    text_align: center
 
 # ─── style_rules ───────────────────────────────────────────────────────────
 # All visual styling.  Each rule has a select + apply_to + style triple.
@@ -279,13 +198,13 @@ style_rules:
     style:
       font: PlaywriteDEGrund-VariableFont_wght
       size: 12
-      color: white
+      color: grey
   - name: define text:body_secondary
     define: text
     as: body_secondary
     style:
       font: PlaywriteDEGrund-VariableFont_wght
-      size: 12
+      size: 10
       color: grey
   - name: define text:label
     define: text
@@ -689,6 +608,7 @@ style_rules:
       font: Roboto-Regular
       size: 7
       color: black
+      align: center
   - name: 'define text:milestone_label  # backfilled from basic.yaml'
     define: text
     as: milestone_label
@@ -696,6 +616,7 @@ style_rules:
       font: Roboto-Regular
       size: 7
       color: black
+      align: center
   - name: 'define box:cell  # backfilled from basic.yaml'
     define: box
     as: cell

@@ -62,7 +62,7 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
+  month_palette: bmh
   fiscal_palette: Greys
   group_palette: Pastel1
   hash_lines: black
@@ -164,7 +164,7 @@ blockplan:
   duration_show_start_date: true
   duration_show_end_date: true
   duration_date_format: M/D
-  duration_date_color: Black
+  duration_date_color: white
   event_show_date: false
   event_date_font: PlaywriteDEGrund-VariableFont_wght
   event_date_font_size: null
@@ -346,6 +346,13 @@ style_rules:
     as: duration
     style:
       color: navy
+  - name: define icon:milestone
+    define: icon
+    as: milestone
+    style:
+      icon: flag
+      color: gold
+      size: 16
   - name: define icon:overflow
     define: icon
     as: overflow

@@ -62,9 +62,9 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
-  fiscal_palette: Greys
-  group_palette: Pastel1
+  month_palette: blues
+  fiscal_palette: colorblind
+  group_palette: coraltealblue
   hash_lines: black
   federal_holiday:
     alpha: 0.1
@@ -597,7 +597,7 @@ style_rules:
     style:
       font: PlaywriteDEGrund-VariableFont_wght
       size: 12
-      color: white
+      color: black
   - name: define text:body_secondary
     define: text
     as: body_secondary

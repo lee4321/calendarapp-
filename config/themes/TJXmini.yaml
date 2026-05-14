@@ -62,16 +62,16 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
-  fiscal_palette: Greys
-  group_palette: Pastel1
+  month_palette: paired
+  fiscal_palette: blues
+  group_palette: oranges
   hash_lines: black
   company_holiday:
     alpha: 0.25
     color: gold
   federal_holiday:
     alpha: 0.1
-    color: tomato
+    color: "#87BBBB"
 
 # ─── mini_calendar ─────────────────────────────────────────────────────────
 # Mini visualizer non-styling config: title format, layout dimensions,
@@ -202,7 +202,7 @@ style_rules:
     style:
       font: PlaywriteDEGrund-VariableFont_wght
       size: 12
-      color: white
+      color: blue
   - name: define text:body_secondary
     define: text
     as: body_secondary
@@ -237,7 +237,7 @@ style_rules:
     style:
       font: PlaywriteDEGrund-VariableFont_wght
       size: 22
-      color: white
+      color: blue
   - name: define text:month_title
     define: text
     as: month_title
