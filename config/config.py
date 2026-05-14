@@ -409,14 +409,11 @@ class CalendarConfig:
     mini_current_day_color: str = "lightblue"  # Current day shade color
 
     # Theme-overridable mini calendar fields (None = use mini_* defaults above)
-    theme_mini_title_color: str | None = None
-    theme_mini_header_color: str | None = None
     theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
     theme_mini_holiday_color: str | None = None
     theme_mini_nonworkday_fill_color: str | None = None
     theme_mini_milestone_color: str | None = None
-    theme_mini_week_number_color: str | None = None
     theme_mini_current_day_color: str | None = None
 
     # Content filtering options

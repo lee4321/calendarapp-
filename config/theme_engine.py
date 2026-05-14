@@ -1256,17 +1256,18 @@ class ThemeEngine:
                 setattr(config, config_field, val)
 
         # Mini calendar theme color overrides
+        # title_color / header_color / week_number_color were dropped in
+        # the Phase 2 strip pass — no renderer reads them post-migration
+        # (text:month_title / text:label / text:week_number tokens cover
+        # those styling slots).
         mc = colors.get("mini_calendar", {})
         if isinstance(mc, dict):
             _MINI_COLOR_FIELDS = {
-                "title_color": "theme_mini_title_color",
-                "header_color": "theme_mini_header_color",
                 "day_color": "theme_mini_day_color",
                 "adjacent_month_color": "theme_mini_adjacent_month_color",
                 "holiday_color": "theme_mini_holiday_color",
                 "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
                 "milestone_color": "theme_mini_milestone_color",
-                "week_number_color": "theme_mini_week_number_color",
                 "current_day_color": "theme_mini_current_day_color",
             }
             for yaml_key, config_field in _MINI_COLOR_FIELDS.items():
