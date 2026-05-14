@@ -535,8 +535,12 @@ class CalendarConfig:
     weekly_notes_text_alignment: str = "left"
     hash_pattern_opacity: float = 0.15
 
-    # Timeline styling
-    timeline_background_color: str = "none"
+    # Timeline styling.  Phase 2 strip dropped dead fields with no
+    # readers post-Phase-1: background_color (page bg from box:background),
+    # text_font_color/_opacity/_alignment + name_text_font_opacity/_alignment
+    # + notes_text_font_opacity/_alignment (all subsumed by text:event_name /
+    # text:event_notes / text:label tokens), text_font_size,
+    # duration_bar_stroke_dasharray, duration_bracket_stroke_dasharray.
     timeline_axis_color: str = "lightgrey"
     timeline_axis_opacity: float = 0.85
     timeline_axis_width: float = 2.0
@@ -565,22 +569,14 @@ class CalendarConfig:
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     timeline_duration_icon_visible: bool = False
-    # ── Timeline text styling (uniform) ──────────────────────────────────────
+    # ── Timeline text styling — kept survivors only.
     timeline_text_font_name: str = Fonts.R_BOLD
-    timeline_text_font_color: str = "deepskyblue"
-    timeline_text_font_size: float | None = None
-    timeline_text_font_opacity: float = 1.0
-    timeline_text_alignment: str = "left"
     timeline_name_text_font_name: str = Fonts.R_BOLD
     timeline_name_text_font_color: str = "deepskyblue"
     timeline_name_text_font_size: float | None = None
-    timeline_name_text_font_opacity: float = 1.0
-    timeline_name_text_alignment: str = "left"
     timeline_notes_text_font_name: str = Fonts.RC_BOLD
     timeline_notes_text_font_color: str = "deepskyblue"
     timeline_notes_text_font_size: float | None = None
-    timeline_notes_text_font_opacity: float = 1.0
-    timeline_notes_text_alignment: str = "left"
     # Timeline box/date fields (not renamed — not event name/notes text)
     timeline_event_box_width: float | None = None
     timeline_event_box_height: float | None = None
@@ -599,9 +595,7 @@ class CalendarConfig:
     timeline_tick_stroke_dasharray: str | None = None
     timeline_today_line_dasharray: str | None = None
     timeline_label_stroke_dasharray: str | None = None
-    timeline_duration_bar_stroke_dasharray: str | None = None
     timeline_connector_stroke_dasharray: str | None = None
-    timeline_duration_bracket_stroke_dasharray: str | None = None
     timeline_top_colors: list[str] = field(
         default_factory=lambda: [
             "deepskyblue",

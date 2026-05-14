@@ -86,8 +86,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.notes_text", "font_size"): "weekly_notes_text_font_size",
     ("weekly.notes_text", "font_opacity"): "weekly_notes_text_font_opacity",
     ("weekly.notes_text", "alignment"): "weekly_notes_text_alignment",
-    # Timeline
-    ("timeline", "background_color"): "timeline_background_color",
+    # Timeline.  Phase 2 strip dropped 11 dead translations:
+    # background_color, duration_bar_stroke_dasharray,
+    # duration_bracket_stroke_dasharray, text_font_color/_opacity/_alignment
+    # / _font_size, name_text_font_opacity/_alignment,
+    # notes_text_font_opacity/_alignment.
     ("timeline", "axis_color"): "timeline_axis_color",
     ("timeline", "axis_opacity"): "timeline_axis_opacity",
     ("timeline", "axis_width"): "timeline_axis_width",
@@ -115,10 +118,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "tick_stroke_dasharray"): "timeline_tick_stroke_dasharray",
     ("timeline", "today_line_dasharray"): "timeline_today_line_dasharray",
     ("timeline", "label_stroke_dasharray"): "timeline_label_stroke_dasharray",
-    (
-        "timeline",
-        "duration_bar_stroke_dasharray",
-    ): "timeline_duration_bar_stroke_dasharray",
     ("timeline", "top_colors"): "timeline_top_colors",
     ("timeline", "bottom_colors"): "timeline_bottom_colors",
     ("timeline", "show_fiscal_periods"): "timeline_show_fiscal_periods",
@@ -132,22 +131,14 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "continuation_icon_left"): "timeline_continuation_icon_left",
     ("timeline", "continuation_icon_height"): "timeline_continuation_icon_height",
     ("timeline", "continuation_icon_color"): "timeline_continuation_icon_color",
-    # Timeline text styling (uniform)
+    # Timeline text styling — kept survivors only.
     ("timeline.text", "font_name"): "timeline_text_font_name",
-    ("timeline.text", "font_color"): "timeline_text_font_color",
-    ("timeline.text", "font_size"): "timeline_text_font_size",
-    ("timeline.text", "font_opacity"): "timeline_text_font_opacity",
-    ("timeline.text", "alignment"): "timeline_text_alignment",
     ("timeline.name_text", "font_name"): "timeline_name_text_font_name",
     ("timeline.name_text", "font_color"): "timeline_name_text_font_color",
     ("timeline.name_text", "font_size"): "timeline_name_text_font_size",
-    ("timeline.name_text", "font_opacity"): "timeline_name_text_font_opacity",
-    ("timeline.name_text", "alignment"): "timeline_name_text_alignment",
     ("timeline.notes_text", "font_name"): "timeline_notes_text_font_name",
     ("timeline.notes_text", "font_color"): "timeline_notes_text_font_color",
     ("timeline.notes_text", "font_size"): "timeline_notes_text_font_size",
-    ("timeline.notes_text", "font_opacity"): "timeline_notes_text_font_opacity",
-    ("timeline.notes_text", "alignment"): "timeline_notes_text_alignment",
     # Timeline box/date fields (not renamed)
     ("timeline_events", "box_width"): "timeline_event_box_width",
     ("timeline_events", "box_height"): "timeline_event_box_height",
@@ -416,10 +407,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
         "separator_stroke_dasharray",
     ): "mini_details_separator_stroke_dasharray",
     ("timeline", "connector_stroke_dasharray"): "timeline_connector_stroke_dasharray",
-    (
-        "timeline",
-        "duration_bracket_stroke_dasharray",
-    ): "timeline_duration_bracket_stroke_dasharray",
     # ExcelHeader
     ("excelheader", "font_name"): "excelheader_font_name",
     ("excelheader", "font_size"): "excelheader_font_size",
