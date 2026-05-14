@@ -86,44 +86,63 @@ The mini migration surfaced these. Each affects rendered output, future
 migrations, or the Phase 2/3 cleanup story. Resolve before applying the
 pattern to weekly / timeline / blockplan.
 
-### 1. Theme-defined text sizes now override `setfontsizes` output
+### 1. Theme-defined text sizes now override `setfontsizes` output — RESOLVED
 
-**What changed.** `text:day_number`, `text:month_title`, `text:label`,
-`text:week_number`, `text:fiscal_label` sizes in basic.yaml and SAMPLE.yaml
-now take effect. Previously the renderer read `config.mini_<x>_font_size`
-(computed by `setfontsizes()` based on page height) and silently ignored
-the theme's `size:` field. After the migration the theme wins.
+**Resolution (option c).** `setfontsizes()` now consults
+`config.theme.resolve_token(<token>)["size"]` for every field that has a
+unified-theme analogue, and only falls back to the page-height heuristic
+when the token is unset (or no theme is loaded).  Per-visualizer ctx
+(`{"visualizer": "mini" | "weekly" | "timeline" | "blockplan",
+"papersize": <name>}`) is supplied so themes can write per-visualizer or
+per-papersize overrides via `select:`.  Page-chrome fields (header_*,
+footer_*, blockplan_header_font_size, watermark_font_size) have no token
+analogue and continue to use the heuristic unconditionally.
 
-**Concrete effect.** On letter paper, mini headers shrink from ~9.5pt
-(setfontsizes) to 7pt (basic.yaml `text:label size: 7`), and mini day
-numbers grow from ~9.5pt to 11pt (SAMPLE.yaml `text:day_number size: 11`).
-The render completeness probe still passes — it only checks exit code —
-but the page looks different.
+The mini renderer's existing `tk.get("size") or config.<legacy>` pattern
+now behaves consistently: when a token defines `size:`, both branches
+return the same value; when it doesn't, the legacy field carries the
+heuristic.  This makes Phase 2 stripping safe — there is no precedence
+inversion to silently flip.
 
-**Why this matters.** Three of the remaining migrations (weekly, timeline,
-blockplan) have the same coupling between `setfontsizes()` field
-assignments and theme token sizes. Applying the same pattern multiplies
-the rendering shifts across every visualizer.
+**Field-to-token mapping** (centralized in `config/config.py::setfontsizes`):
 
-**Options.**
+| CalendarConfig field | Token | Visualizer ctx |
+|---|---|---|
+| `week_number_font_size` | `text:week_number` | weekly |
+| `day_name_font_size` / `color_key_font_size` | `text:label` | weekly |
+| `day_box_number_font_size` / `day_box_icon_font_size` | `text:day_number` | weekly |
+| `fiscal_period_label_font_size` | `text:fiscal_label` | (none — shared) |
+| `weekly_name_text_font_size` / `weekly_text_font_size` / `event_icon_font_size` | `text:event_name` | weekly |
+| `weekly_notes_text_font_size` | `text:event_notes` | weekly |
+| `mini_cell_font_size` | `text:day_number` | mini |
+| `mini_title_font_size` | `text:month_title` | mini |
+| `mini_header_font_size` | `text:label` | mini |
+| `mini_week_number_font_size` | `text:week_number` | mini |
+| `mini_details_title_font_size` | `text:heading` | mini |
+| `mini_details_header_font_size` | `text:label` | mini |
+| `mini_details_name_text_font_size` / `mini_details_text_font_size` | `text:event_name` | mini |
+| `mini_details_notes_text_font_size` | `text:event_notes` | mini |
+| `timeline_name_text_font_size` / `timeline_text_font_size` | `text:event_name` | timeline |
+| `timeline_notes_text_font_size` | `text:event_notes` | timeline |
+| `blockplan_band_font_size` | `text:band_label` | blockplan |
+| `blockplan_lane_label_font_size` | `text:swimlane_label` | blockplan |
+| `blockplan_name_text_font_size` / `blockplan_text_font_size` | `text:event_name` | blockplan |
+| `blockplan_notes_text_font_size` | `text:event_notes` | blockplan |
+| `blockplan_event_date_font_size` | `text:event_date` | blockplan |
+| `blockplan_duration_date_font_size` | `text:duration_date` | blockplan |
 
-- **(a) Accept it as the design intent.** Themes are authoritative.
-  Audit every theme YAML and add explicit per-papersize `size_rules` for
-  the tokens that need to scale. Update `setfontsizes()` to write to
-  tokens, not legacy fields.
+**Visible effect** matches the issue's "concrete effect" description:
+basic.yaml's `text:label size: 7` now sets `mini_header_font_size = 7`
+(was ~9.5 from heuristic); SAMPLE.yaml's `text:day_number size: 11` now
+sets both `mini_cell_font_size` and `day_box_number_font_size = 11`
+(were ~9.5 / ~10.3).  The visible shift is the design intent.
 
-- **(b) Invert precedence — legacy field wins.** Change the migration to
-  `config.<legacy> or tk.get("size")`. Preserves rendering but defeats the
-  migration's purpose: themes' `size:` keys remain dead until Phase 2
-  strips the legacy fields, at which point precedence flips silently.
-
-- **(c) `setfontsizes()` consults tokens.** Have `setfontsizes()` read
-  `theme.resolve_token("text:day_number")["size"]` and *only* fall back to
-  the page-height heuristic when the token is unset. Single source of
-  truth; legacy fields go away cleanly in Phase 2.
-
-Recommendation: **(c)**. Migrates the "what size?" decision to one place
-and makes Phase 2 stripping safe.
+**Future audit (theme authors).** Themes that want paper-aware scaling
+for a token should remove the explicit `size:` from its `define` rule
+(or scope it with `select: { papersize: <name> }`).  The migrator
+faithfully copied legacy text-style sizes when emitting `define` rules,
+so most current themes opt out of scaling by default — that's a theme
+cleanup task, not a runtime fix.
 
 ### 2. `box:day` content rules now fire in addition to legacy holiday chains
 
@@ -306,8 +325,9 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
 | excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
 
-Recommended order for the remaining work: **resolve Open issues §1 and §2
-first**, then weekly → timeline → blockplan → svg_base → excelheader.
+Recommended order for the remaining work: **resolve Open issue §2**
+(§1 is done — see Open issues section), then weekly → timeline →
+blockplan → svg_base → excelheader.
 
 ### Per-renderer migration recipe
 
@@ -460,9 +480,15 @@ fields become dead — they're populated by `ThemeEngine.apply()` from the
 decompiled legacy sections but nothing reads them. Stripping them is safe
 and reveals any consumer the migration missed.
 
-**Blocker:** Open issues §1 and §4 must be resolved first, or stripping
-will silently invert the legacy-vs-token precedence built into the
-current `tk.get(x) or config.<legacy>` shape.
+**Blocker:** Open issue §4 must be resolved first.  (§1 is done — the
+precedence story is now consistent: tokens win when defined, heuristic
+falls back when not, and the renderer's `tk.get(x) or config.<legacy>`
+shape returns the same value either way.)  For Phase 2 to also strip
+the page-aware `setfontsizes` heuristic safely, `setfontsizes` will
+need to *write* its computed sizes back into the unified-theme token
+registry (so the renderer's direct `tk.get("size")` read still gets a
+value when no theme defines `size:`).  That's a Phase 2 design decision
+the strip pass needs to settle.
 
 - [ ] **Identify candidate fields.** A field is a candidate if every
       `grep` for `config.<field>` (excluding tests and theme_engine itself)
@@ -533,7 +559,8 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | mini-icon | 30 minutes | **done** |
 | text-mini | 1 hour | **done** (no-op) |
 | mini | 3-4 hours | **done** |
-| **Open issues §1, §2 resolution** | **2-4 hours** | **blocker** |
+| Open issue §1 resolution (font-size precedence) | 1 hour | **done** |
+| **Open issue §2 resolution (dual box:day chain)** | **1-2 hours** | **blocker** |
 | weekly | 2-3 hours | pending |
 | timeline | 5-6 hours | pending |
 | blockplan | 5-6 hours | pending |

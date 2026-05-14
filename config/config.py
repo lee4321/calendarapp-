@@ -1981,14 +1981,52 @@ def resolve_page_margins(config: CalendarConfig) -> dict[str, float]:
     }
 
 
+def _theme_size(
+    config: CalendarConfig,
+    token: str,
+    *,
+    visualizer: str | None = None,
+) -> float | None:
+    """Return the unified-theme ``size:`` for *token* if defined, else None.
+
+    Resolved against ``config.theme`` with a context that always carries
+    ``papersize`` and (when supplied) ``visualizer``, so themes can scope
+    size rules with ``select: { papersize: tabloid }`` or
+    ``select: { visualizer: weekly }``.  Returns ``None`` when no theme is
+    loaded, the token isn't defined, or its resolved style bag has no
+    numeric ``size:``.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        return None
+    ctx: dict[str, str] = {}
+    papersize = getattr(config, "papersize", None)
+    if papersize:
+        ctx["papersize"] = str(papersize)
+    if visualizer:
+        ctx["visualizer"] = visualizer
+    style = theme.resolve_token(token, ctx) or {}
+    raw = style.get("size")
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     """
-    Set font sizes using page-dimension-derived formulas.
+    Set font sizes using page-dimension-derived formulas, with unified-theme
+    token sizes taking precedence when defined.
 
-    All font sizes scale proportionally to pageY (the taller dimension
-    in the current orientation). Layout percentages use fixed ratios
-    that work across all paper sizes. Min/max clamps prevent illegibly
-    small or absurdly large text on extreme paper sizes.
+    For every field that has a unified-theme analogue, the corresponding
+    ``text:<name>`` token is consulted first via :func:`_theme_size`; the
+    token's ``size:`` wins when set.  Otherwise the page-height heuristic
+    runs unchanged — proportional to ``pageY`` with min/max clamps that
+    keep text readable across paper sizes.  Page-chrome fields
+    (header / footer / watermark / blockplan_header) have no token analogue
+    and always use the heuristic.
 
     Args:
         config: Calendar configuration to update
@@ -1997,6 +2035,10 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         The same config instance with font sizes set
     """
     h = config.pageY
+
+    def _size(token: str, fallback: float, *, visualizer: str | None = None) -> float:
+        sz = _theme_size(config, token, visualizer=visualizer)
+        return fallback if sz is None else sz
 
     # Layout percentages (fixed ratios, work for all sizes)
     config.week_number_percent = 0.02
@@ -2018,12 +2060,23 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         if base_event_size > 0:
             scale = target_event_size / base_event_size
 
-    config.week_number_font_size = _clamp(
-        _clamp(h * 0.01, 6.0, 32.0) * scale, 6.0, 32.0
+    config.week_number_font_size = _size(
+        "text:week_number",
+        _clamp(_clamp(h * 0.01, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
     )
-    config.day_name_font_size = _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0)
-    config.color_key_font_size = _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0)
+    config.day_name_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
+    config.color_key_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
 
+    # Header / footer are page chrome — no token analogue, heuristic only.
     config.header_left_font_size = _clamp(
         _clamp(h * 0.013, 6.0, 32.0) * scale, 6.0, 32.0
     )
@@ -2036,72 +2089,127 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.footer_center_font_size = config.footer_left_font_size
     config.footer_right_font_size = config.footer_left_font_size
 
-    config.day_box_number_font_size = _clamp(
-        _clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0
+    config.day_box_number_font_size = _size(
+        "text:day_number",
+        _clamp(_clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0),
+        visualizer="weekly",
     )
     config.day_box_icon_font_size = config.day_box_number_font_size
 
-    config.fiscal_period_label_font_size = config.day_box_number_font_size * 0.7
+    # Shared between weekly + mini; no visualizer ctx so a single rule applies
+    # to both unless a theme adds a per-visualizer override.
+    config.fiscal_period_label_font_size = _size(
+        "text:fiscal_label",
+        config.day_box_number_font_size * 0.7,
+    )
 
     # Weekly text sizes
-    config.weekly_name_text_font_size = _clamp(base_event_size * scale, 6.0, 32.0)
-    config.weekly_notes_text_font_size = config.weekly_name_text_font_size * 0.9
+    config.weekly_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(base_event_size * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
+    config.weekly_notes_text_font_size = _size(
+        "text:event_notes",
+        config.weekly_name_text_font_size * 0.9,
+        visualizer="weekly",
+    )
     config.weekly_text_font_size = config.weekly_name_text_font_size
     config.event_icon_font_size = config.weekly_name_text_font_size
 
     # Mini calendar font sizes
-    config.mini_cell_font_size = _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0)
-    config.mini_title_font_size = _clamp(
-        _clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_cell_font_size = _size(
+        "text:day_number",
+        _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="mini",
     )
-    config.mini_header_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_title_font_size = _size(
+        "text:month_title",
+        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_week_number_font_size = _clamp(
-        _clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_header_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
+    )
+    config.mini_week_number_font_size = _size(
+        "text:week_number",
+        _clamp(_clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
 
     # Mini details page font sizes
-    config.mini_details_title_font_size = _clamp(
-        _clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_title_font_size = _size(
+        "text:heading",
+        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_details_header_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_header_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_details_name_text_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
     config.mini_details_text_font_size = config.mini_details_name_text_font_size
-    config.mini_details_notes_text_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_notes_text_font_size = _size(
+        "text:event_notes",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
 
     # Timeline text sizes
     base_event = config.weekly_name_text_font_size
-    config.timeline_name_text_font_size = max(10.0, base_event + 2.0)
-    config.timeline_notes_text_font_size = max(8.0, base_event * 0.9)
+    config.timeline_name_text_font_size = _size(
+        "text:event_name",
+        max(10.0, base_event + 2.0),
+        visualizer="timeline",
+    )
+    config.timeline_notes_text_font_size = _size(
+        "text:event_notes",
+        max(8.0, base_event * 0.9),
+        visualizer="timeline",
+    )
     config.timeline_text_font_size = config.timeline_name_text_font_size
 
-    # Blockplan font sizes
+    # Blockplan font sizes — header is page chrome (no token).
     config.blockplan_header_font_size = _clamp(
         _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
     )
-    config.blockplan_band_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_band_font_size = _size(
+        "text:band_label",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
-    config.blockplan_lane_label_font_size = _clamp(
-        _clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_lane_label_font_size = _size(
+        "text:swimlane_label",
+        _clamp(_clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
-    config.blockplan_name_text_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
     config.blockplan_text_font_size = config.blockplan_name_text_font_size
-    config.blockplan_notes_text_font_size = config.blockplan_name_text_font_size * 0.85
-    config.blockplan_event_date_font_size = _clamp(
-        _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0
+    config.blockplan_notes_text_font_size = _size(
+        "text:event_notes",
+        config.blockplan_name_text_font_size * 0.85,
+        visualizer="blockplan",
     )
-    config.blockplan_duration_date_font_size = _clamp(
-        _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0
+    config.blockplan_event_date_font_size = _size(
+        "text:event_date",
+        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="blockplan",
+    )
+    config.blockplan_duration_date_font_size = _size(
+        "text:duration_date",
+        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="blockplan",
     )
 
     # Watermark base font size (paper-size aware, theme-overridable)
