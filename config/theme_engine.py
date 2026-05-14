@@ -458,10 +458,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "vertical_lines"): "excelheader_vertical_lines",
     ("excelheader", "vertical_line_color"): "excelheader_vertical_line_color",
     ("excelheader", "vertical_line_width"): "excelheader_vertical_line_width",
-    ("excelheader", "vertical_line_dasharray"): "excelheader_vertical_line_dasharray",
-    ("excelheader", "vertical_line_opacity"): "excelheader_vertical_line_opacity",
-    ("excelheader", "vertical_line_fill_color"): "excelheader_vertical_line_fill_color",
-    ("excelheader", "vertical_line_fill_opacity"): "excelheader_vertical_line_fill_opacity",
     ("excelheader", "band_row_height"): "excelheader_band_row_height",
     ("excelheader", "header_heading_fill_color"): "excelheader_header_heading_fill_color",
     ("excelheader", "header_label_color"): "excelheader_header_label_color",
@@ -473,9 +469,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "federal_holiday_fill_color"): "excelheader_federal_holiday_fill_color",
     ("excelheader", "company_holiday_fill_color"): "excelheader_company_holiday_fill_color",
     ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
-    ("excelheader", "federal_holiday_icon"): "excelheader_federal_holiday_icon",
-    ("excelheader", "company_holiday_icon"): "excelheader_company_holiday_icon",
-    ("excelheader", "weekend_icon"): "excelheader_weekend_icon",
+    # Stripped in Phase 2 (no consumers): vertical_line_dasharray /
+    # vertical_line_opacity / vertical_line_fill_color /
+    # vertical_line_fill_opacity (XLSX borders are color+style only),
+    # federal_holiday_icon / company_holiday_icon / weekend_icon (XLSX
+    # cells render glyphs as fills, not as icon SVGs).
 }
 
 # Valid top-level sections in a theme file

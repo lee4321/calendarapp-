@@ -1009,10 +1009,6 @@ class CalendarConfig:
     excelheader_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
     excelheader_vertical_line_color: str = "red"
     excelheader_vertical_line_width: float = 1.5
-    excelheader_vertical_line_dasharray: str | None = None
-    excelheader_vertical_line_opacity: float = 0.9
-    excelheader_vertical_line_fill_color: str = "none"
-    excelheader_vertical_line_fill_opacity: float = 0.2
     excelheader_band_row_height: float = 18.0
     excelheader_header_heading_fill_color: str = "none"
     excelheader_header_label_color: str = "black"
@@ -1026,9 +1022,6 @@ class CalendarConfig:
     excelheader_federal_holiday_fill_color: str | None = None
     excelheader_company_holiday_fill_color: str | None = None
     excelheader_weekend_fill_color: str | None = None
-    excelheader_federal_holiday_icon: str | None = None
-    excelheader_company_holiday_icon: str | None = None
-    excelheader_weekend_icon: str | None = None
 
     # Overflow indicator
     overflow_indicator_icon: str = "overflow"
