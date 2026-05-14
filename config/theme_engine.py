@@ -1016,6 +1016,10 @@ class ThemeEngine:
         if self._is_new_format():
             self._build_theme_styles(config)
 
+        # Synthesize box:day rules from colors.federal_holiday /
+        # colors.company_holiday before parsing — see method docstring.
+        self._synthesize_holiday_box_day_rules()
+
         # Build the parsed UnifiedTheme for the post-migration runtime API
         # (design §6).  This is parallel to theme_styles for now — renderer
         # consumers gradually migrate from CalendarConfig styling fields to
@@ -1035,6 +1039,69 @@ class ThemeEngine:
             config.theme = None
 
         return config
+
+    def _synthesize_holiday_box_day_rules(self) -> None:
+        """Convert ``colors.federal_holiday`` / ``colors.company_holiday`` into
+        equivalent ``box:day`` rules so the unified-theme runtime is the
+        single source of truth for holiday cell shading.
+
+        Resolves Open Issue §2 of the runtime cutover: previously the mini
+        renderer ran *two* layers (legacy ``_apply_holidays`` chain reading
+        ``theme_federal_holiday_color`` first, then a ``find_rules("box:day")``
+        pass overriding it).  The two layers produced surprising last-write-
+        wins precedence when a theme defined both a ``colors.federal_holiday``
+        section and an explicit ``apply_to: box:day`` rule.
+
+        After this method runs, ``colors.federal_holiday.color`` is exposed
+        as a synthesized ``box:day`` rule selected on
+        ``{federal_holiday: true, nonworkday: true}``; ``colors.company_holiday``
+        becomes the analogous rule on ``{company_holiday: true, nonworkday: true}``.
+        Synthesized rules are *prepended* to ``style_rules`` so explicit
+        theme rules later in the file still win in declaration order — matching
+        the pre-migration "explicit overrides built-in" expectation.
+
+        ``fill_opacity`` is hardcoded to the legacy mini-renderer values
+        (0.2 federal, 0.25 company) rather than read from the section's
+        ``alpha`` key, because the pre-migration mini code ignored ``alpha``
+        and used those constants directly.  Other consumers
+        (weekly / blockplan) continue to read ``alpha`` via the legacy
+        CalendarConfig fields.
+
+        Theme color, icon, and pattern from the holiday/special_day DB
+        record itself remain handled by the legacy chains in
+        ``mini/day_styles.py`` — those are per-row data, not theme style.
+        """
+        data = self._unified_theme_data
+        if not isinstance(data, dict):
+            return
+        colors = data.get("colors")
+        if not isinstance(colors, dict):
+            return
+
+        synthesized: list[dict] = []
+        fed = colors.get("federal_holiday")
+        if isinstance(fed, dict) and fed.get("color"):
+            synthesized.append({
+                "name": "synthesized: colors.federal_holiday → box:day fill",
+                "apply_to": "box:day",
+                "select": {"federal_holiday": True, "nonworkday": True},
+                "style": {"fill": fed["color"], "fill_opacity": 0.2},
+            })
+        comp = colors.get("company_holiday")
+        if isinstance(comp, dict) and comp.get("color"):
+            synthesized.append({
+                "name": "synthesized: colors.company_holiday → box:day fill",
+                "apply_to": "box:day",
+                "select": {"company_holiday": True, "nonworkday": True},
+                "style": {"fill": comp["color"], "fill_opacity": 0.25},
+            })
+        if not synthesized:
+            return
+
+        existing = data.get("style_rules")
+        if not isinstance(existing, list):
+            existing = []
+        data["style_rules"] = synthesized + existing
 
     # Placement-list locations in a theme, paired with the target CalendarConfig
     # field that each visualizer's renderer reads.  Each entry may be a string

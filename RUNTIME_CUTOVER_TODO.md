@@ -144,46 +144,47 @@ faithfully copied legacy text-style sizes when emitting `define` rules,
 so most current themes opt out of scaling by default — that's a theme
 cleanup task, not a runtime fix.
 
-### 2. `box:day` content rules now fire in addition to legacy holiday chains
+### 2. `box:day` content rules now fire in addition to legacy holiday chains — RESOLVED
 
-**What changed.** `mini/day_styles.py::_apply_box_day_rules` now walks
-`theme.find_rules("box:day", ctx)` and overlays each matching rule's
-`style` bag onto the `DayStyle`. Previously the legacy `StyleEngine` only
-matched `apply_to: day_box` rules; the unified `apply_to: box:day` form
-was silently dropped.
+**Resolution (option c).** `ThemeEngine.apply()` now synthesizes
+`box:day` rules from `colors.federal_holiday.color` and
+`colors.company_holiday.color` (when defined) and *prepends* them to the
+parsed theme's `style_rules`.  See
+`config/theme_engine.py::_synthesize_holiday_box_day_rules`.  The
+synthesized rules carry the legacy mini-renderer opacities (0.2 federal,
+0.25 company) — those constants were hardcoded in the pre-migration
+mini code and ignored the section's `alpha` key, so preserving them
+keeps mini output byte-identical for themes that haven't authored an
+explicit `box:day` rule yet.
 
-**Concrete effect.** SAMPLE's federal-holiday rule
-(`fill: tomato`, `pattern: diagonal-stripes`) now overrides the
-`theme_federal_holiday_color` (`lightblue`) that the legacy
-`_apply_holidays` chain sets first. Two layers run; the second wins.
+`mini/day_styles.py::_apply_holidays` and `_apply_special_days` no
+longer pull `theme_federal_holiday_color` / `theme_company_holiday_color`
+into the cell shade.  They now set a CalendarConfig-default baseline
+(via `theme_mini_nonworkday_fill_color` → `mini_nonworkday_fill_color`)
+that the synthesized box:day rules — and any explicit theme rules —
+override through `_apply_box_day_rules`.  Text color, icon, and pattern
+fields remain on the legacy chains; those are per-row holiday data, not
+theme style.
 
-**Why this matters.** The two-layer approach (legacy hardcoded chain +
-new find_rules pass) is in place to be conservative, but it's confusing:
-the visible output depends on which layer's data is present in the theme.
-Themes that define *both* a `colors.federal_holiday.color` and a
-`box:day` rule will see the box:day rule win — sometimes silently
-surprising the theme author.
+**Single runtime path** for holiday cell shade is now:
 
-**Options.**
+1. Baseline shade from CalendarConfig defaults (always; survives when
+   `config.theme is None`).
+2. Synthesized `box:day` rule from `colors.federal_holiday` /
+   `colors.company_holiday` (if the theme defined either).
+3. Explicit `apply_to: box:day` rules in the theme's `style_rules` —
+   later in declaration order, so they win over synthesized rules.
+4. Legacy `apply_to: day_box` rules consumed by `StyleEngine`
+   (pre-migration themes that haven't been re-saved).
 
-- **(a) Delete the legacy chains.** Remove the
-  `theme_federal_holiday_color` / `theme_mini_holiday_color` /
-  `mini_holiday_color` resolution in `_apply_holidays` and
-  `_apply_special_days` entirely; `box:day` rules become the only path
-  for holiday tinting. Themes without box:day rules lose holiday tints.
+The dual-layer surprise from the original issue is gone: a theme that
+defines both a `colors.federal_holiday.color` and an explicit `box:day`
+fill now sees the explicit rule win via plain declaration-order
+semantics, not via a hidden second pass.
 
-- **(b) Keep both layers, document the order.** Leave the current shape;
-  add a comment block in `day_styles.py` describing the precedence and a
-  release note flagging the change for theme authors.
-
-- **(c) Convert legacy chains to synthesized box:day rules.** Have
-  `theme_engine.apply()` emit equivalent `box:day` rules from the
-  `colors.federal_holiday` section, so there's only one runtime path.
-  Requires deciding what happens when a theme defines both.
-
-Recommendation: **(c)**. Removes the dual code path while preserving
-backward-compatible rendering for themes that haven't migrated their
-color-section conventions to style_rules.
+**Verified** by re-rendering `mini --theme TJX` for Jan 2026 (MLK Day)
+— federal-holiday cell still tinted; full test suite (382 tests) plus
+the render-completeness probe (15 tests) green.
 
 ### 3. Pre-existing failure in `tests/test_theme_engine.py`
 
@@ -325,9 +326,8 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
 | excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
 
-Recommended order for the remaining work: **resolve Open issue §2**
-(§1 is done — see Open issues section), then weekly → timeline →
-blockplan → svg_base → excelheader.
+Recommended order for the remaining work: §1 and §2 done — proceed
+straight to weekly → timeline → blockplan → svg_base → excelheader.
 
 ### Per-renderer migration recipe
 
@@ -560,7 +560,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | text-mini | 1 hour | **done** (no-op) |
 | mini | 3-4 hours | **done** |
 | Open issue §1 resolution (font-size precedence) | 1 hour | **done** |
-| **Open issue §2 resolution (dual box:day chain)** | **1-2 hours** | **blocker** |
+| Open issue §2 resolution (dual box:day chain) | 1 hour | **done** |
 | weekly | 2-3 hours | pending |
 | timeline | 5-6 hours | pending |
 | blockplan | 5-6 hours | pending |

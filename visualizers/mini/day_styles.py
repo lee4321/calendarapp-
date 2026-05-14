@@ -181,12 +181,22 @@ class DayStyleResolver:
         return style
 
     def _apply_holidays(self, style: DayStyle, holidays: list[dict]) -> None:
-        """Apply holiday styling to a DayStyle."""
+        """Apply baseline holiday styling — text color, fallback shade, icon.
+
+        Cell shade for ``colors.federal_holiday`` is now driven by a
+        synthesized ``box:day`` rule injected by ``ThemeEngine.apply()``
+        (Open Issue §2 resolution).  This method sets a CalendarConfig-
+        default baseline shade so themes that don't define
+        ``colors.federal_holiday`` (or whose theme failed to parse) still
+        get *some* visible nonworkday tint; the synthesized rule then
+        overrides it via ``_apply_box_day_rules``.
+        """
         if not holidays:
             return
 
         holiday = holidays[0]
-        # Unified: use federal holiday color (same as weekly renderer), then mini-specific overrides
+        # Text color stays on the legacy chain — text:day_number is a
+        # separate concern from box:day.
         style.text_color = (
             self._config.theme_federal_holiday_color
             or self._config.theme_mini_holiday_color
@@ -195,8 +205,7 @@ class DayStyleResolver:
 
         if holiday.get("nonworkday"):
             style.shade_color = (
-                self._config.theme_federal_holiday_color
-                or self._config.theme_mini_nonworkday_fill_color
+                self._config.theme_mini_nonworkday_fill_color
                 or self._config.mini_nonworkday_fill_color
             )
             style.shade_opacity = 0.2
@@ -206,13 +215,18 @@ class DayStyleResolver:
             style.icon_replace = str(icon)
 
     def _apply_special_days(self, style: DayStyle, special_days: list[dict]) -> None:
-        """Apply company special day styling."""
+        """Apply baseline company-special-day styling — fallback shade,
+        pattern, icon.
+
+        Cell shade for ``colors.company_holiday`` is now driven by a
+        synthesized ``box:day`` rule (Open Issue §2 resolution); this
+        method only provides the CalendarConfig-default baseline that the
+        synthesized rule overrides.
+        """
         for sd in special_days:
             if sd.get("nonworkday"):
-                # Unified: use company holiday color (same as weekly renderer), then mini-specific override
                 style.shade_color = (
-                    self._config.theme_company_holiday_color
-                    or self._config.theme_mini_nonworkday_fill_color
+                    self._config.theme_mini_nonworkday_fill_color
                     or self._config.mini_nonworkday_fill_color
                 )
                 style.shade_opacity = 0.25
@@ -292,10 +306,14 @@ class DayStyleResolver:
         - ``icon`` → ``icon_replace``
         - ``text["day_number"]`` font / color → text style fields
 
-        Two rule sources are consulted in order: the parsed UnifiedTheme's
-        ``box:day`` rules (when present), then the legacy StyleEngine for
-        ``apply_to: day_box`` rules (still consumed by some pre-migration
-        themes).  Both layers are additive — later rules override earlier ones.
+        Pass 1 consumes the parsed UnifiedTheme's ``box:day`` rules — both
+        the synthesized rules ``ThemeEngine.apply()`` injects from
+        ``colors.federal_holiday`` / ``colors.company_holiday``, and any
+        explicit ``apply_to: box:day`` rules the theme declares.  Pass 2
+        consumes the legacy ``apply_to: day_box`` form via ``StyleEngine``
+        for pre-migration themes that haven't been re-saved through
+        ``tools/migrate_theme.py``; ``_applicable_rules("day_box")`` ignores
+        the new ``box:day`` form so the two passes don't double up.
         """
         federal_holiday = bool(holidays)
         company_holiday = any(bool(sd.get("nonworkday")) for sd in special_days)
