@@ -60,7 +60,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "fill_opacity"): "day_box_fill_opacity",
     ("weekly.day_box", "number_font"): "day_box_number_font",
     ("weekly.day_box", "number_color"): "day_box_number_color",
-    ("weekly.day_box", "icon_color"): "day_box_icon_color",
     ("weekly.day_box", "font_color"): "day_box_font_color",
     # Base / global
     ("base", "default_missing_icon"): "default_missing_icon",
@@ -70,22 +69,18 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Durations (icon/stroke only — text fields moved to weekly.name_text/notes_text)
     ("durations", "icon_color"): "duration_icon_color",
     ("durations", "stroke_dasharray"): "duration_stroke_dasharray",
-    # Weekly text styling (uniform)
-    ("weekly.text", "font_name"): "weekly_text_font_name",
-    ("weekly.text", "font_color"): "weekly_text_font_color",
+    # Weekly text styling — kept survivors only.  Phase 2 stripped the
+    # weekly_text_* set entirely (font_name/color/size/opacity/alignment),
+    # plus name_text_alignment + notes_text_alignment (no readers).
     ("weekly.text", "font_size"): "weekly_text_font_size",
-    ("weekly.text", "font_opacity"): "weekly_text_font_opacity",
-    ("weekly.text", "alignment"): "weekly_text_alignment",
     ("weekly.name_text", "font_name"): "weekly_name_text_font_name",
     ("weekly.name_text", "font_color"): "weekly_name_text_font_color",
     ("weekly.name_text", "font_size"): "weekly_name_text_font_size",
     ("weekly.name_text", "font_opacity"): "weekly_name_text_font_opacity",
-    ("weekly.name_text", "alignment"): "weekly_name_text_alignment",
     ("weekly.notes_text", "font_name"): "weekly_notes_text_font_name",
     ("weekly.notes_text", "font_color"): "weekly_notes_text_font_color",
     ("weekly.notes_text", "font_size"): "weekly_notes_text_font_size",
     ("weekly.notes_text", "font_opacity"): "weekly_notes_text_font_opacity",
-    ("weekly.notes_text", "alignment"): "weekly_notes_text_alignment",
     # Timeline.  Phase 2 strip dropped 11 dead translations:
     # background_color, duration_bar_stroke_dasharray,
     # duration_bracket_stroke_dasharray, text_font_color/_opacity/_alignment
@@ -318,9 +313,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "title_font"): "mini_title_font",
     ("mini_calendar", "title_font_size"): "mini_title_font_size",
     ("mini_calendar", "title_color"): "mini_title_color",
-    ("mini_calendar", "header_font"): "mini_header_font",
     ("mini_calendar", "header_font_size"): "mini_header_font_size",
-    ("mini_calendar", "header_color"): "mini_header_color",
     ("mini_calendar", "cell_font_size"): "mini_cell_font_size",
     ("mini_calendar", "day_number_glyphs"): "mini_day_number_glyphs",
     ("mini_calendar", "day_number_digits"): "mini_day_number_digits",
@@ -342,35 +335,22 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "month_outline_width"): "mini_month_outline_width",
     ("mini_calendar", "month_outline_opacity"): "mini_month_outline_opacity",
     ("mini_calendar", "month_outline_dasharray"): "mini_month_outline_dasharray",
-    ("mini_calendar", "week_number_font"): "mini_week_number_font",
     ("mini_calendar", "week_number_font_size"): "mini_week_number_font_size",
-    ("mini_calendar", "week_number_color"): "mini_week_number_color",
     ("mini_calendar", "week_number_label_format"): "mini_week_number_label_format",
     # mini_calendar.day_box.hash_rules removed — use style_rules instead
-    # Mini details page
+    # Mini details page — kept survivors only.  Phase 2 stripped
+    # title_color/_font + header_color/_font, plus the text/name_text/notes_text
+    # alignment + name fields with no readers.
     ("mini_details", "title_text"): "mini_details_title_text",
-    ("mini_details", "title_font"): "mini_details_title_font",
     ("mini_details", "title_font_size"): "mini_details_title_font_size",
-    ("mini_details", "title_color"): "mini_details_title_color",
-    ("mini_details", "header_font"): "mini_details_header_font",
     ("mini_details", "header_font_size"): "mini_details_header_font_size",
-    ("mini_details", "header_color"): "mini_details_header_color",
-    # Mini details text styling (uniform)
-    ("mini_details.text", "font_name"): "mini_details_text_font_name",
     ("mini_details.text", "font_color"): "mini_details_text_font_color",
     ("mini_details.text", "font_size"): "mini_details_text_font_size",
     ("mini_details.text", "font_opacity"): "mini_details_text_font_opacity",
-    ("mini_details.text", "alignment"): "mini_details_text_alignment",
-    ("mini_details.name_text", "font_name"): "mini_details_name_text_font_name",
     ("mini_details.name_text", "font_color"): "mini_details_name_text_font_color",
     ("mini_details.name_text", "font_size"): "mini_details_name_text_font_size",
     ("mini_details.name_text", "font_opacity"): "mini_details_name_text_font_opacity",
-    ("mini_details.name_text", "alignment"): "mini_details_name_text_alignment",
-    ("mini_details.notes_text", "font_name"): "mini_details_notes_text_font_name",
-    ("mini_details.notes_text", "font_color"): "mini_details_notes_text_font_color",
     ("mini_details.notes_text", "font_size"): "mini_details_notes_text_font_size",
-    ("mini_details.notes_text", "font_opacity"): "mini_details_notes_text_font_opacity",
-    ("mini_details.notes_text", "alignment"): "mini_details_notes_text_alignment",
     ("mini_details", "headers"): "mini_details_headers",
     ("mini_details", "column_widths"): "mini_details_column_widths",
     ("mini_details", "output_suffix"): "mini_details_output_suffix",
@@ -388,16 +368,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "title_format"): "mini_title_format",
     ("mini_calendar", "current_day_color"): "mini_current_day_color",
     ("mini_calendar", "grid_line_dasharray"): "mini_grid_line_dasharray",
-    ("mini_calendar", "cell_box_stroke_dasharray"): "mini_cell_box_stroke_dasharray",
     (
         "mini_calendar",
         "strikethrough_stroke_dasharray",
     ): "mini_strikethrough_stroke_dasharray",
     ("mini_calendar", "hash_line_dasharray"): "mini_hash_line_dasharray",
-    (
-        "mini_calendar",
-        "duration_bar_stroke_dasharray",
-    ): "mini_duration_bar_stroke_dasharray",
     (
         "mini_calendar",
         "duration_bar_stroke_opacity",

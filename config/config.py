@@ -159,9 +159,7 @@ class CalendarConfig:
     mini_title_font_size: float | None = None
     mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
     mini_title_color: str = "navy"
-    mini_header_font: str = Fonts.J_REGULAR  # Day-of-week header font
     mini_header_font_size: float | None = None
-    mini_header_color: str = "grey"
     mini_day_color: str = "black"  # Default day number color
     mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
     mini_holiday_color: str = "red"  # Holiday day number color
@@ -187,16 +185,12 @@ class CalendarConfig:
     mini_month_outline_width: float = 0.5
     mini_month_outline_opacity: float = 1.0
     mini_month_outline_dasharray: str | None = None
-    mini_cell_box_stroke_dasharray: str | None = None
     mini_strikethrough_stroke_dasharray: str | None = None
     mini_hash_line_dasharray: str | None = None
-    mini_duration_bar_stroke_dasharray: str | None = None
     mini_details_separator_stroke_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
-    mini_week_number_font: str = Fonts.J_REGULAR  # Font for week numbers
-    mini_week_number_color: str = "black"  # Color for week numbers
     mini_week_number_font_size: float | None = None  # Week number font size
     mini_week_number_label_format: str = "W{num}"
     mini_icon_set: str = "squares"  # Icon set for mini-icon view
@@ -368,28 +362,16 @@ class CalendarConfig:
     include_mini_details: bool = True
     mini_details_output_suffix: str = "_details"
     mini_details_title_text: str = "Event Details"
-    mini_details_title_font: str = Fonts.RC_BOLD
-    mini_details_title_color: str = "navy"
     mini_details_title_font_size: float | None = None
-    mini_details_header_font: str = Fonts.RC_BOLD
-    mini_details_header_color: str = "grey"
     mini_details_header_font_size: float | None = None
-    # ── Mini details text styling (uniform) ──────────────────────────────────
-    mini_details_text_font_name: str = Fonts.RC_LIGHT
+    # ── Mini details text styling — kept survivors only.
     mini_details_text_font_color: str = "black"
     mini_details_text_font_size: float | None = None
     mini_details_text_font_opacity: float = 1.0
-    mini_details_text_alignment: str = "left"
-    mini_details_name_text_font_name: str = Fonts.RC_LIGHT
     mini_details_name_text_font_color: str = "black"
     mini_details_name_text_font_size: float | None = None
     mini_details_name_text_font_opacity: float = 1.0
-    mini_details_name_text_alignment: str = "left"
-    mini_details_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
-    mini_details_notes_text_font_color: str = "darkgrey"
     mini_details_notes_text_font_size: float | None = None
-    mini_details_notes_text_font_opacity: float = 1.0
-    mini_details_notes_text_alignment: str = "left"
     mini_details_headers: list[str] = field(
         default_factory=lambda: [
             "Start Date",
@@ -509,7 +491,6 @@ class CalendarConfig:
     day_box_fill_opacity: float = 0.25
     day_box_number_font: str = "CascadiaCode"
     day_box_number_color: str = "white"
-    day_box_icon_color: str = "red"
     day_box_font_color: str = "navy"
 
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
@@ -517,22 +498,19 @@ class CalendarConfig:
     duration_icon_color: str = "navy"
     duration_stroke_dasharray: str | None = None
 
-    # ── Weekly text styling (uniform) ──────────────────────────────────────────
-    weekly_text_font_name: str = Fonts.RC_LIGHT
-    weekly_text_font_color: str = "navy"
+    # ── Weekly text styling — kept survivors only.  Phase 2 stripped
+    # weekly_text_* (the full font_name/_color/_opacity/_alignment +
+    # _font_size set), weekly_name_text_alignment, and
+    # weekly_notes_text_alignment — none had readers post-Phase-1.
     weekly_text_font_size: float | None = None
-    weekly_text_font_opacity: float = 1.0
-    weekly_text_alignment: str = "left"
     weekly_name_text_font_name: str = Fonts.RC_LIGHT
     weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None
     weekly_name_text_font_opacity: float = 1.0
-    weekly_name_text_alignment: str = "left"
     weekly_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
     weekly_notes_text_font_color: str = "darkgrey"
     weekly_notes_text_font_size: float | None = None
     weekly_notes_text_font_opacity: float = 1.0
-    weekly_notes_text_alignment: str = "left"
     hash_pattern_opacity: float = 0.15
 
     # Timeline styling.  Phase 2 strip dropped dead fields with no
