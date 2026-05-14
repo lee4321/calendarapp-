@@ -834,7 +834,6 @@ class CalendarConfig:
     blockplan_vertical_line_fill_opacity: float = 0.2
 
     # ── Compact Activities Plan ───────────────────────────────────────────────
-    compactplan_background_color: str = "none"
     compactplan_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
             {
@@ -849,35 +848,29 @@ class CalendarConfig:
     )
     compactplan_band_row_height: float = 22.0
     # ── Compact plan text styling (uniform) ──────────────────────────────────
+    # Phase 2 strip — fields with no consumers post-Phase-1 dropped:
+    #   text_font_color/opacity/alignment, name_text_font_color/opacity/alignment,
+    #   notes_text_font_color/opacity/alignment (all subsumed by the
+    #   text:event_name / text:event_notes / text:label tokens; the per-renderer
+    #   YAML overrides cover any compactplan-specific deviation), plus
+    #   axis_color/dasharray/opacity, duration_stroke_dasharray, duration_opacity,
+    #   duration_icon_color, milestone_color, milestone_list_date_color,
+    #   milestone_list_section_gap, continuation_section_gap, legend_area_ratio,
+    #   background_color (compactplan inherits the page background).
     compactplan_text_font_name: str | None = None
-    compactplan_text_font_color: str = "black"
     compactplan_text_font_size: float | None = None
-    compactplan_text_font_opacity: float = 1.0
-    compactplan_text_alignment: str = "left"
     compactplan_name_text_font_name: str | None = None
-    compactplan_name_text_font_color: str = "#595959"
     compactplan_name_text_font_size: float | None = None
-    compactplan_name_text_font_opacity: float = 1.0
-    compactplan_name_text_alignment: str = "left"
     compactplan_notes_text_font_name: str | None = None
-    compactplan_notes_text_font_color: str = "#595959"
     compactplan_notes_text_font_size: float | None = None
-    compactplan_notes_text_font_opacity: float = 1.0
-    compactplan_notes_text_alignment: str = "left"
     compactplan_show_axis: bool = True
-    compactplan_axis_color: str = "#7f7f7f"
     compactplan_axis_width: float = 1.75
-    compactplan_axis_dasharray: str = "1.75,7.0"
-    compactplan_axis_opacity: float = 1.0
     compactplan_axis_padding: float = 4.0
     compactplan_duration_line_width: float = 5.0
-    compactplan_duration_stroke_dasharray: str | None = None
-    compactplan_duration_opacity: float = 1.0
     compactplan_lane_spacing: float = 6.0
     compactplan_show_duration_icons: bool = True
     compactplan_duration_icon_list: str = "darksquare"  # key into ICON_SETS
     compactplan_duration_icon_height: float = 8.0
-    compactplan_duration_icon_color: str | None = None  # None = use line color
     compactplan_palette: list[str] = field(
         default_factory=lambda: [
             "#92d050",
@@ -892,7 +885,6 @@ class CalendarConfig:
             "mediumpurple",
         ]
     )
-    compactplan_milestone_color: str = "black"
     compactplan_milestone_icon: str | None = None
     compactplan_milestone_flag_width: float = 7.0
     compactplan_milestone_flag_height: float = 9.0
@@ -900,17 +892,14 @@ class CalendarConfig:
     compactplan_show_legend: bool = True
     compactplan_legend_swatch_width: float = 18.0
     compactplan_legend_row_height: float = 10.0
-    compactplan_legend_area_ratio: float = 0.28
     compactplan_legend_column_split: float = 0.5  # fraction of area_w given to the left (group) column
     compactplan_legend_team_columns: int = 2  # sub-columns within the left legend area
     compactplan_header_bottom_y: float | None = None
     compactplan_key_top_y: float | None = None
     compactplan_show_milestone_list: bool = False
     compactplan_milestone_list_date_format: str = "M/D"
-    compactplan_milestone_list_date_color: str = "#595959"
     compactplan_milestone_list_row_height: float = 10.0
     compactplan_milestone_list_date_col_width: float = 32.0
-    compactplan_milestone_list_section_gap: float = 6.0
 
     # Holiday/special-day list column: date • icon • name, sorted by date.
     compactplan_show_holiday_list: bool = True
@@ -929,7 +918,6 @@ class CalendarConfig:
     compactplan_continuation_icon_height: float = 8.0
     compactplan_continuation_icon_color: str | None = None  # None = use line color
     compactplan_continuation_legend_text: str = "activity continues"
-    compactplan_continuation_section_gap: float = 4.0
     compactplan_show_axis_legend: bool = True  # show axis sample + label in the legend
     compactplan_legend_axis_text: str = "timeline"  # label beside the axis sample
 
