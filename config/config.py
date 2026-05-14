@@ -653,8 +653,20 @@ class CalendarConfig:
     timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
     timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
 
-    # Blockplan styling and behavior
-    blockplan_background_color: str = "none"
+    # Blockplan styling and behavior.
+    # Phase 2 strip dropped dead fields with no readers post-Phase-1:
+    # background_color (page bg from box:background), band_row_height
+    # (per-band row_height key), header_font / band_font / lane_label_font /
+    # event_date_font (text:* token covers font selection),
+    # lane_heading_fill_color (box:swimlane_heading), lane_label_color
+    # (text:swimlane_label), event_date_color (text:event_date),
+    # timeband_label_color/_label_opacity (per-band YAML overrides);
+    # the per-text font_color/_opacity/_alignment trio for
+    # text/name_text/notes_text (subsumed by text:event_name /
+    # text:event_notes / text:label tokens); text_font_size, plus a
+    # redundant text_font_name copy (name_text_font_name kept).
+    # blockplan_timeband_fill_color stays — referenced by the
+    # ec-band-cell BoxStyle factory below.
     blockplan_grid_color: str = "grey"
     blockplan_grid_opacity: float = 0.6
     blockplan_grid_line_width: float = 1.0
@@ -664,7 +676,6 @@ class CalendarConfig:
     blockplan_timeband_line_opacity: float | None = None
     blockplan_timeband_line_dasharray: str | None = None
     blockplan_label_column_ratio: float = 0.16
-    blockplan_band_row_height: float = 10.0
     blockplan_fiscal_year_start_month: int = 10
     blockplan_week_start: int = 0  # 0=Monday
     blockplan_show_unmatched_lane: bool = True
@@ -748,17 +759,13 @@ class CalendarConfig:
             {"name": "Quality", "match": {"resource_groups": ["quality", "qa"]}},
         ]
     )
-    blockplan_header_font: str = Fonts.RC_BOLD
     blockplan_header_font_size: float | None = None
     blockplan_header_label_color: str = "black"
     blockplan_header_label_opacity: float = 1.0
     blockplan_header_label_align_h: str = "left"  # left | center | right
     blockplan_header_heading_fill_color: str = "none"
-    blockplan_band_font: str = Fonts.RC_BOLD
     blockplan_band_font_size: float | None = None
-    blockplan_timeband_label_color: str = "black"
-    blockplan_timeband_label_opacity: float = 1.0
-    blockplan_timeband_fill_color: str = "none"
+    blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
     blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
     blockplan_timeband_fill_opacity: float = 1.0
     # Non-workday highlighting for timeband date/dow cells.  None → disabled.
@@ -772,37 +779,21 @@ class CalendarConfig:
     blockplan_federal_holiday_icon: str | None = None
     blockplan_company_holiday_icon: str | None = None
     blockplan_weekend_icon: str | None = None
-    blockplan_lane_heading_fill_color: str = "none"
-    blockplan_lane_label_font: str = Fonts.RC_BOLD
     blockplan_lane_label_font_size: float | None = None
-    blockplan_lane_label_color: str = "black"
     blockplan_lane_label_align_h: str = "left"  # left | center | right
     blockplan_lane_label_align_v: str = "middle"  # top | middle | bottom
     blockplan_lane_label_rotation: float = (
         0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
     )
     blockplan_lane_split_ratio: float = 0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
-    # ── Blockplan text styling (uniform) ─────────────────────────────────────
-    blockplan_text_font_name: str = Fonts.RC_LIGHT
-    blockplan_text_font_color: str = "navy"
-    blockplan_text_font_size: float | None = None
-    blockplan_text_font_opacity: float = 1.0
-    blockplan_text_alignment: str = "left"
-    blockplan_name_text_font_name: str = Fonts.RC_LIGHT
-    blockplan_name_text_font_color: str = "navy"
+    # ── Blockplan text styling — kept survivors only (font_size + name fields).
     blockplan_name_text_font_size: float | None = None
-    blockplan_name_text_font_opacity: float = 1.0
-    blockplan_name_text_alignment: str = "left"
     blockplan_notes_text_font_name: str | None = None
     blockplan_notes_text_font_color: str | None = None
     blockplan_notes_text_font_size: float | None = None
-    blockplan_notes_text_font_opacity: float = 1.0
-    blockplan_notes_text_alignment: str = "left"
     # Blockplan event/duration date & marker fields (not renamed)
     blockplan_event_show_date: bool = False
-    blockplan_event_date_font: str = Fonts.RC_LIGHT
     blockplan_event_date_font_size: float | None = None
-    blockplan_event_date_color: str = "grey"
     blockplan_event_date_format: str = "YYYY-MM-DD"
     blockplan_marker_radius: float = 2.0
     blockplan_duration_fill_opacity: float = 0.35
@@ -2173,7 +2164,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
         visualizer="blockplan",
     )
-    config.blockplan_text_font_size = config.blockplan_name_text_font_size
     config.blockplan_notes_text_font_size = _size(
         "text:event_notes",
         config.blockplan_name_text_font_size * 0.85,
