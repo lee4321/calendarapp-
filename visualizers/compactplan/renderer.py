@@ -440,6 +440,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         icon_to_draw, p.x1, icon_baseline, dur_icon_h,
                         anchor="start", color=icon_color,
                         css_class="ec-duration-icon",
+                        box_token="box:duration",
+                        box_ctx=self._event_ctx(p.event),
                     )
 
         # Continuation icons — drawn at the clamped right edge of any duration
@@ -1185,6 +1187,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
                             p.icon_name, sub_x, icon_baseline, dur_icon_h,
                             anchor="start", color=icon_color,
                             css_class="ec-legend-icon",
+                            box_token="box:duration",
+                            box_ctx=self._event_ctx(p.event),
                         )
 
                     note_str = ""

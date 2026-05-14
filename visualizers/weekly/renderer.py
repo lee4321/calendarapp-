@@ -1198,6 +1198,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 fallback_name=config.default_missing_icon,
                 fallback_color="red",
                 css_class="ec-event-icon",
+                box_token=(
+                    "box:milestone"
+                    if getattr(t, "milestone", False)
+                    else "box:event"
+                ),
+                box_ctx=self._event_ctx(t),
             )
 
     def _process_overflow(
@@ -1591,6 +1597,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-duration-icon",
+                    box_token="box:duration",
+                    box_ctx=self._event_ctx(t),
                 )
 
             if continues_left and i_rect == 0:

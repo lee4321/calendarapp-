@@ -225,7 +225,7 @@ own similar method. This is fine for the first few; if patterns repeat,
 consider hoisting to `BaseSVGRenderer` with a per-subclass declarative
 list.
 
-### 6. Icon halo / background tokens are defined but never drawn
+### 6. Icon halo / background tokens are defined but never drawn — RESOLVED
 
 The design ([design_unified_style_rules.html](design_unified_style_rules.html) §10.3 / §11.4)
 specifies that each icon glyph token is paired with an optional `box:`
@@ -308,6 +308,61 @@ of weekly / timeline / blockplan is on the new token path so the
 helper can land on `BaseSVGRenderer` with two or three callers
 already exercising the pattern, rather than on `MiniCalendarRenderer`
 alone.
+
+**Resolution.**  Phase 1.5 landed in (this commit) after weekly,
+blockplan, and timeline were on the new token path:
+
+- `BaseSVGRenderer._maybe_draw_icon_halo` paints the halo rect ahead
+  of the glyph when a `box_token` is supplied.  Honours `fill`,
+  `fill_opacity`, `stroke`, `stroke_width`, `stroke_opacity`,
+  `dasharray`, plus a token-level `padding` (default `icon_size * 0.1`
+  for a 20% halo).  Rules whose merged style has neither a drawable
+  fill nor a drawable stroke are no-ops, so the basic.yaml /
+  SAMPLE.yaml `box:milestone fill: none, stroke: none` placeholder
+  doesn't produce a ghost rect.
+- `BaseSVGRenderer._event_ctx(event)` builds the selector context
+  dict (`event_type`, `milestone`, `priority`, `task_name`, etc.)
+  that `find_rules("box:<…>", ctx)` matches against.  Mirrors the
+  vocabulary `StyleEngine.evaluate_event` already supports.
+- `_draw_icon_svg(... box_token=, box_ctx=)` parameters added; halo
+  resolution is opt-in per call-site.
+- Wired call-sites:
+    - **compactplan**: duration-start glyph + legend duration glyph →
+      `box:duration` (event ctx from `p.event`).  Continuation icons
+      and non-workday band-cell icons left un-haloed (per the routing
+      decision in this issue's "Decisions needed" subsection).
+    - **blockplan**: duration-bar event glyph → `box:duration`;
+      lane-event glyph → `box:milestone` when `event.milestone` else
+      `box:event`.
+    - **timeline**: callout event glyph → `box:milestone` /
+      `box:event` (dispatched on `event.milestone`); duration-bar
+      event glyph → `box:duration`.  `_draw_timeline_marker` (the
+      axis circle/icon) left un-haloed — it lacks per-event ctx and
+      its callout/duration sibling already carries the halo.
+    - **weekly**: in-cell event glyph → `box:milestone` /
+      `box:event`; duration-bar glyph → `box:duration`.
+      Continuation, holiday-title, and overflow icons left
+      un-haloed.
+    - **mini / mini-icon**: skipped — both call `_draw_icon_svg` with
+      a bare icon name and no event object available, so there's no
+      meaningful `box_ctx` to construct without a deeper refactor.
+
+**Selector-matcher fix.**  `unified_theme._select_matches` was
+treating `priority_min` / `priority_max` selectors as literal context
+keys (`context["priority_min"]`), which made the design's worked
+example silently no-op.  Fixed to also resolve range-predicate
+selectors against the base field — `select: { priority_min: 1 }`
+now matches `context = { priority: 2 }`, which is the documented
+semantics.  Literal-key form preserved for back-compat with the
+existing `test_priority_min_max` shape.
+
+**Reference theme example.**  SAMPLE.yaml carries an annotated,
+commented-out `critical milestone — halo` rule that theme authors
+can copy-paste.  Uncommenting it draws a soft red halo behind every
+priority-≥1 milestone glyph in compactplan / blockplan / timeline /
+weekly.  Verified by `ecalendar.py blockplan 20260101 20260331
+--theme SAMPLE` — three `<rect fill="#fde0e0" ...>` halos appear in
+the output SVG at the priority-1 milestone bars.
 
 ---
 
@@ -600,7 +655,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | blockplan | 5-6 hours | **done** |
 | svg_base | 1-2 hours | **done** |
 | excelheader | 1-2 hours | pending |
-| Phase 1.5 (icon halo wiring) | 3-4 hours | parallel to Phase 1; lands after first non-mini renderer migrates |
+| Phase 1.5 (icon halo wiring) | 3-4 hours | **done** |
 | Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |
 | Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |

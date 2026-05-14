@@ -403,6 +403,21 @@ style_rules:
     style:
       fill: none
       stroke: none
+  # Halo example — uncomment to draw a soft red halo behind every
+  # high-priority milestone glyph in compactplan / blockplan / timeline.
+  # Honored by the Phase 1.5 ``box_token`` wiring on _draw_icon_svg.
+  # Style vocabulary: fill, fill_opacity, stroke, stroke_width,
+  # stroke_opacity, dasharray, padding (default = icon_size * 0.1, i.e.
+  # a 20% halo around the glyph).
+  # - name: critical milestone — halo
+  #   apply_to: box:milestone
+  #   select: { priority_min: 1 }
+  #   style:
+  #     fill: "#fde0e0"
+  #     fill_opacity: 0.6
+  #     stroke: red
+  #     stroke_width: 0.5
+  #     padding: 2
   - name: define box:vline
     define: box
     as: vline

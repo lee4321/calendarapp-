@@ -1289,6 +1289,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 anchor="start",
                 color=icon_color,
                 css_class="ec-event-icon",
+                box_token=(
+                    "box:milestone"
+                    if getattr(item.event, "milestone", False)
+                    else "box:event"
+                ),
+                box_ctx=self._event_ctx(item.event),
             )
             title_text_x = text_x + fitted_title + icon_gap
             title_max_w = item.box_width - 12.0 - fitted_title - icon_gap
@@ -1567,6 +1573,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 fallback_color=dur_icon_color,
                 transform=icon_transform,
                 css_class="ec-duration-icon",
+                box_token="box:duration",
+                box_ctx=self._event_ctx(item.event),
             )
             text_x = draw_x + effective_icon_w + gap if icon_drawn else (item.start_x + item.end_x) / 2
             self._draw_text(

@@ -245,18 +245,27 @@ def _select_matches(select: dict[str, Any], context: dict[str, Any]) -> bool:
       is in the list.
     * String key with scalar value matches on equality.
     * ``priority_min`` / ``priority_max`` / ``percent_complete: {min, max}``
-      are recognized as range predicates.
+      are recognized as range predicates.  A ``<field>_min`` / ``<field>_max``
+      selector key resolves against ``context[<field>]`` when the literal key
+      is absent — so ``select: { priority_min: 1 }`` matches a context that
+      binds ``priority`` (the design's documented form).
 
     A rule with a constraint on key ``X`` does *not* apply unless the context
-    binds ``X``.  This is the conservative interpretation: rules opt into
-    contexts, they don't fall through unmatched.  An empty ``select`` is the
+    binds ``X`` (or its base field for range predicates).  Rules opt into
+    contexts; they don't fall through unmatched.  An empty ``select`` is the
     explicit "always applies" form and is how token definitions are written.
     """
     for key, want in select.items():
-        if key not in context:
-            # Constraint not satisfied — context hasn't bound this key.
+        if key in context:
+            have = context[key]
+        elif key.endswith("_min") and key[:-4] in context:
+            have = context[key[:-4]]
+        elif key.endswith("_max") and key[:-4] in context:
+            have = context[key[:-4]]
+        else:
+            # Constraint not satisfied — context hasn't bound this key
+            # (or its base field for range predicates).
             return False
-        have = context[key]
         if not _value_matches(want, have, key=key):
             return False
     return True

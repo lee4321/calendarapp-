@@ -1724,6 +1724,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         fallback_color=event_icon_color,
                         transform=icon_transform,
                         css_class="ec-event-icon",
+                        box_token="box:duration",
+                        box_ctx=self._event_ctx(event),
                     )
                     text_x = (
                         draw_x + effective_icon_w + gap
@@ -2052,6 +2054,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-event-icon",
+                    box_token="box:milestone" if getattr(event, "milestone", False) else "box:event",
+                    box_ctx=self._event_ctx(event),
                 )
 
             if not marker_drawn:
