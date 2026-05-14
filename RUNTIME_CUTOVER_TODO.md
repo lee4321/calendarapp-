@@ -37,6 +37,7 @@ swaps reads from one source to the other.
 | svg_base helper hoist | `6a2f4244` | Added `BaseSVGRenderer._resolve_token(config, token, ctx)` for reuse. Not a migration of svg_base's own 10 reads. |
 | mini family | `8f0ce7b5` | 83 reads across `renderer.py` + `day_styles.py`. SVG **NOT** byte-identical — see Open issues §1 and §2. |
 | weekly | (this commit) | 37 reads. SVG byte-identical (modulo timestamp) for default / corporate / dark; TJX shows expected diffs where its `box:cell stroke: none, stroke_width: 0.5` and `text:holiday_title size: 12` tokens now win over the renderer's hardcoded defaults — same shape as Open Issue §1. |
+| blockplan | (this commit) | 96 reads. SVG diffs across all 4 reference themes are token-driven precedence shifts: default.yaml's `text:heading color: grey` and `line:grid width: 0.5` now drive the heading-text color and grid-line stroke width (were silently ignored pre-migration); TJX's `header_label_color: Green` legacy field is now overridden by its global `text:heading color: grey` token. Same shape as Open Issue §1's design-intent precedence. |
 
 ### Pattern that emerged from the mini migration
 
@@ -323,7 +324,7 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | mini (layout) | `visualizers/mini/layout.py` | 17 | **skipped** | geometry only; no styling reads requiring migration |
 | weekly | `visualizers/weekly/renderer.py` | 37 | **done** | `text:day_number`, `text:event_name`, `text:event_notes`, `text:fiscal_label`, `text:week_number`, `text:holiday_title`, `box:cell`, `line:hash`, `icon:event`, `icon:overflow` |
 | timeline | `visualizers/timeline/renderer.py` | 96 | pending | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
-| blockplan | `visualizers/blockplan/renderer.py` | 95 | pending | `text:band_label`, `text:swimlane_label`, `text:event_name`, `text:event_notes`, `text:duration_date`, `box:band`, `box:band_heading`, `box:swimlane_heading`, `box:swimlane_content`, `box:duration`, `box:event`, `box:milestone`, `box:vline`, `line:grid`, `icon:event`, `icon:milestone` |
+| blockplan | `visualizers/blockplan/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:band_label`, `text:swimlane_label`, `text:label`, `text:heading`, `box:band`, `box:duration`, `line:grid`, `icon:event`, `icon:milestone` |
 | svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
 | excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
 
@@ -386,14 +387,24 @@ For each renderer (one commit each):
 - [ ] `visualizers/timeline/layout.py` — geometry only
 - [ ] Commit
 
-#### blockplan (95 reads, second-largest)
-- [ ] `visualizers/blockplan/renderer.py` — full token set (bands,
-      swimlanes, events, durations, milestones, vlines, grid)
-- [ ] `visualizers/blockplan/layout.py` — geometry only
-- [ ] Lane routing already lives in `config.theme.route_lane(ctx)`;
-      replace any direct read of `config.blockplan_lane_match_mode` /
-      legacy swimlane-rules infrastructure
-- [ ] Commit
+#### blockplan (96 reads) — DONE
+- [x] `visualizers/blockplan/renderer.py` — text:event_name,
+      text:event_notes, text:event_date, text:duration_date,
+      text:band_label, text:swimlane_label, text:label, text:heading,
+      box:band (stroke + fill_opacity), box:duration (stroke + fill_opacity),
+      line:grid, icon:event, icon:milestone.  Two new module-level
+      helpers (`_blockplan_style_rules`, `_blockplan_swimlane_rules`)
+      route StyleEngine / LaneEngine sourcing through UnifiedTheme.
+      `_timeband_stroke`, `_grid_stroke`, `_band_row_h` converted
+      from staticmethods to instance methods so they can read the
+      per-render token cache.
+- [x] `visualizers/blockplan/layout.py` — verified, no styling reads.
+- [ ] Per-event halo / vline / milestone-marker `box:` token wiring
+      tracked separately under Phase 1.5 (Open Issue §6).  Lane routing
+      already routes through `_blockplan_swimlane_rules`; the
+      `config.theme.route_lane(ctx)` design-doc API is a future
+      consolidation that can replace the LaneEngine entirely.
+- [x] Commit
 
 #### svg_base (10 reads)
 - [ ] `renderers/svg_base.py` — shared rendering primitives. Already has
@@ -568,7 +579,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | Open issue §2 resolution (dual box:day chain) | 1 hour | **done** |
 | weekly | 2-3 hours | **done** |
 | timeline | 5-6 hours | pending |
-| blockplan | 5-6 hours | pending |
+| blockplan | 5-6 hours | **done** |
 | svg_base | 1-2 hours | pending |
 | excelheader | 1-2 hours | pending |
 | Phase 1.5 (icon halo wiring) | 3-4 hours | parallel to Phase 1; lands after first non-mini renderer migrates |
