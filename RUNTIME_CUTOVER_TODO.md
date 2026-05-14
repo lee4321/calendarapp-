@@ -40,6 +40,7 @@ swaps reads from one source to the other.
 | blockplan | (this commit) | 96 reads. SVG diffs across all 4 reference themes are token-driven precedence shifts: default.yaml's `text:heading color: grey` and `line:grid width: 0.5` now drive the heading-text color and grid-line stroke width (were silently ignored pre-migration); TJX's `header_label_color: Green` legacy field is now overridden by its global `text:heading color: grey` token. Same shape as Open Issue §1's design-intent precedence. |
 | svg_base | (this commit) | 9 reads in the overflow-table helpers. `text:day_number color` now drives the table text color (and the "Overflow Events" title), `text:event_name font/size` now drives the table body font.  Helper signatures grew a `text_color` param so the lookup happens once at the caller; no per-row token resolution. |
 | timeline | (this commit) | 96 reads.  All 4 reference themes' SVGs are byte-identical (modulo timestamp + command-line) — the unified theme tokens that timeline queries (`text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:label`, `text:today_label`) are not defined by any reference theme today, so the legacy heuristic chain still drives every value.  Migration is structural: token-first precedence is wired so any future theme that ships timeline-specific tokens will have them respected.  Also removed a duplicate `_callout_metrics` definition that pre-dated the migration (Python silently overrode it). |
+| excelheader | (this commit) | 21 reads.  basic / SAMPLE XLSXs byte-identical (modulo creation timestamp); `default` shifts only the heading-cell font color from black → grey, picking up its `text:heading color: grey` token — same shape as the blockplan diff.  Holiday colors, system fonts (`Calibri` 9pt), `excelheader_band_row_height`, palette refs, alignment, and band placement lists stay on CalendarConfig per design §10.4 (XLSX-specific concerns). |
 
 ### Pattern that emerged from the mini migration
 
@@ -383,10 +384,13 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | timeline | `visualizers/timeline/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:label`, `text:today_label`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
 | blockplan | `visualizers/blockplan/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:band_label`, `text:swimlane_label`, `text:label`, `text:heading`, `box:band`, `box:duration`, `line:grid`, `icon:event`, `icon:milestone` |
 | svg_base | `renderers/svg_base.py` | 10 | **done** | overflow-table only: `text:day_number` (color) + `text:event_name` (font, size) |
-| excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
+| excelheader | `visualizers/excelheader.py` | 21 | **done** | `text:heading`, `text:band_label`, `box:band` (fill), `box:vline` (stroke / stroke_width). Holiday colors + system fonts stay (per design §10.4). |
 
-Recommended order for the remaining work: §1 and §2 done — proceed
-straight to weekly → timeline → blockplan → svg_base → excelheader.
+Phase 1 complete — every renderer (mini, mini-icon, text-mini,
+compactplan, weekly, blockplan, timeline, svg_base, excelheader) reads
+styling from `config.theme.resolve_token(...)` first, with the legacy
+CalendarConfig field as fallback.  Open Issues §1, §2, §6 resolved.
+Next: Phase 2 (strip CalendarConfig styling defaults).
 
 ### Per-renderer migration recipe
 
@@ -486,11 +490,25 @@ For each renderer (one commit each):
       unconditional rules.
 - [x] Commit
 
-#### excelheader (XLSX path)
-- [ ] `visualizers/excelheader.py` — most reads are XLSX-specific and stay
-      (per design §10.4). Only the SVG-equivalent styling fields need
-      migrating (band fills/colors, fonts other than `excel_font_*`).
-- [ ] Commit
+#### excelheader (XLSX path) — DONE
+- [x] `visualizers/excelheader.py` — `text:heading color` (heading-cell
+      font color), `text:band_label color` (segment-label font color),
+      `box:band fill` (segment fill), `box:vline stroke / stroke_width`
+      (vertical-line color / width).  Module-level
+      `_resolve_excel_token(config, token)` helper pre-resolves with
+      papersize-only ctx (no per-event context — excelheader draws
+      timeband rows, not events).  Per-band YAML overrides
+      (`band.label_color`, `band.font_color`, `band.fill_color`,
+      `line.color`, `line.width`) still win over tokens, matching the
+      blockplan precedence pattern.
+- [x] Holiday colors (`excelheader_federal_holiday_fill_color` /
+      `theme_federal_holiday_color`, company / weekend equivalents),
+      system fonts (`excelheader_font_name` / `excelheader_font_size` —
+      Calibri 9pt; XLSX uses native fonts, not the SVG glyph-extraction
+      pipeline — deliberate exception per design §10.4),
+      `excelheader_band_row_height`, palette refs, alignment, and
+      band placement lists stay on CalendarConfig.
+- [x] Commit
 
 ---
 
@@ -654,7 +672,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | timeline | 5-6 hours | **done** |
 | blockplan | 5-6 hours | **done** |
 | svg_base | 1-2 hours | **done** |
-| excelheader | 1-2 hours | pending |
+| excelheader | 1-2 hours | **done** |
 | Phase 1.5 (icon halo wiring) | 3-4 hours | **done** |
 | Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |
 | Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
