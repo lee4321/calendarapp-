@@ -36,6 +36,7 @@ swaps reads from one source to the other.
 | text-mini | n/a | Confirmed zero styling reads (all 12 are geometry / formatting / symbol declarations). |
 | svg_base helper hoist | `6a2f4244` | Added `BaseSVGRenderer._resolve_token(config, token, ctx)` for reuse. Not a migration of svg_base's own 10 reads. |
 | mini family | `8f0ce7b5` | 83 reads across `renderer.py` + `day_styles.py`. SVG **NOT** byte-identical — see Open issues §1 and §2. |
+| weekly | (this commit) | 37 reads. SVG byte-identical (modulo timestamp) for default / corporate / dark; TJX shows expected diffs where its `box:cell stroke: none, stroke_width: 0.5` and `text:holiday_title size: 12` tokens now win over the renderer's hardcoded defaults — same shape as Open Issue §1. |
 
 ### Pattern that emerged from the mini migration
 
@@ -320,7 +321,7 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | mini | `visualizers/mini/renderer.py` | 47 | **done** (`8f0ce7b5`) | full set per pattern above |
 | mini (day_styles) | `visualizers/mini/day_styles.py` | 19 | **done** (`8f0ce7b5`) | `find_rules("box:day", ctx)` pass added; legacy chains remain (see Open issue §2) |
 | mini (layout) | `visualizers/mini/layout.py` | 17 | **skipped** | geometry only; no styling reads requiring migration |
-| weekly | `visualizers/weekly/renderer.py` | 37 | pending | `text:day_number`, `text:month_title`, `text:week_number`, `text:event_name`, `text:event_notes`, `text:event_date`, `text:holiday_title`, `box:day`, `box:cell`, `line:grid`, `icon:event`, `icon:overflow` |
+| weekly | `visualizers/weekly/renderer.py` | 37 | **done** | `text:day_number`, `text:event_name`, `text:event_notes`, `text:fiscal_label`, `text:week_number`, `text:holiday_title`, `box:cell`, `line:hash`, `icon:event`, `icon:overflow` |
 | timeline | `visualizers/timeline/renderer.py` | 96 | pending | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
 | blockplan | `visualizers/blockplan/renderer.py` | 95 | pending | `text:band_label`, `text:swimlane_label`, `text:event_name`, `text:event_notes`, `text:duration_date`, `box:band`, `box:band_heading`, `box:swimlane_heading`, `box:swimlane_content`, `box:duration`, `box:event`, `box:milestone`, `box:vline`, `line:grid`, `icon:event`, `icon:milestone` |
 | svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
@@ -365,15 +366,19 @@ For each renderer (one commit each):
 
 ### Per-renderer punch list (remaining)
 
-#### weekly (37 reads)
-- [ ] `visualizers/weekly/renderer.py` — text:day_number, text:month_title,
-      text:week_number, text:event_name, text:event_notes, text:event_date,
-      text:holiday_title, box:day, box:cell, line:grid, icon:event,
-      icon:overflow
-- [ ] `visualizers/weekly/layout.py` — geometry only; verify no styling reads
-- [ ] Coordinate `fiscal_period_label_font_size` migration with mini (Open
-      issue §4) so the field can be stripped in Phase 2
-- [ ] Commit
+#### weekly (37 reads) — DONE
+- [x] `visualizers/weekly/renderer.py` — text:day_number, text:event_name,
+      text:event_notes, text:fiscal_label, text:week_number,
+      text:holiday_title, box:cell, line:hash, icon:event, icon:overflow.
+      `_weekly_style_rules(config)` helper added (compactplan / mini-day_styles
+      pattern); 4 `StyleEngine(...)` constructions migrated.
+      `_populate_weekly_tokens` + `_tk()` cache mirrors mini's shape.
+- [x] `visualizers/weekly/layout.py` — verified, no styling reads (geometry
+      only).
+- [ ] `fiscal_period_label_font_size` is now read via the token chain in
+      both weekly and mini.  Phase 2 strip can drop the field once Open
+      issue §4 is resolved.
+- [x] Commit
 
 #### timeline (96 reads, largest)
 - [ ] `visualizers/timeline/renderer.py` — full token set (events,
@@ -561,7 +566,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | mini | 3-4 hours | **done** |
 | Open issue §1 resolution (font-size precedence) | 1 hour | **done** |
 | Open issue §2 resolution (dual box:day chain) | 1 hour | **done** |
-| weekly | 2-3 hours | pending |
+| weekly | 2-3 hours | **done** |
 | timeline | 5-6 hours | pending |
 | blockplan | 5-6 hours | pending |
 | svg_base | 1-2 hours | pending |
