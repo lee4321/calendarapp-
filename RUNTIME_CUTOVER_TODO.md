@@ -38,6 +38,7 @@ swaps reads from one source to the other.
 | mini family | `8f0ce7b5` | 83 reads across `renderer.py` + `day_styles.py`. SVG **NOT** byte-identical — see Open issues §1 and §2. |
 | weekly | (this commit) | 37 reads. SVG byte-identical (modulo timestamp) for default / corporate / dark; TJX shows expected diffs where its `box:cell stroke: none, stroke_width: 0.5` and `text:holiday_title size: 12` tokens now win over the renderer's hardcoded defaults — same shape as Open Issue §1. |
 | blockplan | (this commit) | 96 reads. SVG diffs across all 4 reference themes are token-driven precedence shifts: default.yaml's `text:heading color: grey` and `line:grid width: 0.5` now drive the heading-text color and grid-line stroke width (were silently ignored pre-migration); TJX's `header_label_color: Green` legacy field is now overridden by its global `text:heading color: grey` token. Same shape as Open Issue §1's design-intent precedence. |
+| svg_base | (this commit) | 9 reads in the overflow-table helpers. `text:day_number color` now drives the table text color (and the "Overflow Events" title), `text:event_name font/size` now drives the table body font.  Helper signatures grew a `text_color` param so the lookup happens once at the caller; no per-row token resolution. |
 
 ### Pattern that emerged from the mini migration
 
@@ -325,7 +326,7 @@ Renderer files and their CalendarConfig-styling-field reference counts (from
 | weekly | `visualizers/weekly/renderer.py` | 37 | **done** | `text:day_number`, `text:event_name`, `text:event_notes`, `text:fiscal_label`, `text:week_number`, `text:holiday_title`, `box:cell`, `line:hash`, `icon:event`, `icon:overflow` |
 | timeline | `visualizers/timeline/renderer.py` | 96 | pending | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:today_label`, `box:event`, `box:duration`, `box:milestone`, `box:callout`, `line:axis`, `line:today`, `line:tick`, `icon:event`, `icon:milestone` |
 | blockplan | `visualizers/blockplan/renderer.py` | 96 | **done** | `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:band_label`, `text:swimlane_label`, `text:label`, `text:heading`, `box:band`, `box:duration`, `line:grid`, `icon:event`, `icon:milestone` |
-| svg_base | `renderers/svg_base.py` | 10 | pending | shared base — migrate after weekly/timeline establish patterns |
+| svg_base | `renderers/svg_base.py` | 10 | **done** | overflow-table only: `text:day_number` (color) + `text:event_name` (font, size) |
 | excelheader | `visualizers/excelheader.py` | TBD | pending | most reads are XLSX-specific (per design §10.4); only the SVG-equivalent styling fields migrate |
 
 Recommended order for the remaining work: §1 and §2 done — proceed
@@ -406,12 +407,20 @@ For each renderer (one commit each):
       consolidation that can replace the LaneEngine entirely.
 - [x] Commit
 
-#### svg_base (10 reads)
-- [ ] `renderers/svg_base.py` — shared rendering primitives. Already has
-      `_resolve_token()` helper from the mini-icon prep commit. Migrate
-      after weekly + timeline are on the new path so the pattern is
-      fully established.
-- [ ] Commit
+#### svg_base (10 reads) — DONE
+- [x] `renderers/svg_base.py` — every styling read lived in the
+      overflow-table helpers (`_render_overflow_svg`,
+      `_draw_overflow_table_header`, `_draw_overflow_table_rows`).
+      `text:day_number` resolves the cell text color (`config.day_box_font_color`
+      legacy fallback); `text:event_name` resolves the table body font
+      and base size (`config.weekly_name_text_font_name` /
+      `config.weekly_name_text_font_size + 1` legacy fallback).
+      Token lookup happens once in `_render_overflow_svg`; helpers
+      grew a `text_color` parameter so they don't re-resolve per row.
+      No visualizer ctx — the overflow page is shared across visualizers
+      and themes' overflow-specific overrides should use papersize/
+      unconditional rules.
+- [x] Commit
 
 #### excelheader (XLSX path)
 - [ ] `visualizers/excelheader.py` — most reads are XLSX-specific and stay
@@ -580,7 +589,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | weekly | 2-3 hours | **done** |
 | timeline | 5-6 hours | pending |
 | blockplan | 5-6 hours | **done** |
-| svg_base | 1-2 hours | pending |
+| svg_base | 1-2 hours | **done** |
 | excelheader | 1-2 hours | pending |
 | Phase 1.5 (icon halo wiring) | 3-4 hours | parallel to Phase 1; lands after first non-mini renderer migrates |
 | Phase 2 (strip) | 2-3 hours | blocked on Phase 1 + Open §4 |

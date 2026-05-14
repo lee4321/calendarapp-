@@ -987,6 +987,7 @@ class BaseSVGRenderer(ABC):
         row_height: float,
         table_font: str,
         table_font_size: float,
+        text_color: str,
     ) -> float:
         """
         Draw the overflow table header row and separator line.
@@ -1011,7 +1012,7 @@ class BaseSVGRenderer(ABC):
             "Start Date",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
         self._draw_text(
             col2_x + 4,
@@ -1019,7 +1020,7 @@ class BaseSVGRenderer(ABC):
             "End Date",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
         self._draw_text(
             col3_x + 4,
@@ -1027,7 +1028,7 @@ class BaseSVGRenderer(ABC):
             "Event Name",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
 
         sep_y = header_y + row_height
@@ -1058,6 +1059,7 @@ class BaseSVGRenderer(ABC):
         table_font: str,
         table_font_size: float,
         font_path: str,
+        text_color: str,
     ) -> None:
         """Draw all data rows in the overflow table."""
         from config.config import monthcolors
@@ -1091,7 +1093,7 @@ class BaseSVGRenderer(ABC):
                 self._format_date(entry.start),
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
             )
             self._draw_text(
                 col2_x + 4,
@@ -1099,7 +1101,7 @@ class BaseSVGRenderer(ABC):
                 self._format_date(entry.end),
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
             )
             self._draw_text(
                 col3_x + 4,
@@ -1107,7 +1109,7 @@ class BaseSVGRenderer(ABC):
                 entry.task_name or "",
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
                 max_width=col3_width - 8,
             )
             current_y = row_bottom
@@ -1144,6 +1146,17 @@ class BaseSVGRenderer(ABC):
             self._overflow_content_area(config)
         )
 
+        # Resolve unified-theme tokens once for the whole overflow page.
+        # ``text:day_number`` drives the overflow-table text color (it is the
+        # day-cell text color on the parent calendar page, kept in sync here);
+        # ``text:event_name`` drives the table body font and base size.  No
+        # visualizer ctx — this helper is shared across visualizers; per-
+        # visualizer overrides via ``select:`` aren't applied to overflow text.
+        _ctx = {"papersize": config.papersize}
+        _tk_dn = self._resolve_token(config, "text:day_number", _ctx)
+        _tk_en = self._resolve_token(config, "text:event_name", _ctx)
+        text_color = _tk_dn.get("color") or config.day_box_font_color
+
         # Title
         _hdr_ts = config.get_text_style("ec-header-text")
         title_font_size = config.header_center_font_size
@@ -1154,13 +1167,15 @@ class BaseSVGRenderer(ABC):
             "Overflow Events",
             _hdr_ts.font,
             title_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
             anchor="middle",
         )
 
         # Table layout
-        table_font = config.weekly_name_text_font_name
-        table_font_size = config.weekly_name_text_font_size + 1
+        table_font = _tk_en.get("font") or config.weekly_name_text_font_name
+        table_font_size = (
+            _tk_en.get("size") or config.weekly_name_text_font_size
+        ) + 1
         row_height = table_font_size + 6
         table_top = title_y + title_font_size + 5
 
@@ -1183,6 +1198,7 @@ class BaseSVGRenderer(ABC):
             row_height,
             table_font,
             table_font_size,
+            text_color,
         )
 
         font_path = get_font_path(table_font)
@@ -1202,6 +1218,7 @@ class BaseSVGRenderer(ABC):
             table_font,
             table_font_size,
             font_path,
+            text_color,
         )
 
         overflow_path = config.outputfile.replace(".svg", "_overflow.svg")
