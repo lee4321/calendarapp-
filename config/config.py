@@ -915,6 +915,14 @@ class CalendarConfig:
     compactplan_milestone_list_date_col_width: float = 32.0
     compactplan_milestone_list_section_gap: float = 6.0
 
+    # Holiday/special-day list column: date • icon • name, sorted by date.
+    compactplan_show_holiday_list: bool = True
+    compactplan_holiday_list_date_format: str = "M/D"
+    compactplan_holiday_list_row_height: float = 10.0
+    compactplan_holiday_list_date_col_width: float = 32.0
+    compactplan_holiday_list_icon_col_width: float = 14.0
+    compactplan_holiday_list_icon_height: float = 8.0
+
     # ── Continuation icon ─────────────────────────────────────────────────────
     # When a duration line extends beyond the specified end date it is clamped
     # to the timeline edge and, when show_continuation_icon is True, a small
@@ -1245,6 +1253,7 @@ class CalendarConfig:
             "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
             "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
             "ec-legend-text": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color),
+            "ec-legend-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
         }
         builder = _map.get(ec)
         return builder() if builder else TextStyle()

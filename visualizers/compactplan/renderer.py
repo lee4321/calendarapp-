@@ -475,19 +475,42 @@ class CompactPlanRenderer(BaseSVGRenderer):
             self._draw_milestone(m, day_x, px_per_day, axis_y, config, db)
 
         # ------------------------------------------------------------------
-        # Two-column section: left = group legend, right = milestone roster.
-        # Both columns start at legend_y and are rendered side by side.
-        # The column split is a fraction of area_w (default 0.5 = equal halves).
+        # Multi-column section: left = group legend, then milestone roster
+        # and/or holiday list to the right.  Columns start at legend_y and
+        # render side by side.  The legend takes ``legend_column_split`` of
+        # area_w (default 0.5 = equal halves); the remaining area is split
+        # evenly between the milestone and holiday columns when both are
+        # enabled, otherwise the single enabled column fills it.
         # ------------------------------------------------------------------
         show_ms_list = bool(config.compactplan_show_milestone_list)
+        show_holiday_list = bool(getattr(config, "compactplan_show_holiday_list", False))
         has_legend_content = show_legend and bool(placed)
         has_ms_content = show_ms_list and bool(milestones)
+
+        holiday_entries: list[tuple[date, str, str]] = (
+            self._collect_holiday_entries(visible_days, config, db)
+            if show_holiday_list and db is not None
+            else []
+        )
+        has_holiday_content = bool(holiday_entries)
 
         col_split = float(getattr(config, "compactplan_legend_column_split", 0.5))
         inter_col_gap = 8.0
         left_col_w = area_w * col_split
-        right_col_x = area_x + left_col_w + inter_col_gap
-        right_col_w = area_w - left_col_w - inter_col_gap
+        right_area_x = area_x + left_col_w + inter_col_gap
+        right_area_w = area_w - left_col_w - inter_col_gap
+
+        if has_ms_content and has_holiday_content:
+            ms_col_w = (right_area_w - inter_col_gap) / 2.0
+            hol_col_w = right_area_w - inter_col_gap - ms_col_w
+            ms_col_x = right_area_x
+            hol_col_x = right_area_x + ms_col_w + inter_col_gap
+        elif has_ms_content:
+            ms_col_x, ms_col_w = right_area_x, right_area_w
+            hol_col_x, hol_col_w = right_area_x, right_area_w
+        else:
+            ms_col_x, ms_col_w = right_area_x, right_area_w
+            hol_col_x, hol_col_w = right_area_x, right_area_w
 
         left_bottom = legend_y
         if has_legend_content:
@@ -495,13 +518,19 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 placed, group_color_map, area_x, legend_y, left_col_w, config
             )
 
-        right_bottom = legend_y
+        ms_bottom = legend_y
         if has_ms_content:
-            right_bottom = self._draw_milestone_list(
-                milestones, right_col_x, right_col_w, legend_y, config
+            ms_bottom = self._draw_milestone_list(
+                milestones, ms_col_x, ms_col_w, legend_y, config
             )
 
-        rendered_bottom = max(left_bottom, right_bottom)
+        holiday_bottom = legend_y
+        if has_holiday_content:
+            holiday_bottom = self._draw_holiday_list(
+                holiday_entries, hol_col_x, hol_col_w, legend_y, config, db
+            )
+
+        rendered_bottom = max(left_bottom, ms_bottom, holiday_bottom)
 
         # Right-side legend entries — stacked below legend_y, right-aligned to the
         # diagram edge.  Each entry advances next_right_y by one milestone row height.
@@ -569,6 +598,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         _band_text_style = config.get_text_style("ec-label")
         text_color = str(_band_text_style.color or "black")
         text_opacity = float(_band_text_style.opacity)
+        _sep_style = config.get_line_style("ec-separator")
         _events: list[Event] = events or []
 
         # Per-day non-workday classes — used for date/dow band cells.
@@ -604,7 +634,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 self._draw_icon_band_row(day_cells, row_y, band_row_h, icon_h, fill, css_class="ec-band-cell")
                 self._draw_line(
                     area_x, row_y + band_row_h, area_x + area_w, row_y + band_row_h,
-                    stroke="#cccccc", stroke_width=0.5,
+                    stroke=_sep_style.color,
+                    stroke_width=_sep_style.width,
+                    stroke_opacity=_sep_style.opacity,
+                    stroke_dasharray=_sep_style.dasharray,
                     css_class="ec-separator",
                 )
                 continue
@@ -671,6 +704,19 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         css_class="ec-band-cell",
                     )
 
+                # Vertical divider at the left edge of every segment after the
+                # first — gives one stroke per cell boundary (N-1 dividers for
+                # N segments), inheriting the ec-separator line style.
+                if seg_idx > 0:
+                    self._draw_line(
+                        x1, row_y, x1, row_y + band_row_h,
+                        stroke=_sep_style.color,
+                        stroke_width=_sep_style.width,
+                        stroke_opacity=_sep_style.opacity,
+                        stroke_dasharray=_sep_style.dasharray,
+                        css_class="ec-separator",
+                    )
+
                 if _nwd_icon_result:
                     _icon_name, _icon_color = _nwd_icon_result
                     _icon_size = band_row_h * 0.65
@@ -719,7 +765,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
             sep_y = row_y + band_row_h
             self._draw_line(
                 area_x, sep_y, area_x + area_w, sep_y,
-                stroke="#cccccc", stroke_width=0.5,
+                stroke=_sep_style.color,
+                stroke_width=_sep_style.width,
+                stroke_opacity=_sep_style.opacity,
+                stroke_dasharray=_sep_style.dasharray,
                 css_class="ec-separator",
             )
 
@@ -1010,6 +1059,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
         _legend_text_style = config.get_text_style("ec-legend-text")
         label_color = str(_legend_text_style.color or "#595959")
         label_opacity = float(_legend_text_style.opacity)
+
+        include_notes = bool(getattr(config, "include_notes", False))
+        _legend_notes_style = config.get_text_style("ec-legend-notes")
+        notes_font_name = self._resolve_font(
+            getattr(config, "compactplan_notes_text_font_name", None)
+            or getattr(_legend_notes_style, "font", None),
+            config,
+            italic=True,
+        )
+        notes_font_size = float(
+            getattr(config, "compactplan_notes_text_font_size", None)
+            or getattr(_legend_notes_style, "size", None)
+            or font_size
+        )
+        notes_color = str(_legend_notes_style.color or label_color)
+        notes_opacity = float(_legend_notes_style.opacity)
+
         swatch_w = float(config.compactplan_legend_swatch_width)
         swatch_text_gap = 5.0
         row_h = float(config.compactplan_legend_row_height)
@@ -1121,13 +1187,40 @@ class CompactPlanRenderer(BaseSVGRenderer):
                             css_class="ec-legend-icon",
                         )
 
-                    self._draw_text(
-                        sub_x + text_offset, cur_y, task_name,
-                        font_name, font_size,
-                        fill=label_color, fill_opacity=label_opacity,
-                        max_width=text_max_w,
-                        css_class="ec-legend-text",
-                    )
+                    note_str = ""
+                    if include_notes:
+                        raw_note = str(getattr(p.event, "notes", "") or "").strip()
+                        if raw_note:
+                            note_str = raw_note
+
+                    if note_str:
+                        try:
+                            name_font_path = get_font_path(font_name)
+                            name_w = string_width(task_name + " ", name_font_path, font_size)
+                        except Exception:
+                            name_w = 0.0
+                        self._draw_text(
+                            sub_x + text_offset, cur_y, task_name,
+                            font_name, font_size,
+                            fill=label_color, fill_opacity=label_opacity,
+                            css_class="ec-legend-text",
+                        )
+                        notes_max_w = max(0.0, text_max_w - name_w)
+                        self._draw_text(
+                            sub_x + text_offset + name_w, cur_y, note_str,
+                            notes_font_name, notes_font_size,
+                            fill=notes_color, fill_opacity=notes_opacity,
+                            max_width=notes_max_w,
+                            css_class="ec-legend-notes",
+                        )
+                    else:
+                        self._draw_text(
+                            sub_x + text_offset, cur_y, task_name,
+                            font_name, font_size,
+                            fill=label_color, fill_opacity=label_opacity,
+                            max_width=text_max_w,
+                            css_class="ec-legend-text",
+                        )
                     cur_y += row_h
 
             bottom_y = max(bottom_y, cur_y)
@@ -1185,6 +1278,131 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 font_name, font_size,
                 fill=name_color, fill_opacity=opacity,
                 max_width=area_w - date_col_w,
+                css_class="ec-event-name",
+            )
+            cur_y += row_h
+
+        return cur_y
+
+    def _collect_holiday_entries(
+        self,
+        visible_days: list[date],
+        config: "CalendarConfig",
+        db: "CalendarDB",
+    ) -> list[tuple[date, str, str]]:
+        """Collect (date, icon_name, display_name) for federal holidays and
+        company special days that fall on *visible_days*.
+
+        Days excluded by the active ``weekend_style`` (e.g. weekends in
+        workweek-only mode) are skipped so the legend never lists a holiday
+        that isn't actually rendered on the timeline.
+
+        Sorted by date, then name for stable ordering when multiple events fall
+        on the same day.
+        """
+        country = getattr(config, "country", None)
+        entries: list[tuple[date, str, str]] = []
+        for cursor in visible_days:
+            daykey = cursor.strftime("%Y%m%d")
+            try:
+                hols = db.get_holidays_for_date(daykey, country) or []
+            except Exception:
+                hols = []
+            for h in hols:
+                name = (
+                    h.get("displayname")
+                    or h.get("name")
+                    or ""
+                )
+                if not name:
+                    continue
+                icon = (
+                    h.get("icon")
+                    or h.get("displayicon")
+                    or h.get("displayiconid")
+                    or ""
+                )
+                entries.append((cursor, str(icon).strip(), str(name).strip()))
+
+            try:
+                specials = db.get_special_days_for_date(daykey) or []
+            except Exception:
+                specials = []
+            for s in specials:
+                name = (s.get("name") or s.get("displayname") or "").strip()
+                if not name:
+                    continue
+                icon = str(s.get("icon") or "").strip()
+                entries.append((cursor, icon, name))
+
+        entries.sort(key=lambda e: (e[0], e[2].lower()))
+        return entries
+
+    def _draw_holiday_list(
+        self,
+        entries: list[tuple[date, str, str]],
+        area_x: float,
+        area_w: float,
+        list_y: float,
+        config: "CalendarConfig",
+        db: "CalendarDB",
+    ) -> float:
+        """Draw the date-sorted holiday / special-day roster.
+
+        Columns: ``date | icon | name``.  Returns the actual bottom Y of the
+        last drawn row so the surrounding layout can compute the rendered
+        extent.
+        """
+        if not entries:
+            return list_y
+
+        font_name = self._resolve_font(
+            getattr(config, "compactplan_name_text_font_name", None), config
+        )
+        font_size = float(
+            getattr(config, "compactplan_name_text_font_size", None) or 8.0
+        )
+        _date_style = config.get_text_style("ec-event-date")
+        date_color = str(_date_style.color or "#595959")
+        _name_style = config.get_text_style("ec-event-name")
+        name_color = str(_name_style.color or "#595959")
+        opacity = float(_name_style.opacity)
+
+        row_h = float(config.compactplan_holiday_list_row_height)
+        date_col_w = float(config.compactplan_holiday_list_date_col_width)
+        icon_col_w = float(config.compactplan_holiday_list_icon_col_width)
+        icon_h = float(config.compactplan_holiday_list_icon_height)
+        date_fmt = str(config.compactplan_holiday_list_date_format or "M/D")
+
+        cur_y = list_y + row_h
+        for d, icon_name, name in entries:
+            date_str = format_arrow_date(arrow.get(d), date_fmt)
+            self._draw_text(
+                area_x, cur_y, date_str,
+                font_name, font_size,
+                fill=date_color, fill_opacity=opacity,
+                css_class="ec-event-date",
+            )
+
+            if icon_name:
+                icon_baseline = cur_y - font_size * 0.35 + icon_h * 0.3
+                self._draw_icon_svg(
+                    icon_name,
+                    area_x + date_col_w + icon_col_w / 2.0,
+                    icon_baseline,
+                    icon_h,
+                    anchor="middle",
+                    color=name_color,
+                    css_class="ec-legend-icon",
+                )
+
+            name_x = area_x + date_col_w + icon_col_w
+            name_max_w = max(0.0, area_w - date_col_w - icon_col_w)
+            self._draw_text(
+                name_x, cur_y, name,
+                font_name, font_size,
+                fill=name_color, fill_opacity=opacity,
+                max_width=name_max_w,
                 css_class="ec-event-name",
             )
             cur_y += row_h
