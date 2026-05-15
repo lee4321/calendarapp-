@@ -448,7 +448,12 @@ VALID_SECTIONS = frozenset(
 )
 
 # Sections that indicate new unified theme format
-_NEW_FORMAT_SECTIONS = frozenset({"text_styles", "element_styles"})
+# Unified-format themes ship `style_rules` instead of the legacy
+# `text_styles` / `element_styles` sections.  Phase 3 path (b) made
+# `style_rules` the single source of truth — `text_styles` /
+# `element_styles` are no longer produced by the decompiler (which was
+# removed) and won't appear in any post-migration theme YAML.
+_NEW_FORMAT_SECTIONS = frozenset({"style_rules"})
 
 # Keys that reference font names (for validation)
 FONT_KEYS = frozenset({"font_family", "font_name", "number_font", "notes_font"})
@@ -523,23 +528,6 @@ class ThemeEngine:
                 self._theme_data = yaml.safe_load(f) or {}
         except yaml.YAMLError as e:
             raise ThemeError(f"Invalid YAML in theme file '{path}': {e}")
-
-        # Preserve the original (pre-decompile) theme data so that apply()
-        # can hand a clean unified-schema dict to config.unified_theme.
-        # parse_theme — which rejects the synthesized legacy sections the
-        # decompiler is about to add.
-        import copy
-        self._unified_theme_data = copy.deepcopy(self._theme_data)
-
-        # Unified-schema themes contain style_rules but no text_styles /
-        # box_styles / line_styles / icon_styles / element_styles.
-        # The legacy parser still expects those sections, so synthesize
-        # them in place from the style_rules `define:` and element-binding
-        # entries.  See config/style_rules_decompiler.py.  This bridge
-        # disappears once the renderer is migrated to query UnifiedTheme
-        # directly (design §7.1).
-        from config.style_rules_decompiler import decompile_style_rules
-        decompile_style_rules(self._theme_data)
 
         meta = self._theme_data.get("theme", {})
         self._theme_name = (
@@ -941,31 +929,28 @@ class ThemeEngine:
         # this expands the references into those flat lists.
         self._apply_band_placements(config)
 
-        # Build unified ThemeStyles if the theme uses the new format
-        if self._is_new_format():
-            self._build_theme_styles(config)
-
         # Synthesize box:day rules from colors.federal_holiday /
         # colors.company_holiday before parsing — see method docstring.
         self._synthesize_holiday_box_day_rules()
 
-        # Build the parsed UnifiedTheme for the post-migration runtime API
-        # (design §6).  This is parallel to theme_styles for now — renderer
-        # consumers gradually migrate from CalendarConfig styling fields to
-        # config.theme.resolve_token() / .find_rules(); the decompiler bridge
-        # keeps the legacy fields populated in the meantime.  parse_theme()
-        # rejects the synthesized legacy sections the decompiler added in
-        # load(), so we hand it the pre-decompile snapshot.
+        # Build the parsed UnifiedTheme (design §6) — single source of
+        # truth for both the runtime API (resolve_token / find_rules) and
+        # the ThemeStyles object (now derived from theme.rules in
+        # _build_theme_styles, post-Phase-3-path-b).
         try:
             from config.unified_theme import parse_theme  # local import to avoid cycles
-            config.theme = parse_theme(self._unified_theme_data)
+            config.theme = parse_theme(self._theme_data)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Theme '%s' could not be parsed as a unified theme: %s. "
-                "Legacy code paths still work via theme_styles.",
+                "ThemeStyles will be empty.",
                 self._theme_name, exc,
             )
             config.theme = None
+
+        # Build ThemeStyles from the parsed UnifiedTheme.
+        if self._is_new_format():
+            self._build_theme_styles(config)
 
         # Phase 2 wave 2: inject heuristic-derived size tokens so renderers
         # can drop their `tk.get("size") or config.<legacy>` fallback chain.
@@ -1009,7 +994,7 @@ class ThemeEngine:
         record itself remain handled by the legacy chains in
         ``mini/day_styles.py`` — those are per-row data, not theme style.
         """
-        data = self._unified_theme_data
+        data = self._theme_data
         if not isinstance(data, dict):
             return
         colors = data.get("colors")
@@ -1219,26 +1204,30 @@ class ThemeEngine:
         return bool(self._theme_data.keys() & _NEW_FORMAT_SECTIONS)
 
     def _build_theme_styles(self, config: "CalendarConfig") -> None:
-        """Parse new-format YAML sections and build ThemeStyles on config."""
-        from config.styles import (
-            TextStyle,
-            BoxStyle,
-            LineStyle,
-            IconStyle,
-            ElementBinding,
-            ThemeStyles,
-        )
+        """Build ThemeStyles directly from the parsed UnifiedTheme.
+
+        Replaces the legacy `_parse_text_styles` / `_parse_box_styles` /
+        `_parse_line_styles` / `_parse_icon_styles` / `_parse_element_bindings`
+        path that consumed the decompiled `self._theme_data["text_styles"]`
+        etc. sections.  The decompiler bridge now exists only as a no-op
+        compatibility shim during load (kept until any direct legacy-section
+        readers are confirmed retired).
+
+        Requires `config.theme` to be already populated (UnifiedTheme).
+        """
+        from config.styles import ThemeStyles
         from renderers.css_generator import generate_css
 
-        # Parse named style token dictionaries
-        text_styles = self._parse_text_styles()
-        box_styles = self._parse_box_styles()
-        line_styles = self._parse_line_styles()
-        icon_styles = self._parse_icon_styles()
+        theme = getattr(config, "theme", None)
+        if theme is None:
+            return
 
-        # Parse element bindings
-        element_bindings = self._parse_element_bindings(
-            text_styles, box_styles, line_styles, icon_styles
+        text_styles = self._parse_text_styles_unified(theme)
+        box_styles = self._parse_box_styles_unified(theme)
+        line_styles = self._parse_line_styles_unified(theme)
+        icon_styles = self._parse_icon_styles_unified(theme)
+        element_bindings = self._parse_element_bindings_unified(
+            theme, text_styles, box_styles, line_styles, icon_styles
         )
 
         theme_styles = ThemeStyles(
@@ -1248,170 +1237,201 @@ class ThemeEngine:
             icon_styles=icon_styles,
             element_bindings=element_bindings,
         )
-
-        # Generate and attach CSS
         theme_styles.css = generate_css(theme_styles)
         config.theme_styles = theme_styles
 
-    def _parse_text_styles(self) -> dict:
-        """Parse text_styles: section into {name: TextStyle} dict."""
+    @staticmethod
+    def _parse_text_styles_unified(theme) -> dict:
+        """Build {name: TextStyle} from `define text:<name>` rules."""
         from config.styles import TextStyle
 
-        raw = self._theme_data.get("text_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: text_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "text" or not rule.as_name:
                 continue
-            size_rules = props.get("size_rules", ())
-            if isinstance(size_rules, list):
-                size_rules = tuple(size_rules)
-            else:
-                size_rules = ()
-            result[name] = TextStyle(
-                font=props.get("font", "RobotoCondensed-Light"),
-                size=float(props.get("size", 8.0)),
-                color=str(props.get("color", "#333333")),
-                opacity=float(props.get("opacity", 1.0)),
-                alignment=str(props.get("alignment", "start")),
-                size_rules=size_rules,
+            style = rule.style or {}
+            try:
+                size = float(style.get("size", 8.0))
+            except (TypeError, ValueError):
+                size = 8.0
+            try:
+                opacity = float(style.get("opacity", 1.0))
+            except (TypeError, ValueError):
+                opacity = 1.0
+            result[rule.as_name] = TextStyle(
+                font=str(style.get("font", "RobotoCondensed-Light")),
+                size=size,
+                color=str(style.get("color", "#333333")),
+                opacity=opacity,
+                alignment=str(style.get("alignment", "start")),
+                # size_rules are conditional rules, not part of the define;
+                # they apply via UnifiedTheme.resolve_token().  TextStyle's
+                # size_rules field is now informational/unused in the
+                # post-Phase-1 token path.
+                size_rules=(),
             )
         return result
 
-    def _parse_box_styles(self) -> dict:
-        """Parse box_styles: section into {name: BoxStyle} dict."""
+    @staticmethod
+    def _parse_box_styles_unified(theme) -> dict:
+        """Build {name: BoxStyle} from `define box:<name>` rules.
+
+        Reads the unified-form keys (`fill`, `stroke`, `dasharray`) directly
+        — no decompiler-rename round-trip.
+        """
         from config.styles import BoxStyle
 
-        raw = self._theme_data.get("box_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: box_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "box" or not rule.as_name:
                 continue
-            fill_colors = props.get("fill_colors")
-            if isinstance(fill_colors, list):
-                fill_colors = tuple(fill_colors)
+            style = rule.style or {}
+            fc = style.get("fill_colors")
+            if isinstance(fc, list):
+                fill_colors = tuple(fc)
             else:
                 fill_colors = None
-            result[name] = BoxStyle(
-                fill=str(props.get("fill", "white")),
-                fill_opacity=float(props.get("fill_opacity", 1.0)),
-                stroke=props.get("stroke"),
-                stroke_width=float(props.get("stroke_width", 0.5)),
-                stroke_opacity=float(props.get("stroke_opacity", 1.0)),
-                stroke_dasharray=props.get("stroke_dasharray"),
-                fill_palette=props.get("fill_palette"),
+            try:
+                fill_opacity = float(style.get("fill_opacity", 1.0))
+            except (TypeError, ValueError):
+                fill_opacity = 1.0
+            try:
+                stroke_width = float(style.get("stroke_width", 0.5))
+            except (TypeError, ValueError):
+                stroke_width = 0.5
+            try:
+                stroke_opacity = float(style.get("stroke_opacity", 1.0))
+            except (TypeError, ValueError):
+                stroke_opacity = 1.0
+            result[rule.as_name] = BoxStyle(
+                fill=str(style.get("fill", "white")),
+                fill_opacity=fill_opacity,
+                stroke=style.get("stroke"),
+                stroke_width=stroke_width,
+                stroke_opacity=stroke_opacity,
+                stroke_dasharray=style.get("dasharray"),
+                fill_palette=style.get("fill_palette"),
                 fill_colors=fill_colors,
             )
         return result
 
-    def _parse_line_styles(self) -> dict:
-        """Parse line_styles: section into {name: LineStyle} dict."""
+    @staticmethod
+    def _parse_line_styles_unified(theme) -> dict:
+        """Build {name: LineStyle} from `define line:<name>` rules."""
         from config.styles import LineStyle
 
-        raw = self._theme_data.get("line_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: line_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "line" or not rule.as_name:
                 continue
-            result[name] = LineStyle(
-                color=str(props.get("color", "#CCCCCC")),
-                width=float(props.get("width", 0.5)),
-                opacity=float(props.get("opacity", 1.0)),
-                dasharray=props.get("dasharray"),
+            style = rule.style or {}
+            try:
+                width = float(style.get("width", 0.5))
+            except (TypeError, ValueError):
+                width = 0.5
+            try:
+                opacity = float(style.get("opacity", 1.0))
+            except (TypeError, ValueError):
+                opacity = 1.0
+            result[rule.as_name] = LineStyle(
+                color=str(style.get("color", "#CCCCCC")),
+                width=width,
+                opacity=opacity,
+                dasharray=style.get("dasharray"),
             )
         return result
 
-    def _parse_icon_styles(self) -> dict:
-        """Parse icon_styles: or icons: section into {name: IconStyle} dict."""
+    @staticmethod
+    def _parse_icon_styles_unified(theme) -> dict:
+        """Build {name: IconStyle} from `define icon:<name>` rules."""
         from config.styles import IconStyle
 
-        # Try icon_styles first, fall back to icons
-        raw = self._theme_data.get("icon_styles") or self._theme_data.get("icons", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "icon" or not rule.as_name:
                 continue
-            result[name] = IconStyle(
-                color=str(props.get("color", "#333333")),
-                size=float(props.get("size", 10.0)),
-                icon=props.get("icon"),
+            style = rule.style or {}
+            try:
+                size = float(style.get("size", 10.0))
+            except (TypeError, ValueError):
+                size = 10.0
+            result[rule.as_name] = IconStyle(
+                color=str(style.get("color", "#333333")),
+                size=size,
+                icon=style.get("icon"),
             )
         return result
 
-    def _parse_element_bindings(
-        self, text_styles: dict, box_styles: dict,
-        line_styles: dict, icon_styles: dict,
+    # ec-class binding kind → name lookup.  Mirrors the legacy element_styles
+    # `<kind>_style: <name>` shape.
+    _BIND_KIND_TO_FIELD: dict[str, str] = {
+        "text": "text_style",
+        "box": "box_style",
+        "line": "line_style",
+        "icon": "icon_style",
+    }
+
+    @classmethod
+    def _parse_element_bindings_unified(
+        cls,
+        theme,
+        text_styles: dict,
+        box_styles: dict,
+        line_styles: dict,
+        icon_styles: dict,
     ) -> dict:
-        """Parse element_styles: section into {class_name: ElementBinding} dict."""
+        """Build {class_name: ElementBinding} from `apply_to: element` rules.
+
+        Each rule's ``select.element`` names the ec-class(es) (string or list)
+        and ``style.use`` references the kind:name token to bind.  Other
+        ``style`` keys become per-element overrides on the binding (currently
+        only ``color`` is supported on the ElementBinding dataclass).
+        """
         from config.styles import ElementBinding
 
-        raw = self._theme_data.get("element_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-
-        result = {}
-        for class_name, binding_def in raw.items():
-            if not isinstance(binding_def, dict):
-                logger.warning("Theme: element_styles.%s must be a dict", class_name)
+        kind_to_dict = {
+            "text": text_styles,
+            "box": box_styles,
+            "line": line_styles,
+            "icon": icon_styles,
+        }
+        result: dict = {}
+        for rule in theme.rules:
+            if "element" not in rule.apply_to:
+                continue
+            select = rule.select or {}
+            element = select.get("element")
+            style = rule.style or {}
+            use = style.get("use")
+            if not isinstance(use, str) or ":" not in use:
+                continue
+            kind, _, token_name = use.partition(":")
+            field_name = cls._BIND_KIND_TO_FIELD.get(kind)
+            if field_name is None:
+                continue
+            kind_dict = kind_to_dict.get(kind, {})
+            if token_name not in kind_dict:
+                logger.warning(
+                    "Theme: element binding references unknown %s:%s",
+                    kind, token_name,
+                )
                 continue
 
-            binding = ElementBinding()
+            if isinstance(element, str):
+                targets = [element]
+            elif isinstance(element, list):
+                targets = [e for e in element if isinstance(e, str)]
+            else:
+                continue
 
-            if "text_style" in binding_def:
-                style_name = binding_def["text_style"]
-                if style_name in text_styles:
-                    binding.text_style = text_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown text_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "box_style" in binding_def:
-                style_name = binding_def["box_style"]
-                if style_name in box_styles:
-                    binding.box_style = box_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown box_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "line_style" in binding_def:
-                style_name = binding_def["line_style"]
-                if style_name in line_styles:
-                    binding.line_style = line_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown line_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "icon_style" in binding_def:
-                style_name = binding_def["icon_style"]
-                if style_name in icon_styles:
-                    binding.icon_style = icon_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown icon_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "color" in binding_def:
-                binding.color = str(binding_def["color"])
-
-            result[class_name] = binding
-
+            for ec in targets:
+                if ec in result:
+                    continue
+                binding = ElementBinding()
+                setattr(binding, field_name, kind_dict[token_name])
+                if "color" in style:
+                    binding.color = str(style["color"])
+                result[ec] = binding
         return result
 
     # ── Rule-list support ─────────────────────────────────────────────────────

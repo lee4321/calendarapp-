@@ -656,9 +656,7 @@ format strings, palette references, fiscal semantics, the loaded
 
 ---
 
-## Phase 3 — delete the decompiler bridge
-
-**Status: blocked on a CSS-generator / element-binding rewrite.**
+## Phase 3 — delete the decompiler bridge — DONE (path b)
 
 The decompiler bridge is alive because `theme_styles` (the
 ThemeStyles object decompiler+parsers produce) has TWO heavy consumers
@@ -693,29 +691,43 @@ Both consumers can be retired by either:
 Option (b) is the smaller refactor (~5 parsers × ~25 lines each), but
 both are 2-4 hour undertakings and out of scope for this session.
 
-### Done in this session (small win)
+### Done
 
 - [x] **Strip dead `AxisStyle`** — `_parse_axis_style`, the `axis`
-      field on `ThemeStyles`, and the `AxisStyle` class itself were
-      defined but had zero consumers (renderers moved off it during the
-      unified-theme migration).  Removed from `config/styles.py`,
-      `config/theme_engine.py::_build_theme_styles`, and the docstring
-      reference.
-
-### Pending
-
-- [ ] **Delete the decompiler call** in `ThemeEngine.load()` —
-      blocked on option (a) or (b) above.
-- [ ] **Delete `config/style_rules_decompiler.py`** and
-      `tests/test_style_rules_decompiler.py` — same blocker.
-- [ ] **Delete the legacy-section parsers** from `theme_engine.py`
-      (`_parse_text_styles` etc.) — same blocker; option (b) replaces
-      them in-place.
-- [ ] **Delete `_unified_theme_data` and the copy.deepcopy** in
-      `ThemeEngine.load()` — same blocker; the snapshot is consumed by
-      `parse_theme()` and `_synthesize_holiday_box_day_rules` (Open
-      Issue §2's mechanism), both of which need an alternate input
-      source if `self._theme_data` is the post-decompile form.
+      field on `ThemeStyles`, and the `AxisStyle` class itself
+      removed (zero consumers post-Phase-1 timeline migration).
+- [x] **Rewrite the 5 parsers to consume UnifiedTheme directly.**
+      `_parse_text_styles_unified` / `_parse_box_styles_unified` /
+      `_parse_line_styles_unified` / `_parse_icon_styles_unified` /
+      `_parse_element_bindings_unified` walk `theme.rules` filtered by
+      `define == "<kind>"` (or `"element" in apply_to`) and build the
+      corresponding TextStyle / BoxStyle / LineStyle / IconStyle /
+      ElementBinding objects.  No more decompile-then-reparse round
+      trip.  Side-effect benefit: the legacy box-styles parser was
+      silently broken (read `props.get("fill")` after the decompiler
+      had renamed it to `fill_color`, so every box had default
+      `fill: white`); the unified parser reads the actual `fill` key
+      and produces correct CSS.  Visible output is unchanged because
+      every `<rect class="ec-cell">` carries an inline `style="..."`
+      attribute that overrides the CSS rule (per CSS specificity).
+- [x] **Reorder `apply()`** so `parse_theme()` runs before
+      `_build_theme_styles(config)` — the latter now reads from
+      `config.theme`.
+- [x] **`_NEW_FORMAT_SECTIONS`** flipped to check for `"style_rules"`
+      (was `"text_styles"` / `"element_styles"` — both decompiler
+      outputs that no theme YAML actually ships).
+- [x] **Delete the decompiler call** in `ThemeEngine.load()`.
+- [x] **Delete `config/style_rules_decompiler.py`** (183 lines) and
+      `tests/test_style_rules_decompiler.py` (11 tests).
+- [x] **Delete the legacy-section parsers** (`_parse_text_styles` /
+      `_parse_box_styles` / `_parse_line_styles` / `_parse_icon_styles` /
+      `_parse_element_bindings`) — replaced by the `_unified` variants
+      above.
+- [x] **Delete `_unified_theme_data` and the `copy.deepcopy`** in
+      `ThemeEngine.load()` — `_theme_data` is now the unified form
+      end-to-end (no decompile mutation), so the snapshot was
+      redundant.  All `self._unified_theme_data` references collapsed
+      to `self._theme_data`.
 
 ---
 
@@ -760,7 +772,7 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | Phase 2 wave 2 (inject heuristic tokens) | 1 hour | **done** (commits `c1c4f171` + setfontsizes call-site + bootstrap) |
 | Phase 2 wave 3 (strip fallbacks) | 3-5 hours | **done** (~20 sites + lazy-populate guards in weekly/mini) |
 | Phase 3 partial (strip dead AxisStyle) | 30 minutes | **done** |
-| Phase 3 (delete decompiler bridge) | 4-6 hours | blocked on get_*_style migration or parser rewrite — see Phase 3 section |
+| Phase 3 (delete decompiler bridge — path b) | 2 hours | **done** |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
 | **Remaining total** | **~25-35 hours** | |
 
