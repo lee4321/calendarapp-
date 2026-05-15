@@ -26,6 +26,7 @@ from config.config import (
 if TYPE_CHECKING:
     from config.config import CalendarConfig
 
+
 # Mapping from icon set name (CLI value) → list of 31 icon name strings.
 ICON_SETS: dict[str, list[str]] = {
     "squares": squares,
@@ -60,28 +61,21 @@ class MiniIconRenderer(MiniCalendarRenderer):
             return icon_list[day_num - 1]
         return None
 
-    def _draw_day_cell(
+    def _draw_day_cell_background(
         self,
         config: "CalendarConfig",
         x: float,
         y: float,
         w: float,
         h: float,
-        day_num: int,
         style: DayStyle,
     ) -> None:
-        """
-        Draw a day cell using an icon instead of a day-number text glyph.
+        """Draw the layers that belong *under* duration bars.
 
-        Rendering order (back to front):
-        1. Background shade
-        2. SVG pattern decorations
-        3. Legacy hash pattern
-        4. Grid line (if enabled)
-        5. Circle (if milestone)
-        6. Icon (cell-height based size; falls back to text if icon missing)
+        Order (back to front): shade → SVG patterns → legacy hash → grid line.
         """
-        default_color = config.theme_mini_day_color or config.mini_day_color
+        ctx = {"visualizer": "mini", "papersize": config.papersize}
+        grid_line = self._resolve_token(config, "line:grid", ctx)
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -104,18 +98,52 @@ class MiniIconRenderer(MiniCalendarRenderer):
 
         # 4. Grid lines
         if config.mini_grid_lines:
-            grid_stroke_width = config.mini_grid_line_width
+            grid_stroke_width = float(
+                grid_line.get("width") if grid_line.get("width") is not None
+                else config.mini_grid_line_width
+            )
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset, y + inset,
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
-                stroke=config.mini_grid_line_color,
+                stroke=grid_line.get("color") or config.mini_grid_line_color,
                 stroke_width=grid_stroke_width,
-                stroke_opacity=config.mini_grid_line_opacity,
-                stroke_dasharray=config.mini_grid_line_dasharray or None,
+                stroke_opacity=float(
+                    grid_line.get("opacity") if grid_line.get("opacity") is not None
+                    else config.mini_grid_line_opacity
+                ),
+                stroke_dasharray=(
+                    grid_line.get("dasharray")
+                    or config.mini_grid_line_dasharray
+                    or None
+                ),
             )
+
+    def _draw_day_cell_foreground(
+        self,
+        config: "CalendarConfig",
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        day_num: int,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *over* duration bars.
+
+        Order: milestone circle → day-number icon (with text fallback).
+        """
+        ctx = {"visualizer": "mini", "papersize": config.papersize}
+        day_text = self._resolve_token(config, "text:day_number", ctx)
+        milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
+
+        default_color = (
+            day_text.get("color")
+            or config.theme_mini_day_color
+            or config.mini_day_color
+        )
 
         text_color = style.text_color or default_color
         cx = x + w / 2
@@ -128,8 +156,16 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 cx, cy, radius,
                 stroke=style.circle_color,
                 fill=style.circle_fill or "none",
-                stroke_width=config.mini_milestone_stroke_width,
-                stroke_opacity=config.mini_milestone_stroke_opacity,
+                stroke_width=float(
+                    milestone_icon.get("stroke_width")
+                    if milestone_icon.get("stroke_width") is not None
+                    else config.mini_milestone_stroke_width
+                ),
+                stroke_opacity=float(
+                    milestone_icon.get("stroke_opacity")
+                    if milestone_icon.get("stroke_opacity") is not None
+                    else config.mini_milestone_stroke_opacity
+                ),
             )
 
         # 6. Determine which icon to draw.
@@ -157,14 +193,22 @@ class MiniIconRenderer(MiniCalendarRenderer):
             icon_size,
             anchor="middle",
             color=text_color,
+            fallback_name=config.default_missing_icon,
+            fallback_color=text_color,
         )
 
         # Fallback: if the icon was not found in the DB, render the day number
         # as plain text so the calendar is still usable.
         if not drawn:
             display_text = self._format_day_number(day_num, config)
-            font = config.mini_cell_bold_font if style.bold else config.mini_cell_font
-            font_size = config.mini_cell_font_size
+            font = (
+                config.mini_cell_bold_font if style.bold
+                else (day_text.get("font") or config.mini_cell_font)
+            )
+            font_size = float(
+                day_text.get("size") if day_text.get("size") is not None
+                else config.mini_cell_font_size
+            )
             text_y = cy + (font_size / 3)
             self._draw_text(
                 cx, text_y, display_text,

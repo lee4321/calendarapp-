@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import yaml
 
-from tools.migrate_theme import migrate_text
+from tools.migrate_theme_v1_to_v2 import migrate_text
 
 
 SOURCE = """\

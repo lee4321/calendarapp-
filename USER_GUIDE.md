@@ -337,148 +337,215 @@ In weekly, day boxes are drawn first, then events and durations are placed into 
 
 ## Theme System
 
-Themes control all visual styling of SVG output. Two formats are supported:
+Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a specific surface (an `ec-*` element class, a content surface like `box:day` or `box:duration`, or a lane assignment). Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
 
-- **Unified format (v2.0)**: Token-based style definitions with CSS class names on every SVG element. All 9 bundled themes (`default`, `corporate`, `dark`, `vibrant`, `accent`, `leemini`, `Julia`, `TJX`, `minimal`) use this format. `SAMPLE.yaml` ships as a fully annotated reference template — copy it as a starting point for new themes.
-- **Legacy format (v1.0)**: Flat per-visualizer fields. Still supported for backward compatibility.
+There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error pointing at `tools/migrate_theme.py`. Run the migrator once on any existing theme:
 
-The theme engine auto-detects the format based on the presence of `text_styles` or `element_styles` top-level sections.
+```bash
+uv run python tools/migrate_theme.py --in-place path/to/theme.yaml
+```
+
+The 17 bundled themes (`default`, `corporate`, `dark`, `vibrant`, `accent`, `leemini`, `Julia`, `TJX`, `TJX*`, `minimal`, `basic`, `SAMPLE`) are already in the unified schema. Two reference themes serve as anchors:
+
+- **`basic.yaml`** — the minimum viable theme. One value per required key, deliberately plain styling (Roboto-Regular, black on white, no patterns). Copy it as a starting point for new themes.
+- **`SAMPLE.yaml`** — a complete annotated reference. Every required key is set; optional features (content rules for holidays/sprints/priorities, milestone halos, band alternation, vline patterns, swimlane fills, lane routing) appear as annotated examples.
 
 ### Unified Theme Format
 
-The unified format defines reusable style tokens and binds them to semantic CSS element classes. Every SVG element gets a `class="ec-..."` attribute and a `<style>` block is injected into each SVG.
-
-#### Theme YAML Structure
+A theme is one YAML document with these top-level sections (alphabetical here; order in the file is conventional but not enforced):
 
 ```yaml
-theme:
-  name: "My Theme"
-  version: "2.0"
-
-text_styles:       # Named text style tokens
-box_styles:        # Named box/rectangle style tokens
-line_styles:       # Named line style tokens
-icon_styles:       # Named icon style tokens
-axis:              # Shared axis definition
-element_styles:    # Flat map: CSS class name -> style token binding
-
-style_rules:       # Conditional visual styling (day_box / event / duration)
-swimlane_rules:    # Blockplan lane routing (first-match-wins)
+theme:           # name, version, description
+base:            # default font_family, default_missing_icon
+layout:          # page margins (numeric points or unit-suffixed values)
+header:          # header text content
+footer:          # footer text content
+events:          # item_placement_order (non-styling)
+durations:       # geometry / placement
+watermark:       # watermark text and rotation
+fiscal:          # label_format, year_offset
+colors:          # palette name references; holiday structural attrs
+weekly:          # weekly format strings + overflow icon name
+mini_calendar:   # mini title_format, layout dims, icon_set name
+mini_details:    # column widths, header text, output_suffix
+text_mini:       # glyph-set declarations
+timeline:        # tick_label_format, geometry, today_date
+compact_plan:    # axis-relative geometry, band references
+blockplan:       # swimlane name list, label_column_ratio, lane policy
+excelheader:     # XLSX-specific config (deliberate exception, see §10.4)
+time_bands:      # shared band catalog (referenced by placement lists)
+style_rules:     # the only styling section
 ```
 
-`style_rules` and `swimlane_rules` are top-level keys that replace the legacy per-visualizer `weekly.day_box.hash_rules`, `mini_calendar.day_box.hash_rules`, and `blockplan.swimlanes[].match` blocks. See [Complex Structures Reference](#complex-structures-reference) for full syntax.
+`style_rules` is the heart of the schema. Every visual decision is one rule. See [Complex Structures Reference](#complex-structures-reference) for the full vocabulary.
 
-#### Text Styles
+#### Style Rules: Token Definitions
 
-Each text style defines font, size, color, opacity, and optional paper-size scaling rules.
+A token defines a named bundle of style properties — a text appearance, a box appearance, a line, or an icon. Use `define:` to introduce one:
 
 ```yaml
-text_styles:
-  heading:
-    font: "Roboto-Bold"
-    size: 10
-    color: "#000000"
-    opacity: 1.0
-    alignment: start       # start | middle | end
-    size_rules:
-      - font_size: 12
-        when: { papersize: ["letter", "ledger"] }
-      - font_size: 8
-        when: { papersize: ["3x5", "5x8"] }
-  body:
-    font: "RobotoCondensed-Light"
-    size: 8
-    color: "#333333"
+style_rules:
+  - name: define text:heading
+    define: text
+    as: heading
+    style:
+      font: Roboto-Bold
+      size: 10
+      color: "#000000"
+
+  - name: define box:cell
+    define: box
+    as: cell
+    style:
+      fill: white
+      fill_opacity: 1.0
+      stroke: "#E0E0E0"
+      stroke_width: 0.25
+      stroke_opacity: 1.0
+
+  - name: define line:grid
+    define: line
+    as: grid
+    style:
+      color: "#CCCCCC"
+      width: 0.5
+      opacity: 1.0
+
+  - name: define icon:event
+    define: icon
+    as: event
+    style:
+      color: "#333333"
+      size: 10
 ```
 
-#### Box Styles
+Once defined, a token is addressable as `<kind>:<name>` — for example `text:heading`, `box:cell`, `line:grid`, `icon:event`. Token names are stable handles used in selectors and bindings.
 
-Box styles control rectangles, cells, and backgrounds. Optional palette cycling for repeating elements.
+#### Style Rules: Paper-Size and Visualizer Overrides
+
+Rules with `apply_to: <kind>:<name>` add conditional layers on top of a definition. Later rules win:
 
 ```yaml
-box_styles:
-  cell:
-    fill: "white"
-    fill_opacity: 1.0
-    stroke: "#E0E0E0"
-    stroke_width: 0.25
-    stroke_opacity: 1.0
-    stroke_dasharray: null
-    fill_palette: "Greys"                    # Named DB palette for color cycling
-    fill_colors: ["#F0F0F0", "#E8E8E8"]     # Inline color list (takes priority)
+style_rules:
+  - name: define text:heading
+    define: text
+    as: heading
+    style: { font: Roboto-Bold, size: 10, color: black }
+
+  - name: text:heading — small paper
+    apply_to: text:heading
+    select: { papersize: [3x5, 5x8] }
+    style: { size: 7 }
+
+  - name: text:heading — weekly visualizer accent
+    apply_to: text:heading
+    select: { visualizer: weekly }
+    style: { color: navy }
 ```
 
-Palette resolution priority: `fill_colors` > `fill_palette` > `fill` (static fallback). The renderer calls `palette[index % len(palette)]` to cycle through colors for repeating instances.
+#### Style Rules: Element Bindings
 
-#### Line Styles
-
-All line elements support color, width, opacity, and dash array.
+`ec-*` CSS classes are bound to tokens by `apply_to: element` rules with `select.element: <ec-name>` and `style.use: <token>`:
 
 ```yaml
-line_styles:
-  grid:
-    color: "#CCCCCC"
-    width: 0.5
-    opacity: 1.0
-    dasharray: null          # e.g. "4,2" for dashed lines
-  today:
-    color: "red"
-    width: 1.5
-    dasharray: "4,2"
+style_rules:
+  - name: bind ec-heading
+    apply_to: element
+    select: { element: ec-heading }
+    style: { use: text:heading }
+
+  - name: bind ec-today-label
+    apply_to: element
+    select: { element: ec-today-label }
+    style: { use: text:label, color: red }   # per-element color override
 ```
 
-#### Icon Styles
+A list-valued `select.element` binds several classes at once. Additional style keys override the referenced token.
+
+#### Style Rules: Content-Driven Styling
+
+Rules with `apply_to:` set to a content surface (`box:day`, `box:event`, `box:duration`, `box:vline`, `box:milestone`, `text:event_name`, etc.) carry selectors that match against the data being rendered: federal holidays, milestones, priorities, task names, percent complete, etc.
 
 ```yaml
-icon_styles:
-  event:
-    color: "#333333"
-    size: 10
-  overflow:
-    icon: "overflow"         # Default icon name
-    color: "red"
+style_rules:
+  - name: federal holidays — day box tint
+    apply_to: box:day
+    select: { federal_holiday: true }
+    style:
+      fill: tomato
+      fill_opacity: 0.10
+      pattern: diagonal-stripes
+      pattern_color: tomato
+      pattern_opacity: 0.12
+
+  - name: sprint durations
+    apply_to: box:duration
+    select:
+      task_name: [Sprint]
+      event_type: duration
+    style:
+      fill: steelblue
+      fill_opacity: 0.5
+
+  - name: critical milestones
+    apply_to: [icon:milestone, text:milestone_label]
+    select: { priority_min: 1 }
+    style:
+      icon: flag
+      color: red
+      size: 14
 ```
 
-#### Axis Definition
+A list-valued `apply_to:` fans the rule out: each style property is routed to every listed target that recognizes it. See [`style_rules` in Complex Structures Reference](#style_rules--unified-visual-styling-rules) for the full grammar.
 
-Shared configuration for timeline/blockplan/compact plan axes.
+#### Style Rules: Lane Routing (Blockplan)
+
+`apply_to: lane` rules assign matched content to a swimlane. First match wins.
 
 ```yaml
-axis:
-  line_style: axis           # Reference to a line_styles name
-  tick:
-    color: "#666666"
-    label_style: caption     # Reference to a text_styles name
-    date_format: "MMM D"
-  today:
-    line_style: today
-    label_color: "red"
-    label_text: "Today"
+style_rules:
+  - name: route engineering tasks
+    apply_to: lane
+    select: { resource_group: [engineering, dev] }
+    style: { swimlane: Engineering }
+
+  - name: catch-all
+    apply_to: lane
+    select: {}
+    style: { swimlane: Other }
 ```
 
-#### Element Styles (Binding Map)
+#### Time Bands: Shared Catalog
 
-A single flat map binds each CSS element class to its style tokens. No per-visualizer overrides; different styling needs require a new theme file.
+Timebands across `blockplan`, `compact_plan`, and `excelheader` reference a single catalog under the top-level `time_bands:` map. Each visualizer's placement list is a list of catalog keys, optionally with inline geometry overrides.
 
 ```yaml
-element_styles:
-  # Text elements
-  ec-heading:        { text_style: heading }
-  ec-label:          { text_style: label }
-  ec-event-name:     { text_style: body }
-  ec-today-label:    { text_style: label, color: "red" }  # Per-element color override
+time_bands:
+  fiscal_quarter:
+    unit: fiscal_quarter
+    label: Fiscal Quarter
+    label_format: "FY{fy2} Q{q}"
+    show_every: 1
+  month:
+    unit: month
+    label: Month
+    date_format: "MMM"
+    show_every: 1
 
-  # Box elements
-  ec-cell:           { box_style: cell }
-  ec-background:     { box_style: default }
+blockplan:
+  top_bands: [fiscal_quarter, month]    # references
+  bottom_bands: []
 
-  # Line elements
-  ec-grid-line:      { line_style: grid }
-  ec-today-line:     { line_style: today }
+compact_plan:
+  bands: [fiscal_quarter, month]
 
-  # Icon elements
-  ec-event-icon:     { icon_style: event }
+excelheader:
+  top_bands: [fiscal_quarter, month]
+  band_fonts:
+    fiscal_quarter: { excel_font_name: "Arial Narrow", excel_font_size: 10 }
 ```
+
+Band styling lives in `style_rules` keyed by `select.band: <catalog_key>`. ExcelHeader's `band_fonts` map and `vertical_lines` list are XLSX-only exceptions that do not flow through `style_rules` (they map to Excel cell formatting, not SVG primitives).
 
 ### CSS Element Catalog
 
@@ -519,9 +586,11 @@ Every SVG element gets a semantic CSS class. These classes appear in the SVG out
 | `ec-duration-bar` | line | Duration span bar/line |
 | `ec-hash-line` | line | Hash pattern line |
 | `ec-strikethrough` | line | Strikethrough line |
-| `ec-milestone-marker` | marker | Milestone indicator |
-| `ec-milestone-flag` | marker | Milestone flag pennant |
-| `ec-duration-marker` | marker | Duration start indicator |
+| `ec-milestone-marker` | icon | Milestone indicator (bound to `icon:milestone`) |
+| `ec-milestone-flag` | icon | Milestone flag pennant (bound to `icon:milestone`) |
+| `ec-duration-marker` | icon | Duration start indicator |
+| `ec-band-label` | text | Time-band segment label |
+| `ec-band-heading-cell` | box | Heading-column cell carrying a band's label |
 | `ec-event-icon` | icon | Event/holiday icon |
 | `ec-duration-icon` | icon | Duration category icon |
 | `ec-overflow-icon` | icon | Overflow indicator |
@@ -533,13 +602,28 @@ Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`,
 
 ### Creating a New Theme
 
-New themes do not need to replicate existing themes. Define only the style tokens and element bindings you need:
+The fastest path is to copy `config/themes/basic.yaml` — the minimum viable theme — and edit. `basic.yaml` ships with every required key set to a plain default, so each line you change is a deliberate styling choice. Recipe:
 
-1. Start with a `theme:` metadata block
-2. Define the `text_styles` you need (typically 3-5 is sufficient)
-3. Define `box_styles`, `line_styles`, `icon_styles` as needed
-4. Create the `element_styles` binding map connecting CSS classes to your style tokens
-5. Add any non-styling configuration sections (blockplan swimlanes, time bands, etc.) as legacy sections
+1. Start with a `theme:` metadata block (name, version, description).
+2. Define the `style_rules` tokens you need with `define:` entries — typically a few `text:` tokens (heading, body, day_number…), one or two `box:` tokens (cell, header), and any `icon:` tokens you reference.
+3. Bind tokens to the `ec-*` element classes that need them via rules of the form:
+
+   ```yaml
+   - apply_to: element
+     select: { element: ec-name }
+     style: { use: text:heading }
+   ```
+
+4. Add content rules that should override the defaults — federal-holiday tinting, high-priority highlighting, sprint hatching — by appending `apply_to: box:day` (or `box:event`, etc.) entries with `select:` predicates.
+5. Add any non-styling configuration you need: format strings under `weekly` / `mini_calendar` / `timeline` / `fiscal`; structural lists under `blockplan.swimlanes` and the shared `time_bands:` catalog; `colors.*_palette` palette names.
+
+Validate before rendering:
+
+```bash
+uv run python tools/validate_theme.py config/themes/mytheme.yaml
+```
+
+The validator parses the YAML, checks every required key per visualizer, and emits a paste-ready snippet (from `basic.yaml`) for anything missing.
 
 ### External CSS Overrides
 
@@ -554,12 +638,6 @@ Since every SVG element has a semantic CSS class, you can apply external CSS to 
 ```
 
 CSS class rules override inline SVG presentational attributes due to CSS specificity.
-
-### Legacy Theme Format
-
-Cascade precedence for a setting: exact section key -> parent section key -> `base` key. CLI flags override theme values.
-
-Valid top-level theme sections (`config/theme_engine.py` `VALID_SECTIONS`): `theme`, `base`, `header`, `footer`, `weekly`, `events`, `durations`, `timeline`, `timeline_events`, `timeline_durations`, `watermark`, `colors`, `mini_calendar`, `fiscal`, `mini_details`, `text_mini`, `layout`, `blockplan`, `excelheader`, `compact_plan`, `text_styles`, `box_styles`, `line_styles`, `icon_styles`, `axis`, `icons`, `patterns`, `element_styles`, `style_rules`, `swimlane_rules`. Unknown top-level keys are reported as warnings during theme load.
 
 ### Theme Resources
 
@@ -590,6 +668,16 @@ Common entry points to remember:
 | Transparent | `"none"` | No fill / transparent |
 
 ### Complete Theme Key Reference
+
+> **Note:** the table below is auto-generated from `CalendarConfig`'s field
+> docstrings and currently reflects the pre-migration field set. The
+> styling-related fields (`*_font_color`, `*_fill_color`, etc.) are no longer
+> read from theme files — they live in `style_rules` token definitions. The
+> next regeneration of this table (after the `CalendarConfig` strip lands)
+> will surface only the non-styling config that remains: format strings,
+> geometry, fiscal semantics, palette references, structural lane and band
+> lists. For the unified styling vocabulary, see
+> [Complex Structures Reference → `style_rules`](#style_rules--unified-visual-styling-rules).
 
 Grouped by visualization type. Within each group, rows are sorted alphabetically by `config field`.
 
@@ -958,69 +1046,78 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 ### `style_rules` — Unified Visual Styling Rules
 
-Top-level theme key that replaces the per-visualizer `weekly.day_box.hash_rules`, `mini_calendar.day_box.hash_rules`, and `blockplan.vertical_lines` lists. Each rule has three parts:
+`style_rules` is the only styling section. Each entry is a rule with three keys:
 
-- **`select:`** — what to match (day context, event criteria, and/or band-segment criteria)
-- **`apply_to:`** — which visual element type(s) to style: `day_box`, `event`, `duration`, `vertical_line`, or `all` (or a list mixing them)
-- **`style:`** — visual properties to apply (fill, pattern, stroke, text, icon, align)
+- **`select:`** — predicates (day context, event criteria, band segment, paper size, visualizer scope). An empty `select` matches everything; otherwise every constraint must be satisfied for the rule to apply.
+- **`apply_to:`** — the target surface(s) to style. Accepts a single target or a list.
+- **`style:`** — properties to set.
 
-Rules are evaluated **in declaration order**. Later rules **layer on top of** earlier ones — a `None` field in a later rule leaves the earlier value intact, so rules compose additively (e.g., a federal holiday rule lays down a red pattern; a "Sprint" rule on the same day adds a steelblue overlay).
+Rules are evaluated **in declaration order**. For token resolution and content surfaces, the **last matching rule wins** — later rules layer on top of earlier ones. For `apply_to: lane`, **first match wins** (lane assignment is a discrete choice, not a layered attribute).
+
+A rule with a `define:` key creates a named token instead of styling a surface; the token becomes referenceable as `<kind>:<name>`.
 
 ```yaml
 style_rules:
 
-  - name: "Federal Holidays"
-    select:
-      federal_holiday: true
-    apply_to: [day_box, event, duration]
+  - name: define text:day_number
+    define: text
+    as: day_number
+    style: { font: Roboto-Bold, size: 11, color: black }
+
+  - name: Federal Holidays
+    apply_to: box:day
+    select: { federal_holiday: true }
     style:
-      fill_color: tomato
+      fill: tomato
       fill_opacity: 0.10
       pattern: diagonal-stripes
       pattern_color: tomato
       pattern_opacity: 0.12
 
-  - name: "Sprint Durations"
+  - name: Sprint Durations
+    apply_to: box:duration
     select:
-      task_name: ["Sprint"]
+      task_name: [Sprint]
       event_type: duration
-    apply_to: duration
     style:
-      fill_color: steelblue
-      stroke_color: white
+      fill: steelblue
+      stroke: white
       stroke_width: 1.0
-      font_color: white
 
-  - name: "Code Freeze Window"
+  - name: Sprint Duration Name
+    apply_to: text:event_name
     select:
-      date: "20190301-20190321"
-    apply_to: [day_box, event, duration]
-    style:
-      fill_color: steelblue
-      fill_opacity: 0.15
-      pattern: diagonal-stripes
-      pattern_color: steelblue
-      pattern_opacity: 0.10
+      task_name: [Sprint]
+      event_type: duration
+    style: { color: white, font: OfficinaSans-Bold }
 
-  - name: "Priority 1"
-    select:
-      priority: 1
-    apply_to: [event, duration]
-    style:
-      stroke_color: crimson
-      stroke_width: 1.5
-      text:
-        event_name:
-          font: OfficinaSans-Bold
-          font_color: crimson
-        duration_name:
-          font: OfficinaSans-Bold
-          font_color: white
+  - name: Priority 1 — box outline
+    apply_to: [box:event, box:duration]
+    select: { priority: 1 }
+    style: { stroke: crimson, stroke_width: 1.5 }
+
+  - name: Priority 1 — event name
+    apply_to: text:event_name
+    select: { priority: 1 }
+    style: { color: crimson, font: OfficinaSans-Bold }
 ```
 
-#### `select:` — Day/Context Criteria
+#### `apply_to:` — Targets
 
-Derived from the date and DB. Use these on `apply_to: day_box` rules and as filters on event-targeted rules.
+| Target | What gets styled |
+|---|---|
+| `text:<name>` | A text token (`text:heading`, `text:event_name`, `text:milestone_label`, …) |
+| `box:<name>` | A box token. Canonical names: `box:day`, `box:event`, `box:duration`, `box:vline`, `box:milestone`, `box:swimlane_heading`, `box:swimlane_content`, `box:band`, plus shared `box:cell`/`box:header`/`box:callout`/`box:default`. |
+| `line:<name>` | A line token (`line:grid`, `line:axis`, `line:today`, …) |
+| `icon:<name>` | An icon token (`icon:event`, `icon:milestone`, `icon:overflow`, …) |
+| `element` | Bind a CSS class to a token via `select.element` + `style.use` |
+| `lane` | Route content to a swimlane via `style.swimlane` (blockplan) |
+
+A list-valued `apply_to:` fans the rule out: each style property is routed to every listed target that recognizes it. Unrecognized keys for a given target are silently dropped per-target.
+
+#### `select:` — Day / Context Criteria
+
+Use these on rules targeting `box:day`, and as filters on event-targeted rules.
 
 | Key | Type | Description |
 |---|---|---|
@@ -1030,14 +1127,16 @@ Derived from the date and DB. Use these on `apply_to: day_box` rules and as filt
 | `workday` | `bool` | Not nonworkday |
 | `weekend` | `bool` | Falls on config weekend days |
 | `date` | `str \| list` | Single `YYYYMMDD`, closed range `YYYYMMDD-YYYYMMDD`, or list of dates |
+| `papersize` | `str \| list` | One of the recognized paper sizes (`letter`, `tabloid`, `3x5`, …) |
+| `visualizer` | `str \| list` | Limit a rule to specific visualizers (`weekly`, `mini`, `timeline`, `blockplan`, `compactplan`) |
 
 #### `select:` — Event Criteria
 
-Matched against `Event` fields on the day/event being styled. All specified criteria must match (AND logic) unless `min_match:` is set.
+Matched against the data attached to the event/duration/milestone being drawn. All specified criteria must match (AND).
 
 | Key | Type | Match style |
 |---|---|---|
-| `task_name` | `str \| list` | Substring |
+| `task_name` | `str \| list` | Substring (case-insensitive) |
 | `notes` | `str \| list` | Substring |
 | `resource_group` | `str \| list` | Case-insensitive exact |
 | `resource_names` | `str \| list` | Substring (comma-split field) |
@@ -1047,360 +1146,379 @@ Matched against `Event` fields on the day/event being styled. All specified crit
 | `percent_complete` | `int \| {min, max}` | Exact or range |
 | `milestone` | `bool` | Flag field |
 | `rollup` | `bool` | Flag field |
-| `event_type` | `event \| duration \| any` | Point vs span |
+| `event_type` | `event \| duration \| any` | Point vs span vs either |
 | `color` | `str` | Exact match on `Event.color` |
 | `icon` | `str` | Exact match on `Event.icon` |
 | `date_overlap` | `bool` | When `true`, `date` matches durations whose span overlaps the date/range (default: matches start date only) |
 
-#### `select:` — Aggregation Modifiers (for `apply_to: day_box`)
-
-Control how event criteria are tested across all events on a day.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `min_match` | `1` | Min criteria that must be true |
-| `any_event` | `true` | Passes if *any* event on the day matches event criteria |
-| `all_events` | `false` | Passes only if *all* events match |
-
-#### `apply_to:` — Style Targets
-
-| Value | What gets styled |
-|---|---|
-| `day_box` | Weekly day cell background + pattern; mini calendar cell |
-| `event` | Point event icon, name text, date text |
-| `duration` | Duration bar fill, stroke, label text |
-| `vertical_line` | Blockplan vertical marker line + optional column fill, pinned to a time-band segment |
-| `all` | All of the above |
-
-A single rule can specify a list (e.g., `apply_to: [day_box, duration]`) to style multiple target types in one pass.
-
-#### `select:` — Band Segment Criteria (for `apply_to: vertical_line`)
-
-Used to pin a vertical line to a specific time-band segment in the blockplan. Combine with the day-context keys above to limit lines to weekends, holidays, etc.
+#### `select:` — Band Segment Criteria (for `apply_to: box:vline` and band rules)
 
 | Key | Type | Description |
 |---|---|---|
-| `band` | `str` | Time-band `label` to anchor to (case-insensitive). Required. |
-| `value` | `str` | Segment label to match (case-insensitive) when `repeat` is absent or false. |
+| `band` | `str` | Time-band catalog key (e.g. `month`, `fiscal_quarter`). Required for band-anchored rules. |
+| `value` | `str` | Segment label to match when `repeat` is absent or false. |
 | `repeat` | `bool` | When `true`, every segment in the band matches; `value` is ignored. |
+| `swimlane` | `str` | Lane catalog name (used for `box:swimlane_*` and `text:swimlane_label` rules). |
 
-#### `style:` — Fill and Background
+#### `select:` — Aggregation Modifiers (for `apply_to: box:day`)
 
-| Property | Applies to | Notes |
+| Key | Default | Meaning |
 |---|---|---|
-| `fill_color` | day_box, event, duration | Background / bar fill |
-| `fill_opacity` | day_box, event, duration | |
-| `pattern` | day_box | SVG pattern name from DB |
-| `pattern_color` | day_box | Colorizes the pattern |
-| `pattern_opacity` | day_box | |
+| `min_match` | `1` | Minimum number of event criteria that must be true |
+| `any_event` | `true` | Passes if *any* event on the day matches event criteria |
+| `all_events` | `false` | Passes only if *all* events match |
 
-#### `style:` — Stroke and Border
-
-| Property | Applies to | Notes |
-|---|---|---|
-| `stroke_color` | day_box, event, duration | Border / outline color |
-| `stroke_width` | day_box, event, duration | |
-| `stroke_opacity` | day_box, event, duration | |
-| `stroke_dasharray` | day_box, event, duration | SVG dash pattern, e.g. `"4 2"` |
-
-#### `style:` — Text Shorthand
-
-Flat keys apply to **all** text elements rendered for the matched target.
+#### `style:` — Box Properties (recognized by every `box:<name>` target)
 
 | Property | Notes |
 |---|---|
-| `font` | Font name — applied to all sub-elements |
-| `font_size` | Point size — applied to all sub-elements |
-| `font_color` | Color — applied to all sub-elements |
-| `font_opacity` | Opacity — applied to all sub-elements |
+| `fill` | Scalar color, `none`, or list (list cycles across repeating instances) |
+| `fill_opacity` | 0–1 |
+| `fill_palette` | DB palette name (cycled across instances) |
+| `fill_colors` | Explicit color list (cycled across instances) — takes priority over `fill_palette` |
+| `stroke` | Border color |
+| `stroke_width` | Border width in points |
+| `stroke_opacity` | 0–1 |
+| `dasharray` | SVG dash pattern, e.g. `"4 2"` |
+| `pattern` | DB pattern name |
+| `pattern_color` | Colorizes the pattern |
+| `pattern_opacity` | 0–1 |
+| `align` | `start` \| `center` \| `end` (placement hint for `box:vline`) |
 
-#### `style:` — Per-Element Text (`text:` block)
+#### `style:` — Text Properties (recognized by every `text:<name>` target)
 
-A nested `text:` block provides per-element control. Any key omitted inherits from the shorthand or theme default.
+| Property | Notes |
+|---|---|
+| `font` | Font name from the registry |
+| `size` | Point size |
+| `color` | Text color |
+| `weight` | `normal` \| `bold` |
+| `italic` | `true` \| `false` |
+| `opacity` | 0–1 |
+| `align_h` | `left` \| `center` \| `right` (where meaningful, e.g. swimlane label) |
+| `align_v` | `top` \| `middle` \| `bottom` |
+| `rotation` | Degrees (for rotated labels) |
+
+#### `style:` — Line Properties (recognized by every `line:<name>` target)
+
+| Property | Notes |
+|---|---|
+| `color` | Line color |
+| `width` | Line width in points |
+| `opacity` | 0–1 |
+| `dasharray` | SVG dash pattern |
+
+#### `style:` — Icon Properties (recognized by every `icon:<name>` target)
+
+| Property | Notes |
+|---|---|
+| `icon` | Glyph name (`diamond`, `flag`, `overflow`, …) |
+| `color` | Icon color |
+| `size` | Icon size in points |
+
+#### `style:` — Element-Binding Properties (for `apply_to: element`)
+
+| Property | Notes |
+|---|---|
+| `use` | Reference to a token (`text:heading`, `box:cell`, …). The element inherits the resolved token's style. |
+| Any text/box/line/icon property | Overrides the referenced token for this element only. |
+
+#### `style:` — Lane-Routing Properties (for `apply_to: lane`)
+
+| Property | Notes |
+|---|---|
+| `swimlane` | Catalog name of the swimlane this rule routes content to. |
+
+#### Multiple targets in one rule
 
 ```yaml
-style:
-  text:
-    event_name:           # ec-event-name  — point event title
-      font: OfficinaSans-Bold
-      font_size: 10
-      font_color: crimson
-    event_notes:          # ec-event-notes — point event notes line
-      font: OfficinaSans-BookItalic
-      font_color: grey
-    event_date:           # ec-event-date  — point event date label
-      font_size: 7
-      font_color: darkgrey
-    duration_name:        # duration title in bar or label column
-      font: OfficinaSans-Bold
-      font_color: white
-    duration_notes:       # duration notes line
-      font_color: "#DDDDDD"
-    duration_start_date:  # start date printed on or beside duration bar
-      font_size: 8
-      font_color: gold
-    duration_end_date:    # end date printed on or beside duration bar
-      font_size: 8
-      font_color: gold
-    day_number:           # ec-day-number  — large digit in day box corner
-      font_size: 11
-      font_color: "#FF7800"
-    week_number:          # ec-week-number — week label beside row
-      font_color: yellow
-    month_indicator:      # ec-month-title — abbreviated month on 1st of month
-      font_color: navy
-      font_size: 8
-    holiday_title:        # ec-holiday-title — special day / holiday name
-      font_color: white
-      font_size: 8
+style_rules:
+  - name: muted completed items
+    apply_to: [box:event, box:duration, text:event_name]
+    select: { percent_complete: { min: 100 } }
+    style:
+      fill: "#f4f4f4"          # applies to the box: targets
+      color: grey              # applies to text:event_name
+      italic: true             # applies to text:event_name
 ```
 
-##### Text Element Reference
+Each target consumes only the style keys it recognizes; the others are silently dropped per-target. For property values that differ across targets, write separate rules with the same `select:`.
 
-| `text:` key | CSS class | Where rendered |
+#### Per-Element Text Styling
+
+To style a specific text role for a matched event/duration, write a rule targeting that text token directly. Example: make event names red for priority-1 events:
+
+```yaml
+- apply_to: text:event_name
+  select: { priority: 1 }
+  style: { color: red, weight: bold }
+```
+
+The recognized text-role tokens map to the CSS classes shown earlier:
+
+| Token | CSS class | Where rendered |
 |---|---|---|
-| `event_name` | `ec-event-name` | Point event title (weekly, blockplan, timeline) |
-| `event_notes` | `ec-event-notes` | Point event notes line |
-| `event_date` | `ec-event-date` | Point event date label |
-| `duration_name` | `ec-event-name` | Duration bar / lane label title |
-| `duration_notes` | `ec-event-notes` | Duration notes line |
-| `duration_start_date` | `ec-duration-date` | Start date beside duration bar |
-| `duration_end_date` | `ec-duration-date` | End date beside duration bar |
-| `day_number` | `ec-day-number` | Large digit in weekly / mini day box |
-| `week_number` | `ec-week-number` | Week number label on row left edge |
-| `month_indicator` | `ec-month-title` | Abbreviated month on first day of month |
-| `holiday_title` | `ec-holiday-title` | Holiday / special day name in day box |
-
-#### `style:` — Icons
-
-| Property | Applies to | Notes |
-|---|---|---|
-| `icon` | event | Override the event icon glyph |
-| `icon_color` | event | Icon color |
-
-#### `style:` — Vertical Line Render Hint
-
-| Property | Applies to | Notes |
-|---|---|---|
-| `align` | vertical_line | `start` (default) \| `center` \| `end` — which edge of the matched segment to pin the line to |
-
-For `apply_to: vertical_line` rules, `stroke_*` styles the line and `fill_color`/`fill_opacity` paints a column rect behind it across the full swimlane height. `fill_color` may be a list or palette name; values cycle across that rule's matched segments.
+| `text:event_name` | `ec-event-name` | Point event title (weekly, blockplan, timeline); duration bar / lane label title |
+| `text:event_notes` | `ec-event-notes` | Event / duration notes line |
+| `text:event_date` | `ec-event-date` | Point event date label |
+| `text:duration_date` | `ec-duration-date` | Duration start/end date labels |
+| `text:day_number` | `ec-day-number` | Large digit in weekly / mini day box |
+| `text:week_number` | `ec-week-number` | Week-number label on row left edge |
+| `text:month_title` | `ec-month-title` | Abbreviated month on first day of month |
+| `text:holiday_title` | `ec-holiday-title` | Holiday / special day name in day box |
+| `text:milestone_label` | (no class) | Text rendered next to a milestone marker |
+| `text:swimlane_label` | (no class) | Lane heading text in blockplan |
+| `text:band_label` | `ec-band-label` | Time-band segment text |
 
 #### Date Range Matching
 
-The `date` criterion is evaluated against the **day being rendered** for `apply_to: day_box`, and against the **event's start date** for `apply_to: event` / `duration`. Use `date_overlap: true` to match durations that overlap a date range rather than start within it.
+The `date` criterion is evaluated against the **day being rendered** for `box:day` rules, and against the **event's start date** for event/duration rules. Use `date_overlap: true` to match durations that overlap a date range rather than start within it.
 
 | Format | Example | Meaning |
 |---|---|---|
-| Single date | `"20190321"` | Exactly that calendar day |
-| Closed range | `"20190301-20190321"` | Start and end inclusive |
-| List | `["20190101", "20190704", "20191225"]` | Any of the listed dates |
+| Single date | `"20260321"` | Exactly that calendar day |
+| Closed range | `"20260301-20260321"` | Start and end inclusive |
+| List | `["20260101", "20260704", "20261225"]` | Any of the listed dates |
 
 ---
 
-### `swimlane_rules` — Blockplan Lane Routing
+### Lane Routing (Blockplan)
 
-Top-level theme key controlling **which lane** each blockplan event/duration is placed into. Routing is separate from styling — `style_rules` controls how events look; `swimlane_rules` controls where they go. Lane visual properties (colors, label alignment, split ratio) remain in `blockplan.swimlanes`.
-
-`swimlane_rules` shares the same `select:` syntax as `style_rules`. The `apply_to:` field is a **lane name string** matching the `name` field of a `blockplan.swimlanes` entry — not a list. Rules are evaluated **in declaration order** and **first match wins**. An empty `select: {}` matches everything and is therefore only useful as a final catch-all.
+Lane routing lives in `style_rules` with `apply_to: lane`. Each matched rule assigns content to a swimlane by name; **first match wins**. An empty `select: {}` is the catch-all and only useful as the final entry.
 
 ```yaml
-swimlane_rules:
+style_rules:
+  - name: Route Xstore
+    apply_to: lane
+    select: { resource_group: [Xstore] }
+    style: { swimlane: "Xstore\nConversions" }
 
-  - name: "Route Xstore"
-    select:
-      resource_group: ["Xstore"]
-    apply_to: "Xstore\nConversions"
+  - name: Route Triversity
+    apply_to: lane
+    select: { resource_group: [Triversity] }
+    style: { swimlane: "Triversity\nPOSReady7" }
 
-  - name: "Route Triversity"
-    select:
-      resource_group: ["Triversity"]
-    apply_to: "Triversity\nPOSReady7"
+  - name: High-priority milestones to top lane
+    apply_to: lane
+    select: { milestone: true, priority: 1 }
+    style: { swimlane: "Key Milestones" }
 
-  - name: "High-priority milestones to top lane"
-    select:
-      milestone: true
-      priority: 1
-    apply_to: "Key Milestones"
-
-  - name: "Unmatched catch-all"
+  - name: Unmatched catch-all
+    apply_to: lane
     select: {}
-    apply_to: "Other"
+    style: { swimlane: Other }
 ```
 
-Events that match no rule and have no catch-all are placed into the unmatched lane if `blockplan.show_unmatched_lane: true`, or dropped from the blockplan otherwise.
+The `style.swimlane` value must match a `name` in `blockplan.swimlanes`. Events that match no rule and have no catch-all are placed into the unmatched lane if `blockplan.show_unmatched_lane: true`, or dropped from the blockplan otherwise.
 
 ---
 
-### `swimlanes` — Blockplan Lane Visual Definitions
+### `swimlanes` — Blockplan Lane Structural Definitions
 
-Used in `blockplan.swimlanes`. Each entry defines the **visual properties** of one horizontal lane. Routing is handled by `swimlane_rules` above.
+`blockplan.swimlanes` is the structural list — it declares which lanes exist and the geometric `split_ratio` (events/durations divider position). All *visual* properties (heading fill, content tint, label color, label alignment, label rotation) live in `style_rules` keyed by `select.swimlane: <name>`.
 
 ```yaml
 blockplan:
   swimlanes:
-    - name: "Xstore\nConversions"     # must match apply_to value in swimlane_rules
-      fill_color:          null       # heading cell fill; null = lane_heading_fill_color
-      label_color:         red        # label text color; null = lane_label_color
-      timeline_fill_color: "none"     # content area background tint
-      split_ratio:         0.5        # events upper half, durations lower half
-      label_align_h:       "center"   # left | center | right
-      label_align_v:       "middle"   # top | middle | bottom
-      label_rotation:      0          # degrees clockwise; -90 = bottom-to-top
+    - name: "Xstore\nConversions"
+      split_ratio: 0.5            # events upper half, durations lower half
     - name: "Key Milestones"
-      fill_color: gold
-      label_color: black
-      split_ratio: 0.0                # 0.0 or 1.0 removes the events/durations divider
-    - name: "Other"
-      fill_color: "#F0F0F0"
-      label_color: dimgrey
+      split_ratio: 0.0            # 0.0 or 1.0 removes the events/durations divider
+    - name: Other
+
+style_rules:
+  # Heading-cell background for the Xstore lane.
+  - apply_to: box:swimlane_heading
+    select: { swimlane: "Xstore\nConversions" }
+    style: { fill: "#dceaff" }
+
+  # Content-area tint for the Xstore lane.
+  - apply_to: box:swimlane_content
+    select: { swimlane: "Xstore\nConversions" }
+    style: { fill: "#fafbff" }
+
+  # Label color and alignment for the Xstore lane.
+  - apply_to: text:swimlane_label
+    select: { swimlane: "Xstore\nConversions" }
+    style:
+      color: red
+      align_h: center
+      align_v: middle
+      rotation: 0
+
+  # Key Milestones — gold heading + black label.
+  - apply_to: box:swimlane_heading
+    select: { swimlane: "Key Milestones" }
+    style: { fill: gold }
+
+  - apply_to: text:swimlane_label
+    select: { swimlane: "Key Milestones" }
+    style: { color: black }
 ```
 
 ---
 
-### `top_time_bands` / `bottom_time_bands` — Time-Band Row Definitions
+### `time_bands` — Shared Band Catalog
 
-Used in `blockplan.top_time_bands` (above swimlanes) and `blockplan.bottom_time_bands` (below swimlanes). Each entry is a time-band row.
+A theme defines its time bands once under the top-level `time_bands:` map. Each visualizer's placement list is a list of *references* by catalog key, with optional inline geometry overrides.
 
 ```yaml
-top_time_bands:
-  - label:        "Fiscal Quarter"
-    unit:         "fiscal_quarter"
+time_bands:
+  fiscal_quarter:
+    unit: fiscal_quarter
+    label: Fiscal Quarter
     label_format: "FY{fy2} Q{q}"
-    row_height:   25
-    fill_color:   ["steelblue"]
-    font_color:   "white"
-    label_color:  "dimgrey"
-
-  - label:        "Month"
-    unit:         "month"
-    date_format:  "MMM"
-    row_height:   20
-    fill_color:   ["lightblue", "lightyellow"]
-    show_every:   1
-
-  - label:        "Days to Launch"
-    unit:         "countdown"
-    target_date:  "2026-06-30"
+    show_every: 1
+  month:
+    unit: month
+    label: Month
+    date_format: "MMM"
+    show_every: 1
+  countdown_launch:
+    unit: countdown
+    label: Days to Launch
+    target_date: "2026-06-30"
     skip_weekends: true
     label_format: "{n}d"
-    row_height:   14
-
-  - label:        "Day"
-    unit:         "countup"
-    start_date:   "2026-01-01"
+  day:
+    unit: countup
+    label: Day
+    start_date: "2026-01-01"
     skip_weekends: false
     label_format: "D+{n}"
-    row_height:   14
+
+blockplan:
+  top_bands:
+    - { band: fiscal_quarter, row_height: 25 }   # inline geometry override
+    - { band: month,          row_height: 20 }
+  bottom_bands: []
+
+compact_plan:
+  bands: [fiscal_quarter, month]
+
+excelheader:
+  top_bands: [fiscal_quarter, month]
+  band_fonts:
+    fiscal_quarter: { excel_font_name: "Arial Narrow", excel_font_size: 10 }
 ```
 
-#### Time-Band Fields
+Band styling lives in `style_rules`, keyed by `select.band: <catalog_key>`:
+
+```yaml
+style_rules:
+  - apply_to: box:band
+    select: { band: month }
+    style: { fill: [lightblue, lightyellow] }   # list cycles across segments
+
+  - apply_to: text:band_label
+    select: { band: month }
+    style: { color: navy }
+```
+
+#### Time-Band Structural Fields (in `time_bands:`)
 
 | Key | Type | Description |
 |---|---|---|
-| `anchor_date` | `str` (YYYY-MM-DD) | alignment anchor for interval unit |
-| `date_format` | `str` | Arrow format for month/date/dow labels; e.g. `"MMM"`, `"MMMM"`, `"D"`, `"ddd"` |
-| `fill_color` | `str \| list` | segment fill; list cycles across segments |
-| `fill_palette` | `list[str]` | palette name(s) cycling across segments |
-| `font` | `str` | segment label font (overrides `band_font`) |
-| `font_color` | `str` | segment label color |
-| `font_opacity` | `float` | segment label opacity |
-| `font_size` | `float` | segment label size |
-| `interval_days` | `int` | segment length in days (interval unit only) |
-| `label` | `str` | text shown in the heading column cell |
-| `label_align_h` | `str` | `left` \| `center` \| `right` |
-| `label_color` | `str` | heading cell label color |
-| `label_fill_color` | `str` | heading cell fill |
-| `label_font` | `str` | heading cell font |
-| `label_font_size` | `float` | heading cell font size |
-| `label_format` | `str` | format for week/fiscal_quarter; placeholders: `{week}` `{fy}` `{fy2}` `{q}` |
-| `label_opacity` | `float` | heading cell label opacity |
-| `label_values` | `list[str\|null]` | override displayed segment text; null = auto; `""` = blank |
-| `max_index` | `int` | counter resets to `start_index` after this value (interval unit) |
-| `prefix` | `str` | label prefix (interval unit); e.g. `"Sprint "` |
-| `row_height` | `float` | override `band_row_height` for this row (points) |
-| `show_every` | `int` | merge N consecutive segments into one cell |
-| `start_index` | `int` | first counter value (interval unit) |
-| `stroke_color` | `str` | cell border color override |
 | `unit` | `str` | `fiscal_quarter` \| `month` \| `week` \| `interval` \| `date` \| `dow` \| `countdown` \| `countup` |
+| `label` | `str` | Text shown in the heading column cell |
+| `label_format` | `str` | Format for week/fiscal_quarter/countdown/countup; placeholders: `{week}` `{fy}` `{fy2}` `{q}` `{n}` |
+| `date_format` | `str` | Arrow format for month/date/dow labels; e.g. `"MMM"`, `"MMMM"`, `"D"`, `"ddd"` |
+| `interval_days` | `int` | Segment length in days (interval unit only) |
+| `anchor_date` | `str` (YYYY-MM-DD) | Alignment anchor for interval unit |
+| `prefix` | `str` | Label prefix (interval unit); e.g. `"Sprint "` |
+| `start_index` | `int` | First counter value (interval unit) |
+| `max_index` | `int` | Counter resets to `start_index` after this value (interval unit) |
 | `target_date` | `str` (YYYY-MM-DD) | **countdown only** — required: the date to count down to |
 | `start_date` | `str` (YYYY-MM-DD) | **countup only** — required: the origin date to count up from (day 0) |
-| `skip_weekends` | `bool` | **countdown/countup** — exclude Sat/Sun from the day count (default `false`) |
-| `skip_nonworkdays` | `bool` | **countdown/countup** — exclude holidays & company non-workdays from the count (default `false`) |
+| `skip_weekends` | `bool` | **countdown/countup** — exclude Sat/Sun from the day count |
+| `skip_nonworkdays` | `bool` | **countdown/countup** — exclude holidays & company non-workdays |
+| `label_values` | `list[str\|null]` | Override displayed segment text; `null` = auto; `""` = blank |
+| `show_every` | `int` | Merge N consecutive segments into one cell |
 
 > **`countdown` unit:** Each visible day cell shows the number of counting-days between that day and `target_date`. The value is **0** on the target day itself, **positive** for days before it (days remaining), and **negative** for days after (days elapsed). Use `label_format: "{n}d"` to append a suffix, or `label_format: "D-{n}"` for a launch-style label. Combine `skip_weekends: true` and `skip_nonworkdays: true` to count only business days.
 
 > **`countup` unit:** Each visible day cell shows the number of counting-days elapsed since `start_date`. The value is **0** on the start day itself, **positive** for days after it (days elapsed), and **negative** for days before it (days prior to the origin). Use `label_format: "D+{n}"` for a project-day-style label. The same `skip_weekends` / `skip_nonworkdays` options apply.
 
+Visual properties (segment fill, label color/font/size, alternation across segments) go in `style_rules` on `box:band` and `text:band_label`. Per-placement geometry (`row_height`, `show_every` overrides) goes inline on the reference, as shown in the `blockplan.top_bands` example above.
+
 ---
 
 ### Blockplan Vertical Marker Lines
 
-Vertical marker lines (and optional column fills) in the blockplan are now expressed as top-level `style_rules` entries with `apply_to: vertical_line`. See [`style_rules` → Band Segment Criteria](#select--band-segment-criteria-for-apply_to-vertical_line) and [`style:` Vertical Line Render Hint](#style--vertical-line-render-hint).
+Vertical marker lines (and optional column fills) in the blockplan are expressed as `style_rules` entries with `apply_to: box:vline`. Selectors pin the line to a band segment.
 
 ```yaml
 style_rules:
-  # Light grey separator at the end of every Month segment.
+  # Light grey dashed separator at the end of every Month segment.
   - name: month_separator
-    apply_to: vertical_line
-    select:
-      band: "Month"
-      repeat: true
+    apply_to: box:vline
+    select: { band: month, repeat: true }
     style:
       align: end
-      stroke_color: grey
+      stroke: grey
       stroke_width: 1.0
       stroke_opacity: 0.4
-      stroke_dasharray: "4,4"
+      dasharray: "4,4"
 
   # Heavier navy line at the end of every Fiscal Quarter, with a soft column fill.
   - name: quarter_marker
-    apply_to: vertical_line
-    select:
-      band: "Fiscal Quarter"
+    apply_to: box:vline
+    select: { band: fiscal_quarter }
     style:
       align: end
-      stroke_color: navy
+      stroke: navy
       stroke_width: 1.5
-      fill_color: lightyellow
+      fill: lightyellow
       fill_opacity: 0.10
 
   # Highlight every weekend cell in the Date band with a soft fill (no line).
   - name: weekend_columns
-    apply_to: vertical_line
-    select:
-      band: "Date"
-      repeat: true
-      weekend: true
+    apply_to: box:vline
+    select: { band: date, repeat: true, weekend: true }
     style:
-      fill_color: "#E8E8E8"
+      fill: "#E8E8E8"
       fill_opacity: 0.4
 ```
 
-The per-attribute defaults — `blockplan.vertical_line_color`, `vertical_line_width`, `vertical_line_opacity`, `vertical_line_dasharray`, `vertical_line_fill_color`, `vertical_line_fill_opacity` — still apply when a rule omits the corresponding `stroke_*` / `fill_*` key.
+`align: start | center | end` controls which edge of the matched segment the line pins to. `fill` may be a scalar, `none`, or a list (cycled across the rule's matched segments).
 
 ---
 
 ## Visualization Setting Gaps
 
-Each visualizer recognizes a different slice of the unified theme schema. Exact missing-key counts shift as new fields are added; rather than maintain those numbers inline, the high-level shape of each visualizer's surface area is summarized here.
+Each visualizer reads two kinds of theme content:
 
-- `weekly` exposes unique day-box and overflow marker controls (`weekly.day_box.*`, `weekly.overflow.*`).
-- `mini` exposes grid/details controls (`mini_calendar.*`, `mini_details.*`) absent from other renderers.
-- `mini-icon` is a `mini` variant that adds icon-set selection (`mini_calendar.icon_set`) and inherits everything else from `mini`.
-- `text-mini` exposes symbol/glyph controls (`text_mini.*`) that do not apply to SVG renderers.
-- `timeline` exposes axis/callout/lane settings (`timeline.*`, `timeline_events.*`, `timeline_durations.*`).
-- `blockplan` exposes lane/band/palette/vertical-line settings (`blockplan.*`); vertical-line styling now lives in top-level `style_rules` with `apply_to: vertical_line`.
-- `compactplan` exposes axis-relative duration/legend controls (`compact_plan.*`).
-- `excelheader` mirrors the blockplan band schema under `excelheader.*` and writes to `.xlsx` instead of SVG.
-- Shared typography/content sections (`header.*`, `footer.*`, `events.*`, `durations.*`, `colors.*`) are reused by multiple visualizers.
+1. **Shared `style_rules`** — every visualizer consults the same top-level rule list. Rules scope themselves to a visualizer with `select.visualizer: weekly | mini | timeline | blockplan | compactplan | text-mini` or apply globally.
+2. **Per-visualizer non-styling config** — format strings, geometry, fiscal semantics, and structural declarations remain in dedicated sections.
+
+Per-visualizer non-styling surfaces:
+
+- `weekly` — week-number format, day-name format, overflow icon name.
+- `mini` — `mini_calendar.title_format`, layout dimensions; `mini_calendar.icon_set` name (mini-icon variant).
+- `text-mini` — symbol/glyph name registry; not an SVG renderer.
+- `timeline` — `timeline.tick_label_format`, axis/callout/lane geometry, `today_date` / `today_label_text` content references.
+- `blockplan` — swimlane and timeband lists, `label_column_ratio`, lane match policy, vertical-line and band declarations (visual styling lives in `style_rules`, e.g. `apply_to: box:vline`).
+- `compactplan` — axis-relative duration/legend geometry.
+- `excelheader` — XLSX-specific band schema (`band_fonts`) and `vertical_lines`. These are **not** reached by `style_rules`: they map to Excel cell formatting and cell borders, not SVG primitives. See "Vertical Lines → Cell Right Borders" below.
+
+Shared non-styling sections:
+
+- `theme.*` — metadata.
+- `base.*` — default font family, default missing-icon name.
+- `events.*` — `item_placement_order` (algorithm; no styling).
+- `durations.*` — placement / geometry only.
+- `fiscal.*` — label format, year offset.
+- `colors.*_palette` — palette names referenced by token style bags.
+
+Anything that controls *appearance* — fills, strokes, fonts, colors, patterns, line widths, opacities, dasharrays — lives in `style_rules`, not in any per-visualizer section.
 
 ## Notes
 
-- Theme `size_rule` blocks match papersize case-insensitively and use first matching rule.
+- Paper-size-conditional styling is expressed as a `style_rules` entry with `select.papersize: [letter, tabloid]` (or similar). Later rules override earlier ones.
 - `layout.margin.*` accepts numeric points or values with units such as `0.5in` and `10mm`.
 - `colors.*_palette` keys reference DB palette names and resolve during render.
 - Run `ecalendar.py help <subcommand>` for allowed values and focused help output.
+- Run `uv run python tools/validate_theme.py <theme.yaml>` to check a theme against the unified schema.
 
 ---
 
@@ -1442,60 +1560,70 @@ Freeze panes are set at column F / the column-header row so timebands and label 
 
 ### Timeband Configuration
 
-Timebands and vertical lines are configured under the `excelheader` section of the active theme (independent of `blockplan`):
+ExcelHeader's bands are *references* into the shared top-level `time_bands:` catalog. Per-band geometry overrides (`row_height`, `show_every`) can go inline; per-band Excel-font overrides live in `excelheader.band_fonts` keyed by catalog name (deliberate exception — Excel uses system-installed fonts that aren't in the ecalendar font registry, so the XLSX side keeps its own narrow font slot):
 
 ```yaml
 excelheader:
-  font_name: "Calibri"
-  font_size: 9
+  font_name: "Calibri"           # workbook-wide default font
+  font_size: 9                   # workbook-wide default size in points
   band_row_height: 18
-  header_heading_fill_color: "none"
-  header_label_color: "black"
-  header_label_align_h: "left"
-  timeband_fill_color: "none"
-  timeband_label_color: "black"
 
-  top_time_bands:
-    - label: "Quarter"
-      unit:  "fiscal_quarter"
-      label_format: "FY{fy2} Q{q}"
-      fill_color: ["steelblue", "deepskyblue"]
-      font_color: "white"
-    - label: "Month"
-      unit:  "month"
-      date_format: "MMM"
-      fill_color: ["lightblue", "lightyellow"]
-    - label: "Day"
-      unit:  "date"
-      date_format: "D"
+  top_bands: [fiscal_quarter, month, day]
 
-  vertical_line_color: "red"
+  band_fonts:
+    fiscal_quarter:
+      excel_font_name: "Arial Narrow"
+      excel_font_size: 10
+    month:
+      excel_font_size: 9
+
+  # Vertical lines: XLSX-only feature — these render as right-cell borders
+  # in Excel, not as SVG box:vline rules.  See "Vertical Lines →
+  # Cell Right Borders" below.
+  vertical_line_color: red
   vertical_line_width: 1.5
   vertical_lines:
-    - band:   "Month"
+    - band: month
       repeat: true
-      align:  "end"
-      color:  "navy"
-      width:  2.0
+      align: end
+      color: navy
+      width: 2.0
+
+time_bands:
+  fiscal_quarter:
+    unit: fiscal_quarter
+    label: Quarter
+    label_format: "FY{fy2} Q{q}"
+  month:
+    unit: month
+    label: Month
+    date_format: "MMM"
+  day:
+    unit: date
+    label: Day
+    date_format: "D"
 ```
 
-All standard timeband `unit` types are supported: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, `countup`, and `icon`.
+All standard `unit` types are supported in the catalog: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, `countup`, and `icon`.
 
-Icon bands (`unit: "icon"`) render a colored bullet symbol (●) in each day cell where a matching event exists. Icons are matched using `icon_rules` — the same rule schema as blockplan icon bands. Example:
+Icon bands (`unit: "icon"`) render a colored bullet symbol (●) in each day cell where a matching event exists. Icons are matched using `icon_rules` on the catalog entry — the same rule schema as blockplan icon bands. Example:
 
 ```yaml
+time_bands:
+  events:
+    unit: icon
+    label: Events
+    row_height: 14
+    icon_rules:
+      - milestone: true
+        icon: diamond
+        color: "#4472C4"
+      - task_contains: Release
+        icon: star
+        color: "#E74C3C"
+
 excelheader:
-  top_time_bands:
-    - label: "Events"
-      unit: "icon"
-      row_height: 14
-      icon_rules:
-        - milestone: true
-          icon: "diamond"
-          color: "#4472C4"
-        - task_contains: "Release"
-          icon: "star"
-          color: "#E74C3C"
+  top_bands: [events]
 ```
 
 ### Excel Font Settings
@@ -1508,14 +1636,13 @@ excelheader:
   font_size: 9           # default font size in points
 ```
 
-Per-band font overrides can be set directly in any band dict:
+Per-band font overrides live in `excelheader.band_fonts`, keyed by the catalog name (a deliberate XLSX-only exception — SVG renderers go through `text:band_label` in `style_rules` instead):
 
 ```yaml
 excelheader:
-  top_time_bands:
-    - label:           "Quarter"
-      unit:            "fiscal_quarter"
-      excel_font_name: "Arial Narrow"   # this band only
+  band_fonts:
+    fiscal_quarter:
+      excel_font_name: "Arial Narrow"
       excel_font_size: 10
 ```
 

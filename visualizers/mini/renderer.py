@@ -32,6 +32,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _mini_style_rules(config: "CalendarConfig") -> list:
+    """Return the raw style_rules list to feed StyleEngine.
+
+    Prefers the parsed UnifiedTheme's section so the renderer no longer
+    depends on the legacy ``theme_style_rules`` field.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        rules = theme.sections.get("style_rules")
+        if isinstance(rules, list):
+            return rules
+    return list(getattr(config, "theme_style_rules", None) or [])
+
+
 class MiniCalendarRenderer(BaseSVGRenderer):
     """
     Renderer for mini calendar visualization.
@@ -45,6 +59,47 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         self._week_numbers: dict[str, int] = {}
         self._pattern_svg_cache: dict[str, str] = {}
         self._registered_pattern_ids: set[str] = set()
+        # Per-render unified-theme token cache, populated at the top of
+        # _render_content.  Maps "<kind>:<name>" → merged style dict.  Cells
+        # consult this rather than calling self._resolve_token() per draw.
+        self._mini_tokens: dict[str, dict] = {}
+
+    # ---------------------------------------------------------------------
+    # Unified-theme token plumbing
+    # ---------------------------------------------------------------------
+
+    def _populate_mini_tokens(self, config: CalendarConfig) -> None:
+        """Pre-resolve every token the mini renderer queries each render.
+
+        Each draw call then reads via :py:meth:`_tk` instead of repeatedly
+        walking the rule list per cell.
+        """
+        ctx = {"visualizer": "mini", "papersize": config.papersize}
+        names = (
+            "text:day_number", "text:month_title", "text:week_number",
+            "text:label", "text:fiscal_label", "text:event_name",
+            "text:event_notes", "text:event_date", "text:heading",
+            "text:holiday_title",
+            "box:day", "box:cell",
+            "line:grid", "line:hash", "line:strikethrough", "line:separator",
+            "line:duration_bar",
+            "icon:milestone", "icon:event",
+        )
+        self._mini_tokens = {
+            name: self._resolve_token(config, name, ctx) for name in names
+        }
+
+    def _tk(self, token: str) -> dict:
+        """Return the cached token dict (``{}`` if unknown / unresolved)."""
+        return self._mini_tokens.get(token, {})
+
+    def _ensure_mini_tokens(self, config: CalendarConfig) -> None:
+        """Lazy-populate the per-render token cache when entering a draw
+        method that bypasses ``_render_content`` (e.g. test fixtures).
+        No-op when the cache is already populated.
+        """
+        if not self._mini_tokens:
+            self._populate_mini_tokens(config)
 
     def set_week_numbers(self, week_numbers: dict[str, int]) -> None:
         """
@@ -74,6 +129,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         Returns:
             Tuple of (overflow_count, overflow_entries) — always (0, []).
         """
+        self._populate_mini_tokens(config)
         resolver = DayStyleResolver(config, db)
         self._load_icon_svg_cache(db)
         self._pattern_svg_cache = db.get_all_patterns()
@@ -87,7 +143,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             and weekend_style_starts_sunday(config.weekend_style)
         )
 
-        # First pass: month outlines (drawn behind titles, headers, cells)
+        # First pass: month outlines (drawn behind titles, headers, cells).
+        # The outline is a mini-specific border around the whole month grid
+        # (not the cell stroke), so no unified token applies — these reads
+        # stay on CalendarConfig and will be reconsidered in Phase 2.
         outline_color = config.mini_month_outline_color
         if outline_color and not _is_none_color(outline_color):
             for key in sorted(coordinates):
@@ -119,11 +178,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 if wn_value is not None:
                     self._draw_week_number(config, x, y, w, h, wn_value)
 
-        # Third pass: duration bars (behind day numbers and icons)
-        if config.includedurations:
-            self._draw_all_duration_bars(config, coordinates, events)
-
-        # Fourth pass: day cells (day numbers, icons, backgrounds)
+        # Resolve every cell's DayStyle once, then render in three sub-passes
+        # so duration bars land between the day-cell background (shade,
+        # patterns, grid lines) and the foreground (numbers, circles, icons).
+        # Drawing patterns inside _draw_day_cell after _draw_all_duration_bars
+        # painted the bars on top of the duration line.
+        cell_render_state: list[tuple[float, float, float, float, int, DayStyle]] = []
         for key in sorted(coordinates):
             if not key.startswith("Cell_"):
                 continue
@@ -140,9 +200,20 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
             day_events = events_by_day.get(daykey, [])
             style = resolver.resolve(daykey, day_events, is_adjacent)
-
             day_num = int(daykey[6:8])
-            self._draw_day_cell(config, x, y, w, h, day_num, style)
+            cell_render_state.append((x, y, w, h, day_num, style))
+
+        # Pass 3a: day-cell backgrounds (shade, SVG patterns, hash, grid lines)
+        for x, y, w, h, day_num, style in cell_render_state:
+            self._draw_day_cell_background(config, x, y, w, h, style)
+
+        # Pass 3b: duration bars (drawn over backgrounds, under foregrounds)
+        if config.includedurations:
+            self._draw_all_duration_bars(config, coordinates, events)
+
+        # Pass 3c: day-cell foregrounds (numbers, circles, boxes, icons)
+        for x, y, w, h, day_num, style in cell_render_state:
+            self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
 
         return 0, []
 
@@ -155,7 +226,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     ):
         result = super().render(config, coordinates, events, db)
         if config.include_mini_details:
-            self._render_details_svg(config, coordinates, events)
+            self._render_details_svg(config, coordinates, events, db)
             result.page_count += 1
         return result
 
@@ -178,14 +249,15 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         dt = arrow.Arrow(year, month, 1)
         title = format_arrow_date(dt, config.mini_title_format)
 
+        tk = self._tk("text:month_title")
         _ts = config.get_text_style("ec-month-title")
         self._draw_text(
             x + w / 2,
             y + h * 0.8,
             title,
-            _ts.font,
-            config.mini_title_font_size,
-            fill=_ts.color,
+            tk.get("font") or _ts.font,
+            tk.get("size"),
+            fill=tk.get("color") or _ts.color,
             anchor="middle",
             css_class="ec-month-title",
         )
@@ -210,6 +282,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         in a narrower column, with 7 day labels in the remaining space.
         """
         _ts_label = config.get_text_style("ec-label")
+        tk_label = self._tk("text:label")
+        header_size = tk_label.get("size")
 
         is_workweek = weekend_style_is_workweek(config.weekend_style)
         labels = self._ordered_day_labels(week_start_sunday, is_workweek)
@@ -223,13 +297,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
             # Draw "W#" label
             _ts_wn = config.get_text_style("ec-week-number")
+            tk_wn = self._tk("text:week_number")
             self._draw_text(
                 x + wn_col_width / 2,
                 y + h * 0.75,
                 "W#",
-                _ts_wn.font,
-                config.mini_header_font_size,
-                fill=_ts_wn.color,
+                tk_wn.get("font") or _ts_wn.font,
+                tk_wn.get("size"),
+                fill=tk_wn.get("color") or _ts_wn.color,
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -243,9 +318,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 cx,
                 y + h * 0.75,
                 label,
-                _ts_label.font,
-                config.mini_header_font_size,
-                fill=_ts_label.color,
+                tk_label.get("font") or _ts_label.font,
+                header_size,
+                fill=tk_label.get("color") or _ts_label.color,
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -288,8 +363,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         wn_value: int,
     ) -> None:
         """Draw a week number in the W# column cell."""
+        self._ensure_mini_tokens(config)
         _ts = config.get_text_style("ec-week-number")
-        font_size = config.mini_week_number_font_size
+        tk = self._tk("text:week_number")
+        font_size = tk.get("size")
         try:
             label = config.mini_week_number_label_format.format(num=wn_value)
         except (KeyError, ValueError):
@@ -299,9 +376,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             x + w / 2,
             y + (h / 2) + (font_size / 3),
             label,
-            _ts.font,
+            tk.get("font") or _ts.font,
             font_size,
-            fill=_ts.color,
+            fill=tk.get("color") or _ts.color,
             anchor="middle",
             css_class="ec-week-number",
         )
@@ -323,19 +400,34 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         Draw a single day cell with all visual treatments from DayStyle.
 
-        Rendering order (back to front):
-        1. Background shade
-        2. Hash pattern
-        3. SVG pattern decorations
-        4. Legacy hash pattern
-        5. Grid line (if enabled)
-        6. Circle (if milestone)
-        7. Box (if boxed)
-        8. Day number text (with bold/outlined/color/font overrides)
-        9. Strikethrough line
-        10. Icon (append or replace)
+        Combines the background pass (shade, patterns, grid lines) with the
+        foreground pass (numbers, circles, icons, etc.).  Callers wanting to
+        sandwich other artwork between them should call
+        :meth:`_draw_day_cell_background` and :meth:`_draw_day_cell_foreground`
+        directly — see :meth:`_render_content` for the layered ordering.
         """
-        default_color = config.get_element_color("ec-day-number", config.mini_day_color)
+        self._ensure_mini_tokens(config)
+        self._draw_day_cell_background(config, x, y, w, h, style)
+        self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
+
+    def _draw_day_cell_background(
+        self,
+        config: CalendarConfig,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *under* duration bars.
+
+        Order (back to front):
+        1. Background shade
+        2. SVG pattern decorations
+        3. Legacy hash pattern
+        4. Grid line (if enabled)
+        """
+        tk_grid = self._tk("line:grid")
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -369,7 +461,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # 4. Grid lines
         if config.mini_grid_lines:
             _ls_grid = config.get_line_style("ec-grid-line")
-            grid_stroke_width = _ls_grid.width
+            grid_stroke_width = float(
+                tk_grid.get("width") if tk_grid.get("width") is not None
+                else _ls_grid.width
+            )
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset,
@@ -377,17 +472,54 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
-                stroke=_ls_grid.color,
+                stroke=tk_grid.get("color") or _ls_grid.color,
                 stroke_width=grid_stroke_width,
-                stroke_opacity=_ls_grid.opacity,
-                stroke_dasharray=_ls_grid.dasharray or None,
+                stroke_opacity=float(
+                    tk_grid.get("opacity") if tk_grid.get("opacity") is not None
+                    else _ls_grid.opacity
+                ),
+                stroke_dasharray=tk_grid.get("dasharray") or _ls_grid.dasharray or None,
                 css_class="ec-day-box",
             )
+
+    def _draw_day_cell_foreground(
+        self,
+        config: CalendarConfig,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        day_num: int,
+        style: DayStyle,
+    ) -> None:
+        """Draw the layers that belong *over* duration bars.
+
+        Order (back to front):
+        5. Circle (if milestone)
+        6. Box around number (if boxed)
+        7. Day number text or replacement icon
+        7b. Fiscal period start label
+        8. Strikethrough line
+        """
+        tk_day = self._tk("text:day_number")
+        tk_milestone = self._tk("icon:milestone")
+        default_color = (
+            tk_day.get("color")
+            or config.get_element_color("ec-day-number", config.mini_day_color)
+        )
 
         # Determine text to display
         display_text = self._format_day_number(day_num, config)
         replace_icon_name = style.icon_replace or style.icon_append
-        has_replace_icon = bool(self._resolve_icon_svg(replace_icon_name))
+        # An icon will be drawn either when the requested icon resolves OR
+        # when the theme's default_missing_icon resolves as a fallback for a
+        # requested-but-missing icon.  In both cases the day-number text is
+        # suppressed so the icon stands in its place.
+        has_replace_icon = bool(self._resolve_icon_svg(replace_icon_name)) or (
+            bool(replace_icon_name)
+            and bool(config.default_missing_icon)
+            and bool(self._resolve_icon_svg(config.default_missing_icon))
+        )
         if has_replace_icon:
             display_text = ""
 
@@ -398,7 +530,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         elif style.bold:
             font = config.mini_cell_bold_font
         else:
-            font = _ts_day.font
+            font = tk_day.get("font") or _ts_day.font
 
         # Determine color and opacity
         text_color = style.text_color or default_color
@@ -409,7 +541,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         cy = y + h / 2
         # Vertical centering: place baseline at cell midpoint, adjusted
         # down by ~1/3 of font size (baseline sits below the visual center in SVG Y-down)
-        font_size = config.mini_cell_font_size
+        font_size = tk_day.get("size")
         text_y = cy + (font_size / 3)
 
         # 5. Circle (milestone)
@@ -422,8 +554,16 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 radius,
                 stroke=style.circle_color,
                 fill=style.circle_fill or "none",
-                stroke_width=_ls_milestone.width,
-                stroke_opacity=_ls_milestone.opacity,
+                stroke_width=float(
+                    tk_milestone.get("stroke_width")
+                    if tk_milestone.get("stroke_width") is not None
+                    else _ls_milestone.width
+                ),
+                stroke_opacity=float(
+                    tk_milestone.get("stroke_opacity")
+                    if tk_milestone.get("stroke_opacity") is not None
+                    else _ls_milestone.opacity
+                ),
                 css_class="ec-milestone-marker",
             )
 
@@ -433,12 +573,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             from config.config import get_font_path
 
             font_path = get_font_path(font)
-            tw = string_width(display_text, font_path, config.mini_cell_font_size)
+            tw = string_width(display_text, font_path, font_size)
             box_pad = 2.0
             box_x = cx - tw / 2 - box_pad
             box_w = tw + 2 * box_pad
-            box_h = config.mini_cell_font_size * 1.2
-            box_y_svg = text_y - box_h + config.mini_cell_font_size * 0.2
+            box_h = font_size * 1.2
+            box_y_svg = text_y - box_h + font_size * 0.2
             self._draw_rect(
                 box_x,
                 box_y_svg,
@@ -454,7 +594,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # 7. Draw day number text
         day_num_css = "ec-day-number ec-adjacent" if style.is_adjacent_month else "ec-day-number"
         if has_replace_icon:
-            icon_size = config.mini_cell_font_size * 0.85
+            icon_size = font_size * 0.85
             icon_baseline_y = cy + (icon_size * 0.30)
             self._draw_icon_svg(
                 replace_icon_name,
@@ -463,6 +603,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 icon_size,
                 anchor="middle",
                 color=text_color,
+                fallback_name=config.default_missing_icon,
+                fallback_color=text_color,
                 css_class="ec-event-icon",
             )
         elif style.outlined:
@@ -475,7 +617,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 text_y,
                 display_text,
                 font,
-                config.mini_cell_font_size,
+                font_size,
                 fill=text_color,
                 fill_opacity=0.15,
                 anchor="middle",
@@ -487,7 +629,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 text_y,
                 display_text,
                 font,
-                config.mini_cell_font_size,
+                font_size,
                 fill=text_color,
                 fill_opacity=text_opacity,
                 anchor="middle",
@@ -497,18 +639,18 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # 7b. Fiscal period start label (small text at bottom of cell)
         if style.fiscal_period_label:
             _ts_fiscal = config.get_text_style("ec-fiscal-label")
+            tk_fiscal = self._tk("text:fiscal_label")
             label_font_size = max(
-                4.0,
-                (config.fiscal_period_label_font_size or config.mini_cell_font_size * 0.6),
+                4.0, tk_fiscal.get("size") or font_size * 0.6
             )
             label_y = y + h - label_font_size * 0.3
             self._draw_text(
                 cx,
                 label_y,
                 style.fiscal_period_label,
-                _ts_fiscal.font,
+                tk_fiscal.get("font") or _ts_fiscal.font,
                 label_font_size,
-                fill=_ts_fiscal.color,
+                fill=tk_fiscal.get("color") or _ts_fiscal.color,
                 fill_opacity=0.85,
                 anchor="middle",
                 css_class="ec-fiscal-label",
@@ -520,8 +662,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             from config.config import get_font_path
 
             font_path = get_font_path(font)
-            tw = string_width(display_text, font_path, config.mini_cell_font_size)
-            strike_y = text_y + config.mini_cell_font_size * 0.3
+            tw = string_width(display_text, font_path, font_size)
+            strike_y = text_y + font_size * 0.3
             self._draw_line(
                 cx - tw / 2,
                 strike_y,
@@ -728,7 +870,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # Assign a distinct color and StyleResult to each duration event.
         palette = config.group_colors or ["lightsteelblue"]
-        style_engine = StyleEngine(config.theme_style_rules or [])
+        style_engine = StyleEngine(_mini_style_rules(config))
         from visualizers.mini.day_styles import DayStyleResolver
         from shared.rule_engine import StyleResult
         event_styles: dict[int, tuple[str, StyleResult]] = {}
@@ -838,7 +980,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         coordinates: CoordinateDict,
         events: list,
+        db: "CalendarDB | None" = None,
     ) -> None:
+        self._ensure_mini_tokens(config)
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None
@@ -872,16 +1016,17 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # Title
         _ts_heading = config.get_text_style("ec-heading")
-        title_font_size = config.mini_details_title_font_size
+        tk_heading = self._tk("text:heading")
+        title_font_size = tk_heading.get("size")
         title_text = config.mini_details_title_text
         title_y = content_top + title_font_size + 10
         self._draw_text(
             content_left + content_width / 2,
             title_y,
             title_text,
-            _ts_heading.font,
+            tk_heading.get("font") or _ts_heading.font,
             title_font_size,
-            fill=_ts_heading.color,
+            fill=tk_heading.get("color") or _ts_heading.color,
             anchor="middle",
             css_class="ec-heading",
         )
@@ -909,15 +1054,19 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             col_x.append(col_x[-1] + w)
 
         _ts_det_label = config.get_text_style("ec-label")
-        header_font_size = config.mini_details_header_font_size
+        tk_det_label = self._tk("text:label")
+        header_font_size = tk_det_label.get("size")
         header_y = title_y + header_font_size + 6
         _ts_event_name = config.get_text_style("ec-event-name")
-        row_font = _ts_event_name.font
-        row_font_size = config.mini_details_name_text_font_size
+        tk_event_name = self._tk("text:event_name")
+        row_font = tk_event_name.get("font") or _ts_event_name.font
+        row_font_size = tk_event_name.get("size")
         _ts_event_date = config.get_text_style("ec-event-date")
+        tk_event_date = self._tk("text:event_date")
         _ts_event_notes = config.get_text_style("ec-event-notes")
-        notes_font = _ts_event_notes.font
-        notes_font_size = config.mini_details_notes_text_font_size
+        tk_event_notes = self._tk("text:event_notes")
+        notes_font = tk_event_notes.get("font") or _ts_event_notes.font
+        notes_font_size = tk_event_notes.get("size")
 
         # Header row
         for idx, head in enumerate(headers):
@@ -925,9 +1074,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 col_x[idx] + 4,
                 header_y,
                 head,
-                _ts_det_label.font,
+                tk_det_label.get("font") or _ts_det_label.font,
                 header_font_size,
-                fill=_ts_det_label.color,
+                fill=tk_det_label.get("color") or _ts_det_label.color,
                 css_class="ec-label",
             )
 
@@ -963,6 +1112,21 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             ),
         )
 
+        # Hoisted out of the per-event loop so the trailing holiday/special-day
+        # section can reuse the same colors and opacities.
+        name_fill = tk_event_name.get("color") or config.mini_details_name_text_font_color
+        name_opacity = (
+            tk_event_name.get("opacity")
+            if tk_event_name.get("opacity") is not None
+            else config.mini_details_name_text_font_opacity
+        )
+        text_fill = tk_event_name.get("color") or config.mini_details_text_font_color
+        text_opacity_det = (
+            tk_event_name.get("opacity")
+            if tk_event_name.get("opacity") is not None
+            else config.mini_details_text_font_opacity
+        )
+
         for event in events_sorted:
             if current_y + row_height > content_bottom:
                 break
@@ -985,8 +1149,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 start_fmt,
                 row_font,
                 row_font_size,
-                fill=_ts_event_date.color,
-                fill_opacity=_ts_event_date.opacity,
+                fill=tk_event_date.get("color") or _ts_event_date.color,
+                fill_opacity=(
+                    tk_event_date.get("opacity")
+                    if tk_event_date.get("opacity") is not None
+                    else _ts_event_date.opacity
+                ),
                 css_class="ec-event-date",
             )
             self._draw_text(
@@ -995,8 +1163,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 name,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_name_text_font_color,
-                fill_opacity=config.mini_details_name_text_font_opacity,
+                fill=name_fill,
+                fill_opacity=name_opacity,
                 max_width=name_width,
                 css_class="ec-event-name",
             )
@@ -1006,8 +1174,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 milestone,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_text_font_color,
-                fill_opacity=config.mini_details_text_font_opacity,
+                fill=text_fill,
+                fill_opacity=text_opacity_det,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -1016,8 +1184,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 priority,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_text_font_color,
-                fill_opacity=config.mini_details_text_font_opacity,
+                fill=text_fill,
+                fill_opacity=text_opacity_det,
                 css_class="ec-event-name",
             )
             self._draw_text(
@@ -1026,8 +1194,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 group,
                 row_font,
                 row_font_size,
-                fill=config.mini_details_text_font_color,
-                fill_opacity=config.mini_details_text_font_opacity,
+                fill=text_fill,
+                fill_opacity=text_opacity_det,
                 css_class="ec-event-name",
             )
 
@@ -1048,13 +1216,104 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     detail_line,
                     notes_font,
                     notes_font_size,
-                    fill=_ts_event_notes.color,
-                    fill_opacity=_ts_event_notes.opacity,
+                    fill=tk_event_notes.get("color") or _ts_event_notes.color,
+                    fill_opacity=(
+                        tk_event_notes.get("opacity")
+                        if tk_event_notes.get("opacity") is not None
+                        else _ts_event_notes.opacity
+                    ),
                     max_width=name_width,
                     css_class="ec-event-notes",
                 )
 
             current_y += row_height
+
+        # Holidays + company special days that appear on the visualization.
+        # Collect by walking the primary cell daykeys (one row per unique
+        # name across the visible range), then render after the events.
+        if db is not None:
+            extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
+            if extra_rows and current_y + row_height <= content_bottom:
+                # Section heading, mirroring the top column-header shape:
+                # heading text first, separator line below it, rows below that.
+                section_y = current_y + header_font_size
+                self._draw_text(
+                    col_x[0] + 4,
+                    section_y,
+                    "Holidays & Special Days",
+                    tk_det_label.get("font") or _ts_det_label.font,
+                    header_font_size,
+                    fill=tk_det_label.get("color") or _ts_det_label.color,
+                    css_class="ec-label",
+                )
+                section_sep_y = section_y + header_font_size * 0.6
+                self._draw_line(
+                    content_left,
+                    section_sep_y,
+                    content_right,
+                    section_sep_y,
+                    stroke="grey",
+                    stroke_opacity=0.5,
+                    stroke_dasharray=_ls_sep.dasharray or None,
+                    css_class="ec-separator",
+                )
+                current_y = section_sep_y + 15
+
+                for row in extra_rows:
+                    if current_y + row_height > content_bottom:
+                        break
+                    self._draw_text(
+                        col_x[0] + 4,
+                        current_y,
+                        row["date_label"],
+                        row_font,
+                        row_font_size,
+                        fill=tk_event_date.get("color") or _ts_event_date.color,
+                        fill_opacity=(
+                            tk_event_date.get("opacity")
+                            if tk_event_date.get("opacity") is not None
+                            else _ts_event_date.opacity
+                        ),
+                        css_class="ec-event-date",
+                    )
+                    self._draw_text(
+                        col_x[1] + 4,
+                        current_y,
+                        row["name"],
+                        row_font,
+                        row_font_size,
+                        fill=name_fill,
+                        fill_opacity=name_opacity,
+                        max_width=col_widths[1] - 8,
+                        css_class="ec-event-name",
+                    )
+                    self._draw_text(
+                        col_x[4] + 4,
+                        current_y,
+                        row["kind"],
+                        row_font,
+                        row_font_size,
+                        fill=text_fill,
+                        fill_opacity=text_opacity_det,
+                        css_class="ec-event-name",
+                    )
+                    if row.get("notes"):
+                        self._draw_text(
+                            col_x[1] + 4,
+                            current_y + (notes_font_size + 2),
+                            row["notes"],
+                            notes_font,
+                            notes_font_size,
+                            fill=tk_event_notes.get("color") or _ts_event_notes.color,
+                            fill_opacity=(
+                                tk_event_notes.get("opacity")
+                                if tk_event_notes.get("opacity") is not None
+                                else _ts_event_notes.opacity
+                            ),
+                            max_width=col_widths[1] - 8,
+                            css_class="ec-event-notes",
+                        )
+                    current_y += row_height
 
         if config.shrink_to_content:
             details_bbox = {
@@ -1076,3 +1335,74 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             details_path = f"{config.outputfile}{config.mini_details_output_suffix}.svg"
         self._drawing.save_svg(details_path)
         self._drawing = saved_drawing
+
+    @staticmethod
+    def _collect_holiday_special_rows(
+        coordinates: "CoordinateDict",
+        config: "CalendarConfig",
+        db: "CalendarDB",
+    ) -> list[dict]:
+        """Build the deduplicated holiday + special-day entries for the details page.
+
+        Walks the primary day-cell coordinates so the result matches what's
+        visible on the calendar.  A holiday or special day that recurs across
+        multiple visible days is collapsed into a single row labelled with the
+        date range it covers.
+        """
+        # Primary daykeys only — adjacent-month cells share dates with their
+        # owning month elsewhere in the grid and should not double-count.
+        daykeys = sorted({
+            key[len("Cell_") :]
+            for key in coordinates
+            if key.startswith("Cell_") and not key.endswith("__adj")
+        })
+        if not daykeys:
+            return []
+
+        def fmt(d: str) -> str:
+            return f"{d[:4]}-{d[4:6]}-{d[6:8]}" if d and len(d) >= 8 else d
+
+        def date_label(first: str, last: str) -> str:
+            return fmt(first) if first == last else f"{fmt(first)} – {fmt(last)}"
+
+        # name → {"first": daykey, "last": daykey, "notes": str}
+        holidays_seen: dict[str, dict[str, str]] = {}
+        specials_seen: dict[str, dict[str, str]] = {}
+
+        for dk in daykeys:
+            for h in db.get_holidays_for_date(dk, config.country):
+                name = (h.get("displayname") or h.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = holidays_seen.setdefault(name, {"first": dk, "last": dk, "notes": ""})
+                entry["last"] = dk
+                country = (h.get("country") or "").strip()
+                if country and country not in entry["notes"]:
+                    entry["notes"] = (
+                        f"{entry['notes']}, {country}" if entry["notes"] else country
+                    )
+            for sd in db.get_special_days_for_date(dk):
+                name = (sd.get("name") or "").strip()
+                if not name:
+                    continue
+                entry = specials_seen.setdefault(
+                    name, {"first": dk, "last": dk, "notes": (sd.get("notes") or "").strip()}
+                )
+                entry["last"] = dk
+
+        rows: list[dict] = []
+        for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
+            rows.append({
+                "date_label": date_label(info["first"], info["last"]),
+                "name": name,
+                "kind": "Federal Holiday",
+                "notes": info["notes"],
+            })
+        for name, info in sorted(specials_seen.items(), key=lambda kv: kv[1]["first"]):
+            rows.append({
+                "date_label": date_label(info["first"], info["last"]),
+                "name": name,
+                "kind": "Special Day",
+                "notes": info["notes"],
+            })
+        return rows

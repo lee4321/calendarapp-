@@ -39,6 +39,24 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
 
+
+def _resolve_excel_token(config: "CalendarConfig", token: str) -> dict:
+    """Return the unified-theme style dict for ``token`` (papersize-only ctx).
+
+    Excelheader has no per-event ctx (it draws timeband rows, not events) and
+    no notion of paper size in the SVG sense, but ``papersize`` is forwarded
+    so themes can scope rules with ``select: { papersize: ... }`` if needed.
+    Returns ``{}`` when no theme is loaded or the token isn't defined.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        return {}
+    ctx: dict[str, str] = {}
+    papersize = getattr(config, "papersize", None)
+    if papersize:
+        ctx["papersize"] = str(papersize)
+    return theme.resolve_token(token, ctx) or {}
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 FIXED_COLUMNS: list[tuple[str, float]] = [
@@ -249,6 +267,7 @@ def _build_right_border_cols(
     config: "CalendarConfig",
 ) -> dict[int, dict]:
     """Return {excel_col: {color, style}} for each configured vertical line."""
+    tk_vline = _resolve_excel_token(config, "box:vline")
     result: dict[int, dict] = {}
     for line in vertical_lines:
         if not isinstance(line, dict):
@@ -259,11 +278,13 @@ def _build_right_border_cols(
         align = str(line.get("align", "end")).strip().lower()
         line_color = str(
             line.get("color")
+            or tk_vline.get("stroke")
             or getattr(config, "excelheader_vertical_line_color", "red")
             or "red"
         )
         line_width = float(
             line.get("width")
+            or tk_vline.get("stroke_width")
             or getattr(config, "excelheader_vertical_line_width", 1.5)
             or 1.5
         )
@@ -411,6 +432,14 @@ def generate_excel_header(
         ws.column_dimensions[get_column_letter(FIRST_DATE_COL + i)].width = DAY_COL_WIDTH
 
     # ── Timeband rows ─────────────────────────────────────────────────────────
+    # Pre-resolve the unified-theme tokens used in the band loop so themes can
+    # drive heading / band-label color and band-cell fill from the same
+    # `text:heading`, `text:band_label`, `box:band` definitions other
+    # visualizers consume.  Per-band YAML overrides still win over tokens.
+    tk_heading = _resolve_excel_token(config, "text:heading")
+    tk_band_label = _resolve_excel_token(config, "text:band_label")
+    tk_box_band = _resolve_excel_token(config, "box:band")
+
     current_row = 1
 
     for band in top_bands:
@@ -434,6 +463,7 @@ def generate_excel_header(
         )
         heading_label_color = str(
             band.get("label_color")
+            or tk_heading.get("color")
             or getattr(config, "excelheader_header_label_color", None)
             or "black"
         )
@@ -497,12 +527,17 @@ def generate_excel_header(
 
         segs = band_segments.get(str(band.get("label", "")).strip().lower(), [])
 
-        band_fill_raw = band.get("fill_color", getattr(config, "excelheader_timeband_fill_color", "none"))
+        band_fill_raw = band.get(
+            "fill_color",
+            tk_box_band.get("fill")
+            or getattr(config, "excelheader_timeband_fill_color", "none"),
+        )
         band_palette_raw = band.get("fill_palette", getattr(config, "excelheader_timeband_fill_palette", []))
         color_list = BlockPlanRenderer._resolve_color_list(band_fill_raw, band_palette_raw, db)
 
         seg_label_color = str(
             band.get("font_color")
+            or tk_band_label.get("color")
             or getattr(config, "excelheader_timeband_label_color", None)
             or "black"
         )

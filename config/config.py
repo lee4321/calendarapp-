@@ -79,6 +79,14 @@ class CalendarConfig:
     # Unified theme styles (new system — populated by theme engine for new-format themes)
     theme_styles: Any = None  # config.styles.ThemeStyles | None
 
+    # Parsed unified-schema theme (post-migration runtime API).  Populated by
+    # ThemeEngine.load() alongside theme_styles.  Renderer consumers should
+    # query this directly via .resolve_token() / .find_rules() instead of
+    # reading legacy CalendarConfig styling fields; once every consumer has
+    # migrated, the legacy fields and the decompiler bridge can be removed.
+    # See config/unified_theme.py and design §6.
+    theme: Any = None  # config.unified_theme.UnifiedTheme | None
+
     # Data source description (for header/footer expansion)
     events: str = ""
 
@@ -151,9 +159,7 @@ class CalendarConfig:
     mini_title_font_size: float | None = None
     mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
     mini_title_color: str = "navy"
-    mini_header_font: str = Fonts.J_REGULAR  # Day-of-week header font
     mini_header_font_size: float | None = None
-    mini_header_color: str = "grey"
     mini_day_color: str = "black"  # Default day number color
     mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
     mini_holiday_color: str = "red"  # Holiday day number color
@@ -179,16 +185,12 @@ class CalendarConfig:
     mini_month_outline_width: float = 0.5
     mini_month_outline_opacity: float = 1.0
     mini_month_outline_dasharray: str | None = None
-    mini_cell_box_stroke_dasharray: str | None = None
     mini_strikethrough_stroke_dasharray: str | None = None
     mini_hash_line_dasharray: str | None = None
-    mini_duration_bar_stroke_dasharray: str | None = None
     mini_details_separator_stroke_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
-    mini_week_number_font: str = Fonts.J_REGULAR  # Font for week numbers
-    mini_week_number_color: str = "black"  # Color for week numbers
     mini_week_number_font_size: float | None = None  # Week number font size
     mini_week_number_label_format: str = "W{num}"
     mini_icon_set: str = "squares"  # Icon set for mini-icon view
@@ -360,28 +362,16 @@ class CalendarConfig:
     include_mini_details: bool = True
     mini_details_output_suffix: str = "_details"
     mini_details_title_text: str = "Event Details"
-    mini_details_title_font: str = Fonts.RC_BOLD
-    mini_details_title_color: str = "navy"
     mini_details_title_font_size: float | None = None
-    mini_details_header_font: str = Fonts.RC_BOLD
-    mini_details_header_color: str = "grey"
     mini_details_header_font_size: float | None = None
-    # ── Mini details text styling (uniform) ──────────────────────────────────
-    mini_details_text_font_name: str = Fonts.RC_LIGHT
+    # ── Mini details text styling — kept survivors only.
     mini_details_text_font_color: str = "black"
     mini_details_text_font_size: float | None = None
     mini_details_text_font_opacity: float = 1.0
-    mini_details_text_alignment: str = "left"
-    mini_details_name_text_font_name: str = Fonts.RC_LIGHT
     mini_details_name_text_font_color: str = "black"
     mini_details_name_text_font_size: float | None = None
     mini_details_name_text_font_opacity: float = 1.0
-    mini_details_name_text_alignment: str = "left"
-    mini_details_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
-    mini_details_notes_text_font_color: str = "darkgrey"
     mini_details_notes_text_font_size: float | None = None
-    mini_details_notes_text_font_opacity: float = 1.0
-    mini_details_notes_text_alignment: str = "left"
     mini_details_headers: list[str] = field(
         default_factory=lambda: [
             "Start Date",
@@ -401,14 +391,11 @@ class CalendarConfig:
     mini_current_day_color: str = "lightblue"  # Current day shade color
 
     # Theme-overridable mini calendar fields (None = use mini_* defaults above)
-    theme_mini_title_color: str | None = None
-    theme_mini_header_color: str | None = None
     theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
     theme_mini_holiday_color: str | None = None
     theme_mini_nonworkday_fill_color: str | None = None
     theme_mini_milestone_color: str | None = None
-    theme_mini_week_number_color: str | None = None
     theme_mini_current_day_color: str | None = None
 
     # Content filtering options
@@ -504,7 +491,6 @@ class CalendarConfig:
     day_box_fill_opacity: float = 0.25
     day_box_number_font: str = "CascadiaCode"
     day_box_number_color: str = "white"
-    day_box_icon_color: str = "red"
     day_box_font_color: str = "navy"
 
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
@@ -512,26 +498,27 @@ class CalendarConfig:
     duration_icon_color: str = "navy"
     duration_stroke_dasharray: str | None = None
 
-    # ── Weekly text styling (uniform) ──────────────────────────────────────────
-    weekly_text_font_name: str = Fonts.RC_LIGHT
-    weekly_text_font_color: str = "navy"
+    # ── Weekly text styling — kept survivors only.  Phase 2 stripped
+    # weekly_text_* (the full font_name/_color/_opacity/_alignment +
+    # _font_size set), weekly_name_text_alignment, and
+    # weekly_notes_text_alignment — none had readers post-Phase-1.
     weekly_text_font_size: float | None = None
-    weekly_text_font_opacity: float = 1.0
-    weekly_text_alignment: str = "left"
     weekly_name_text_font_name: str = Fonts.RC_LIGHT
     weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None
     weekly_name_text_font_opacity: float = 1.0
-    weekly_name_text_alignment: str = "left"
     weekly_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
     weekly_notes_text_font_color: str = "darkgrey"
     weekly_notes_text_font_size: float | None = None
     weekly_notes_text_font_opacity: float = 1.0
-    weekly_notes_text_alignment: str = "left"
     hash_pattern_opacity: float = 0.15
 
-    # Timeline styling
-    timeline_background_color: str = "none"
+    # Timeline styling.  Phase 2 strip dropped dead fields with no
+    # readers post-Phase-1: background_color (page bg from box:background),
+    # text_font_color/_opacity/_alignment + name_text_font_opacity/_alignment
+    # + notes_text_font_opacity/_alignment (all subsumed by text:event_name /
+    # text:event_notes / text:label tokens), text_font_size,
+    # duration_bar_stroke_dasharray, duration_bracket_stroke_dasharray.
     timeline_axis_color: str = "lightgrey"
     timeline_axis_opacity: float = 0.85
     timeline_axis_width: float = 2.0
@@ -560,22 +547,14 @@ class CalendarConfig:
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     timeline_duration_icon_visible: bool = False
-    # ── Timeline text styling (uniform) ──────────────────────────────────────
+    # ── Timeline text styling — kept survivors only.
     timeline_text_font_name: str = Fonts.R_BOLD
-    timeline_text_font_color: str = "deepskyblue"
-    timeline_text_font_size: float | None = None
-    timeline_text_font_opacity: float = 1.0
-    timeline_text_alignment: str = "left"
     timeline_name_text_font_name: str = Fonts.R_BOLD
     timeline_name_text_font_color: str = "deepskyblue"
     timeline_name_text_font_size: float | None = None
-    timeline_name_text_font_opacity: float = 1.0
-    timeline_name_text_alignment: str = "left"
     timeline_notes_text_font_name: str = Fonts.RC_BOLD
     timeline_notes_text_font_color: str = "deepskyblue"
     timeline_notes_text_font_size: float | None = None
-    timeline_notes_text_font_opacity: float = 1.0
-    timeline_notes_text_alignment: str = "left"
     # Timeline box/date fields (not renamed — not event name/notes text)
     timeline_event_box_width: float | None = None
     timeline_event_box_height: float | None = None
@@ -594,9 +573,7 @@ class CalendarConfig:
     timeline_tick_stroke_dasharray: str | None = None
     timeline_today_line_dasharray: str | None = None
     timeline_label_stroke_dasharray: str | None = None
-    timeline_duration_bar_stroke_dasharray: str | None = None
     timeline_connector_stroke_dasharray: str | None = None
-    timeline_duration_bracket_stroke_dasharray: str | None = None
     timeline_top_colors: list[str] = field(
         default_factory=lambda: [
             "deepskyblue",
@@ -648,8 +625,20 @@ class CalendarConfig:
     timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
     timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
 
-    # Blockplan styling and behavior
-    blockplan_background_color: str = "none"
+    # Blockplan styling and behavior.
+    # Phase 2 strip dropped dead fields with no readers post-Phase-1:
+    # background_color (page bg from box:background), band_row_height
+    # (per-band row_height key), header_font / band_font / lane_label_font /
+    # event_date_font (text:* token covers font selection),
+    # lane_heading_fill_color (box:swimlane_heading), lane_label_color
+    # (text:swimlane_label), event_date_color (text:event_date),
+    # timeband_label_color/_label_opacity (per-band YAML overrides);
+    # the per-text font_color/_opacity/_alignment trio for
+    # text/name_text/notes_text (subsumed by text:event_name /
+    # text:event_notes / text:label tokens); text_font_size, plus a
+    # redundant text_font_name copy (name_text_font_name kept).
+    # blockplan_timeband_fill_color stays — referenced by the
+    # ec-band-cell BoxStyle factory below.
     blockplan_grid_color: str = "grey"
     blockplan_grid_opacity: float = 0.6
     blockplan_grid_line_width: float = 1.0
@@ -659,7 +648,6 @@ class CalendarConfig:
     blockplan_timeband_line_opacity: float | None = None
     blockplan_timeband_line_dasharray: str | None = None
     blockplan_label_column_ratio: float = 0.16
-    blockplan_band_row_height: float = 10.0
     blockplan_fiscal_year_start_month: int = 10
     blockplan_week_start: int = 0  # 0=Monday
     blockplan_show_unmatched_lane: bool = True
@@ -743,17 +731,13 @@ class CalendarConfig:
             {"name": "Quality", "match": {"resource_groups": ["quality", "qa"]}},
         ]
     )
-    blockplan_header_font: str = Fonts.RC_BOLD
     blockplan_header_font_size: float | None = None
     blockplan_header_label_color: str = "black"
     blockplan_header_label_opacity: float = 1.0
     blockplan_header_label_align_h: str = "left"  # left | center | right
     blockplan_header_heading_fill_color: str = "none"
-    blockplan_band_font: str = Fonts.RC_BOLD
     blockplan_band_font_size: float | None = None
-    blockplan_timeband_label_color: str = "black"
-    blockplan_timeband_label_opacity: float = 1.0
-    blockplan_timeband_fill_color: str = "none"
+    blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
     blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
     blockplan_timeband_fill_opacity: float = 1.0
     # Non-workday highlighting for timeband date/dow cells.  None → disabled.
@@ -767,37 +751,21 @@ class CalendarConfig:
     blockplan_federal_holiday_icon: str | None = None
     blockplan_company_holiday_icon: str | None = None
     blockplan_weekend_icon: str | None = None
-    blockplan_lane_heading_fill_color: str = "none"
-    blockplan_lane_label_font: str = Fonts.RC_BOLD
     blockplan_lane_label_font_size: float | None = None
-    blockplan_lane_label_color: str = "black"
     blockplan_lane_label_align_h: str = "left"  # left | center | right
     blockplan_lane_label_align_v: str = "middle"  # top | middle | bottom
     blockplan_lane_label_rotation: float = (
         0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
     )
     blockplan_lane_split_ratio: float = 0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
-    # ── Blockplan text styling (uniform) ─────────────────────────────────────
-    blockplan_text_font_name: str = Fonts.RC_LIGHT
-    blockplan_text_font_color: str = "navy"
-    blockplan_text_font_size: float | None = None
-    blockplan_text_font_opacity: float = 1.0
-    blockplan_text_alignment: str = "left"
-    blockplan_name_text_font_name: str = Fonts.RC_LIGHT
-    blockplan_name_text_font_color: str = "navy"
+    # ── Blockplan text styling — kept survivors only (font_size + name fields).
     blockplan_name_text_font_size: float | None = None
-    blockplan_name_text_font_opacity: float = 1.0
-    blockplan_name_text_alignment: str = "left"
     blockplan_notes_text_font_name: str | None = None
     blockplan_notes_text_font_color: str | None = None
     blockplan_notes_text_font_size: float | None = None
-    blockplan_notes_text_font_opacity: float = 1.0
-    blockplan_notes_text_alignment: str = "left"
     # Blockplan event/duration date & marker fields (not renamed)
     blockplan_event_show_date: bool = False
-    blockplan_event_date_font: str = Fonts.RC_LIGHT
     blockplan_event_date_font_size: float | None = None
-    blockplan_event_date_color: str = "grey"
     blockplan_event_date_format: str = "YYYY-MM-DD"
     blockplan_marker_radius: float = 2.0
     blockplan_duration_fill_opacity: float = 0.35
@@ -818,6 +786,7 @@ class CalendarConfig:
     blockplan_duration_date_font: str = Fonts.RC_LIGHT
     blockplan_duration_date_font_size: float | None = None
     blockplan_duration_date_color: str | None = None
+    blockplan_duration_date_inset: float = 2.0
     blockplan_vertical_line_color: str = "red"
     blockplan_vertical_line_width: float = 1.5
     blockplan_vertical_line_dasharray: str | None = None
@@ -828,7 +797,6 @@ class CalendarConfig:
     blockplan_vertical_line_fill_opacity: float = 0.2
 
     # ── Compact Activities Plan ───────────────────────────────────────────────
-    compactplan_background_color: str = "none"
     compactplan_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
             {
@@ -843,35 +811,29 @@ class CalendarConfig:
     )
     compactplan_band_row_height: float = 22.0
     # ── Compact plan text styling (uniform) ──────────────────────────────────
+    # Phase 2 strip — fields with no consumers post-Phase-1 dropped:
+    #   text_font_color/opacity/alignment, name_text_font_color/opacity/alignment,
+    #   notes_text_font_color/opacity/alignment (all subsumed by the
+    #   text:event_name / text:event_notes / text:label tokens; the per-renderer
+    #   YAML overrides cover any compactplan-specific deviation), plus
+    #   axis_color/dasharray/opacity, duration_stroke_dasharray, duration_opacity,
+    #   duration_icon_color, milestone_color, milestone_list_date_color,
+    #   milestone_list_section_gap, continuation_section_gap, legend_area_ratio,
+    #   background_color (compactplan inherits the page background).
     compactplan_text_font_name: str | None = None
-    compactplan_text_font_color: str = "black"
     compactplan_text_font_size: float | None = None
-    compactplan_text_font_opacity: float = 1.0
-    compactplan_text_alignment: str = "left"
     compactplan_name_text_font_name: str | None = None
-    compactplan_name_text_font_color: str = "#595959"
     compactplan_name_text_font_size: float | None = None
-    compactplan_name_text_font_opacity: float = 1.0
-    compactplan_name_text_alignment: str = "left"
     compactplan_notes_text_font_name: str | None = None
-    compactplan_notes_text_font_color: str = "#595959"
     compactplan_notes_text_font_size: float | None = None
-    compactplan_notes_text_font_opacity: float = 1.0
-    compactplan_notes_text_alignment: str = "left"
     compactplan_show_axis: bool = True
-    compactplan_axis_color: str = "#7f7f7f"
     compactplan_axis_width: float = 1.75
-    compactplan_axis_dasharray: str = "1.75,7.0"
-    compactplan_axis_opacity: float = 1.0
     compactplan_axis_padding: float = 4.0
     compactplan_duration_line_width: float = 5.0
-    compactplan_duration_stroke_dasharray: str | None = None
-    compactplan_duration_opacity: float = 1.0
     compactplan_lane_spacing: float = 6.0
     compactplan_show_duration_icons: bool = True
     compactplan_duration_icon_list: str = "darksquare"  # key into ICON_SETS
     compactplan_duration_icon_height: float = 8.0
-    compactplan_duration_icon_color: str | None = None  # None = use line color
     compactplan_palette: list[str] = field(
         default_factory=lambda: [
             "#92d050",
@@ -886,7 +848,6 @@ class CalendarConfig:
             "mediumpurple",
         ]
     )
-    compactplan_milestone_color: str = "black"
     compactplan_milestone_icon: str | None = None
     compactplan_milestone_flag_width: float = 7.0
     compactplan_milestone_flag_height: float = 9.0
@@ -894,17 +855,22 @@ class CalendarConfig:
     compactplan_show_legend: bool = True
     compactplan_legend_swatch_width: float = 18.0
     compactplan_legend_row_height: float = 10.0
-    compactplan_legend_area_ratio: float = 0.28
     compactplan_legend_column_split: float = 0.5  # fraction of area_w given to the left (group) column
     compactplan_legend_team_columns: int = 2  # sub-columns within the left legend area
     compactplan_header_bottom_y: float | None = None
     compactplan_key_top_y: float | None = None
     compactplan_show_milestone_list: bool = False
     compactplan_milestone_list_date_format: str = "M/D"
-    compactplan_milestone_list_date_color: str = "#595959"
     compactplan_milestone_list_row_height: float = 10.0
     compactplan_milestone_list_date_col_width: float = 32.0
-    compactplan_milestone_list_section_gap: float = 6.0
+
+    # Holiday/special-day list column: date • icon • name, sorted by date.
+    compactplan_show_holiday_list: bool = True
+    compactplan_holiday_list_date_format: str = "M/D"
+    compactplan_holiday_list_row_height: float = 10.0
+    compactplan_holiday_list_date_col_width: float = 32.0
+    compactplan_holiday_list_icon_col_width: float = 14.0
+    compactplan_holiday_list_icon_height: float = 8.0
 
     # ── Continuation icon ─────────────────────────────────────────────────────
     # When a duration line extends beyond the specified end date it is clamped
@@ -915,7 +881,6 @@ class CalendarConfig:
     compactplan_continuation_icon_height: float = 8.0
     compactplan_continuation_icon_color: str | None = None  # None = use line color
     compactplan_continuation_legend_text: str = "activity continues"
-    compactplan_continuation_section_gap: float = 4.0
     compactplan_show_axis_legend: bool = True  # show axis sample + label in the legend
     compactplan_legend_axis_text: str = "timeline"  # label beside the axis sample
 
@@ -995,10 +960,6 @@ class CalendarConfig:
     excelheader_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
     excelheader_vertical_line_color: str = "red"
     excelheader_vertical_line_width: float = 1.5
-    excelheader_vertical_line_dasharray: str | None = None
-    excelheader_vertical_line_opacity: float = 0.9
-    excelheader_vertical_line_fill_color: str = "none"
-    excelheader_vertical_line_fill_opacity: float = 0.2
     excelheader_band_row_height: float = 18.0
     excelheader_header_heading_fill_color: str = "none"
     excelheader_header_label_color: str = "black"
@@ -1012,9 +973,6 @@ class CalendarConfig:
     excelheader_federal_holiday_fill_color: str | None = None
     excelheader_company_holiday_fill_color: str | None = None
     excelheader_weekend_fill_color: str | None = None
-    excelheader_federal_holiday_icon: str | None = None
-    excelheader_company_holiday_icon: str | None = None
-    excelheader_weekend_icon: str | None = None
 
     # Overflow indicator
     overflow_indicator_icon: str = "overflow"
@@ -1236,6 +1194,7 @@ class CalendarConfig:
             "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
             "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
             "ec-legend-text": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color),
+            "ec-legend-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
         }
         builder = _map.get(ec)
         return builder() if builder else TextStyle()
@@ -1963,14 +1922,165 @@ def resolve_page_margins(config: CalendarConfig) -> dict[str, float]:
     }
 
 
+# Phase 2 wave 2 — heuristic-token injection map.
+#
+# Each entry is ``(token, visualizer, legacy_field_name)``.
+# `_inject_heuristic_size_tokens` walks this list after the second
+# `theme_engine.apply()` and synthesizes a `text:<name>` rule for every
+# token whose resolved style lacks `size:` in the current ctx, using the
+# value setfontsizes() already wrote into ``legacy_field_name``.
+#
+# The result: `theme.resolve_token("text:foo", {visualizer, papersize})`
+# always returns a numeric `size:`, so renderers can drop their
+# `tk.get("size") or config.<legacy>` fallback chain.
+_HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
+    # Weekly text sizes (token reads via tk_*.get("size") in
+    # visualizers/weekly/renderer.py).
+    ("text:week_number", "weekly", "week_number_font_size"),
+    ("text:label", "weekly", "day_name_font_size"),
+    ("text:day_number", "weekly", "day_box_number_font_size"),
+    ("text:event_name", "weekly", "weekly_name_text_font_size"),
+    ("text:event_notes", "weekly", "weekly_notes_text_font_size"),
+    # Fiscal label is shared between weekly and mini — no visualizer ctx.
+    ("text:fiscal_label", None, "fiscal_period_label_font_size"),
+    # Mini.
+    ("text:day_number", "mini", "mini_cell_font_size"),
+    ("text:month_title", "mini", "mini_title_font_size"),
+    ("text:label", "mini", "mini_header_font_size"),
+    ("text:week_number", "mini", "mini_week_number_font_size"),
+    # Mini details page.
+    ("text:heading", "mini", "mini_details_title_font_size"),
+    ("text:event_name", "mini", "mini_details_name_text_font_size"),
+    ("text:event_notes", "mini", "mini_details_notes_text_font_size"),
+    # Timeline.
+    ("text:event_name", "timeline", "timeline_name_text_font_size"),
+    ("text:event_notes", "timeline", "timeline_notes_text_font_size"),
+    # Blockplan.
+    ("text:heading", "blockplan", "blockplan_header_font_size"),
+    ("text:band_label", "blockplan", "blockplan_band_font_size"),
+    ("text:swimlane_label", "blockplan", "blockplan_lane_label_font_size"),
+    ("text:event_name", "blockplan", "blockplan_name_text_font_size"),
+    ("text:event_notes", "blockplan", "blockplan_notes_text_font_size"),
+    ("text:event_date", "blockplan", "blockplan_event_date_font_size"),
+    ("text:duration_date", "blockplan", "blockplan_duration_date_font_size"),
+)
+
+
+def _inject_heuristic_size_tokens(config: CalendarConfig) -> None:
+    """Inject synthesized ``text:<name>`` rules into ``config.theme.rules``
+    for every entry in :data:`_HEURISTIC_TOKEN_FIELDS` whose token doesn't
+    already define ``size:`` for the current ctx.
+
+    Called from :py:meth:`ThemeEngine.apply` right after
+    ``config.theme = parse_theme(...)``, and again at the end of
+    :py:func:`setfontsizes` so test fixtures that skip the theme-engine
+    boot sequence still get a populated token registry.  The heuristic
+    value comes from ``getattr(config, legacy_field_name)``, which
+    setfontsizes() populated earlier.
+
+    When ``config.theme`` is None (no theme was loaded), creates a
+    minimal :py:class:`UnifiedTheme` to hold the synthesized rules
+    so renderers can read ``tk.get("size")`` without falling back.
+
+    No-op for tokens that already resolve to a numeric ``size:``
+    (theme-defined or previously injected).
+    """
+    from config.unified_theme import Rule, UnifiedTheme, _build_token_index
+
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        # Bootstrap a stub theme so test fixtures (which call setfontsizes
+        # but never theme_engine.apply) still populate the token registry
+        # with heuristic sizes.  Real boots overwrite config.theme via
+        # ThemeEngine.apply() before any rendering.
+        theme = UnifiedTheme(sections={}, rules=[])
+        config.theme = theme
+
+    papersize = str(getattr(config, "papersize", "") or "")
+    new_rules: list[Rule] = []
+    for token, visualizer, field_name in _HEURISTIC_TOKEN_FIELDS:
+        ctx: dict[str, str] = {}
+        if papersize:
+            ctx["papersize"] = papersize
+        if visualizer:
+            ctx["visualizer"] = visualizer
+        if (theme.resolve_token(token, ctx) or {}).get("size") is not None:
+            continue
+        value = getattr(config, field_name, None)
+        if value is None:
+            continue
+        try:
+            size_val = float(value)
+        except (TypeError, ValueError):
+            continue
+        select: dict[str, str] = {}
+        if papersize:
+            select["papersize"] = papersize
+        if visualizer:
+            select["visualizer"] = visualizer
+        new_rules.append(
+            Rule(
+                name=f"setfontsizes heuristic: {token}"
+                + (f" (visualizer={visualizer})" if visualizer else ""),
+                define=None,
+                as_name=None,
+                apply_to=(token,),
+                select=select,
+                style={"size": size_val},
+            )
+        )
+    if not new_rules:
+        return
+    theme.rules.extend(new_rules)
+    theme._token_index = _build_token_index(theme.rules)
+
+
+def _theme_size(
+    config: CalendarConfig,
+    token: str,
+    *,
+    visualizer: str | None = None,
+) -> float | None:
+    """Return the unified-theme ``size:`` for *token* if defined, else None.
+
+    Resolved against ``config.theme`` with a context that always carries
+    ``papersize`` and (when supplied) ``visualizer``, so themes can scope
+    size rules with ``select: { papersize: tabloid }`` or
+    ``select: { visualizer: weekly }``.  Returns ``None`` when no theme is
+    loaded, the token isn't defined, or its resolved style bag has no
+    numeric ``size:``.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        return None
+    ctx: dict[str, str] = {}
+    papersize = getattr(config, "papersize", None)
+    if papersize:
+        ctx["papersize"] = str(papersize)
+    if visualizer:
+        ctx["visualizer"] = visualizer
+    style = theme.resolve_token(token, ctx) or {}
+    raw = style.get("size")
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     """
-    Set font sizes using page-dimension-derived formulas.
+    Set font sizes using page-dimension-derived formulas, with unified-theme
+    token sizes taking precedence when defined.
 
-    All font sizes scale proportionally to pageY (the taller dimension
-    in the current orientation). Layout percentages use fixed ratios
-    that work across all paper sizes. Min/max clamps prevent illegibly
-    small or absurdly large text on extreme paper sizes.
+    For every field that has a unified-theme analogue, the corresponding
+    ``text:<name>`` token is consulted first via :func:`_theme_size`; the
+    token's ``size:`` wins when set.  Otherwise the page-height heuristic
+    runs unchanged — proportional to ``pageY`` with min/max clamps that
+    keep text readable across paper sizes.  Page-chrome fields
+    (header / footer / watermark / blockplan_header) have no token analogue
+    and always use the heuristic.
 
     Args:
         config: Calendar configuration to update
@@ -1979,6 +2089,10 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         The same config instance with font sizes set
     """
     h = config.pageY
+
+    def _size(token: str, fallback: float, *, visualizer: str | None = None) -> float:
+        sz = _theme_size(config, token, visualizer=visualizer)
+        return fallback if sz is None else sz
 
     # Layout percentages (fixed ratios, work for all sizes)
     config.week_number_percent = 0.02
@@ -2000,12 +2114,23 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         if base_event_size > 0:
             scale = target_event_size / base_event_size
 
-    config.week_number_font_size = _clamp(
-        _clamp(h * 0.01, 6.0, 32.0) * scale, 6.0, 32.0
+    config.week_number_font_size = _size(
+        "text:week_number",
+        _clamp(_clamp(h * 0.01, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
     )
-    config.day_name_font_size = _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0)
-    config.color_key_font_size = _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0)
+    config.day_name_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
+    config.color_key_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
 
+    # Header / footer are page chrome — no token analogue, heuristic only.
     config.header_left_font_size = _clamp(
         _clamp(h * 0.013, 6.0, 32.0) * scale, 6.0, 32.0
     )
@@ -2018,75 +2143,136 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.footer_center_font_size = config.footer_left_font_size
     config.footer_right_font_size = config.footer_left_font_size
 
-    config.day_box_number_font_size = _clamp(
-        _clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0
+    config.day_box_number_font_size = _size(
+        "text:day_number",
+        _clamp(_clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0),
+        visualizer="weekly",
     )
     config.day_box_icon_font_size = config.day_box_number_font_size
 
-    config.fiscal_period_label_font_size = config.day_box_number_font_size * 0.7
+    # Shared between weekly + mini; no visualizer ctx so a single rule applies
+    # to both unless a theme adds a per-visualizer override.
+    config.fiscal_period_label_font_size = _size(
+        "text:fiscal_label",
+        config.day_box_number_font_size * 0.7,
+    )
 
     # Weekly text sizes
-    config.weekly_name_text_font_size = _clamp(base_event_size * scale, 6.0, 32.0)
-    config.weekly_notes_text_font_size = config.weekly_name_text_font_size * 0.9
+    config.weekly_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(base_event_size * scale, 6.0, 32.0),
+        visualizer="weekly",
+    )
+    config.weekly_notes_text_font_size = _size(
+        "text:event_notes",
+        config.weekly_name_text_font_size * 0.9,
+        visualizer="weekly",
+    )
     config.weekly_text_font_size = config.weekly_name_text_font_size
     config.event_icon_font_size = config.weekly_name_text_font_size
 
     # Mini calendar font sizes
-    config.mini_cell_font_size = _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0)
-    config.mini_title_font_size = _clamp(
-        _clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_cell_font_size = _size(
+        "text:day_number",
+        _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="mini",
     )
-    config.mini_header_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_title_font_size = _size(
+        "text:month_title",
+        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_week_number_font_size = _clamp(
-        _clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_header_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
+    )
+    config.mini_week_number_font_size = _size(
+        "text:week_number",
+        _clamp(_clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
 
     # Mini details page font sizes
-    config.mini_details_title_font_size = _clamp(
-        _clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_title_font_size = _size(
+        "text:heading",
+        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_details_header_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_header_font_size = _size(
+        "text:label",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
-    config.mini_details_name_text_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
     config.mini_details_text_font_size = config.mini_details_name_text_font_size
-    config.mini_details_notes_text_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.mini_details_notes_text_font_size = _size(
+        "text:event_notes",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="mini",
     )
 
     # Timeline text sizes
     base_event = config.weekly_name_text_font_size
-    config.timeline_name_text_font_size = max(10.0, base_event + 2.0)
-    config.timeline_notes_text_font_size = max(8.0, base_event * 0.9)
+    config.timeline_name_text_font_size = _size(
+        "text:event_name",
+        max(10.0, base_event + 2.0),
+        visualizer="timeline",
+    )
+    config.timeline_notes_text_font_size = _size(
+        "text:event_notes",
+        max(8.0, base_event * 0.9),
+        visualizer="timeline",
+    )
     config.timeline_text_font_size = config.timeline_name_text_font_size
 
-    # Blockplan font sizes
+    # Blockplan font sizes — header is page chrome (no token).
     config.blockplan_header_font_size = _clamp(
         _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
     )
-    config.blockplan_band_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_band_font_size = _size(
+        "text:band_label",
+        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
-    config.blockplan_lane_label_font_size = _clamp(
-        _clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_lane_label_font_size = _size(
+        "text:swimlane_label",
+        _clamp(_clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
-    config.blockplan_name_text_font_size = _clamp(
-        _clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0
+    config.blockplan_name_text_font_size = _size(
+        "text:event_name",
+        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
+        visualizer="blockplan",
     )
-    config.blockplan_text_font_size = config.blockplan_name_text_font_size
-    config.blockplan_notes_text_font_size = config.blockplan_name_text_font_size * 0.85
-    config.blockplan_event_date_font_size = _clamp(
-        _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0
+    config.blockplan_notes_text_font_size = _size(
+        "text:event_notes",
+        config.blockplan_name_text_font_size * 0.85,
+        visualizer="blockplan",
     )
-    config.blockplan_duration_date_font_size = _clamp(
-        _clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0
+    config.blockplan_event_date_font_size = _size(
+        "text:event_date",
+        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="blockplan",
+    )
+    config.blockplan_duration_date_font_size = _size(
+        "text:duration_date",
+        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
+        visualizer="blockplan",
     )
 
     # Watermark base font size (paper-size aware, theme-overridable)
     config.watermark_font_size = int(round(_clamp(h * 0.10, 24.0, 256.0)))
+
+    # Phase 2 wave 2: inject heuristic-derived size tokens so renderers'
+    # `tk.get("size")` reads always return a value, even from test fixtures
+    # that skip the theme_engine boot sequence.  ThemeEngine.apply() also
+    # calls this — both call sites are idempotent (already-defined tokens
+    # are skipped).
+    _inject_heuristic_size_tokens(config)
 
     return config

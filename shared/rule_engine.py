@@ -356,8 +356,12 @@ def _build_style_result(rule_style: dict) -> StyleResult:
     def _str_or_none(v: Any) -> str | None:
         return str(v) if v is not None else None
 
-    if "fill_color" in rule_style:
-        raw = rule_style["fill_color"]
+    # Unified schema uses `fill` / `stroke` / `dasharray`; legacy uses the
+    # `*_color` / `stroke_dasharray` spellings.  Accept both — unified takes
+    # precedence when both are present.
+    fill_key = "fill" if "fill" in rule_style else ("fill_color" if "fill_color" in rule_style else None)
+    if fill_key is not None:
+        raw = rule_style[fill_key]
         # Preserve list values so vertical_line rules can cycle colors across
         # matched segments. Other apply_to targets only ever see strings, so
         # the renderers that expect str will already have a string here.
@@ -375,14 +379,16 @@ def _build_style_result(rule_style: dict) -> StyleResult:
         sr.pattern_color = str(raw).strip() if raw else None
     if "pattern_opacity" in rule_style:
         sr.pattern_opacity = float(rule_style["pattern_opacity"])
-    if "stroke_color" in rule_style:
-        sr.stroke_color = _str_or_none(rule_style["stroke_color"])
+    stroke_key = "stroke" if "stroke" in rule_style else ("stroke_color" if "stroke_color" in rule_style else None)
+    if stroke_key is not None:
+        sr.stroke_color = _str_or_none(rule_style[stroke_key])
     if "stroke_width" in rule_style:
         sr.stroke_width = float(rule_style["stroke_width"])
     if "stroke_opacity" in rule_style:
         sr.stroke_opacity = float(rule_style["stroke_opacity"])
-    if "stroke_dasharray" in rule_style:
-        v = rule_style["stroke_dasharray"]
+    dash_key = "dasharray" if "dasharray" in rule_style else ("stroke_dasharray" if "stroke_dasharray" in rule_style else None)
+    if dash_key is not None:
+        v = rule_style[dash_key]
         sr.stroke_dasharray = str(v) if v is not None else None
 
     # Text shorthand — applies to all text sub-elements as a baseline
@@ -444,8 +450,18 @@ class StyleEngine:
     def __init__(self, rules: list[dict]):
         self._rules = [r for r in (rules or []) if isinstance(r, dict)]
 
+    # Legacy apply_to filter strings ↔ unified-schema tokens.
+    _UNIFIED_ALIASES: dict[str, set[str]] = {
+        "duration": {"box:duration"},
+        "event": {"box:event"},
+        "day_box": {"box:day"},
+        "vertical_line": {"box:vline"},
+        "band": {"box:band"},
+    }
+
     def _applicable_rules(self, apply_to_filter: str) -> list[dict]:
         """Yield rules whose apply_to includes apply_to_filter or 'all'."""
+        aliases = self._UNIFIED_ALIASES.get(apply_to_filter, set())
         out = []
         for rule in self._rules:
             raw = rule.get("apply_to", [])
@@ -455,7 +471,7 @@ class StyleEngine:
                 targets = {str(x).lower() for x in raw}
             else:
                 continue
-            if apply_to_filter in targets or "all" in targets:
+            if apply_to_filter in targets or "all" in targets or targets & aliases:
                 out.append(rule)
         return out
 
@@ -584,7 +600,11 @@ class StyleEngine:
                 targets = {str(x).lower() for x in raw}
             else:
                 continue
-            if "vertical_line" not in targets and "all" not in targets:
+            if (
+                "vertical_line" not in targets
+                and "box:vline" not in targets
+                and "all" not in targets
+            ):
                 continue
 
             select = rule.get("select", {})

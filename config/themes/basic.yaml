@@ -4,14 +4,14 @@
 # Theme metadata: name, version, description; surfaced by --theme lookup
 # and the SVG <desc> element.
 theme:
-  name: SAMPLE
+  name: basic
   version: '3.0'
-  description: Annotated reference theme for the unified style_rules schema.
+  description: Absolute minimum viable theme. See design §11.4.
 
 # ─── base ──────────────────────────────────────────────────────────────────
 # Theme-wide defaults: default font family and default missing-icon name.
 base:
-  font_family: FiraSans-Light
+  font_family: Roboto-Regular
   default_missing_icon: applet-closed
 
 # ─── layout ────────────────────────────────────────────────────────────────
@@ -22,26 +22,6 @@ layout:
     right: 0.5in
     bottom: 0.5in
     left: 0.5in
-
-# ─── header ────────────────────────────────────────────────────────────────
-# Header non-styling config (text content references); styling lives in style_rules.
-header:
-  left:
-    text: '{theme.name}'
-  center:
-    text: '{calendar.range}'
-  right:
-    text: '{today}'
-
-# ─── footer ────────────────────────────────────────────────────────────────
-# Footer non-styling config (text content references); styling lives in style_rules.
-footer:
-  left:
-    text: ''
-  center:
-    text: ''
-  right:
-    text: p. {page}
 
 # ─── events ────────────────────────────────────────────────────────────────
 # Event placement policy (item_placement_order); no styling.
@@ -54,13 +34,6 @@ events:
 durations:
   stroke_dasharray: null
 
-# ─── watermark ─────────────────────────────────────────────────────────────
-# Watermark text content and rotation; styling lives in style_rules.
-watermark:
-  text: ''
-  rotation_angle: 45.0
-  resize_mode: fit
-
 # ─── fiscal ────────────────────────────────────────────────────────────────
 # Fiscal calendar semantics: label format and year offset.
 fiscal:
@@ -72,18 +45,13 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: Pastel1
-  fiscal_palette: Blues
-  group_palette: Set2
+  month_palette: Greys
+  fiscal_palette: Greys
+  group_palette: Greys
   federal_holiday:
     alpha: 0.25
   company_holiday:
     alpha: 0.25
-  resource_groups:
-    engineering: steelblue
-    design: mediumpurple
-    qa: tomato
-    ops: goldenrod
 
 # ─── weekly ────────────────────────────────────────────────────────────────
 # Weekly visualizer non-styling config: week-number format, day-name
@@ -129,11 +97,8 @@ text_mini:
   duration_fill: ■
   event_symbols:
     - •
-    - ○
-    - ◐
   milestone_symbols:
     - ◆
-    - ◇
   holiday_symbols:
     - ✕
   nonworkday_symbols:
@@ -146,7 +111,7 @@ timeline:
   tick_label_format: M/D
   today_date: ''
   today_label_text: Today
-  marker_radius: 4.2
+  marker_radius: 4.0
   icon_size: 8
   callout_offset_y: 30.0
   duration_offset_y: 30.0
@@ -155,16 +120,15 @@ timeline:
 # ─── compact_plan ──────────────────────────────────────────────────────────
 # compactplan non-styling config: axis-relative duration/legend geometry.
 compact_plan:
-  legend_area_ratio: 0.28
+  legend_area_ratio: 0.25
   bands:
     - date_range
-    - week
 
 # ─── blockplan ─────────────────────────────────────────────────────────────
 # Blockplan non-styling config: swimlane name list, label-column ratio,
 # lane match policy, fiscal-year start.
 blockplan:
-  fiscal_year_start_month: 2
+  fiscal_year_start_month: 1
   week_start: 0
   label_column_ratio: 0.1
   band_row_height: 12.0
@@ -172,15 +136,8 @@ blockplan:
   show_unmatched_lane: true
   unmatched_lane_name: Other
   swimlanes:
-    - name: Engineering
-    - name: Design
-    - name: QA
-      split_ratio: 0.0
-    - name: Operations
     - name: Other
-  top_bands:
-    - fiscal_quarter
-    - month
+  top_bands: []
   bottom_bands: []
 
 # ─── excelheader ───────────────────────────────────────────────────────────
@@ -191,13 +148,7 @@ excelheader:
   font_name: Calibri
   font_size: 9
   band_row_height: 18.0
-  top_bands:
-    - fiscal_quarter
-    - month
-  band_fonts:
-    fiscal_quarter:
-      excel_font_name: Calibri
-      excel_font_size: 10
+  top_bands: []
   vertical_lines: []
 
 # ─── style_rules ───────────────────────────────────────────────────────────
@@ -209,136 +160,128 @@ style_rules:
     define: text
     as: base
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 9
       color: black
   - name: define text:heading
     define: text
     as: heading
     style:
-      font: FiraSans-Bold
-      size: 11
+      font: Roboto-Regular
+      size: 10
       color: black
   - name: define text:body
     define: text
     as: body
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 8
       color: black
   - name: define text:caption
     define: text
     as: caption
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: dimgrey
+      color: grey
   - name: define text:label
     define: text
     as: label
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
       color: grey
   - name: define text:day_number
     define: text
     as: day_number
     style:
-      font: Roboto-Bold
-      size: 11
+      font: Roboto-Regular
+      size: 10
       color: black
   - name: define text:month_title
     define: text
     as: month_title
     style:
-      font: Roboto-Bold
-      size: 9
+      font: Roboto-Regular
+      size: 8
       color: black
   - name: define text:week_number
     define: text
     as: week_number
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
       color: grey
   - name: define text:event_name
     define: text
     as: event_name
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 8
-      color: navy
+      color: black
   - name: define text:event_notes
     define: text
     as: event_notes
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: darkgrey
+      color: grey
   - name: define text:event_date
     define: text
     as: event_date
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: darkgrey
+      color: grey
   - name: define text:duration_date
     define: text
     as: duration_date
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: darkgrey
+      color: grey
   - name: define text:holiday_title
     define: text
     as: holiday_title
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
       color: black
   - name: define text:today_label
     define: text
     as: today_label
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: tomato
+      color: grey
   - name: define text:fiscal_label
     define: text
     as: fiscal_label
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
-      color: navy
+      color: grey
   - name: define text:swimlane_label
     define: text
     as: swimlane_label
     style:
-      font: Roboto-Bold
+      font: Roboto-Regular
       size: 8
       color: black
   - name: define text:band_label
     define: text
     as: band_label
     style:
-      font: FiraSans-Light
+      font: Roboto-Regular
       size: 7
       color: black
   - name: define text:milestone_label
     define: text
     as: milestone_label
     style:
-      font: Roboto-Bold
+      font: Roboto-Regular
       size: 7
-      color: navy
-  - name: text:heading — small paper
-    apply_to: text:heading
-    select:
-      papersize:
-        - 3x5
-        - 5x8
-    style:
-      size: 8
+      color: black
   - name: define box:default
     define: box
     as: default
@@ -350,10 +293,9 @@ style_rules:
     define: box
     as: cell
     style:
-      fill: none
-      stroke: grey
+      fill: white
+      stroke: lightgrey
       stroke_width: 0.5
-      stroke_opacity: 0.5
   - name: define box:header
     define: box
     as: header
@@ -365,24 +307,22 @@ style_rules:
     as: callout
     style:
       fill: white
-      fill_opacity: 0.85
       stroke: grey
       stroke_width: 0.5
   - name: define box:highlight
     define: box
     as: highlight
     style:
-      fill: lightblue
-      fill_opacity: 0.3
+      fill: '#f0f0f0'
+      fill_opacity: 0.5
       stroke: none
   - name: define box:day
     define: box
     as: day
     style:
-      fill: none
-      stroke: grey
+      fill: white
+      stroke: lightgrey
       stroke_width: 0.5
-      stroke_opacity: 0.5
   - name: define box:event
     define: box
     as: event
@@ -393,9 +333,8 @@ style_rules:
     define: box
     as: duration
     style:
-      fill: steelblue
-      fill_opacity: 0.35
-      stroke: navy
+      fill: lightgrey
+      stroke: grey
       stroke_width: 0.5
   - name: define box:milestone
     define: box
@@ -403,21 +342,6 @@ style_rules:
     style:
       fill: none
       stroke: none
-  # Halo example — uncomment to draw a soft red halo behind every
-  # high-priority milestone glyph in compactplan / blockplan / timeline.
-  # Honored by the Phase 1.5 ``box_token`` wiring on _draw_icon_svg.
-  # Style vocabulary: fill, fill_opacity, stroke, stroke_width,
-  # stroke_opacity, dasharray, padding (default = icon_size * 0.1, i.e.
-  # a 20% halo around the glyph).
-  # - name: critical milestone — halo
-  #   apply_to: box:milestone
-  #   select: { priority_min: 1 }
-  #   style:
-  #     fill: "#fde0e0"
-  #     fill_opacity: 0.6
-  #     stroke: red
-  #     stroke_width: 0.5
-  #     padding: 2
   - name: define box:vline
     define: box
     as: vline
@@ -429,8 +353,8 @@ style_rules:
     define: box
     as: swimlane_heading
     style:
-      fill: '#f4f4f4'
-      stroke: grey
+      fill: '#fafafa'
+      stroke: lightgrey
       stroke_width: 0.5
   - name: define box:swimlane_content
     define: box
@@ -443,9 +367,8 @@ style_rules:
     as: band
     style:
       fill: none
-      stroke: grey
+      stroke: lightgrey
       stroke_width: 0.5
-      stroke_opacity: 0.5
   - name: define box:band_heading
     define: box
     as: band_heading
@@ -456,14 +379,14 @@ style_rules:
     define: line
     as: grid
     style:
-      color: '#cccccc'
+      color: lightgrey
       width: 0.5
       opacity: 1.0
   - name: define line:axis
     define: line
     as: axis
     style:
-      color: lightgrey
+      color: grey
       width: 1.0
       opacity: 1.0
   - name: define line:tick
@@ -477,21 +400,21 @@ style_rules:
     define: line
     as: today
     style:
-      color: tomato
-      width: 1.5
+      color: grey
+      width: 1.0
       opacity: 1.0
   - name: define line:separator
     define: line
     as: separator
     style:
-      color: grey
+      color: lightgrey
       width: 0.5
-      opacity: 0.5
+      opacity: 1.0
   - name: define line:connector
     define: line
     as: connector
     style:
-      color: grey
+      color: lightgrey
       width: 0.5
       opacity: 1.0
       dasharray: 4 2
@@ -499,26 +422,26 @@ style_rules:
     define: icon
     as: event
     style:
-      color: navy
+      color: black
       size: 8
   - name: define icon:duration
     define: icon
     as: duration
     style:
-      color: navy
+      color: black
       size: 8
   - name: define icon:milestone
     define: icon
     as: milestone
     style:
       icon: diamond
-      color: gold
-      size: 12
+      color: black
+      size: 10
   - name: define icon:overflow
     define: icon
     as: overflow
     style:
-      icon: chevron-down
+      icon: overflow
       color: grey
       size: 8
   - name: bind ec-heading
@@ -701,195 +624,7 @@ style_rules:
       element: ec-overflow-icon
     style:
       use: icon:overflow
-  - name: federal holidays — day box tint
-    apply_to: box:day
-    select:
-      federal_holiday: true
-    style:
-      fill: tomato
-      fill_opacity: 0.1
-      pattern: diagonal-stripes
-      pattern_color: tomato
-      pattern_opacity: 0.12
-  - name: company nonworkdays — day box tint
-    apply_to: box:day
-    select:
-      company_holiday: true
-    style:
-      fill: gold
-      fill_opacity: 0.1
-  - name: sprint durations
-    apply_to: box:duration
-    select:
-      task_name:
-        - Sprint
-      event_type: duration
-    style:
-      fill: steelblue
-      fill_opacity: 0.5
-      stroke: steelblue
-      stroke_width: 1.0
-  - name: priority 1 — box outline
-    apply_to: box:event
-    select:
-      priority: 1
-    style:
-      stroke: crimson
-      stroke_width: 1.5
-  - name: priority 1 — event name
-    apply_to: text:event_name
-    select:
-      priority: 1
-    style:
-      color: crimson
-      weight: bold
-  - name: completed items — visual fade
-    apply_to:
-      - box:event
-      - box:duration
-      - text:event_name
-    select:
-      percent_complete:
-        min: 100
-    style:
-      fill: '#f4f4f4'
-      color: grey
-      italic: true
-  - name: critical milestone — marker
-    apply_to: icon:milestone
-    select:
-      priority_min: 1
-    style:
-      icon: flag
-      color: red
-      size: 14
-  - name: critical milestone — label
-    apply_to: text:milestone_label
-    select:
-      priority_min: 1
-    style:
-      color: red
-      weight: bold
-  - name: month band — segment fill
-    apply_to: box:band
-    select:
-      band: month
-    style:
-      fill:
-        - lightblue
-        - lightyellow
-  - name: month band — label
-    apply_to: text:band_label
-    select:
-      band: month
-    style:
-      color: navy
-  - name: month separator vertical line
-    apply_to: box:vline
-    select:
-      band: month
-      repeat: true
-    style:
-      align: end
-      stroke: grey
-      stroke_width: 1.0
-      stroke_opacity: 0.33
-      dasharray: 5,5
-  - name: Engineering — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Engineering
-    style:
-      fill: '#dceaff'
-  - name: Engineering — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Engineering
-    style:
-      color: navy
-  - name: Design — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Design
-    style:
-      fill: '#e7defb'
-  - name: Design — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Design
-    style:
-      color: indigo
-  - name: QA — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: QA
-    style:
-      fill: '#ffe1de'
-  - name: QA — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: QA
-    style:
-      color: firebrick
-  - name: Operations — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Operations
-    style:
-      fill: '#fff3d8'
-  - name: Operations — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Operations
-    style:
-      color: darkgoldenrod
-  - name: Other — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Other
-    style:
-      fill: '#f0f0f0'
-  - name: Other — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Other
-    style:
-      color: dimgrey
-  - name: route engineering tasks
-    apply_to: lane
-    select:
-      resource_group:
-        - engineering
-        - dev
-        - eng
-    style:
-      swimlane: Engineering
-  - name: route design tasks
-    apply_to: lane
-    select:
-      resource_group:
-        - design
-        - ux
-    style:
-      swimlane: Design
-  - name: route qa tasks
-    apply_to: lane
-    select:
-      resource_group:
-        - qa
-        - test
-    style:
-      swimlane: QA
-  - name: route ops tasks
-    apply_to: lane
-    select:
-      resource_group:
-        - ops
-        - operations
-        - sre
-    style:
-      swimlane: Operations
-  - name: catch-all
+  - name: route everything to Other
     apply_to: lane
     select: {}
     style:

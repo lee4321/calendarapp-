@@ -60,7 +60,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "fill_opacity"): "day_box_fill_opacity",
     ("weekly.day_box", "number_font"): "day_box_number_font",
     ("weekly.day_box", "number_color"): "day_box_number_color",
-    ("weekly.day_box", "icon_color"): "day_box_icon_color",
     ("weekly.day_box", "font_color"): "day_box_font_color",
     # Base / global
     ("base", "default_missing_icon"): "default_missing_icon",
@@ -70,24 +69,23 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Durations (icon/stroke only — text fields moved to weekly.name_text/notes_text)
     ("durations", "icon_color"): "duration_icon_color",
     ("durations", "stroke_dasharray"): "duration_stroke_dasharray",
-    # Weekly text styling (uniform)
-    ("weekly.text", "font_name"): "weekly_text_font_name",
-    ("weekly.text", "font_color"): "weekly_text_font_color",
+    # Weekly text styling — kept survivors only.  Phase 2 stripped the
+    # weekly_text_* set entirely (font_name/color/size/opacity/alignment),
+    # plus name_text_alignment + notes_text_alignment (no readers).
     ("weekly.text", "font_size"): "weekly_text_font_size",
-    ("weekly.text", "font_opacity"): "weekly_text_font_opacity",
-    ("weekly.text", "alignment"): "weekly_text_alignment",
     ("weekly.name_text", "font_name"): "weekly_name_text_font_name",
     ("weekly.name_text", "font_color"): "weekly_name_text_font_color",
     ("weekly.name_text", "font_size"): "weekly_name_text_font_size",
     ("weekly.name_text", "font_opacity"): "weekly_name_text_font_opacity",
-    ("weekly.name_text", "alignment"): "weekly_name_text_alignment",
     ("weekly.notes_text", "font_name"): "weekly_notes_text_font_name",
     ("weekly.notes_text", "font_color"): "weekly_notes_text_font_color",
     ("weekly.notes_text", "font_size"): "weekly_notes_text_font_size",
     ("weekly.notes_text", "font_opacity"): "weekly_notes_text_font_opacity",
-    ("weekly.notes_text", "alignment"): "weekly_notes_text_alignment",
-    # Timeline
-    ("timeline", "background_color"): "timeline_background_color",
+    # Timeline.  Phase 2 strip dropped 11 dead translations:
+    # background_color, duration_bar_stroke_dasharray,
+    # duration_bracket_stroke_dasharray, text_font_color/_opacity/_alignment
+    # / _font_size, name_text_font_opacity/_alignment,
+    # notes_text_font_opacity/_alignment.
     ("timeline", "axis_color"): "timeline_axis_color",
     ("timeline", "axis_opacity"): "timeline_axis_opacity",
     ("timeline", "axis_width"): "timeline_axis_width",
@@ -115,10 +113,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "tick_stroke_dasharray"): "timeline_tick_stroke_dasharray",
     ("timeline", "today_line_dasharray"): "timeline_today_line_dasharray",
     ("timeline", "label_stroke_dasharray"): "timeline_label_stroke_dasharray",
-    (
-        "timeline",
-        "duration_bar_stroke_dasharray",
-    ): "timeline_duration_bar_stroke_dasharray",
     ("timeline", "top_colors"): "timeline_top_colors",
     ("timeline", "bottom_colors"): "timeline_bottom_colors",
     ("timeline", "show_fiscal_periods"): "timeline_show_fiscal_periods",
@@ -132,22 +126,14 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "continuation_icon_left"): "timeline_continuation_icon_left",
     ("timeline", "continuation_icon_height"): "timeline_continuation_icon_height",
     ("timeline", "continuation_icon_color"): "timeline_continuation_icon_color",
-    # Timeline text styling (uniform)
+    # Timeline text styling — kept survivors only.
     ("timeline.text", "font_name"): "timeline_text_font_name",
-    ("timeline.text", "font_color"): "timeline_text_font_color",
-    ("timeline.text", "font_size"): "timeline_text_font_size",
-    ("timeline.text", "font_opacity"): "timeline_text_font_opacity",
-    ("timeline.text", "alignment"): "timeline_text_alignment",
     ("timeline.name_text", "font_name"): "timeline_name_text_font_name",
     ("timeline.name_text", "font_color"): "timeline_name_text_font_color",
     ("timeline.name_text", "font_size"): "timeline_name_text_font_size",
-    ("timeline.name_text", "font_opacity"): "timeline_name_text_font_opacity",
-    ("timeline.name_text", "alignment"): "timeline_name_text_alignment",
     ("timeline.notes_text", "font_name"): "timeline_notes_text_font_name",
     ("timeline.notes_text", "font_color"): "timeline_notes_text_font_color",
     ("timeline.notes_text", "font_size"): "timeline_notes_text_font_size",
-    ("timeline.notes_text", "font_opacity"): "timeline_notes_text_font_opacity",
-    ("timeline.notes_text", "alignment"): "timeline_notes_text_alignment",
     # Timeline box/date fields (not renamed)
     ("timeline_events", "box_width"): "timeline_event_box_width",
     ("timeline_events", "box_height"): "timeline_event_box_height",
@@ -158,8 +144,14 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline_durations", "date_color"): "timeline_duration_date_color",
     ("timeline.date", "font_family"): "timeline_date_font",
     ("timeline.date", "font_color"): "timeline_date_color",
-    # Blockplan
-    ("blockplan", "background_color"): "blockplan_background_color",
+    # Blockplan.  Phase 2 strip dropped 23 dead translations:
+    # background_color, band_font, band_row_height, event_date_color/_font,
+    # header_font, lane_heading_fill_color, lane_label_color/_font,
+    # name_text_alignment / _font_color / _font_name / _font_opacity,
+    # notes_text_alignment / _font_opacity, text_alignment / _font_color
+    # / _font_name / _font_opacity / _font_size, timeband_fill_color,
+    # timeband_label_color / _label_opacity (per-band YAML overrides
+    # cover those slots; tokens cover the rest).
     ("blockplan", "grid_color"): "blockplan_grid_color",
     ("blockplan", "grid_opacity"): "blockplan_grid_opacity",
     ("blockplan", "grid_line_width"): "blockplan_grid_line_width",
@@ -169,7 +161,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "timeband_line_opacity"): "blockplan_timeband_line_opacity",
     ("blockplan", "timeband_line_dasharray"): "blockplan_timeband_line_dasharray",
     ("blockplan", "label_column_ratio"): "blockplan_label_column_ratio",
-    ("blockplan", "band_row_height"): "blockplan_band_row_height",
     ("blockplan", "fiscal_year_start_month"): "blockplan_fiscal_year_start_month",
     ("blockplan", "week_start"): "blockplan_week_start",
     ("blockplan", "show_unmatched_lane"): "blockplan_show_unmatched_lane",
@@ -184,8 +175,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "header_label_opacity"): "blockplan_header_label_opacity",
     ("blockplan", "header_label_align_h"): "blockplan_header_label_align_h",
     ("blockplan", "header_heading_fill_color"): "blockplan_header_heading_fill_color",
-    ("blockplan", "timeband_label_color"): "blockplan_timeband_label_color",
-    ("blockplan", "timeband_label_opacity"): "blockplan_timeband_label_opacity",
     ("blockplan", "timeband_fill_color"): "blockplan_timeband_fill_color",
     ("blockplan", "timeband_fill_palette"): "blockplan_timeband_fill_palette",
     ("blockplan", "timeband_fill_opacity"): "blockplan_timeband_fill_opacity",
@@ -199,15 +188,12 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "federal_holiday_icon"): "blockplan_federal_holiday_icon",
     ("blockplan", "company_holiday_icon"): "blockplan_company_holiday_icon",
     ("blockplan", "weekend_icon"): "blockplan_weekend_icon",
-    ("blockplan", "lane_heading_fill_color"): "blockplan_lane_heading_fill_color",
     ("blockplan", "lane_label_align_h"): "blockplan_lane_label_align_h",
     ("blockplan", "lane_label_align_v"): "blockplan_lane_label_align_v",
     ("blockplan", "lane_label_rotation"): "blockplan_lane_label_rotation",
     ("blockplan", "lane_split_ratio"): "blockplan_lane_split_ratio",
     ("blockplan", "event_show_date"): "blockplan_event_show_date",
-    ("blockplan", "event_date_font"): "blockplan_event_date_font",
     ("blockplan", "event_date_font_size"): "blockplan_event_date_font_size",
-    ("blockplan", "event_date_color"): "blockplan_event_date_color",
     ("blockplan", "event_date_format"): "blockplan_event_date_format",
     ("blockplan", "duration_fill_opacity"): "blockplan_duration_fill_opacity",
     ("blockplan", "duration_stroke_color"): "blockplan_duration_stroke_color",
@@ -227,6 +213,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "duration_date_font"): "blockplan_duration_date_font",
     ("blockplan", "duration_date_font_size"): "blockplan_duration_date_font_size",
     ("blockplan", "duration_date_color"): "blockplan_duration_date_color",
+    ("blockplan", "duration_date_inset"): "blockplan_duration_date_inset",
     ("blockplan", "marker_radius"): "blockplan_marker_radius",
     ("blockplan", "vertical_line_color"): "blockplan_vertical_line_color",
     ("blockplan", "vertical_line_width"): "blockplan_vertical_line_width",
@@ -234,65 +221,38 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "vertical_line_opacity"): "blockplan_vertical_line_opacity",
     ("blockplan", "vertical_line_fill_color"): "blockplan_vertical_line_fill_color",
     ("blockplan", "vertical_line_fill_opacity"): "blockplan_vertical_line_fill_opacity",
-    ("blockplan", "header_font"): "blockplan_header_font",
-    ("blockplan", "band_font"): "blockplan_band_font",
-    ("blockplan", "lane_label_font"): "blockplan_lane_label_font",
     ("blockplan", "header_font_size"): "blockplan_header_font_size",
     ("blockplan", "band_font_size"): "blockplan_band_font_size",
     ("blockplan", "lane_label_font_size"): "blockplan_lane_label_font_size",
-    # Blockplan text styling (uniform)
-    ("blockplan.text", "font_name"): "blockplan_text_font_name",
-    ("blockplan.text", "font_color"): "blockplan_text_font_color",
-    ("blockplan.text", "font_size"): "blockplan_text_font_size",
-    ("blockplan.text", "font_opacity"): "blockplan_text_font_opacity",
-    ("blockplan.text", "alignment"): "blockplan_text_alignment",
-    ("blockplan.name_text", "font_name"): "blockplan_name_text_font_name",
-    ("blockplan.name_text", "font_color"): "blockplan_name_text_font_color",
+    # Blockplan text styling — only font_size + name fields kept; the
+    # color / opacity / alignment trios were stripped (see header).
     ("blockplan.name_text", "font_size"): "blockplan_name_text_font_size",
-    ("blockplan.name_text", "font_opacity"): "blockplan_name_text_font_opacity",
-    ("blockplan.name_text", "alignment"): "blockplan_name_text_alignment",
     ("blockplan.notes_text", "font_name"): "blockplan_notes_text_font_name",
     ("blockplan.notes_text", "font_color"): "blockplan_notes_text_font_color",
     ("blockplan.notes_text", "font_size"): "blockplan_notes_text_font_size",
-    ("blockplan.notes_text", "font_opacity"): "blockplan_notes_text_font_opacity",
-    ("blockplan.notes_text", "alignment"): "blockplan_notes_text_alignment",
     # Compact Activities Plan
-    ("compact_plan", "background_color"): "compactplan_background_color",
     ("compact_plan", "time_bands"): "compactplan_time_bands",
     ("compact_plan", "band_row_height"): "compactplan_band_row_height",
-    # Compact plan text styling (uniform)
+    # Compact plan text styling (uniform).  Phase 2 strip dropped the
+    # color / opacity / alignment translations — the unified-theme
+    # text:event_name / text:event_notes / text:label tokens cover those
+    # slots; only font_name / font_size remain as legacy fallbacks.
     ("compact_plan.text", "font_name"): "compactplan_text_font_name",
-    ("compact_plan.text", "font_color"): "compactplan_text_font_color",
     ("compact_plan.text", "font_size"): "compactplan_text_font_size",
-    ("compact_plan.text", "font_opacity"): "compactplan_text_font_opacity",
-    ("compact_plan.text", "alignment"): "compactplan_text_alignment",
     ("compact_plan.name_text", "font_name"): "compactplan_name_text_font_name",
-    ("compact_plan.name_text", "font_color"): "compactplan_name_text_font_color",
     ("compact_plan.name_text", "font_size"): "compactplan_name_text_font_size",
-    ("compact_plan.name_text", "font_opacity"): "compactplan_name_text_font_opacity",
-    ("compact_plan.name_text", "alignment"): "compactplan_name_text_alignment",
     ("compact_plan.notes_text", "font_name"): "compactplan_notes_text_font_name",
-    ("compact_plan.notes_text", "font_color"): "compactplan_notes_text_font_color",
     ("compact_plan.notes_text", "font_size"): "compactplan_notes_text_font_size",
-    ("compact_plan.notes_text", "font_opacity"): "compactplan_notes_text_font_opacity",
-    ("compact_plan.notes_text", "alignment"): "compactplan_notes_text_alignment",
     ("compact_plan", "show_axis"): "compactplan_show_axis",
-    ("compact_plan", "axis_color"): "compactplan_axis_color",
     ("compact_plan", "axis_width"): "compactplan_axis_width",
-    ("compact_plan", "axis_dasharray"): "compactplan_axis_dasharray",
-    ("compact_plan", "axis_opacity"): "compactplan_axis_opacity",
     ("compact_plan", "axis_padding"): "compactplan_axis_padding",
     ("compact_plan", "duration_line_width"): "compactplan_duration_line_width",
-    ("compact_plan", "duration_stroke_dasharray"): "compactplan_duration_stroke_dasharray",
-    ("compact_plan", "duration_opacity"): "compactplan_duration_opacity",
     ("compact_plan", "show_duration_icons"): "compactplan_show_duration_icons",
     ("compact_plan", "duration_icon_list"): "compactplan_duration_icon_list",
     ("compact_plan", "duration_icon_height"): "compactplan_duration_icon_height",
-    ("compact_plan", "duration_icon_color"): "compactplan_duration_icon_color",
     ("compact_plan", "lane_spacing"): "compactplan_lane_spacing",
     ("compact_plan", "palette"): "compactplan_palette",
     ("compact_plan", "palette_name"): "theme_compactplan_palette_name",
-    ("compact_plan", "milestone_color"): "compactplan_milestone_color",
     ("compact_plan", "milestone_icon"): "compactplan_milestone_icon",
     ("compact_plan", "milestone_flag_width"): "compactplan_milestone_flag_width",
     ("compact_plan", "milestone_flag_height"): "compactplan_milestone_flag_height",
@@ -300,15 +260,18 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "show_legend"): "compactplan_show_legend",
     ("compact_plan", "legend_swatch_width"): "compactplan_legend_swatch_width",
     ("compact_plan", "legend_row_height"): "compactplan_legend_row_height",
-    ("compact_plan", "legend_area_ratio"): "compactplan_legend_area_ratio",
     ("compact_plan", "header_bottom_y"): "compactplan_header_bottom_y",
     ("compact_plan", "key_top_y"): "compactplan_key_top_y",
     ("compact_plan", "show_milestone_list"): "compactplan_show_milestone_list",
     ("compact_plan", "milestone_list_date_format"): "compactplan_milestone_list_date_format",
-    ("compact_plan", "milestone_list_date_color"): "compactplan_milestone_list_date_color",
     ("compact_plan", "milestone_list_row_height"): "compactplan_milestone_list_row_height",
     ("compact_plan", "milestone_list_date_col_width"): "compactplan_milestone_list_date_col_width",
-    ("compact_plan", "milestone_list_section_gap"): "compactplan_milestone_list_section_gap",
+    ("compact_plan", "show_holiday_list"): "compactplan_show_holiday_list",
+    ("compact_plan", "holiday_list_date_format"): "compactplan_holiday_list_date_format",
+    ("compact_plan", "holiday_list_row_height"): "compactplan_holiday_list_row_height",
+    ("compact_plan", "holiday_list_date_col_width"): "compactplan_holiday_list_date_col_width",
+    ("compact_plan", "holiday_list_icon_col_width"): "compactplan_holiday_list_icon_col_width",
+    ("compact_plan", "holiday_list_icon_height"): "compactplan_holiday_list_icon_height",
     ("compact_plan", "legend_column_split"): "compactplan_legend_column_split",
     ("compact_plan", "legend_team_columns"): "compactplan_legend_team_columns",
     ("compact_plan", "show_continuation_icon"): "compactplan_show_continuation_icon",
@@ -316,7 +279,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "continuation_icon_height"): "compactplan_continuation_icon_height",
     ("compact_plan", "continuation_icon_color"): "compactplan_continuation_icon_color",
     ("compact_plan", "continuation_legend_text"): "compactplan_continuation_legend_text",
-    ("compact_plan", "continuation_section_gap"): "compactplan_continuation_section_gap",
     ("compact_plan", "show_axis_legend"): "compactplan_show_axis_legend",
     ("compact_plan", "legend_axis_text"): "compactplan_legend_axis_text",
     # Non-workday highlighting for date/dow timeband cells
@@ -351,9 +313,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "title_font"): "mini_title_font",
     ("mini_calendar", "title_font_size"): "mini_title_font_size",
     ("mini_calendar", "title_color"): "mini_title_color",
-    ("mini_calendar", "header_font"): "mini_header_font",
     ("mini_calendar", "header_font_size"): "mini_header_font_size",
-    ("mini_calendar", "header_color"): "mini_header_color",
     ("mini_calendar", "cell_font_size"): "mini_cell_font_size",
     ("mini_calendar", "day_number_glyphs"): "mini_day_number_glyphs",
     ("mini_calendar", "day_number_digits"): "mini_day_number_digits",
@@ -375,35 +335,22 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "month_outline_width"): "mini_month_outline_width",
     ("mini_calendar", "month_outline_opacity"): "mini_month_outline_opacity",
     ("mini_calendar", "month_outline_dasharray"): "mini_month_outline_dasharray",
-    ("mini_calendar", "week_number_font"): "mini_week_number_font",
     ("mini_calendar", "week_number_font_size"): "mini_week_number_font_size",
-    ("mini_calendar", "week_number_color"): "mini_week_number_color",
     ("mini_calendar", "week_number_label_format"): "mini_week_number_label_format",
     # mini_calendar.day_box.hash_rules removed — use style_rules instead
-    # Mini details page
+    # Mini details page — kept survivors only.  Phase 2 stripped
+    # title_color/_font + header_color/_font, plus the text/name_text/notes_text
+    # alignment + name fields with no readers.
     ("mini_details", "title_text"): "mini_details_title_text",
-    ("mini_details", "title_font"): "mini_details_title_font",
     ("mini_details", "title_font_size"): "mini_details_title_font_size",
-    ("mini_details", "title_color"): "mini_details_title_color",
-    ("mini_details", "header_font"): "mini_details_header_font",
     ("mini_details", "header_font_size"): "mini_details_header_font_size",
-    ("mini_details", "header_color"): "mini_details_header_color",
-    # Mini details text styling (uniform)
-    ("mini_details.text", "font_name"): "mini_details_text_font_name",
     ("mini_details.text", "font_color"): "mini_details_text_font_color",
     ("mini_details.text", "font_size"): "mini_details_text_font_size",
     ("mini_details.text", "font_opacity"): "mini_details_text_font_opacity",
-    ("mini_details.text", "alignment"): "mini_details_text_alignment",
-    ("mini_details.name_text", "font_name"): "mini_details_name_text_font_name",
     ("mini_details.name_text", "font_color"): "mini_details_name_text_font_color",
     ("mini_details.name_text", "font_size"): "mini_details_name_text_font_size",
     ("mini_details.name_text", "font_opacity"): "mini_details_name_text_font_opacity",
-    ("mini_details.name_text", "alignment"): "mini_details_name_text_alignment",
-    ("mini_details.notes_text", "font_name"): "mini_details_notes_text_font_name",
-    ("mini_details.notes_text", "font_color"): "mini_details_notes_text_font_color",
     ("mini_details.notes_text", "font_size"): "mini_details_notes_text_font_size",
-    ("mini_details.notes_text", "font_opacity"): "mini_details_notes_text_font_opacity",
-    ("mini_details.notes_text", "alignment"): "mini_details_notes_text_alignment",
     ("mini_details", "headers"): "mini_details_headers",
     ("mini_details", "column_widths"): "mini_details_column_widths",
     ("mini_details", "output_suffix"): "mini_details_output_suffix",
@@ -421,16 +368,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "title_format"): "mini_title_format",
     ("mini_calendar", "current_day_color"): "mini_current_day_color",
     ("mini_calendar", "grid_line_dasharray"): "mini_grid_line_dasharray",
-    ("mini_calendar", "cell_box_stroke_dasharray"): "mini_cell_box_stroke_dasharray",
     (
         "mini_calendar",
         "strikethrough_stroke_dasharray",
     ): "mini_strikethrough_stroke_dasharray",
     ("mini_calendar", "hash_line_dasharray"): "mini_hash_line_dasharray",
-    (
-        "mini_calendar",
-        "duration_bar_stroke_dasharray",
-    ): "mini_duration_bar_stroke_dasharray",
     (
         "mini_calendar",
         "duration_bar_stroke_opacity",
@@ -440,10 +382,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
         "separator_stroke_dasharray",
     ): "mini_details_separator_stroke_dasharray",
     ("timeline", "connector_stroke_dasharray"): "timeline_connector_stroke_dasharray",
-    (
-        "timeline",
-        "duration_bracket_stroke_dasharray",
-    ): "timeline_duration_bracket_stroke_dasharray",
     # ExcelHeader
     ("excelheader", "font_name"): "excelheader_font_name",
     ("excelheader", "font_size"): "excelheader_font_size",
@@ -451,10 +389,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "vertical_lines"): "excelheader_vertical_lines",
     ("excelheader", "vertical_line_color"): "excelheader_vertical_line_color",
     ("excelheader", "vertical_line_width"): "excelheader_vertical_line_width",
-    ("excelheader", "vertical_line_dasharray"): "excelheader_vertical_line_dasharray",
-    ("excelheader", "vertical_line_opacity"): "excelheader_vertical_line_opacity",
-    ("excelheader", "vertical_line_fill_color"): "excelheader_vertical_line_fill_color",
-    ("excelheader", "vertical_line_fill_opacity"): "excelheader_vertical_line_fill_opacity",
     ("excelheader", "band_row_height"): "excelheader_band_row_height",
     ("excelheader", "header_heading_fill_color"): "excelheader_header_heading_fill_color",
     ("excelheader", "header_label_color"): "excelheader_header_label_color",
@@ -466,9 +400,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "federal_holiday_fill_color"): "excelheader_federal_holiday_fill_color",
     ("excelheader", "company_holiday_fill_color"): "excelheader_company_holiday_fill_color",
     ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
-    ("excelheader", "federal_holiday_icon"): "excelheader_federal_holiday_icon",
-    ("excelheader", "company_holiday_icon"): "excelheader_company_holiday_icon",
-    ("excelheader", "weekend_icon"): "excelheader_weekend_icon",
+    # Stripped in Phase 2 (no consumers): vertical_line_dasharray /
+    # vertical_line_opacity / vertical_line_fill_color /
+    # vertical_line_fill_opacity (XLSX borders are color+style only),
+    # federal_holiday_icon / company_holiday_icon / weekend_icon (XLSX
+    # cells render glyphs as fills, not as icon SVGs).
 }
 
 # Valid top-level sections in a theme file
@@ -494,6 +430,9 @@ VALID_SECTIONS = frozenset(
         "blockplan",
         "excelheader",
         "compact_plan",
+        # Shared band catalog referenced by blockplan / compactplan /
+        # excelheader placement lists (design §10).
+        "time_bands",
         # New unified theme format sections
         "text_styles",
         "box_styles",
@@ -509,7 +448,12 @@ VALID_SECTIONS = frozenset(
 )
 
 # Sections that indicate new unified theme format
-_NEW_FORMAT_SECTIONS = frozenset({"text_styles", "element_styles"})
+# Unified-format themes ship `style_rules` instead of the legacy
+# `text_styles` / `element_styles` sections.  Phase 3 path (b) made
+# `style_rules` the single source of truth — `text_styles` /
+# `element_styles` are no longer produced by the decompiler (which was
+# removed) and won't appear in any post-migration theme YAML.
+_NEW_FORMAT_SECTIONS = frozenset({"style_rules"})
 
 # Keys that reference font names (for validation)
 FONT_KEYS = frozenset({"font_family", "font_name", "number_font", "notes_font"})
@@ -547,12 +491,20 @@ class ThemeEngine:
 
     @classmethod
     def list_available_themes(cls) -> list[str]:
-        """Return names of built-in themes (without .yaml extension)."""
+        """Return names of built-in themes (without .yaml extension), sorted.
+
+        Sorts on the stem (post-extension-strip) rather than the full path so
+        the result is stably ordered as plain theme names — `TJXmini` <
+        `TJXmini-icon` (Python's string comparison: shorter shared-prefix
+        sorts first).  Sorting the paths first would give the opposite
+        order because `.` (0x2E) > `-` (0x2D), so `TJXmini-icon.yaml` sorts
+        before `TJXmini.yaml` at the path level.
+        """
         themes: list[str] = []
         if cls.BUILTIN_THEMES_DIR.exists():
-            for f in sorted(cls.BUILTIN_THEMES_DIR.glob("*.yaml")):
+            for f in cls.BUILTIN_THEMES_DIR.glob("*.yaml"):
                 themes.append(f.stem)
-        return themes
+        return sorted(themes)
 
     def load(self, theme_path_or_name: str) -> None:
         """
@@ -976,11 +928,209 @@ class ThemeEngine:
         # Apply color maps
         self._apply_color_maps(config)
 
-        # Build unified ThemeStyles if the theme uses the new format
+        # Resolve band placement lists against the top-level time_bands catalog.
+        # Post-migration themes ship a catalog of named bands at the top level
+        # and per-visualizer placement lists (compact_plan.bands,
+        # blockplan.top_bands, etc.) that reference catalog entries by name.
+        # The renderers still read flat lists of band dicts from
+        # config.compactplan_time_bands / blockplan_top_time_bands / etc., so
+        # this expands the references into those flat lists.
+        self._apply_band_placements(config)
+
+        # Synthesize box:day rules from colors.federal_holiday /
+        # colors.company_holiday before parsing — see method docstring.
+        self._synthesize_holiday_box_day_rules()
+
+        # Build the parsed UnifiedTheme (design §6) — single source of
+        # truth for both the runtime API (resolve_token / find_rules) and
+        # the ThemeStyles object (now derived from theme.rules in
+        # _build_theme_styles, post-Phase-3-path-b).
+        try:
+            from config.unified_theme import parse_theme  # local import to avoid cycles
+            config.theme = parse_theme(self._theme_data)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Theme '%s' could not be parsed as a unified theme: %s. "
+                "ThemeStyles will be empty.",
+                self._theme_name, exc,
+            )
+            config.theme = None
+
+        # Build ThemeStyles from the parsed UnifiedTheme.
         if self._is_new_format():
             self._build_theme_styles(config)
 
+        # Phase 2 wave 2: inject heuristic-derived size tokens so renderers
+        # can drop their `tk.get("size") or config.<legacy>` fallback chain.
+        # Reads the legacy size fields setfontsizes() wrote earlier in the
+        # boot sequence — no-op on the first apply (legacy fields still at
+        # their dataclass defaults), takes effect on the second apply (after
+        # setfontsizes ran).  See config.config._inject_heuristic_size_tokens.
+        from config.config import _inject_heuristic_size_tokens
+        _inject_heuristic_size_tokens(config)
+
         return config
+
+    def _synthesize_holiday_box_day_rules(self) -> None:
+        """Convert ``colors.federal_holiday`` / ``colors.company_holiday`` into
+        equivalent ``box:day`` rules so the unified-theme runtime is the
+        single source of truth for holiday cell shading.
+
+        Resolves Open Issue §2 of the runtime cutover: previously the mini
+        renderer ran *two* layers (legacy ``_apply_holidays`` chain reading
+        ``theme_federal_holiday_color`` first, then a ``find_rules("box:day")``
+        pass overriding it).  The two layers produced surprising last-write-
+        wins precedence when a theme defined both a ``colors.federal_holiday``
+        section and an explicit ``apply_to: box:day`` rule.
+
+        After this method runs, ``colors.federal_holiday.color`` is exposed
+        as a synthesized ``box:day`` rule selected on
+        ``{federal_holiday: true, nonworkday: true}``; ``colors.company_holiday``
+        becomes the analogous rule on ``{company_holiday: true, nonworkday: true}``.
+        Synthesized rules are *prepended* to ``style_rules`` so explicit
+        theme rules later in the file still win in declaration order — matching
+        the pre-migration "explicit overrides built-in" expectation.
+
+        ``fill_opacity`` is hardcoded to the legacy mini-renderer values
+        (0.2 federal, 0.25 company) rather than read from the section's
+        ``alpha`` key, because the pre-migration mini code ignored ``alpha``
+        and used those constants directly.  Other consumers
+        (weekly / blockplan) continue to read ``alpha`` via the legacy
+        CalendarConfig fields.
+
+        Theme color, icon, and pattern from the holiday/special_day DB
+        record itself remain handled by the legacy chains in
+        ``mini/day_styles.py`` — those are per-row data, not theme style.
+        """
+        data = self._theme_data
+        if not isinstance(data, dict):
+            return
+        colors = data.get("colors")
+        if not isinstance(colors, dict):
+            return
+
+        synthesized: list[dict] = []
+        fed = colors.get("federal_holiday")
+        if isinstance(fed, dict) and fed.get("color"):
+            synthesized.append({
+                "name": "synthesized: colors.federal_holiday → box:day fill",
+                "apply_to": "box:day",
+                "select": {"federal_holiday": True, "nonworkday": True},
+                "style": {"fill": fed["color"], "fill_opacity": 0.2},
+            })
+        comp = colors.get("company_holiday")
+        if isinstance(comp, dict) and comp.get("color"):
+            synthesized.append({
+                "name": "synthesized: colors.company_holiday → box:day fill",
+                "apply_to": "box:day",
+                "select": {"company_holiday": True, "nonworkday": True},
+                "style": {"fill": comp["color"], "fill_opacity": 0.25},
+            })
+        if not synthesized:
+            return
+
+        existing = data.get("style_rules")
+        if not isinstance(existing, list):
+            existing = []
+        data["style_rules"] = synthesized + existing
+
+    # Placement-list locations in a theme, paired with the target CalendarConfig
+    # field that each visualizer's renderer reads.  Each entry may be a string
+    # (catalog name) or a dict with ``band: <name>`` plus per-placement
+    # overrides.
+    _BAND_PLACEMENTS: tuple[tuple[str, str, str], ...] = (
+        ("compact_plan", "bands",         "compactplan_time_bands"),
+        ("blockplan",    "top_bands",     "blockplan_top_time_bands"),
+        ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
+        ("excelheader",  "top_bands",     "excelheader_top_time_bands"),
+        ("timeline",     "top_bands",     "timeline_top_time_bands"),
+        ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
+    )
+
+    def _apply_band_placements(self, config: "CalendarConfig") -> None:
+        """Expand placement-list references against the top-level time_bands catalog.
+
+        Each placement entry is one of:
+
+        * A string — looked up in the catalog as-is.  Unknown names are
+          dropped with a warning.
+        * A dict carrying ``band: <name>`` plus per-placement overrides —
+          the overrides are merged on top of the catalog entry.
+        * A bare dict with ``unit:`` (etc.) — passed through unchanged, so
+          inline-only placements still work.
+        """
+        catalog = self._theme_data.get("time_bands")
+        if not isinstance(catalog, dict):
+            catalog = {}
+
+        for section, key, config_field in self._BAND_PLACEMENTS:
+            section_data = self._theme_data.get(section)
+            if not isinstance(section_data, dict):
+                continue
+            placements = section_data.get(key)
+            if not isinstance(placements, list):
+                continue
+
+            resolved: list[dict] = []
+            for entry in placements:
+                resolved_entry = self._resolve_band_placement(
+                    entry, catalog, section=section, key=key,
+                )
+                if resolved_entry is not None:
+                    resolved.append(resolved_entry)
+
+            if resolved:
+                try:
+                    setattr(config, config_field, resolved)
+                except (TypeError, ValueError) as exc:
+                    logger.warning(
+                        "Theme: could not set %s=%r: %s",
+                        config_field, resolved, exc,
+                    )
+
+    def _resolve_band_placement(
+        self,
+        entry: Any,
+        catalog: dict,
+        *,
+        section: str,
+        key: str,
+    ) -> dict | None:
+        """Resolve one placement entry against the catalog.  Returns None on miss."""
+        if isinstance(entry, str):
+            cat = catalog.get(entry)
+            if not isinstance(cat, dict):
+                logger.warning(
+                    "Theme: %s.%s references unknown time_band '%s'",
+                    section, key, entry,
+                )
+                return None
+            return dict(cat)
+
+        if isinstance(entry, dict):
+            name = entry.get("band")
+            if isinstance(name, str):
+                cat = catalog.get(name)
+                if not isinstance(cat, dict):
+                    logger.warning(
+                        "Theme: %s.%s references unknown time_band '%s'",
+                        section, key, name,
+                    )
+                    return None
+                merged = dict(cat)
+                for k, v in entry.items():
+                    if k == "band":
+                        continue
+                    merged[k] = v
+                return merged
+            # Bare inline band definition (no catalog reference) — pass through.
+            return dict(entry)
+
+        logger.warning(
+            "Theme: %s.%s contains a non-string/non-dict entry %r — skipped",
+            section, key, entry,
+        )
+        return None
 
     def _apply_color_maps(self, config: "CalendarConfig") -> None:
         """Apply the colors: section to theme override fields on config."""
@@ -1037,17 +1187,18 @@ class ThemeEngine:
                 setattr(config, config_field, val)
 
         # Mini calendar theme color overrides
+        # title_color / header_color / week_number_color were dropped in
+        # the Phase 2 strip pass — no renderer reads them post-migration
+        # (text:month_title / text:label / text:week_number tokens cover
+        # those styling slots).
         mc = colors.get("mini_calendar", {})
         if isinstance(mc, dict):
             _MINI_COLOR_FIELDS = {
-                "title_color": "theme_mini_title_color",
-                "header_color": "theme_mini_header_color",
                 "day_color": "theme_mini_day_color",
                 "adjacent_month_color": "theme_mini_adjacent_month_color",
                 "holiday_color": "theme_mini_holiday_color",
                 "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
                 "milestone_color": "theme_mini_milestone_color",
-                "week_number_color": "theme_mini_week_number_color",
                 "current_day_color": "theme_mini_current_day_color",
             }
             for yaml_key, config_field in _MINI_COLOR_FIELDS.items():
@@ -1061,28 +1212,30 @@ class ThemeEngine:
         return bool(self._theme_data.keys() & _NEW_FORMAT_SECTIONS)
 
     def _build_theme_styles(self, config: "CalendarConfig") -> None:
-        """Parse new-format YAML sections and build ThemeStyles on config."""
-        from config.styles import (
-            TextStyle,
-            BoxStyle,
-            LineStyle,
-            IconStyle,
-            AxisStyle,
-            ElementBinding,
-            ThemeStyles,
-        )
+        """Build ThemeStyles directly from the parsed UnifiedTheme.
+
+        Replaces the legacy `_parse_text_styles` / `_parse_box_styles` /
+        `_parse_line_styles` / `_parse_icon_styles` / `_parse_element_bindings`
+        path that consumed the decompiled `self._theme_data["text_styles"]`
+        etc. sections.  The decompiler bridge now exists only as a no-op
+        compatibility shim during load (kept until any direct legacy-section
+        readers are confirmed retired).
+
+        Requires `config.theme` to be already populated (UnifiedTheme).
+        """
+        from config.styles import ThemeStyles
         from renderers.css_generator import generate_css
 
-        # Parse named style token dictionaries
-        text_styles = self._parse_text_styles()
-        box_styles = self._parse_box_styles()
-        line_styles = self._parse_line_styles()
-        icon_styles = self._parse_icon_styles()
-        axis = self._parse_axis_style()
+        theme = getattr(config, "theme", None)
+        if theme is None:
+            return
 
-        # Parse element bindings
-        element_bindings = self._parse_element_bindings(
-            text_styles, box_styles, line_styles, icon_styles
+        text_styles = self._parse_text_styles_unified(theme)
+        box_styles = self._parse_box_styles_unified(theme)
+        line_styles = self._parse_line_styles_unified(theme)
+        icon_styles = self._parse_icon_styles_unified(theme)
+        element_bindings = self._parse_element_bindings_unified(
+            theme, text_styles, box_styles, line_styles, icon_styles
         )
 
         theme_styles = ThemeStyles(
@@ -1090,198 +1243,203 @@ class ThemeEngine:
             box_styles=box_styles,
             line_styles=line_styles,
             icon_styles=icon_styles,
-            axis=axis,
             element_bindings=element_bindings,
         )
-
-        # Generate and attach CSS
         theme_styles.css = generate_css(theme_styles)
         config.theme_styles = theme_styles
 
-    def _parse_text_styles(self) -> dict:
-        """Parse text_styles: section into {name: TextStyle} dict."""
+    @staticmethod
+    def _parse_text_styles_unified(theme) -> dict:
+        """Build {name: TextStyle} from `define text:<name>` rules."""
         from config.styles import TextStyle
 
-        raw = self._theme_data.get("text_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: text_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "text" or not rule.as_name:
                 continue
-            size_rules = props.get("size_rules", ())
-            if isinstance(size_rules, list):
-                size_rules = tuple(size_rules)
-            else:
-                size_rules = ()
-            result[name] = TextStyle(
-                font=props.get("font", "RobotoCondensed-Light"),
-                size=float(props.get("size", 8.0)),
-                color=str(props.get("color", "#333333")),
-                opacity=float(props.get("opacity", 1.0)),
-                alignment=str(props.get("alignment", "start")),
-                size_rules=size_rules,
+            style = rule.style or {}
+            try:
+                size = float(style.get("size", 8.0))
+            except (TypeError, ValueError):
+                size = 8.0
+            try:
+                opacity = float(style.get("opacity", 1.0))
+            except (TypeError, ValueError):
+                opacity = 1.0
+            result[rule.as_name] = TextStyle(
+                font=str(style.get("font", "RobotoCondensed-Light")),
+                size=size,
+                color=str(style.get("color", "#333333")),
+                opacity=opacity,
+                alignment=str(style.get("alignment", "start")),
+                # size_rules are conditional rules, not part of the define;
+                # they apply via UnifiedTheme.resolve_token().  TextStyle's
+                # size_rules field is now informational/unused in the
+                # post-Phase-1 token path.
+                size_rules=(),
             )
         return result
 
-    def _parse_box_styles(self) -> dict:
-        """Parse box_styles: section into {name: BoxStyle} dict."""
+    @staticmethod
+    def _parse_box_styles_unified(theme) -> dict:
+        """Build {name: BoxStyle} from `define box:<name>` rules.
+
+        Reads the unified-form keys (`fill`, `stroke`, `dasharray`) directly
+        — no decompiler-rename round-trip.
+        """
         from config.styles import BoxStyle
 
-        raw = self._theme_data.get("box_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: box_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "box" or not rule.as_name:
                 continue
-            fill_colors = props.get("fill_colors")
-            if isinstance(fill_colors, list):
-                fill_colors = tuple(fill_colors)
+            style = rule.style or {}
+            fc = style.get("fill_colors")
+            if isinstance(fc, list):
+                fill_colors = tuple(fc)
             else:
                 fill_colors = None
-            result[name] = BoxStyle(
-                fill=str(props.get("fill", "white")),
-                fill_opacity=float(props.get("fill_opacity", 1.0)),
-                stroke=props.get("stroke"),
-                stroke_width=float(props.get("stroke_width", 0.5)),
-                stroke_opacity=float(props.get("stroke_opacity", 1.0)),
-                stroke_dasharray=props.get("stroke_dasharray"),
-                fill_palette=props.get("fill_palette"),
+            try:
+                fill_opacity = float(style.get("fill_opacity", 1.0))
+            except (TypeError, ValueError):
+                fill_opacity = 1.0
+            try:
+                stroke_width = float(style.get("stroke_width", 0.5))
+            except (TypeError, ValueError):
+                stroke_width = 0.5
+            try:
+                stroke_opacity = float(style.get("stroke_opacity", 1.0))
+            except (TypeError, ValueError):
+                stroke_opacity = 1.0
+            result[rule.as_name] = BoxStyle(
+                fill=str(style.get("fill", "white")),
+                fill_opacity=fill_opacity,
+                stroke=style.get("stroke"),
+                stroke_width=stroke_width,
+                stroke_opacity=stroke_opacity,
+                stroke_dasharray=style.get("dasharray"),
+                fill_palette=style.get("fill_palette"),
                 fill_colors=fill_colors,
             )
         return result
 
-    def _parse_line_styles(self) -> dict:
-        """Parse line_styles: section into {name: LineStyle} dict."""
+    @staticmethod
+    def _parse_line_styles_unified(theme) -> dict:
+        """Build {name: LineStyle} from `define line:<name>` rules."""
         from config.styles import LineStyle
 
-        raw = self._theme_data.get("line_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
-                logger.warning("Theme: line_styles.%s must be a dict", name)
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "line" or not rule.as_name:
                 continue
-            result[name] = LineStyle(
-                color=str(props.get("color", "#CCCCCC")),
-                width=float(props.get("width", 0.5)),
-                opacity=float(props.get("opacity", 1.0)),
-                dasharray=props.get("dasharray"),
+            style = rule.style or {}
+            try:
+                width = float(style.get("width", 0.5))
+            except (TypeError, ValueError):
+                width = 0.5
+            try:
+                opacity = float(style.get("opacity", 1.0))
+            except (TypeError, ValueError):
+                opacity = 1.0
+            result[rule.as_name] = LineStyle(
+                color=str(style.get("color", "#CCCCCC")),
+                width=width,
+                opacity=opacity,
+                dasharray=style.get("dasharray"),
             )
         return result
 
-    def _parse_icon_styles(self) -> dict:
-        """Parse icon_styles: or icons: section into {name: IconStyle} dict."""
+    @staticmethod
+    def _parse_icon_styles_unified(theme) -> dict:
+        """Build {name: IconStyle} from `define icon:<name>` rules."""
         from config.styles import IconStyle
 
-        # Try icon_styles first, fall back to icons
-        raw = self._theme_data.get("icon_styles") or self._theme_data.get("icons", {})
-        if not isinstance(raw, dict):
-            return {}
-        result = {}
-        for name, props in raw.items():
-            if not isinstance(props, dict):
+        result: dict = {}
+        for rule in theme.rules:
+            if rule.define != "icon" or not rule.as_name:
                 continue
-            result[name] = IconStyle(
-                color=str(props.get("color", "#333333")),
-                size=float(props.get("size", 10.0)),
-                icon=props.get("icon"),
+            style = rule.style or {}
+            try:
+                size = float(style.get("size", 10.0))
+            except (TypeError, ValueError):
+                size = 10.0
+            result[rule.as_name] = IconStyle(
+                color=str(style.get("color", "#333333")),
+                size=size,
+                icon=style.get("icon"),
             )
         return result
 
-    def _parse_axis_style(self):
-        """Parse axis: section into AxisStyle."""
-        from config.styles import AxisStyle
+    # ec-class binding kind → name lookup.  Mirrors the legacy element_styles
+    # `<kind>_style: <name>` shape.
+    _BIND_KIND_TO_FIELD: dict[str, str] = {
+        "text": "text_style",
+        "box": "box_style",
+        "line": "line_style",
+        "icon": "icon_style",
+    }
 
-        raw = self._theme_data.get("axis", {})
-        if not isinstance(raw, dict):
-            return AxisStyle()
-
-        tick = raw.get("tick", {})
-        if not isinstance(tick, dict):
-            tick = {}
-        today = raw.get("today", {})
-        if not isinstance(today, dict):
-            today = {}
-
-        return AxisStyle(
-            line_style=str(raw.get("line_style", "axis")),
-            tick_color=str(tick.get("color", "#666666")),
-            tick_label_style=str(tick.get("label_style", "caption")),
-            tick_date_format=str(tick.get("date_format", "MMM D")),
-            today_line_style=str(today.get("line_style", "today")),
-            today_label_color=str(today.get("label_color", "red")),
-            today_label_text=str(today.get("label_text", "Today")),
-        )
-
-    def _parse_element_bindings(
-        self, text_styles: dict, box_styles: dict,
-        line_styles: dict, icon_styles: dict,
+    @classmethod
+    def _parse_element_bindings_unified(
+        cls,
+        theme,
+        text_styles: dict,
+        box_styles: dict,
+        line_styles: dict,
+        icon_styles: dict,
     ) -> dict:
-        """Parse element_styles: section into {class_name: ElementBinding} dict."""
+        """Build {class_name: ElementBinding} from `apply_to: element` rules.
+
+        Each rule's ``select.element`` names the ec-class(es) (string or list)
+        and ``style.use`` references the kind:name token to bind.  Other
+        ``style`` keys become per-element overrides on the binding (currently
+        only ``color`` is supported on the ElementBinding dataclass).
+        """
         from config.styles import ElementBinding
 
-        raw = self._theme_data.get("element_styles", {})
-        if not isinstance(raw, dict):
-            return {}
-
-        result = {}
-        for class_name, binding_def in raw.items():
-            if not isinstance(binding_def, dict):
-                logger.warning("Theme: element_styles.%s must be a dict", class_name)
+        kind_to_dict = {
+            "text": text_styles,
+            "box": box_styles,
+            "line": line_styles,
+            "icon": icon_styles,
+        }
+        result: dict = {}
+        for rule in theme.rules:
+            if "element" not in rule.apply_to:
+                continue
+            select = rule.select or {}
+            element = select.get("element")
+            style = rule.style or {}
+            use = style.get("use")
+            if not isinstance(use, str) or ":" not in use:
+                continue
+            kind, _, token_name = use.partition(":")
+            field_name = cls._BIND_KIND_TO_FIELD.get(kind)
+            if field_name is None:
+                continue
+            kind_dict = kind_to_dict.get(kind, {})
+            if token_name not in kind_dict:
+                logger.warning(
+                    "Theme: element binding references unknown %s:%s",
+                    kind, token_name,
+                )
                 continue
 
-            binding = ElementBinding()
+            if isinstance(element, str):
+                targets = [element]
+            elif isinstance(element, list):
+                targets = [e for e in element if isinstance(e, str)]
+            else:
+                continue
 
-            if "text_style" in binding_def:
-                style_name = binding_def["text_style"]
-                if style_name in text_styles:
-                    binding.text_style = text_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown text_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "box_style" in binding_def:
-                style_name = binding_def["box_style"]
-                if style_name in box_styles:
-                    binding.box_style = box_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown box_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "line_style" in binding_def:
-                style_name = binding_def["line_style"]
-                if style_name in line_styles:
-                    binding.line_style = line_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown line_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "icon_style" in binding_def:
-                style_name = binding_def["icon_style"]
-                if style_name in icon_styles:
-                    binding.icon_style = icon_styles[style_name]
-                else:
-                    logger.warning(
-                        "Theme: element_styles.%s references unknown icon_style '%s'",
-                        class_name, style_name,
-                    )
-
-            if "color" in binding_def:
-                binding.color = str(binding_def["color"])
-
-            result[class_name] = binding
-
+            for ec in targets:
+                if ec in result:
+                    continue
+                binding = ElementBinding()
+                setattr(binding, field_name, kind_dict[token_name])
+                if "color" in style:
+                    binding.color = str(style["color"])
+                result[ec] = binding
         return result
 
     # ── Rule-list support ─────────────────────────────────────────────────────

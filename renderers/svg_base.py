@@ -58,6 +58,27 @@ class BaseSVGRenderer(ABC):
         self._icon_svg_map: dict[str, str] = {}
 
     # =========================================================================
+    # Unified-theme token resolution
+    # =========================================================================
+
+    @staticmethod
+    def _resolve_token(
+        config: "CalendarConfig",
+        token: str,
+        ctx: dict | None = None,
+    ) -> dict:
+        """Resolve a UnifiedTheme token; returns ``{}`` when no theme is loaded.
+
+        The returned dict carries the merged style bag for ``token`` (e.g.
+        ``"text:day_number"``).  Callers read individual properties with
+        ``.get("color")`` etc. and supply their own legacy-field fallback.
+        """
+        theme = getattr(config, "theme", None)
+        if theme is None:
+            return {}
+        return theme.resolve_token(token, ctx or {})
+
+    # =========================================================================
     # Drawing helper methods
     # =========================================================================
 
@@ -725,6 +746,123 @@ class BaseSVGRenderer(ABC):
             inner = inner.rsplit("</svg>", 1)[0]
         return inner.strip()
 
+    @staticmethod
+    def _event_ctx(event) -> dict:
+        """Build a selector context dict from an Event for box: halo lookups.
+
+        Mirrors the predicate vocabulary the design's ``box:milestone``
+        worked example uses: ``event_type``, ``milestone``, ``rollup``,
+        ``priority``, ``percent_complete``, ``task_name``, ``notes``,
+        ``resource_group``, ``resource_names``, ``wbs``.  Returns an empty
+        dict for falsy inputs so the helper can be passed an Optional[Event]
+        without per-call branching.
+        """
+        if event is None:
+            return {}
+        ctx: dict = {}
+        for attr in (
+            "milestone", "rollup", "priority", "percent_complete",
+            "task_name", "notes", "resource_group", "resource_names",
+            "wbs", "icon",
+        ):
+            v = getattr(event, attr, None)
+            if v is not None:
+                ctx[attr] = v
+        # event_type is a derived field — milestone if event.milestone, else
+        # "duration" if event.is_duration, else "event".
+        is_dur = getattr(event, "is_duration", None)
+        if getattr(event, "milestone", False):
+            ctx["event_type"] = "milestone"
+        elif is_dur:
+            ctx["event_type"] = "duration"
+        else:
+            ctx["event_type"] = "event"
+        return ctx
+
+    @staticmethod
+    def _is_drawable_color(value) -> bool:
+        """True if ``value`` is a non-empty, non-transparent color string."""
+        if value is None:
+            return False
+        s = str(value).strip().lower()
+        return s not in {"", "none", "transparent"}
+
+    def _maybe_draw_icon_halo(
+        self,
+        box_token: str | None,
+        box_ctx: dict | None,
+        draw_x: float,
+        draw_y: float,
+        size: float,
+    ) -> None:
+        """Paint an optional halo / background rect before an icon glyph.
+
+        When ``box_token`` is set (e.g. ``"box:milestone"``), resolves
+        ``theme.find_rules(box_token, ctx)`` against the merged context
+        (``box_ctx`` plus ambient ``papersize``).  Each matching rule's
+        ``style`` bag is layered in declaration order; the merged bag is
+        painted as a rect at the icon's bounding box (inflated by ``padding``,
+        default ``size * 0.1`` on every side for a 20% halo).
+
+        Honours: ``fill``, ``fill_opacity``, ``stroke``, ``stroke_width``,
+        ``stroke_opacity``, ``dasharray``, plus a token-level ``padding``
+        override.  Rules whose merged style has neither a drawable fill nor
+        a drawable stroke are treated as no-ops (so the basic.yaml
+        placeholder ``box:milestone fill: none, stroke: none`` doesn't
+        produce a ghost rect).
+        """
+        if not box_token:
+            return
+        config = getattr(self, "_config", None)
+        theme = getattr(config, "theme", None) if config else None
+        if theme is None:
+            return
+        ctx = dict(box_ctx or {})
+        if config and getattr(config, "papersize", None):
+            ctx.setdefault("papersize", str(config.papersize))
+        rules = theme.find_rules(box_token, ctx)
+        if not rules:
+            return
+        merged: dict = {}
+        for r in rules:
+            sty = getattr(r, "style", None) or {}
+            merged.update(sty)
+        if not merged:
+            return
+        fill = merged.get("fill")
+        stroke = merged.get("stroke")
+        if not (self._is_drawable_color(fill) or self._is_drawable_color(stroke)):
+            return
+        try:
+            pad = float(merged.get("padding", size * 0.1))
+        except (TypeError, ValueError):
+            pad = size * 0.1
+        try:
+            fill_op = float(merged.get("fill_opacity", 1.0))
+        except (TypeError, ValueError):
+            fill_op = 1.0
+        try:
+            stroke_w = float(merged.get("stroke_width", 0))
+        except (TypeError, ValueError):
+            stroke_w = 0.0
+        try:
+            stroke_op = float(merged.get("stroke_opacity", 1.0))
+        except (TypeError, ValueError):
+            stroke_op = 1.0
+        dasharray = merged.get("dasharray")
+        self._draw_rect(
+            draw_x - pad,
+            draw_y - pad,
+            size + 2 * pad,
+            size + 2 * pad,
+            fill=str(fill) if self._is_drawable_color(fill) else "none",
+            fill_opacity=fill_op,
+            stroke=str(stroke) if self._is_drawable_color(stroke) else "none",
+            stroke_width=stroke_w,
+            stroke_opacity=stroke_op,
+            stroke_dasharray=str(dasharray) if dasharray else None,
+        )
+
     def _draw_icon_svg(
         self,
         icon_name: str | None,
@@ -738,12 +876,20 @@ class BaseSVGRenderer(ABC):
         fallback_color: str | None = None,
         transform: str | None = None,
         css_class: str | None = None,
+        box_token: str | None = None,
+        box_ctx: dict | None = None,
     ) -> bool:
         """
         Draw an icon from the DB icon cache at text-like baseline coordinates.
 
         If icon_name is specified but not found in the cache and fallback_name is
         provided, the fallback icon is drawn with fallback_color instead.
+
+        When ``box_token`` is set (e.g. ``"box:milestone"``), the matching
+        ``apply_to:`` rules are resolved against ``box_ctx`` and painted as a
+        halo / background rect *before* the glyph.  See
+        :py:meth:`_maybe_draw_icon_halo` for the style vocabulary and
+        no-op semantics.
 
         Returns:
             True if an icon was drawn, else False.
@@ -772,6 +918,9 @@ class BaseSVGRenderer(ABC):
         # (~0.20 * size below baseline).  This keeps icon and text caps visually
         # centered on the same axis.
         draw_y = baseline_y - (size * 0.80)
+
+        # Halo / background rect — drawn first so the glyph layers on top.
+        self._maybe_draw_icon_halo(box_token, box_ctx, draw_x, draw_y, size)
 
         # Extract the icon's original viewBox before stripping the wrapper so
         # the nested <svg> preserves the icon's own coordinate space.  width
@@ -966,6 +1115,7 @@ class BaseSVGRenderer(ABC):
         row_height: float,
         table_font: str,
         table_font_size: float,
+        text_color: str,
     ) -> float:
         """
         Draw the overflow table header row and separator line.
@@ -990,7 +1140,7 @@ class BaseSVGRenderer(ABC):
             "Start Date",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
         self._draw_text(
             col2_x + 4,
@@ -998,7 +1148,7 @@ class BaseSVGRenderer(ABC):
             "End Date",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
         self._draw_text(
             col3_x + 4,
@@ -1006,7 +1156,7 @@ class BaseSVGRenderer(ABC):
             "Event Name",
             table_font,
             table_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
         )
 
         sep_y = header_y + row_height
@@ -1037,6 +1187,7 @@ class BaseSVGRenderer(ABC):
         table_font: str,
         table_font_size: float,
         font_path: str,
+        text_color: str,
     ) -> None:
         """Draw all data rows in the overflow table."""
         from config.config import monthcolors
@@ -1070,7 +1221,7 @@ class BaseSVGRenderer(ABC):
                 self._format_date(entry.start),
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
             )
             self._draw_text(
                 col2_x + 4,
@@ -1078,7 +1229,7 @@ class BaseSVGRenderer(ABC):
                 self._format_date(entry.end),
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
             )
             self._draw_text(
                 col3_x + 4,
@@ -1086,7 +1237,7 @@ class BaseSVGRenderer(ABC):
                 entry.task_name or "",
                 table_font,
                 table_font_size,
-                fill=config.day_box_font_color,
+                fill=text_color,
                 max_width=col3_width - 8,
             )
             current_y = row_bottom
@@ -1123,6 +1274,17 @@ class BaseSVGRenderer(ABC):
             self._overflow_content_area(config)
         )
 
+        # Resolve unified-theme tokens once for the whole overflow page.
+        # ``text:day_number`` drives the overflow-table text color (it is the
+        # day-cell text color on the parent calendar page, kept in sync here);
+        # ``text:event_name`` drives the table body font and base size.  No
+        # visualizer ctx — this helper is shared across visualizers; per-
+        # visualizer overrides via ``select:`` aren't applied to overflow text.
+        _ctx = {"papersize": config.papersize}
+        _tk_dn = self._resolve_token(config, "text:day_number", _ctx)
+        _tk_en = self._resolve_token(config, "text:event_name", _ctx)
+        text_color = _tk_dn.get("color") or config.day_box_font_color
+
         # Title
         _hdr_ts = config.get_text_style("ec-header-text")
         title_font_size = config.header_center_font_size
@@ -1133,13 +1295,13 @@ class BaseSVGRenderer(ABC):
             "Overflow Events",
             _hdr_ts.font,
             title_font_size,
-            fill=config.day_box_font_color,
+            fill=text_color,
             anchor="middle",
         )
 
         # Table layout
-        table_font = config.weekly_name_text_font_name
-        table_font_size = config.weekly_name_text_font_size + 1
+        table_font = _tk_en.get("font") or config.weekly_name_text_font_name
+        table_font_size = _tk_en.get("size") + 1
         row_height = table_font_size + 6
         table_top = title_y + title_font_size + 5
 
@@ -1162,6 +1324,7 @@ class BaseSVGRenderer(ABC):
             row_height,
             table_font,
             table_font_size,
+            text_color,
         )
 
         font_path = get_font_path(table_font)
@@ -1181,6 +1344,7 @@ class BaseSVGRenderer(ABC):
             table_font,
             table_font_size,
             font_path,
+            text_color,
         )
 
         overflow_path = config.outputfile.replace(".svg", "_overflow.svg")

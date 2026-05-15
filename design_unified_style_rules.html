@@ -2559,11 +2559,22 @@ configuration. The catalog (one entry per top-level section):</p>
 
 <hr style="margin: 48px 0 16px; border: none; border-top: 1px solid var(--rule);">
 <p style="color: var(--muted); font-size: 12px;">
-End of design. Next step: implement the unified loader, write the one-shot converter, run it against
-all 17 themes, capture pre-migration SVG baselines for the round-trip diff in §7.4, apply the
-USER_GUIDE rewrites in §9 alongside the code changes, land the timeband-catalog change in §10, strip
-defaults from <code class="inline">CalendarConfig</code> per §11, ship <code class="inline">basic.yaml</code>, and
-rewrite <code class="inline">SAMPLE.yaml</code> as a complete reference. All in the same single PR.
+End of design. <strong>Implementation complete</strong> on the
+<code class="inline">unified-style-rules</code> branch.  The unified loader,
+one-shot converter, and round-trip-diff infrastructure all landed; every renderer
+(weekly, mini, mini-icon, text-mini, compactplan, blockplan, timeline, svg_base,
+excelheader) reads styling via <code class="inline">config.theme.resolve_token(...)</code>;
+89 dead <code class="inline">CalendarConfig</code> styling fields stripped in
+Phase 2 wave 1 plus <code class="inline">tk.get(size) or config.&lt;legacy&gt;</code>
+fallback chain stripped in Wave 3; the decompiler bridge
+(<code class="inline">style_rules_decompiler.py</code>, the snapshot
+<code class="inline">_unified_theme_data</code>, and the 5 legacy section
+parsers) was deleted in Phase 3 path (b);
+<code class="inline">basic.yaml</code> ships as the reference and
+<code class="inline">SAMPLE.yaml</code> carries an annotated
+<code class="inline">box:milestone</code> halo example demonstrating Phase 1.5
+icon halos.  See <code class="inline">RUNTIME_CUTOVER_TODO.md</code> in the
+repo root for the per-commit punch list.
 </p>
 
 </div>

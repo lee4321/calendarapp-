@@ -172,7 +172,8 @@ class TestThemeEngineApply:
         _, config = self._load_builtin("default")
         assert config.weekly_name_text_font_color == "navy"
         assert config.day_box_number_color == "white"
-        assert config.day_box_icon_color == "red"
+        # day_box_icon_color was stripped in Phase 2 wave 1 (no consumers
+        # post-Phase-1; event_icon_color is the live field).
         assert config.header_left_font_color == "grey"
 
     def test_day_box_styling_applied(self):
@@ -351,7 +352,7 @@ class TestThemeEngineApply:
         theme_data = {
             "theme": {"name": "Timeline"},
             "timeline": {
-                "background_color": "black",
+                # background_color removed in Phase 2 wave 1 strip
                 "axis_color": "white",
                 "date_format": "YYYY-MM-DD",
                 "tick_label_format": "MMM YYYY",
@@ -389,7 +390,7 @@ class TestThemeEngineApply:
             config = create_calendar_config()
             engine.apply(config)
 
-        assert config.timeline_background_color == "black"
+        # timeline_background_color stripped in Phase 2 wave 1 (no consumers).
         assert config.timeline_axis_color == "white"
         assert config.timeline_date_format == "YYYY-MM-DD"
         assert config.timeline_tick_label_format == "MMM YYYY"
@@ -877,7 +878,15 @@ class TestStrokeDasharray:
         assert kwargs["transform"] == "rotate(-12.0 100.0 50.0)"
 
     def _make_renderer_config(self, **overrides):
-        """Create a config with computed font sizes set for renderer tests."""
+        """Create a config with computed font sizes set for renderer tests.
+
+        Calls `_inject_heuristic_size_tokens(config)` after populating the
+        legacy size fields so the renderer's `tk.get("size")` reads return
+        the test-supplied values.  Without injection, the post-Phase-2-wave-3
+        renderers would crash on `None * 1.3` because they no longer fall
+        back to the legacy field.
+        """
+        from config.config import _inject_heuristic_size_tokens
         config = create_calendar_config()
         config.weekly_name_text_font_size = 9.0
         config.event_icon_font_size = 9.0
@@ -885,6 +894,7 @@ class TestStrokeDasharray:
         config.day_box_icon_font_size = 13.0
         for k, v in overrides.items():
             setattr(config, k, v)
+        _inject_heuristic_size_tokens(config)
         return config
 
     def test_day_box_renderer_uses_config_stroke_values(self):
@@ -1013,14 +1023,9 @@ class TestStrokeDasharrayTimelineMini:
         )
         assert config.timeline_label_stroke_dasharray == "2,4"
 
-    def test_timeline_duration_bar_stroke_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "timeline": {"duration_bar_stroke_dasharray": "5,5"},
-            }
-        )
-        assert config.timeline_duration_bar_stroke_dasharray == "5,5"
+    # timeline_duration_bar_stroke_dasharray was stripped in Phase 2 wave 1
+    # (no consumers — renderers always pass per-call dasharray to _draw_rect /
+    # _draw_line).  The corresponding test is removed.
 
     # ── Mini theme mappings ──────────────────────────────────────────────────
 
@@ -1142,7 +1147,7 @@ class TestStrokeDasharrayTimelineMini:
         assert config.timeline_tick_stroke_dasharray is None
         assert config.timeline_today_line_dasharray is None
         assert config.timeline_label_stroke_dasharray is None
-        assert config.timeline_duration_bar_stroke_dasharray is None
+        # timeline_duration_bar_stroke_dasharray stripped in Phase 2 wave 1.
 
     def test_mini_dasharray_fields_default_to_none(self):
         config = create_calendar_config()
@@ -1268,13 +1273,12 @@ def test_blockplan_theme_applied():
     assert config.blockplan_vertical_line_dasharray == "4,2"
     assert config.blockplan_vertical_line_opacity == 0.6
     assert not hasattr(config, "blockplan_vertical_lines")
-    assert config.blockplan_header_font == "Roboto-Bold"
+    # Phase 2 wave 1 stripped: blockplan_header_font, blockplan_name_text_font_color,
+    # blockplan_event_date_font, blockplan_event_date_color (all subsumed by
+    # text:event_name / text:event_date / text:heading tokens).
     assert config.blockplan_header_label_align_h == "right"
-    assert config.blockplan_name_text_font_color == "tomato"
     assert config.blockplan_event_show_date is True
-    assert config.blockplan_event_date_font == "Roboto-Bold"
     assert config.blockplan_event_date_font_size == 11.0
-    assert config.blockplan_event_date_color == "purple"
     assert config.blockplan_event_date_format == "MMM D"
     assert config.blockplan_timeband_fill_palette == ["#111111", "#222222"]
     assert config.blockplan_swimlanes == [{"name": "Infra"}]

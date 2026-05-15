@@ -27,6 +27,21 @@ if TYPE_CHECKING:
     from visualizers.base import CoordinateDict
 
 
+def _timeline_style_rules(config: "CalendarConfig") -> list:
+    """Source the raw style_rules list for StyleEngine.
+
+    Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
+    longer depends on the legacy ``theme_style_rules`` decompiler bridge.
+    Mirrors compactplan / weekly / blockplan / mini-day_styles.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        rules = theme.sections.get("style_rules")
+        if isinstance(rules, list):
+            return rules
+    return list(getattr(config, "theme_style_rules", None) or [])
+
+
 @dataclass(frozen=True)
 class TimelineCallout:
     """Point-in-time event callout placement."""
@@ -63,21 +78,37 @@ class TimelineRenderer(BaseSVGRenderer):
 
     _CALL_OUT_DATE_ROWS = 3
 
-    @staticmethod
-    def _callout_metrics(config: "CalendarConfig") -> tuple[float, float, float]:
-        """Return (title_size, notes_size, date_size) for point-event callouts."""
-        title_size = (
-            float(config.timeline_name_text_font_size)
-            if config.timeline_name_text_font_size is not None
-            else max(10.0, config.weekly_name_text_font_size + 2.0)
+    def __init__(self):
+        super().__init__()
+        # Per-render unified-theme token cache, populated at the top of
+        # _render_content.  Maps "<kind>:<name>" → merged style dict.
+        self._timeline_tokens: dict[str, dict] = {}
+
+    def _populate_timeline_tokens(self, config: "CalendarConfig") -> None:
+        """Pre-resolve every token the timeline renderer reads each render.
+
+        Mirrors the pattern from mini (commit 8f0ce7b5), weekly
+        (commit c98d75fb), and blockplan (commit dadb3fb4).
+        """
+        ctx = {"visualizer": "timeline", "papersize": config.papersize}
+        names = (
+            "text:event_name", "text:event_notes", "text:event_date",
+            "text:duration_date", "text:label", "text:today_label",
+            "line:axis", "line:today", "line:tick",
+            "icon:event", "icon:milestone",
         )
-        notes_size = (
-            float(config.timeline_notes_text_font_size)
-            if config.timeline_notes_text_font_size is not None
-            else max(8.0, config.weekly_name_text_font_size * 0.9)
-        )
-        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
-        return title_size, notes_size, date_size
+        self._timeline_tokens = {
+            name: self._resolve_token(config, name, ctx) for name in names
+        }
+
+    def _tk(self, token: str) -> dict:
+        """Return the cached token dict (``{}`` if unknown / unresolved)."""
+        return self._timeline_tokens.get(token, {})
+
+    # NOTE: ``_callout_metrics`` is defined near the bottom of the file.
+    # An earlier duplicate definition existed at this point pre-migration
+    # (Python silently used the last one); removed during this migration
+    # so the token-aware version is the single source of truth.
 
     @staticmethod
     def _fit_box_text_sizes(
@@ -187,9 +218,10 @@ class TimelineRenderer(BaseSVGRenderer):
 
         event_objs = [Event.from_dict(e) for e in events]
         self._load_icon_svg_cache(db)
+        self._populate_timeline_tokens(config)
         point_events, duration_events = self._split_events(config, event_objs)
 
-        style_engine = StyleEngine(config.theme_style_rules or [])
+        style_engine = StyleEngine(_timeline_style_rules(config))
 
         callouts = self._layout_callouts(
             config,
@@ -1192,8 +1224,20 @@ class TimelineRenderer(BaseSVGRenderer):
 
         _name_style = config.get_text_style("ec-event-name")
         _notes_style = config.get_text_style("ec-event-notes")
-        title_font_path = self._safe_font_path(config.timeline_name_text_font_name or _name_style.font)
-        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name or _notes_style.font)
+        tk_name = self._tk("text:event_name")
+        tk_notes = self._tk("text:event_notes")
+        name_font_default = (
+            tk_name.get("font")
+            or config.timeline_name_text_font_name
+            or _name_style.font
+        )
+        notes_font_default = (
+            tk_notes.get("font")
+            or config.timeline_notes_text_font_name
+            or _notes_style.font
+        )
+        title_font_path = self._safe_font_path(name_font_default)
+        notes_font_path = self._safe_font_path(notes_font_default)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -1209,17 +1253,27 @@ class TimelineRenderer(BaseSVGRenderer):
         title_y = item.box_y + fitted_title * 1.15
         notes_y = title_y + (fitted_notes * 1.55)
 
-        event_text_color = config.timeline_name_text_font_color or _name_style.color or item.color
+        event_text_color = (
+            tk_name.get("color")
+            or config.timeline_name_text_font_color
+            or _name_style.color
+            or item.color
+        )
         name_font, _, name_color, name_opacity = _sr.text_override(
             "event_name",
-            font=config.timeline_name_text_font_name or _name_style.font,
+            font=name_font_default,
             color=event_text_color,
             opacity=_name_style.opacity,
         )
-        notes_color_base = config.timeline_notes_text_font_color or _notes_style.color or event_text_color
+        notes_color_base = (
+            tk_notes.get("color")
+            or config.timeline_notes_text_font_color
+            or _notes_style.color
+            or event_text_color
+        )
         notes_font, _, notes_color, notes_opacity = _sr.text_override(
             "event_notes",
-            font=config.timeline_notes_text_font_name or _notes_style.font,
+            font=notes_font_default,
             color=notes_color_base,
             opacity=_notes_style.opacity,
         )
@@ -1235,6 +1289,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 anchor="start",
                 color=icon_color,
                 css_class="ec-event-icon",
+                box_token=(
+                    "box:milestone"
+                    if getattr(item.event, "milestone", False)
+                    else "box:event"
+                ),
+                box_ctx=self._event_ctx(item.event),
             )
             title_text_x = text_x + fitted_title + icon_gap
             title_max_w = item.box_width - 12.0 - fitted_title - icon_gap
@@ -1268,6 +1328,7 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
         _event_date_style = config.get_text_style("ec-event-date")
+        tk_event_date = self._tk("text:event_date")
         date_label = format_arrow_date(
             self._safe_day(item.event.start, fallback=arrow.now()),
             config.timeline_date_format,
@@ -1278,8 +1339,16 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         date_font, _, date_color, _ = _sr.text_override(
             "event_date",
-            font=_event_date_style.font or config.timeline_date_font,
-            color=_event_date_style.color or event_text_color,
+            font=(
+                _event_date_style.font
+                or tk_event_date.get("font")
+                or config.timeline_date_font
+            ),
+            color=(
+                _event_date_style.color
+                or tk_event_date.get("color")
+                or event_text_color
+            ),
         )
         self._draw_text(
             item.x,
@@ -1422,8 +1491,20 @@ class TimelineRenderer(BaseSVGRenderer):
 
         _dur_name_style = config.get_text_style("ec-event-name")
         _dur_notes_style = config.get_text_style("ec-event-notes")
-        title_font_path = self._safe_font_path(config.timeline_name_text_font_name or _dur_name_style.font)
-        notes_font_path = self._safe_font_path(config.timeline_notes_text_font_name or _dur_notes_style.font)
+        tk_dur_name = self._tk("text:event_name")
+        tk_dur_notes = self._tk("text:event_notes")
+        dur_name_font_default = (
+            tk_dur_name.get("font")
+            or config.timeline_name_text_font_name
+            or _dur_name_style.font
+        )
+        dur_notes_font_default = (
+            tk_dur_notes.get("font")
+            or config.timeline_notes_text_font_name
+            or _dur_notes_style.font
+        )
+        title_font_path = self._safe_font_path(dur_name_font_default)
+        notes_font_path = self._safe_font_path(dur_notes_font_default)
         text_w = max(10.0, item.end_x - item.start_x - 6.0)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
@@ -1435,8 +1516,13 @@ class TimelineRenderer(BaseSVGRenderer):
             title_size,
             notes_size,
         )
-        duration_text_color = config.timeline_name_text_font_color or _dur_name_style.color or item.color
-        title_font_base = config.timeline_name_text_font_name or _dur_name_style.font
+        duration_text_color = (
+            tk_dur_name.get("color")
+            or config.timeline_name_text_font_color
+            or _dur_name_style.color
+            or item.color
+        )
+        title_font_base = dur_name_font_default
         title_font, _, name_color, name_opacity = _sr.text_override(
             "duration_name",
             font=title_font_base,
@@ -1487,6 +1573,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 fallback_color=dur_icon_color,
                 transform=icon_transform,
                 css_class="ec-duration-icon",
+                box_token="box:duration",
+                box_ctx=self._event_ctx(item.event),
             )
             text_x = draw_x + effective_icon_w + gap if icon_drawn else (item.start_x + item.end_x) / 2
             self._draw_text(
@@ -1516,10 +1604,15 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
         if has_notes:
-            notes_color_base = config.timeline_notes_text_font_color or _dur_notes_style.color or duration_text_color
+            notes_color_base = (
+                tk_dur_notes.get("color")
+                or config.timeline_notes_text_font_color
+                or _dur_notes_style.color
+                or duration_text_color
+            )
             notes_font, _, notes_color, notes_opacity = _sr.text_override(
                 "duration_notes",
-                font=config.timeline_notes_text_font_name or _dur_notes_style.font,
+                font=dur_notes_font_default,
                 color=notes_color_base,
                 opacity=_dur_notes_style.opacity,
             )
@@ -1539,8 +1632,19 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Keep start/end labels on the same Y baseline.
         _dur_date_style = config.get_text_style("ec-duration-date")
-        date_font_base = _dur_date_style.font or config.timeline_duration_date_font or config.timeline_date_font
-        date_color_base = _dur_date_style.color or config.timeline_duration_date_color or duration_text_color
+        tk_dur_date = self._tk("text:duration_date")
+        date_font_base = (
+            _dur_date_style.font
+            or config.timeline_duration_date_font
+            or tk_dur_date.get("font")
+            or config.timeline_date_font
+        )
+        date_color_base = (
+            _dur_date_style.color
+            or config.timeline_duration_date_color
+            or tk_dur_date.get("color")
+            or duration_text_color
+        )
         start_date_font, _, start_date_color, _ = _sr.text_override(
             "duration_start_date",
             font=date_font_base,
@@ -1625,25 +1729,42 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=_marker_style.stroke_width,
         )
 
-    @staticmethod
     def _duration_metrics(
+        self,
         config: "CalendarConfig",
     ) -> tuple[float, float, float, float]:
-        """Return (title_size, notes_size, date_size, bar_height)."""
+        """Return (title_size, notes_size, date_size, bar_height).
+
+        Consults ``text:event_name`` / ``text:event_notes`` / ``text:duration_date``
+        tokens first; falls back to legacy ``timeline_*_font_size`` (with the
+        same 0.85 / 0.82 scale-down factors that pre-migration code applied)
+        and finally to the page-scaled ``weekly_name_text_font_size``.
+        Token sizes are taken at face value — if a theme defines an explicit
+        size for the duration bar text, it's expected to be that size.
+        """
         title_size = (
-            float(config.timeline_name_text_font_size * 0.85)
-            if config.timeline_name_text_font_size is not None
-            else max(8.0, config.weekly_name_text_font_size * 0.86)
+            self._tk("text:event_name").get("size")
+            or (
+                float(config.timeline_name_text_font_size * 0.85)
+                if config.timeline_name_text_font_size is not None
+                else max(8.0, config.weekly_name_text_font_size * 0.86)
+            )
         )
         notes_size = (
-            float(config.timeline_notes_text_font_size * 0.82)
-            if config.timeline_notes_text_font_size is not None
-            else max(7.0, config.weekly_name_text_font_size * 0.74)
+            self._tk("text:event_notes").get("size")
+            or (
+                float(config.timeline_notes_text_font_size * 0.82)
+                if config.timeline_notes_text_font_size is not None
+                else max(7.0, config.weekly_name_text_font_size * 0.74)
+            )
         )
         date_size = (
-            float(config.timeline_duration_date_font_size)
-            if config.timeline_duration_date_font_size is not None
-            else max(7.0, config.weekly_name_text_font_size * 0.78)
+            self._tk("text:duration_date").get("size")
+            or (
+                float(config.timeline_duration_date_font_size)
+                if config.timeline_duration_date_font_size is not None
+                else max(7.0, config.weekly_name_text_font_size * 0.78)
+            )
         )
         if config.timeline_duration_box_height is not None:
             bar_h = max(8.0, float(config.timeline_duration_box_height))
@@ -1692,8 +1813,13 @@ class TimelineRenderer(BaseSVGRenderer):
             d = d + timedelta(days=1)
 
         _band_text_style = config.get_text_style("ec-label")
-        text_color = str(_band_text_style.color or "black")
-        text_opacity = float(_band_text_style.opacity)
+        tk_band_label = self._tk("text:label")
+        text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
+        text_opacity = float(
+            tk_band_label.get("opacity")
+            if tk_band_label.get("opacity") is not None
+            else _band_text_style.opacity
+        )
 
         row_y = block_top_y
         for band in bands:
@@ -1704,10 +1830,19 @@ class TimelineRenderer(BaseSVGRenderer):
             text_align = str(band.get("text_align", "center")).strip().lower()
             if text_align not in {"left", "center", "right"}:
                 text_align = "center"
-            band_font = str(band.get("font") or _band_text_style.font or config.timeline_text_font_name)
+            band_font = str(
+                band.get("font")
+                or tk_band_label.get("font")
+                or _band_text_style.font
+                or config.timeline_text_font_name
+            )
             band_font_color = str(band.get("font_color") or text_color)
             band_label_color = str(band.get("label_color") or band_font_color)
-            font_size = float(band.get("font_size") or max(7.0, row_h * 0.55))
+            font_size = float(
+                band.get("font_size")
+                or tk_band_label.get("size")
+                or max(7.0, row_h * 0.55)
+            )
 
             segments = _build_band_segments(
                 band, start_d, end_d, config,
@@ -1946,11 +2081,21 @@ class TimelineRenderer(BaseSVGRenderer):
         draw_labels = bool(band.get("show_labels", True)) and len(ticks) <= int(
             band.get("max_label_count", 60)
         )
-        label_color = str(band.get("label_color") or band.get("font_color") or _tick_style.color)
+        tk_event_date = self._tk("text:event_date")
+        label_color = str(
+            band.get("label_color")
+            or band.get("font_color")
+            or tk_event_date.get("color")
+            or _tick_style.color
+        )
         label_opacity = float(
             band.get("label_opacity") if band.get("label_opacity") is not None else 0.8
         )
-        font_name = str(band.get("font") or config.timeline_date_font)
+        font_name = str(
+            band.get("font")
+            or tk_event_date.get("font")
+            or config.timeline_date_font
+        )
         label_offset = band.get("label_offset_y")
         label_gap = band.get("label_gap")
         if label_offset is not None:
@@ -2089,9 +2234,9 @@ class TimelineRenderer(BaseSVGRenderer):
                     x,
                     axis_y - (tick_h + label_size * 1.5),
                     format_arrow_date(m, config.timeline_tick_label_format),
-                    config.timeline_date_font,
+                    self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
-                    fill=_tick_style.color,
+                    fill=self._tk("text:event_date").get("color") or _tick_style.color,
                     fill_opacity=0.8,
                     anchor="middle",
                     css_class="ec-label",
@@ -2161,7 +2306,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 cy = row_top + band_h / 2.0 + label_size * 0.35
                 self._draw_text(
                     cx, cy, seg.label,
-                    config.timeline_date_font,
+                    self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
                     fill=label_color,
                     fill_opacity=0.9,
@@ -2234,7 +2379,11 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_dasharray=_today_line_style.dasharray or None,
             css_class="ec-today-line",
         )
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        tk_today_label = self._tk("text:today_label")
+        label_size = (
+            tk_today_label.get("size")
+            or max(7.0, config.weekly_name_text_font_size * 0.8)
+        )
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
         # Keep label baseline inside SVG bounds.
         min_y = label_size * 1.1
@@ -2246,9 +2395,9 @@ class TimelineRenderer(BaseSVGRenderer):
             x,
             label_y,
             config.timeline_today_label_text or "Today",
-            _today_label_style.font or config.timeline_date_font,
+            tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font,
             label_size,
-            fill=_today_label_style.color,
+            fill=tk_today_label.get("color") or _today_label_style.color,
             fill_opacity=0.85,
             anchor="middle",
             css_class="ec-today-label",
@@ -2318,18 +2467,31 @@ class TimelineRenderer(BaseSVGRenderer):
         except KeyError:
             return get_font_path("RobotoCondensed-Bold")
 
-    @staticmethod
-    def _callout_metrics(config: "CalendarConfig") -> tuple[float, float, float]:
-        """Return (title_size, notes_size, date_size) for point-event callouts."""
+    def _callout_metrics(self, config: "CalendarConfig") -> tuple[float, float, float]:
+        """Return (title_size, notes_size, date_size) for point-event callouts.
+
+        Consults ``text:event_name`` / ``text:event_notes`` / ``text:event_date``
+        tokens first; falls back to the legacy ``timeline_*_font_size`` fields
+        and finally to the page-scaled ``weekly_name_text_font_size``.
+        """
         title_size = (
-            float(config.timeline_name_text_font_size)
-            if config.timeline_name_text_font_size is not None
-            else max(10.0, config.weekly_name_text_font_size + 2.0)
+            self._tk("text:event_name").get("size")
+            or (
+                float(config.timeline_name_text_font_size)
+                if config.timeline_name_text_font_size is not None
+                else max(10.0, config.weekly_name_text_font_size + 2.0)
+            )
         )
         notes_size = (
-            float(config.timeline_notes_text_font_size)
-            if config.timeline_notes_text_font_size is not None
-            else max(8.0, config.weekly_name_text_font_size * 0.9)
+            self._tk("text:event_notes").get("size")
+            or (
+                float(config.timeline_notes_text_font_size)
+                if config.timeline_notes_text_font_size is not None
+                else max(8.0, config.weekly_name_text_font_size * 0.9)
+            )
         )
-        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
+        date_size = (
+            self._tk("text:event_date").get("size")
+            or max(8.0, config.weekly_name_text_font_size * 0.95)
+        )
         return title_size, notes_size, date_size
