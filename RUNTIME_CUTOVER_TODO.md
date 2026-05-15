@@ -658,22 +658,64 @@ format strings, palette references, fiscal semantics, the loaded
 
 ## Phase 3 — delete the decompiler bridge
 
-Decompiler removal is safe once no `CalendarConfig` field requires the
-synthesized legacy sections.
+**Status: blocked on a CSS-generator / element-binding rewrite.**
 
-- [ ] **Confirm `ThemeEngine.apply()` no longer reads from
-      `self._theme_data["text_styles"]`, `["box_styles"]`, etc.** by removing
-      `_parse_text_styles`, `_parse_box_styles`, `_parse_line_styles`,
-      `_parse_icon_styles`, `_parse_element_bindings` calls — they should
-      now be unused.
-- [ ] **Delete the decompiler call** in `ThemeEngine.load()`.
+The decompiler bridge is alive because `theme_styles` (the
+ThemeStyles object decompiler+parsers produce) has TWO heavy consumers
+that the unified-theme migration didn't replace:
+
+1. **`config.get_text_style("ec-…")` and siblings** — used 97 times
+   across the 6 renderers (mini 19, compactplan 19, blockplan 18,
+   timeline 23, weekly 13, svg_base 5).  Each call resolves an
+   `ec-class` to its bound TextStyle/BoxStyle/LineStyle/IconStyle via
+   `theme_styles.element_bindings`.
+2. **`config.theme_styles.css`** — the pre-generated CSS string that
+   `svg_base._inject_css` injects into every SVG `<style>` block.
+   `renderers.css_generator.generate_css()` reads
+   `theme_styles.element_bindings` to build it.
+
+Both consumers can be retired by either:
+
+- (a) Migrating all 97 `get_*_style` call sites to
+  `config.theme.resolve_token("text:foo", ctx)` (mirrors Phase 1 work)
+  AND rewriting `generate_css()` to consume UnifiedTheme directly.  Then
+  `theme_styles` becomes orphan, and decompiler + parsers can be
+  deleted.
+
+- (b) Rewriting `_parse_text_styles` / `_parse_box_styles` /
+  `_parse_line_styles` / `_parse_icon_styles` / `_parse_element_bindings`
+  to read from `config.theme.defined_tokens()` and `theme.find_rules()`
+  directly — bypassing `self._theme_data["text_styles"]` etc.  The
+  decompiler call in `load()` then has no consumer; delete it.
+  ThemeStyles + element bindings + CSS generator stay as-is because
+  they're now fed by unified-theme rules.
+
+Option (b) is the smaller refactor (~5 parsers × ~25 lines each), but
+both are 2-4 hour undertakings and out of scope for this session.
+
+### Done in this session (small win)
+
+- [x] **Strip dead `AxisStyle`** — `_parse_axis_style`, the `axis`
+      field on `ThemeStyles`, and the `AxisStyle` class itself were
+      defined but had zero consumers (renderers moved off it during the
+      unified-theme migration).  Removed from `config/styles.py`,
+      `config/theme_engine.py::_build_theme_styles`, and the docstring
+      reference.
+
+### Pending
+
+- [ ] **Delete the decompiler call** in `ThemeEngine.load()` —
+      blocked on option (a) or (b) above.
 - [ ] **Delete `config/style_rules_decompiler.py`** and
-      `tests/test_style_rules_decompiler.py`.
+      `tests/test_style_rules_decompiler.py` — same blocker.
 - [ ] **Delete the legacy-section parsers** from `theme_engine.py`
-      (`_parse_text_styles` etc.) — they have no consumers.
+      (`_parse_text_styles` etc.) — same blocker; option (b) replaces
+      them in-place.
 - [ ] **Delete `_unified_theme_data` and the copy.deepcopy** in
-      `ThemeEngine.load()` — `_theme_data` is now the unified form, no
-      snapshot needed.
+      `ThemeEngine.load()` — same blocker; the snapshot is consumed by
+      `parse_theme()` and `_synthesize_holiday_box_day_rules` (Open
+      Issue §2's mechanism), both of which need an alternate input
+      source if `self._theme_data` is the post-decompile form.
 
 ---
 
@@ -716,8 +758,9 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | Phase 1.5 (icon halo wiring) | 3-4 hours | **done** |
 | Phase 2 wave 1 (strip purely-dead) | 2-3 hours | **done** (89 fields across 6 commits) |
 | Phase 2 wave 2 (inject heuristic tokens) | 1 hour | **done** (commits `c1c4f171` + setfontsizes call-site + bootstrap) |
-| Phase 2 wave 3 (strip fallbacks + dead size fields) | 3-5 hours | pending — see Wave 2 doc for test-fixture path forward |
-| Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
+| Phase 2 wave 3 (strip fallbacks) | 3-5 hours | **done** (~20 sites + lazy-populate guards in weekly/mini) |
+| Phase 3 partial (strip dead AxisStyle) | 30 minutes | **done** |
+| Phase 3 (delete decompiler bridge) | 4-6 hours | blocked on get_*_style migration or parser rewrite — see Phase 3 section |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
 | **Remaining total** | **~25-35 hours** | |
 

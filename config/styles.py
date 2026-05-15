@@ -1,7 +1,7 @@
 """
 Unified style primitives for the EventCalendar theme system.
 
-Defines reusable style tokens (TextStyle, BoxStyle, LineStyle, IconStyle, AxisStyle)
+Defines reusable style tokens (TextStyle, BoxStyle, LineStyle, IconStyle)
 and a ThemeStyles container that binds CSS element classes to resolved style objects.
 """
 
@@ -60,19 +60,6 @@ class IconStyle:
     icon: str | None = None  # Default icon name (e.g., for overflow)
 
 
-@dataclass(frozen=True)
-class AxisStyle:
-    """Shared axis definition for timeline/blockplan/compact plan."""
-
-    line_style: str = "axis"  # Reference to a LineStyle name
-    tick_color: str = "#666666"
-    tick_label_style: str = "caption"  # Reference to a TextStyle name
-    tick_date_format: str = "MMM D"
-    today_line_style: str = "today"  # Reference to a LineStyle name
-    today_label_color: str = "red"
-    today_label_text: str = "Today"
-
-
 @dataclass
 class ElementBinding:
     """Binding of a CSS element class to its resolved style."""
@@ -99,9 +86,6 @@ class ThemeStyles:
     box_styles: dict[str, BoxStyle] = field(default_factory=dict)
     line_styles: dict[str, LineStyle] = field(default_factory=dict)
     icon_styles: dict[str, IconStyle] = field(default_factory=dict)
-
-    # Shared axis definition
-    axis: AxisStyle = field(default_factory=AxisStyle)
 
     # Flat element-to-style binding map: CSS class name → ElementBinding
     element_bindings: dict[str, ElementBinding] = field(default_factory=dict)

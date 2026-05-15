@@ -1225,7 +1225,6 @@ class ThemeEngine:
             BoxStyle,
             LineStyle,
             IconStyle,
-            AxisStyle,
             ElementBinding,
             ThemeStyles,
         )
@@ -1236,7 +1235,6 @@ class ThemeEngine:
         box_styles = self._parse_box_styles()
         line_styles = self._parse_line_styles()
         icon_styles = self._parse_icon_styles()
-        axis = self._parse_axis_style()
 
         # Parse element bindings
         element_bindings = self._parse_element_bindings(
@@ -1248,7 +1246,6 @@ class ThemeEngine:
             box_styles=box_styles,
             line_styles=line_styles,
             icon_styles=icon_styles,
-            axis=axis,
             element_bindings=element_bindings,
         )
 
@@ -1350,31 +1347,6 @@ class ThemeEngine:
                 icon=props.get("icon"),
             )
         return result
-
-    def _parse_axis_style(self):
-        """Parse axis: section into AxisStyle."""
-        from config.styles import AxisStyle
-
-        raw = self._theme_data.get("axis", {})
-        if not isinstance(raw, dict):
-            return AxisStyle()
-
-        tick = raw.get("tick", {})
-        if not isinstance(tick, dict):
-            tick = {}
-        today = raw.get("today", {})
-        if not isinstance(today, dict):
-            today = {}
-
-        return AxisStyle(
-            line_style=str(raw.get("line_style", "axis")),
-            tick_color=str(tick.get("color", "#666666")),
-            tick_label_style=str(tick.get("label_style", "caption")),
-            tick_date_format=str(tick.get("date_format", "MMM D")),
-            today_line_style=str(today.get("line_style", "today")),
-            today_label_color=str(today.get("label_color", "red")),
-            today_label_text=str(today.get("label_text", "Today")),
-        )
 
     def _parse_element_bindings(
         self, text_styles: dict, box_styles: dict,
