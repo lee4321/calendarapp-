@@ -1922,6 +1922,108 @@ def resolve_page_margins(config: CalendarConfig) -> dict[str, float]:
     }
 
 
+# Phase 2 wave 2 — heuristic-token injection map.
+#
+# Each entry is ``(token, visualizer, legacy_field_name)``.
+# `_inject_heuristic_size_tokens` walks this list after the second
+# `theme_engine.apply()` and synthesizes a `text:<name>` rule for every
+# token whose resolved style lacks `size:` in the current ctx, using the
+# value setfontsizes() already wrote into ``legacy_field_name``.
+#
+# The result: `theme.resolve_token("text:foo", {visualizer, papersize})`
+# always returns a numeric `size:`, so renderers can drop their
+# `tk.get("size") or config.<legacy>` fallback chain.
+_HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
+    # Weekly text sizes (token reads via tk_*.get("size") in
+    # visualizers/weekly/renderer.py).
+    ("text:week_number", "weekly", "week_number_font_size"),
+    ("text:label", "weekly", "day_name_font_size"),
+    ("text:day_number", "weekly", "day_box_number_font_size"),
+    ("text:event_name", "weekly", "weekly_name_text_font_size"),
+    ("text:event_notes", "weekly", "weekly_notes_text_font_size"),
+    # Fiscal label is shared between weekly and mini — no visualizer ctx.
+    ("text:fiscal_label", None, "fiscal_period_label_font_size"),
+    # Mini.
+    ("text:day_number", "mini", "mini_cell_font_size"),
+    ("text:month_title", "mini", "mini_title_font_size"),
+    ("text:label", "mini", "mini_header_font_size"),
+    ("text:week_number", "mini", "mini_week_number_font_size"),
+    # Mini details page.
+    ("text:heading", "mini", "mini_details_title_font_size"),
+    ("text:event_name", "mini", "mini_details_name_text_font_size"),
+    ("text:event_notes", "mini", "mini_details_notes_text_font_size"),
+    # Timeline.
+    ("text:event_name", "timeline", "timeline_name_text_font_size"),
+    ("text:event_notes", "timeline", "timeline_notes_text_font_size"),
+    # Blockplan.
+    ("text:band_label", "blockplan", "blockplan_band_font_size"),
+    ("text:swimlane_label", "blockplan", "blockplan_lane_label_font_size"),
+    ("text:event_name", "blockplan", "blockplan_name_text_font_size"),
+    ("text:event_notes", "blockplan", "blockplan_notes_text_font_size"),
+    ("text:event_date", "blockplan", "blockplan_event_date_font_size"),
+    ("text:duration_date", "blockplan", "blockplan_duration_date_font_size"),
+)
+
+
+def _inject_heuristic_size_tokens(config: CalendarConfig) -> None:
+    """Inject synthesized ``text:<name>`` rules into ``config.theme.rules``
+    for every entry in :data:`_HEURISTIC_TOKEN_FIELDS` whose token doesn't
+    already define ``size:`` for the current ctx.
+
+    Called from :py:meth:`ThemeEngine.apply` right after
+    ``config.theme = parse_theme(...)``, so the synthesized rules
+    survive the second-apply rebuild.  The heuristic value comes from
+    ``getattr(config, legacy_field_name)``, which :py:func:`setfontsizes`
+    populated earlier in the boot sequence.
+
+    No-op when ``config.theme`` is None, the legacy field doesn't exist,
+    or the token already resolves to a numeric ``size:`` (theme-defined
+    or previously injected).
+    """
+    theme = getattr(config, "theme", None)
+    if theme is None:
+        return
+    from config.unified_theme import Rule, _build_token_index
+
+    papersize = str(getattr(config, "papersize", "") or "")
+    new_rules: list[Rule] = []
+    for token, visualizer, field_name in _HEURISTIC_TOKEN_FIELDS:
+        ctx: dict[str, str] = {}
+        if papersize:
+            ctx["papersize"] = papersize
+        if visualizer:
+            ctx["visualizer"] = visualizer
+        if (theme.resolve_token(token, ctx) or {}).get("size") is not None:
+            continue
+        value = getattr(config, field_name, None)
+        if value is None:
+            continue
+        try:
+            size_val = float(value)
+        except (TypeError, ValueError):
+            continue
+        select: dict[str, str] = {}
+        if papersize:
+            select["papersize"] = papersize
+        if visualizer:
+            select["visualizer"] = visualizer
+        new_rules.append(
+            Rule(
+                name=f"setfontsizes heuristic: {token}"
+                + (f" (visualizer={visualizer})" if visualizer else ""),
+                define=None,
+                as_name=None,
+                apply_to=(token,),
+                select=select,
+                style={"size": size_val},
+            )
+        )
+    if not new_rules:
+        return
+    theme.rules.extend(new_rules)
+    theme._token_index = _build_token_index(theme.rules)
+
+
 def _theme_size(
     config: CalendarConfig,
     token: str,

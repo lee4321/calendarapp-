@@ -967,6 +967,15 @@ class ThemeEngine:
             )
             config.theme = None
 
+        # Phase 2 wave 2: inject heuristic-derived size tokens so renderers
+        # can drop their `tk.get("size") or config.<legacy>` fallback chain.
+        # Reads the legacy size fields setfontsizes() wrote earlier in the
+        # boot sequence — no-op on the first apply (legacy fields still at
+        # their dataclass defaults), takes effect on the second apply (after
+        # setfontsizes ran).  See config.config._inject_heuristic_size_tokens.
+        from config.config import _inject_heuristic_size_tokens
+        _inject_heuristic_size_tokens(config)
+
         return config
 
     def _synthesize_holiday_box_day_rules(self) -> None:
