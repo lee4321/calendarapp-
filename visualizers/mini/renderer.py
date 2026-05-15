@@ -93,6 +93,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
         return self._mini_tokens.get(token, {})
 
+    def _ensure_mini_tokens(self, config: CalendarConfig) -> None:
+        """Lazy-populate the per-render token cache when entering a draw
+        method that bypasses ``_render_content`` (e.g. test fixtures).
+        No-op when the cache is already populated.
+        """
+        if not self._mini_tokens:
+            self._populate_mini_tokens(config)
+
     def set_week_numbers(self, week_numbers: dict[str, int]) -> None:
         """
         Provide pre-computed week number values from the layout.
@@ -248,7 +256,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             y + h * 0.8,
             title,
             tk.get("font") or _ts.font,
-            tk.get("size") or config.mini_title_font_size,
+            tk.get("size"),
             fill=tk.get("color") or _ts.color,
             anchor="middle",
             css_class="ec-month-title",
@@ -275,7 +283,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         _ts_label = config.get_text_style("ec-label")
         tk_label = self._tk("text:label")
-        header_size = tk_label.get("size") or config.mini_header_font_size
+        header_size = tk_label.get("size")
 
         is_workweek = weekend_style_is_workweek(config.weekend_style)
         labels = self._ordered_day_labels(week_start_sunday, is_workweek)
@@ -295,7 +303,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 y + h * 0.75,
                 "W#",
                 tk_wn.get("font") or _ts_wn.font,
-                tk_wn.get("size") or config.mini_header_font_size,
+                tk_wn.get("size"),
                 fill=tk_wn.get("color") or _ts_wn.color,
                 anchor="middle",
                 css_class="ec-label",
@@ -355,9 +363,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         wn_value: int,
     ) -> None:
         """Draw a week number in the W# column cell."""
+        self._ensure_mini_tokens(config)
         _ts = config.get_text_style("ec-week-number")
         tk = self._tk("text:week_number")
-        font_size = tk.get("size") or config.mini_week_number_font_size
+        font_size = tk.get("size")
         try:
             label = config.mini_week_number_label_format.format(num=wn_value)
         except (KeyError, ValueError):
@@ -397,6 +406,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         :meth:`_draw_day_cell_background` and :meth:`_draw_day_cell_foreground`
         directly — see :meth:`_render_content` for the layered ordering.
         """
+        self._ensure_mini_tokens(config)
         self._draw_day_cell_background(config, x, y, w, h, style)
         self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
 
@@ -531,7 +541,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         cy = y + h / 2
         # Vertical centering: place baseline at cell midpoint, adjusted
         # down by ~1/3 of font size (baseline sits below the visual center in SVG Y-down)
-        font_size = tk_day.get("size") or config.mini_cell_font_size
+        font_size = tk_day.get("size")
         text_y = cy + (font_size / 3)
 
         # 5. Circle (milestone)
@@ -631,12 +641,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             _ts_fiscal = config.get_text_style("ec-fiscal-label")
             tk_fiscal = self._tk("text:fiscal_label")
             label_font_size = max(
-                4.0,
-                (
-                    tk_fiscal.get("size")
-                    or config.fiscal_period_label_font_size
-                    or font_size * 0.6
-                ),
+                4.0, tk_fiscal.get("size") or font_size * 0.6
             )
             label_y = y + h - label_font_size * 0.3
             self._draw_text(
@@ -977,6 +982,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         events: list,
         db: "CalendarDB | None" = None,
     ) -> None:
+        self._ensure_mini_tokens(config)
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None
@@ -1011,7 +1017,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # Title
         _ts_heading = config.get_text_style("ec-heading")
         tk_heading = self._tk("text:heading")
-        title_font_size = tk_heading.get("size") or config.mini_details_title_font_size
+        title_font_size = tk_heading.get("size")
         title_text = config.mini_details_title_text
         title_y = content_top + title_font_size + 10
         self._draw_text(
@@ -1049,18 +1055,18 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         _ts_det_label = config.get_text_style("ec-label")
         tk_det_label = self._tk("text:label")
-        header_font_size = tk_det_label.get("size") or config.mini_details_header_font_size
+        header_font_size = tk_det_label.get("size")
         header_y = title_y + header_font_size + 6
         _ts_event_name = config.get_text_style("ec-event-name")
         tk_event_name = self._tk("text:event_name")
         row_font = tk_event_name.get("font") or _ts_event_name.font
-        row_font_size = tk_event_name.get("size") or config.mini_details_name_text_font_size
+        row_font_size = tk_event_name.get("size")
         _ts_event_date = config.get_text_style("ec-event-date")
         tk_event_date = self._tk("text:event_date")
         _ts_event_notes = config.get_text_style("ec-event-notes")
         tk_event_notes = self._tk("text:event_notes")
         notes_font = tk_event_notes.get("font") or _ts_event_notes.font
-        notes_font_size = tk_event_notes.get("size") or config.mini_details_notes_text_font_size
+        notes_font_size = tk_event_notes.get("size")
 
         # Header row
         for idx, head in enumerate(headers):

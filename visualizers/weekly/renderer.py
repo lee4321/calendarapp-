@@ -118,6 +118,15 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
         return self._weekly_tokens.get(token, {})
 
+    def _ensure_weekly_tokens(self, config: CalendarConfig) -> None:
+        """Lazy-populate the per-render token cache when entering a draw
+        method that bypasses ``_render_content`` (e.g. test fixtures
+        that call ``_draw_day_box`` directly).  No-op when the cache is
+        already populated.
+        """
+        if not self._weekly_tokens:
+            self._populate_weekly_tokens(config)
+
     def _build_day_boxes(
         self,
         config: CalendarConfig,
@@ -389,14 +398,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         Returns:
             Dict with coordinates for Number, Event positions, Row_Coords, etc.
         """
-        name_size = (
-            self._tk("text:event_name").get("size")
-            or config.weekly_name_text_font_size
-        )
-        day_num_size = (
-            self._tk("text:day_number").get("size")
-            or config.day_box_number_font_size
-        )
+        name_size = self._tk("text:event_name").get("size")
+        day_num_size = self._tk("text:day_number").get("size")
         textrowheight = round(name_size * 1.3, 2)
         daynumheight = day_num_size
 
@@ -667,12 +670,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         fiscal_label = " ".join(label_parts).strip()
         tk_fiscal = self._tk("text:fiscal_label")
         tk_dn = self._tk("text:day_number")
-        day_num_size = tk_dn.get("size") or config.day_box_number_font_size
-        label_font_size = (
-            tk_fiscal.get("size")
-            or config.fiscal_period_label_font_size
-            or day_num_size * 0.7
-        )
+        day_num_size = tk_dn.get("size")
+        label_font_size = tk_fiscal.get("size") or day_num_size * 0.7
         label_y = dbc["Number"][1]
         _ts_fiscal = config.get_text_style("ec-fiscal-label")
         label_font = tk_fiscal.get("font") or _ts_fiscal.font
@@ -737,7 +736,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         except (KeyError, ValueError):
             week_text = f"W{week_num:02d}"
         tk_wn = self._tk("text:week_number")
-        wn_size = tk_wn.get("size") or config.week_number_font_size
+        wn_size = tk_wn.get("size")
         margins = resolve_page_margins(config)
         drew_inside = False
         if margins["left"] > 0:
@@ -746,7 +745,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         else:
             day_num_size = (
                 self._tk("text:day_number").get("size")
-                or config.day_box_number_font_size
+               
             )
             gap = day_num_size * 0.3
             wn_x = label_x + (label_width + gap if label_width else 0.0)
@@ -808,7 +807,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         tk_icon_ev = self._tk("icon:event")
         ht_font = tk_ht.get("font") or _ts_ht.font
         ht_color = tk_ht.get("color") or _ts_ht.color
-        day_num_size = tk_dn.get("size") or config.day_box_number_font_size
+        day_num_size = tk_dn.get("size")
         x1_icon_default, _ = dbc["Day_Icon"]
         x1_name_default, _ = dbc["Day_Name"]
         shift = max(0.0, min_left_x + (day_num_size * 0.3) - x1_icon_default)
@@ -821,7 +820,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         ht_max_size = (
             tk_ht.get("size")
             or tk_en.get("size")
-            or config.weekly_name_text_font_size
+           
         )
         fontsize = shrinktext(
             daytitle,
@@ -874,6 +873,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             shadespecialday: Whether to shade as special day
             style_result: Accumulated style overrides from matched style_rules
         """
+        self._ensure_weekly_tokens(config)
         dbc = self._day_box_coords(config, X, Y, W, H)
         oneday_str = oneday.format("YYYYMMDD")
         month = oneday.format("MM")
@@ -928,7 +928,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _ts_dn = config.get_text_style("ec-day-number")
         tk_dn = self._tk("text:day_number")
         dn_font = tk_dn.get("font") or _ts_dn.font
-        dn_size = tk_dn.get("size") or config.day_box_number_font_size
+        dn_size = tk_dn.get("size")
         dn_color = tk_dn.get("color") or _ts_dn.color
         boxdate = self._build_day_number_label(config, oneday, oneday_str)
         day_num_width = string_width(
@@ -1097,7 +1097,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # shrink its height to match.
         top_clearance = (
             self._tk("text:day_number").get("size")
-            or config.day_box_number_font_size
+           
         ) * 1.2
         pattern_h = max(0.0, h - top_clearance)
 
@@ -1146,7 +1146,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         tk_en = self._tk("text:event_name")
         tk_icon_ev = self._tk("icon:event")
         en_font = tk_en.get("font") or _ts_en.font
-        en_size_default = tk_en.get("size") or config.weekly_name_text_font_size
+        en_size_default = tk_en.get("size")
         textcolor = tk_en.get("color") or _ts_en.color
         iconcolor = tk_icon_ev.get("color") or _is_ei.color
 
@@ -1233,7 +1233,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _is_oi = config.get_icon_style("ec-overflow-icon")
         tk_dn = self._tk("text:day_number")
         tk_overflow = self._tk("icon:overflow")
-        font_size = tk_dn.get("size") or config.day_box_number_font_size
+        font_size = tk_dn.get("size")
         self._draw_icon_svg(
             config.overflow_indicator_icon,
             indicatorX,
@@ -1328,7 +1328,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                                 font=tk_notes.get("font") or _ts_notes.font,
                                 font_size=(
                                     tk_notes.get("size")
-                                    or config.weekly_notes_text_font_size
+                                   
                                 ),
                                 color=tk_notes.get("color") or _ts_notes.color,
                             )
@@ -1511,13 +1511,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         name_font, name_size, name_color, name_opacity = dur_style.text_override(
             "duration_name",
             font=tk_en.get("font") or _ts_en.font,
-            font_size=tk_en.get("size") or config.weekly_name_text_font_size,
+            font_size=tk_en.get("size"),
             color=tk_en.get("color") or _ts_en.color,
         )
         notes_font, notes_size, notes_color, notes_opacity = dur_style.text_override(
             "duration_notes",
             font=tk_notes.get("font") or _ts_notes.font,
-            font_size=tk_notes.get("size") or config.weekly_notes_text_font_size,
+            font_size=tk_notes.get("size"),
             color=tk_notes.get("color") or _ts_notes.color,
         )
 

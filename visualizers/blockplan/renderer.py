@@ -417,7 +417,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         font_size = float(
             band.get("font_size")
             or self._tk("text:band_label").get("size")
-            or config.blockplan_band_font_size
+           
         )
         return font_size * 1.01
 
@@ -589,7 +589,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_font_size = float(
                     band.get("label_font_size")
                     or (row_h * 0.65 if has_explicit_row_h else (
-                        tk_heading.get("size") or config.blockplan_header_font_size
+                        tk_heading.get("size")
                     ))
                 )
                 heading_color = band.get("label_color") or tk_heading.get("color") or _heading_text_style.color
@@ -670,7 +670,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 band_font_size = row_h * 0.65
             else:
                 band_font_size = float(
-                    tk_band_label.get("size") or config.blockplan_band_font_size
+                    tk_band_label.get("size")
                 )
             heading_font = band.get("label_font") or tk_heading.get("font") or _heading_text_style.font
             if band.get("label_font_size"):
@@ -679,7 +679,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_font_size = row_h * 0.65
             else:
                 heading_font_size = float(
-                    tk_heading.get("size") or config.blockplan_header_font_size
+                    tk_heading.get("size")
                 )
             heading_color = band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color
             heading_opacity = float(
@@ -1518,7 +1518,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_dur_box = self._tk("box:duration")
             if weekly_style_with_notes:
                 notes_font_size = float(
-                    tk_event_notes.get("size") or config.blockplan_notes_text_font_size
+                    tk_event_notes.get("size")
                 )
             y = top + (row * row_h) + ((row_h - bar_h) / 2.0)
 
@@ -1619,7 +1619,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_dur_date = self._tk("text:duration_date")
             if has_dates:
                 date_font_size = float(
-                    tk_dur_date.get("size") or config.blockplan_duration_date_font_size
+                    tk_dur_date.get("size")
                 )
                 date_baseline_y = y + bar_h - float(config.blockplan_duration_date_inset)
                 date_color = (
@@ -1764,7 +1764,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     str(event.notes),
                     _dur_notes_font_name,
                     float(
-                        tk_event_notes.get("size") or config.blockplan_notes_text_font_size
+                        tk_event_notes.get("size")
                     ),
                     fill=dur_notes_color,
                     anchor="middle",
@@ -1775,7 +1775,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _draw_icon_and_text(
                     y + (bar_h * 0.80),
                     float(
-                        tk_event_name.get("size") or config.blockplan_name_text_font_size
+                        tk_event_name.get("size")
                     ),
                     w - 4,
                 )
@@ -1886,14 +1886,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
         tk_event_notes = self._tk("text:event_notes")
         tk_event_date = self._tk("text:event_date")
         event_size = float(
-            tk_event_name.get("size") or config.blockplan_name_text_font_size
+            tk_event_name.get("size")
         )
         notes_size = float(
-            tk_event_notes.get("size") or config.blockplan_notes_text_font_size
+            tk_event_notes.get("size")
         )
         date_size = float(
             tk_event_date.get("size")
-            or config.blockplan_event_date_font_size
+           
             or max(6.0, event_size * 0.9)
         )
         show_date = bool(getattr(config, "blockplan_event_show_date", False))
@@ -2167,9 +2167,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         tk_event_name = self._tk("text:event_name")
         fs = float(
             tk_swimlane_label.get("size")
-            or config.blockplan_lane_label_font_size
             or tk_event_name.get("size")
-            or config.weekly_name_text_font_size
             or 9.0
         )
         line_gap = fs * 1.20

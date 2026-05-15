@@ -1956,6 +1956,7 @@ _HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
     ("text:event_name", "timeline", "timeline_name_text_font_size"),
     ("text:event_notes", "timeline", "timeline_notes_text_font_size"),
     # Blockplan.
+    ("text:heading", "blockplan", "blockplan_header_font_size"),
     ("text:band_label", "blockplan", "blockplan_band_font_size"),
     ("text:swimlane_label", "blockplan", "blockplan_lane_label_font_size"),
     ("text:event_name", "blockplan", "blockplan_name_text_font_size"),
