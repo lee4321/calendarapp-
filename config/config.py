@@ -1971,19 +1971,29 @@ def _inject_heuristic_size_tokens(config: CalendarConfig) -> None:
     already define ``size:`` for the current ctx.
 
     Called from :py:meth:`ThemeEngine.apply` right after
-    ``config.theme = parse_theme(...)``, so the synthesized rules
-    survive the second-apply rebuild.  The heuristic value comes from
-    ``getattr(config, legacy_field_name)``, which :py:func:`setfontsizes`
-    populated earlier in the boot sequence.
+    ``config.theme = parse_theme(...)``, and again at the end of
+    :py:func:`setfontsizes` so test fixtures that skip the theme-engine
+    boot sequence still get a populated token registry.  The heuristic
+    value comes from ``getattr(config, legacy_field_name)``, which
+    setfontsizes() populated earlier.
 
-    No-op when ``config.theme`` is None, the legacy field doesn't exist,
-    or the token already resolves to a numeric ``size:`` (theme-defined
-    or previously injected).
+    When ``config.theme`` is None (no theme was loaded), creates a
+    minimal :py:class:`UnifiedTheme` to hold the synthesized rules
+    so renderers can read ``tk.get("size")`` without falling back.
+
+    No-op for tokens that already resolve to a numeric ``size:``
+    (theme-defined or previously injected).
     """
+    from config.unified_theme import Rule, UnifiedTheme, _build_token_index
+
     theme = getattr(config, "theme", None)
     if theme is None:
-        return
-    from config.unified_theme import Rule, _build_token_index
+        # Bootstrap a stub theme so test fixtures (which call setfontsizes
+        # but never theme_engine.apply) still populate the token registry
+        # with heuristic sizes.  Real boots overwrite config.theme via
+        # ThemeEngine.apply() before any rendering.
+        theme = UnifiedTheme(sections={}, rules=[])
+        config.theme = theme
 
     papersize = str(getattr(config, "papersize", "") or "")
     new_rules: list[Rule] = []
@@ -2256,5 +2266,12 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
 
     # Watermark base font size (paper-size aware, theme-overridable)
     config.watermark_font_size = int(round(_clamp(h * 0.10, 24.0, 256.0)))
+
+    # Phase 2 wave 2: inject heuristic-derived size tokens so renderers'
+    # `tk.get("size")` reads always return a value, even from test fixtures
+    # that skip the theme_engine boot sequence.  ThemeEngine.apply() also
+    # calls this — both call sites are idempotent (already-defined tokens
+    # are skipped).
+    _inject_heuristic_size_tokens(config)
 
     return config

@@ -616,30 +616,39 @@ Each batch:
 5. Run the full test suite (`pytest tests/ --ignore=tests/test_theme_engine.py`)
    plus render-completeness; both must stay green.
 
-### Wave 2 (deferred) — strip the `or config.<legacy>` fallback chain
+### Wave 2 (this session) — heuristic-token injection landed; fallback strip deferred
 
-After Wave 1, the renderers still read styling via the
-`tk.get(x) or config.<legacy>` shape established in Phase 1.  Wave 2
-flips that to `tk.get(x)` directly and strips the surviving
-CalendarConfig fields.
+`_inject_heuristic_size_tokens(config)` (config/config.py) walks the
+new `_HEURISTIC_TOKEN_FIELDS` map after the second `theme_engine.apply()`
+(and again at the end of `setfontsizes()` for test-fixture safety) and
+synthesizes a `text:<name>` rule for every token whose resolved style
+lacks `size:` in the current ctx.  Heuristic value comes from the legacy
+field setfontsizes wrote earlier.  When `config.theme is None` the
+injector bootstraps a stub `UnifiedTheme` so renderers' direct
+`tk.get("size")` reads always return a value when a theme is loaded.
 
-**Blocker:** `setfontsizes` writes the page-height heuristic into
-CalendarConfig fields today; for Wave 2 to be safe, `setfontsizes` (or
-a sibling pass) needs to *write* its computed sizes back into the
-unified-theme token registry, so `theme.resolve_token("text:foo")["size"]`
-returns a value even when no theme defines `size:`.  Without that, a
-no-`size`-defined theme would render text at None pt.
+**Status:** infrastructure landed (commit `c1c4f171`); fallback strip
+deferred.
 
-The simplest design: a new pass that runs after the second
-`theme_engine.apply()` and walks the existing `_size(token, fallback,
-visualizer)` map, injecting a synthesized rule into `config.theme.rules`
-for every token whose resolved style lacks `size:`.  Renderers can then
-drop their `or config.<legacy>` fallbacks and the legacy fields can
-follow.
+**Why deferred.** Stripping `tk.get("size") or config.<legacy>` to bare
+`tk.get("size")` works at the runtime entry points (where
+`theme_engine.apply` and `setfontsizes` run as expected) but breaks
+existing test fixtures that construct `CalendarConfig` and call
+draw methods directly, bypassing `_render_content` (which is what
+populates the per-renderer token cache `self._weekly_tokens` /
+`self._mini_tokens` / etc.).  E.g. `tests/test_week_numbers.py` calls
+`renderer._draw_day_box(...)` against a `_CaptureRenderer` subclass; the
+cache is empty, so `self._tk(token).get("size")` returns None and
+`None * 1.3` crashes.
 
-- [ ] Design + implement `_inject_heuristic_size_tokens(config)`.
+**Path forward.** Wave 3 (next session, separate scope):
+
+- [ ] Decide between (a) updating test fixtures to call
+      `renderer._populate_<viz>_tokens(config)` after `setfontsizes()`,
+      or (b) making `_tk()` lazy-resolve when the cache is empty
+      (requires `self._config` to be set on the renderer in tests).
 - [ ] Strip `or config.<legacy>` from each renderer's read sites.
-- [ ] Strip the now-truly-dead legacy fields family by family.
+- [ ] Strip the now-truly-dead legacy size fields.
 
 The end state: `CalendarConfig` has only non-styling fields — geometry,
 format strings, palette references, fiscal semantics, the loaded
@@ -706,7 +715,8 @@ visualizer (assuming careful work, SVG diffing, and test runs):
 | excelheader | 1-2 hours | **done** |
 | Phase 1.5 (icon halo wiring) | 3-4 hours | **done** |
 | Phase 2 wave 1 (strip purely-dead) | 2-3 hours | **done** (89 fields across 6 commits) |
-| Phase 2 wave 2 (strip fallbacks) | 4-6 hours | pending — needs setfontsizes-writes-tokens design |
+| Phase 2 wave 2 (inject heuristic tokens) | 1 hour | **done** (commits `c1c4f171` + setfontsizes call-site + bootstrap) |
+| Phase 2 wave 3 (strip fallbacks + dead size fields) | 3-5 hours | pending — see Wave 2 doc for test-fixture path forward |
 | Phase 3 (delete bridge) | 1 hour | blocked on Phase 2 |
 | Phase 4 (validation) | 2-3 hours | blocked on Phase 3 + Open §3 |
 | **Remaining total** | **~25-35 hours** | |
