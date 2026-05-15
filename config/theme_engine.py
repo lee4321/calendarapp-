@@ -491,12 +491,20 @@ class ThemeEngine:
 
     @classmethod
     def list_available_themes(cls) -> list[str]:
-        """Return names of built-in themes (without .yaml extension)."""
+        """Return names of built-in themes (without .yaml extension), sorted.
+
+        Sorts on the stem (post-extension-strip) rather than the full path so
+        the result is stably ordered as plain theme names — `TJXmini` <
+        `TJXmini-icon` (Python's string comparison: shorter shared-prefix
+        sorts first).  Sorting the paths first would give the opposite
+        order because `.` (0x2E) > `-` (0x2D), so `TJXmini-icon.yaml` sorts
+        before `TJXmini.yaml` at the path level.
+        """
         themes: list[str] = []
         if cls.BUILTIN_THEMES_DIR.exists():
-            for f in sorted(cls.BUILTIN_THEMES_DIR.glob("*.yaml")):
+            for f in cls.BUILTIN_THEMES_DIR.glob("*.yaml"):
                 themes.append(f.stem)
-        return themes
+        return sorted(themes)
 
     def load(self, theme_path_or_name: str) -> None:
         """
