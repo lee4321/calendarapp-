@@ -108,7 +108,7 @@ weekly:
     font_name: RobotoCondensed-LightItalic
     font_color: darkgrey
   overflow:
-    icon: overflow
+    icon: warningtriangle
     color: red
 
 # ─── mini_calendar ─────────────────────────────────────────────────────────

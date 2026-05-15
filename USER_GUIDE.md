@@ -324,16 +324,21 @@ In timeline, single-day events and multi-day durations are rendered differently 
 
 #### `weekly` rendering behavior
 
-In weekly, day boxes are drawn first, then events and durations are placed into the available rows inside each visible day:
+In weekly, day-box cells are drawn first, events and durations are placed into the available rows inside each visible day, then the day-number row is laid out with full knowledge of which days overflowed:
 
 - Day-box background color is chosen from month colors by default, from fiscal-period colors when fiscal colors are enabled, or from holiday/company nonworkday colors when the date is marked as a special day. `--shade` overrides that fill for the current day only.
-- Holiday titles and holiday icons are drawn on the same baseline as the day number when a holiday title exists for that date.
-- Week numbers appear only on week-start days when enabled. Fiscal period labels appear only when fiscal labeling is enabled and the date qualifies as a fiscal boundary according to the fiscal lookup.
+- The number of event rows per day box is derived from the box height, day-number height, and event-row height so the bottom row never bleeds into the next week's cell.
+- Day-number row layout (left → right): fiscal label, week number, overflow icon, holiday/special-day icon(s), holiday name, day number. Every element is vertically centered with the day number — text/icon baselines shift by `0.3 × (day_num_size − element_size)` so labels with smaller fonts share a midline with the day number rather than a baseline.
+  - **Week numbers** appear only on week-start days when `--weeknumbers` is enabled. They sit either in the left page margin (when one is present) or inside the day box past the fiscal label.
+  - **Overflow icon** is drawn only on days where at least one event or duration could not fit into the available rows. Multiple overflows on the same day produce a single icon. The icon supports a themed halo via `apply_to: box:overflow` (see "Style Rules" below).
+  - **Holiday / special-day icons** are drawn one per marking, in sequence after the overflow icon. Federal holidays come first, then company special days. Numeric icon IDs are resolved through the `fonticon` table.
+  - **Holiday name** is drawn ONLY when there is exactly one marking AND no overflow on that day; otherwise the row is icon-only so multiple markings stay visible. The name follows immediately after the icon (left-justified) and shrinks to fit the space between the icons and the day number while the icon itself stays at the unshrunk theme size.
+- Fiscal period labels appear only when fiscal labeling is enabled and the date qualifies as a fiscal boundary according to the fiscal lookup.
 - Day-box pattern and color decorations come from top-level `style_rules` entries with `apply_to: day_box`. Rules can match on day context (federal/company holiday, nonworkday, weekend, date) and event criteria (task name, notes, WBS, percent complete, resource group/names, priority, milestone, rollup, event type). Rules layer additively in declaration order. If no rule supplies a pattern, `theme_weekly_hash_pattern` is used as the fallback pattern. See Complex Structures Reference for the full syntax.
 - Single-day event text and event icons use the event's resource-group color when that group maps to a configured resource-group color; otherwise they use the default weekly event colors.
 - Item placement order is controlled by `item_placement_order`. Type tokens (`milestones`, `events`, `durations`) determine grouping order, and `priority` or `alphabetical` determine ordering within each group.
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
-- When an event or duration cannot fit into the available rows, the overflow indicator icon is placed on the affected day.
+- Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
 
 ## Theme System
 
@@ -779,7 +784,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
 | `overflow_indicator_color` | `weekly.overflow.color` | `str` | `'red'` | color |
-| `overflow_indicator_icon` | `weekly.overflow.icon` | `str` | `'overflow'` | icon |
+| `overflow_indicator_icon` | `weekly.overflow.icon` | `str` | `'warningtriangle'` | icon |
+| *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | — | Optional halo (fill/stroke/padding) painted behind the overflow icon. See "Style Rules" → Box Properties. |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
 | `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |
@@ -1107,7 +1113,7 @@ style_rules:
 | Target | What gets styled |
 |---|---|
 | `text:<name>` | A text token (`text:heading`, `text:event_name`, `text:milestone_label`, …) |
-| `box:<name>` | A box token. Canonical names: `box:day`, `box:event`, `box:duration`, `box:vline`, `box:milestone`, `box:swimlane_heading`, `box:swimlane_content`, `box:band`, plus shared `box:cell`/`box:header`/`box:callout`/`box:default`. |
+| `box:<name>` | A box token. Canonical names: `box:day`, `box:event`, `box:duration`, `box:overflow`, `box:vline`, `box:milestone`, `box:swimlane_heading`, `box:swimlane_content`, `box:band`, plus shared `box:cell`/`box:header`/`box:callout`/`box:default`. |
 | `line:<name>` | A line token (`line:grid`, `line:axis`, `line:today`, …) |
 | `icon:<name>` | An icon token (`icon:event`, `icon:milestone`, `icon:overflow`, …) |
 | `element` | Bind a CSS class to a token via `select.element` + `style.use` |
@@ -1184,6 +1190,21 @@ Matched against the data attached to the event/duration/milestone being drawn. A
 | `pattern_color` | Colorizes the pattern |
 | `pattern_opacity` | 0–1 |
 | `align` | `start` \| `center` \| `end` (placement hint for `box:vline`) |
+| `padding` | Halo inset (in points) for icon halos like `box:milestone`, `box:overflow`. Default `size * 0.1`. |
+
+Halo example for the weekly overflow icon — paint a small ring behind the indicator:
+
+```yaml
+- name: overflow halo
+  apply_to: box:overflow
+  style:
+    fill: white
+    stroke: red
+    stroke_width: 0.5
+    padding: 1
+```
+
+`box:overflow` is matched once per overflowed day with a single `date` selector context.
 
 #### `style:` — Text Properties (recognized by every `text:<name>` target)
 

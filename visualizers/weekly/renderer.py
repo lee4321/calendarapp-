@@ -359,6 +359,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
         self._populate_weekly_tokens(config)
 
+        # Reset per-page overflow tracker. _process_overflow appends to this
+        # set; _draw_day_top_row_extras consults it to lay out the day-number
+        # row (week-number, overflow icon, holiday icons, optional name).
+        self._overflow_daykeys = set()
+
         events_by_day = self._build_events_by_day(
             config,
             event_objects,
@@ -373,6 +378,27 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         rows_on_days, overflow_count, overflow_entries = self._place_all_events(
             config, event_objects, days_to_print, rows_on_days
         )
+
+        # Day-number row contents now know which days overflowed.
+        tk_dn = self._tk("text:day_number")
+        dn_font = tk_dn.get("font") or config.get_text_style("ec-day-number").font
+        dn_size = tk_dn.get("size")
+        dn_font_path = get_font_path(dn_font)
+        for daykey in days_to_print:
+            oneday = arrow.get(daykey, "YYYYMMDD")
+            X, Y, W, H = coordinates[daykey]
+            day_num_label = self._build_day_number_label(config, oneday, daykey)
+            day_num_width = string_width(day_num_label, dn_font_path, dn_size)
+            holidays = self._get_all_special_day_titles(daykey, db, config.country)
+            self._draw_day_top_row_extras(
+                config,
+                oneday,
+                daykey,
+                X, Y, W, H,
+                has_overflow=daykey in self._overflow_daykeys,
+                holidays=holidays,
+                day_num_width=day_num_width,
+            )
 
         overflow_entries.sort(key=lambda e: (e.start, e.end, e.task_name))
         return overflow_count, overflow_entries
@@ -428,8 +454,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         dayNameX = round(dayIconX + (textrowheight * 1.1), 2)
         dayNameY = dayIconY
 
-        # Calculate virtual rows for events and durations
-        MaxRows = int((height - daynumheight - (textrowheight * 0.2)) / textrowheight)
+        # Calculate virtual rows for events and durations.
+        # Row 0 starts at eventTextY (below the day-number baseline plus a
+        # textrowheight*1.1 gap), so available height = box bottom - row 0 top.
+        MaxRows = max(0, int(((y + height) - eventTextY) / textrowheight))
         config.maxrows = MaxRows
 
         Row_Coords = {}
@@ -516,6 +544,46 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             dayicon = icon or ""
 
         return daytitle, dayicon
+
+    def _get_all_special_day_titles(
+        self,
+        daykey: str,
+        db: CalendarDB,
+        country: str | None = None,
+    ) -> list[tuple[str, str]]:
+        """
+        Return every special-day marking for ``daykey`` (federal holidays
+        first, then company special days), as a list of ``(name, icon)``
+        tuples.  Numeric icon IDs are resolved through ``fonticon``.
+
+        Used when multiple markings need to be rendered side-by-side on the
+        day-number row (see ``_draw_day_top_row_extras``).
+        """
+        results: list[tuple[str, str]] = []
+
+        for h in db.get_holidays_for_date(daykey, country):
+            name = h.get("displayname")
+            if not name:
+                continue
+            raw_icon = (
+                h.get("icon")
+                or h.get("displayiconid")
+                or h.get("displayicon")
+                or ""
+            )
+            icon = str(raw_icon).strip()
+            if icon.isdigit():
+                resolved = db.get_icon_by_id(int(icon))
+                if resolved:
+                    icon = resolved
+            results.append((str(name), icon))
+
+        for day in db.get_special_days_for_date(daykey):
+            name = day.get("name")
+            if name:
+                results.append((str(name), str(day.get("icon") or "")))
+
+        return results
 
     def _build_events_by_day(
         self,
@@ -700,7 +768,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         label_x: float,
         label_width: float,
     ) -> float:
-        """Draw week number on week-start days at the same baseline as the day number.
+        """Draw week number on week-start days, vertically centered with the day number.
+
+        The label baseline is shifted up by 0.3 * (day_num_size - wn_size) so
+        its visual center aligns with the day number's center (same convention
+        used for holiday markings — see _draw_day_top_row_extras).
 
         Returns the rightmost x-coordinate occupied by the in-box week-number
         label, so callers can shift downstream content to avoid overlap.
@@ -737,16 +809,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             week_text = f"W{week_num:02d}"
         tk_wn = self._tk("text:week_number")
         wn_size = tk_wn.get("size")
+        day_num_size = self._tk("text:day_number").get("size")
         margins = resolve_page_margins(config)
         drew_inside = False
         if margins["left"] > 0:
             wn_x = box_left - 2.0
             anchor = "end"
         else:
-            day_num_size = (
-                self._tk("text:day_number").get("size")
-               
-            )
             gap = day_num_size * 0.3
             wn_x = label_x + (label_width + gap if label_width else 0.0)
             anchor = "start"
@@ -754,9 +823,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _ts_wn = config.get_text_style("ec-week-number")
         wn_font = tk_wn.get("font") or _ts_wn.font
         wn_color = tk_wn.get("color") or _ts_wn.color
+        # Center the week-number label vertically with the day number by
+        # shifting its baseline up by 0.3 * (day_num_size - wn_size).
+        wn_baseline_y = y1 - 0.3 * (day_num_size - wn_size)
         self._draw_text(
             wn_x,
-            y1,
+            wn_baseline_y,
             week_text,
             wn_font,
             wn_size,
@@ -775,76 +847,147 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         )
         return wn_x + text_w
 
-    def _draw_special_day_title(
+    def _draw_day_top_row_extras(
         self,
         config: CalendarConfig,
-        dbc: dict,
-        x1: float,
+        oneday: arrow.Arrow,
+        daykey: str,
         X: float,
-        baseline_y: float,
-        daytitle: str | bool,
-        dayicon: str,
-        day_num_rendered_width: float = 0.0,
-        min_left_x: float = 0.0,
+        Y: float,
+        W: float,
+        H: float,
+        has_overflow: bool,
+        holidays: list[tuple[str, str]],
+        day_num_width: float,
     ) -> None:
-        """Draw special day (holiday) title text and icon in the day box.
+        """Draw fiscal label, week-number, overflow icon, and holiday
+        markings on the day-number row.
 
-        baseline_y is the shared text baseline for this row (same as the day
-        number), so the title and icon are baseline-aligned with the day number.
+        Layout (left → right):
+            [fiscal label] [week-number] [overflow icon] [holiday icons]
+            [holiday name?]                                  ... [day number]
 
-        ``min_left_x`` is the rightmost x already occupied on this row by
-        upstream labels (e.g. an in-box week-number label); the icon and
-        title are shifted right so they begin past this boundary.
+        The holiday name is drawn ONLY when there is exactly one holiday/
+        special-day marking AND no overflow. With overflow OR multiple
+        markings, only the icons are drawn — the row never has more than
+        one text label besides the day number.
+
+        All elements are vertically centered with the day number using
+        baseline shifts of ``0.3 * (day_num_size - element_size)``.
         """
-        if not daytitle:
+        self._ensure_weekly_tokens(config)
+        dbc = self._day_box_coords(config, X, Y, W, H)
+        oneday_str = daykey
+        x1, y1 = dbc["Number"]
+
+        tk_dn = self._tk("text:day_number")
+        day_num_size = tk_dn.get("size")
+
+        # 1. Fiscal label and week-number (unchanged from prior behavior).
+        label_x = X + (W * 0.02)
+        label_width = self._draw_fiscal_label(
+            config, oneday, oneday_str, dbc, label_x
+        )
+        wn_right_x = self._draw_week_number_label(
+            config, oneday, y1, X, label_x, label_width
+        )
+
+        # Available horizontal budget runs from the left edge (past any
+        # week-number label, etc.) to just before the day number.
+        gap = day_num_size * 0.15
+        available_right = x1 - day_num_width - gap
+
+        # Starting x for the icon strip: past the leftmost label.
+        x1_icon_default, _ = dbc["Day_Icon"]
+        base_shift = max(0.0, wn_right_x + (day_num_size * 0.3) - x1_icon_default)
+        next_x = x1_icon_default + base_shift
+
+        icon_gap = day_num_size * 0.15
+
+        # 2. Overflow icon (only if this day overflowed). The themable
+        # ``box:overflow`` token gives themes a way to paint a halo behind
+        # the icon — see _maybe_draw_icon_halo.
+        if has_overflow:
+            _is_oi = config.get_icon_style("ec-overflow-icon")
+            tk_overflow = self._tk("icon:overflow")
+            of_color = tk_overflow.get("color") or _is_oi.color
+            of_size = day_num_size
+            of_baseline_y = y1 - 0.3 * (day_num_size - of_size)
+            self._draw_icon_svg(
+                config.overflow_indicator_icon,
+                next_x,
+                of_baseline_y,
+                of_size,
+                color=of_color,
+                fallback_name=config.default_missing_icon,
+                fallback_color="red",
+                css_class="ec-overflow-icon",
+                box_token="box:overflow",
+                box_ctx={"date": daykey},
+            )
+            next_x += of_size + icon_gap
+
+        if not holidays:
             return
 
+        # 3. Holiday / special-day icons. Sized at the unshrunk holiday
+        # title size so fidelity matches the rest of the row.
         _ts_ht = config.get_text_style("ec-holiday-title")
         _is_ei = config.get_icon_style("ec-event-icon")
         tk_ht = self._tk("text:holiday_title")
-        tk_dn = self._tk("text:day_number")
         tk_en = self._tk("text:event_name")
         tk_icon_ev = self._tk("icon:event")
         ht_font = tk_ht.get("font") or _ts_ht.font
         ht_color = tk_ht.get("color") or _ts_ht.color
-        day_num_size = tk_dn.get("size")
-        x1_icon_default, _ = dbc["Day_Icon"]
-        x1_name_default, _ = dbc["Day_Name"]
-        shift = max(0.0, min_left_x + (day_num_size * 0.3) - x1_icon_default)
-        x1_icon = x1_icon_default + shift
-        x1_name = x1_name_default + shift
-        gap = day_num_size * 0.15
-        available_right = x1 - day_num_rendered_width - gap
-        daytitlewidth = max(available_right - x1_name, 0.0)
-        font_path = get_font_path(ht_font)
+        icon_color = tk_icon_ev.get("color") or _is_ei.color
         ht_max_size = (
             tk_ht.get("size")
             or tk_en.get("size")
-           
         )
+        icon_size = ht_max_size
+        icon_baseline_y = y1 - 0.3 * (day_num_size - icon_size)
+
+        for _name, icon_name in holidays:
+            if next_x + icon_size > available_right:
+                break  # ran out of room
+            self._draw_icon_svg(
+                icon_name,
+                next_x,
+                icon_baseline_y,
+                icon_size,
+                color=icon_color,
+                css_class="ec-event-icon",
+            )
+            next_x += icon_size + icon_gap
+
+        # 4. Holiday name — drawn ONLY when a single marking exists and
+        # there is no overflow. Multiple markings or an overflow icon
+        # mean the row is icon-only.
+        if has_overflow or len(holidays) != 1:
+            return
+
+        daytitle, _icon = holidays[0]
+        if not daytitle:
+            return
+
+        font_path = get_font_path(ht_font)
+        title_width_budget = max(available_right - next_x, 0.0)
         fontsize = shrinktext(
             daytitle,
-            daytitlewidth,
+            title_width_budget,
             font_path,
             ht_max_size,
         )
+        title_baseline_y = y1 - 0.3 * (day_num_size - fontsize)
         self._draw_text(
-            x1_name,
-            baseline_y,
+            next_x,
+            title_baseline_y,
             daytitle,
             ht_font,
             fontsize,
             fill=ht_color,
+            anchor="start",
             css_class="ec-holiday-title",
-        )
-
-        self._draw_icon_svg(
-            dayicon,
-            x1_icon,
-            baseline_y,
-            fontsize,
-            color=tk_icon_ev.get("color") or _is_ei.color,
-            css_class="ec-event-icon",
         )
 
     def _draw_day_box(
@@ -947,20 +1090,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             css_class="ec-day-number",
         )
 
-        # Fiscal period label and week number
-        label_x = X + (W * 0.02)
-        label_width = self._draw_fiscal_label(config, oneday, oneday_str, dbc, label_x)
-        wn_right_x = self._draw_week_number_label(
-            config, oneday, y1, X, label_x, label_width
-        )
-
-        # Holiday title and icon share the day-number baseline so all elements
-        # on the same row are baseline-aligned (standard typographic convention).
-        # Shift past the week-number label when one was drawn inside the box.
-        self._draw_special_day_title(
-            config, dbc, x1, X, y1, daytitle, dayicon, day_num_width,
-            min_left_x=wn_right_x,
-        )
+        # Fiscal period label, week number, overflow icon, and holiday
+        # markings are all drawn later by ``_draw_day_top_row_extras`` once
+        # event placement has determined which days overflowed.
 
     # =========================================================================
     # SVG pattern decoration
@@ -1214,34 +1346,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         daykey: str,
     ):
         """
-        Handle overflow condition by placing indicator icon.
+        Record a day that needs an overflow indicator.
 
-        Args:
-            config: Calendar configuration
-            coordinates: Layout coordinates
-            t: Event object
-            daykey: Date key
+        The actual icon is drawn later by ``_draw_day_top_row_extras`` so it
+        can be laid out alongside the week-number label and any holiday
+        markings without overwriting them.
+
+        ``coordinates`` and ``t`` are retained in the signature for
+        compatibility with existing call sites and tests.
         """
-        X, Y, W, H = coordinates[daykey]
-        dbc = self._day_box_coords(config, X, Y, W, H)
-        indicatorX, _ = dbc["Overflow"]
-
-        # Place overflow icon on the day-number baseline, left-aligned.
-        numX, numY = dbc["Number"]
-        indicatorY = numY
-
-        _is_oi = config.get_icon_style("ec-overflow-icon")
-        tk_dn = self._tk("text:day_number")
-        tk_overflow = self._tk("icon:overflow")
-        font_size = tk_dn.get("size")
-        self._draw_icon_svg(
-            config.overflow_indicator_icon,
-            indicatorX,
-            indicatorY,
-            font_size,
-            color=tk_overflow.get("color") or _is_oi.color,
-            css_class="ec-overflow-icon",
-        )
+        self._overflow_daykeys.add(daykey)
 
     def _place_event_and_notes(
         self,
@@ -1601,6 +1715,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     box_ctx=self._event_ctx(t),
                 )
 
+            # Continuation dates sit INSIDE the bar, alongside the arrow icon:
+            #   left side  → date is drawn just right of the left arrow
+            #   right side → date is drawn just left of the right arrow
+            # Both share the icon's baseline (name_ty) and use a center-aligned
+            # baseline shift so the smaller text is vertically centered with
+            # the icon ("vertical center = baseline - 0.3 * size" convention).
             if continues_left and i_rect == 0:
                 cont_left_x = X + cont_pad
                 self._draw_icon_svg(
@@ -1614,19 +1734,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_color="red",
                     css_class="ec-duration-icon",
                 )
-                if use_double_height:
-                    date_y = notes_ty
-                else:
-                    date_y = Y + Height + notes_size * 0.95
+                date_gap = cont_size * 0.3
+                date_baseline_y = name_ty + 0.3 * (notes_size - cont_size)
                 self._draw_text(
-                    cont_left_x,
-                    date_y,
+                    cont_left_x + cont_size + date_gap,
+                    date_baseline_y,
                     cont_start_str,
                     notes_font,
                     notes_size,
                     fill=notes_color,
                     anchor="start",
-                    max_width=Width,
                     css_class="ec-duration-date",
                 )
 
@@ -1643,19 +1760,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_color="red",
                     css_class="ec-duration-icon",
                 )
-                if use_double_height:
-                    date_y = notes_ty
-                else:
-                    date_y = Y + Height + notes_size * 0.95
+                date_gap = cont_size * 0.3
+                date_baseline_y = name_ty + 0.3 * (notes_size - cont_size)
                 self._draw_text(
-                    cont_right_x,
-                    date_y,
+                    cont_right_x - cont_size - date_gap,
+                    date_baseline_y,
                     cont_end_str,
                     notes_font,
                     notes_size,
                     fill=notes_color,
                     anchor="end",
-                    max_width=Width,
                     css_class="ec-duration-date",
                 )
 

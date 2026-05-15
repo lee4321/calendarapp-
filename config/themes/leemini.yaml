@@ -136,7 +136,7 @@ weekly:
     font_name: NotoSans-CondensedLightItalic
     font_color: red
   overflow:
-    icon: overflow
+    icon: warningtriangle
     color: darkorange
 
 # ─── mini_calendar ─────────────────────────────────────────────────────────

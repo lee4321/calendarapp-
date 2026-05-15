@@ -76,23 +76,26 @@ def _base_config():
     return config
 
 
+def _draw_extras(renderer, config, oneday, X=0, Y=0, W=100, H=100,
+                 has_overflow=False, holidays=None):
+    renderer._draw_day_top_row_extras(
+        config,
+        oneday,
+        oneday.format("YYYYMMDD"),
+        X, Y, W, H,
+        has_overflow=has_overflow,
+        holidays=holidays or [],
+        day_num_width=0.0,
+    )
+
+
 def test_week_number_drawn_on_week_start_sunday():
     config = _base_config()
     config.weekend_style = 1  # Sunday start
     renderer = _CaptureRenderer()
 
     oneday = arrow.get("20250105", "YYYYMMDD")  # Sunday
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=0,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday)
 
     assert any(text.startswith("W") for text in renderer.text_calls)
 
@@ -103,17 +106,7 @@ def test_week_number_not_drawn_on_non_start_day():
     renderer = _CaptureRenderer()
 
     oneday = arrow.get("20250107", "YYYYMMDD")  # Tuesday
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=0,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday)
 
     assert not any(text.startswith("W") for text in renderer.text_calls)
 
@@ -126,17 +119,7 @@ def test_week_number_drawn_in_left_margin_when_present():
     renderer = _CaptureRenderer()
 
     oneday = arrow.get("20250105", "YYYYMMDD")  # Sunday
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=100,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday, X=100)
 
     week_calls = [
         c for c in renderer.text_detail_calls if str(c.get("text", "")).startswith("W")
@@ -154,17 +137,7 @@ def test_week_number_formatting_applied():
     renderer = _CaptureRenderer()
 
     oneday = arrow.get("20250105", "YYYYMMDD")  # Sunday
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=0,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday)
 
     assert "WK1" in renderer.text_calls
 
@@ -191,17 +164,7 @@ def test_fiscal_label_formatting_applied():
 
     renderer = _CaptureRenderer()
     oneday = arrow.get("20250105", "YYYYMMDD")
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=0,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday)
 
     assert "FY25Q1P1" in "".join(renderer.text_calls)
 
@@ -253,17 +216,7 @@ def test_fiscal_period_end_label_applied():
 
     renderer = _CaptureRenderer()
     oneday = arrow.get("20250111", "YYYYMMDD")
-    renderer._draw_day_box(
-        config,
-        oneday,
-        X=0,
-        Y=0,
-        W=100,
-        H=100,
-        daytitle=False,
-        dayicon="",
-        shadespecialday=False,
-    )
+    _draw_extras(renderer, config, oneday)
 
     assert "ENDP1" in renderer.text_calls
 

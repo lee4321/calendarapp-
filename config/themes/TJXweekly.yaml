@@ -62,7 +62,7 @@ fiscal:
 # Palette name references (month_palette, fiscal_palette, group_palette)
 # and structural holiday attributes.
 colors:
-  month_palette: viridis
+  month_palette: colorblind1
   fiscal_palette: Greys
   group_palette: Pastel1
   hash_lines: black
@@ -110,7 +110,7 @@ weekly:
     font_color: grey
     font_size: 14
   overflow:
-    icon: overflow
+    icon: warningtriangle
     color: red
 
 # ─── style_rules ───────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ style_rules:
     style:
       fill: '#F8F8FF'
       fill_opacity: 0.25
-      stroke: none
+      stroke: black
       stroke_width: 0.5
       stroke_opacity: 0.5
   - name: define box:header
@@ -295,7 +295,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: overflow
+      icon: warning
       color: red
   - name: bind ec-heading -> text:heading
     apply_to: element

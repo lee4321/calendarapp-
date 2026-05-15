@@ -275,7 +275,7 @@ class CalendarDB:
                 cursor.execute(
                     """
                     SELECT name, notes, icon, nonworkday, daycolor, pattern, patterncolor, marks
-                    FROM companyspecialdays
+                    FROM specialdays
                     WHERE startdate <= ? AND enddate >= ?
                     AND visible = 1
                     """,
@@ -286,7 +286,7 @@ class CalendarDB:
                     cursor.execute(
                         """
                         SELECT name, notes, icon, nonworkday, daycolor, pattern, patterncolor
-                        FROM companyspecialdays
+                        FROM specialdays
                         WHERE startdate <= ? AND enddate >= ?
                         AND visible = 1
                         """,
@@ -327,7 +327,7 @@ class CalendarDB:
             try:
                 cursor.execute(
                     """
-                    SELECT 1 FROM companyspecialdays
+                    SELECT 1 FROM specialdays
                     WHERE startdate <= ? AND enddate >= ?
                     AND nonworkday = 1
                     LIMIT 1

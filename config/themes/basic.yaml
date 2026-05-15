@@ -60,7 +60,7 @@ weekly:
   week_numbers:
     label_format: W{num:02d}
   overflow:
-    icon: overflow
+    icon: warningtriangle
 
 # ─── mini_calendar ─────────────────────────────────────────────────────────
 # Mini visualizer non-styling config: title format, layout dimensions,

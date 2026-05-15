@@ -925,7 +925,6 @@ class TestStrokeDasharray:
             patch.object(renderer, "_draw_text"),
             patch.object(renderer, "_draw_fiscal_label", return_value=0),
             patch.object(renderer, "_draw_week_number_label"),
-            patch.object(renderer, "_draw_special_day_title"),
             patch("visualizers.weekly.renderer.string_width", return_value=10),
         ):
             renderer._draw_day_box(config, oneday, 10, 10, 80, 60, False, "", False)
@@ -960,7 +959,6 @@ class TestStrokeDasharray:
             patch.object(renderer, "_draw_text"),
             patch.object(renderer, "_draw_fiscal_label", return_value=0),
             patch.object(renderer, "_draw_week_number_label"),
-            patch.object(renderer, "_draw_special_day_title"),
             patch("visualizers.weekly.renderer.string_width", return_value=10),
         ):
             renderer._draw_day_box(config, oneday, 10, 10, 80, 60, False, "", False)

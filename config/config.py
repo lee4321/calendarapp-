@@ -975,7 +975,7 @@ class CalendarConfig:
     excelheader_weekend_fill_color: str | None = None
 
     # Overflow indicator
-    overflow_indicator_icon: str = "overflow"
+    overflow_indicator_icon: str = "warningtriangle"
     overflow_indicator_color: str = "red"
 
     # Default icon shown when an event's icon name cannot be found in the icons table

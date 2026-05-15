@@ -63,7 +63,7 @@ fiscal:
 # and structural holiday attributes.
 colors:
   month_palette: blues
-  fiscal_palette: colorblind
+  fiscal_palette: colorblind1
   group_palette: coraltealblue
   hash_lines: black
   federal_holiday:
@@ -110,7 +110,7 @@ weekly:
     font_color: grey
     font_size: 14
   overflow:
-    icon: overflow
+    icon: warningtriangle
     color: red
 
 # ─── mini_calendar ─────────────────────────────────────────────────────────
