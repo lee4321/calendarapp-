@@ -73,7 +73,7 @@ colors:
     d: grey
   company_holiday:
     alpha: 0.25
-    color: gold
+    color: red
   federal_holiday:
     alpha: 0.1
     color: tomato
@@ -87,8 +87,17 @@ weekly:
     font_color: black
   week_numbers:
     font_family: PlaywriteDEGrund-VariableFont_wght
-    font_color: yellow
     label_format: W{num:02d}
+    size_rule:
+      - font_size: 14
+        when:
+          papersize:
+            - letter
+            - ledger
+            - tabloid
+            - arche
+            - archd
+            - archc
   day_box:
     stroke_color: black
     stroke_opacity: 0.5
@@ -284,7 +293,7 @@ style_rules:
     define: icon
     as: event
     style:
-      color: yellow
+      color: orange
       size: 10
   - name: define icon:duration
     define: icon
@@ -484,14 +493,13 @@ style_rules:
       element: ec-overflow-icon
     style:
       use: icon:overflow
-  - name: weekly_hash_0
+  - name: weekends
     select:
-      nonworkday: false
+      nonworkday: true
     apply_to: box:day
     style:
-      pattern: stars74
-      pattern_color: silver
-      pattern_opacity: 0.01
+      fill: silver
+      pattern: dingbat29 
   - name: fedholidays
     select:
       federal_holiday: true
