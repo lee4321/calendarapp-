@@ -417,8 +417,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Start icons — one unique icon at the left (start-date) end of each duration line.
         # Each duration gets its own icon by index, cycling through the configured list.
         show_dur_icons = bool(config.compactplan_show_duration_icons)
-        dur_icon_h = float(config.compactplan_duration_icon_height)
         _dur_icon_style = config.get_icon_style("ec-duration-icon")
+        # Theme-declared `icon:duration size:` overrides the per-visualizer
+        # default; falls back to compactplan_duration_icon_height when absent.
+        dur_icon_h = float(
+            _dur_icon_style.size
+            if _dur_icon_style.size is not None
+            else config.compactplan_duration_icon_height
+        )
         dur_icon_color_cfg = str(_dur_icon_style.color or "").strip()
         if show_dur_icons and dur_icon_h > 0:
             for p in placed:
@@ -449,9 +455,25 @@ class CompactPlanRenderer(BaseSVGRenderer):
         show_continuation = bool(config.compactplan_show_continuation_icon)
         has_continuations = any(p.continues for p in placed)
         if show_continuation and has_continuations:
-            cont_icon_name = str(config.compactplan_continuation_icon or "arrow-right")
-            cont_icon_h = float(config.compactplan_continuation_icon_height or 8.0)
-            cont_icon_color_cfg = (config.compactplan_continuation_icon_color or "").strip()
+            # Theme `icon:continuation` (bound to ec-continuation-icon) takes
+            # precedence; each field falls back to the legacy compactplan_*
+            # config keys when the theme is silent.
+            _cont_icon_style = config.get_icon_style("ec-continuation-icon")
+            cont_icon_name = str(
+                _cont_icon_style.icon
+                or config.compactplan_continuation_icon
+                or "arrow-right"
+            )
+            cont_icon_h = float(
+                _cont_icon_style.size
+                if _cont_icon_style.size is not None
+                else (config.compactplan_continuation_icon_height or 8.0)
+            )
+            cont_icon_color_cfg = (
+                _cont_icon_style.color
+                or config.compactplan_continuation_icon_color
+                or ""
+            ).strip()
             for p in placed:
                 if p.continues:
                     # Contrast-swap when the configured continuation-icon color
@@ -469,7 +491,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     self._draw_icon_svg(
                         cont_icon_name, p.x2, icon_baseline, cont_icon_h,
                         anchor="end", color=icon_color,
-                        css_class="ec-duration-icon",
+                        css_class="ec-continuation-icon",
                     )
 
         # Milestones
@@ -1084,8 +1106,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
         line_w = float(config.compactplan_duration_line_width)
 
         show_dur_icons = bool(config.compactplan_show_duration_icons)
-        dur_icon_h = float(config.compactplan_duration_icon_height)
         _legend_icon_style = config.get_icon_style("ec-duration-icon")
+        dur_icon_h = float(
+            _legend_icon_style.size
+            if _legend_icon_style.size is not None
+            else config.compactplan_duration_icon_height
+        )
         dur_icon_color_cfg = str(_legend_icon_style.color or "").strip()
         icon_text_gap = 3.0
 
@@ -1439,9 +1465,22 @@ class CompactPlanRenderer(BaseSVGRenderer):
         label_color = str(_cont_legend_style.color or "#595959")
         label_opacity = float(_cont_legend_style.opacity)
 
-        icon_name = str(config.compactplan_continuation_icon or "arrow-right")
-        icon_h = float(config.compactplan_continuation_icon_height or 8.0)
-        icon_color_cfg = (config.compactplan_continuation_icon_color or "").strip()
+        _cont_icon_style = config.get_icon_style("ec-continuation-icon")
+        icon_name = str(
+            _cont_icon_style.icon
+            or config.compactplan_continuation_icon
+            or "arrow-right"
+        )
+        icon_h = float(
+            _cont_icon_style.size
+            if _cont_icon_style.size is not None
+            else (config.compactplan_continuation_icon_height or 8.0)
+        )
+        icon_color_cfg = (
+            _cont_icon_style.color
+            or config.compactplan_continuation_icon_color
+            or ""
+        ).strip()
         icon_color = icon_color_cfg if icon_color_cfg else label_color
         legend_text = str(config.compactplan_continuation_legend_text or "activity continues")
 

@@ -178,7 +178,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 - The legend and milestone roster are rendered **side by side** in a two-column layout starting at the same vertical position. The fraction of the total width given to the left column is controlled by `compact_plan.legend_column_split` (default `0.5`; a fixed 8 pt gap separates the columns).
   - **Left column** (controlled by `compact_plan.show_legend`): one row per resource group. When `show_duration_icons` is enabled the row layout is `[icon] [swatch line] [Group Name: names…]`; otherwise `[swatch line] [Group Name: names…]`. The icon matches the one drawn on the duration line for that group. Names are **wrapped**: as many comma-separated names as fit are placed on the header row; any that overflow wrap onto continuation rows indented to align with the text start (no icon or swatch repeated).
   - **Right column** (controlled by `compact_plan.show_milestone_list`): a date-sorted roster of every milestone marker. Each row shows the date (formatted by `compact_plan.milestone_list_date_format`, Arrow format string, default `M/D`) in a fixed-width left sub-column and the task name in the remaining sub-column width.
-- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If `compact_plan.show_continuation_icon` is `true` (the default), a small icon is drawn at the right edge of the clamped line and a corresponding legend entry is appended below the milestone roster. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) are set by `compact_plan.continuation_icon`, `continuation_icon_height`, and `continuation_icon_color` respectively. The legend text is set by `continuation_legend_text` (default `"activity continues"`) and the gap above it by `continuation_section_gap` (default `4.0` pts). Icons are loaded from the `icons` table in the database.
+- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If `compact_plan.show_continuation_icon` is `true` (the default), a small icon is drawn at the right edge of the clamped line and a corresponding legend entry is appended below the milestone roster. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) are set by `compact_plan.continuation_icon`, `continuation_icon_height`, and `continuation_icon_color` respectively. A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the `compact_plan.continuation_icon*` defaults. The legend text is set by `continuation_legend_text` (default `"activity continues"`) and the gap above it by `continuation_section_gap` (default `4.0` pts). Icons are loaded from the `icons` table in the database.
 - All text areas (band headers, milestone labels, legend entries, milestone roster, continuation legend) support independent font name, font size, color, and opacity settings in the theme via the `compact_plan` section.
 - `--shade` highlights the current day column when today falls within the date range.
 - `--weekends` controls whether weekend columns are included in the x-axis day list (same as all other commands).
@@ -598,6 +598,7 @@ Every SVG element gets a semantic CSS class. These classes appear in the SVG out
 | `ec-band-heading-cell` | box | Heading-column cell carrying a band's label |
 | `ec-event-icon` | icon | Event/holiday icon |
 | `ec-duration-icon` | icon | Duration category icon |
+| `ec-continuation-icon` | icon | Continuation arrow drawn on a duration that extends past the visible range (compactplan) |
 | `ec-overflow-icon` | icon | Overflow indicator |
 | `ec-legend-swatch` | legend | Legend color swatch |
 | `ec-legend-text` | legend | Legend item text |
@@ -1235,7 +1236,7 @@ Halo example for the weekly overflow icon — paint a small ring behind the indi
 |---|---|
 | `icon` | Glyph name (`diamond`, `flag`, `overflow`, …) |
 | `color` | Icon color |
-| `size` | Icon size in points |
+| `size` | Icon size in points. **Optional** — when omitted, each visualizer falls back to its own default: weekly event/duration icons use `event_icon_font_size` (which tracks the event-name text size); compactplan duration and continuation icons use `compact_plan.duration_icon_height` and `continuation_icon_height` respectively. Declaring `size:` on the bound `icon:` token overrides those defaults. |
 
 #### `style:` — Element-Binding Properties (for `apply_to: element`)
 

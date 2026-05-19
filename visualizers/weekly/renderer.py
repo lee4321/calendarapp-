@@ -1321,11 +1321,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 css_class="ec-event-name",
             )
 
+            ev_icon_size = (
+                _is_ei.size if _is_ei.size is not None else config.event_icon_font_size
+            )
             self._draw_icon_svg(
                 icon_to_draw,
                 iconx,
                 icony,
-                config.event_icon_font_size,
+                ev_icon_size,
                 color=icon_color,
                 fallback_name=config.default_missing_icon,
                 fallback_color="red",
@@ -1638,7 +1641,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _is_di = config.get_icon_style("ec-duration-icon")
         icon_to_draw = dur_style.icon if dur_style.icon is not None else t.icon
         icon_color = dur_style.icon_color or _is_di.color
-        icon_size = config.event_icon_font_size
+        # Theme-declared `icon:duration` size wins; fall back to the global
+        # event/duration size when the theme is silent.
+        icon_size = (
+            _is_di.size if _is_di.size is not None else config.event_icon_font_size
+        )
         icon_gap = icon_size * 0.4
 
         name_font_path = ""

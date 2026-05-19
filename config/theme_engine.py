@@ -1359,10 +1359,15 @@ class ThemeEngine:
             if rule.define != "icon" or not rule.as_name:
                 continue
             style = rule.style or {}
-            try:
-                size = float(style.get("size", 10.0))
-            except (TypeError, ValueError):
-                size = 10.0
+            # Only carry through `size` when the theme actually declared it;
+            # leaving it as None lets renderers fall back to their own size
+            # (e.g. event_icon_font_size) instead of an arbitrary 10pt.
+            size: float | None = None
+            if "size" in style:
+                try:
+                    size = float(style["size"])
+                except (TypeError, ValueError):
+                    size = None
             result[rule.as_name] = IconStyle(
                 color=str(style.get("color", "#333333")),
                 size=size,

@@ -56,7 +56,9 @@ class IconStyle:
     """Named icon style token."""
 
     color: str = "#333333"
-    size: float = 10.0
+    # None means "theme did not declare a size"; callers fall back to a
+    # context-appropriate default (e.g. event_icon_font_size in weekly).
+    size: float | None = None
     icon: str | None = None  # Default icon name (e.g., for overflow)
 
 

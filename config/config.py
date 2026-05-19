@@ -1236,6 +1236,10 @@ class CalendarConfig:
         _map = {
             "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
             "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
+            "ec-continuation-icon": lambda: IconStyle(
+                color=(self.compactplan_continuation_icon_color or self.duration_icon_color),
+                icon=self.compactplan_continuation_icon,
+            ),
             "ec-overflow-icon": lambda: IconStyle(color=self.overflow_indicator_color, icon=self.overflow_indicator_icon),
         }
         builder = _map.get(ec)
