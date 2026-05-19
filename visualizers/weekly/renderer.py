@@ -1702,10 +1702,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 rendered_w = min(measured, text_max_width)
                 icon_x = centerX - (rendered_w / 2) - icon_gap - icon_size
                 icon_x = max(X + 2.0, icon_x)
+                # Align icon midline with name text midline: text center sits at
+                # baseline - 0.3*name_size; icon center at baseline - 0.3*icon_size.
+                icon_baseline_y = name_ty - 0.3 * (name_size - icon_size)
                 self._draw_icon_svg(
                     icon_to_draw,
                     icon_x,
-                    name_ty,
+                    icon_baseline_y,
                     icon_size,
                     color=icon_color,
                     fallback_name=config.default_missing_icon,
@@ -1723,10 +1726,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             # the icon ("vertical center = baseline - 0.3 * size" convention).
             if continues_left and i_rect == 0:
                 cont_left_x = X + cont_pad
+                cont_baseline_y = name_ty - 0.3 * (name_size - cont_size)
                 self._draw_icon_svg(
                     cont_icon_left,
                     cont_left_x,
-                    name_ty,
+                    cont_baseline_y,
                     cont_size,
                     anchor="start",
                     color=icon_color,
@@ -1749,10 +1753,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
             if continues_right and i_rect == last_idx:
                 cont_right_x = X + Width - cont_pad
+                cont_baseline_y = name_ty - 0.3 * (name_size - cont_size)
                 self._draw_icon_svg(
                     cont_icon_right,
                     cont_right_x,
-                    name_ty,
+                    cont_baseline_y,
                     cont_size,
                     anchor="end",
                     color=icon_color,
