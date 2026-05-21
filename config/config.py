@@ -407,6 +407,12 @@ class CalendarConfig:
     WBS: str = ""
     _wbs_filter: Any = field(default=None, repr=False)
     _wbs_filter_raw: str = field(default="", repr=False)
+    # Status filter: events whose status is in this set are included.
+    # None means "all statuses". Default keeps the historic behaviour of
+    # showing only events with status='active'.
+    status_filter: frozenset[str] | None = field(
+        default_factory=lambda: frozenset({"active"})
+    )
 
     # Display options
     shade_current_day: bool = True

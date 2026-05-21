@@ -35,6 +35,8 @@ def filter_events(events: list[dict], config: "CalendarConfig") -> list[dict]:
 
     * Holidays (``Notes`` in ``'HOLIDAY'``, ``'USFederal'``, ``'CanFED'``) are
       always excluded — they are rendered as day-box decorations, not event rows.
+    * ``config.status_filter`` — keep only events whose ``Status`` is in the
+      set. ``None`` means "all statuses". Default is ``{'active'}``.
     * ``config.ignorecomplete`` — skip items with ``Percent_Complete == 1``.
     * ``config.milestones``     — keep **only** items where ``Milestone`` is truthy.
     * ``config.rollups``        — keep **only** items where ``Rollup`` is truthy.
@@ -56,11 +58,19 @@ def filter_events(events: list[dict], config: "CalendarConfig") -> list[dict]:
             setattr(config, "_wbs_filter_raw", config.WBS)
         wbs_compiled = getattr(config, "_wbs_filter", None)
 
+    status_filter = getattr(config, "status_filter", None)
+
     result: list[dict] = []
     for ev in events:
         # --- holidays always excluded ---
         if ev.get("Notes") in ("HOLIDAY", "USFederal", "CanFED"):
             continue
+
+        # --- status filter (None = all statuses) ---
+        if status_filter is not None:
+            ev_status = (ev.get("Status") or "active").strip().lower()
+            if ev_status not in status_filter:
+                continue
 
         # --- config-level content filters ---
         if config.ignorecomplete and ev.get("Percent_Complete") == 1:

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.21.1"
+__version__ = "26.05.21.2"
 
 import argparse
 import logging
@@ -570,6 +570,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
     _ed_content.add_argument(
+        "--status",
+        type=str,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Comma-separated event statuses to include "
+            "(active, draft, cancelled, archived, on-hold). "
+            "Use 'all' for no filter. Default: active."
+        ),
+    )
+    _ed_content.add_argument(
         "--country",
         "-cc",
         type=str,
@@ -859,6 +870,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             ),
         )
         content_group.add_argument(
+            "--status",
+            type=str,
+            default=None,
+            metavar="LIST",
+            help=(
+                "Comma-separated event statuses to include "
+                "(active, draft, cancelled, archived, on-hold). "
+                "Use 'all' for no filter. Default: active."
+            ),
+        )
+        content_group.add_argument(
             "--overflow",
             "-x",
             action="store_true",
@@ -956,6 +978,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "WBS filter expression. Comma-separated tokens; '!' excludes. "
             "Segments are dot-separated. '*' matches a segment, '**' matches "
             "any remaining segments (implicit if omitted)."
+        ),
+    )
+    _tm_content.add_argument(
+        "--status",
+        type=str,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Comma-separated event statuses to include "
+            "(active, draft, cancelled, archived, on-hold). "
+            "Use 'all' for no filter. Default: active."
         ),
     )
     _tm_content.add_argument(
@@ -1367,6 +1400,7 @@ def _apply_args_to_config(
     config.include_notes = getattr(args, "includenotes", False)
     config.WBS = getattr(args, "WBS", config.WBS)
     config.country = getattr(args, "country", None)
+    config.status_filter = _parse_status_filter(getattr(args, "status", None))
 
     # Mini calendar options — only override config defaults when explicitly set
     if getattr(args, "mini_columns", None) is not None:
@@ -1767,6 +1801,32 @@ def _resolve_single_palette_ref(value: str, db: "CalendarDB") -> str:
         logger.warning(f"Invalid palette index: {idx_str!r}")
         return value
     return colors[idx]
+
+
+def _parse_status_filter(raw: str | None) -> "frozenset[str] | None":
+    """Parse ``--status`` CLI value into the set used by ``config.status_filter``.
+
+    ``None`` / empty / ``"all"`` → ``None`` (no filter). Otherwise a
+    comma-separated list of status names (case-insensitive). Unknown values
+    are rejected against :data:`shared.data_models.ALLOWED_STATUSES`.
+    """
+    from shared.data_models import ALLOWED_STATUSES
+
+    if raw is None:
+        return frozenset({"active"})
+    cleaned = raw.strip().lower()
+    if not cleaned or cleaned == "all":
+        return None
+    parts = [p.strip().lower() for p in cleaned.split(",") if p.strip()]
+    if not parts:
+        return None
+    bad = [p for p in parts if p not in ALLOWED_STATUSES]
+    if bad:
+        raise SystemExit(
+            f"--status: unknown value(s) {bad!r}. "
+            f"Allowed: {sorted(ALLOWED_STATUSES)} or 'all'."
+        )
+    return frozenset(parts)
 
 
 def _parse_weekend_days(raw: str) -> list[int]:
@@ -3165,6 +3225,7 @@ def run(argv: list[str] | None = None) -> int:
         _ed_config.milestones = args.milestones
         _ed_config.rollups = args.rollups
         _ed_config.WBS = args.WBS
+        _ed_config.status_filter = _parse_status_filter(getattr(args, "status", None))
         calc_calendar_range(_ed_config, args.begin, args.end)
         _ed_db.load_python_holidays(
             _ed_config.country, _ed_config.adjustedstart, _ed_config.adjustedend

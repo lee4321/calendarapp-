@@ -878,6 +878,7 @@ class BaseSVGRenderer(ABC):
         css_class: str | None = None,
         box_token: str | None = None,
         box_ctx: dict | None = None,
+        opacity: float = 1.0,
     ) -> bool:
         """
         Draw an icon from the DB icon cache at text-like baseline coordinates.
@@ -942,9 +943,10 @@ class BaseSVGRenderer(ABC):
             f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
         )
         class_attr = f' class="{css_class}"' if css_class else ""
+        opacity_attr = f' opacity="{opacity:.3f}"' if opacity < 1.0 else ""
         nested_svg = (
             f'<svg x="{_r(draw_x)}" y="{_r(draw_y)}" width="{_r(size)}" height="{_r(size)}" '
-            f'viewBox="{viewbox}" preserveAspectRatio="xMidYMid meet"{style_attr}{class_attr}>'
+            f'viewBox="{viewbox}" preserveAspectRatio="xMidYMid meet"{style_attr}{class_attr}{opacity_attr}>'
             f"{inner}</svg>"
         )
         if transform:

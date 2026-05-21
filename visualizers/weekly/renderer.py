@@ -52,6 +52,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# Visual treatment for non-active event statuses. Active events render at
+# full opacity. Other statuses (when surfaced via --status) are dimmed so
+# they are visually distinguishable without changing layout.
+_STATUS_OPACITY: dict[str, float] = {
+    "active": 1.0,
+    "draft": 0.55,
+    "on-hold": 0.50,
+    "cancelled": 0.35,
+    "archived": 0.25,
+}
+
+
+def _status_opacity(status: str | None) -> float:
+    """Return the opacity multiplier for an event status. Unknown → 1.0."""
+    if not status:
+        return 1.0
+    return _STATUS_OPACITY.get(str(status).strip().lower(), 1.0)
+
+
 def _weekly_style_rules(config: "CalendarConfig") -> list:
     """Source the raw style_rules list for StyleEngine.
 
@@ -1298,6 +1317,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         icon_to_draw = ev_style.icon if ev_style.icon is not None else t.icon
         icon_color = ev_style.icon_color or iconcolor
 
+        status_opacity = _status_opacity(getattr(t, "status", None))
+
         if not icon_to_draw:
             self._draw_text(
                 iconx,
@@ -1306,6 +1327,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 name_font,
                 name_size,
                 fill=name_color,
+                fill_opacity=status_opacity,
                 max_width=Width,
                 css_class="ec-event-name",
             )
@@ -1317,6 +1339,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 name_font,
                 name_size,
                 fill=name_color,
+                fill_opacity=status_opacity,
                 max_width=(Width - (en_size_default * 1.5)),
                 css_class="ec-event-name",
             )
@@ -1339,6 +1362,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     else "box:event"
                 ),
                 box_ctx=self._event_ctx(t),
+                opacity=status_opacity,
             )
 
     def _process_overflow(
@@ -1669,6 +1693,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         cont_end_str = arrow.get(t.end).format("M/D/YY")
         last_idx = len(list_of_rects) - 1
 
+        status_opacity = _status_opacity(getattr(t, "status", None))
+        # Compose with any theme-supplied fill_opacity already in rect_kwargs.
+        rect_kwargs = dict(rect_kwargs)
+        rect_kwargs["fill_opacity"] = (
+            rect_kwargs.get("fill_opacity", 1.0) * status_opacity
+        )
+
         for i_rect, (X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty) in enumerate(list_of_rects):
             self._draw_rect(
                 X,
@@ -1695,6 +1726,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 name_font,
                 name_size,
                 fill=name_color,
+                fill_opacity=status_opacity,
                 anchor="middle",
                 max_width=text_max_width,
                 css_class="ec-event-name",
@@ -1723,6 +1755,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     css_class="ec-duration-icon",
                     box_token="box:duration",
                     box_ctx=self._event_ctx(t),
+                    opacity=status_opacity,
                 )
 
             # Continuation dates sit INSIDE the bar, alongside the arrow icon:
@@ -1744,6 +1777,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-duration-icon",
+                    opacity=status_opacity,
                 )
                 date_gap = cont_size * 0.3
                 date_baseline_y = name_ty + 0.3 * (notes_size - cont_size)
@@ -1754,6 +1788,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     notes_font,
                     notes_size,
                     fill=notes_color,
+                    fill_opacity=status_opacity,
                     anchor="start",
                     css_class="ec-duration-date",
                 )
@@ -1771,6 +1806,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     fallback_name=config.default_missing_icon,
                     fallback_color="red",
                     css_class="ec-duration-icon",
+                    opacity=status_opacity,
                 )
                 date_gap = cont_size * 0.3
                 date_baseline_y = name_ty + 0.3 * (notes_size - cont_size)
@@ -1781,6 +1817,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     notes_font,
                     notes_size,
                     fill=notes_color,
+                    fill_opacity=status_opacity,
                     anchor="end",
                     css_class="ec-duration-date",
                 )
@@ -1793,6 +1830,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     notes_font,
                     notes_size,
                     fill=notes_color,
+                    fill_opacity=status_opacity,
                     anchor="middle",
                     max_width=Width,
                     css_class="ec-event-notes",

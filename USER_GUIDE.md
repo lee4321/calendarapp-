@@ -56,6 +56,9 @@ PYTHONPATH=. uv run python ecalendar.py excelheader 20260101 20260630 -th corpor
 # Export filtered events to CSV
 PYTHONPATH=. uv run python ecalendar.py exportdata 20260101 20261231 --milestones -o milestones.csv
 
+# Weekly view including draft and on-hold events (dimmed) alongside active work
+PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 --status active,draft,on-hold -of weekly.svg
+
 # Inspect available theme resources
 PYTHONPATH=. uv run python ecalendar.py themes
 PYTHONPATH=. uv run python ecalendar.py papersizes
@@ -117,6 +120,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
 | `--shade`, `-sh` |  | `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
 | `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
+| `--status` | `LIST` | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include. Allowed values: `active`, `draft`, `cancelled`, `archived`, `on-hold`. Use `all` for no filter. Default: `active`. See [Event Status](#event-status) for details. | default `active` |
 | `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
@@ -275,7 +279,9 @@ No positional arguments. Three sample rows (uppercase, lowercase, digits/punct) 
 | `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
 | `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
-Exports filtered events and durations as a CSV file matching the schema consumed by `importers/import_events.py`. Supports the standard content filters (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`) and `--country` for selecting which government holidays accompany the event rows. The `--outputfile` short form is `-o` (not `-of`); the default path is `output/exportdata_YYYYMMDD.csv` based on the run date.
+Exports filtered events and durations as a CSV file matching the schema consumed by `importers/import_events.py`. Supports the standard content filters (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`) and `--country` for selecting which government holidays accompany the event rows. By default only `status='active'` events are exported — pass `--status all` or a specific list (e.g. `--status active,draft`) to widen the result. The `--outputfile` short form is `-o` (not `-of`); the default path is `output/exportdata_YYYYMMDD.csv` based on the run date.
+
+The exported CSV includes every column of the `events` table that round-trips back through the importer: `task_name`, `status`, `start_date`, `finish_date`, `earliest_start_date`, `latest_start_date`, `earliest_end_date`, `latest_end_date`, `priority`, `wbs`, `rollup`, `milestone`, `percent_complete`, `effort`, `duration`, `predecessors`, `resource_names`, `resource_group`, `notes`, `icon`, `color`, `tags`.
 
 ### `text-mini`
 
@@ -339,6 +345,42 @@ In weekly, day-box cells are drawn first, events and durations are placed into t
 - Item placement order is controlled by `item_placement_order`. Type tokens (`milestones`, `events`, `durations`) determine grouping order, and `priority` or `alphabetical` determine ordering within each group.
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
 - Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
+
+## Event Status
+
+Every row in the `events` table carries a `status` value. The system recognizes five values: `active`, `draft`, `cancelled`, `archived`, and `on-hold`. Other values are accepted by the importer and stored as-is, but render as if `active`.
+
+**Filtering.** By default, all rendering and export commands include only events with `status='active'` — older statuses stay in the database but don't appear in output. Pass `--status` to widen the set:
+
+```bash
+# Default: only active events (equivalent to --status active)
+PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131
+
+# Include drafts alongside active events
+PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 --status active,draft
+
+# Show every event regardless of status
+PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 --status all
+
+# Export only cancelled events for a clean-up review
+PYTHONPATH=. uv run python ecalendar.py exportdata 20260101 20261231 --status cancelled -o cancelled.csv
+```
+
+Unknown status names are rejected at the CLI; the error message lists the allowed values.
+
+**Visual treatment.** When non-active statuses are surfaced via `--status`, the weekly renderer dims them via opacity so they remain visible but visually subordinate to active work:
+
+| Status | Opacity | Use case |
+|---|---|---|
+| `active` | 1.00 | Default — full visibility |
+| `draft` | 0.55 | Planned but not yet committed |
+| `on-hold` | 0.50 | Paused; expected to resume |
+| `cancelled` | 0.35 | Will not be done; kept for audit trail |
+| `archived` | 0.25 | Historical record; rarely shown |
+
+The opacity applies to the event name, event icon, duration bar fill, duration name/notes/icon, and continuation arrows/dates. It is multiplied with any theme-supplied opacity so style-rule transparency still composes correctly.
+
+**Import.** The importer (`importers/import_events.py`) reads `Status` (or `State`) from the source file's columns. When the column is absent or blank, the row is stored with `status='active'`. CSV / XLSX files exported via `exportdata` round-trip cleanly: status is preserved column-for-column.
 
 ## Theme System
 

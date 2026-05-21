@@ -10,6 +10,13 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+# Allowed values for events.status. Unknown values are accepted by the
+# importer (stored as-is) but render as if 'active'.
+ALLOWED_STATUSES: frozenset[str] = frozenset(
+    {"active", "draft", "cancelled", "archived", "on-hold"}
+)
+
+
 @dataclass(frozen=True)
 class Event:
     """
@@ -33,6 +40,7 @@ class Event:
     priority: int = 0
     wbs: Optional[str] = None
     color: Optional[str] = None
+    status: str = "active"
 
     @classmethod
     def from_dict(cls, data: dict) -> "Event":
@@ -60,6 +68,7 @@ class Event:
             priority=data.get("Priority", 0) or 0,
             wbs=data.get("WBS"),
             color=data.get("Color") or data.get("color") or None,
+            status=(data.get("Status") or "active"),
         )
 
     @property
