@@ -170,6 +170,31 @@ COLUMN_MAPPING = {
     "end": "end_date",
     "due": "end_date",
     "due_date": "end_date",
+    # Earliest / latest start date (schedule windows)
+    "earliest_start_date": "earliest_start_date",
+    "earliest_start": "earliest_start_date",
+    "early_start": "earliest_start_date",
+    "es_date": "earliest_start_date",
+    "latest_start_date": "latest_start_date",
+    "latest_start": "latest_start_date",
+    "late_start": "latest_start_date",
+    "ls_date": "latest_start_date",
+    # Earliest / latest end (finish) date
+    "earliest_end_date": "earliest_end_date",
+    "earliest_end": "earliest_end_date",
+    "earliest_finish_date": "earliest_end_date",
+    "earliest_finish": "earliest_end_date",
+    "early_finish": "earliest_end_date",
+    "ef_date": "earliest_end_date",
+    "latest_end_date": "latest_end_date",
+    "latest_end": "latest_end_date",
+    "latest_finish_date": "latest_end_date",
+    "latest_finish": "latest_end_date",
+    "late_finish": "latest_end_date",
+    "lf_date": "latest_end_date",
+    # Status
+    "status": "status",
+    "state": "status",
     # Priority
     "priority": "priority",
     # WBS
@@ -829,6 +854,13 @@ def transform_row(row, user_id, import_id, event_id):
         "end_date": end_date,
     }
 
+    date_cols = {
+        "earliest_start_date",
+        "latest_start_date",
+        "earliest_end_date",
+        "latest_end_date",
+    }
+
     # Map remaining normalized columns with type coercions
     for db_col, value in norm.items():
         if db_col in ("start_date", "end_date"):
@@ -855,6 +887,8 @@ def transform_row(row, user_id, import_id, event_id):
                 )
             except (ValueError, TypeError):
                 value = None
+        elif db_col in date_cols:
+            value = convert_date(value)
         else:
             # String fields - handle NaN
             value = (
@@ -864,6 +898,10 @@ def transform_row(row, user_id, import_id, event_id):
             )
 
         event[db_col] = value
+
+    # status falls back to "active" when source value is missing/blank
+    if event.get("status") is None:
+        event["status"] = "active"
 
     # Validate required fields
     if not event.get("name") or not str(event["name"]).strip():

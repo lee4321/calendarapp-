@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.21.0"
+__version__ = "26.05.21.1"
 
 import argparse
 import logging
@@ -1894,8 +1894,13 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
 #: re-imported without relying on fallback aliases.
 _EXPORTDATA_COLUMNS: list[str] = [
     "task_name",
+    "status",
     "start_date",
     "finish_date",
+    "earliest_start_date",
+    "latest_start_date",
+    "earliest_end_date",
+    "latest_end_date",
     "priority",
     "wbs",
     "rollup",
@@ -1925,8 +1930,13 @@ def _event_to_row(ev: dict) -> dict:
     """Map a raw database event dict to an exportdata CSV row dict."""
     return {
         "task_name": ev.get("Task_Name", ""),
+        "status": ev.get("Status", ""),
         "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date")),
         "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date")),
+        "earliest_start_date": _fmt_date(ev.get("Earliest_Start_Date")),
+        "latest_start_date": _fmt_date(ev.get("Latest_Start_Date")),
+        "earliest_end_date": _fmt_date(ev.get("Earliest_End_Date")),
+        "latest_end_date": _fmt_date(ev.get("Latest_End_Date")),
         "priority": ev.get("Priority", ""),
         "wbs": ev.get("WBS", ""),
         "rollup": ev.get("Rollup", ""),

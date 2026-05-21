@@ -435,6 +435,7 @@ class CalendarDB:
                 """
                 SELECT
                     id as ID,
+                    status as Status,
                     priority as Priority,
                     wbs as WBS,
                     rollup as Rollup,
@@ -445,6 +446,10 @@ class CalendarDB:
                     duration as Duration,
                     start_date as Start_Date,
                     end_date as Finish_Date,
+                    earliest_start_date as Earliest_Start_Date,
+                    latest_start_date as Latest_Start_Date,
+                    earliest_end_date as Earliest_End_Date,
+                    latest_end_date as Latest_End_Date,
                     predecessors as Predecessors,
                     resource_names as Resource_Names,
                     resource_group as Resource_Group,
