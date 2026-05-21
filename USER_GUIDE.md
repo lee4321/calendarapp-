@@ -382,6 +382,59 @@ The opacity applies to the event name, event icon, duration bar fill, duration n
 
 **Import.** The importer (`importers/import_events.py`) reads `Status` (or `State`) from the source file's columns. When the column is absent or blank, the row is stored with `status='active'`. CSV / XLSX files exported via `exportdata` round-trip cleanly: status is preserved column-for-column.
 
+## Importing Special Days
+
+Company special days (founders days, all-hands picnics, hack days, locale-specific observances) live in the `specialdays` table and are loaded with `importers/import_specialdays.py`. The importer mirrors `import_events.py` in shape: XLSX / XLS / CSV / TSV input, case-insensitive column aliasing, SHA-256 hashing for duplicate detection, and full `import_history` tracking.
+
+```sh
+# Import a single file
+uv run python importers/import_specialdays.py SpecialDays/company.xlsx
+
+# Re-import after editing the source (replaces the previous batch by file hash)
+uv run python importers/import_specialdays.py SpecialDays/company.xlsx --replace
+
+# Import every supported file in a directory
+uv run python importers/import_specialdays.py SpecialDays/ --verbose
+
+# Validate without writing
+uv run python importers/import_specialdays.py SpecialDays/company.csv --dry-run
+
+# Review what is already in import_history (with row counts per import)
+uv run python importers/import_specialdays.py --list
+
+# Drop a previous import and all of its rows
+uv run python importers/import_specialdays.py --remove 15 --force
+```
+
+**Required columns:** `name` and at least one of `start_date` / `end_date`. A blank end date is auto-filled from start (and vice versa); a reversed pair is swapped.
+
+**Accepted column aliases (case-insensitive):**
+
+| Database column | Aliases |
+| --- | --- |
+| `name` | `name`, `title`, `special_day`, `holiday`, `event` |
+| `startdate` | `start_date`, `startdate`, `start`, `begin`, `begin_date`, `date` |
+| `enddate` | `end_date`, `enddate`, `end`, `finish`, `finish_date`, `due`, `due_date` |
+| `company` | `company`, `org`, `organization` |
+| `user` | `user`, `userid`, `user_id`, `owner` |
+| `country` | `country`, `country_code` (default `US` via `--country`) |
+| `language` | `language`, `lang` (default `en` via `--language`) |
+| `notes` | `notes`, `note`, `description` |
+| `icon` | `icon`, `icon_name` |
+| `nonworkday` | `nonworkday`, `non_work_day`, `is_nonworkday`, `day_off` (default `0`) |
+| `fullday` | `fullday`, `full_day`, `all_day` (default `1`) |
+| `starthour` / `endhour` | `start_hour` / `end_hour`, `start_time` / `end_time` |
+| `tags` | `tags`, `tag`, `marks`, `mark` |
+| `daycolor` | `daycolor`, `day_color`, `color`, `colour`, `highlight_color` |
+| `visible` | `visible`, `is_visible`, `show` (default `1`) |
+| `pattern` / `patterncolor` | `pattern` / `pattern_id`, `pattern_color` |
+
+Date formats accepted: `YYYY-MM-DD`, `M/D/YYYY`, `M/D/YY`, and any other format `dateutil` can parse. Booleans accept `true`/`false`, `yes`/`no`, `y`/`n`, `1`/`0`.
+
+**Import history.** Every run inserts a row in the shared `import_history` table (id, userid, filename, date, filehash, command). Each imported `specialdays` row is tagged with the `import_id` from that record, so `--replace` and `--remove` can target a single batch without touching rows added by other imports or hand-edited entries.
+
+**Schema migration.** On first run the importer adds an `import_id INTEGER` column to `specialdays` via a lazy `ALTER TABLE` (no-op if the column already exists). Existing rows without an `import_id` are left intact and are not affected by `--replace` or `--remove`.
+
 ## Theme System
 
 Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a specific surface (an `ec-*` element class, a content surface like `box:day` or `box:duration`, or a lane assignment). Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
