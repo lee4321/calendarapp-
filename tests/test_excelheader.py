@@ -308,7 +308,7 @@ class _EventDB(_DummyDB):
                 "Notes": "",
                 "Icon": "",
                 "Color": "",
-                "Marks": "",
+                "Tags": "",
                 "Datekey": "20260112",
                 "Start": "20260112",
                 "End": "20260112",

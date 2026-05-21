@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.09.1"
+__version__ = "26.05.21.0"
 
 import argparse
 import logging
@@ -1909,7 +1909,7 @@ _EXPORTDATA_COLUMNS: list[str] = [
     "notes",
     "icon",
     "color",
-    "marks",
+    "tags",
 ]
 
 
@@ -1940,7 +1940,7 @@ def _event_to_row(ev: dict) -> dict:
         "notes": ev.get("Notes", ""),
         "icon": ev.get("Icon", ""),
         "color": ev.get("Color", ""),
-        "marks": ev.get("Marks", ""),
+        "tags": ev.get("Tags", ""),
     }
 
 

@@ -98,6 +98,6 @@ class SpecialDay:
             title=data.get("title", data.get("Holiday", "")),
             icon=data.get("icon", data.get("Icon")),
             nonworkday=bool(data.get("nonworkday", False)),
-            hash_pattern=data.get("hash_pattern", data.get("marks", 0)) or 0,
+            hash_pattern=data.get("hash_pattern", data.get("tags", 0)) or 0,
             country=data.get("country"),
         )

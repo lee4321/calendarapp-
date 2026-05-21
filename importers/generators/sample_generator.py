@@ -7,7 +7,7 @@ Usage:
     python import_events.py --generate generators/sample_generator.py
     python import_events.py -g generators/sample_generator.py --start-date 6/1/2026 --end-date 6/30/2026
     python import_events.py -g generators/sample_generator.py --param Priority=1 --param Icon=rocket
-    python import_events.py -g generators/sample_generator.py --start-date 2026-06-01 --end-date 2026-06-30 --param Marks=Sprint
+    python import_events.py -g generators/sample_generator.py --start-date 2026-06-01 --end-date 2026-06-30 --param Tags=Sprint
 
 This script demonstrates the generator contract:
 - Define a generate_events() function with optional keyword arguments
@@ -17,7 +17,7 @@ This script demonstrates the generator contract:
 
 The function can accept these keyword arguments from the CLI:
 - start_date / end_date: YYYYMMDD strings (from --start-date / --end-date)
-- Any key=value pair (from --param KEY=VALUE), e.g., Priority, Icon, Marks, Notes
+- Any key=value pair (from --param KEY=VALUE), e.g., Priority, Icon, Tags, Notes
 
 Date formats: Any format parseable by dateutil (M/D/YYYY, YYYY-MM-DD, etc.)
 """
@@ -40,7 +40,7 @@ def generate_events(start_date=None, end_date=None, **kwargs):
         end_date: Optional end date in YYYYMMDD format (from --end-date)
         **kwargs: Additional parameters (from --param KEY=VALUE), e.g.:
             Priority, Milestone, Task_Name, Resource_Group, Notes, Icon,
-            nonworkday, Marks - all arrive as strings
+            nonworkday, Tags - all arrive as strings
 
     Returns:
         pandas.DataFrame with Title_Case column names matching the CSV import contract.
@@ -56,7 +56,7 @@ def generate_events(start_date=None, end_date=None, **kwargs):
     default_priority = int(kwargs.get("Priority", 0)) if "Priority" in kwargs else None
     default_icon = kwargs.get("Icon")
     default_notes = kwargs.get("Notes")
-    default_marks = kwargs.get("Marks")
+    default_tags = kwargs.get("Tags")
     default_resource_group = kwargs.get("Resource_Group")
 
     events = [
@@ -77,7 +77,7 @@ def generate_events(start_date=None, end_date=None, **kwargs):
             "Duration": 10,
             "Notes": default_notes or "Two-week sprint",
             "Resource_Group": default_resource_group or "Engineering",
-            "Marks": default_marks or "Sprint",
+            "Tags": default_tags or "Sprint",
         },
         {
             "Task_Name": "Code Review Day",

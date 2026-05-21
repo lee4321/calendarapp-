@@ -269,12 +269,12 @@ class CalendarDB:
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            # Note: The 'marks' column may not exist in all database versions
+            # Note: The 'tags' column may not exist in all database versions
             # We query available columns and handle missing ones gracefully
             try:
                 cursor.execute(
                     """
-                    SELECT name, notes, icon, nonworkday, daycolor, pattern, patterncolor, marks
+                    SELECT name, notes, icon, nonworkday, daycolor, pattern, patterncolor, tags
                     FROM specialdays
                     WHERE startdate <= ? AND enddate >= ?
                     AND visible = 1
@@ -298,8 +298,8 @@ class CalendarDB:
             results = []
             for row in rows:
                 d = dict(row)
-                # Add marks field with empty string if not present
-                d["marks"] = d.get("marks", "")
+                # Add tags field with empty string if not present
+                d["tags"] = d.get("tags", "")
                 results.append(d)
             return results
 
@@ -364,18 +364,18 @@ class CalendarDB:
             daykey: Date in YYYYMMDD format
 
         Returns:
-            Dictionary with 'nonworkday' bool and 'marks' list
+            Dictionary with 'nonworkday' bool and 'tags' list
         """
         special_days = self.get_special_days_for_date(daykey)
 
         nonworkday = any(day.get("nonworkday", 0) for day in special_days)
 
-        marks = []
+        tags = []
         for day in special_days:
-            if day.get("marks"):
-                marks.append(day["marks"])
+            if day.get("tags"):
+                tags.append(day["tags"])
 
-        return {"nonworkday": nonworkday, "marks": marks}
+        return {"nonworkday": nonworkday, "tags": tags}
 
     def get_holiday_title_for_date(
         self, daykey: str, country: str | None = None
@@ -451,7 +451,7 @@ class CalendarDB:
                     notes as Notes,
                     icon as Icon,
                     color as Color,
-                    marks as Marks,
+                    tags as Tags,
                     start_date as Datekey,
                     start_date as Start,
                     end_date as End

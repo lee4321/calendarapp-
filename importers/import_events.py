@@ -17,7 +17,7 @@ Examples:
     python import_events.py -g my_generator.py --replace --dry-run
     python import_events.py -g my_generator.py --start-date 1/1/2026 --end-date 12/31/2026
     python import_events.py -g my_generator.py --param Priority=1 --param Icon=rocket
-    python import_events.py -g my_generator.py --start-date 2026-06-01 --end-date 2026-06-30 --param Marks=Sprint
+    python import_events.py -g my_generator.py --start-date 2026-06-01 --end-date 2026-06-30 --param Tags=Sprint
 """
 
 import argparse
@@ -209,11 +209,11 @@ COLUMN_MAPPING = {
     "highlight_color": "color",
     "color": "color",
     "colour": "color",
-    # Marks / tags
-    "marks": "marks",
-    "mark": "marks",
-    "tags": "marks",
-    "tag": "marks",
+    # Tags
+    "tags": "tags",
+    "tag": "tags",
+    "marks": "tags",
+    "mark": "tags",
 }
 
 
