@@ -786,6 +786,7 @@ def _prepare_sheet(
     db: "CalendarDB",
     *,
     subcommand: str,
+    freeze: bool = True,
 ) -> tuple[Any, Any, int, list[date], dict[date, dict], dict[int, dict], list[Event], dict]:
     """Build a workbook, write timeband + column-header rows, return shared state.
 
@@ -795,6 +796,11 @@ def _prepare_sheet(
     (one row past the column-header row).  ``all_events_objects`` are the
     Event dataclasses sourced for icon-band evaluation; callers can reuse
     them for downstream rendering.
+
+    When ``freeze`` is ``True`` (default) a freeze pane is set at the first
+    date column / header row.  Pass ``False`` to leave the sheet
+    fully scrollable — clearing ``freeze_panes`` after the fact would leave
+    orphaned ``<selection pane>`` elements in the XML and corrupt the file.
     """
     visible_days = compute_visible_days(config)
     settings = _read_band_settings(config, subcommand)
@@ -880,8 +886,9 @@ def _prepare_sheet(
 
     data_start_row = header_row + 1
 
-    # Freeze pane: keep label cols + timeband rows visible.
-    ws.freeze_panes = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
+    if freeze:
+        # Freeze pane: keep label cols + timeband rows visible.
+        ws.freeze_panes = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
 
     return wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, band_events, settings
 

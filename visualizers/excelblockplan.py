@@ -212,13 +212,13 @@ def generate_excel_blockplan(
     if not visible_days:
         return
 
+    # freeze=False — excelblockplan rows are independent records ordered by
+    # start date; sort/filter workflows want full-sheet scroll, and clearing
+    # freeze_panes after the fact corrupts the XML (orphaned <selection pane>
+    # elements remain), so the freeze must never be set in the first place.
     wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, all_events, settings = (
-        _prepare_sheet(config, db, subcommand="excelblockplan")
+        _prepare_sheet(config, db, subcommand="excelblockplan", freeze=False)
     )
-    # Excelblockplan rows are independent records ordered by start date — users
-    # typically scroll the full sheet without needing a sticky header, and the
-    # frozen pane interferes with sort/filter workflows. Drop it for this view.
-    ws.freeze_panes = None
 
     # Filter events / durations using the same predicate the other
     # visualizers use so the data sheet stays consistent with the SVG views.
