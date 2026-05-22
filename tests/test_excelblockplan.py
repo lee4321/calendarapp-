@@ -317,6 +317,28 @@ def test_excelblockplan_default_output_filename(tmp_path, monkeypatch):
     assert (tmp_path / "output" / "ExcelBlockplan.xlsx").exists()
 
 
+def test_excelblockplan_timeband_heading_right_aligned_in_merged_a_w(tmp_path):
+    """Timeband heading labels are merged A:W and right-aligned so the text
+    visually sits in column W."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelheader_top_time_bands = [{"label": "Month", "unit": "month"}]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    wb = openpyxl.load_workbook(str(out))
+    ws = wb.active
+
+    # Merged range A1:W1 (cols 1..LABEL_COL_END inclusive)
+    merged = [str(r) for r in ws.merged_cells.ranges]
+    expected_w_letter = get_column_letter(LABEL_COL_END)
+    assert f"A1:{expected_w_letter}1" in merged
+
+    heading = ws.cell(row=1, column=1)
+    assert heading.value == "Month"
+    assert heading.alignment.horizontal == "right", (
+        "timeband heading should be right-aligned so the label visually sits in column W"
+    )
+
+
 def test_excelblockplan_content_filters_exclude_events(tmp_path):
     """--noevents flag should drop single-day events from the sheet."""
     out = tmp_path / "bp.xlsx"

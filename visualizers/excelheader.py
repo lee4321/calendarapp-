@@ -454,13 +454,22 @@ def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
             default="black",
         )
     )
-    header_label_align_h = str(
-        _cfg(
-            f"{subcommand}_header_label_align_h",
-            "excelheader_header_label_align_h",
-            default="right",
-        )
-    ).lower()
+    # Alignment lookup intentionally does NOT fall back to excelheader for
+    # excelblockplan — the two views have different visual defaults (excelheader
+    # left-anchors labels in column A; excelblockplan right-anchors them so the
+    # text visually sits in column W, the rightmost label column).
+    if subcommand == "excelblockplan":
+        header_label_align_h = str(
+            _cfg(f"{subcommand}_header_label_align_h", default="right")
+        ).lower()
+    else:
+        header_label_align_h = str(
+            _cfg(
+                f"{subcommand}_header_label_align_h",
+                "excelheader_header_label_align_h",
+                default="left",
+            )
+        ).lower()
     timeband_fill_color = _cfg(
         f"{subcommand}_timeband_fill_color",
         "excelheader_timeband_fill_color",
