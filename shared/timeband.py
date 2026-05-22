@@ -17,6 +17,9 @@ Supported ``unit`` values:
   - ``date`` / ``dow`` — one segment per visible day; ``date_format``
     (``label_format`` accepted as an alias).
   - ``countdown`` / ``countup`` — per-day count to/from a reference date.
+  - ``icon`` — per-day icon glyphs driven by ``icon_rules``.  Not produced by
+    this module (returns an empty segment list); handled directly by each
+    visualizer's band renderer via :func:`shared.icon_band.compute_icon_band_days`.
 """
 
 from __future__ import annotations
@@ -68,6 +71,11 @@ def build_segments(
     unit = str(band.get("unit", "date")).strip().lower()
     segments: list[BandSegment] = []
     one_day = timedelta(days=1)
+
+    # ``icon`` bands have no labeled segments — per-day icons are emitted
+    # directly by the visualizer via shared.icon_band.compute_icon_band_days.
+    if unit == "icon":
+        return segments
 
     if unit == "fiscal_quarter":
         fiscal_start = int(

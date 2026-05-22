@@ -233,7 +233,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 - Duration line colors are assigned per `resource_group`, cycling through `compact_plan.palette` in sorted group order. An individual event's `Color` field in the database overrides the group palette color.
 - **Duration start icons**: when `compact_plan.show_duration_icons` is `true` (the default), an icon is drawn at the start (left) end of every duration line. Icons are assigned per resource group by cycling through the named icon list (`compact_plan.duration_icon_list`, default `"darksquare"`). The icon is drawn in the same color as the line. `compact_plan.duration_icon_height` controls the icon size in points (default `8.0`). Available icon lists are `darksquare`, `squares`, `darkcircles`, `circles`, `squircles`, and `darksquircles`; all are defined in `config/config.py` as `ICON_SETS`.
 - Milestone markers are drawn on the axis at the milestone date. Marker shape priority: `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme → built-in flag shape (vertical stem + pennant). If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker.
-- Column header time bands follow the same schema as `blockplan.top_time_bands`. Supported units: `week`, `month`, `fiscal_quarter`, `interval`. Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
+- Column header time bands follow the same schema as `blockplan.top_time_bands`. Supported units: `week`, `month`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon` (see [time_bands](#time_bands--shared-band-catalog) for the full reference). Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
 - The layout is content-first and always shrunk: the axis is fixed at the vertical centre of the content area, duration rows are placed around it, then the header bands float `compact_plan.header_bottom_y` pts above the topmost row and the legend floats `compact_plan.key_top_y` pts below the bottommost row. The SVG viewBox is trimmed to exactly the rendered content, producing the smallest possible output.
 - The legend and milestone roster are rendered **side by side** in a two-column layout starting at the same vertical position. The fraction of the total width given to the left column is controlled by `compact_plan.legend_column_split` (default `0.5`; a fixed 8 pt gap separates the columns).
   - **Left column** (controlled by `compact_plan.show_legend`): one row per resource group. When `show_duration_icons` is enabled the row layout is `[icon] [swatch line] [Group Name: names…]`; otherwise `[swatch line] [Group Name: names…]`. The icon matches the one drawn on the duration line for that group. Names are **wrapped**: as many comma-separated names as fit are placed on the header row; any that overflow wrap onto continuation rows indented to align with the text start (no icon or swatch repeated).
@@ -1585,20 +1585,34 @@ time_bands:
     start_date: "2026-01-01"
     skip_weekends: false
     label_format: "D+{n}"
+  flags:
+    unit: icon
+    label: Flags
+    row_height: 18
+    icon_height: 12
+    fill_color: "none"
+    icon_rules:
+      - { milestone: true,        icon: star,   color: "#cc6600" }
+      - { resource_group: "QA",   icon: bug,    color: "#aa1144" }
+      - { federal_holiday: true,  icon: flag,   color: "#888888" }
 
 blockplan:
   top_bands:
     - { band: fiscal_quarter, row_height: 25 }   # inline geometry override
     - { band: month,          row_height: 20 }
+    - { band: flags }
   bottom_bands: []
 
 compact_plan:
-  bands: [fiscal_quarter, month]
+  bands: [fiscal_quarter, month, flags]
 
 excelheader:
-  top_bands: [fiscal_quarter, month]
+  top_bands: [fiscal_quarter, month, flags]
   band_fonts:
     fiscal_quarter: { excel_font_name: "Arial Narrow", excel_font_size: 10 }
+
+timeline:
+  top_time_bands: [fiscal_quarter, month, flags]
 ```
 
 Band styling lives in `style_rules`, keyed by `select.band: <catalog_key>`:
@@ -1618,7 +1632,7 @@ style_rules:
 
 | Key | Type | Description |
 |---|---|---|
-| `unit` | `str` | `fiscal_quarter` \| `month` \| `week` \| `interval` \| `date` \| `dow` \| `countdown` \| `countup` |
+| `unit` | `str` | `fiscal_quarter` \| `fiscal_period` \| `month` \| `week` \| `interval` \| `date` \| `dow` \| `countdown` \| `countup` \| `icon` |
 | `label` | `str` | Text shown in the heading column cell |
 | `label_format` | `str` | Format for week/fiscal_quarter/countdown/countup; placeholders: `{week}` `{fy}` `{fy2}` `{q}` `{n}` |
 | `date_format` | `str` | Arrow format for month/date/dow labels; e.g. `"MMM"`, `"MMMM"`, `"D"`, `"ddd"` |
@@ -1633,10 +1647,37 @@ style_rules:
 | `skip_nonworkdays` | `bool` | **countdown/countup** — exclude holidays & company non-workdays |
 | `label_values` | `list[str\|null]` | Override displayed segment text; `null` = auto; `""` = blank |
 | `show_every` | `int` | Merge N consecutive segments into one cell |
+| `icon_rules` | `list[dict]` | **icon only** — required: list of icon rules (see below) |
+| `icon_height` | `float` | **icon only** — display height of each icon in pts (defaults to `row_height * 0.65`) |
+| `fill_color` | `str` | **icon only** — background fill for every day cell (`"none"` = transparent) |
 
 > **`countdown` unit:** Each visible day cell shows the number of counting-days between that day and `target_date`. The value is **0** on the target day itself, **positive** for days before it (days remaining), and **negative** for days after (days elapsed). Use `label_format: "{n}d"` to append a suffix, or `label_format: "D-{n}"` for a launch-style label. Combine `skip_weekends: true` and `skip_nonworkdays: true` to count only business days.
 
 > **`countup` unit:** Each visible day cell shows the number of counting-days elapsed since `start_date`. The value is **0** on the start day itself, **positive** for days after it (days elapsed), and **negative** for days before it (days prior to the origin). Use `label_format: "D+{n}"` for a project-day-style label. The same `skip_weekends` / `skip_nonworkdays` options apply.
+
+> **`icon` unit:** Per-day glyph row instead of labeled segments. Each visible day gets one cell; rules in `icon_rules` are matched against the events on that day (and, optionally, the day's non-workday class), and any matching icon is drawn in the cell. Icons are deduplicated by name per day. Supported by `blockplan`, `compactplan`, `excelheader`, `excelblockplan`, and `timeline`. In `excelheader`/`excelblockplan` the icon is rendered as a centred filled bullet (`●`) coloured to the rule's `color`; the SVG visualizers render the actual icon glyph from the `icons` table. The icon-band heading cell still respects the band's `label`, so put a column-label like `"Flags"` on the band itself.
+>
+> Each entry in `icon_rules` is a dict. The only required key is `icon` (an icon name from the `icons` table — run `ecalendar.py icons` to list, `ecalendar.py iconsheet` to preview). Add one or more match keys to filter which events trigger the icon:
+>
+> | Rule key | Matches when… |
+> |---|---|
+> | `icon` | (required) icon name to draw |
+> | `color` | fill color for the drawn icon (default `#333333`) |
+> | `milestone` | event's milestone flag equals this bool |
+> | `event_type` | `"milestone"` or `"duration"` |
+> | `task_contains` | case-insensitive substring of the task name |
+> | `resource_group` | exact match on `resource_group` |
+> | `notes_contains` | case-insensitive substring of the event's notes |
+> | `rollup` | rollup flag matches |
+> | `priority` | exact priority (int) |
+> | `priority_min` / `priority_max` | inclusive priority range |
+> | `wbs_prefixes` | list of WBS prefixes; at least one must match |
+> | `federal_holiday` | day is a federal holiday (no event needed) |
+> | `company_holiday` | day is a company non-workday |
+> | `weekend` | day is a Saturday/Sunday |
+> | `nonworkday` | day matches any of the three classes above |
+>
+> A rule that contains any of the four day-based keys (`federal_holiday`, `company_holiday`, `weekend`, `nonworkday`) is evaluated once per visible day against the non-workday classifier rather than against events. All other rules evaluate against each event whose start (or `datekey`, for milestones) falls on that day.
 
 Visual properties (segment fill, label color/font/size, alternation across segments) go in `style_rules` on `box:band` and `text:band_label`. Per-placement geometry (`row_height`, `show_every` overrides) goes inline on the reference, as shown in the `blockplan.top_bands` example above.
 
@@ -1755,7 +1796,6 @@ Row  N+1     : column-header row with the A–E labels
 Rows N+2..   : 100 empty data rows for project tracking
 ```
 
-Freeze panes are set at column F / the column-header row so timebands and label columns stay visible when scrolling.
 
 ### Timeband Configuration
 

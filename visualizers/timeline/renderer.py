@@ -19,6 +19,8 @@ from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine, StyleResult
+from shared.day_classifier import classify_day
+from shared.icon_band import compute_icon_band_days
 from shared.timeband import build_segments as _build_band_segments
 
 if TYPE_CHECKING:
@@ -343,7 +345,8 @@ class TimelineRenderer(BaseSVGRenderer):
         # stack below it. Only drawn when declared in the theme.
         if top_bands:
             self._draw_timeline_bands(
-                config, top_bands, area_y, axis_left, axis_right, start, end, db
+                config, top_bands, area_y, axis_left, axis_right, start, end, db,
+                events=event_objs,
             )
         if bottom_bands:
             self._draw_timeline_bands(
@@ -355,6 +358,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 start,
                 end,
                 db,
+                events=event_objs,
             )
 
         # After all content is laid out, tighten the SVG viewBox to the actual
@@ -1791,12 +1795,17 @@ class TimelineRenderer(BaseSVGRenderer):
         start: arrow.Arrow,
         end: arrow.Arrow,
         db: "CalendarDB",
+        events: "list[Event] | None" = None,
     ) -> None:
         """Draw a stack of timebands using shared.timeband.build_segments().
 
         Each band gets a row of the configured ``row_height``. Bands are stacked
         downward starting at ``block_top_y``. Segment x positions are mapped via
         the same date→x function used by the timeline axis.
+
+        Bands with ``unit: "icon"`` are rendered per visible day via
+        :func:`shared.icon_band.compute_icon_band_days` rather than as labeled
+        segments.
         """
         if not bands:
             return
@@ -1812,6 +1821,14 @@ class TimelineRenderer(BaseSVGRenderer):
             visible_days.append(d)
             d = d + timedelta(days=1)
 
+        _events: list[Event] = events or []
+        _day_classes: dict = (
+            {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
+        )
+
+        def _classify(day_) -> frozenset:
+            return _day_classes.get(day_, frozenset())
+
         _band_text_style = config.get_text_style("ec-label")
         tk_band_label = self._tk("text:label")
         text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
@@ -1825,6 +1842,33 @@ class TimelineRenderer(BaseSVGRenderer):
         for band in bands:
             row_h = float(band.get("row_height", 14.0))
             unit = str(band.get("unit", "week")).strip().lower()
+
+            # ── Icon band — one cell per visible day, icons driven by rules ──
+            if unit == "icon":
+                icon_rules = list(band.get("icon_rules") or [])
+                day_icon_map = compute_icon_band_days(
+                    _events, icon_rules, visible_days, classify_fn=_classify
+                )
+                icon_h = float(band.get("icon_height") or row_h * 0.65)
+                fill = str(band.get("fill_color") or "none")
+                day_cells: list[tuple[float, float, list[tuple[str, str]]]] = []
+                for day_d in visible_days:
+                    day_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day)
+                    next_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day).shift(days=1)
+                    cell_x = self._x_for_day(day_arrow, start, end, axis_left, axis_right)
+                    cell_x2 = self._x_for_day(next_arrow, start, end, axis_left, axis_right)
+                    cell_w = max(0.0, cell_x2 - cell_x)
+                    day_cells.append((cell_x, cell_w, day_icon_map.get(day_d, [])))
+                self._draw_icon_band_row(day_cells, row_y, row_h, icon_h, fill)
+                sep_y = row_y + row_h
+                self._draw_line(
+                    axis_left, sep_y, axis_right, sep_y,
+                    stroke="#cccccc", stroke_width=0.5,
+                    css_class="ec-separator",
+                )
+                row_y += row_h
+                continue
+
             fill_color = str(band.get("fill_color") or "none")
             alt_fill_color = str(band.get("alt_fill_color") or "none")
             text_align = str(band.get("text_align", "center")).strip().lower()
