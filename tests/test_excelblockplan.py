@@ -286,13 +286,17 @@ def test_excelblockplan_continuation_marker_for_duration_running_past_range(tmp_
     assert "◀" in marker and "▶" in marker
 
 
-def test_excelblockplan_freeze_panes_at_first_date_column(tmp_path):
+def test_excelblockplan_no_freeze_panes(tmp_path):
+    """Excelblockplan must not lock any rows/columns — full-sheet sort/filter
+    workflows are the primary use case."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
     generate_excel_blockplan(cfg, _BaseDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    assert ws.freeze_panes == f"{get_column_letter(FIRST_DATE_COL)}2"
+    assert ws.freeze_panes in (None, ""), (
+        f"excelblockplan should not freeze panes, got {ws.freeze_panes!r}"
+    )
 
 
 def test_excelblockplan_default_output_filename(tmp_path, monkeypatch):
