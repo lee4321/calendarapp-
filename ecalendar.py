@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.21.3"
+__version__ = "26.05.21.4"
 
 import argparse
 import logging
@@ -345,6 +345,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "timeline",
             "blockplan",
             "compactplan",
+            "excelheader",
+            "excelblockplan",
             "themes",
             "papersizes",
             "patterns",
