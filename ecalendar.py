@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.21.2"
+__version__ = "26.05.21.3"
 
 import argparse
 import logging
@@ -294,6 +294,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         "excelheader",
         help="Generate an Excel workbook with blockplan-style timeband header rows",
     )
+    excelblockplan = sub.add_parser(
+        "excelblockplan",
+        help=(
+            "Generate an Excel workbook with blockplan-style timeband header "
+            "rows plus one row per event/duration in the date range"
+        ),
+    )
     themes = sub.add_parser("themes", help="List available themes")
     papers = sub.add_parser("papersizes", help="List available paper sizes")
     patterns = sub.add_parser("patterns", help="List available day-box patterns")
@@ -355,7 +362,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # If a flag belongs to every view, add it in these loops rather than
     # copy-pasting per-subcommand definitions.
     # Positional arguments for calendar views
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan, excelheader, exportdata):
+    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan, excelheader, excelblockplan, exportdata):
         view_parser.add_argument(
             "begin",
             type=str,
@@ -519,6 +526,126 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
 
+    # excelblockplan subcommand arguments — mirror excelheader plus blockplan
+    # content filters so users get parity with the SVG blockplan view.
+    excelblockplan.add_argument(
+        "--outputfile",
+        "-of",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Output .xlsx path (default: output/ExcelBlockplan.xlsx)",
+    )
+    excelblockplan.add_argument(
+        "--theme",
+        "-th",
+        type=str,
+        default=None,
+        metavar="THEME",
+        help="Theme name or path to .yaml theme file",
+    )
+    excelblockplan.add_argument(
+        "--weekends",
+        "-we",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3, 4],
+        help=(
+            "Weekend style: "
+            "0=work week only (default), "
+            "1=full week Sunday start, "
+            "2=half weekends Sunday start, "
+            "3=full week Monday start, "
+            "4=half weekends Monday start"
+        ),
+    )
+    excelblockplan.add_argument(
+        "--weekend-days",
+        type=str,
+        default=None,
+        metavar="DAYS",
+        help=(
+            "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
+            "non-working days for holiday/weekend classification."
+        ),
+    )
+    excelblockplan.add_argument(
+        "--country",
+        "-cc",
+        type=str,
+        default=None,
+        metavar="CODE",
+        help=(
+            "ISO 3166-1 alpha-2 country code(s) for holidays. "
+            "Accepts a single code (e.g. US) or a comma-separated list "
+            "(e.g. US,CA,GB) to include holidays from multiple countries."
+        ),
+    )
+    _ebp_content = excelblockplan.add_argument_group("Content Filtering")
+    _ebp_content.add_argument(
+        "--noevents",
+        "-ne",
+        action="store_true",
+        help="Exclude single-day events",
+    )
+    _ebp_content.add_argument(
+        "--nodurations",
+        "-nd",
+        action="store_true",
+        help="Exclude multi-day durations",
+    )
+    _ebp_content.add_argument(
+        "--ignorecomplete",
+        "-ic",
+        action="store_true",
+        help="Exclude 100%% complete items",
+    )
+    _ebp_content.add_argument(
+        "--milestones",
+        "-mo",
+        action="store_true",
+        help="Show only milestones",
+    )
+    _ebp_content.add_argument(
+        "--rollups",
+        "-ro",
+        action="store_true",
+        help="Show only rollup entries",
+    )
+    _ebp_content.add_argument(
+        "--includenotes",
+        "-notes",
+        action="store_true",
+        help="Include notes (mirrors blockplan --includenotes)",
+    )
+    _ebp_content.add_argument(
+        "--WBS",
+        type=str,
+        default="",
+        help=(
+            "WBS filter expression. Comma-separated tokens; '!' excludes. "
+            "Segments are dot-separated. '*' matches a segment, '**' matches "
+            "any remaining segments (implicit if omitted)."
+        ),
+    )
+    _ebp_content.add_argument(
+        "--status",
+        type=str,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Comma-separated event statuses to include "
+            "(active, draft, cancelled, archived, on-hold). "
+            "Use 'all' for no filter. Default: active."
+        ),
+    )
+    _ebp_content.add_argument(
+        "--empty",
+        "-e",
+        action="store_true",
+        help="Create blank workbook (no events)",
+    )
+
     # exportdata subcommand arguments
     exportdata.add_argument(
         "--outputfile",
@@ -636,6 +763,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         blockplan,
         compactplan,
         excelheader,
+        excelblockplan,
         papers,
         patterns,
         icons,
@@ -1209,6 +1337,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         blockplan,
         compactplan,
         excelheader,
+        excelblockplan,
         themes,
         papers,
         patterns,
@@ -3210,6 +3339,55 @@ def run(argv: list[str] | None = None) -> int:
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         generate_excel_header(_eh_config, _eh_db, out_path)
+        if not args.quiet:
+            print(out_path)
+        return 0
+
+    # excelblockplan — Excel workbook with timeband header + event/duration rows
+    if args.command == "excelblockplan":
+        from visualizers.excelblockplan import generate_excel_blockplan
+
+        _ebp_db = _open_calendar_db(args.database)
+        _ebp_config = create_calendar_config()
+        _ebp_config.weekend_style = args.weekends
+        _ebp_wd = getattr(args, "weekend_days", None)
+        if _ebp_wd:
+            _ebp_config.weekend_days = _parse_weekend_days(_ebp_wd)
+        _ebp_config.country = args.country
+        _ebp_config.userstart = args.begin
+        _ebp_config.userend = args.end
+        # Blockplan-equivalent content filters
+        _ebp_config.includeevents = not args.noevents
+        _ebp_config.includedurations = not args.nodurations
+        _ebp_config.ignorecomplete = args.ignorecomplete
+        _ebp_config.milestones = args.milestones
+        _ebp_config.rollups = args.rollups
+        _ebp_config.include_notes = args.includenotes
+        _ebp_config.WBS = args.WBS
+        _ebp_config.status_filter = _parse_status_filter(getattr(args, "status", None))
+        if args.empty:
+            _ebp_config.includeevents = False
+            _ebp_config.includedurations = False
+            _ebp_config.ignorecomplete = True
+            _ebp_config.milestones = False
+        calc_calendar_range(_ebp_config, args.begin, args.end)
+        _ebp_db.load_python_holidays(
+            _ebp_config.country, _ebp_config.adjustedstart, _ebp_config.adjustedend
+        )
+        if getattr(args, "theme", None):
+            from config.theme_engine import ThemeEngine
+
+            _ebp_te = ThemeEngine()
+            _ebp_te.load(args.theme)
+            _ebp_te.apply(_ebp_config)
+            _resolve_palette_overrides(_ebp_config, _ebp_db)
+        out_path = (
+            Path(args.outputfile)
+            if args.outputfile
+            else Path("output") / "ExcelBlockplan.xlsx"
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        generate_excel_blockplan(_ebp_config, _ebp_db, out_path)
         if not args.quiet:
             print(out_path)
         return 0

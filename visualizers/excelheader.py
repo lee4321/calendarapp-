@@ -1,20 +1,28 @@
-"""Excel workbook generator — timeband header.
+"""Excel workbook generators — timeband header and blockplan-style data sheet.
 
-Produces an .xlsx file whose top rows contain merged-cell timeband segments
-(driven by ``excelheader_top_time_bands`` config), followed by a fixed
-column-header row and 100 empty data rows.
+This module provides the column-layout constants, helpers and timeband-row
+writer that both the ``excelheader`` and ``excelblockplan`` subcommands share,
+plus the ``generate_excel_header`` entry point used by the former.
 
-Layout
-------
-Columns A-E  : fixed project-tracking labels (Activity, Effort, Duration,
-               Scheduled Start, Scheduled End)
-Columns F+   : one column per visible calendar day (width = 3 chars)
-Rows 1..N    : one row per band in excelheader_top_time_bands
-Row  N+1     : column header row ("Activity" … date columns)
-Rows N+2..   : 100 empty data rows (holiday shading + vertical-line borders)
+Layout (shared between excelheader and excelblockplan)
+------------------------------------------------------
+Columns A-W : project-tracking labels — one per ``events`` table column
+              ``id | status | priority | wbs | rollup | milestone |
+              percent_complete | name | effort | duration | start_date |
+              end_date | earliest_start_date | latest_start_date |
+              earliest_end_date | latest_end_date | predecessors |
+              resource_names | resource_group | notes | icon | color | tags``
+Column X    : reserved for the continuation icon (filled by excelblockplan
+              when a duration extends beyond the visible range)
+Columns Y+  : one column per visible calendar day (width = 3 chars)
+Rows 1..N   : timeband rows — heading label placed in column W,
+              segment values starting at column Y
+Row  N+1    : column-header row with the A-W label names
+Rows N+2..  : data rows (excelheader: ``DATA_ROWS`` empty rows;
+              excelblockplan: one row per event/duration)
 
-Freeze panes are set at F / header-row so the label columns and timeband
-rows stay visible while scrolling.
+Freeze panes are set at column Y / column-header row so the label columns
+and timeband rows stay visible while scrolling.
 """
 
 from __future__ import annotations
@@ -43,10 +51,11 @@ if TYPE_CHECKING:
 def _resolve_excel_token(config: "CalendarConfig", token: str) -> dict:
     """Return the unified-theme style dict for ``token`` (papersize-only ctx).
 
-    Excelheader has no per-event ctx (it draws timeband rows, not events) and
-    no notion of paper size in the SVG sense, but ``papersize`` is forwarded
-    so themes can scope rules with ``select: { papersize: ... }`` if needed.
-    Returns ``{}`` when no theme is loaded or the token isn't defined.
+    The Excel writers have no per-event ctx (they draw timeband rows, not
+    events) and no notion of paper size in the SVG sense, but ``papersize``
+    is forwarded so themes can scope rules with ``select: { papersize: ... }``
+    if needed. Returns ``{}`` when no theme is loaded or the token isn't
+    defined.
     """
     theme = getattr(config, "theme", None)
     if theme is None:
@@ -57,18 +66,40 @@ def _resolve_excel_token(config: "CalendarConfig", token: str) -> dict:
         ctx["papersize"] = str(papersize)
     return theme.resolve_token(token, ctx) or {}
 
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
+# Fixed label columns A-W — one per events-table column the user can plan around.
 FIXED_COLUMNS: list[tuple[str, float]] = [
-    ("Activity", 20),
-    ("Effort", 8),
-    ("Duration", 10),
-    ("Scheduled Start", 16),
-    ("Scheduled End", 16),
+    ("id", 6),
+    ("status", 9),
+    ("priority", 8),
+    ("wbs", 10),
+    ("rollup", 7),
+    ("milestone", 10),
+    ("percent_complete", 10),
+    ("name", 30),
+    ("effort", 8),
+    ("duration", 10),
+    ("start_date", 12),
+    ("end_date", 12),
+    ("earliest_start_date", 14),
+    ("latest_start_date", 14),
+    ("earliest_end_date", 14),
+    ("latest_end_date", 14),
+    ("predecessors", 16),
+    ("resource_names", 18),
+    ("resource_group", 14),
+    ("notes", 24),
+    ("icon", 10),
+    ("color", 10),
+    ("tags", 12),
 ]
+LABEL_COL_END = len(FIXED_COLUMNS)              # 23 = column W
+CONTINUATION_COL = LABEL_COL_END + 1            # 24 = column X
+FIRST_DATE_COL = LABEL_COL_END + 2              # 25 = column Y
 DATA_ROWS = 100
 DAY_COL_WIDTH = 3.0  # Excel character-width units
-FIRST_DATE_COL = len(FIXED_COLUMNS) + 1  # Column F = 6
 
 # ISO 3166-1 alpha-2 → flag emoji
 _COUNTRY_FLAGS: dict[str, str] = {
@@ -189,6 +220,33 @@ def _col_for_day(
     return FIRST_DATE_COL + max(0, idx)
 
 
+# ── Visible-day helper ────────────────────────────────────────────────────────
+
+def compute_visible_days(config: "CalendarConfig") -> list[date]:
+    """Return the ordered list of calendar dates that get a day column.
+
+    Honors ``config.weekend_style`` (0 = weekdays only, 1+ = full week).
+    Uses ``userstart``/``userend`` if present, otherwise the adjusted range.
+    """
+    range_start = str(config.userstart or config.adjustedstart)
+    range_end = str(config.userend or config.adjustedend)
+    start = arrow.get(range_start, "YYYYMMDD").date()
+    end = arrow.get(range_end, "YYYYMMDD").date()
+    if end < start:
+        start, end = end, start
+    weekend_style = int(getattr(config, "weekend_style", 0))
+    visible: list[date] = []
+    cursor = start
+    while cursor <= end:
+        if weekend_style == 0:
+            if cursor.weekday() < 5:
+                visible.append(cursor)
+        else:
+            visible.append(cursor)
+        cursor += timedelta(days=1)
+    return visible
+
+
 # ── Holiday pre-fetch ─────────────────────────────────────────────────────────
 
 def _build_holiday_map(
@@ -202,8 +260,9 @@ def _build_holiday_map(
     """Return a dict mapping each non-workday to display info.
 
     Classification uses :func:`shared.day_classifier.classify_days` so
-    blockplan and excelheader share one source of truth.  Precedence when
-    multiple classes match a single date: federal > company > weekend.
+    blockplan, excelheader and excelblockplan share one source of truth.
+    Precedence when multiple classes match a single date:
+    federal > company > weekend.
     """
     hmap: dict[date, dict] = {}
     classes_by_day = classify_days(visible_days, db, config)
@@ -265,9 +324,14 @@ def _build_right_border_cols(
     band_segments: dict[str, list[_BandSegment]],
     visible_days: list[date],
     config: "CalendarConfig",
+    *,
+    default_color: str | None = None,
+    default_width: float | None = None,
 ) -> dict[int, dict]:
     """Return {excel_col: {color, style}} for each configured vertical line."""
     tk_vline = _resolve_excel_token(config, "box:vline")
+    fallback_color = default_color or "red"
+    fallback_width = float(default_width if default_width is not None else 1.5)
     result: dict[int, dict] = {}
     for line in vertical_lines:
         if not isinstance(line, dict):
@@ -279,14 +343,12 @@ def _build_right_border_cols(
         line_color = str(
             line.get("color")
             or tk_vline.get("stroke")
-            or getattr(config, "excelheader_vertical_line_color", "red")
-            or "red"
+            or fallback_color
         )
         line_width = float(
             line.get("width")
             or tk_vline.get("stroke_width")
-            or getattr(config, "excelheader_vertical_line_width", 1.5)
-            or 1.5
+            or fallback_width
         )
         if not band_name:
             continue
@@ -323,154 +385,212 @@ def _apply_right_border(cell: Any, style: str, color: str) -> None:
     )
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
+def _apply_overlay_fill(cell: Any, base_argb: str, overlay_color: str | None) -> None:
+    """Decorate *cell* with both an existing base fill and a holiday/special-day
+    overlay color.
 
-def generate_excel_header(
-    config: "CalendarConfig",
-    db: "CalendarDB",
-    out_path: Path,
-) -> None:
-    """Generate an Excel workbook with timeband header rows.
-
-    Args:
-        config: Fully populated CalendarConfig (date range + theme already applied).
-        db:     Open CalendarDB instance.
-        out_path: Destination .xlsx path (parent directory must exist).
+    When the cell already carries event/duration data (``base_argb`` non-None)
+    and a non-workday colour applies (``overlay_color`` non-None), use an
+    Excel pattern fill that visibly combines the two — the holiday colour
+    becomes the foreground stripes, the data colour stays as the background.
+    Otherwise apply a plain solid fill.  Mirrors the “show both” rule from
+    the spec for blockplan-style data sheets.
     """
-    # ── Date range & visible days ─────────────────────────────────────────────
-    range_start = str(config.userstart or config.adjustedstart)
-    range_end = str(config.userend or config.adjustedend)
-    start = arrow.get(range_start, "YYYYMMDD").date()
-    end = arrow.get(range_end, "YYYYMMDD").date()
-    if end < start:
-        start, end = end, start
-
-    weekend_style = int(getattr(config, "weekend_style", 0))
-    visible_days: list[date] = []
-    cursor = start
-    while cursor <= end:
-        if weekend_style == 0:
-            if cursor.weekday() < 5:
-                visible_days.append(cursor)
-        else:
-            visible_days.append(cursor)
-        cursor += timedelta(days=1)
-
-    if not visible_days:
+    overlay_argb = _to_argb(overlay_color)
+    if base_argb and overlay_argb:
+        cell.fill = PatternFill(
+            start_color=overlay_argb,
+            end_color=base_argb,
+            fill_type="lightUp",
+        )
         return
+    if overlay_argb is not None:
+        cell.fill = PatternFill(
+            start_color=overlay_argb, end_color=overlay_argb, fill_type="solid"
+        )
 
-    # ── Configuration ─────────────────────────────────────────────────────────
-    top_bands: list[dict] = list(getattr(config, "excelheader_top_time_bands", []) or [])
-    vertical_lines: list[dict] = list(getattr(config, "excelheader_vertical_lines", []) or [])
 
-    font_name: str = str(getattr(config, "excelheader_font_name", None) or "Calibri")
-    font_size: int = int(getattr(config, "excelheader_font_size", None) or 9)
+# ── Shared sheet-builder helpers ──────────────────────────────────────────────
 
-    federal_color: str = str(
-        getattr(config, "excelheader_federal_holiday_fill_color", None)
-        or getattr(config, "theme_federal_holiday_color", None)
-        or "#FFE4E1"
+def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
+    """Return dict of shared excel font, colours and band defaults for *subcommand*.
+
+    ``subcommand`` is ``"excelheader"`` or ``"excelblockplan"``.  Per-subcommand
+    config-field prefixes are looked up first, falling back to ``excelheader_*``
+    so themes that only set the excelheader keys also style excelblockplan
+    consistently.
+    """
+    def _cfg(*names: str, default: Any = None) -> Any:
+        for n in names:
+            v = getattr(config, n, None)
+            if v not in (None, ""):
+                return v
+        return default
+
+    font_name = str(
+        _cfg(f"{subcommand}_font_name", "excelheader_font_name", default="Calibri")
     )
-    company_color: str = str(
-        getattr(config, "excelheader_company_holiday_fill_color", None)
-        or getattr(config, "theme_company_holiday_color", None)
-        or "#FFFACD"
+    font_size = int(
+        _cfg(f"{subcommand}_font_size", "excelheader_font_size", default=9)
     )
-    weekend_color: str | None = (
-        getattr(config, "excelheader_weekend_fill_color", None) or None
+    band_row_height = float(
+        _cfg(
+            f"{subcommand}_band_row_height",
+            "excelheader_band_row_height",
+            default=18.0,
+        )
     )
-
-    # ── Pre-fetch holiday info ────────────────────────────────────────────────
-    holiday_map = _build_holiday_map(
-        visible_days, db, config, federal_color, company_color, weekend_color
+    header_heading_fill = str(
+        _cfg(
+            f"{subcommand}_header_heading_fill_color",
+            "excelheader_header_heading_fill_color",
+            default="none",
+        )
     )
-    # Classifier cache for icon-band and fill_rules evaluation.
-    day_classes = classify_days(visible_days, db, config)
-
-    def _classify(d: date) -> frozenset[str]:
-        return day_classes.get(d, frozenset())
-
-    # ── Pre-fetch events for icon bands ───────────────────────────────────────
-    has_icon_bands = any(
-        str(b.get("unit", "")).strip().lower() == "icon" for b in top_bands
+    header_label_color = str(
+        _cfg(
+            f"{subcommand}_header_label_color",
+            "excelheader_header_label_color",
+            default="black",
+        )
     )
-    band_events: list[Event] = []
-    if has_icon_bands:
-        range_start_str = str(config.userstart or config.adjustedstart)
-        range_end_str = str(config.userend or config.adjustedend)
-        raw_events = db.get_all_events_in_range(range_start_str, range_end_str)
-        band_events = [
-            Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events
-        ]
-
-    # ── Segment builder (reuse BlockPlanRenderer static helpers) ──────────────
-    _renderer = BlockPlanRenderer()
-    band_segments: dict[str, list[_BandSegment]] = {}
-    for band in top_bands:
-        bname = str(band.get("label", "")).strip().lower()
-        if bname and str(band.get("unit", "")).strip().lower() != "icon":
-            band_segments[bname] = _renderer._build_segments(
-                band, start, end, config, visible_days=visible_days, db=db
-            )
-
-    # Vertical-line → right-border column mapping
-    right_border_cols = _build_right_border_cols(
-        vertical_lines, band_segments, visible_days, config
+    header_label_align_h = str(
+        _cfg(
+            f"{subcommand}_header_label_align_h",
+            "excelheader_header_label_align_h",
+            default="right",
+        )
+    ).lower()
+    timeband_fill_color = _cfg(
+        f"{subcommand}_timeband_fill_color",
+        "excelheader_timeband_fill_color",
+        default="none",
     )
+    timeband_fill_palette = _cfg(
+        f"{subcommand}_timeband_fill_palette",
+        "excelheader_timeband_fill_palette",
+        default=[],
+    ) or []
+    timeband_label_color = str(
+        _cfg(
+            f"{subcommand}_timeband_label_color",
+            "excelheader_timeband_label_color",
+            default="black",
+        )
+    )
+    federal_color = str(
+        _cfg(
+            f"{subcommand}_federal_holiday_fill_color",
+            "excelheader_federal_holiday_fill_color",
+            "theme_federal_holiday_color",
+            default="#FFE4E1",
+        )
+    )
+    company_color = str(
+        _cfg(
+            f"{subcommand}_company_holiday_fill_color",
+            "excelheader_company_holiday_fill_color",
+            "theme_company_holiday_color",
+            default="#FFFACD",
+        )
+    )
+    weekend_color = _cfg(
+        f"{subcommand}_weekend_fill_color",
+        "excelheader_weekend_fill_color",
+        default=None,
+    )
+    vline_color = str(
+        _cfg(
+            f"{subcommand}_vertical_line_color",
+            "excelheader_vertical_line_color",
+            default="red",
+        )
+    )
+    vline_width = float(
+        _cfg(
+            f"{subcommand}_vertical_line_width",
+            "excelheader_vertical_line_width",
+            default=1.5,
+        )
+    )
+    return {
+        "font_name": font_name,
+        "font_size": font_size,
+        "band_row_height": band_row_height,
+        "header_heading_fill": header_heading_fill,
+        "header_label_color": header_label_color,
+        "header_label_align_h": header_label_align_h,
+        "timeband_fill_color": timeband_fill_color,
+        "timeband_fill_palette": timeband_fill_palette,
+        "timeband_label_color": timeband_label_color,
+        "federal_color": federal_color,
+        "company_color": company_color,
+        "weekend_color": weekend_color or None,
+        "vline_color": vline_color,
+        "vline_width": vline_width,
+    }
 
-    # ── Build workbook ────────────────────────────────────────────────────────
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Planner"
 
-    # Fixed label columns A-E
+def _setup_column_widths(ws: Any, visible_days: list[date]) -> None:
+    """Set widths for A-W label columns, the X continuation column and Y+ days."""
     for col_idx, (_, width) in enumerate(FIXED_COLUMNS, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-
-    # Date columns F+
+    ws.column_dimensions[get_column_letter(CONTINUATION_COL)].width = DAY_COL_WIDTH
     for i in range(len(visible_days)):
-        ws.column_dimensions[get_column_letter(FIRST_DATE_COL + i)].width = DAY_COL_WIDTH
+        ws.column_dimensions[
+            get_column_letter(FIRST_DATE_COL + i)
+        ].width = DAY_COL_WIDTH
 
-    # ── Timeband rows ─────────────────────────────────────────────────────────
-    # Pre-resolve the unified-theme tokens used in the band loop so themes can
-    # drive heading / band-label color and band-cell fill from the same
-    # `text:heading`, `text:band_label`, `box:band` definitions other
-    # visualizers consume.  Per-band YAML overrides still win over tokens.
+
+def _write_timebands(
+    ws: Any,
+    *,
+    config: "CalendarConfig",
+    db: "CalendarDB",
+    top_bands: list[dict],
+    visible_days: list[date],
+    band_events: list[Event],
+    holiday_map: dict[date, dict],
+    day_classes: dict[date, frozenset[str]],
+    band_segments: dict[str, list[_BandSegment]],
+    settings: dict,
+    start_row: int = 1,
+) -> int:
+    """Write the timeband rows and return the next free row index.
+
+    The band heading label (``band["label"]``) is placed in column W
+    (rightmost label column) by merging cells A:W and aligning per
+    ``label_align_h``.  Segment cells start at column Y so the X column
+    (reserved for the continuation icon) stays clear.
+    """
     tk_heading = _resolve_excel_token(config, "text:heading")
     tk_band_label = _resolve_excel_token(config, "text:band_label")
     tk_box_band = _resolve_excel_token(config, "box:band")
 
-    current_row = 1
+    def _classify(d: date) -> frozenset[str]:
+        return day_classes.get(d, frozenset())
 
+    current_row = start_row
     for band in top_bands:
-        band_font_name: str = str(band.get("excel_font_name") or font_name)
-        band_font_size: int = int(band.get("excel_font_size") or font_size)
+        band_font_name: str = str(band.get("excel_font_name") or settings["font_name"])
+        band_font_size: int = int(band.get("excel_font_size") or settings["font_size"])
 
-        # Row height: band row_height (pts) × 0.75 → Excel height units
         row_h_pts = float(
-            band.get("row_height")
-            or getattr(config, "excelheader_band_row_height", 18)
-            or 18
+            band.get("row_height") or settings["band_row_height"]
         )
         ws.row_dimensions[current_row].height = max(12.0, row_h_pts * 0.75)
 
-        # ── Heading cell (A:E merged) ─────────────────────────────────────────
         label_text = str(band.get("label", ""))
         heading_fill_color = str(
-            band.get("label_fill_color")
-            or getattr(config, "excelheader_header_heading_fill_color", None)
-            or ""
+            band.get("label_fill_color") or settings["header_heading_fill"] or ""
         )
         heading_label_color = str(
             band.get("label_color")
             or tk_heading.get("color")
-            or getattr(config, "excelheader_header_label_color", None)
-            or "black"
+            or settings["header_label_color"]
         )
         heading_align_h = str(
-            band.get("label_align_h")
-            or getattr(config, "excelheader_header_label_align_h", None)
-            or "left"
+            band.get("label_align_h") or settings["header_label_align_h"]
         ).lower()
         excel_h_align = (
             "right" if heading_align_h == "right"
@@ -480,7 +600,7 @@ def generate_excel_header(
 
         ws.merge_cells(
             start_row=current_row, start_column=1,
-            end_row=current_row, end_column=len(FIXED_COLUMNS),
+            end_row=current_row, end_column=LABEL_COL_END,
         )
         heading_cell = ws.cell(row=current_row, column=1, value=label_text)
         heading_cell.font = Font(
@@ -494,8 +614,7 @@ def generate_excel_header(
         )
         _apply_fill(heading_cell, heading_fill_color)
 
-        # ── Segment cells ─────────────────────────────────────────────────────
-        # Icon bands — compute per-day icons and render as colored symbols.
+        # ── Icon band — one cell per visible day in Y+ ────────────────────
         if str(band.get("unit", "")).strip().lower() == "icon":
             icon_rules = list(band.get("icon_rules") or [])
             day_icon_map = compute_icon_band_days(
@@ -505,16 +624,14 @@ def generate_excel_header(
             for i, d in enumerate(visible_days):
                 col = FIRST_DATE_COL + i
                 icons = day_icon_map.get(d, [])
-                # Holiday overlay
                 if d in holiday_map:
                     _apply_fill(ws.cell(row=current_row, column=col), holiday_map[d]["color"])
                 elif icon_fill and icon_fill.lower() not in {"none", "transparent"}:
                     _apply_fill(ws.cell(row=current_row, column=col), icon_fill)
                 if not icons:
                     continue
-                # Render first icon as a colored bullet symbol in the cell.
                 icon_name, icon_color = icons[0]
-                symbol = "\u25cf"  # ● filled circle
+                symbol = "●"  # ● filled circle
                 cell = ws.cell(row=current_row, column=col, value=symbol)
                 cell.font = Font(
                     name=band_font_name,
@@ -529,17 +646,17 @@ def generate_excel_header(
 
         band_fill_raw = band.get(
             "fill_color",
-            tk_box_band.get("fill")
-            or getattr(config, "excelheader_timeband_fill_color", "none"),
+            tk_box_band.get("fill") or settings["timeband_fill_color"],
         )
-        band_palette_raw = band.get("fill_palette", getattr(config, "excelheader_timeband_fill_palette", []))
-        color_list = BlockPlanRenderer._resolve_color_list(band_fill_raw, band_palette_raw, db)
+        band_palette_raw = band.get("fill_palette", settings["timeband_fill_palette"])
+        color_list = BlockPlanRenderer._resolve_color_list(
+            band_fill_raw, band_palette_raw, db
+        )
 
         seg_label_color = str(
             band.get("font_color")
             or tk_band_label.get("color")
-            or getattr(config, "excelheader_timeband_label_color", None)
-            or "black"
+            or settings["timeband_label_color"]
         )
         show_every = max(1, int(band.get("show_every", 1)))
         label_values: list | None = band.get("label_values")
@@ -556,25 +673,24 @@ def generate_excel_header(
             col_s = _col_for_day(seg_start, visible_days)
             col_e = _col_for_day(seg_end_excl, visible_days, end=True)
 
-            # Clamp to valid date range
             col_s = max(FIRST_DATE_COL, min(col_s, FIRST_DATE_COL + len(visible_days) - 1))
             col_e = max(col_s, min(col_e, FIRST_DATE_COL + len(visible_days) - 1))
 
-            # Determine label text
             if label_values and gidx < len(label_values):
                 cell_text: str = str(label_values[gidx] or group[0].label)
             else:
                 cell_text = group[0].label
 
-            # For single-day segments (date/dow/countdown units): check holiday
             is_single_day = (col_s == col_e)
-            cell_fill_color: str | None = color_list[gidx % len(color_list)] if color_list else None
+            cell_fill_color: str | None = (
+                color_list[gidx % len(color_list)] if color_list else None
+            )
             if is_single_day:
                 day_idx = col_s - FIRST_DATE_COL
                 if 0 <= day_idx < len(visible_days):
                     d = visible_days[day_idx]
-                    # Band-level fill_rules win over holiday_map fill
                     if band_fill_rules:
+                        matched = False
                         for rule in band_fill_rules:
                             if not isinstance(rule, dict):
                                 continue
@@ -585,17 +701,17 @@ def generate_excel_header(
                                 color = rule.get("color")
                                 if color:
                                     cell_fill_color = str(color)
-                                    break
-                        else:
-                            if d in holiday_map:
-                                cell_fill_color = holiday_map[d]["color"]
-                                cell_text = holiday_map[d]["emoji"] or cell_text
+                                matched = True
+                                break
+                        if not matched and d in holiday_map:
+                            cell_fill_color = holiday_map[d]["color"]
+                            if holiday_map[d]["emoji"]:
+                                cell_text = holiday_map[d]["emoji"]
                     elif d in holiday_map:
                         cell_fill_color = holiday_map[d]["color"]
                         if holiday_map[d]["emoji"]:
                             cell_text = holiday_map[d]["emoji"]
 
-            # Write cell
             if col_e > col_s:
                 ws.merge_cells(
                     start_row=current_row, start_column=col_s,
@@ -614,9 +730,23 @@ def generate_excel_header(
 
         current_row += 1
 
-    # ── Column header row ─────────────────────────────────────────────────────
-    header_row = current_row
-    header_font = Font(name=font_name, size=font_size, bold=True)
+    return current_row
+
+
+def _write_column_header_row(
+    ws: Any,
+    *,
+    header_row: int,
+    config: "CalendarConfig",
+    visible_days: list[date],
+    holiday_map: dict[date, dict],
+    right_border_cols: dict[int, dict],
+    settings: dict,
+) -> None:
+    """Write the A-W label row, then apply holiday shading / vertical-line borders."""
+    header_font = Font(
+        name=settings["font_name"], size=settings["font_size"], bold=True
+    )
     header_align_center = Alignment(horizontal="center", vertical="center")
 
     ws.row_dimensions[header_row].height = 18
@@ -626,43 +756,162 @@ def generate_excel_header(
         hcell.font = header_font
         hcell.alignment = header_align_center
 
+    # X column header — blank but anchored so column dimensions track.
+    _x_cell = ws.cell(row=header_row, column=CONTINUATION_COL, value="")
+    _x_cell.alignment = header_align_center
+
     for i, d in enumerate(visible_days):
         col = FIRST_DATE_COL + i
         hcell = ws.cell(row=header_row, column=col)
-        hcell.font = Font(name=font_name, size=font_size)
+        hcell.font = Font(name=settings["font_name"], size=settings["font_size"])
         hcell.alignment = header_align_center
         if d in holiday_map:
             _apply_fill(hcell, holiday_map[d]["color"])
-        # Apply any right border that falls on this column
         if col in right_border_cols:
             rbs = right_border_cols[col]
             _apply_right_border(hcell, rbs["style"], rbs["color"])
 
-    current_row += 1
 
-    # ── Data rows (100 rows) ──────────────────────────────────────────────────
-    data_start = current_row
+def _prepare_sheet(
+    config: "CalendarConfig",
+    db: "CalendarDB",
+    *,
+    subcommand: str,
+) -> tuple[Any, Any, int, list[date], dict[date, dict], dict[int, dict], list[Event], dict]:
+    """Build a workbook, write timeband + column-header rows, return shared state.
+
+    Returns (workbook, worksheet, data_start_row, visible_days, holiday_map,
+    right_border_cols, all_events_objects, settings).
+    The data_start_row is the first row available for callers to write data
+    (one row past the column-header row).  ``all_events_objects`` are the
+    Event dataclasses sourced for icon-band evaluation; callers can reuse
+    them for downstream rendering.
+    """
+    visible_days = compute_visible_days(config)
+    settings = _read_band_settings(config, subcommand)
+
+    top_bands_field = f"{subcommand}_top_time_bands"
+    vlines_field = f"{subcommand}_vertical_lines"
+    top_bands: list[dict] = list(
+        getattr(config, top_bands_field, None)
+        or getattr(config, "excelheader_top_time_bands", [])
+        or []
+    )
+    vertical_lines: list[dict] = list(
+        getattr(config, vlines_field, None)
+        or getattr(config, "excelheader_vertical_lines", [])
+        or []
+    )
+
+    holiday_map = _build_holiday_map(
+        visible_days, db, config,
+        settings["federal_color"], settings["company_color"], settings["weekend_color"],
+    )
+    day_classes = classify_days(visible_days, db, config)
+
+    # Always source events — icon bands need them and excelblockplan needs
+    # them for data rows.  When no events exist this is a cheap call.
+    range_start_str = str(config.userstart or config.adjustedstart)
+    range_end_str = str(config.userend or config.adjustedend)
+    raw_events = db.get_all_events_in_range(range_start_str, range_end_str)
+    band_events: list[Event] = [
+        Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events
+    ]
+
+    # Segments cached for both heading rendering and vertical-line lookup.
+    _renderer = BlockPlanRenderer()
+    range_start = str(config.userstart or config.adjustedstart)
+    range_end = str(config.userend or config.adjustedend)
+    start = arrow.get(range_start, "YYYYMMDD").date()
+    end = arrow.get(range_end, "YYYYMMDD").date()
+    if end < start:
+        start, end = end, start
+    band_segments: dict[str, list[_BandSegment]] = {}
+    for band in top_bands:
+        bname = str(band.get("label", "")).strip().lower()
+        if bname and str(band.get("unit", "")).strip().lower() != "icon":
+            band_segments[bname] = _renderer._build_segments(
+                band, start, end, config, visible_days=visible_days, db=db
+            )
+
+    right_border_cols = _build_right_border_cols(
+        vertical_lines, band_segments, visible_days, config,
+        default_color=settings["vline_color"],
+        default_width=settings["vline_width"],
+    )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Planner"
+
+    _setup_column_widths(ws, visible_days)
+
+    header_row = _write_timebands(
+        ws,
+        config=config, db=db,
+        top_bands=top_bands,
+        visible_days=visible_days,
+        band_events=band_events,
+        holiday_map=holiday_map,
+        day_classes=day_classes,
+        band_segments=band_segments,
+        settings=settings,
+        start_row=1,
+    )
+
+    _write_column_header_row(
+        ws,
+        header_row=header_row,
+        config=config,
+        visible_days=visible_days,
+        holiday_map=holiday_map,
+        right_border_cols=right_border_cols,
+        settings=settings,
+    )
+
+    data_start_row = header_row + 1
+
+    # Freeze pane: keep label cols + timeband rows visible.
+    ws.freeze_panes = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
+
+    return wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, band_events, settings
+
+
+# ── Main entry point — excelheader ───────────────────────────────────────────
+
+def generate_excel_header(
+    config: "CalendarConfig",
+    db: "CalendarDB",
+    out_path: Path,
+) -> None:
+    """Generate the Excel workbook for the ``excelheader`` subcommand.
+
+    Produces the shared A-W / Y+ skeleton plus ``DATA_ROWS`` empty data rows
+    decorated with holiday shading and vertical-line borders.
+
+    Args:
+        config: Fully populated CalendarConfig (date range + theme applied).
+        db:     Open CalendarDB instance.
+        out_path: Destination .xlsx path (parent directory must exist).
+    """
+    visible_days = compute_visible_days(config)
+    if not visible_days:
+        return
+
+    wb, ws, data_start, visible_days, holiday_map, right_border_cols, _events, _settings = (
+        _prepare_sheet(config, db, subcommand="excelheader")
+    )
 
     for row in range(data_start, data_start + DATA_ROWS):
         ws.row_dimensions[row].height = 14
-        # Anchor the row so openpyxl tracks it in max_row even when no
-        # holiday or border cells are written.
         ws.cell(row=row, column=1).value = ""
-        # Holiday shading on date columns
         for i, d in enumerate(visible_days):
             col = FIRST_DATE_COL + i
             if d in holiday_map:
                 dcell = ws.cell(row=row, column=col)
                 _apply_fill(dcell, holiday_map[d]["color"])
-        # Right borders for vertical lines
         for col, rbs in right_border_cols.items():
             dcell = ws.cell(row=row, column=col)
             _apply_right_border(dcell, rbs["style"], rbs["color"])
 
-    # ── Freeze panes ──────────────────────────────────────────────────────────
-    # Freeze everything above the column-header row and left of the date columns
-    freeze_cell = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
-    ws.freeze_panes = freeze_cell
-
-    # ── Save ──────────────────────────────────────────────────────────────────
     wb.save(str(out_path))

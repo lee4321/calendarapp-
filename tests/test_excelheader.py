@@ -9,8 +9,11 @@ from openpyxl.utils import get_column_letter
 
 from config.config import create_calendar_config
 from visualizers.excelheader import (
-    FIRST_DATE_COL,
+    CONTINUATION_COL,
     DATA_ROWS,
+    FIRST_DATE_COL,
+    FIXED_COLUMNS,
+    LABEL_COL_END,
     generate_excel_header,
 )
 
@@ -97,8 +100,8 @@ def test_excelheader_creates_file(tmp_path):
     assert "Planner" in wb.sheetnames
 
 
-def test_excelheader_day_columns_start_at_f(tmp_path):
-    """Date columns must begin at column F (index 6)."""
+def test_excelheader_day_columns_start_at_y(tmp_path):
+    """Date columns must begin at column Y (index 25), skipping X (continuation)."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
     config.excelheader_top_time_bands = [
@@ -107,15 +110,17 @@ def test_excelheader_day_columns_start_at_f(tmp_path):
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    # Column F should exist and E should be the last fixed label column
-    assert FIRST_DATE_COL == 6  # sanity check constant
-    assert get_column_letter(FIRST_DATE_COL) == "F"
-    # The date-band row should have a value in column F
+    # 23 label columns (A-W) + column X (continuation) → date columns start at Y
+    assert LABEL_COL_END == 23
+    assert CONTINUATION_COL == 24
+    assert FIRST_DATE_COL == 25
+    assert get_column_letter(FIRST_DATE_COL) == "Y"
+    # The date-band row should have a value in column Y
     assert ws.cell(row=1, column=FIRST_DATE_COL).value is not None
 
 
 def test_excelheader_fixed_label_columns(tmp_path):
-    """Column-header row must contain the 5 fixed label strings in A–E."""
+    """Column-header row must contain the 23 events-table field names in A-W."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
     config.excelheader_top_time_bands = [
@@ -126,8 +131,15 @@ def test_excelheader_fixed_label_columns(tmp_path):
     ws = wb.active
     # After 1 timeband row the header row is row 2
     header_row = 2
-    headers = [ws.cell(row=header_row, column=c).value for c in range(1, 6)]
-    assert headers == ["Activity", "Effort", "Duration", "Scheduled Start", "Scheduled End"]
+    expected = [name for name, _w in FIXED_COLUMNS]
+    headers = [
+        ws.cell(row=header_row, column=c).value for c in range(1, LABEL_COL_END + 1)
+    ]
+    assert headers == expected
+    # Confirm key columns by position so future re-orderings break the test.
+    assert headers[0] == "id"
+    assert headers[7] == "name"
+    assert headers[-1] == "tags"
 
 
 def test_excelheader_day_column_width(tmp_path):
@@ -254,8 +266,8 @@ def test_excelheader_freeze_panes_set(tmp_path):
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    # freeze_panes should be "F2" (1 band row → header on row 2, freeze at F)
-    assert ws.freeze_panes == "F2"
+    # 1 band row → header on row 2 — freeze at the first date column (Y).
+    assert ws.freeze_panes == f"{get_column_letter(FIRST_DATE_COL)}2"
 
 
 def test_excelheader_weekends_excluded_when_style_zero(tmp_path):

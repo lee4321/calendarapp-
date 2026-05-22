@@ -14,6 +14,7 @@ This guide is generated from the current codebase (`ecalendar.py`, `config/theme
 | `blockplan` | Generate a blockplan SVG. |
 | `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
 | `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
+| `excelblockplan` | Generate an `.xlsx` workbook with the same timeband header rows as `excelheader` plus one row per event/duration in the range (with style-rule decoration and holiday overlays). |
 | `themes` | List available themes. |
 | `papersizes` | List available paper sizes from DB. |
 | `patterns` | List available SVG day-box patterns from DB. |
@@ -52,6 +53,9 @@ PYTHONPATH=. uv run python ecalendar.py compactplan 20260309 20260424 -th corpor
 
 # Excel workbook with project-planning template
 PYTHONPATH=. uv run python ecalendar.py excelheader 20260101 20260630 -th corporate -of plan.xlsx
+
+# Excel workbook with blockplan-style data rows (events + durations, sorted by start date)
+PYTHONPATH=. uv run python ecalendar.py excelblockplan 20260101 20260630 -th corporate -of plan.xlsx
 
 # Export filtered events to CSV
 PYTHONPATH=. uv run python ecalendar.py exportdata 20260101 20261231 --milestones -o milestones.csv
@@ -156,7 +160,59 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `START_DATE` | yes | Start date in YYYYMMDD format |
 | `END_DATE` | yes | End date in YYYYMMDD format |
 
-Generates an Excel workbook (`.xlsx`) with timeband rows at the top, a column-header row, and 100 empty data rows ready for project planning. Timeband configuration uses `excelheader.top_time_bands` and `excelheader.vertical_lines` from the active theme. See [ExcelHeader](#excelheader-subcommand) for full details.
+Generates an Excel workbook (`.xlsx`) using the shared blockplan-style layout:
+columns A–W carry the 23 events-table field names (`id`, `status`, `priority`,
+`wbs`, `rollup`, `milestone`, `percent_complete`, `name`, `effort`, `duration`,
+`start_date`, `end_date`, `earliest_start_date`, `latest_start_date`,
+`earliest_end_date`, `latest_end_date`, `predecessors`, `resource_names`,
+`resource_group`, `notes`, `icon`, `color`, `tags`), column X is reserved for
+the continuation marker (used by `excelblockplan`), and one column per visible
+day starts at column Y. Timeband rows place their heading label in column W
+with segment values starting at column Y. After the column-header row,
+`excelheader` writes 100 empty data rows decorated with holiday shading and
+vertical-line borders so the workbook can be used as a planning template.
+Timeband configuration uses `excelheader.top_time_bands` and
+`excelheader.vertical_lines` from the active theme.
+
+### `excelblockplan`
+
+| Name | Required | Description |
+|---|---|---|
+| `START_DATE` | yes | Start date in YYYYMMDD format |
+| `END_DATE` | yes | End date in YYYYMMDD format |
+
+Generates the same workbook skeleton as `excelheader` but populates the data
+rows with one record per event/duration sourced from the events table. The
+command-line surface mirrors `blockplan` so the same filter flags work:
+`--theme`, `--weekends`, `--weekend-days`, `--country`, `--noevents`,
+`--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`,
+`--includenotes`, `--WBS`, `--status`, `--empty`.
+
+Data-row behavior:
+
+- Rows are ordered by `start_date`, then by `name`.
+- Each event or duration occupies its own row — cells in columns A–W are
+  written independently (never merged) so per-cell colour and font rules
+  from `style_rules` can apply.
+- **Single-day events**: the resolved icon glyph (theme `style_rules`'
+  `icon:` → events.icon → `●`) is placed in the day column (Y+) that
+  corresponds to the event's start date.
+- **Multi-day durations**: every visible day column between start and end
+  is filled with the style-resolved colour (or `events.color` when no rule
+  matches).
+- **Continuation marker**: when a duration extends past the visible range,
+  column X carries `◀`, `▶`, or `◀▶` to indicate which side(s) continue.
+- **Holiday overlay**: after all data rows are drawn the federal-holiday /
+  company-holiday / weekend decoration is applied to the day columns. When
+  a cell already holds an event icon or duration colour, the overlay uses
+  an Excel `lightUp` pattern that combines the holiday colour (foreground
+  stripes) with the data colour (background) so both stay visible.
+
+Default output path: `output/ExcelBlockplan.xlsx`. Configure via
+`excelblockplan.top_time_bands`, `excelblockplan.vertical_lines` and the
+matching `excelblockplan.*` colour/font keys in the active theme — these
+fall back to the corresponding `excelheader.*` keys when unset, so a single
+theme can style both views consistently.
 
 #### `blockplan` rendering behavior
 
@@ -1142,6 +1198,32 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `excelheader_vertical_line_opacity` | `excelheader.vertical_line_opacity` | `float` | `0.9` | default vertical line opacity |
 | `excelheader_vertical_line_width` | `excelheader.vertical_line_width` | `float` | `1.5` | default vertical line width |
 | `excelheader_vertical_lines` | `excelheader.vertical_lines` | `list[dict]` | `[]` | vertical lines rendered as right-cell borders |
+
+
+#### `excelblockplan`
+
+All `excelblockplan_*` config fields default to `None` and fall back to the
+corresponding `excelheader_*` field when unset. Setting any value here lets a
+theme style the data-sheet variant independently of the planner template.
+
+| Config field | Theme key | Type | Default | Explanation |
+|---|---|---|---|---|
+| `excelblockplan_band_row_height` | `excelblockplan.band_row_height` | `float \| None` | `None` (→ `excelheader_band_row_height`) | per-band default row height in points |
+| `excelblockplan_font_name` | `excelblockplan.font_name` | `str \| None` | `None` (→ `excelheader_font_name`) | Excel font for all cells |
+| `excelblockplan_font_size` | `excelblockplan.font_size` | `int \| None` | `None` (→ `excelheader_font_size`) | font size in points |
+| `excelblockplan_header_heading_fill_color` | `excelblockplan.header_heading_fill_color` | `str \| None` | `None` | heading cell A:W background color |
+| `excelblockplan_header_label_align_h` | `excelblockplan.header_label_align_h` | `str \| None` | `None` (→ excelheader, default `right`) | heading text alignment in A:W merged cell |
+| `excelblockplan_header_label_color` | `excelblockplan.header_label_color` | `str \| None` | `None` | heading label color |
+| `excelblockplan_timeband_fill_color` | `excelblockplan.timeband_fill_color` | `str \| None` | `None` | default segment fill color |
+| `excelblockplan_timeband_fill_palette` | `excelblockplan.timeband_fill_palette` | `list[str] \| None` | `None` | palette names cycling across segments |
+| `excelblockplan_timeband_label_color` | `excelblockplan.timeband_label_color` | `str \| None` | `None` | default segment label color |
+| `excelblockplan_top_time_bands` | `excelblockplan.top_time_bands` | `list[dict] \| None` | `None` (→ excelheader default) | timeband rows; same schema as `blockplan.top_time_bands` |
+| `excelblockplan_vertical_line_color` | `excelblockplan.vertical_line_color` | `str \| None` | `None` | default right-border color for vertical lines |
+| `excelblockplan_vertical_line_width` | `excelblockplan.vertical_line_width` | `float \| None` | `None` | default right-border width |
+| `excelblockplan_vertical_lines` | `excelblockplan.vertical_lines` | `list[dict] \| None` | `None` | vertical lines rendered as right-cell borders |
+| `excelblockplan_federal_holiday_fill_color` | `excelblockplan.federal_holiday_fill_color` | `str \| None` | `None` | overlay color for federal holiday cells |
+| `excelblockplan_company_holiday_fill_color` | `excelblockplan.company_holiday_fill_color` | `str \| None` | `None` | overlay color for company holiday cells |
+| `excelblockplan_weekend_fill_color` | `excelblockplan.weekend_fill_color` | `str \| None` | `None` | overlay color for weekend cells |
 
 
 ## Complex Structures Reference

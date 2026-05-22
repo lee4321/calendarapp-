@@ -980,6 +980,28 @@ class CalendarConfig:
     excelheader_company_holiday_fill_color: str | None = None
     excelheader_weekend_fill_color: str | None = None
 
+    # ── ExcelBlockplan ────────────────────────────────────────────────────────
+    # Settings for the excelblockplan subcommand. Mirrors excelheader_* but
+    # populates one row per event/duration instead of leaving the body blank.
+    # All fields default to None so the excelheader_* equivalents are used
+    # whenever a theme has only set the shared excelheader keys.
+    excelblockplan_font_name: str | None = None
+    excelblockplan_font_size: int | None = None
+    excelblockplan_top_time_bands: list[dict[str, Any]] | None = None
+    excelblockplan_vertical_lines: list[dict[str, Any]] | None = None
+    excelblockplan_vertical_line_color: str | None = None
+    excelblockplan_vertical_line_width: float | None = None
+    excelblockplan_band_row_height: float | None = None
+    excelblockplan_header_heading_fill_color: str | None = None
+    excelblockplan_header_label_color: str | None = None
+    excelblockplan_header_label_align_h: str | None = None
+    excelblockplan_timeband_fill_color: str | None = None
+    excelblockplan_timeband_fill_palette: list[str] | None = None
+    excelblockplan_timeband_label_color: str | None = None
+    excelblockplan_federal_holiday_fill_color: str | None = None
+    excelblockplan_company_holiday_fill_color: str | None = None
+    excelblockplan_weekend_fill_color: str | None = None
+
     # Overflow indicator
     overflow_indicator_icon: str = "warningtriangle"
     overflow_indicator_color: str = "red"

@@ -400,6 +400,24 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "federal_holiday_fill_color"): "excelheader_federal_holiday_fill_color",
     ("excelheader", "company_holiday_fill_color"): "excelheader_company_holiday_fill_color",
     ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
+    # ExcelBlockplan — mirrors excelheader keys; None values fall back to the
+    # excelheader_* equivalents at render time.
+    ("excelblockplan", "font_name"): "excelblockplan_font_name",
+    ("excelblockplan", "font_size"): "excelblockplan_font_size",
+    ("excelblockplan", "top_time_bands"): "excelblockplan_top_time_bands",
+    ("excelblockplan", "vertical_lines"): "excelblockplan_vertical_lines",
+    ("excelblockplan", "vertical_line_color"): "excelblockplan_vertical_line_color",
+    ("excelblockplan", "vertical_line_width"): "excelblockplan_vertical_line_width",
+    ("excelblockplan", "band_row_height"): "excelblockplan_band_row_height",
+    ("excelblockplan", "header_heading_fill_color"): "excelblockplan_header_heading_fill_color",
+    ("excelblockplan", "header_label_color"): "excelblockplan_header_label_color",
+    ("excelblockplan", "header_label_align_h"): "excelblockplan_header_label_align_h",
+    ("excelblockplan", "timeband_fill_color"): "excelblockplan_timeband_fill_color",
+    ("excelblockplan", "timeband_fill_palette"): "excelblockplan_timeband_fill_palette",
+    ("excelblockplan", "timeband_label_color"): "excelblockplan_timeband_label_color",
+    ("excelblockplan", "federal_holiday_fill_color"): "excelblockplan_federal_holiday_fill_color",
+    ("excelblockplan", "company_holiday_fill_color"): "excelblockplan_company_holiday_fill_color",
+    ("excelblockplan", "weekend_fill_color"): "excelblockplan_weekend_fill_color",
     # Stripped in Phase 2 (no consumers): vertical_line_dasharray /
     # vertical_line_opacity / vertical_line_fill_color /
     # vertical_line_fill_opacity (XLSX borders are color+style only),
@@ -429,6 +447,7 @@ VALID_SECTIONS = frozenset(
         "layout",
         "blockplan",
         "excelheader",
+        "excelblockplan",
         "compact_plan",
         # Shared band catalog referenced by blockplan / compactplan /
         # excelheader placement lists (design §10).
@@ -559,7 +578,7 @@ class ThemeEngine:
         self._validate_fonts(self._theme_data, FONT_REGISTRY)
 
     # Sections where font names refer to system-installed fonts, not FONT_REGISTRY
-    _FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader"})
+    _FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader", "excelblockplan"})
 
     def _validate_fonts(
         self,
@@ -1043,6 +1062,7 @@ class ThemeEngine:
         ("blockplan",    "top_bands",     "blockplan_top_time_bands"),
         ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
         ("excelheader",  "top_bands",     "excelheader_top_time_bands"),
+        ("excelblockplan", "top_bands",   "excelblockplan_top_time_bands"),
         ("timeline",     "top_bands",     "timeline_top_time_bands"),
         ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
     )
