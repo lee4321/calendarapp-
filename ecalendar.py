@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.25.0"
+__version__ = "26.05.25.1"
 
 import argparse
 import logging
@@ -27,7 +27,7 @@ from config.config import (
     setfontsizes,
 )
 from shared.db_access import CalendarDB
-from shared.date_utils import InvalidDateError, calc_calendar_range
+from shared.date_utils import InvalidDateError, calc_calendar_range, parse_date
 from visualizers.factory import VisualizerFactory
 from visualizers.weekly.layout import WeeklyCalendarLayout
 
@@ -3326,6 +3326,14 @@ def run(argv: list[str] | None = None) -> int:
     # Calendar views and excelheader require date args
     if not args.begin or not args.end:
         parser.error("START_DATE and END_DATE are required")
+
+    # Validate date format up front so every subcommand emits a friendly
+    # message instead of leaking a traceback from deep inside calc_calendar_range.
+    try:
+        parse_date(args.begin, "start")
+        parse_date(args.end, "end")
+    except InvalidDateError as e:
+        parser.error(f"{e}. Dates must be in YYYYMMDD format (e.g. 20260301).")
 
     # excelheader — Excel workbook with timeband header rows
     if args.command == "excelheader":
