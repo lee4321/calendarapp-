@@ -679,6 +679,13 @@ def _write_timebands(
             seg_start = group[0].start
             seg_end_excl = group[-1].end_exclusive
 
+            if (
+                not visible_days
+                or seg_start > visible_days[-1]
+                or seg_end_excl <= visible_days[0]
+            ):
+                continue
+
             col_s = _col_for_day(seg_start, visible_days)
             col_e = _col_for_day(seg_end_excl, visible_days, end=True)
 
