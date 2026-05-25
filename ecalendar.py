@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.21.4"
+__version__ = "26.05.25.0"
 
 import argparse
 import logging
@@ -3037,9 +3037,12 @@ def run(argv: list[str] | None = None) -> int:
     Returns:
         Integer exit code (0 = success).
     """
-    # Generate default output filename
+    # Generate default output filename. The "ecalendar" prefix acts as a
+    # sentinel so we can detect when the user did not override --outputfile
+    # and substitute the subcommand name (e.g. "blockplan202605251040.svg").
     now = datetime.now()
-    default_output = f"ecalendar{now.strftime('%Y%m%d%H%M')}.svg"
+    _timestamp = now.strftime("%Y%m%d%H%M")
+    default_output = f"ecalendar{_timestamp}.svg"
 
     print(f"EventCalendar ({__version__})")
 
@@ -3059,12 +3062,24 @@ def run(argv: list[str] | None = None) -> int:
     # Configure logging
     _configure_logging(args.verbose, args.quiet)
 
+    # When the user did not pass --outputfile, derive the default name from
+    # the subcommand so each visualizer produces a recognizable file
+    # (e.g. weekly202605251040.svg, blockplan202605251040.svg).
+    _svg_visualizer_commands = {
+        "weekly", "mini", "mini-icon", "timeline", "blockplan", "compactplan",
+    }
+    if (
+        getattr(args, "outputfile", None) == default_output
+        and args.command in _svg_visualizer_commands
+    ):
+        args.outputfile = f"{args.command}{_timestamp}.svg"
+
     # Default output extension for text-mini
     if (
         args.command == "text-mini"
         and getattr(args, "outputfile", default_output) == default_output
     ):
-        args.outputfile = default_output.replace(".svg", ".txt")
+        args.outputfile = f"text-mini{_timestamp}.txt"
 
     # Dispatch subcommands.
     # This explicit chain favors straightforward traceability while commands
