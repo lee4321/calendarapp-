@@ -87,3 +87,47 @@ def test_nonexistent_file_exit_2(capsys: pytest.CaptureFixture[str]) -> None:
     captured = capsys.readouterr()
     assert rc == 2
     assert "theme file not found" in captured.err
+
+
+def test_legacy_apply_to_element_is_rejected(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`apply_to: element` rules are no longer valid in themes (post-catalog)."""
+    legacy = tmp_path / "stray.yaml"
+    legacy.write_text(yaml.safe_dump({
+        "theme": {"name": "stray", "version": "3.0"},
+        "style_rules": [{
+            "name": "bind ec-heading",
+            "apply_to": "element",
+            "select": {"element": "ec-heading"},
+            "style": {"use": "text:heading"},
+        }],
+    }))
+    rc = main([str(legacy)])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "element_catalog.yaml" in captured.err
+    assert "element_overrides:" in captured.err
+
+
+def test_no_bundled_theme_contains_stray_element_bindings() -> None:
+    """Shipped themes must not author `apply_to: element` rules any more —
+    those bindings live in config/element_catalog.yaml.  rc=2 from the
+    validator means it tripped that check.
+    """
+    failures: list[str] = []
+    for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
+        raw = yaml.safe_load(theme_path.read_text()) or {}
+        rules = raw.get("style_rules") or []
+        for i, rule in enumerate(rules):
+            if not isinstance(rule, dict):
+                continue
+            apply_to = rule.get("apply_to")
+            targets = (
+                [apply_to] if isinstance(apply_to, str)
+                else list(apply_to) if isinstance(apply_to, list)
+                else []
+            )
+            if "element" in targets:
+                failures.append(f"{theme_path.name}: style_rules[{i}] is `apply_to: element`")
+    assert not failures, "Stray element bindings still in shipped themes:\n" + "\n".join(failures)

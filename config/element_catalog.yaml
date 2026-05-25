@@ -1,0 +1,85 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# CalendarApp element catalog — single source of truth
+#
+# Maps every CSS `ec-*` element class produced by the SVG renderers to the
+# token (`text:<name>` / `box:<name>` / `line:<name>` / `icon:<name>`) that
+# supplies its visual style.  Themes only declare *what* those tokens look
+# like; the binding between an element and its token kind/name lives here so
+# theme authors are not required to re-write 30+ `apply_to: element` rules in
+# every theme.
+#
+# Edit this file when adding a new `ec-*` element class to a renderer.
+# tests/test_element_catalog.py enforces that every `ec-*` literal grep'd from
+# renderers/ and visualizers/ appears here, so missing entries fail CI.
+#
+# To override an entry from a single theme (e.g., bind ec-today-label to
+# text:label-with-red-color), use `element_overrides:` in the theme YAML —
+# see USER_GUIDE.md "Overriding a built-in element binding".
+# ══════════════════════════════════════════════════════════════════════════════
+
+elements:
+
+  # ── Text ───────────────────────────────────────────────────────────────────
+  ec-heading:        { kind: text, token: heading,        scope: [all],                                description: "Section/area heading text" }
+  ec-label:          { kind: text, token: label,          scope: [all],                                description: "Short label text (DOW headers, tick labels)" }
+  ec-tick-label:     { kind: text, token: label,          scope: [timeline, blockplan, compactplan],   description: "Axis tick label" }
+  ec-day-number:     { kind: text, token: day_number,     scope: [weekly, mini, mini-icon],            description: "Day-of-month number" }
+  ec-month-title:    { kind: text, token: month_title,    scope: [weekly, mini, mini-icon],            description: "Mini calendar month heading" }
+  ec-week-number:    { kind: text, token: week_number,    scope: [weekly, mini, mini-icon],            description: "Week-number label" }
+  ec-fiscal-label:   { kind: text, token: fiscal_label,   scope: [weekly, blockplan, compactplan],     description: "Fiscal period label" }
+  ec-event-name:     { kind: text, token: event_name,     scope: [all],                                description: "Event/task name" }
+  ec-event-notes:    { kind: text, token: event_notes,    scope: [all],                                description: "Event notes / description line" }
+  ec-event-date:     { kind: text, token: event_date,     scope: [all],                                description: "Event date label" }
+  ec-duration-date:  { kind: text, token: duration_date,  scope: [all],                                description: "Duration start/end date label" }
+  ec-holiday-title:  { kind: text, token: holiday_title,  scope: [weekly, mini, mini-icon],            description: "Holiday / special-day name in day box" }
+  ec-today-label:    { kind: text, token: today_label,    scope: [timeline, blockplan, compactplan],   description: "'Today' marker label" }
+  ec-header-text:    { kind: text, token: heading,        scope: [all],                                description: "Page header L/C/R text" }
+  ec-footer-text:    { kind: text, token: caption,        scope: [all],                                description: "Page footer L/C/R text" }
+  ec-watermark:      { kind: text, token: heading,        scope: [all],                                description: "Watermark overlay text" }
+  ec-legend-text:    { kind: text, token: body,           scope: [timeline, compactplan],              description: "Legend item text" }
+  ec-legend-notes:   { kind: text, token: event_notes,    scope: [timeline, compactplan],              description: "Legend item notes line" }
+
+  # ── Box ────────────────────────────────────────────────────────────────────
+  ec-background:     { kind: box, token: default,  scope: [all],                                description: "Page / area background" }
+  ec-cell:           { kind: box, token: cell,     scope: [all],                                description: "Generic content cell background" }
+  ec-day-box:        { kind: box, token: day,      scope: [weekly, mini, mini-icon],            description: "Day-box rectangle" }
+  ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelheader], description: "Lane / heading-column cell" }
+  ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelheader], description: "Time-band segment cell" }
+  ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
+  ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
+  ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }
+
+  # ── Line ───────────────────────────────────────────────────────────────────
+  ec-grid-line:      { kind: line, token: grid,      scope: [all],                              description: "Cell / grid boundary" }
+  ec-axis-line:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan], description: "Timeline / blockplan axis" }
+  ec-axis-tick:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan], description: "Axis tick mark" }
+  ec-today-line:     { kind: line, token: today,     scope: [all],                              description: "Today indicator vertical line" }
+  ec-separator:      { kind: line, token: separator, scope: [all],                              description: "Section / row separator" }
+  ec-connector:      { kind: line, token: grid,      scope: [timeline],                         description: "Dependency / callout connector line" }
+  ec-vline:          { kind: line, token: grid,      scope: [blockplan, compactplan],           description: "Configured vertical line" }
+  ec-duration-bar:   { kind: line, token: axis,      scope: [all],                              description: "Duration span bar / line" }
+  ec-hash-line:      { kind: line, token: grid,      scope: [weekly, mini, mini-icon],          description: "Legacy hash-pattern line" }
+  ec-strikethrough:  { kind: line, token: grid,      scope: [weekly, mini, mini-icon, compactplan], description: "Strikethrough on past / completed events" }
+
+  # ── Icon ───────────────────────────────────────────────────────────────────
+  ec-event-icon:        { kind: icon, token: event,     scope: [all],                              description: "Point-event glyph" }
+  ec-duration-icon:     { kind: icon, token: duration,  scope: [all],                              description: "Duration bar glyph" }
+  ec-overflow-icon:     { kind: icon, token: overflow,  scope: [weekly, mini, mini-icon],          description: "Overflow indicator" }
+  ec-holiday-icon:      { kind: icon, token: event,     scope: [weekly, mini, mini-icon, timeline], description: "Holiday glyph" }
+  ec-nwd-icon:          { kind: icon, token: event,     scope: [weekly, mini, mini-icon],          description: "Non-workday glyph" }
+  ec-milestone-marker:  { kind: icon, token: milestone, scope: [timeline, blockplan, compactplan], description: "Milestone diamond / circle" }
+  ec-milestone-flag:    { kind: icon, token: milestone, scope: [compactplan],                      description: "Milestone flag pennant" }
+  ec-duration-marker:   { kind: icon, token: duration,  scope: [timeline, blockplan],              description: "Duration start / end cap" }
+  ec-continuation-icon: { kind: icon, token: duration,  scope: [compactplan],                      description: "Continuation arrow for clipped durations" }
+  ec-legend-swatch:     { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend color swatch" }
+  ec-legend-icon:       { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend item icon" }
+
+
+# Modifier classes — applied alongside an element class to convey extra state.
+# Not bound to tokens here; renderers may emit external CSS rules targeting
+# them in combination with the element class.
+modifiers:
+  - ec-holiday
+  - ec-nonworkday
+  - ec-current-day
+  - ec-adjacent

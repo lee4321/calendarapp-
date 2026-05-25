@@ -601,6 +601,7 @@ single place to trace the full execution path.
 | `VisualizerFactory` | `visualizers.factory` | Creates the correct visualizer for each subcommand |
 | `WeeklyCalendarLayout` | `visualizers.weekly.layout` | Pre-computes page coordinates for weekly view |
 | `ThemeEngine` | `config.theme_engine` | Loads and applies YAML themes to config |
+| `load_catalog` / `iter_required_tokens` | `config.element_catalog` | Loader for the built-in `ec-*` → token catalog (`config/element_catalog.yaml`) consumed by `ThemeEngine._build_element_bindings_from_catalog`. Themes no longer ship element bindings. |
 | `generate_excel_header` | `visualizers.excelheader` | Produces the Excel workbook for `excelheader` |
 | `create_fiscal_calendar` / `build_fiscal_lookup` | `shared.fiscal_calendars` | Fiscal calendar computation |
 | `text_to_svg_group` | `renderers.glyph_cache` | Converts text to SVG glyph path group |

@@ -64,6 +64,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "excelheader",
     "time_bands",
     "style_rules",
+    "element_overrides",
 })
 
 # Legacy sections that the migration retires.  Their presence is a hard parse

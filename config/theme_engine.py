@@ -463,6 +463,9 @@ VALID_SECTIONS = frozenset(
         "element_styles",
         "style_rules",
         "swimlane_rules",
+        # Per-theme overrides of the built-in element catalog
+        # (config/element_catalog.yaml).
+        "element_overrides",
     }
 )
 
@@ -1254,8 +1257,12 @@ class ThemeEngine:
         box_styles = self._parse_box_styles_unified(theme)
         line_styles = self._parse_line_styles_unified(theme)
         icon_styles = self._parse_icon_styles_unified(theme)
-        element_bindings = self._parse_element_bindings_unified(
-            theme, text_styles, box_styles, line_styles, icon_styles
+        self._apply_catalog_defaults(
+            text_styles, box_styles, line_styles, icon_styles,
+        )
+        element_bindings = self._build_element_bindings_from_catalog(
+            text_styles, box_styles, line_styles, icon_styles,
+            element_overrides=self._theme_data.get("element_overrides") or {},
         )
 
         theme_styles = ThemeStyles(
@@ -1395,8 +1402,7 @@ class ThemeEngine:
             )
         return result
 
-    # ec-class binding kind → name lookup.  Mirrors the legacy element_styles
-    # `<kind>_style: <name>` shape.
+    # ec-class binding kind → ElementBinding field name.
     _BIND_KIND_TO_FIELD: dict[str, str] = {
         "text": "text_style",
         "box": "box_style",
@@ -1404,22 +1410,152 @@ class ThemeEngine:
         "icon": "icon_style",
     }
 
+    # One-time warning state — keep noise out of the log on repeated apply().
+    _FALLBACK_TOKENS_WARNED: set[tuple[str, str]] = set()
+
     @classmethod
-    def _parse_element_bindings_unified(
+    def _apply_catalog_defaults(
         cls,
-        theme,
         text_styles: dict,
         box_styles: dict,
         line_styles: dict,
         icon_styles: dict,
-    ) -> dict:
-        """Build {class_name: ElementBinding} from `apply_to: element` rules.
+    ) -> None:
+        """Fill in any catalog-referenced token the theme did not define.
 
-        Each rule's ``select.element`` names the ec-class(es) (string or list)
-        and ``style.use`` references the kind:name token to bind.  Other
-        ``style`` keys become per-element overrides on the binding (currently
-        only ``color`` is supported on the ElementBinding dataclass).
+        Looks at every ``(kind, token)`` pair the catalog binds an
+        element to and, if the theme's token dict is missing that name,
+        substitutes the fallback from ``element_catalog_defaults.yaml``.
+        Logs a one-time INFO so theme authors can see what they inherited.
         """
+        from config.element_catalog import iter_required_tokens, load_default_tokens
+        from config.styles import BoxStyle, IconStyle, LineStyle, TextStyle
+
+        defaults = load_default_tokens()
+        kind_to_dict = {
+            "text": text_styles,
+            "box": box_styles,
+            "line": line_styles,
+            "icon": icon_styles,
+        }
+        kind_to_factory = {
+            "text": cls._textstyle_from_dict,
+            "box": cls._boxstyle_from_dict,
+            "line": cls._linestyle_from_dict,
+            "icon": cls._iconstyle_from_dict,
+        }
+        for kind, token in iter_required_tokens(None):
+            dest = kind_to_dict[kind]
+            if token in dest:
+                continue
+            fallback_body = defaults.get(kind, {}).get(token)
+            if fallback_body is None:
+                # The catalog loader already enforces this can't happen, but
+                # be defensive.
+                continue
+            dest[token] = kind_to_factory[kind](fallback_body)
+            if (kind, token) not in cls._FALLBACK_TOKENS_WARNED:
+                cls._FALLBACK_TOKENS_WARNED.add((kind, token))
+                logger.info(
+                    "Theme: %s:%s not defined; using catalog fallback",
+                    kind, token,
+                )
+
+    @staticmethod
+    def _textstyle_from_dict(body: dict):
+        from config.styles import TextStyle
+        try:
+            size = float(body.get("size", 8.0))
+        except (TypeError, ValueError):
+            size = 8.0
+        try:
+            opacity = float(body.get("opacity", 1.0))
+        except (TypeError, ValueError):
+            opacity = 1.0
+        return TextStyle(
+            font=str(body.get("font", "RobotoCondensed-Light")),
+            size=size,
+            color=str(body.get("color", "#333333")),
+            opacity=opacity,
+            alignment=str(body.get("alignment", "start")),
+            size_rules=(),
+        )
+
+    @staticmethod
+    def _boxstyle_from_dict(body: dict):
+        from config.styles import BoxStyle
+        try:
+            fill_opacity = float(body.get("fill_opacity", 1.0))
+        except (TypeError, ValueError):
+            fill_opacity = 1.0
+        try:
+            stroke_width = float(body.get("stroke_width", 0.5))
+        except (TypeError, ValueError):
+            stroke_width = 0.5
+        try:
+            stroke_opacity = float(body.get("stroke_opacity", 1.0))
+        except (TypeError, ValueError):
+            stroke_opacity = 1.0
+        return BoxStyle(
+            fill=str(body.get("fill", "white")),
+            fill_opacity=fill_opacity,
+            stroke=body.get("stroke"),
+            stroke_width=stroke_width,
+            stroke_opacity=stroke_opacity,
+            stroke_dasharray=body.get("dasharray"),
+        )
+
+    @staticmethod
+    def _linestyle_from_dict(body: dict):
+        from config.styles import LineStyle
+        try:
+            width = float(body.get("width", 0.5))
+        except (TypeError, ValueError):
+            width = 0.5
+        try:
+            opacity = float(body.get("opacity", 1.0))
+        except (TypeError, ValueError):
+            opacity = 1.0
+        return LineStyle(
+            color=str(body.get("color", "#CCCCCC")),
+            width=width,
+            opacity=opacity,
+            dasharray=body.get("dasharray"),
+        )
+
+    @staticmethod
+    def _iconstyle_from_dict(body: dict):
+        from config.styles import IconStyle
+        size: float | None = None
+        if "size" in body:
+            try:
+                size = float(body["size"])
+            except (TypeError, ValueError):
+                size = None
+        return IconStyle(
+            color=str(body.get("color", "#333333")),
+            size=size,
+            icon=body.get("icon"),
+        )
+
+    @classmethod
+    def _build_element_bindings_from_catalog(
+        cls,
+        text_styles: dict,
+        box_styles: dict,
+        line_styles: dict,
+        icon_styles: dict,
+        *,
+        element_overrides: dict,
+    ) -> dict:
+        """Build {ec-class: ElementBinding} from the built-in catalog.
+
+        Every entry in ``config/element_catalog.yaml`` becomes a binding
+        whose target style is looked up in the theme's parsed token dicts.
+        Per-theme ``element_overrides:`` may remap an element to a
+        different token or pin a per-element color.
+        """
+        from config.element_catalog import load_catalog
         from config.styles import ElementBinding
 
         kind_to_dict = {
@@ -1428,49 +1564,69 @@ class ThemeEngine:
             "line": line_styles,
             "icon": icon_styles,
         }
+        catalog = load_catalog()
         result: dict = {}
-        for rule in theme.rules:
-            if "element" not in rule.apply_to:
-                continue
-            select = rule.select or {}
-            element = select.get("element")
-            style = rule.style or {}
-            use = style.get("use")
-            if not isinstance(use, str) or ":" not in use:
-                continue
-            kind, _, token_name = use.partition(":")
+        for class_name, entry in catalog.items():
+            kind = entry.kind
+            token_name = entry.token
+            color_override: str | None = None
+            extra = element_overrides.get(class_name) if isinstance(element_overrides, dict) else None
+            if isinstance(extra, dict):
+                use = extra.get("use")
+                if isinstance(use, str) and ":" in use:
+                    o_kind, _, o_token = use.partition(":")
+                    if o_kind in cls._BIND_KIND_TO_FIELD:
+                        kind, token_name = o_kind, o_token
+                color_value = extra.get("color")
+                if isinstance(color_value, str) and color_value:
+                    color_override = color_value
             field_name = cls._BIND_KIND_TO_FIELD.get(kind)
             if field_name is None:
                 continue
             kind_dict = kind_to_dict.get(kind, {})
-            if token_name not in kind_dict:
+            style_obj = kind_dict.get(token_name)
+            if style_obj is None:
                 logger.warning(
-                    "Theme: element binding references unknown %s:%s",
-                    kind, token_name,
+                    "Theme: element %s references unknown token %s:%s",
+                    class_name, kind, token_name,
                 )
                 continue
-
-            if isinstance(element, str):
-                targets = [element]
-            elif isinstance(element, list):
-                targets = [e for e in element if isinstance(e, str)]
-            else:
-                continue
-
-            for ec in targets:
-                if ec in result:
-                    continue
-                binding = ElementBinding()
-                setattr(binding, field_name, kind_dict[token_name])
-                if "color" in style:
-                    binding.color = str(style["color"])
-                result[ec] = binding
+            binding = ElementBinding()
+            setattr(binding, field_name, style_obj)
+            if color_override is not None:
+                binding.color = color_override
+            result[class_name] = binding
         return result
 
     # ── Rule-list support ─────────────────────────────────────────────────────
 
     def _check_deprecated_rule_keys(self) -> None:
         """Raise ThemeError if the YAML contains old-format rule keys."""
+        # Per-theme `apply_to: element` bindings are now sourced from the
+        # built-in element catalog (config/element_catalog.yaml).  Themes
+        # may pin per-element tweaks via the top-level `element_overrides:`
+        # mapping instead.  Reject leftover bindings with a clear pointer.
+        style_rules = self._theme_data.get("style_rules") or []
+        if isinstance(style_rules, list):
+            for i, raw in enumerate(style_rules):
+                if not isinstance(raw, dict):
+                    continue
+                apply_to = raw.get("apply_to")
+                targets = (
+                    [apply_to] if isinstance(apply_to, str)
+                    else list(apply_to) if isinstance(apply_to, list)
+                    else []
+                )
+                if "element" in targets:
+                    name = raw.get("name", f"rule_{i}")
+                    raise ThemeError(
+                        f"style_rules[{i}] {name!r}: apply_to: element is no longer "
+                        "supported in themes.  Element-to-token bindings live in "
+                        "config/element_catalog.yaml; use the top-level "
+                        "`element_overrides:` section for per-theme tweaks.  "
+                        "Run tools/strip_element_bindings.py to convert this theme."
+                    )
+
         weekly = self._theme_data.get("weekly", {}) or {}
         day_box = (weekly.get("day_box", {}) or {}) if isinstance(weekly, dict) else {}
         if isinstance(day_box, dict) and "hash_rules" in day_box:

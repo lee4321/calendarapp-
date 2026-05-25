@@ -81,6 +81,10 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
+# Ensure the repo root is on sys.path so we can import the catalog and
+# required-keys registry whether the script is run directly or via -m.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import yaml
 
 # ─── PyYAML dict-order preservation ─────────────────────────────────────────
@@ -1026,6 +1030,14 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
         _warn(f"unknown top-level key '{k}' carried through unchanged", fname=fname)
         out[k] = src[k]
 
+    # Catalog pass: remove `apply_to: element` rules and hoist any non-default
+    # binding into a top-level `element_overrides:` map.  Element-to-token
+    # bindings now live in config/element_catalog.yaml; themes only ship the
+    # overrides (if any).
+    overrides = _hoist_element_overrides(out, fname=fname)
+    if overrides:
+        out["element_overrides"] = overrides
+
     # Final pass: backfill any missing required keys from basic.yaml so the
     # converted theme is complete enough to load under the unified parser.
     # See design §11.4 — basic.yaml is the single source of truth for
@@ -1103,6 +1115,81 @@ def _path_has_value(d: dict[str, Any], path: str) -> bool:
             return False
         cur = cur[part]
     return cur is not None
+
+
+def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> "OrderedDict[str, Any]":
+    """Strip `apply_to: element` rules; record non-catalog-default ones.
+
+    Element-to-token bindings now live in config/element_catalog.yaml.  Every
+    rule of the form::
+
+        - apply_to: element
+          select: { element: ec-foo }
+          style:  { use: text:bar, color: red }
+
+    is removed from ``out["style_rules"]``.  If the (kind, token) it bound
+    matches the catalog's default for that ec-class — and no extra style
+    keys are present — the rule is silently dropped.  Otherwise the binding
+    is recorded under ``element_overrides[ec-foo]``.
+    """
+    try:
+        from config.element_catalog import load_catalog
+    except Exception as exc:  # noqa: BLE001
+        _warn(f"could not load element catalog for hoist: {exc}", fname=fname)
+        return OrderedDict()
+
+    catalog = load_catalog()
+    style_rules = out.get("style_rules") or []
+    kept: list[dict[str, Any]] = []
+    overrides: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+
+    for rule in style_rules:
+        if not isinstance(rule, dict):
+            kept.append(rule)
+            continue
+        apply_to = rule.get("apply_to")
+        targets = (
+            [apply_to] if isinstance(apply_to, str)
+            else list(apply_to) if isinstance(apply_to, list)
+            else []
+        )
+        if "element" not in targets:
+            kept.append(rule)
+            continue
+
+        select = rule.get("select") or {}
+        ec_value = select.get("element") if isinstance(select, dict) else None
+        if isinstance(ec_value, str):
+            ec_names = [ec_value]
+        elif isinstance(ec_value, list):
+            ec_names = [e for e in ec_value if isinstance(e, str)]
+        else:
+            ec_names = []
+        style = rule.get("style") or {}
+        use = style.get("use") if isinstance(style, dict) else None
+        extra = {
+            k: v for k, v in (style or {}).items()
+            if k != "use" and k in {"color"}
+        }
+
+        for ec in ec_names:
+            entry = catalog.get(ec)
+            override: dict[str, Any] = {}
+            if isinstance(use, str) and ":" in use:
+                use_kind, _, use_token = use.partition(":")
+                if entry is None or (use_kind, use_token) != (entry.kind, entry.token):
+                    override["use"] = use
+            override.update(extra)
+            if override:
+                # Last-wins; later style_rules overrode earlier ones in the
+                # legacy semantics, so preserve that here.
+                overrides[ec] = override
+            else:
+                # Catalog default with no extras → silently drop.
+                pass
+
+    out["style_rules"] = kept
+    return overrides
 
 
 def _backfill_from_basic(out: OrderedDict, *, fname: str) -> None:

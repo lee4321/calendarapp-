@@ -1,5 +1,17 @@
 # Unified `style_rules` Design
 
+> **Update — element bindings extracted to a built-in catalog (Phase 5).**
+> The per-theme `apply_to: element` rules described in this design no longer
+> exist in user-facing YAML.  Element-to-token bindings (every `ec-*` →
+> `<kind>:<name>` pairing) now live in [`config/element_catalog.yaml`](config/element_catalog.yaml) and are
+> shared by every theme.  Themes only declare token definitions, content
+> rules, and lane routing.  When a theme needs to deviate from the catalog
+> for one element, it uses the top-level `element_overrides:` mapping —
+> see [USER_GUIDE.md](USER_GUIDE.md) "Element Bindings: built-in catalog".
+> The remainder of this file describes the original four-phase plan that
+> introduced `style_rules`; references to `apply_to: element` rules apply
+> only to the pre-catalog state.
+
 ## Core Concept
 
 Two top-level rule lists replace the existing per-visualizer rule systems:

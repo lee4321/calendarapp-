@@ -61,6 +61,44 @@ def _deep_to_dict(obj):
     return obj
 
 
+def _find_element_bindings(raw: dict) -> list[tuple[int, str | None]]:
+    """Return (index, ec-name) for every legacy `apply_to: element` rule."""
+    out: list[tuple[int, str | None]] = []
+    rules = raw.get("style_rules") if isinstance(raw, dict) else None
+    if not isinstance(rules, list):
+        return out
+    for i, rule in enumerate(rules):
+        if not isinstance(rule, dict):
+            continue
+        apply_to = rule.get("apply_to")
+        targets = (
+            [apply_to] if isinstance(apply_to, str)
+            else list(apply_to) if isinstance(apply_to, list)
+            else []
+        )
+        if "element" in targets:
+            select = rule.get("select") or {}
+            ec = select.get("element") if isinstance(select, dict) else None
+            out.append((i, ec if isinstance(ec, str) else None))
+    return out
+
+
+def _tokens_missing_for_catalog(theme, visualizers: list[str]) -> dict[str, set[str]]:
+    """Return {`<kind>:<name>`: {visualizers needing it}} for tokens the theme
+    does not define but the element catalog references."""
+    from config.element_catalog import iter_required_tokens
+
+    defined = set(theme.defined_tokens())
+    missing: dict[str, set[str]] = {}
+    for v in visualizers:
+        for kind, token in iter_required_tokens(v):
+            key = f"{kind}:{token}"
+            if key in defined:
+                continue
+            missing.setdefault(key, set()).add(v)
+    return missing
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("theme", help="Path to a theme YAML file.")
@@ -109,6 +147,23 @@ def main(argv: list[str] | None = None) -> int:
         from tools.migrate_theme import convert_theme
         raw = _deep_to_dict(convert_theme(raw, fname=theme_path.name))
 
+    # Pre-parse check: reject leftover `apply_to: element` rules with a
+    # pointer to the catalog/overrides model.
+    stray = _find_element_bindings(raw)
+    if stray:
+        print(
+            f"error: {theme_path} contains {len(stray)} `apply_to: element` "
+            "rule(s); element-to-token bindings now live in "
+            "config/element_catalog.yaml.  Move per-theme tweaks to the "
+            "top-level `element_overrides:` map (see USER_GUIDE.md "
+            "\"Element Bindings: built-in catalog\"), or run\n"
+            f"    uv run python tools/strip_element_bindings.py {theme_path}",
+            file=sys.stderr,
+        )
+        for i, ec in stray[:6]:
+            print(f"  style_rules[{i}]: ec={ec!r}", file=sys.stderr)
+        return 2
+
     # Parse.
     try:
         theme = parse_theme(raw)
@@ -123,6 +178,15 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         return 2
+
+    # Warn about catalog tokens that fell back to defaults.
+    fallback = _tokens_missing_for_catalog(theme, requested)
+    for kind_token, vs in sorted(fallback.items()):
+        kind, _, token = kind_token.partition(":")
+        print(
+            f"  warn  {kind}:{token} not defined; using catalog fallback "
+            f"(referenced by visualizers: {', '.join(sorted(vs))})"
+        )
 
     # Required-key probe per requested visualizer.
     any_missing = False

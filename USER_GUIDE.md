@@ -493,7 +493,7 @@ Date formats accepted: `YYYY-MM-DD`, `M/D/YYYY`, `M/D/YY`, and any other format 
 
 ## Theme System
 
-Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a specific surface (an `ec-*` element class, a content surface like `box:day` or `box:duration`, or a lane assignment). Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
+Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a content surface (`box:day`, `box:duration`, etc.) or a lane assignment. Element-to-token bindings — *which* `ec-*` class consumes *which* token — are not part of any theme; they live in the built-in catalog at [`config/element_catalog.yaml`](config/element_catalog.yaml) and are shared by every theme. Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
 
 There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error pointing at `tools/migrate_theme.py`. Run the migrator once on any existing theme:
 
@@ -599,24 +599,28 @@ style_rules:
     style: { color: navy }
 ```
 
-#### Style Rules: Element Bindings
+#### Element Bindings: built-in catalog
 
-`ec-*` CSS classes are bound to tokens by `apply_to: element` rules with `select.element: <ec-name>` and `style.use: <token>`:
+`ec-*` CSS classes are bound to tokens by the built-in element catalog at [`config/element_catalog.yaml`](config/element_catalog.yaml) — themes no longer ship binding rules.  The catalog is the single source of truth: each `ec-*` class names a token kind (`text` / `box` / `line` / `icon`) and a token name (`heading`, `day_number`, `cell`, `grid`, etc.), and that pairing applies to every theme.
+
+To rebind or tweak a single element from one theme, use the top-level `element_overrides:` map:
 
 ```yaml
-style_rules:
-  - name: bind ec-heading
-    apply_to: element
-    select: { element: ec-heading }
-    style: { use: text:heading }
-
-  - name: bind ec-today-label
-    apply_to: element
-    select: { element: ec-today-label }
-    style: { use: text:label, color: red }   # per-element color override
+element_overrides:
+  ec-today-label:
+    use: text:label       # remap to a different token
+    color: red            # per-element color tweak (also valid alone)
+  ec-watermark:
+    use: text:caption     # pin watermark to caption styling in this theme only
+  ec-axis-tick:
+    color: "#888888"      # keep the catalog's text token, change just the color
 ```
 
-A list-valued `select.element` binds several classes at once. Additional style keys override the referenced token.
+`element_overrides:` keys must be `ec-*` class names that appear in the catalog. Omit `use:` to keep the catalog's default token while still applying a per-element color.  Authoring full `apply_to: element` rules in a theme is no longer supported; if you have an older theme that still ships them, run `tools/strip_element_bindings.py` (targeted, idempotent) to lift them into `element_overrides:`:
+
+```bash
+uv run python tools/strip_element_bindings.py path/to/theme.yaml
+```
 
 #### Style Rules: Content-Driven Styling
 
@@ -705,7 +709,7 @@ Band styling lives in `style_rules` keyed by `select.band: <catalog_key>`. Excel
 
 ### CSS Element Catalog
 
-Every SVG element gets a semantic CSS class. These classes appear in the SVG output and can be used for external CSS overrides.
+Every SVG element gets a semantic CSS class. The authoritative list — including which token kind each class binds to by default — lives in [`config/element_catalog.yaml`](config/element_catalog.yaml). The table below mirrors that file. Adding a new `ec-*` class to a renderer requires an entry there; a CI test enforces the two stay in sync.
 
 | CSS Class | Type | What it styles |
 |-----------|------|---------------|
@@ -762,15 +766,8 @@ Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`,
 The fastest path is to copy `config/themes/basic.yaml` — the minimum viable theme — and edit. `basic.yaml` ships with every required key set to a plain default, so each line you change is a deliberate styling choice. Recipe:
 
 1. Start with a `theme:` metadata block (name, version, description).
-2. Define the `style_rules` tokens you need with `define:` entries — typically a few `text:` tokens (heading, body, day_number…), one or two `box:` tokens (cell, header), and any `icon:` tokens you reference.
-3. Bind tokens to the `ec-*` element classes that need them via rules of the form:
-
-   ```yaml
-   - apply_to: element
-     select: { element: ec-name }
-     style: { use: text:heading }
-   ```
-
+2. Define the `style_rules` tokens you need with `define:` entries — typically a few `text:` tokens (heading, body, day_number…), one or two `box:` tokens (cell, header), and any `icon:` tokens you reference.  The element catalog (`config/element_catalog.yaml`) lists the token names each `ec-*` element looks up.  Any required token you omit falls back to a safe default from `config/element_catalog_defaults.yaml`.
+3. (Optional) Add an `element_overrides:` block if you need to rebind a single `ec-*` element to a different token (`use: text:label`) or pin a per-element color.  Most themes need no overrides; the catalog covers every element class out of the box.
 4. Add content rules that should override the defaults — federal-holiday tinting, high-priority highlighting, sprint hatching — by appending `apply_to: box:day` (or `box:event`, etc.) entries with `select:` predicates.
 5. Add any non-styling configuration you need: format strings under `weekly` / `mini_calendar` / `timeline` / `fiscal`; structural lists under `blockplan.swimlanes` and the shared `time_bands:` catalog; `colors.*_palette` palette names.
 
@@ -1294,8 +1291,9 @@ style_rules:
 | `box:<name>` | A box token. Canonical names: `box:day`, `box:event`, `box:duration`, `box:overflow`, `box:vline`, `box:milestone`, `box:swimlane_heading`, `box:swimlane_content`, `box:band`, plus shared `box:cell`/`box:header`/`box:callout`/`box:default`. |
 | `line:<name>` | A line token (`line:grid`, `line:axis`, `line:today`, …) |
 | `icon:<name>` | An icon token (`icon:event`, `icon:milestone`, `icon:overflow`, …) |
-| `element` | Bind a CSS class to a token via `select.element` + `style.use` |
 | `lane` | Route content to a swimlane via `style.swimlane` (blockplan) |
+
+`apply_to: element` is no longer accepted in themes — element-to-token bindings live in [`config/element_catalog.yaml`](config/element_catalog.yaml).  Use the top-level `element_overrides:` map for per-theme tweaks (see "Element Bindings: built-in catalog" earlier).
 
 A list-valued `apply_to:` fans the rule out: each style property is routed to every listed target that recognizes it. Unrecognized keys for a given target are silently dropped per-target.
 
@@ -1415,12 +1413,16 @@ Halo example for the weekly overflow icon — paint a small ring behind the indi
 | `color` | Icon color |
 | `size` | Icon size in points. **Optional** — when omitted, each visualizer falls back to its own default: weekly event/duration icons use `event_icon_font_size` (which tracks the event-name text size); compactplan duration and continuation icons use `compact_plan.duration_icon_height` and `continuation_icon_height` respectively. Declaring `size:` on the bound `icon:` token overrides those defaults. |
 
-#### `style:` — Element-Binding Properties (for `apply_to: element`)
+#### `element_overrides:` — Per-Theme Element Tweaks
+
+`element_overrides:` is a top-level mapping from `ec-*` class name to a small style bag.  It is the only supported way for a theme to influence the element catalog's bindings.
 
 | Property | Notes |
 |---|---|
-| `use` | Reference to a token (`text:heading`, `box:cell`, …). The element inherits the resolved token's style. |
-| Any text/box/line/icon property | Overrides the referenced token for this element only. |
+| `use` | Reference to a token (`text:heading`, `box:cell`, …) that should replace the catalog default for this element. |
+| `color` | Per-element color override applied on top of the resolved token. |
+
+A missing entry means the catalog default applies unchanged.
 
 #### `style:` — Lane-Routing Properties (for `apply_to: lane`)
 

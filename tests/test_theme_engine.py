@@ -1315,3 +1315,95 @@ class TestThemeEngineValidation:
             with caplog.at_level("WARNING"):
                 engine.load(f.name)
             assert "NonexistentFont-Bold" in caplog.text
+
+
+class TestElementCatalogBindings:
+    """Tests for the built-in element catalog driving ThemeStyles."""
+
+    def _minimal_theme(self, **extra):
+        data = {
+            "theme": {"name": "Cat", "version": "3.0"},
+            "style_rules": [
+                {"name": "def text:base", "define": "text", "as": "base",
+                 "style": {"font": "Roboto-Light", "size": 9, "color": "#111"}},
+                {"name": "def text:event_name", "define": "text", "as": "event_name",
+                 "style": {"font": "Roboto-Bold", "size": 11, "color": "blue"}},
+                {"name": "def box:day", "define": "box", "as": "day",
+                 "style": {"fill": "white"}},
+            ],
+        }
+        data.update(extra)
+        return data
+
+    def _engine_for(self, theme_data):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(theme_data, f)
+            f.flush()
+            engine = ThemeEngine()
+            engine.load(f.name)
+            return engine
+
+    def test_catalog_binds_every_ec_class(self):
+        from config.element_catalog import load_catalog
+        engine = self._engine_for(self._minimal_theme())
+        cfg = engine.apply(CalendarConfig())
+        ts = cfg.theme_styles
+        assert ts is not None
+        # Every catalog entry must produce a binding.
+        for ec in load_catalog():
+            assert ec in ts.element_bindings, f"missing binding for {ec}"
+
+    def test_theme_defined_token_drives_element_color(self):
+        engine = self._engine_for(self._minimal_theme())
+        cfg = engine.apply(CalendarConfig())
+        ts = cfg.theme_styles
+        # ec-event-name is bound to text:event_name by the catalog.
+        assert ts.element_bindings["ec-event-name"].text_style.color == "blue"
+
+    def test_missing_token_uses_catalog_fallback(self):
+        """A theme that omits text:heading still renders via the fallback."""
+        engine = self._engine_for(self._minimal_theme())
+        cfg = engine.apply(CalendarConfig())
+        ts = cfg.theme_styles
+        # text:heading was never defined; ec-heading is still bound.
+        assert "heading" in ts.text_styles  # filled from defaults
+        assert ts.element_bindings["ec-heading"].text_style is not None
+
+    def test_element_overrides_remap_token(self):
+        theme = self._minimal_theme(
+            element_overrides={
+                "ec-watermark": {"use": "text:event_name"},
+            },
+        )
+        engine = self._engine_for(theme)
+        cfg = engine.apply(CalendarConfig())
+        # ec-watermark would normally use text:heading; the override flips it
+        # to text:event_name which the theme set to blue.
+        assert cfg.theme_styles.element_bindings["ec-watermark"].text_style.color == "blue"
+
+    def test_element_overrides_color_only(self):
+        theme = self._minimal_theme(
+            element_overrides={"ec-today-label": {"color": "red"}},
+        )
+        engine = self._engine_for(theme)
+        cfg = engine.apply(CalendarConfig())
+        binding = cfg.theme_styles.element_bindings["ec-today-label"]
+        assert binding.color == "red"
+        # The catalog token (text:today_label or fallback) still drives the rest.
+        assert binding.text_style is not None
+
+    def test_stray_apply_to_element_raises(self):
+        theme = self._minimal_theme(style_rules=[
+            {"name": "bind ec-heading", "apply_to": "element",
+             "select": {"element": "ec-heading"},
+             "style": {"use": "text:event_name"}},
+        ])
+        # Note: this replaces the default style_rules from _minimal_theme,
+        # but the only thing that matters here is the engine reject.
+        engine = ThemeEngine()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(theme, f)
+            f.flush()
+            engine.load(f.name)
+        with pytest.raises(ThemeError, match="apply_to: element is no longer supported"):
+            engine.apply(CalendarConfig())

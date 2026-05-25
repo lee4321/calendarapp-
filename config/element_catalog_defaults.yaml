@@ -1,0 +1,59 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Catalog fallback tokens
+#
+# Used by config/element_catalog.py when a theme YAML omits a token that the
+# catalog references.  The renderer never crashes on a missing token; instead
+# the value below is substituted and the theme engine logs a one-time INFO
+# noting which fallback was used.  Theme authors who want explicit control
+# should copy the snippet below into their YAML as a `define:` rule.
+#
+# Keep these values neutral — no opinionated colors or fonts.  They are a
+# safety net, not a "house style".
+# ══════════════════════════════════════════════════════════════════════════════
+
+text:
+  base:            { font: "RobotoCondensed-Light", size: 9,  color: "#333333" }
+  heading:         { font: "RobotoCondensed-Bold",  size: 12, color: "#333333" }
+  body:            { font: "RobotoCondensed-Light", size: 10, color: "#333333" }
+  body_italic:     { font: "RobotoCondensed-LightItalic", size: 9, color: "#666666" }
+  caption:         { font: "RobotoCondensed-Light", size: 8,  color: "#666666" }
+  label:           { font: "RobotoCondensed-Light", size: 9,  color: "#888888" }
+  day_number:      { font: "RobotoCondensed-Bold",  size: 11, color: "#333333" }
+  month_title:     { font: "RobotoCondensed-Bold",  size: 11, color: "#333333" }
+  week_number:     { font: "RobotoCondensed-Light", size: 9,  color: "#888888" }
+  event_name:      { font: "RobotoCondensed-Light", size: 10, color: "#333333" }
+  event_notes:     { font: "RobotoCondensed-LightItalic", size: 9, color: "#666666" }
+  event_date:      { font: "RobotoCondensed-Light", size: 8,  color: "#666666" }
+  duration_date:   { font: "RobotoCondensed-Light", size: 8,  color: "#666666" }
+  holiday_title:   { font: "RobotoCondensed-Light", size: 8,  color: "#333333" }
+  today_label:     { font: "RobotoCondensed-Light", size: 8,  color: "#FF4444" }
+  fiscal_label:    { font: "RobotoCondensed-Light", size: 8,  color: "#666666" }
+  swimlane_label:  { font: "RobotoCondensed-Bold",  size: 12, color: "#333333" }
+  band_label:      { font: "RobotoCondensed-Light", size: 9,  color: "#666666" }
+  milestone_label: { font: "RobotoCondensed-Light", size: 9,  color: "#333333" }
+
+box:
+  default:           { fill: "white",     fill_opacity: 1.0, stroke: "none" }
+  cell:              { fill: "#F8F8FF",   fill_opacity: 0.25, stroke: "#CCCCCC", stroke_width: 0.5 }
+  day:               { fill: "#F8F8FF",   fill_opacity: 0.25, stroke: "#CCCCCC", stroke_width: 0.5 }
+  header:            { fill: "none",      stroke: "none" }
+  callout:           { fill: "white",     fill_opacity: 0.25, stroke: "#CCCCCC", stroke_width: 1.0 }
+  event:             { fill: "none",      stroke: "none" }
+  duration:          { fill: "#888888",   fill_opacity: 0.75, stroke: "none" }
+  milestone:         { fill: "#333333",   fill_opacity: 1.0,  stroke: "none" }
+  vline:             { fill: "lightblue", fill_opacity: 0.3,  stroke: "none" }
+  swimlane_heading:  { fill: "none",      stroke: "none" }
+  swimlane_content:  { fill: "none",      stroke: "none" }
+  band:              { fill: "none",      stroke: "none" }
+
+line:
+  grid:      { color: "#CCCCCC", width: 0.5, opacity: 0.5 }
+  axis:      { color: "#AAAAAA", width: 2.0, opacity: 0.9 }
+  today:     { color: "#FF4444", width: 1.5, opacity: 1.0 }
+  separator: { color: "#CCCCCC", width: 0.5, opacity: 0.5 }
+
+icon:
+  event:     { color: "#333333", size: 10 }
+  duration:  { color: "#555555", size: 10 }
+  milestone: { color: "#333333", size: 10 }
+  overflow:  { color: "red",     size: 10, icon: "overflow" }
