@@ -1,0 +1,366 @@
+theme:
+  name: TJXtimeline_vertical
+  version: '2.0'
+  description: Vertical timeline (top-to-bottom axis) with labels on both sides
+base:
+  font_family: PlaywriteDEGrund-VariableFont_wght
+  default_missing_icon: applet-closed
+header:
+  font_family: PlaywriteDEGrund-VariableFont_wght
+  font_color: grey
+footer:
+  font_family: PlaywriteDEGrund-VariableFont_wght
+  font_color: grey
+events:
+  icon_color: blue
+  item_placement_order:
+    - priority
+durations:
+  icon_color: navy
+  stroke_dasharray: null
+watermark:
+  text: null
+  color: blue
+  font_family: PlaywriteDEGrund-VariableFont_wght
+  opacity: 0.5
+  font_size: null
+  resize_mode: fit
+  rotation_angle: 45.0
+  image_rotation_angle: 45.0
+fiscal:
+  label_format: '{prefix}{period_short}'
+  end_label_format: '{period_short} End'
+  year_offset: 1
+colors:
+  month_palette: viridis
+  fiscal_palette: Greys
+  group_palette: Pastel1
+  hash_lines: black
+  company_holiday:
+    alpha: 0.25
+    color: gold
+  federal_holiday:
+    alpha: 0.1
+    color: tomato
+timeline:
+  orientation: vertical
+  label_side: both
+  labella:
+    layer_gap: 14
+    node_height: 24
+    density: 0.55
+  background_color: none
+  axis_color: lightgrey
+  axis_opacity: 0.9
+  axis_width: 3
+  tick_color: grey
+  date_format: M/D
+  tick_label_format: M/D
+  today_date: ''
+  today_label_text: Today
+  today_label_offset_y: 10.0
+  today_line_color: grey
+  today_label_color: grey
+  marker_stroke_color: ''
+  marker_stroke_width: 1.0
+  marker_radius: 4.0
+  icon_size: 14
+  callout_offset_y: 20.0
+  event_axis_padding: 24.0
+  duration_offset_y: 20.0
+  duration_lane_gap_y: 20.0
+  duration_icon_visible: true
+  label_stroke_width: 1.0
+  label_fill_opacity: 0.25
+  duration_bar_fill_opacity: 0.75
+  axis_stroke_dasharray: null
+  tick_stroke_dasharray: null
+  today_line_dasharray: null
+  label_stroke_dasharray: null
+  duration_bar_stroke_dasharray: null
+  connector_stroke_dasharray: 4 2
+  duration_bracket_stroke_dasharray: null
+  top_colors:
+    - deepskyblue
+    - gold
+    - tomato
+    - springgreen
+    - lightskyblue
+    - ivory
+    - lightgoldenrod
+    - lightsalmon
+    - lime
+    - mistyrose
+  bottom_colors:
+    - midnightblue
+    - springgreen
+    - deepskyblue
+    - gold
+    - orchid
+    - orange
+    - mediumblue
+    - orangered
+    - firebrick
+    - fuchsia
+  name_text:
+    font_name: PlaywriteDEGrund-VariableFont_wght
+    font_color: white
+    font_size: 18
+  notes_text:
+    font_name: PlaywriteDEGrund-VariableFont_wght
+    font_color: grey
+    font_size: 14
+  date:
+    font_family: PlaywriteDEGrund-VariableFont_wght
+    font_color: grey
+  ticks:
+    - unit: month
+      label_format: MMM D
+      show_labels: true
+      label_color: black
+      label_font_size: 11
+      tick_width: 0.5
+      tick_opacity: 0.5
+      tick_length: 8.0
+      label_gap: 18.0
+    - unit: Date
+      show_labels: true
+      label_format: D
+      label_color: black
+      label_font_size: 6
+      tick_width: 0.5
+      tick_opacity: 0.5
+      tick_length: 4.0
+      include_endpoints: false
+      max_label_count: 400
+      label_gap: 10.0
+    - unit: Date
+      show_labels: true
+      label_format: dd
+      label_color: black
+      label_font_size: 6
+      tick_width: 0.5
+      tick_opacity: 0.5
+      tick_length: 2.0
+      include_endpoints: false
+      max_label_count: 400
+      label_gap: 4.0
+  show_continuation_icon: true
+  continuation_icon_right: move-right
+  continuation_icon_left: move-left
+  continuation_icon_height: 14.0
+  continuation_icon_color: white
+timeline_events:
+  box_height: 24
+timeline_durations:
+  box_height: 50
+  date_font: PlaywriteDEGrund-VariableFont_wght
+  date_font_size: 10
+  date_color: black
+style_rules:
+  - name: base font — papersize override
+    apply_to: text:base
+    select:
+      papersize:
+        - letter
+        - ledger
+        - tabloid
+    style:
+      size: 14
+  - name: base font — papersize override
+    apply_to: text:base
+    select:
+      papersize:
+        - 3x5
+        - 5x8
+    style:
+      size: 12
+  - name: define text:heading
+    define: text
+    as: heading
+    style:
+      font: PlaywriteDEGrund-VariableFont_wght
+      size: 14
+      color: grey
+  - name: text:heading — papersize override
+    apply_to: text:heading
+    select:
+      papersize:
+        - letter
+        - ledger
+        - tabloid
+    style:
+      size: 10
+  - name: text:heading — papersize override
+    apply_to: text:heading
+    select:
+      papersize:
+        - 3x5
+        - 5x8
+    style:
+      size: 8
+  - name: define text:body
+    define: text
+    as: body
+    style:
+      font: PlaywriteDEGrund-VariableFont_wght
+      size: 12
+      color: white
+  - name: define text:body_secondary
+    define: text
+    as: body_secondary
+    style:
+      font: PlaywriteDEGrund-VariableFont_wght
+      size: 12
+      color: grey
+  - name: define text:label
+    define: text
+    as: label
+    style:
+      font: PlaywriteDEGrund-VariableFont_wght
+      size: 12
+      color: grey
+  - name: define text:caption
+    define: text
+    as: caption
+    style:
+      font: PlaywriteDEGrund-VariableFont_wght
+      size: 22
+      color: black
+  - name: define box:default
+    define: box
+    as: default
+    style:
+      fill: white
+      fill_opacity: 1.0
+      stroke: none
+  - name: define box:header
+    define: box
+    as: header
+    style:
+      fill: none
+      stroke: none
+  - name: define box:timeband
+    define: box
+    as: timeband
+    style:
+      fill: none
+      fill_opacity: 1.0
+      stroke: none
+  - name: define box:callout
+    define: box
+    as: callout
+    style:
+      fill: white
+      fill_opacity: 0.25
+      stroke: grey
+      stroke_width: 1.0
+  - name: define line:axis
+    define: line
+    as: axis
+    style:
+      color: lightgrey
+      width: 3
+      opacity: 0.9
+  - name: define line:today
+    define: line
+    as: today
+    style:
+      color: grey
+      width: 1.5
+      opacity: 1.0
+  - name: define line:connector
+    define: line
+    as: connector
+    style:
+      color: grey
+      width: 0.5
+      opacity: 1.0
+      dasharray: 4 2
+  - name: define line:separator
+    define: line
+    as: separator
+    style:
+      color: grey
+      width: 0.5
+      opacity: 0.5
+  - name: define icon:event
+    define: icon
+    as: event
+    style:
+      color: yellow
+      size: 10
+  - name: define icon:duration
+    define: icon
+    as: duration
+    style:
+      color: navy
+  - name: define line:tick
+    define: line
+    as: tick
+    style:
+      color: grey
+      width: 0.5
+      opacity: 1.0
+  - name: today label color
+    apply_to: text:today_label
+    style:
+      color: grey
+  - name: Marshalls durations (name)
+    select:
+      task_name:
+        - Marshalls
+      event_type: duration
+    apply_to: box:duration
+    style:
+      fill: red
+  - name: Marshalls durations (notes)
+    select:
+      notes:
+        - Marshalls
+      event_type: duration
+    apply_to: box:duration
+    style:
+      fill: red
+  - name: Maxx durations
+    select:
+      task_name:
+        - Maxx
+      event_type: duration
+    apply_to: box:duration
+    style:
+      fill: blue
+  - name: Canada durations
+    select:
+      task_name:
+        - Canada
+      event_type: duration
+    apply_to: box:duration
+    style:
+      fill: black
+element_overrides:
+  ec-axis-tick:
+    use: line:tick
+  ec-tick-label:
+    use: text:caption
+  ec-event-name:
+    use: text:body
+  ec-event-notes:
+    use: text:body_secondary
+  ec-event-date:
+    use: text:caption
+  ec-duration-date:
+    use: text:caption
+  ec-today-label:
+    use: text:label
+    color: grey
+  ec-band-cell:
+    use: box:timeband
+  ec-connector:
+    use: line:connector
+  ec-duration-marker:
+    use: line:axis
+  ec-legend-swatch:
+    use: line:axis
+  ec-legend-text:
+    use: text:body_secondary

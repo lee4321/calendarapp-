@@ -56,6 +56,7 @@ elements:
   ec-today-line:     { kind: line, token: today,     scope: [all],                              description: "Today indicator vertical line" }
   ec-separator:      { kind: line, token: separator, scope: [all],                              description: "Section / row separator" }
   ec-connector:      { kind: line, token: grid,      scope: [timeline],                         description: "Dependency / callout connector line" }
+  ec-callout-leader: { kind: line, token: grid,      scope: [timeline],                         description: "Labella curved bezier leader from axis dot to callout label" }
   ec-vline:          { kind: line, token: grid,      scope: [blockplan, compactplan],           description: "Configured vertical line" }
   ec-duration-bar:   { kind: line, token: axis,      scope: [all],                              description: "Duration span bar / line" }
   ec-hash-line:      { kind: line, token: grid,      scope: [weekly, mini, mini-icon],          description: "Legacy hash-pattern line" }

@@ -9,6 +9,7 @@ import pytest
 from config.config import create_calendar_config, setfontsizes
 from shared.data_models import Event
 from visualizers.timeline.layout import TimelineLayout
+from visualizers.timeline.orientation import Orientation, Side
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,
@@ -173,6 +174,8 @@ def test_timeline_duration_bars_use_start_end_alignment(tmp_path):
 
 
 def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
+    """Labella VPSC places same-date events on distinct layers — verify
+    no two callouts on the same layer overlap along the axis."""
     output = tmp_path / "timeline_overlap.svg"
     config = _base_config(output)
 
@@ -184,9 +187,6 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
     end = arrow.get("20260331", "YYYYMMDD")
     axis_left = 60.0
     axis_right = 730.0
-    area_x = 36.0
-    area_w = 720.0
-    area_h = 800.0
     axis_y = 400.0
 
     # Same/close-day events are worst-case for overlap.
@@ -199,21 +199,72 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
         point_events,
         start,
         end,
-        axis_left,
-        axis_right,
-        area_x,
-        area_x + area_w,
-        axis_y,
-        area_h,
+        axis_origin=(axis_left, axis_y),
+        axis_length=axis_right - axis_left,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
     )
 
-    boxes = [
-        (c.box_x, c.box_y, c.box_x + c.box_width, c.box_y + c.box_height)
-        for c in callouts
+    # Group by layer; same-layer x-intervals must not overlap.
+    assert len(callouts) == len(point_events)
+    by_layer: dict[int, list[tuple[float, float]]] = {}
+    for c in callouts:
+        by_layer.setdefault(c.lane, []).append(
+            (c.box_x, c.box_x + c.box_width)
+        )
+    for layer, intervals in by_layer.items():
+        intervals.sort()
+        for (a_lo, a_hi), (b_lo, b_hi) in zip(intervals, intervals[1:]):
+            assert a_hi <= b_lo + 1e-6, (
+                f"Layer {layer}: [{a_lo:.2f},{a_hi:.2f}] "
+                f"overlaps [{b_lo:.2f},{b_hi:.2f}]"
+            )
+
+
+@pytest.mark.parametrize(
+    ("orientation", "side"),
+    [
+        (Orientation.HORIZONTAL, Side.PRIMARY),
+        (Orientation.HORIZONTAL, Side.SECONDARY),
+        (Orientation.HORIZONTAL, Side.BOTH),
+        (Orientation.VERTICAL, Side.PRIMARY),
+        (Orientation.VERTICAL, Side.SECONDARY),
+        (Orientation.VERTICAL, Side.BOTH),
+    ],
+)
+def test_timeline_layout_callouts_produces_callouts_for_each_orientation_side(
+    tmp_path, orientation, side
+):
+    """Every orientation × side combo returns one callout per event,
+    each carrying both the dot position and a non-empty leader path."""
+    config = _base_config(tmp_path / f"timeline_{orientation.value}_{side.value}.svg")
+    config.timeline_orientation = orientation.value
+    config.timeline_label_side = side.value
+    renderer = TimelineRenderer()
+    renderer._page_width = config.pageX
+    renderer._page_height = config.pageY
+
+    start = arrow.get("20260201", "YYYYMMDD")
+    end = arrow.get("20260331", "YYYYMMDD")
+    events = [
+        Event(task_name=f"E{i}", start=f"202602{10+i:02d}", end=f"202602{10+i:02d}")
+        for i in range(8)
     ]
-    for i in range(len(boxes)):
-        for j in range(i + 1, len(boxes)):
-            assert not renderer._boxes_overlap(boxes[i], boxes[j], pad=2.0)
+    callouts = renderer._layout_callouts(
+        config,
+        events,
+        start,
+        end,
+        axis_origin=(50.0, 200.0),
+        axis_length=500.0,
+        orientation=orientation,
+        side=side,
+    )
+    assert len(callouts) == len(events)
+    for c in callouts:
+        assert c.leader_path_d.startswith("M ")
+        assert " C " in c.leader_path_d
+        assert c.orientation is orientation
 
 
 def test_timeline_duration_dates_share_same_y_and_offset_is_configurable(tmp_path):
@@ -350,7 +401,8 @@ def test_timeline_callout_uses_configured_event_name_and_notes_font_sizes(tmp_pa
     callout = TimelineCallout(
         event=event,
         color="gold",
-        x=200.0,
+        x_dot=200.0,
+        y_dot=300.0,
         lane=0,
         box_x=150.0,
         box_y=230.0,
@@ -373,7 +425,8 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
     callout_a = TimelineCallout(
         event=Event(task_name="A", start="20260110", end="20260110"),
         color="gold",
-        x=200.0,
+        x_dot=200.0,
+        y_dot=300.0,
         lane=0,
         box_x=150.0,
         box_y=230.0,
@@ -384,7 +437,8 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
     callout_b = TimelineCallout(
         event=Event(task_name="B", start="20260111", end="20260111"),
         color="gold",
-        x=205.0,
+        x_dot=205.0,
+        y_dot=300.0,
         lane=0,
         box_x=155.0,
         box_y=220.0,
@@ -401,112 +455,14 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
     assert date_a[0]["y"] != date_b[0]["y"]
 
 
-def test_timeline_callout_connector_uses_orthogonal_segments(tmp_path):
-    config = _base_config(tmp_path / "timeline_orthogonal_connector.svg")
-    renderer = _CaptureTimelineRenderer()
-
-    callout = TimelineCallout(
-        event=Event(task_name="A", start="20260110", end="20260110"),
-        color="gold",
-        x=100.0,
-        lane=0,
-        box_x=150.0,
-        box_y=200.0,
-        box_width=120.0,
-        box_height=70.0,
-        date_row=0,
-    )
-    renderer._draw_callout_connector(config, callout, axis_y=300.0)
-
-    assert len(renderer.line_calls) >= 2
-    first = renderer.line_calls[0]
-    assert first["x1"] == first["x2"] == callout.x
-    assert first["y1"] == 300.0  # connector intersects timeline at event date
-
-    vlines = [l for l in renderer.line_calls if l["x1"] == l["x2"]]
-    hlines = [l for l in renderer.line_calls if l["y1"] == l["y2"]]
-    assert vlines
-    assert hlines
-    assert any(l["y1"] == callout.box_y for l in hlines)
-    assert any(l["x2"] == callout.box_x or l["x1"] == callout.box_x for l in hlines)
-
-
-def test_timeline_callout_connector_avoids_other_event_rectangles(tmp_path):
-    config = _base_config(tmp_path / "timeline_connector_avoid_boxes.svg")
-    renderer = _CaptureTimelineRenderer()
-
-    target = TimelineCallout(
-        event=Event(task_name="Target", start="20260110", end="20260110"),
-        color="gold",
-        x=200.0,
-        lane=0,
-        box_x=250.0,
-        box_y=150.0,
-        box_width=120.0,
-        box_height=70.0,
-        date_row=0,
-    )
-    blocker = TimelineCallout(
-        event=Event(task_name="Blocker", start="20260111", end="20260111"),
-        color="tomato",
-        x=180.0,
-        lane=0,
-        box_x=170.0,
-        box_y=200.0,
-        box_width=60.0,
-        box_height=55.0,  # Blocks direct vertical connector, but does not overlap target box
-        date_row=1,
-    )
-    callouts = [target, blocker]
-    renderer._draw_callout_connector(config, target, axis_y=300.0, callouts=callouts)
-
-    # Ensure every connector segment avoids the blocker rectangle.
-    blocker_rect = (
-        blocker.box_x,
-        blocker.box_y,
-        blocker.box_x + blocker.box_width,
-        blocker.box_y + blocker.box_height,
-    )
-    for seg in renderer.line_calls:
-        hit = renderer._segment_intersects_rect(
-            (seg["x1"], seg["y1"], seg["x2"], seg["y2"]),
-            blocker_rect,
-            pad=0.0,
-        )
-        assert not hit
-
-
-def test_timeline_callout_connector_offsets_x_by_date_row(tmp_path):
-    config = _base_config(tmp_path / "timeline_connector_x_offset.svg")
-    renderer = _CaptureTimelineRenderer()
-
-    callout = TimelineCallout(
-        event=Event(task_name="Target", start="20260110", end="20260110"),
-        color="gold",
-        x=200.0,
-        lane=0,
-        box_x=140.0,
-        box_y=150.0,
-        box_width=120.0,
-        box_height=70.0,
-        date_row=1,
-    )
-    renderer._draw_callout_connector(config, callout, axis_y=300.0, callouts=[callout])
-
-    # First segment must anchor on exact event date x.
-    assert renderer.line_calls
-    first = renderer.line_calls[0]
-    assert first["x1"] == first["x2"] == 200.0
-    assert first["y1"] == 300.0
-
-    # A non-zero date row should create a horizontal elbow offset between axis and box.
-    elbow_h = [
-        l
-        for l in renderer.line_calls
-        if l["y1"] == l["y2"] and l["y1"] < 300.0 and l["y1"] > callout.box_y
-    ]
-    assert elbow_h
-    assert any(l["x1"] != l["x2"] for l in elbow_h)
+# NOTE: the legacy orthogonal-routing connector tests
+# (test_timeline_callout_connector_uses_orthogonal_segments,
+#  test_timeline_callout_connector_avoids_other_event_rectangles,
+#  test_timeline_callout_connector_offsets_x_by_date_row) were removed
+# when the timeline switched from `graph_layout`-based orthogonal
+# connectors to labella's curved bezier leaders. Leader correctness is
+# covered by the labella adapter tests in tests/test_labella_adapter.py
+# and by the smoke render in test_timeline_renderer_generates_svg.
 
 
 def test_timeline_callout_uses_configured_event_box_width_and_height(tmp_path):
@@ -524,12 +480,10 @@ def test_timeline_callout_uses_configured_event_box_width_and_height(tmp_path):
         [Event(task_name="Event", start="20260110", end="20260110")],
         start,
         end,
-        60.0,
-        730.0,
-        36.0,
-        756.0,
-        400.0,
-        800.0,
+        axis_origin=(60.0, 400.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
     )
     assert len(callouts) == 1
     assert callouts[0].box_width == 160.0
@@ -603,7 +557,8 @@ def test_timeline_shrinks_text_when_box_constraints_are_tight(tmp_path):
     callout = TimelineCallout(
         event=event,
         color="gold",
-        x=200.0,
+        x_dot=200.0,
+        y_dot=300.0,
         lane=0,
         box_x=150.0,
         box_y=220.0,
@@ -647,12 +602,10 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
         close_events,
         start,
         end,
-        axis_left,
-        axis_right,
-        area_x,
-        area_x + area_w,
-        axis_y,
-        area_h,
+        axis_origin=(axis_left, axis_y),
+        axis_length=axis_right - axis_left,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
     )
 
     boxes = [

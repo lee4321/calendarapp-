@@ -126,6 +126,14 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "continuation_icon_left"): "timeline_continuation_icon_left",
     ("timeline", "continuation_icon_height"): "timeline_continuation_icon_height",
     ("timeline", "continuation_icon_color"): "timeline_continuation_icon_color",
+    # Timeline orientation + labella label-placement options.
+    ("timeline", "orientation"): "timeline_orientation",
+    ("timeline", "label_side"): "timeline_label_side",
+    ("timeline.labella", "layer_gap"): "timeline_labella_layer_gap",
+    ("timeline.labella", "node_height"): "timeline_labella_node_height",
+    ("timeline.labella", "density"): "timeline_labella_density",
+    ("timeline.labella", "min_pos"): "timeline_labella_min_pos",
+    ("timeline.labella", "max_pos"): "timeline_labella_max_pos",
     # Timeline text styling — kept survivors only.
     ("timeline.text", "font_name"): "timeline_text_font_name",
     ("timeline.name_text", "font_name"): "timeline_name_text_font_name",

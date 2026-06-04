@@ -631,6 +631,29 @@ class CalendarConfig:
     timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
     timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
 
+    # ---- labella-driven label placement ----
+    # Axis orientation. "horizontal" → axis runs left-to-right, labels above
+    # (primary) or below (secondary). "vertical" → axis runs top-to-bottom,
+    # labels right (primary) or left (secondary).
+    timeline_orientation: str = "horizontal"
+    # Which side(s) of the axis labels appear on. "primary" / "secondary" /
+    # "both"; meaning depends on `timeline_orientation` (see above).
+    timeline_label_side: str = "primary"
+    # Vertical (or horizontal, for vertical orientation) gap between label
+    # rows when labella stacks overlapping labels onto multiple layers.
+    timeline_labella_layer_gap: float = 8.0
+    # Label-row thickness used by labella's Renderer.layout() to position
+    # successive layers away from the axis.
+    timeline_labella_node_height: float = 24.0
+    # Force density (0.0–1.0); higher → tighter packing, may oscillate at
+    # extremes. Passed to labella.Force as the 'density' option.
+    timeline_labella_density: float = 0.75
+    # Override the labella minPos/maxPos constraints (in axis-local units).
+    # None → defaults to the axis bounds (axis_left/axis_top → axis_right/
+    # axis_bottom) at render time.
+    timeline_labella_min_pos: float | None = None
+    timeline_labella_max_pos: float | None = None
+
     # Blockplan styling and behavior.
     # Phase 2 strip dropped dead fields with no readers post-Phase-1:
     # background_color (page bg from box:background), band_row_height
@@ -1088,6 +1111,16 @@ class CalendarConfig:
             raise ValueError(f"weekend_style must be 0–4, got {self.weekend_style}")
         if self.mini_columns < 1:
             raise ValueError(f"mini_columns must be >= 1, got {self.mini_columns}")
+        if self.timeline_orientation not in ("horizontal", "vertical"):
+            raise ValueError(
+                f"timeline_orientation must be 'horizontal' or 'vertical', "
+                f"got {self.timeline_orientation!r}"
+            )
+        if self.timeline_label_side not in ("primary", "secondary", "both"):
+            raise ValueError(
+                f"timeline_label_side must be 'primary', 'secondary', or 'both', "
+                f"got {self.timeline_label_side!r}"
+            )
         if self.weekend_days is not None:
             if not isinstance(self.weekend_days, list) or not all(
                 isinstance(d, int) and 0 <= d <= 6 for d in self.weekend_days

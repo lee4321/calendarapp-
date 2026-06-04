@@ -22,6 +22,11 @@ from shared.rule_engine import StyleEngine, StyleResult
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
 from shared.timeband import build_segments as _build_band_segments
+from visualizers.timeline.labella_adapter import (
+    CalloutPlacement,
+    layout_callouts as _labella_layout_callouts,
+)
+from visualizers.timeline.orientation import Orientation, Side
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -46,18 +51,38 @@ def _timeline_style_rules(config: "CalendarConfig") -> list:
 
 @dataclass(frozen=True)
 class TimelineCallout:
-    """Point-in-time event callout placement."""
+    """Point-in-time event callout placement.
+
+    Coordinates are absolute SVG (Y-down). `x_dot` / `y_dot` mark the
+    location of the dot on the axis line where the leader originates;
+    `box_*` give the label rectangle. `leader_path_d` is labella's bezier
+    `d` attribute in *axis-local* coordinates — it pairs with `axis_origin`
+    via a `<g transform="translate(ox,oy)">` wrapper when emitted.
+    """
 
     event: Event
     color: str
-    x: float
+    # Dot on the axis line (leader origin).
+    x_dot: float
+    y_dot: float
+    # Label box.
     lane: int
     box_x: float
     box_y: float
     box_width: float
     box_height: float
     date_row: int = 0
+    # Labella leader. Empty string is permitted for fallback paths.
+    leader_path_d: str = ""
+    axis_origin: tuple[float, float] = (0.0, 0.0)
+    orientation: Orientation = Orientation.HORIZONTAL
     style: StyleResult | None = None
+
+    @property
+    def x(self) -> float:
+        """Backwards-compat alias for the dot x position (used by older
+        renderer code paths that pre-date the orientation refactor)."""
+        return self.x_dot
 
 
 @dataclass(frozen=True)
@@ -196,73 +221,133 @@ class TimelineRenderer(BaseSVGRenderer):
         if end < start:
             start, end = end, start
 
-        # Reserve vertical space for top/bottom timebands only when defined.
-        top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
-        bottom_bands = list(getattr(config, "timeline_bottom_time_bands", None) or [])
+        orient = Orientation(config.timeline_orientation)
+        label_side = Side(config.timeline_label_side)
+
+        # Reserve room for top/bottom timebands only on horizontal axes —
+        # timebands above/below a vertical axis are not supported in this
+        # release and would land on top of the axis. The config fields
+        # still parse, but they no-op for vertical.
+        if orient is Orientation.HORIZONTAL:
+            top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
+            bottom_bands = list(getattr(config, "timeline_bottom_time_bands", None) or [])
+        else:
+            top_bands = []
+            bottom_bands = []
         top_bands_h = sum(float(b.get("row_height", 14.0)) for b in top_bands)
         bottom_bands_h = sum(float(b.get("row_height", 14.0)) for b in bottom_bands)
-
-        axis_left = area_x + (area_w * 0.04)
-        axis_right = area_x + (area_w * 0.96)
-        # Shift the axis down by the top-band block height so callouts/axis/
-        # ticks lie below the bands without overlap.
-        inner_y = area_y + top_bands_h
-        inner_h = max(1.0, area_h - top_bands_h - bottom_bands_h)
-        if getattr(config, "includeevents", True):
-            axis_y = inner_y + (inner_h * 0.44)
-        else:
-            # No event callouts above the axis: only the tick-label stack needs
-            # clearance, so pull the axis up to just below the top-band block.
-            tick_clearance = self._tick_label_top_clearance(
-                config, getattr(config, "timeline_ticks", None)
-            )
-            axis_y = inner_y + tick_clearance + 4.0
 
         event_objs = [Event.from_dict(e) for e in events]
         self._load_icon_svg_cache(db)
         self._populate_timeline_tokens(config)
         point_events, duration_events = self._split_events(config, event_objs)
-
         style_engine = StyleEngine(_timeline_style_rules(config))
+
+        # Compute the axis geometry for the chosen orientation. axis_origin
+        # is the (x, y) where the 1-D idealPos=0 maps in absolute SVG. For
+        # horizontal this is the left end of the axis; for vertical, the
+        # top end. axis_length is the extent along the axis.
+        if orient is Orientation.HORIZONTAL:
+            axis_left = area_x + (area_w * 0.04)
+            axis_right = area_x + (area_w * 0.96)
+            inner_y = area_y + top_bands_h
+            inner_h = max(1.0, area_h - top_bands_h - bottom_bands_h)
+            if getattr(config, "includeevents", True):
+                axis_y = inner_y + (inner_h * 0.44)
+            else:
+                tick_clearance = self._tick_label_top_clearance(
+                    config, getattr(config, "timeline_ticks", None)
+                )
+                axis_y = inner_y + tick_clearance + 4.0
+            axis_origin = (axis_left, axis_y)
+            axis_length = axis_right - axis_left
+            # End-of-axis coordinates for the line draw and downstream uses.
+            axis_end = (axis_right, axis_y)
+        else:
+            axis_top = area_y + (area_h * 0.04)
+            axis_bottom = area_y + (area_h * 0.96)
+            # Place axis at 44% from the left when events are visible, else
+            # closer to the left edge to give label rows the most room.
+            if getattr(config, "includeevents", True):
+                axis_x = area_x + (area_w * 0.44)
+            else:
+                axis_x = area_x + (area_w * 0.10)
+            axis_origin = (axis_x, axis_top)
+            axis_length = axis_bottom - axis_top
+            axis_end = (axis_x, axis_bottom)
+            # Legacy locals so the horizontal-only feature blocks below can
+            # safely no-op when checked.
+            axis_left = axis_x
+            axis_right = axis_x
+            axis_y = axis_top
 
         callouts = self._layout_callouts(
             config,
             point_events,
             start,
             end,
-            axis_left,
-            axis_right,
-            area_x,
-            area_x + area_w,
-            axis_y,
-            area_h,
-            style_engine,
+            axis_origin=axis_origin,
+            axis_length=axis_length,
+            orientation=orient,
+            side=label_side,
+            style_engine=style_engine,
         )
-        durations = self._layout_durations(
-            config,
-            duration_events,
-            start,
-            end,
-            axis_left,
-            axis_right,
-            axis_y,
-            style_engine,
+        # Durations remain horizontal-only for this release. The function
+        # signature still takes axis_left/right/y and will not be called
+        # for vertical timelines.
+        if orient is Orientation.HORIZONTAL:
+            durations = self._layout_durations(
+                config,
+                duration_events,
+                start,
+                end,
+                axis_left,
+                axis_right,
+                axis_y,
+                style_engine,
+            )
+        else:
+            durations = []
+
+        # Pass 1: emit labella's curved bezier leader paths under everything
+        # else. Each path is in axis-local coordinates; we wrap it in a
+        # translate() transform that places idealPos=0 at axis_origin.
+        leader_style = config.get_line_style("ec-callout-leader")
+        leader_stroke_width = leader_style.width or 1.25
+        leader_opacity = leader_style.opacity or 0.75
+        leader_dasharray = (
+            leader_style.dasharray
+            or config.timeline_connector_stroke_dasharray
+            or None
         )
+        ox, oy = axis_origin
+        for callout in callouts:
+            if not callout.leader_path_d:
+                continue
+            dash_attr = (
+                f' stroke-dasharray="{leader_dasharray}"'
+                if leader_dasharray else ""
+            )
+            self._drawing.append(drawsvg.Raw(
+                f'<g transform="translate({ox:.2f},{oy:.2f})" '
+                f'class="ec-callout-leader">'
+                f'<path d="{callout.leader_path_d}" '
+                f'stroke="{callout.color}" stroke-width="{leader_stroke_width}" '
+                f'stroke-opacity="{leader_opacity}" fill="none"{dash_attr}/>'
+                f'</g>'
+            ))
+        if orient is Orientation.HORIZONTAL:
+            for duration in durations:
+                self._draw_duration_connectors(config, duration, axis_y)
 
-        # Pass 1: draw all connector/aligner lines below everything else.
-        all_waypoints = self._route_all_callout_connectors(config, callouts, axis_y)
-        for callout, waypoints in zip(callouts, all_waypoints):
-            self._draw_routed_connector(config, callout, waypoints)
-        for duration in durations:
-            self._draw_duration_connectors(config, duration, axis_y)
-
-        # Main axis, ticks, and today marker on top of connectors.
+        # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
+        # → (axis_x, axis_bottom).
         _axis_style = config.get_line_style("ec-axis-line")
         self._draw_line(
-            axis_left,
-            axis_y,
-            axis_right,
-            axis_y,
+            axis_origin[0],
+            axis_origin[1],
+            axis_end[0],
+            axis_end[1],
             stroke=_axis_style.color,
             stroke_width=_axis_style.width,
             stroke_opacity=_axis_style.opacity,
@@ -270,70 +355,78 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-axis-line",
         )
 
-        tick_bands_cfg = getattr(config, "timeline_ticks", None)
-        if tick_bands_cfg:
-            tick_bands = (
-                [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
-            )
-            # Precompute ticks per band so labels can be deduplicated when
-            # bands collide on the same day. The band whose unit covers the
-            # largest number of days (e.g. month > week > day) wins the label.
-            band_ticks: list[list[tuple]] = []
-            band_priorities: list[int] = []
-            for tb in tick_bands:
-                if not isinstance(tb, dict):
-                    band_ticks.append([])
-                    band_priorities.append(-1)
-                    continue
-                band_ticks.append(
-                    self._compute_band_ticks(config, tb, start, end, db)
-                )
-                band_priorities.append(self._tick_unit_priority(tb))
-            # Per-date max priority across bands. Equal-priority bands ticking
-            # on the same date all draw their labels (each sits on its own
-            # label row via label_gap/label_offset_y); only strictly lower
-            # priority bands are suppressed.
-            max_prio: dict = {}
-            for idx, ticks in enumerate(band_ticks):
-                prio = band_priorities[idx]
-                for tick_date, _label in ticks:
-                    if tick_date not in max_prio or max_prio[tick_date] < prio:
-                        max_prio[tick_date] = prio
-            for idx, tb in enumerate(tick_bands):
-                if not isinstance(tb, dict):
-                    continue
-                prio = band_priorities[idx]
-                allowed = {
-                    d for d, _l in band_ticks[idx] if max_prio.get(d) == prio
-                }
-                self._draw_axis_ticks_from_band(
-                    config, tb, start, end, axis_left, axis_right, axis_y, db,
-                    ticks=band_ticks[idx],
-                    allowed_label_dates=allowed,
-                )
-        else:
-            self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
-        if config.fiscal_lookup and (
-            config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters
-        ):
-            self._draw_fiscal_bands(config, start, end, axis_left, axis_right, axis_y)
-        self._draw_today_marker(
-            config,
-            start,
-            end,
-            axis_left,
-            axis_right,
-            axis_y,
-            area_y,
-            area_h,
-        )
+        # Tick/today/fiscal/holiday/timeband features below remain
+        # horizontal-only in this release. They are skipped on vertical
+        # axes (otherwise the date-format text would write atop the
+        # vertical axis line). Vertical falls through to the shared
+        # callout-drawing pass below.
+        _horizontal = orient is Orientation.HORIZONTAL
 
-        # Government holiday icons sit between the axis line and the duration
-        # bars (the duration offset already reserves enough vertical space).
-        if getattr(config, "timeline_show_holiday_icons", True):
-            self._draw_holiday_icons(
-                config, start, end, axis_left, axis_right, axis_y, db
+        if _horizontal:
+            tick_bands_cfg = getattr(config, "timeline_ticks", None)
+            if tick_bands_cfg:
+                tick_bands = (
+                    [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
+                )
+                # Precompute ticks per band so labels can be deduplicated when
+                # bands collide on the same day. The band whose unit covers the
+                # largest number of days (e.g. month > week > day) wins the label.
+                band_ticks: list[list[tuple]] = []
+                band_priorities: list[int] = []
+                for tb in tick_bands:
+                    if not isinstance(tb, dict):
+                        band_ticks.append([])
+                        band_priorities.append(-1)
+                        continue
+                    band_ticks.append(
+                        self._compute_band_ticks(config, tb, start, end, db)
+                    )
+                    band_priorities.append(self._tick_unit_priority(tb))
+                # Per-date max priority across bands. Equal-priority bands ticking
+                # on the same date all draw their labels (each sits on its own
+                # label row via label_gap/label_offset_y); only strictly lower
+                # priority bands are suppressed.
+                max_prio: dict = {}
+                for idx, ticks in enumerate(band_ticks):
+                    prio = band_priorities[idx]
+                    for tick_date, _label in ticks:
+                        if tick_date not in max_prio or max_prio[tick_date] < prio:
+                            max_prio[tick_date] = prio
+                for idx, tb in enumerate(tick_bands):
+                    if not isinstance(tb, dict):
+                        continue
+                    prio = band_priorities[idx]
+                    allowed = {
+                        d for d, _l in band_ticks[idx] if max_prio.get(d) == prio
+                    }
+                    self._draw_axis_ticks_from_band(
+                        config, tb, start, end, axis_left, axis_right, axis_y, db,
+                        ticks=band_ticks[idx],
+                        allowed_label_dates=allowed,
+                    )
+            else:
+                self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
+            if config.fiscal_lookup and (
+                config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters
+            ):
+                self._draw_fiscal_bands(config, start, end, axis_left, axis_right, axis_y)
+            self._draw_today_marker(
+                config,
+                start,
+                end,
+                axis_left,
+                axis_right,
+                axis_y,
+                area_y,
+                area_h,
             )
+
+            # Government holiday icons sit between the axis line and the duration
+            # bars (the duration offset already reserves enough vertical space).
+            if getattr(config, "timeline_show_holiday_icons", True):
+                self._draw_holiday_icons(
+                    config, start, end, axis_left, axis_right, axis_y, db
+                )
 
         # Pass 2: draw all boxes, markers, and text on top.
         for callout in callouts:
@@ -485,19 +578,56 @@ class TimelineRenderer(BaseSVGRenderer):
         events: list[Event],
         start: arrow.Arrow,
         end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        content_left: float,
-        content_right: float,
-        axis_y: float,
-        area_h: float,
+        *,
+        axis_origin: tuple[float, float],
+        axis_length: float,
+        orientation: Orientation,
+        side: Side,
         style_engine: StyleEngine | None = None,
     ) -> list[TimelineCallout]:
+        """Place point-event callouts using the labella VPSC algorithm.
+
+        Delegates label-position optimization to the vendored labella
+        primitives (`vendor/labella/`). For each event, returns a
+        `TimelineCallout` carrying both the axis dot position and the
+        post-VPSC label box position, plus the bezier leader path in
+        axis-local coordinates.
+
+        Events whose start date falls outside the user-requested range
+        (or that fail to parse) are dropped.
+        """
         if not events:
             return []
 
+        # User-range filtering — matches the legacy behavior so events
+        # outside the requested window don't get drawn even though the
+        # axis itself spans the rendered range.
+        user_start = (
+            self._safe_day(config.userstart, fallback=start)
+            if config.userstart else start
+        )
+        user_end = (
+            self._safe_day(config.userend, fallback=end)
+            if config.userend else end
+        )
+
+        # Filter events to the user-requested window and assign palette
+        # colors in chronological order BEFORE labella runs, so colour
+        # assignment is independent of the layout algorithm.
+        in_range: list[Event] = []
+        for ev in events:
+            day = self._safe_day(ev.start, fallback=start)
+            if (
+                day.floor("day") < user_start.floor("day")
+                or day.floor("day") > user_end.floor("day")
+            ):
+                continue
+            in_range.append(ev)
+        if not in_range:
+            return []
+
         ordered = sorted(
-            events,
+            in_range,
             key=lambda e: (
                 e.start,
                 e.priority,
@@ -505,159 +635,73 @@ class TimelineRenderer(BaseSVGRenderer):
             ),
         )
 
-        title_font_size, notes_font_size, date_size = self._callout_metrics(config)
-        content_width = max(60.0, content_right - content_left)
-        configured_w = (
-            float(config.timeline_event_box_width)
-            if config.timeline_event_box_width is not None
-            else 0.0
-        )
-        configured_h = (
-            float(config.timeline_event_box_height)
-            if config.timeline_event_box_height is not None
-            else 0.0
-        )
-        if configured_w > 0:
-            box_w = configured_w
-        else:
-            box_w_pref = min(area_h * 0.46, max(140.0, self._page_width * 0.14))
-            # Keep callouts narrower on small pages so near-date events can lane cleanly.
-            box_w = min(box_w_pref, max(80.0, content_width * 0.30))
-        if configured_h > 0:
-            box_h = configured_h
-        else:
-            box_h = title_font_size * 1.9 + (notes_font_size * 1.7)
-
-        lane_gap = max(10.0, title_font_size * 0.7)
-        # Reserve vertical room for staggered date labels near the axis.
+        palette_primary = config.timeline_top_colors or [
+            config.get_text_style("ec-event-name").color
+            or config.timeline_name_text_font_color
+        ]
+        palette_secondary = config.timeline_bottom_colors or palette_primary
         date_rows = max(1, self._CALL_OUT_DATE_ROWS)
-        date_row_gap_factor = 1.35
-        max_date_factor = 0.9 + ((date_rows - 1) * date_row_gap_factor)
-        min_callout_offset = date_size * (max_date_factor + 1.0)
-        extra_pad = float(getattr(config, "timeline_event_axis_padding", 0.0) or 0.0)
-        base_top = axis_y - (max(config.timeline_callout_offset_y, min_callout_offset) + extra_pad)
-        min_top = self._page_height * 0.015
-        top_limit = min(base_top, min_top)
-        if base_top < top_limit:
-            # Small paper fallback: reduce preferred offset to keep room for lanes.
-            base_top = axis_y - min_callout_offset
-            top_limit = min(base_top, min_top)
-        # If the preferred offset leaves too few lanes, pull the base up.
-        lane_step = box_h + lane_gap
-        lanes_possible = (
-            int(((base_top - top_limit) / lane_step) + 1) if lane_step > 0 else 1
-        )
-        if lanes_possible < 4:
-            base_top = axis_y - min_callout_offset
-            top_limit = min(base_top, min_top)
 
-        placed_boxes: list[tuple[float, float, float, float]] = []
-        out: list[TimelineCallout] = []
-        palette = config.timeline_top_colors or [config.get_text_style("ec-event-name").color or config.timeline_name_text_font_color]
-
-        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
-        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
-
+        # Pre-resolve color + rule-engine style per event, keyed by identity
+        # so the post-labella lookup is robust to reordering (Side.BOTH
+        # partitions events into two groups).
+        per_event: dict[int, tuple[str, "StyleResult | None", int]] = {}
         for idx, event in enumerate(ordered):
-            day = self._safe_day(event.start, fallback=start)
-            if day.floor("day") < user_start.floor("day") or day.floor("day") > user_end.floor("day"):
-                continue
-            x = self._x_for_day(day, start, end, axis_left, axis_right)
-            color = palette[idx % len(palette)]
-            _sr = style_engine.evaluate_event(event) if style_engine is not None else None
-            if _sr is not None and _sr.fill_color:
-                color = _sr.fill_color
+            base_palette = (
+                palette_secondary if side is Side.SECONDARY else palette_primary
+            )
+            color = base_palette[idx % len(base_palette)]
+            sr = style_engine.evaluate_event(event) if style_engine else None
+            if sr is not None and sr.fill_color:
+                color = sr.fill_color
+            per_event[id(event)] = (color, sr, idx)
 
-            chosen: tuple[int, float, float] | None = None
-            # Try multiple horizontal offsets per lane to avoid box collisions.
-            # Offsets keep the date x within or near the box so the connector
-            # line remains short; larger offsets are included as last resort.
-            offsets = [
-                0.0,  # date at box centre
-                -(box_w * 0.32),  # date at 82 % from left
-                box_w * 0.32,  # date at 18 % from left
-                -(box_w * 0.64),  # date just past right edge
-                box_w * 0.64,  # date just past left edge
-                -(box_w * 0.90),  # well to the right of box
-                box_w * 0.90,  # well to the left of box
-            ]
+        # Build the date → axis-local position closure. axis_length spans
+        # the entire date window; the labella adapter handles minPos/maxPos
+        # clamping based on config.
+        def pos_for_day(day: arrow.Arrow) -> float:
+            span_days = max(1, (end.floor("day") - start.floor("day")).days)
+            offset = (day.floor("day") - start.floor("day")).days
+            clamped = max(0, min(offset, span_days))
+            return axis_length * (clamped / span_days)
 
-            for lane in range(16):
-                box_y = base_top - lane * (box_h + lane_gap)
-                if box_y < top_limit:
-                    break
+        placements = _labella_layout_callouts(
+            ordered,
+            axis_origin=axis_origin,
+            axis_length=axis_length,
+            orientation=orientation,
+            side=side,
+            config=config,
+            pos_for_day=pos_for_day,
+        )
 
-                for offset in offsets:
-                    cand_x = x - (box_w / 2) + offset
-                    cand_x = max(
-                        content_left + 6.0, min(cand_x, content_right - box_w - 6.0)
-                    )
-                    cand_box = (cand_x, box_y, cand_x + box_w, box_y + box_h)
-
-                    if any(
-                        self._boxes_overlap(cand_box, b, pad=6.0) for b in placed_boxes
-                    ):
-                        continue
-
-                    chosen = (lane, cand_x, box_y)
-                    break
-
-                if chosen is not None:
-                    break
-
-            if chosen is None:
-                # Fine-grained Y search to avoid overlaps on small paper sizes.
-                y_step = max(3.0, notes_font_size * 0.7)
-                probe_y = axis_y - min_callout_offset
-                while probe_y >= top_limit and chosen is None:
-                    for offset in offsets:
-                        fallback_x = x - (box_w / 2) + offset
-                        fallback_x = max(
-                            content_left + 6.0,
-                            min(fallback_x, content_right - box_w - 6.0),
-                        )
-                        cand_box = (
-                            fallback_x,
-                            probe_y,
-                            fallback_x + box_w,
-                            probe_y + box_h,
-                        )
-                        if not any(
-                            self._boxes_overlap(cand_box, b, pad=4.0)
-                            for b in placed_boxes
-                        ):
-                            chosen = (0, fallback_x, probe_y)
-                            break
-                    probe_y -= y_step
-
-            if chosen is None:
-                # No non-overlapping slot exists in current page area; keep distinct
-                # Y to minimize overlap severity instead of collapsing to one row.
-                # Start from base_top (first lane Y) so the spread events sit
-                # above the lanes rather than colliding with them from below.
-                spread_step = max(box_h + 2.0, notes_font_size * 1.2)
-                fallback_y = base_top - (len(out) * spread_step)
-                fallback_x = x - (box_w / 2)
-                fallback_x = max(
-                    content_left + 6.0,
-                    min(fallback_x, content_right - box_w - 6.0),
-                )
-                chosen = (0, fallback_x, fallback_y)
-
-            lane, box_x, box_y = chosen
-            placed_boxes.append((box_x, box_y, box_x + box_w, box_y + box_h))
+        # For Side.BOTH the secondary-side events get the secondary palette.
+        # Walk placements and reassign color for the secondary side.
+        out: list[TimelineCallout] = []
+        for p in placements:
+            color, sr, source_idx = per_event[id(p.event)]
+            if p.side is Side.SECONDARY and config.timeline_bottom_colors:
+                color = config.timeline_bottom_colors[
+                    source_idx % len(config.timeline_bottom_colors)
+                ]
+                if sr is not None and sr.fill_color:
+                    color = sr.fill_color
             out.append(
                 TimelineCallout(
-                    event=event,
+                    event=p.event,
                     color=color,
-                    x=x,
-                    lane=lane,
-                    box_x=box_x,
-                    box_y=box_y,
-                    box_width=box_w,
-                    box_height=box_h,
-                    date_row=idx % date_rows,
-                    style=_sr,
+                    x_dot=p.x_dot,
+                    y_dot=p.y_dot,
+                    lane=p.layer,
+                    box_x=p.x_label,
+                    box_y=p.y_label,
+                    box_width=p.label_w,
+                    box_height=p.label_h,
+                    date_row=source_idx % date_rows,
+                    leader_path_d=p.leader_path_d,
+                    axis_origin=p.axis_origin,
+                    orientation=p.orientation,
+                    style=sr,
                 )
             )
 
@@ -793,394 +837,6 @@ class TimelineRenderer(BaseSVGRenderer):
             ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1
         )
 
-    def _route_all_callout_connectors(
-        self,
-        config: "CalendarConfig",
-        callouts: list[TimelineCallout],
-        axis_y: float,
-    ) -> list[list[tuple[float, float]]]:
-        """Route all callout connectors via orthogonal routing (graph_layout library).
-
-        Callout boxes and axis stub nodes are already in SVG coordinates (y↓),
-        so waypoints are passed directly to route_all_edges + nudge_overlapping_segments
-        without any coordinate conversion.
-
-        Returns one waypoint list per callout in the same order as the input.
-        Each list includes the axis start point and box-top end point.
-        """
-        from graph_layout.orthogonal.edge_routing import (
-            nudge_overlapping_segments,
-            route_all_edges,
-        )
-        from graph_layout.orthogonal.types import NodeBox, Side
-
-        if not callouts:
-            return []
-
-        n = len(callouts)
-        axis_screen_y = axis_y
-
-        # Build NodeBoxes in screen coords (y increases downward).
-        boxes: list[NodeBox] = []
-
-        # Callout boxes (indices 0 .. n-1).
-        for i, item in enumerate(callouts):
-            box_cx = item.box_x + item.box_width / 2.0
-            box_cy_svg = item.box_y + item.box_height / 2.0
-            boxes.append(
-                NodeBox(
-                    index=i,
-                    x=box_cx,
-                    y=box_cy_svg,
-                    width=item.box_width,
-                    height=item.box_height,
-                )
-            )
-
-        # Axis stubs (indices n .. 2n-1): tiny nodes whose NORTH port lands
-        # exactly on the timeline axis so the connector starts at the event date.
-        for i, item in enumerate(callouts):
-            boxes.append(
-                NodeBox(
-                    index=n + i,
-                    x=item.x,
-                    y=axis_screen_y + 0.5,  # NORTH port = y - h/2 = axis_screen_y
-                    width=2.0,
-                    height=1.0,
-                )
-            )
-
-        # Each edge: axis stub (n+i) → callout box (i).
-        # NORTH exits top of stub toward boxes; SOUTH enters bottom of box.
-        edges = [(n + i, i) for i in range(n)]
-        edge_indices = list(range(n))
-        port_constraints: dict[tuple[int, int], tuple[Side, Side]] = {
-            (n + i, i): (Side.NORTH, Side.SOUTH) for i in range(n)
-        }
-
-        edge_separation = max(3.0, config.timeline_axis_width * 3.0)
-
-        routed = route_all_edges(
-            boxes=boxes,
-            edges=edges,
-            edge_indices=edge_indices,
-            edge_separation=edge_separation,
-            port_constraints=port_constraints,
-        )
-        routed = nudge_overlapping_segments(routed, boxes, edge_separation)
-
-        box_map = {b.index: b for b in boxes}
-
-        result: list[list[tuple[float, float]]] = []
-        for edge in routed:
-            src_box = box_map[edge.source]
-            tgt_box = box_map[edge.target]
-            src_pos = src_box.get_port_position(
-                edge.source_port.side, edge.source_port.position
-            )
-            tgt_pos = tgt_box.get_port_position(
-                edge.target_port.side, edge.target_port.position
-            )
-            pts_screen = [src_pos] + list(edge.bends) + [tgt_pos]
-            # Waypoints are already in SVG coords — no conversion needed.
-            result.append(list(pts_screen))
-
-        return result
-
-    def _draw_routed_connector(
-        self,
-        config: "CalendarConfig",
-        callout: TimelineCallout,
-        waypoints: list[tuple[float, float]],
-    ) -> None:
-        """Draw connector line segments from axis point to callout box."""
-        _connector_style = config.get_line_style("ec-connector")
-        kw: dict = dict(
-            stroke=callout.color,
-            stroke_width=1.1,
-            stroke_opacity=0.9,
-            stroke_dasharray=_connector_style.dasharray or None,
-        )
-        for j in range(len(waypoints) - 1):
-            x1, y1 = waypoints[j]
-            x2, y2 = waypoints[j + 1]
-            self._draw_line(x1, y1, x2, y2, **kw, css_class="ec-connector")
-
-    def _draw_callout_connector(
-        self,
-        config: "CalendarConfig",
-        item: TimelineCallout,
-        axis_y: float,
-        callouts: list[TimelineCallout] | None = None,
-        placed_segs: list[tuple[float, float, float, float]] | None = None,
-        axis_left: float | None = None,
-        axis_right: float | None = None,
-    ) -> None:
-        """Draw only the connector line from the axis to the callout box.
-
-        Routing strategy (in priority order):
-        1. Straight vertical — when the event x falls within the box's horizontal
-           span and the direct path is unobstructed.
-        2. Two-segment L-shape — one bend at box-bottom level when possible.
-        3. Three-segment Z-shape — elbow height chosen proportional to the
-           callout's lane so higher boxes get higher elbows, distributing
-           horizontal segments across the full vertical space instead of
-           clustering them near the axis.
-        All routes are checked against other callout boxes *and* against
-        previously placed connector segments (passed in via placed_segs).
-        """
-        box_left = item.box_x
-        box_right = item.box_x + item.box_width
-        if item.x <= box_left:
-            connect_x = box_left
-        elif item.x >= box_right:
-            connect_x = box_right
-        else:
-            connect_x = item.x
-
-        others = [
-            (c.box_x, c.box_y, c.box_x + c.box_width, c.box_y + c.box_height)
-            for c in (callouts or [])
-            if c is not item
-        ]
-
-        y0 = axis_y
-        y1 = item.box_y
-        x0 = item.x
-        xt = connect_x
-        height = max(1.0, y0 - y1)
-
-        box_pad = 0.6
-        seg_clear = 2.0  # min clearance from existing connector segments
-
-        def _seg_hits_box(seg: tuple[float, float, float, float]) -> bool:
-            return any(
-                self._segment_intersects_rect(seg, rect, box_pad) for rect in others
-            )
-
-        def _seg_hits_placed(seg: tuple[float, float, float, float]) -> bool:
-            if not placed_segs:
-                return False
-            return any(
-                self._segments_collinear_overlap(seg, s, seg_clear) for s in placed_segs
-            )
-
-        def _seg_blocked(seg: tuple[float, float, float, float]) -> bool:
-            return _seg_hits_box(seg) or _seg_hits_placed(seg)
-
-        def _route_hits_any(elbow_y: float, xmid: float) -> bool:
-            # The first vertical (axis → elbow) is anchored at the event's x and
-            # cannot be rerouted, so only test it against boxes, not placed segs.
-            if _seg_hits_box((x0, y0, x0, elbow_y)):
-                return True
-            # The remaining segments are optional and can be avoided.
-            if abs(xmid - x0) > 0.5 and _seg_blocked((x0, elbow_y, xmid, elbow_y)):
-                return True
-            if _seg_blocked((xmid, elbow_y, xmid, y1)):
-                return True
-            if abs(xt - xmid) > 0.5 and _seg_blocked((xmid, y1, xt, y1)):
-                return True
-            return False
-
-        # --- Elbow height candidates ---
-        # Distribute elbows evenly across the full axis-to-box height.
-        # A lane-proportional "natural" elbow is tried first so that lower
-        # lanes use low elbows and higher lanes use high elbows, creating
-        # a fan that keeps horizontal segments from clustering near the axis.
-        max_lane = max((c.lane for c in (callouts or [item])), default=0)
-        lane_frac = (item.lane + 0.5) / max(max_lane + 1, 2)
-        natural_elbow = y0 - lane_frac * height * 0.85
-
-        n_spread = 7
-        spread_elbows = [
-            y0 - height * (k / (n_spread + 1)) for k in range(1, n_spread + 1)
-        ]
-        # Sort spread candidates by closeness to the natural elbow.
-        spread_sorted = sorted(spread_elbows, key=lambda e: abs(e - natural_elbow))
-        elbow_candidates: list[float] = [natural_elbow] + [
-            e for e in spread_sorted if abs(e - natural_elbow) > 1.0
-        ]
-        elbow_candidates = [e for e in elbow_candidates if y1 < e < y0]
-        if not elbow_candidates:
-            elbow_candidates = [y0 - height * 0.5]
-
-        # --- Horizontal midpoint candidates ---
-        gap = max(4.0, config.timeline_axis_width * 2.0)
-        lane_step = max(6.0, config.timeline_axis_width * 5.0)
-        # Fan-out by date_row to separate same-date connectors.
-        if item.date_row <= 0:
-            row_offset = 0.0
-        else:
-            mag = (item.date_row + 1) // 2
-            row_offset = lane_step * mag * (1.0 if (item.date_row % 2 == 1) else -1.0)
-        preferred_x = x0 + row_offset
-
-        x_candidates: set[float] = {preferred_x, x0, xt}
-        for left, _bot, right, _top in others:
-            x_candidates.add(left - gap)
-            x_candidates.add(right + gap)
-        # Clamp candidates to the timeline axis bounds so the router never picks
-        # an xmid that lies outside the visible timeline area.  Fall back to
-        # page margins when axis bounds are not provided (e.g. unit tests).
-        page_margin = max(6.0, config.timeline_axis_width * 3.0)
-        x_lo = axis_left if axis_left is not None else page_margin
-        x_hi = axis_right if axis_right is not None else self._page_width - page_margin
-        ordered_x = [
-            v
-            for v in sorted(
-                x_candidates, key=lambda v: (abs(v - preferred_x), abs(v - x0))
-            )
-            if x_lo <= v <= x_hi
-        ]
-        if not ordered_x:
-            ordered_x = [max(x_lo, min(preferred_x, x_hi))]
-
-        def _route_hits_boxes_only(elbow_y: float, xmid: float) -> bool:
-            """Like _route_hits_any but ignores placed connector segments."""
-            if _seg_hits_box((x0, y0, x0, elbow_y)):
-                return True
-            if abs(xmid - x0) > 0.5 and _seg_hits_box((x0, elbow_y, xmid, elbow_y)):
-                return True
-            if _seg_hits_box((xmid, elbow_y, xmid, y1)):
-                return True
-            if abs(xt - xmid) > 0.5 and _seg_hits_box((xmid, y1, xt, y1)):
-                return True
-            return False
-
-        chosen: tuple[float, float] | None = None
-
-        # Straight/L-shape optimisations only apply when date_row is 0 (no
-        # fan-out needed). When date_row > 0, nearby events share the same
-        # date and the Z-shape with preferred_x offset is required to
-        # separate their connectors visually.
-        if item.date_row == 0:
-            # --- Attempt 1: Straight vertical (zero bends) ---
-            if box_left <= x0 <= box_right:
-                if not _seg_blocked((x0, y0, x0, y1)):
-                    # Encode as "elbow at y1" — the draw step below handles this.
-                    chosen = (y1, x0)
-
-            # --- Attempt 2: L-shape (one bend at box-bottom level) ---
-            if chosen is None and not _seg_blocked((x0, y0, x0, y1)):
-                if abs(xt - x0) > 0.5 and not _seg_blocked((x0, y1, xt, y1)):
-                    chosen = (y1, x0)
-
-        # --- Attempt 3: Z-shape with natural-first elbow selection ---
-        if chosen is None:
-            for elbow_y in elbow_candidates:
-                for xmid in ordered_x:
-                    if not _route_hits_any(elbow_y, xmid):
-                        chosen = (elbow_y, xmid)
-                        break
-                if chosen is not None:
-                    break
-
-        # --- Attempt 4: Relax placed_segs constraint (avoid boxes only) ---
-        # Handles scenes where placed connectors fill all viable channels but a
-        # box-avoiding route still exists.
-        if chosen is None:
-            for elbow_y in elbow_candidates:
-                for xmid in ordered_x:
-                    if not _route_hits_boxes_only(elbow_y, xmid):
-                        chosen = (elbow_y, xmid)
-                        break
-                if chosen is not None:
-                    break
-
-        # --- Final fallback: draw the most direct path regardless ---
-        # When the scene is too dense for any clean route, draw a straight
-        # vertical to the box bottom (plus a short horizontal to connect_x if
-        # needed). Portions hidden under other boxes are acceptable — at least
-        # the connector is visible near the axis and near its own box.
-        if chosen is None:
-            chosen = (y1, x0)
-
-        elbow_y, xmid = chosen
-
-        _connector_style = config.get_line_style("ec-connector")
-        kw: dict = dict(
-            stroke=item.color,
-            stroke_width=1.1,
-            stroke_opacity=0.9,
-            stroke_dasharray=_connector_style.dasharray or None,
-            css_class="ec-connector",
-        )
-
-        new_segs: list[tuple[float, float, float, float]] = []
-
-        if elbow_y <= y1 + 0.5:
-            # Straight/L path: vertical up, optional horizontal at box top.
-            # The vertical is mandatory and not registered in placed_segs so that
-            # co-located events don't block each other's first segment.
-            self._draw_line(x0, y0, x0, y1, **kw)
-            if abs(xt - x0) > 0.5:
-                self._draw_line(x0, y1, xt, y1, **kw)
-                new_segs.append((x0, y1, xt, y1))
-        else:
-            # Z-shape: vertical → horizontal at elbow → vertical → optional horizontal.
-            # First vertical is mandatory; not registered in placed_segs.
-            self._draw_line(x0, y0, x0, elbow_y, **kw)
-            if abs(xmid - x0) > 0.5:
-                self._draw_line(x0, elbow_y, xmid, elbow_y, **kw)
-                new_segs.append((x0, elbow_y, xmid, elbow_y))
-            self._draw_line(xmid, elbow_y, xmid, y1, **kw)
-            new_segs.append((xmid, elbow_y, xmid, y1))
-            if abs(xt - xmid) > 0.5:
-                self._draw_line(xmid, y1, xt, y1, **kw)
-                new_segs.append((xmid, y1, xt, y1))
-
-        if placed_segs is not None:
-            placed_segs.extend(new_segs)
-
-    @staticmethod
-    def _segment_intersects_rect(
-        seg: tuple[float, float, float, float],
-        rect: tuple[float, float, float, float],
-        pad: float = 0.0,
-    ) -> bool:
-        """Check whether an axis-aligned segment intersects a rectangle."""
-        x1, y1, x2, y2 = seg
-        rx1, ry1, rx2, ry2 = rect
-        rx1 -= pad
-        ry1 -= pad
-        rx2 += pad
-        ry2 += pad
-
-        if abs(x1 - x2) < 1e-9:
-            x = x1
-            sy1, sy2 = (y1, y2) if y1 <= y2 else (y2, y1)
-            return rx1 <= x <= rx2 and not (sy2 <= ry1 or sy1 >= ry2)
-        if abs(y1 - y2) < 1e-9:
-            y = y1
-            sx1, sx2 = (x1, x2) if x1 <= x2 else (x2, x1)
-            return ry1 <= y <= ry2 and not (sx2 <= rx1 or sx1 >= rx2)
-        # Non-orthogonal segments are not expected here.
-        return False
-
-    @staticmethod
-    def _segments_collinear_overlap(
-        seg_a: tuple[float, float, float, float],
-        seg_b: tuple[float, float, float, float],
-        clearance: float = 1.5,
-    ) -> bool:
-        """True if two axis-aligned segments share an axis within *clearance* and overlap."""
-        ax1, ay1, ax2, ay2 = seg_a
-        bx1, by1, bx2, by2 = seg_b
-        # Both vertical?
-        if abs(ax1 - ax2) < 1e-9 and abs(bx1 - bx2) < 1e-9:
-            if abs(ax1 - bx1) > clearance:
-                return False
-            sa_lo, sa_hi = min(ay1, ay2), max(ay1, ay2)
-            sb_lo, sb_hi = min(by1, by2), max(by1, by2)
-            return sa_lo < sb_hi and sb_lo < sa_hi
-        # Both horizontal?
-        if abs(ay1 - ay2) < 1e-9 and abs(by1 - by2) < 1e-9:
-            if abs(ay1 - by1) > clearance:
-                return False
-            sa_lo, sa_hi = min(ax1, ax2), max(ax1, ax2)
-            sb_lo, sb_hi = min(bx1, bx2), max(bx1, bx2)
-            return sa_lo < sb_hi and sb_lo < sa_hi
-        return False
 
     def _draw_callout(
         self,
@@ -1194,10 +850,14 @@ class TimelineRenderer(BaseSVGRenderer):
         title_font_size, notes_font_size, date_font_size = self._callout_metrics(config)
 
         # Always draw a plain circle on the axis — icons go in the label box.
+        # `item.x_dot` / `item.y_dot` already account for orientation; the
+        # `axis_y` arg is retained for backwards-compatibility but only
+        # consulted by the legacy horizontal-only date-label rendering path
+        # further down in this method.
         self._draw_timeline_marker(
             config,
-            x=item.x,
-            y=axis_y,
+            x=item.x_dot,
+            y=item.y_dot,
             color=item.color,
             icon_name=None,
         )
@@ -1331,39 +991,43 @@ class TimelineRenderer(BaseSVGRenderer):
                 css_class="ec-event-notes",
             )
 
-        _event_date_style = config.get_text_style("ec-event-date")
-        tk_event_date = self._tk("text:event_date")
-        date_label = format_arrow_date(
-            self._safe_day(item.event.start, fallback=arrow.now()),
-            config.timeline_date_format,
-        )
-        date_row_gap_factor = 1.35
-        date_y = axis_y - (
-            date_font_size * (0.9 + (item.date_row * date_row_gap_factor))
-        )
-        date_font, _, date_color, _ = _sr.text_override(
-            "event_date",
-            font=(
-                _event_date_style.font
-                or tk_event_date.get("font")
-                or config.timeline_date_font
-            ),
-            color=(
-                _event_date_style.color
-                or tk_event_date.get("color")
-                or event_text_color
-            ),
-        )
-        self._draw_text(
-            item.x,
-            date_y,
-            date_label,
-            date_font,
-            date_font_size,
-            fill=date_color,
-            anchor="middle",
-            css_class="ec-event-date",
-        )
+        # Date label below the dot — horizontal-only. On vertical timelines
+        # the date is implicit (events are ordered along the axis); the
+        # label box itself shows the task name.
+        if item.orientation is Orientation.HORIZONTAL:
+            _event_date_style = config.get_text_style("ec-event-date")
+            tk_event_date = self._tk("text:event_date")
+            date_label = format_arrow_date(
+                self._safe_day(item.event.start, fallback=arrow.now()),
+                config.timeline_date_format,
+            )
+            date_row_gap_factor = 1.35
+            date_y = axis_y - (
+                date_font_size * (0.9 + (item.date_row * date_row_gap_factor))
+            )
+            date_font, _, date_color, _ = _sr.text_override(
+                "event_date",
+                font=(
+                    _event_date_style.font
+                    or tk_event_date.get("font")
+                    or config.timeline_date_font
+                ),
+                color=(
+                    _event_date_style.color
+                    or tk_event_date.get("color")
+                    or event_text_color
+                ),
+            )
+            self._draw_text(
+                item.x_dot,
+                date_y,
+                date_label,
+                date_font,
+                date_font_size,
+                fill=date_color,
+                anchor="middle",
+                css_class="ec-event-date",
+            )
 
     def _draw_duration_connectors(
         self,
