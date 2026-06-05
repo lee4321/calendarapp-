@@ -87,7 +87,17 @@ class TimelineCallout:
 
 @dataclass(frozen=True)
 class TimelineDuration:
-    """Duration bar placement below the timeline axis."""
+    """Duration bar placement alongside the timeline axis.
+
+    For HORIZONTAL orientation: `start_x`/`end_x` are the bar endpoints
+    along the axis, and `lane` stacks downward below the axis.
+
+    For VERTICAL orientation: `start_y`/`end_y` are the bar endpoints
+    along the axis, `start_x`/`end_x` both equal the axis x position,
+    and `lane` stacks to the LEFT of the axis (secondary side).
+    `continues_left` / `continues_right` map to "continues past the top"
+    / "continues past the bottom" respectively.
+    """
 
     event: Event
     color: str
@@ -98,6 +108,9 @@ class TimelineDuration:
     continues_left: bool = False
     continues_right: bool = False
     style: StyleResult | None = None
+    orientation: Orientation = Orientation.HORIZONTAL
+    start_y: float = 0.0
+    end_y: float = 0.0
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -292,9 +305,6 @@ class TimelineRenderer(BaseSVGRenderer):
             side=label_side,
             style_engine=style_engine,
         )
-        # Durations remain horizontal-only for this release. The function
-        # signature still takes axis_left/right/y and will not be called
-        # for vertical timelines.
         if orient is Orientation.HORIZONTAL:
             durations = self._layout_durations(
                 config,
@@ -307,7 +317,16 @@ class TimelineRenderer(BaseSVGRenderer):
                 style_engine,
             )
         else:
-            durations = []
+            durations = self._layout_durations_vertical(
+                config,
+                duration_events,
+                start,
+                end,
+                axis_x=axis_origin[0],
+                axis_top=axis_origin[1],
+                axis_bottom=axis_end[1],
+                style_engine=style_engine,
+            )
 
         # Pass 1: emit labella's curved bezier leader paths under everything
         # else. Each path is in axis-local coordinates; we wrap it in a
@@ -339,6 +358,11 @@ class TimelineRenderer(BaseSVGRenderer):
         if orient is Orientation.HORIZONTAL:
             for duration in durations:
                 self._draw_duration_connectors(config, duration, axis_y)
+        else:
+            for duration in durations:
+                self._draw_duration_connectors_vertical(
+                    config, duration, axis_origin[0]
+                )
 
         # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
         # → (axis_x, axis_bottom).
@@ -432,7 +456,10 @@ class TimelineRenderer(BaseSVGRenderer):
         for callout in callouts:
             self._draw_callout(config, callout, axis_y)
         for duration in durations:
-            self._draw_duration(config, duration, axis_y)
+            if duration.orientation is Orientation.VERTICAL:
+                self._draw_duration_vertical(config, duration, axis_origin[0])
+            else:
+                self._draw_duration(config, duration, axis_y)
 
         # Timebands: top bands stack above the timeline area; bottom bands
         # stack below it. Only drawn when declared in the theme.
@@ -517,7 +544,10 @@ class TimelineRenderer(BaseSVGRenderer):
         for callout in callouts:
             min_y = min(min_y, callout.box_y)
 
-        # Durations extend below axis_y
+        # Durations extend below axis_y (horizontal) or to the left of
+        # axis_x (vertical).
+        min_x = axis_left
+        max_x = axis_right
         if durations:
             title_size, notes_size, d_date_size, bar_h = self._duration_metrics(config)
             min_duration_offset = self._min_duration_offset(d_date_size)
@@ -525,14 +555,23 @@ class TimelineRenderer(BaseSVGRenderer):
                 config.timeline_duration_offset_y, min_duration_offset
             )
             lane_gap = max(config.timeline_duration_lane_gap_y, d_date_size * 0.9)
-            lane_stride = bar_h + (d_date_size * 1.8) + lane_gap
+            lane_stride_h = bar_h + (d_date_size * 1.8) + lane_gap
+            lane_stride_v = bar_h + lane_gap
 
             for dur in durations:
-                bar_bottom = axis_y + duration_offset
-                bar_y = bar_bottom + (dur.lane * lane_stride)
-                # Date labels sit below bar at bar_y + bar_h + date_size * 1.1
-                label_y = bar_y + bar_h + (d_date_size * 1.1)
-                max_y = max(max_y, label_y + d_date_size)
+                if dur.orientation is Orientation.VERTICAL:
+                    bar_right = axis_left - duration_offset - (dur.lane * lane_stride_v)
+                    bar_x = bar_right - bar_h
+                    min_x = min(min_x, bar_x)
+                    label_y_top = dur.start_y - (d_date_size * 1.3)
+                    label_y_bot = dur.end_y + (d_date_size * 1.3)
+                    min_y = min(min_y, label_y_top)
+                    max_y = max(max_y, label_y_bot)
+                else:
+                    bar_bottom = axis_y + duration_offset
+                    bar_y = bar_bottom + (dur.lane * lane_stride_h)
+                    label_y = bar_y + bar_h + (d_date_size * 1.1)
+                    max_y = max(max_y, label_y + d_date_size)
 
         # Extend bounds for declared timebands (only when present).
         top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
@@ -544,9 +583,11 @@ class TimelineRenderer(BaseSVGRenderer):
         if bottom_bands_h > 0:
             max_y = max(max_y, area_y + area_h)
 
-        # X: axis extent (with 4% margins already baked in as area_x offsets)
-        x = axis_left
-        w = axis_right - axis_left
+        # X: axis extent (with 4% margins already baked in as area_x offsets),
+        # extended to include any vertical-orientation duration lanes that
+        # spill to the left of the axis.
+        x = min(axis_left, min_x)
+        w = max(axis_right, max_x) - x
 
         # Y: min_y is SVG top, max_y is SVG bottom
         y = min_y
@@ -805,6 +846,122 @@ class TimelineRenderer(BaseSVGRenderer):
                     continues_left=continues_left,
                     continues_right=continues_right,
                     style=_sr,
+                )
+            )
+
+        return out
+
+    def _layout_durations_vertical(
+        self,
+        config: "CalendarConfig",
+        events: list[Event],
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        *,
+        axis_x: float,
+        axis_top: float,
+        axis_bottom: float,
+        style_engine: StyleEngine | None = None,
+    ) -> list[TimelineDuration]:
+        """Place vertical-orientation duration bars to the left of the axis.
+
+        Bars run along the axis from start_y to end_y. Lanes stack to the
+        left (each new overlapping bar sits further from the axis). The
+        per-bar `min_width` field carries the minimum *along-axis* length
+        for vertical bars so short events still have room for their labels.
+        """
+        if not events:
+            return []
+
+        ordered = sorted(
+            events,
+            key=lambda e: (
+                e.start,
+                e.end,
+                e.priority,
+                e.task_name.lower() if e.task_name else "",
+            ),
+        )
+
+        lane_last_end: list[float] = []
+        min_gap = max(10.0, self._page_height * 0.01)
+        _layout_notes_style = config.get_text_style("ec-event-notes")
+        palette = config.timeline_bottom_colors or [
+            _layout_notes_style.color or config.timeline_notes_text_font_color
+        ]
+        title_size, notes_size, _, _ = self._duration_metrics(config)
+        title_font_path = self._safe_font_path(
+            _layout_notes_style.font or config.timeline_notes_text_font_name
+        )
+        notes_font_path = self._safe_font_path(
+            _layout_notes_style.font or config.timeline_notes_text_font_name
+        )
+
+        out: list[TimelineDuration] = []
+
+        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
+        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
+
+        for idx, event in enumerate(ordered):
+            start_day = self._safe_day(event.start, fallback=start)
+            end_day = self._safe_day(event.end, fallback=start_day)
+            if end_day < start_day:
+                start_day, end_day = end_day, start_day
+
+            if end_day.floor("day") < user_start.floor("day"):
+                continue
+            if start_day.floor("day") > user_end.floor("day"):
+                continue
+
+            continues_top = start_day.floor("day") < user_start.floor("day")
+            continues_bottom = end_day.floor("day") > user_end.floor("day")
+
+            sy = self._y_for_day(start_day, start, end, axis_top, axis_bottom)
+            ey = self._y_for_day(end_day, start, end, axis_top, axis_bottom)
+
+            configured_len = (
+                float(config.timeline_duration_box_width)
+                if config.timeline_duration_box_width is not None
+                else 0.0
+            )
+            if configured_len > 0:
+                min_length = configured_len
+            else:
+                # Text reads bottom→top once rotated, so the bar's
+                # along-axis length is the available width for the label.
+                name_w = string_width(
+                    event.task_name or "", title_font_path, title_size
+                )
+                notes_w = string_width(
+                    (event.notes or "").strip(), notes_font_path, notes_size
+                )
+                min_length = max(
+                    max(16.0, self._page_height * 0.02),
+                    name_w + 12.0,
+                    notes_w + 12.0,
+                )
+            if ey - sy < min_length:
+                ey = min(axis_bottom, sy + min_length)
+
+            lane = self._place_span_in_lane(lane_last_end, sy, ey, min_gap)
+            color = palette[idx % len(palette)]
+            _sr = style_engine.evaluate_event(event) if style_engine is not None else None
+            if _sr is not None and _sr.fill_color:
+                color = _sr.fill_color
+            out.append(
+                TimelineDuration(
+                    event=event,
+                    color=color,
+                    start_x=axis_x,
+                    end_x=axis_x,
+                    lane=lane,
+                    min_width=min_length,
+                    continues_left=continues_top,
+                    continues_right=continues_bottom,
+                    style=_sr,
+                    orientation=Orientation.VERTICAL,
+                    start_y=sy,
+                    end_y=ey,
                 )
             )
 
@@ -1342,6 +1499,279 @@ class TimelineRenderer(BaseSVGRenderer):
             date_size,
             fill=end_date_color,
             anchor="end",
+            css_class="ec-duration-date",
+        )
+
+    def _draw_duration_connectors_vertical(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        axis_x: float,
+    ) -> None:
+        """Horizontal aligner lines from the vertical axis to the duration bar."""
+        title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
+        min_duration_offset = self._min_duration_offset(date_size)
+        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
+        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
+        lane_stride = bar_thickness + lane_gap
+        bar_right = axis_x - duration_offset - (item.lane * lane_stride)
+        _dur_bar_style = config.get_line_style("ec-duration-bar")
+        self._draw_line(
+            axis_x,
+            item.start_y,
+            bar_right,
+            item.start_y,
+            stroke=item.color,
+            stroke_width=0.9,
+            stroke_opacity=0.8,
+            stroke_dasharray=_dur_bar_style.dasharray or None,
+            css_class="ec-connector",
+        )
+        self._draw_line(
+            axis_x,
+            item.end_y,
+            bar_right,
+            item.end_y,
+            stroke=item.color,
+            stroke_width=0.9,
+            stroke_opacity=0.8,
+            stroke_dasharray=_dur_bar_style.dasharray or None,
+            css_class="ec-connector",
+        )
+
+    def _draw_duration_vertical(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        axis_x: float,
+    ) -> None:
+        """Draw a vertical-orientation duration bar (left of axis)."""
+        title = item.event.task_name or "(untitled duration)"
+        notes = (item.event.notes or "").strip()
+        start_day = self._safe_day(item.event.start, fallback=arrow.now())
+        end_day = self._safe_day(item.event.end, fallback=start_day)
+
+        title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
+        min_duration_offset = self._min_duration_offset(date_size)
+        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
+        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
+        lane_stride = bar_thickness + lane_gap
+
+        bar_right = axis_x - duration_offset - (item.lane * lane_stride)
+        bar_x = bar_right - bar_thickness
+        bar_y = item.start_y
+        bar_h = max(1.0, item.end_y - item.start_y)
+
+        _dur_bar_style = config.get_line_style("ec-duration-bar")
+        _sr = item.style or StyleResult()
+        rect_kwargs = _sr.rect_overrides(
+            fill=item.color,
+            fill_opacity=_dur_bar_style.opacity,
+            stroke=item.color,
+            stroke_width=0.9,
+            stroke_opacity=0.9,
+            stroke_dasharray=_dur_bar_style.dasharray or None,
+        )
+        self._draw_rect(
+            bar_x,
+            bar_y,
+            bar_thickness,
+            bar_h,
+            css_class="ec-duration-bar",
+            **rect_kwargs,
+        )
+
+        # Start/end markers on the main axis at the bar's start/end y.
+        _marker_style = config.get_box_style("ec-milestone-marker")
+        marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
+        marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
+        self._draw_circle(
+            axis_x,
+            item.start_y,
+            radius=max(2.7, config.timeline_marker_radius * 0.8),
+            fill=marker_fill,
+            stroke=marker_stroke,
+            stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
+        )
+        self._draw_circle(
+            axis_x,
+            item.end_y,
+            radius=max(2.7, config.timeline_marker_radius * 0.8),
+            fill=marker_fill,
+            stroke=marker_stroke,
+            stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
+        )
+
+        # Continuation icons for bars clipped above/below the visible range.
+        if (item.continues_left or item.continues_right) and bool(
+            getattr(config, "timeline_show_continuation_icon", True)
+        ):
+            cont_h = float(getattr(config, "timeline_continuation_icon_height", 8.0))
+            cont_color_cfg = getattr(config, "timeline_continuation_icon_color", None)
+            cont_color = cont_color_cfg if cont_color_cfg else item.color
+            cont_x = bar_x + bar_thickness * 0.5
+            if item.continues_left:
+                self._draw_icon_svg(
+                    str(getattr(config, "timeline_continuation_icon_left", "arrow-up")),
+                    cont_x,
+                    item.start_y + cont_h * 0.5,
+                    cont_h,
+                    anchor="middle",
+                    color=cont_color,
+                    css_class="ec-duration-icon",
+                )
+            if item.continues_right:
+                self._draw_icon_svg(
+                    str(getattr(config, "timeline_continuation_icon_right", "arrow-down")),
+                    cont_x,
+                    item.end_y - cont_h * 0.5,
+                    cont_h,
+                    anchor="middle",
+                    color=cont_color,
+                    css_class="ec-duration-icon",
+                )
+
+        # Title + notes rotated -90° so they read bottom→top inside the bar.
+        _dur_name_style = config.get_text_style("ec-event-name")
+        _dur_notes_style = config.get_text_style("ec-event-notes")
+        tk_dur_name = self._tk("text:event_name")
+        tk_dur_notes = self._tk("text:event_notes")
+        dur_name_font_default = (
+            tk_dur_name.get("font")
+            or config.timeline_name_text_font_name
+            or _dur_name_style.font
+        )
+        dur_notes_font_default = (
+            tk_dur_notes.get("font")
+            or config.timeline_notes_text_font_name
+            or _dur_notes_style.font
+        )
+        title_font_path = self._safe_font_path(dur_name_font_default)
+        notes_font_path = self._safe_font_path(dur_notes_font_default)
+        # Available "width" for the rotated text is the bar's along-axis length.
+        text_w = max(10.0, bar_h - 6.0)
+        fitted_title, fitted_notes = self._fit_box_text_sizes(
+            title,
+            notes,
+            text_w,
+            bar_thickness,
+            title_font_path,
+            notes_font_path,
+            title_size,
+            notes_size,
+        )
+        duration_text_color = (
+            tk_dur_name.get("color")
+            or config.timeline_name_text_font_color
+            or _dur_name_style.color
+            or item.color
+        )
+        title_font, _, name_color, name_opacity = _sr.text_override(
+            "duration_name",
+            font=dur_name_font_default,
+            color=duration_text_color,
+            opacity=_dur_name_style.opacity,
+        )
+
+        has_notes = bool(notes and config.include_notes)
+        line1_h = fitted_title * 1.2
+        line2_h = (fitted_notes * 1.2) if has_notes else 0.0
+        text_block_h = line1_h + line2_h
+        # Anchor the rotation around the bar's center; pre-rotation the text
+        # is laid out horizontally centered at (cx, cy) and rotate(-90)
+        # turns it into a vertical run reading bottom→top.
+        cx = bar_x + bar_thickness / 2.0
+        cy = bar_y + bar_h / 2.0
+        # Title baseline (pre-rotation) sits above center by half text_block;
+        # adjust so the title line ends up on the +y side after rotation
+        # (i.e. closer to the bar's start_y / top edge).
+        title_pre_y = cy + (bar_thickness / 2.0) - max(0.0, (bar_thickness - text_block_h) / 2.0) - line2_h - (fitted_title * 0.15)
+        rot = f"rotate(-90 {cx:.4f} {cy:.4f})"
+        self._draw_text(
+            cx,
+            title_pre_y,
+            title,
+            title_font,
+            fitted_title,
+            fill=name_color,
+            fill_opacity=name_opacity,
+            anchor="middle",
+            max_width=text_w,
+            transform=rot,
+            css_class="ec-event-name",
+        )
+        if has_notes:
+            notes_color_base = (
+                tk_dur_notes.get("color")
+                or config.timeline_notes_text_font_color
+                or _dur_notes_style.color
+                or duration_text_color
+            )
+            notes_font, _, notes_color, notes_opacity = _sr.text_override(
+                "duration_notes",
+                font=dur_notes_font_default,
+                color=notes_color_base,
+                opacity=_dur_notes_style.opacity,
+            )
+            notes_pre_y = title_pre_y + line1_h
+            self._draw_text(
+                cx,
+                notes_pre_y,
+                notes,
+                notes_font,
+                fitted_notes,
+                fill=notes_color,
+                fill_opacity=notes_opacity,
+                anchor="middle",
+                max_width=text_w,
+                transform=rot,
+                css_class="ec-event-notes",
+            )
+
+        # Date labels above the bar's start edge and below its end edge,
+        # placed at the bar's horizontal center.
+        _dur_date_style = config.get_text_style("ec-duration-date")
+        tk_dur_date = self._tk("text:duration_date")
+        date_font_base = (
+            _dur_date_style.font
+            or config.timeline_duration_date_font
+            or tk_dur_date.get("font")
+            or config.timeline_date_font
+        )
+        date_color_base = (
+            _dur_date_style.color
+            or config.timeline_duration_date_color
+            or tk_dur_date.get("color")
+            or duration_text_color
+        )
+        start_date_font, _, start_date_color, _ = _sr.text_override(
+            "duration_start_date",
+            font=date_font_base,
+            color=date_color_base,
+        )
+        end_date_font, _, end_date_color, _ = _sr.text_override(
+            "duration_end_date",
+            font=date_font_base,
+            color=date_color_base,
+        )
+        self._draw_text(
+            cx,
+            bar_y - (date_size * 0.3),
+            format_arrow_date(start_day, config.timeline_date_format),
+            start_date_font,
+            date_size,
+            fill=start_date_color,
+            anchor="middle",
+            css_class="ec-duration-date",
+        )
+        self._draw_text(
+            cx,
+            bar_y + bar_h + (date_size * 1.1),
+            format_arrow_date(end_day, config.timeline_date_format),
+            end_date_font,
+            date_size,
+            fill=end_date_color,
+            anchor="middle",
             css_class="ec-duration-date",
         )
 
@@ -2167,6 +2597,21 @@ class TimelineRenderer(BaseSVGRenderer):
         day_offset = (day.floor("day") - start.floor("day")).days
         clamped = max(0, min(day_offset, span_days))
         return axis_left + ((axis_right - axis_left) * (clamped / span_days))
+
+    @staticmethod
+    def _y_for_day(
+        day: arrow.Arrow,
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_top: float,
+        axis_bottom: float,
+    ) -> float:
+        """Vertical analogue of :meth:`_x_for_day`. Y increases downward
+        with later dates (start at top, end at bottom)."""
+        span_days = max(1, (end.floor("day") - start.floor("day")).days)
+        day_offset = (day.floor("day") - start.floor("day")).days
+        clamped = max(0, min(day_offset, span_days))
+        return axis_top + ((axis_bottom - axis_top) * (clamped / span_days))
 
     @staticmethod
     def _safe_font_path(font_name: str) -> str:
