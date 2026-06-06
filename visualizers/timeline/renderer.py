@@ -111,6 +111,9 @@ class TimelineDuration:
     orientation: Orientation = Orientation.HORIZONTAL
     start_y: float = 0.0
     end_y: float = 0.0
+    # Which side of the axis this bar sits on (vertical orientation only;
+    # ignored for horizontal). PRIMARY = right, SECONDARY = left.
+    lane_side: Side = Side.SECONDARY
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -325,6 +328,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 axis_x=axis_origin[0],
                 axis_top=axis_origin[1],
                 axis_bottom=axis_end[1],
+                side=label_side,
                 style_engine=style_engine,
             )
 
@@ -560,9 +564,12 @@ class TimelineRenderer(BaseSVGRenderer):
 
             for dur in durations:
                 if dur.orientation is Orientation.VERTICAL:
-                    bar_right = axis_left - duration_offset - (dur.lane * lane_stride_v)
-                    bar_x = bar_right - bar_h
-                    min_x = min(min_x, bar_x)
+                    if dur.lane_side is Side.PRIMARY:
+                        bar_x_left = axis_left + duration_offset + (dur.lane * lane_stride_v)
+                        max_x = max(max_x, bar_x_left + bar_h)
+                    else:
+                        bar_x_right = axis_left - duration_offset - (dur.lane * lane_stride_v)
+                        min_x = min(min_x, bar_x_right - bar_h)
                     label_y_top = dur.start_y - (d_date_size * 1.3)
                     label_y_bot = dur.end_y + (d_date_size * 1.3)
                     min_y = min(min_y, label_y_top)
@@ -861,14 +868,22 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_x: float,
         axis_top: float,
         axis_bottom: float,
+        side: Side = Side.SECONDARY,
         style_engine: StyleEngine | None = None,
     ) -> list[TimelineDuration]:
-        """Place vertical-orientation duration bars to the left of the axis.
+        """Place vertical-orientation duration bars alongside the axis.
 
-        Bars run along the axis from start_y to end_y. Lanes stack to the
-        left (each new overlapping bar sits further from the axis). The
-        per-bar `min_width` field carries the minimum *along-axis* length
-        for vertical bars so short events still have room for their labels.
+        Bars run along the axis from start_y to end_y. Lanes stack
+        perpendicularly away from the axis (each new overlapping bar sits
+        further out). The per-bar `min_width` field carries the minimum
+        *along-axis* length for vertical bars so short events still have
+        room for their labels.
+
+        ``side`` selects which side(s) of the axis bars go on:
+        - PRIMARY  → right side
+        - SECONDARY → left side
+        - BOTH     → alternate by start date, each side gets independent
+          lane tracking
         """
         if not events:
             return []
@@ -882,6 +897,24 @@ class TimelineRenderer(BaseSVGRenderer):
                 e.task_name.lower() if e.task_name else "",
             ),
         )
+
+        if side is Side.BOTH:
+            # Chronological alternation mirrors how callouts split for
+            # Side.BOTH; gives a balanced layout regardless of input order.
+            primary_events = [e for i, e in enumerate(ordered) if i % 2 == 0]
+            secondary_events = [e for i, e in enumerate(ordered) if i % 2 == 1]
+            return (
+                self._layout_durations_vertical(
+                    config, primary_events, start, end,
+                    axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
+                    side=Side.PRIMARY, style_engine=style_engine,
+                )
+                + self._layout_durations_vertical(
+                    config, secondary_events, start, end,
+                    axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
+                    side=Side.SECONDARY, style_engine=style_engine,
+                )
+            )
 
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_height * 0.01)
@@ -962,6 +995,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     orientation=Orientation.VERTICAL,
                     start_y=sy,
                     end_y=ey,
+                    lane_side=side,
                 )
             )
 
@@ -1514,12 +1548,14 @@ class TimelineRenderer(BaseSVGRenderer):
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_thickness + lane_gap
-        bar_right = axis_x - duration_offset - (item.lane * lane_stride)
+        # PRIMARY = right of axis (+X), SECONDARY = left (-X).
+        sign = 1.0 if item.lane_side is Side.PRIMARY else -1.0
+        bar_near_axis_x = axis_x + sign * (duration_offset + (item.lane * lane_stride))
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
             axis_x,
             item.start_y,
-            bar_right,
+            bar_near_axis_x,
             item.start_y,
             stroke=item.color,
             stroke_width=0.9,
@@ -1530,7 +1566,7 @@ class TimelineRenderer(BaseSVGRenderer):
         self._draw_line(
             axis_x,
             item.end_y,
-            bar_right,
+            bar_near_axis_x,
             item.end_y,
             stroke=item.color,
             stroke_width=0.9,
@@ -1557,8 +1593,14 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_thickness + lane_gap
 
-        bar_right = axis_x - duration_offset - (item.lane * lane_stride)
-        bar_x = bar_right - bar_thickness
+        if item.lane_side is Side.PRIMARY:
+            # Right of axis: bars grow rightward, bar_x is the left edge.
+            bar_x = axis_x + duration_offset + (item.lane * lane_stride)
+        else:
+            # Left of axis: bars grow leftward, bar_x is still the left
+            # edge of the rectangle (axis_x - offset - lane*stride - thickness).
+            bar_right = axis_x - duration_offset - (item.lane * lane_stride)
+            bar_x = bar_right - bar_thickness
         bar_y = item.start_y
         bar_h = max(1.0, item.end_y - item.start_y)
 
