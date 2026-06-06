@@ -27,6 +27,12 @@ watermark:
   resize_mode: fit
   rotation_angle: 45.0
   image_rotation_angle: 45.0
+continuation:
+  show: true
+  icon_before: move-left
+  icon_after: move-right
+  icon_height: 14.0
+  icon_color: white
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -256,11 +262,6 @@ timeline:
       include_endpoints: false
       max_label_count: 400
       label_gap: 4.0
-  show_continuation_icon: true
-  continuation_icon_right: move-right
-  continuation_icon_left: move-left
-  continuation_icon_height: 14.0
-  continuation_icon_color: white
 timeline_events:
   box_height: 24
 timeline_durations:
@@ -318,10 +319,6 @@ compact_plan:
   milestone_list_row_height: 10.0
   milestone_list_date_col_width: 32.0
   milestone_list_section_gap: 6.0
-  show_continuation_icon: true
-  continuation_icon: move-right
-  continuation_icon_height: 8.0
-  continuation_icon_color: white
   continuation_legend_text: activity continues
   continuation_section_gap: 4.0
   bands:
@@ -398,11 +395,6 @@ blockplan:
   duration_stroke_dasharray: null
   duration_bar_height: 40
   duration_icon_visible: true
-  show_continuation_icon: true
-  continuation_icon_right: move-right
-  continuation_icon_left: move-left
-  continuation_icon_height: 12.0
-  continuation_icon_color: white
   name_text:
     font_name: PlaywriteDEGrund-VariableFont_wght
     font_color: grey

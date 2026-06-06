@@ -504,6 +504,19 @@ class CalendarConfig:
     duration_icon_color: str = "navy"
     duration_stroke_dasharray: str | None = None
 
+    # ── Continuation icons (global) ────────────────────────────────────────
+    # When a duration event's start date precedes the visualization start
+    # ("before") or its end date follows the visualization end ("after"),
+    # the visualizers clamp the bar to the visible range and draw a small
+    # icon at the clipped edge to signal that the activity continues. Shared
+    # across timeline, blockplan, and compact_plan; configured under the
+    # top-level `continuation:` section in theme YAMLs.
+    show_continuation_icon: bool = True
+    continuation_icon_before: str = "arrow-left"
+    continuation_icon_after: str = "arrow-right"
+    continuation_icon_height: float = 8.0
+    continuation_icon_color: str | None = None  # None = inherit from bar/line color
+
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
     # _font_size set), weekly_name_text_alignment, and
@@ -615,14 +628,6 @@ class CalendarConfig:
     # ticks and labels) over a finer band (e.g. weeks with thin unlabelled ticks).
     # None = legacy month-start ticks.
     timeline_ticks: dict | list | None = None
-
-    # Continuation icons on duration bars whose event extends past the visible
-    # date range. Drawn flush with the clipped end of the bar.
-    timeline_show_continuation_icon: bool = True
-    timeline_continuation_icon_right: str = "arrow-right"
-    timeline_continuation_icon_left: str = "arrow-left"
-    timeline_continuation_icon_height: float = 8.0
-    timeline_continuation_icon_color: str | None = None  # None = use bar color
 
     # Government holiday icons rendered in a row below the timeline axis,
     # one icon per holiday date positioned at that date's x-coordinate.
@@ -804,11 +809,6 @@ class CalendarConfig:
     blockplan_duration_stroke_dasharray: str | None = None
     blockplan_duration_bar_height: float = 8.0
     blockplan_duration_icon_visible: bool = False
-    blockplan_show_continuation_icon: bool = True
-    blockplan_continuation_icon_right: str = "arrow-right"
-    blockplan_continuation_icon_left: str = "arrow-left"
-    blockplan_continuation_icon_height: float = 8.0
-    blockplan_continuation_icon_color: str | None = None  # None = use bar color
     blockplan_duration_show_start_date: bool = False
     blockplan_duration_show_end_date: bool = False
     blockplan_duration_date_format: str = "MMM D"
@@ -902,13 +902,9 @@ class CalendarConfig:
     compactplan_holiday_list_icon_height: float = 8.0
 
     # ── Continuation icon ─────────────────────────────────────────────────────
-    # When a duration line extends beyond the specified end date it is clamped
-    # to the timeline edge and, when show_continuation_icon is True, a small
-    # icon is drawn at that edge to signal that the activity continues.
-    compactplan_show_continuation_icon: bool = True
-    compactplan_continuation_icon: str = "arrow-right"
-    compactplan_continuation_icon_height: float = 8.0
-    compactplan_continuation_icon_color: str | None = None  # None = use line color
+    # The global continuation_icon_after / _color / _height fields drive the
+    # compactplan continuation icon (the line only clips on its "after" end).
+    # Only the legend text remains compactplan-specific.
     compactplan_continuation_legend_text: str = "activity continues"
     compactplan_show_axis_legend: bool = True  # show axis sample + label in the legend
     compactplan_legend_axis_text: str = "timeline"  # label beside the axis sample
@@ -1298,8 +1294,8 @@ class CalendarConfig:
             "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
             "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
             "ec-continuation-icon": lambda: IconStyle(
-                color=(self.compactplan_continuation_icon_color or self.duration_icon_color),
-                icon=self.compactplan_continuation_icon,
+                color=(self.continuation_icon_color or self.duration_icon_color),
+                icon=self.continuation_icon_after,
             ),
             "ec-overflow-icon": lambda: IconStyle(color=self.overflow_indicator_color, icon=self.overflow_indicator_icon),
         }

@@ -27,6 +27,12 @@ watermark:
   resize_mode: fit
   rotation_angle: 45.0
   image_rotation_angle: 45.0
+continuation:
+  show: true
+  icon_before: arrow-left
+  icon_after: arrow-right
+  icon_height: 8.0
+  icon_color: null
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -250,10 +256,6 @@ compact_plan:
   milestone_list_row_height: 10.0
   milestone_list_date_col_width: 32.0
   milestone_list_section_gap: 6.0
-  show_continuation_icon: true
-  continuation_icon: arrow-right
-  continuation_icon_height: 8.0
-  continuation_icon_color: null
   continuation_legend_text: activity continues
   continuation_section_gap: 4.0
   show_axis_legend: true

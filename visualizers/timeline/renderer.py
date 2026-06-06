@@ -282,10 +282,19 @@ class TimelineRenderer(BaseSVGRenderer):
         else:
             axis_top = area_y + (area_h * 0.04)
             axis_bottom = area_y + (area_h * 0.96)
-            # Place axis at 44% from the left when events are visible, else
-            # closer to the left edge to give label rows the most room.
+            # Pick the axis x so each populated side has room. With events
+            # visible, callouts dominate the layout: keep the 44% bias that
+            # leaves a wider right-hand label column. With --noevents the
+            # only horizontal content is duration lanes, so center the axis
+            # when bars go on both sides (label_side=both), push it right
+            # when bars only go left (secondary), and keep it near the left
+            # margin otherwise.
             if getattr(config, "includeevents", True):
                 axis_x = area_x + (area_w * 0.44)
+            elif label_side is Side.BOTH:
+                axis_x = area_x + (area_w * 0.50)
+            elif label_side is Side.SECONDARY:
+                axis_x = area_x + (area_w * 0.90)
             else:
                 axis_x = area_x + (area_w * 0.10)
             axis_origin = (axis_x, axis_top)
@@ -1320,16 +1329,19 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         # Continuation icons for duration bars clipped by the visible range.
+        # continues_left == event starts before the visualization start
+        # ("before"); continues_right == event ends after the visualization
+        # end ("after"). Driven by the global `continuation` theme section.
         if (item.continues_left or item.continues_right) and bool(
-            getattr(config, "timeline_show_continuation_icon", True)
+            getattr(config, "show_continuation_icon", True)
         ):
-            cont_h = float(getattr(config, "timeline_continuation_icon_height", 8.0))
-            cont_color_cfg = getattr(config, "timeline_continuation_icon_color", None)
+            cont_h = float(getattr(config, "continuation_icon_height", 8.0))
+            cont_color_cfg = getattr(config, "continuation_icon_color", None)
             cont_color = cont_color_cfg if cont_color_cfg else item.color
             cont_baseline = bar_y + bar_h * 0.5 + cont_h * 0.3
             if item.continues_left:
                 self._draw_icon_svg(
-                    str(getattr(config, "timeline_continuation_icon_left", "arrow-left")),
+                    str(getattr(config, "continuation_icon_before", "arrow-left")),
                     item.start_x,
                     cont_baseline,
                     cont_h,
@@ -1339,7 +1351,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
             if item.continues_right:
                 self._draw_icon_svg(
-                    str(getattr(config, "timeline_continuation_icon_right", "arrow-right")),
+                    str(getattr(config, "continuation_icon_after", "arrow-right")),
                     item.end_x,
                     cont_baseline,
                     cont_h,
@@ -1645,16 +1657,18 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         # Continuation icons for bars clipped above/below the visible range.
+        # continues_left == event starts before visualization start ("before");
+        # continues_right == event ends after visualization end ("after").
         if (item.continues_left or item.continues_right) and bool(
-            getattr(config, "timeline_show_continuation_icon", True)
+            getattr(config, "show_continuation_icon", True)
         ):
-            cont_h = float(getattr(config, "timeline_continuation_icon_height", 8.0))
-            cont_color_cfg = getattr(config, "timeline_continuation_icon_color", None)
+            cont_h = float(getattr(config, "continuation_icon_height", 8.0))
+            cont_color_cfg = getattr(config, "continuation_icon_color", None)
             cont_color = cont_color_cfg if cont_color_cfg else item.color
             cont_x = bar_x + bar_thickness * 0.5
             if item.continues_left:
                 self._draw_icon_svg(
-                    str(getattr(config, "timeline_continuation_icon_left", "arrow-up")),
+                    str(getattr(config, "continuation_icon_before", "arrow-up")),
                     cont_x,
                     item.start_y + cont_h * 0.5,
                     cont_h,
@@ -1664,7 +1678,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
             if item.continues_right:
                 self._draw_icon_svg(
-                    str(getattr(config, "timeline_continuation_icon_right", "arrow-down")),
+                    str(getattr(config, "continuation_icon_after", "arrow-down")),
                     cont_x,
                     item.end_y - cont_h * 0.5,
                     cont_h,

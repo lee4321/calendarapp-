@@ -1582,18 +1582,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
             continues_left = ev_start < start
             continues_right = ev_end > end
             if (continues_left or continues_right) and bool(
-                getattr(config, "blockplan_show_continuation_icon", True)
+                getattr(config, "show_continuation_icon", True)
             ):
                 cont_h = min(
-                    float(getattr(config, "blockplan_continuation_icon_height", 8.0)),
+                    float(getattr(config, "continuation_icon_height", 8.0)),
                     bar_h,
                 )
-                cont_color_cfg = getattr(config, "blockplan_continuation_icon_color", None)
+                cont_color_cfg = getattr(config, "continuation_icon_color", None)
                 cont_color = cont_color_cfg if cont_color_cfg else color
                 cont_baseline = y + bar_h * 0.5 + cont_h * 0.3
                 if continues_left:
                     self._draw_icon_svg(
-                        str(getattr(config, "blockplan_continuation_icon_left", "arrow-left")),
+                        str(getattr(config, "continuation_icon_before", "arrow-left")),
                         x0,
                         cont_baseline,
                         cont_h,
@@ -1603,7 +1603,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     )
                 if continues_right:
                     self._draw_icon_svg(
-                        str(getattr(config, "blockplan_continuation_icon_right", "arrow-right")),
+                        str(getattr(config, "continuation_icon_after", "arrow-right")),
                         x0 + w,
                         cont_baseline,
                         cont_h,

@@ -27,14 +27,20 @@ watermark:
   resize_mode: fit
   rotation_angle: 45.0
   image_rotation_angle: 45.0
+continuation:
+  show: true
+  icon_before: move-left
+  icon_after: move-right
+  icon_height: 14.0
+  icon_color: white
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
   year_offset: 1
 colors:
-  month_palette: viridis
+  month_palette: bmh
   fiscal_palette: Greys
-  group_palette: Pastel1
+  group_palette: colorblind2
   hash_lines: black
   company_holiday:
     alpha: 0.25
@@ -145,11 +151,6 @@ timeline:
       include_endpoints: false
       max_label_count: 400
       label_gap: 4.0
-  show_continuation_icon: true
-  continuation_icon_right: move-right
-  continuation_icon_left: move-left
-  continuation_icon_height: 14.0
-  continuation_icon_color: white
 timeline_events:
   box_height: 24
 timeline_durations:

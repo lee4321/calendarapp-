@@ -451,27 +451,28 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     )
 
         # Continuation icons — drawn at the clamped right edge of any duration
-        # line whose event extends beyond the timeline end date.
-        show_continuation = bool(config.compactplan_show_continuation_icon)
+        # line whose event extends beyond the timeline end date. Compactplan
+        # only clips its "after" end, so it reads continuation_icon_after.
+        show_continuation = bool(config.show_continuation_icon)
         has_continuations = any(p.continues for p in placed)
         if show_continuation and has_continuations:
             # Theme `icon:continuation` (bound to ec-continuation-icon) takes
-            # precedence; each field falls back to the legacy compactplan_*
+            # precedence; each field falls back to the global continuation_*
             # config keys when the theme is silent.
             _cont_icon_style = config.get_icon_style("ec-continuation-icon")
             cont_icon_name = str(
                 _cont_icon_style.icon
-                or config.compactplan_continuation_icon
+                or config.continuation_icon_after
                 or "arrow-right"
             )
             cont_icon_h = float(
                 _cont_icon_style.size
                 if _cont_icon_style.size is not None
-                else (config.compactplan_continuation_icon_height or 8.0)
+                else (config.continuation_icon_height or 8.0)
             )
             cont_icon_color_cfg = (
                 _cont_icon_style.color
-                or config.compactplan_continuation_icon_color
+                or config.continuation_icon_color
                 or ""
             ).strip()
             for p in placed:
@@ -1468,17 +1469,17 @@ class CompactPlanRenderer(BaseSVGRenderer):
         _cont_icon_style = config.get_icon_style("ec-continuation-icon")
         icon_name = str(
             _cont_icon_style.icon
-            or config.compactplan_continuation_icon
+            or config.continuation_icon_after
             or "arrow-right"
         )
         icon_h = float(
             _cont_icon_style.size
             if _cont_icon_style.size is not None
-            else (config.compactplan_continuation_icon_height or 8.0)
+            else (config.continuation_icon_height or 8.0)
         )
         icon_color_cfg = (
             _cont_icon_style.color
-            or config.compactplan_continuation_icon_color
+            or config.continuation_icon_color
             or ""
         ).strip()
         icon_color = icon_color_cfg if icon_color_cfg else label_color
