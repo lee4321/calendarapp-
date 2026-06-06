@@ -511,9 +511,16 @@ class CalendarConfig:
     # icon at the clipped edge to signal that the activity continues. Shared
     # across timeline, blockplan, and compact_plan; configured under the
     # top-level `continuation:` section in theme YAMLs.
+    #
+    # icon_before / icon_after each accept either a single icon name or a
+    # [horizontal, vertical] list. With a list, element [0] is used for
+    # horizontally-oriented visualizers and element [1] for vertical
+    # timelines — letting a theme pair, e.g., `move-left` (horizontal
+    # "before") with `move-up` (vertical "before"). A bare string applies
+    # to both orientations.
     show_continuation_icon: bool = True
-    continuation_icon_before: str = "arrow-left"
-    continuation_icon_after: str = "arrow-right"
+    continuation_icon_before: str | list[str] = "arrow-left"
+    continuation_icon_after: str | list[str] = "arrow-right"
     continuation_icon_height: float = 8.0
     continuation_icon_color: str | None = None  # None = inherit from bar/line color
 
@@ -1295,7 +1302,11 @@ class CalendarConfig:
             "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
             "ec-continuation-icon": lambda: IconStyle(
                 color=(self.continuation_icon_color or self.duration_icon_color),
-                icon=self.continuation_icon_after,
+                # Compactplan (the consumer of this fallback) is horizontal,
+                # so resolve here rather than handing a list to IconStyle.
+                icon=resolve_continuation_icon(
+                    self.continuation_icon_after, "horizontal", "arrow-right"
+                ),
             ),
             "ec-overflow-icon": lambda: IconStyle(color=self.overflow_indicator_color, icon=self.overflow_indicator_icon),
         }
@@ -1855,6 +1866,41 @@ WEEKEND_STYLES: dict[int, dict[str, Any]] = {
         "divisor": 6,
     },
 }
+
+
+# =============================================================================
+# Continuation Icon Resolution
+# =============================================================================
+
+
+def resolve_continuation_icon(
+    value: str | list[str] | tuple[str, ...] | None,
+    orientation: str,
+    fallback: str,
+) -> str:
+    """Pick the orientation-appropriate icon name from a continuation_icon field.
+
+    Themes may supply either a single icon name (used for any orientation)
+    or a two-element list ``[horizontal, vertical]``. A single-element list
+    behaves like the bare string. Empty / None values fall through to
+    ``fallback``.
+
+    ``orientation`` is matched case-insensitively against ``"vertical"``;
+    anything else (including ``"horizontal"`` and Orientation enum values
+    whose str() form is ``"horizontal"``) selects index 0.
+    """
+    if value is None or value == "":
+        return fallback
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return fallback
+        is_vertical = str(orientation).lower() == "vertical"
+        idx = 1 if (is_vertical and len(value) >= 2) else 0
+        chosen = value[idx]
+        return str(chosen) if chosen else fallback
+    return str(value)
 
 
 # =============================================================================

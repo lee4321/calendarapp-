@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import arrow
 import drawsvg
 
-from config.config import get_font_path
+from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
@@ -1593,7 +1593,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 cont_baseline = y + bar_h * 0.5 + cont_h * 0.3
                 if continues_left:
                     self._draw_icon_svg(
-                        str(getattr(config, "continuation_icon_before", "arrow-left")),
+                        resolve_continuation_icon(
+                            getattr(config, "continuation_icon_before", None),
+                            "horizontal",
+                            "arrow-left",
+                        ),
                         x0,
                         cont_baseline,
                         cont_h,
@@ -1603,7 +1607,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     )
                 if continues_right:
                     self._draw_icon_svg(
-                        str(getattr(config, "continuation_icon_after", "arrow-right")),
+                        resolve_continuation_icon(
+                            getattr(config, "continuation_icon_after", None),
+                            "horizontal",
+                            "arrow-right",
+                        ),
                         x0 + w,
                         cont_baseline,
                         cont_h,

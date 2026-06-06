@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 import arrow
 import drawsvg
 
-from config.config import get_font_path
+from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
@@ -462,8 +462,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
             _cont_icon_style = config.get_icon_style("ec-continuation-icon")
             cont_icon_name = str(
                 _cont_icon_style.icon
-                or config.continuation_icon_after
-                or "arrow-right"
+                or resolve_continuation_icon(
+                    config.continuation_icon_after, "horizontal", "arrow-right"
+                )
             )
             cont_icon_h = float(
                 _cont_icon_style.size
@@ -1469,8 +1470,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         _cont_icon_style = config.get_icon_style("ec-continuation-icon")
         icon_name = str(
             _cont_icon_style.icon
-            or config.continuation_icon_after
-            or "arrow-right"
+            or resolve_continuation_icon(
+                config.continuation_icon_after, "horizontal", "arrow-right"
+            )
         )
         icon_h = float(
             _cont_icon_style.size

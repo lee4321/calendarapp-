@@ -29,8 +29,10 @@ watermark:
   image_rotation_angle: 45.0
 continuation:
   show: true
-  icon_before: move-left
-  icon_after: move-right
+  # Each icon takes [horizontal, vertical] — element [1] is picked when the
+  # timeline runs vertical so "before" reads as upward and "after" as downward.
+  icon_before: [move-left, move-up]
+  icon_after: [move-right, move-down]
   icon_height: 14.0
   icon_color: white
 fiscal:

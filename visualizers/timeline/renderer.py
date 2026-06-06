@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import arrow
 import drawsvg
 
-from config.config import get_font_path
+from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
@@ -1341,7 +1341,11 @@ class TimelineRenderer(BaseSVGRenderer):
             cont_baseline = bar_y + bar_h * 0.5 + cont_h * 0.3
             if item.continues_left:
                 self._draw_icon_svg(
-                    str(getattr(config, "continuation_icon_before", "arrow-left")),
+                    resolve_continuation_icon(
+                        getattr(config, "continuation_icon_before", None),
+                        "horizontal",
+                        "arrow-left",
+                    ),
                     item.start_x,
                     cont_baseline,
                     cont_h,
@@ -1351,7 +1355,11 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
             if item.continues_right:
                 self._draw_icon_svg(
-                    str(getattr(config, "continuation_icon_after", "arrow-right")),
+                    resolve_continuation_icon(
+                        getattr(config, "continuation_icon_after", None),
+                        "horizontal",
+                        "arrow-right",
+                    ),
                     item.end_x,
                     cont_baseline,
                     cont_h,
@@ -1659,6 +1667,8 @@ class TimelineRenderer(BaseSVGRenderer):
         # Continuation icons for bars clipped above/below the visible range.
         # continues_left == event starts before visualization start ("before");
         # continues_right == event ends after visualization end ("after").
+        # On a vertical axis the second element of a [horizontal, vertical]
+        # icon-list pair selects the orientation-appropriate glyph.
         if (item.continues_left or item.continues_right) and bool(
             getattr(config, "show_continuation_icon", True)
         ):
@@ -1668,7 +1678,11 @@ class TimelineRenderer(BaseSVGRenderer):
             cont_x = bar_x + bar_thickness * 0.5
             if item.continues_left:
                 self._draw_icon_svg(
-                    str(getattr(config, "continuation_icon_before", "arrow-up")),
+                    resolve_continuation_icon(
+                        getattr(config, "continuation_icon_before", None),
+                        "vertical",
+                        "arrow-up",
+                    ),
                     cont_x,
                     item.start_y + cont_h * 0.5,
                     cont_h,
@@ -1678,7 +1692,11 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
             if item.continues_right:
                 self._draw_icon_svg(
-                    str(getattr(config, "continuation_icon_after", "arrow-down")),
+                    resolve_continuation_icon(
+                        getattr(config, "continuation_icon_after", None),
+                        "vertical",
+                        "arrow-down",
+                    ),
                     cont_x,
                     item.end_y - cont_h * 0.5,
                     cont_h,
