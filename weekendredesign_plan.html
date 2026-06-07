@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plan: configurable weekend days (ISO 8601)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         max-width: 880px; margin: 2em auto; padding: 0 1.2em; color: #222; line-height: 1.55; }
+  h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.2em; margin-top: 1.8em; }
+  h3 { margin-top: 1.4em; }
+  code { background: #f4f4f4; padding: 0.1em 0.35em; border-radius: 3px;
+         font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
+  pre { background: #f4f4f4; padding: 0.8em 1em; border-radius: 5px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { border: 1px solid #ccc; padding: 0.5em 0.8em; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; }
+  strong { color: #111; }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 0.3em 0; }
+  blockquote { border-left: 4px solid #888; margin: 1em 0; padding: 0.4em 1em; background: #fafafa; color: #444; }
+</style>
+</head>
+<body>
+
+<h1>Plan: configurable weekend days (ISO 8601)</h1>
+
+<h2>Context</h2>
+<p>The CalendarApp already has a <code>weekend_days</code> field on <code>CalendarConfig</code>, a <code>--weekend-days</code> CLI flag on several subparsers, and a <code>get_weekend_days()</code> resolver. But the field's documented convention ("ISO weekday") is <strong>wrong</strong> &mdash; internally it stores Python <code>date.weekday()</code> values (0=Mon..6=Sun), while the user-facing spec calls for true ISO 8601 (1=Mon..7=Sun, Sat/Sun = 6, 7). This mismatch is currently latent because nothing exercises the boundary, but it will silently corrupt configs as soon as users start writing <code>[6, 7]</code> expecting Sat/Sun.</p>
+
+<p>The design doc at <code>weekendredesign.md</code> proposes standardizing on ISO 8601 (1&ndash;7) at every external surface (CLI, YAML, docs, error messages) and keeping Python <code>weekday()</code> (0&ndash;6) as an internal-only form converted at one chokepoint. This plan implements that design, with corrections from a verification pass against the actual codebase (line numbers, parser inventory, theme count).</p>
+
+<h2>Approach</h2>
+
+<p><strong>One conversion site.</strong> The only place that bridges ISO 1&ndash;7 &rarr; Python 0&ndash;6 is <code>CalendarConfig.get_weekend_weekday_set()</code>. Everything outside config &mdash; CLI, YAML, validation errors, docs &mdash; speaks ISO 1&ndash;7. Every comparison site speaks Python 0&ndash;6 via <code>d.weekday() in &lt;set&gt;</code>.</p>
+
+<p><strong>Weekly visualizer respects <code>weekend_days</code> for classification, but grid geometry stays driven by <code>weekend_style</code></strong> (per design doc &sect;7). <code>weekend_days</code> controls day <em>classification</em> across every visualizer &mdash; weekly shading/hash patterns/holiday styling, blockplan/compactplan/excelheader visible-day filtering, mini/text-mini workweek filtering. A Fri/Sat config with <code>weekend_style=2</code> will still put Sat/Sun in the half-columns geometrically, but Friday will be shaded as a weekend (and Sunday will not). This is a valid combination; emit no warning.</p>
+
+<p>Weekly classification already flows through <code>shared/day_classifier.classify_day()</code> (called at <code>visualizers/weekly/renderer.py:199</code>), which reads <code>config.get_weekend_days()</code>. Once that resolver is updated, weekly weekend shading automatically respects <code>weekend_days</code> with no further weekly-renderer changes. The remaining <code>isoweekday()</code> checks in weekly (lines 721, 723, 806) are <em>week-start</em> detection for fiscal labels and grid boundaries &mdash; those stay driven by <code>weekend_style</code> and are not touched.</p>
+
+<p><strong>Date-range snapping in <code>shared/date_utils.py</code> stays as-is</strong> (per design doc &sect;8). It already uses <code>isoweekday()</code> (1&ndash;7), so it's incidentally already ISO-correct; we just don't entangle it with <code>weekend_days</code>.</p>
+
+<h2>Changes</h2>
+
+<h3>1. <code>config/config.py</code></h3>
+<ul>
+  <li><strong>Field docstring</strong> at line 118&ndash;123: replace "ISO weekday: 0=Mon..6=Sun" with "ISO 8601 weekday: 1=Mon..7=Sun". Default <code>None</code> &rarr; derive from <code>weekend_style</code>. Example default <code>[6, 7]</code>.</li>
+  <li><strong><code>__post_init__</code> validation</strong> at ~line 1091&ndash;1102: change range check from <code>0 &lt;= d &lt;= 6</code> to <code>1 &lt;= d &lt;= 7</code>. Keep duplicate check. Update error message to reference 1&ndash;7.</li>
+  <li><strong>Rename <code>get_weekend_days()</code> &rarr; <code>get_weekend_weekday_set()</code></strong> at line 1144. Body becomes:
+<pre><code>def get_weekend_weekday_set(self) -&gt; frozenset[int]:
+    """Resolve weekend days as Python weekday() values (0=Mon..6=Sun).
+    Converts internally from ISO 8601 storage (1..7)."""
+    if self.weekend_days is not None:
+        return frozenset((iso - 1) % 7 for iso in self.weekend_days)
+    if self.weekend_style == 0:
+        return frozenset()
+    return frozenset({5, 6})  # Sat, Sun</code></pre>
+  </li>
+  <li><strong>Add <code>is_weekend(d: date) -&gt; bool</code></strong> helper next to it: <code>return d.weekday() in self.get_weekend_weekday_set()</code>.</li>
+</ul>
+
+<h3>2. <code>ecalendar.py</code></h3>
+<ul>
+  <li><strong><code>_parse_weekend_days()</code></strong> at line 1963: change range check <code>0 &lt;= d &lt;= 6</code> &rarr; <code>1 &lt;= d &lt;= 7</code>. Update error message. The parser already returns a <code>list[int]</code>, which now flows through unchanged to <code>config.weekend_days</code>.</li>
+  <li><strong>Help text</strong> on all 4 existing <code>--weekend-days</code> argparse calls (lines ~509, 565, 871, 1051 &mdash; <code>excelheader</code>, <code>excelblockplan</code>, <code>blockplan</code>, <code>text_mini</code> subparsers): replace "0&ndash;6" with "1&ndash;7 ISO 8601 (1=Mon..7=Sun). Default 6,7 (Sat/Sun) when weekends are shown."</li>
+  <li><strong>Add <code>--weekend-days</code> to the weekly subparser</strong> (currently absent) with the same parser (<code>_parse_weekend_days</code>) and the same help text. This routes into <code>config.weekend_days</code> and is consumed by the day classifier for weekly weekend shading. Note that the flag affects <em>classification only</em> in weekly; geometry stays driven by <code>--weekend-style</code>. Document this caveat in the help text: append "(weekly grid geometry is controlled by --weekend-style)".</li>
+</ul>
+
+<h3>3. <code>config/theme_engine.py</code></h3>
+<p>Add one line to <code>THEME_TO_CONFIG_MAP</code> (line 30, alongside the existing <code>("base", "default_missing_icon")</code> entry at ~line 65):</p>
+<pre><code>("base", "weekend_days"): "weekend_days",</code></pre>
+<p>The theme engine already validates types via the dataclass; the list is passed through and validated by <code>__post_init__</code>.</p>
+
+<h3>4. Comparison-site updates</h3>
+<p>Replace each hardcoded weekend check with the config helper. Pattern: where code today does <code>d.weekday() &lt; 5</code> or <code>d.weekday() in (5, 6)</code>, change to <code>not config.is_weekend(d)</code> or <code>config.is_weekend(d)</code> respectively (or precompute the set once per render).</p>
+<p>Sites (verified line numbers):</p>
+<ul>
+  <li><code>visualizers/blockplan/renderer.py:2130</code> &mdash; <code>_visible_days()</code>: <code>if cursor.weekday() &lt; 5:</code> &rarr; <code>if not config.is_weekend(cursor):</code></li>
+  <li><code>visualizers/compactplan/renderer.py:1639</code> &mdash; same pattern</li>
+  <li><code>visualizers/excelheader.py:242</code> &mdash; date cursor loop, same pattern</li>
+  <li><code>visualizers/mini/layout.py:278</code> &mdash; <code>is_workweek</code> filter; the <code>weekend_style == 0</code> branch currently uses <code>weekday() &lt; 5</code>, switch to <code>not config.is_weekend(d)</code></li>
+  <li><code>visualizers/text_mini/renderer.py</code> &mdash; same workweek-filter pattern as mini (locate the analogous block during implementation; the doc flagged this file but didn't pin a line)</li>
+  <li><code>shared/day_classifier.py:34</code> &mdash; already uses <code>config.get_weekend_days()</code>. Rename the call to <code>config.get_weekend_weekday_set()</code>.</li>
+</ul>
+
+<h3>5. Theme YAMLs (optional / documentation only)</h3>
+<p>Adding <code>base.weekend_days</code> to YAMLs is optional &mdash; omitting it preserves current behavior. We will <strong>not</strong> touch the 19 existing theme files in this change. Document the new key in <code>USER_GUIDE.md</code> (or wherever theme keys are documented) and let users add it when needed. Explicit empty list <code>[]</code> disables weekends in a theme.</p>
+
+<h3>6. Tests</h3>
+<p>New file <code>tests/test_weekend_days.py</code>:</p>
+<ul>
+  <li><code>get_weekend_weekday_set()</code> returns:
+    <ul>
+      <li><code>frozenset()</code> when <code>weekend_days=None, weekend_style=0</code></li>
+      <li><code>frozenset({5, 6})</code> when <code>weekend_days=None, weekend_style=1</code></li>
+      <li><code>frozenset({5, 6})</code> when <code>weekend_days=[6, 7]</code> (ISO Sat/Sun &rarr; Python 5, 6)</li>
+      <li><code>frozenset({4, 5})</code> when <code>weekend_days=[5, 6]</code> (ISO Fri/Sat &rarr; Python 4, 5)</li>
+      <li><code>frozenset()</code> when <code>weekend_days=[]</code></li>
+      <li><code>frozenset({0,1,2,3,4,5,6})</code> when <code>weekend_days=[1,2,3,4,5,6,7]</code></li>
+    </ul>
+  </li>
+  <li><code>__post_init__</code> raises on <code>[0]</code>, <code>[8]</code>, <code>[1, 1]</code>, <code>["x"]</code></li>
+  <li><code>_parse_weekend_days("6,7")</code> &rarr; <code>[6, 7]</code>; rejects <code>"0,1"</code> with message referencing ISO 1&ndash;7; accepts <code>""</code> &rarr; <code>[]</code></li>
+  <li>One end-to-end test per affected visualizer: with <code>weekend_days=[5]</code> (Fri only, ISO), Friday is classified as weekend and Saturday/Sunday are not. Pattern: stub a <code>_NonworkDB</code> like <code>test_blockplan_nonworkday.py</code>, render, assert visible-days set / weekend-shaded days.</li>
+  <li><strong>Weekly-specific test</strong>: with <code>weekend_days=[5]</code> (Fri only) and <code>weekend_style=1</code> (7-col grid), render a week containing a Friday and assert (a) Friday has the weekend shade applied in the rendered SVG and (b) Saturday/Sunday do not &mdash; confirming classification respects <code>weekend_days</code> while geometry stays driven by <code>weekend_style</code>.</li>
+  <li>Theme-engine round-trip: load a minimal theme dict <code>{"base": {"weekend_days": [5, 6]}}</code> and assert <code>config.weekend_days == [5, 6]</code>.</li>
+</ul>
+
+<h3>7. Migration note</h3>
+<p>This is a <strong>breaking change</strong> to the <code>--weekend-days</code> flag (was 0&ndash;6, now 1&ndash;7) and to the <code>weekend_days</code> config field's accepted range. The flag is recent. The validation error message will explicitly say "ISO 8601 (1=Mon..7=Sun)" so users hitting the boundary get an actionable message. No silent reinterpretation, no compat shim.</p>
+<p>Mention this in <code>changelog.md</code> and update the field docstring + any user-facing docs that quote 0&ndash;6.</p>
+
+<h2>Files touched</h2>
+<table>
+  <thead><tr><th>File</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td><code>config/config.py</code></td><td>Field doc, validation 1&ndash;7, rename <code>get_weekend_days</code> &rarr; <code>get_weekend_weekday_set</code> with ISO&rarr;Python conversion, add <code>is_weekend()</code></td></tr>
+    <tr><td><code>config/theme_engine.py</code></td><td>One line in <code>THEME_TO_CONFIG_MAP</code></td></tr>
+    <tr><td><code>ecalendar.py</code></td><td><code>_parse_weekend_days</code> ISO 1&ndash;7, help text on 4 existing subparsers, add <code>--weekend-days</code> to the weekly subparser</td></tr>
+    <tr><td><code>shared/day_classifier.py</code></td><td>Rename the call site</td></tr>
+    <tr><td><code>visualizers/blockplan/renderer.py</code></td><td><code>_visible_days</code> uses <code>config.is_weekend()</code></td></tr>
+    <tr><td><code>visualizers/compactplan/renderer.py</code></td><td>same</td></tr>
+    <tr><td><code>visualizers/excelheader.py</code></td><td>same</td></tr>
+    <tr><td><code>visualizers/mini/layout.py</code></td><td><code>is_workweek</code> filter uses <code>config.is_weekend()</code></td></tr>
+    <tr><td><code>visualizers/text_mini/renderer.py</code></td><td>same (locate analogous block)</td></tr>
+    <tr><td><code>tests/test_weekend_days.py</code></td><td>new</td></tr>
+    <tr><td><code>changelog.md</code></td><td>breaking-change note</td></tr>
+  </tbody>
+</table>
+
+<p>Untouched (intentionally): all 19 theme YAMLs, <code>shared/date_utils.py</code> (already ISO-correct), the weekly visualizer's renderer/layout code (weekly weekend <em>classification</em> is already routed through <code>day_classifier</code> and picks up <code>weekend_days</code> automatically; weekly grid <em>geometry</em> stays driven by <code>weekend_style</code>).</p>
+
+<h2>Verification</h2>
+<ol>
+  <li><code>uv run python -m pytest tests/test_weekend_days.py -v</code> &mdash; new tests all pass.</li>
+  <li><code>uv run python -m pytest tests/ -v</code> &mdash; full suite green; no regressions in existing visualizer tests.</li>
+  <li>Smoke test the CLI on multiple visualizers:
+    <ul>
+      <li><code>uv run python ecalendar.py blockplan --weekend-days 5,6 --begin 2026-06-01 --end 2026-06-30</code> &mdash; Fri/Sat shaded as weekend, Sun as workday.</li>
+      <li><code>uv run python ecalendar.py weekly --weekend-days 5,6 --weekend-style 1 --begin 2026-06-01 --end 2026-06-30</code> &mdash; weekly 7-col grid retains Sat/Sun in their geometric columns, but Friday shows weekend shading and Sunday does not (geometry vs classification split).</li>
+      <li><code>uv run python ecalendar.py blockplan --weekend-days 0,1 ...</code> &mdash; errors with a message naming ISO 1&ndash;7.</li>
+      <li><code>uv run python ecalendar.py blockplan --weekend-days "" ...</code> &mdash; zero-weekend behavior (every day a workday).</li>
+    </ul>
+  </li>
+  <li>Theme round-trip: write a one-off YAML with <code>base: { weekend_days: [5, 6] }</code>, run <code>ecalendar.py blockplan --theme &lt;path&gt;</code>, confirm Fri/Sat are shaded without the CLI flag.</li>
+  <li>Default behavior unchanged: run any subcommand with no flags and confirm output is byte-identical (or visually identical) to current <code>main</code> for a fixed date range.</li>
+</ol>
+
+</body>
+</html>
