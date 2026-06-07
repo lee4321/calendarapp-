@@ -257,6 +257,34 @@ def test_pit_leader_anchor_start_puts_box_after_endpoint(tmp_path):
         assert abs(left - l) < 0.5
 
 
+def test_pit_leader_length_tracks_layer_gap(tmp_path):
+    """pit_labella_layer_gap sets the axis→label gap (the leader length)."""
+
+    def gap_for(layer_gap: float) -> float:
+        config = _make_config(tmp_path / f"lg{layer_gap}", side="primary")
+        config.pit_labella_layer_gap = layer_gap
+        coords = PITLayout().calculate(config)
+        PITRenderer().render(config, coords, _events_dicts(5), _DummyDB())
+        svg = Path(config.outputfile).read_text(encoding="utf-8").replace("\n", " ")
+        axis_y = float(
+            re.search(r'<line[^>]*y1="([0-9.]+)"[^>]*ec-axis-line', svg).group(1)
+        )
+        # primary side = labels above the axis → box bottom nearest the axis.
+        bottoms = [
+            float(y) + float(h)
+            for y, h in re.findall(
+                r'<rect x="[0-9.]+" y="([0-9.]+)" width="[0-9.]+" '
+                r'height="([0-9.]+)"[^>]*ec-callout-box',
+                svg,
+            )
+        ]
+        return axis_y - max(bottoms)
+
+    g8, g32 = gap_for(8.0), gap_for(32.0)
+    assert abs(g8 - 8.0) < 0.5
+    assert abs(g32 - 32.0) < 0.5
+
+
 def test_pit_inherits_filter_flags(tmp_path):
     """Content-filter flags propagate to config without error."""
     config = _make_config(tmp_path)

@@ -1915,6 +1915,7 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--marker-size` | | `7.0` | Bounding-box size (in points) for built-in shapes and DB icon glyphs. |
 | `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
 | `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
+| `--leader-length` | | `8.0` | Distance (in points) from the axis to the first row of labels — i.e. the leader length. Larger values lengthen leaders and widen row-to-row spacing. Equivalent to the theme's `pit.labella.layer_gap`. |
 
 ### Theme bindings
 
@@ -1994,6 +1995,11 @@ pit:
     padding_x: 6.0
     padding_y: 3.0
   label_palette: Pastel1      # round-robin palette for label box fills
+
+  labella:                    # label-placement tuning
+    layer_gap: 8.0            # axis→label gap = leader length (also row spacing)
+    node_height: 24.0         # label box thickness perpendicular to the axis
+    density: 0.75             # 0–1; lower packs fewer labels per row (more rows)
 ```
 
 #### Per-rule overrides in `style_rules`

@@ -437,6 +437,12 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("pit", "event_palette"): "theme_pit_event_palette",
     ("pit", "milestone_palette"): "theme_pit_milestone_palette",
     ("pit", "label_palette"): "theme_pit_label_palette",
+    # labella label-placement tuning. layer_gap is the axis→label gap,
+    # i.e. the visible leader length (also sets row-to-row spacing with
+    # node_height). Mirrors the timeline.labella block.
+    ("pit.labella", "layer_gap"): "pit_labella_layer_gap",
+    ("pit.labella", "node_height"): "pit_labella_node_height",
+    ("pit.labella", "density"): "pit_labella_density",
 }
 
 # Valid top-level sections in a theme file
