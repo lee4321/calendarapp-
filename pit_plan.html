@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PIT (Points in Time) Visualizer — Implementation Plan (v2)</title>
+<style>
+  :root {
+    --fg: #1b1f24;
+    --muted: #5a6470;
+    --accent: #2d5fae;
+    --accent-soft: #e6efff;
+    --rule: #d6dde6;
+    --code-bg: #f4f6f8;
+    --warn-bg: #fff7e0;
+    --warn-border: #e0c060;
+    --ok-bg: #e8f6ec;
+    --ok-border: #6cba85;
+    --change-bg: #f4ecff;
+    --change-border: #8a5dd6;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg);
+    max-width: 960px;
+    margin: 2.2rem auto;
+    padding: 0 1.4rem 4rem;
+    line-height: 1.55;
+  }
+  h1 { font-size: 2rem; margin-bottom: 0.3rem; }
+  h2 {
+    font-size: 1.35rem;
+    margin-top: 2.2rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 2px solid var(--rule);
+    color: var(--accent);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.6rem; }
+  h4 { font-size: 0.95rem; margin-top: 1.2rem; color: var(--muted); }
+  .subtitle { color: var(--muted); margin-top: 0; }
+  .badges { margin: 0.6rem 0 1.6rem; }
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    margin-right: 6px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .badge.rev { background: var(--change-bg); color: #5a3aa0; }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.86rem;
+  }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre {
+    background: var(--code-bg);
+    padding: 0.9rem 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.45;
+  }
+  pre code { background: transparent; padding: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.92rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { background: var(--code-bg); font-weight: 600; }
+  .callout {
+    padding: 0.8rem 1rem;
+    border-left: 4px solid var(--warn-border);
+    background: var(--warn-bg);
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+  }
+  .callout.ok { border-left-color: var(--ok-border); background: var(--ok-bg); }
+  .callout.change { border-left-color: var(--change-border); background: var(--change-bg); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+    margin: 1rem 0;
+  }
+  .grid .panel {
+    border: 1px solid var(--rule);
+    padding: 0.9rem 1rem;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .panel h4 { margin-top: 0; }
+  .ascii {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    line-height: 1.25;
+    background: var(--code-bg);
+    padding: 0.9rem;
+    border-radius: 6px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  ul.tight li, ol.tight li { margin: 0.15rem 0; }
+  .file-tree {
+    background: var(--code-bg);
+    padding: 0.9rem 1.1rem;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    white-space: pre;
+  }
+  .new { color: #1a7f3b; font-weight: 600; }
+  .mod { color: #b06000; font-weight: 600; }
+  .ref { color: var(--muted); }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  .strike { text-decoration: line-through; color: #99a0a8; }
+  .rev-tag {
+    display: inline-block;
+    background: var(--change-bg);
+    color: #5a3aa0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<h1>PIT — Points in Time Visualizer</h1>
+<p class="subtitle">A labella-driven SVG timeline focused on single-day events and milestones, with horizontal and vertical layouts.</p>
+<div class="badges">
+  <span class="badge">Subcommand: <code>pit</code></span>
+  <span class="badge">Library: vendored labella.py</span>
+  <span class="badge">Output: SVG</span>
+  <span class="badge">Axis directions: horizontal · vertical</span>
+  <span class="badge rev">Plan revision: v5 (2026-06-06)</span>
+</div>
+
+<div class="callout change">
+  <strong>What changed in v5.</strong>
+  <ul class="tight" style="margin: 0.3rem 0 0;">
+    <li>§12 — <strong>New section</strong>: PIT joins the existing project-wide <code>ec-*</code> CSS class system so the SVG is externally styleable. Every PIT primitive is tagged with a stable <code>ec-pit-*</code> class, theme bindings flow through <code>ThemeStyles</code>, and the auto-injected <code>&lt;style&gt;</code> block lets a user-supplied stylesheet (or an inline override) re-skin output without re-rendering.</li>
+  </ul>
+  <details style="margin-top: 0.6rem;">
+    <summary class="small" style="cursor: pointer;">What changed in v4 (previous revision)</summary>
+    <ul class="tight" style="margin: 0.3rem 0 0;">
+      <li>§2 — Every stroked primitive (axis, leader, today line) supports independent <code>marker-start</code> and <code>marker-end</code>, with independently configurable sizes per slot.</li>
+    </ul>
+  </details>
+  <details style="margin-top: 0.6rem;">
+    <summary class="small" style="cursor: pointer;">What changed in v3 (previous revision)</summary>
+    <ul class="tight" style="margin: 0.3rem 0 0;">
+      <li>§2 — Date labels drawn on the opposite side of the axis from each event label; axis + leaders gained <code>marker-end</code> arrowheads; today line became fully themeable + supports a future "as-of" date.</li>
+      <li>§10 — Open questions resolved.</li>
+    </ul>
+  </details>
+  <details style="margin-top: 0.6rem;">
+    <summary class="small" style="cursor: pointer;">What changed in v2 (previous revision)</summary>
+    <ul class="tight" style="margin: 0.3rem 0 0;">
+      <li>§2 — Event-dot and milestone markers can be replaced by DB-stored icons; leader strokes are now fully parameterized.</li>
+      <li>§4 — Renamed <code>--orientation</code> → <code>--direction</code>; collapsed content-filter flags onto existing shared flags; tick granularities mirror the project-wide <code>timeband</code> unit set.</li>
+      <li>§5 — All color slots accept <code>palette:NAME:INDEX</code>; PIT labels gain the full theme styling vocabulary (stroke, fill, opacity, pattern).</li>
+    </ul>
+  </details>
+</div>
+
+<h2>1. Goal &amp; Scope</h2>
+<p>
+Build a new visualizer named <strong>PIT (Points in Time)</strong> that produces SVG output stylistically aligned with the
+<a href="https://github.com/GjjvdBurg/labella.py">labella.py example gallery</a> — a clean axis line, a marker per event,
+and a curved leader joining each marker to a non-overlapping label box.
+</p>
+<p>PIT is intentionally narrower than the existing <code>timeline</code> visualizer:</p>
+<table>
+  <thead><tr><th>Dimension</th><th>Existing <code>timeline</code></th><th>New <code>pit</code></th></tr></thead>
+  <tbody>
+    <tr><td>Single-day events</td><td>Yes (callouts)</td><td><strong>Yes</strong> — primary citizen</td></tr>
+    <tr><td>Milestones</td><td>Yes (diamond marker)</td><td><strong>Yes</strong> — diamond <em>or</em> DB icon</td></tr>
+    <tr><td>Multi-day durations</td><td>Yes (duration bars)</td><td><strong>No</strong> — out of scope</td></tr>
+    <tr><td>Rollups / WBS / icon band</td><td>Yes</td><td>No — deferred</td></tr>
+    <tr><td>Fiscal period / quarter bands</td><td>Yes</td><td>No — deferred</td></tr>
+    <tr><td>Axis directions</td><td>horizontal + vertical</td><td>horizontal + vertical</td></tr>
+    <tr><td>Label sides</td><td>primary / secondary / both</td><td>primary / secondary / both</td></tr>
+    <tr><td>Date scale</td><td>Linear over project range</td><td>Linear over project range</td></tr>
+    <tr><td>Custom marker icons <span class="rev-tag">NEW</span></td><td>No</td><td><strong>Yes</strong> — per-event, per-rule, or per-side</td></tr>
+  </tbody>
+</table>
+
+<div class="callout ok">
+  <strong>Reuse, don't rebuild.</strong> The recent <code>timeline</code> refactor already vendors labella
+  (<code>vendor/labella/</code>) and provides reusable axis-direction primitives
+  (<a href="visualizers/timeline/orientation.py"><code>visualizers/timeline/orientation.py</code></a>) and a labella adapter pattern.
+  PIT lifts those primitives, not duplicates them.
+</div>
+
+<h2>2. Visual Design</h2>
+
+<div class="grid">
+  <div class="panel">
+    <h4>Vertical, Side.BOTH — date opposite the label</h4>
+    <div class="ascii">                          │
+                          │
+                          .        ┌────────────────┐
+                 Apr 1   ( )──────▶│  Milestone 1   │
+                          '        └────────────────┘
+                          │
+┌────────────────┐        .
+│  Milestone 2   │◀──────( ) Apr 27
+└────────────────┘        '
+                          │
+                          .        ┌────────────────┐
+                May 15   ( )──────▶│    Release     │
+                          '        └────────────────┘
+                          │
+                          ▼
+    </div>
+    <p class="small">Reference: <code>text_timeline.txt</code>. Each date sits at the marker's Y, on the opposite side of the axis from its label. Note the <code>marker-end</code> arrowheads: <strong>▶</strong> on each leader's label end and <strong>▼</strong> at the axis tip.</p>
+  </div>
+  <div class="panel">
+    <h4>Vertical, Side.PRIMARY — date still opposite</h4>
+    <div class="ascii">          │
+          .        ┌──────────────┐
+  Jan 12 ( )──────▶│ Q1 Kickoff   │
+          '        └──────────────┘
+          │
+          .        ┌──────────────┐
+  Mar 04 ( )──────▶│ Design freeze│
+          '        └──────────────┘
+          │
+          .        ┌──────────────┐
+  Apr 18 ( )──────▶│ Beta Cut  ◆  │
+          '        └──────────────┘
+          │
+          ▼
+    </div>
+    <p class="small">When all labels are on one side, all dates sit on the opposite side, each at the Y of its leader's intersection with the axis.</p>
+  </div>
+  <div class="panel">
+    <h4>Horizontal, Side.BOTH — dates opposite</h4>
+    <div class="ascii">  [Q1 Kickoff]   [Beta Cut]
+        \              \
+         \              \
+   ──●────●─────●────◆───★───●──▶
+   Jan12      Apr 1  May 4   Jul 9
+                /          /
+               /          /
+          [Audit]    [Launch ★]
+    </div>
+    <p class="small">Horizontal axis: dates are placed on the opposite side of the axis from each event's label, at the X of the dot. The axis ends in a <code>marker-end</code> arrowhead.</p>
+  </div>
+  <div class="panel">
+    <h4>Today line (themeable + offsettable)</h4>
+    <div class="ascii">         │
+         . ┄┄┄┄┄┄┄┄┄┄┄┄ "today"  ← label is themeable
+         │  ← stroke: red, dashed (theme-set)
+         │
+         ▼
+
+  Config: pit_today_date overrides "now"
+          (lets you render a future-state deck)
+    </div>
+    <p class="small">All stroke attributes (color, width, dasharray, opacity, linecap) plus label text and label position are theme-driven. <code>pit_today_date</code> overrides the natural "now" so presentations can be prepared with a forward-looking "today".</p>
+  </div>
+</div>
+
+<h3>Visual primitives</h3>
+<ul class="tight">
+  <li>
+    <strong>Axis line</strong> <span class="rev-tag">UPDATED</span> — single thin stroke spanning the project date range, with ticks at the chosen <em>timeband</em> granularity (see §4). Accepts independent SVG <code>marker-start</code> <em>and</em> <code>marker-end</code> references, each with its own size. Useful patterns: a small dot or tick on <code>marker-start</code> (the "origin" tip) plus an <code>arrow-head</code> on <code>marker-end</code> (the "future" tip), with separate sizes. For v1 a built-in <code>arrow-head</code> marker is auto-injected into <code>&lt;defs&gt;</code> per (kind, color, size) tuple; theme fields accept <code>"arrow-head"</code>, <code>"none"</code>, or any user-defined marker id.
+  </li>
+  <li>
+    <strong>Event marker</strong> <span class="rev-tag">UPDATED</span> — by default a filled circle at the date's axis position. May be replaced by an SVG icon from <code>calendar.db</code>'s <code>icons</code> table. Resolution order:
+    <ol class="tight" style="margin: 0.3rem 0 0.5rem 1.2rem;">
+      <li>Per-event <code>event.icon</code> (DB column) if set.</li>
+      <li>Style-rule <code>marker_icon: "name"</code> (matches today's <code>pattern:</code> rule mechanism).</li>
+      <li>Config <code>pit_default_event_icon</code> (theme-overridable).</li>
+      <li>Fallback: filled circle of radius <code>pit_dot_radius</code>.</li>
+    </ol>
+  </li>
+  <li>
+    <strong>Milestone marker</strong> <span class="rev-tag">UPDATED</span> — by default a filled diamond. Replaceable by a DB icon via the same precedence chain rooted at <code>pit_default_milestone_icon</code> (and per-rule <code>milestone_icon: "name"</code>). Icon glyphs are colored using the same color resolution path as the diamond fill, so themes and rules continue to drive color even when the shape comes from a glyph.</li>
+  <li>
+    <strong>Leader</strong> <span class="rev-tag">UPDATED</span> — labella's bezier path from marker to label box. Now exposes a full SVG stroke attribute set:
+    <ul class="tight">
+      <li><code>stroke</code> (color) — accepts <code>palette:NAME:INDEX</code>, CSS name, or hex.</li>
+      <li><code>stroke-width</code></li>
+      <li><code>stroke-dasharray</code> (e.g. <code>"4,2"</code> for dashed leaders)</li>
+      <li><code>stroke-opacity</code></li>
+      <li><code>stroke-linecap</code> (<code>butt</code> / <code>round</code> / <code>square</code>)</li>
+      <li><code>stroke-linejoin</code> (<code>miter</code> / <code>round</code> / <code>bevel</code>)</li>
+    </ul>
+    Applied from a single resolved <code>LeaderStyle</code> per placement, with precedence: per-rule <code>leader: {...}</code> → side default (<code>theme_pit_leader_primary</code> / <code>_secondary</code>) → global <code>theme_pit_leader</code> → module defaults.
+    <br>Leaders accept <strong>both</strong> <code>marker_start</code> <em>and</em> <code>marker_end</code>, independently sized <span class="rev-tag">UPDATED</span>. <code>marker_start</code> sits at the <em>axis end</em> (next to the dot) — useful as a small filled circle to "cap" the leader on the axis. <code>marker_end</code> sits at the <em>label end</em> — matching the <strong>▶</strong> in the <code>text_timeline.txt</code> reference. SVG auto-rotates each marker so an arrow-head points toward its respective endpoint, in both horizontal and vertical layouts and on both sides. Per-side and per-rule overrides may set either or both.
+  </li>
+  <li>
+    <strong>Date label</strong> <span class="rev-tag">NEW</span> — short date string (format from theme <code>pit.date_format</code>, default <code>"MMM D"</code>) drawn on the <em>opposite side of the axis</em> from each event's label. Placement rules:
+    <ul class="tight">
+      <li><strong>Same Y (vertical axis)</strong> / <strong>same X (horizontal axis)</strong> as the marker — i.e. the intersection of the leader with the axis, <em>not</em> the (force-displaced) Y/X of the label box.</li>
+      <li><strong>Side.BOTH</strong>: a label on the primary side gets its date on the secondary side, and vice-versa (see top-left ASCII diagram, matching <code>text_timeline.txt</code>).</li>
+      <li><strong>Side.PRIMARY only</strong>: all dates appear on the secondary side. <strong>Side.SECONDARY only</strong>: all dates appear on the primary side.</li>
+      <li>Text-anchoring is automatic: horizontal layout uses <code>text-anchor="middle"</code>; vertical layout uses <code>text-anchor="end"</code> on the left and <code>"start"</code> on the right.</li>
+      <li>Theme: <code>pit.date_text</code> exposes <code>color</code>, <code>font_name</code>, <code>font_size</code>, and <code>offset</code> (distance from axis to the date text baseline). All accept <code>palette:NAME:INDEX</code> references for color.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Label box</strong> <span class="rev-tag">UPDATED</span> — task name (bold), optional notes (light), and the formatted date. Supports the same stroke/fill/pattern/opacity vocabulary as weekly day-boxes — see §5.
+  </li>
+  <li>
+    <strong>Today line</strong> <span class="rev-tag">UPDATED</span> — perpendicular line at the configured "today" date. Fully theme-driven:
+    <ul class="tight">
+      <li><strong>Full stroke vocabulary</strong>: <code>color</code>, <code>width</code>, <code>dasharray</code>, <code>opacity</code>, <code>linecap</code>, <code>linejoin</code> — all accept palette references.</li>
+      <li><strong>Label text</strong>: <code>pit.today_line.label</code> (default <code>"today"</code>) — set to <code>""</code> or <code>null</code> to suppress.</li>
+      <li><strong>Label styling</strong>: <code>label_color</code>, <code>label_font_name</code>, <code>label_font_size</code>, <code>label_position</code> (<code>start</code> / <code>middle</code> / <code>end</code> along the line).</li>
+      <li><strong>Marker-start &amp; marker-end</strong> on the line are independently configurable <span class="rev-tag">UPDATED</span>. Typical use: an <code>arrow-head</code> on <code>marker-end</code> pointing "into the future", and a small cap on <code>marker-start</code> at the axis. Each has its own size field.</li>
+      <li><strong>Date override</strong>: <code>pit_today_date</code> (CLI: <code>--today-date YYYY-MM-DD</code>) replaces the natural <em>now</em>. Use case — preparing a presentation slated for a future board meeting with the "correct" today indicator.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>SVG marker defs (<code>marker-start</code> + <code>marker-end</code>) <span class="rev-tag">UPDATED</span></h3>
+
+<p>For v1 a single built-in marker kind — <code>arrow-head</code> (an equilateral triangle, configurable size + fill color via theme) — is auto-injected into <code>&lt;defs&gt;</code> on first use. Inspired by the <strong>▶</strong> / <strong>▼</strong> arrowheads in <code>text_timeline.txt</code>. The injector deduplicates by id <code>marker-{kind}-{color}-{size}</code>, mirroring the existing pattern-def deduplication path (see <code>MEMORY.md</code> → "SVG Pattern Decoration"). Different sizes produce different <code>&lt;marker&gt;</code> entries, so the axis-end and leader-end arrows can render at distinct dimensions on the same SVG without clobbering each other.</p>
+
+<p>Every stroked primitive exposes <strong>both</strong> a start and end slot, each independently sized:</p>
+<table>
+  <thead><tr><th>Theme slot</th><th>Applies to</th><th>Default</th></tr></thead>
+  <tbody>
+    <tr><td><code>pit.axis.marker_start</code> + <code>marker_start_size</code></td><td>Axis origin tip</td><td><code>"none"</code>, size 4.0</td></tr>
+    <tr><td><code>pit.axis.marker_end</code> + <code>marker_end_size</code></td><td>Axis terminal tip (▼ in the reference)</td><td><code>"arrow-head"</code>, size 6.0</td></tr>
+    <tr><td><code>pit.leader.marker_start</code> + <code>marker_start_size</code></td><td>The axis end of every leader (next to the dot)</td><td><code>"none"</code>, size 3.0</td></tr>
+    <tr><td><code>pit.leader.marker_end</code> + <code>marker_end_size</code></td><td>The label end of every leader (▶ in the reference)</td><td><code>"arrow-head"</code>, size 5.0</td></tr>
+    <tr><td><code>pit.today_line.marker_start</code> + <code>marker_start_size</code></td><td>The axis-anchored end of the today line</td><td><code>"none"</code>, size 4.0</td></tr>
+    <tr><td><code>pit.today_line.marker_end</code> + <code>marker_end_size</code></td><td>The free end of the today line</td><td><code>"none"</code>, size 6.0</td></tr>
+  </tbody>
+</table>
+
+<p class="small">Per-side overrides (<code>leader_primary.marker_{start,end}{,_size}</code> / <code>leader_secondary.*</code>) and per-rule overrides (<code>leader: { marker_start: "...", marker_end_size: 8 }</code>) follow the same precedence chain as the rest of <code>LeaderStyle</code>. Setting any slot to <code>"none"</code> emits no SVG attribute for that end. Sizes are SVG user units; the marker's <code>markerWidth</code> / <code>markerHeight</code> are set to the size value and <code>refX</code>/<code>refY</code> are chosen so the marker tip lands exactly on the line endpoint.</p>
+
+<h2>3. Architecture</h2>
+
+<p>PIT follows the project's existing visualizer triad (layout → renderer → visualizer) and the factory registration in
+<a href="visualizers/factory.py"><code>visualizers/factory.py</code></a>.</p>
+
+<div class="file-tree">visualizers/
+├── factory.py                          <span class="mod">(modify)</span> register "pit"
+├── timeline/                           <span class="ref">(unchanged — sibling)</span>
+│   ├── labella_adapter.py
+│   ├── orientation.py                  <span class="ref">← reused as-is by PIT</span>
+│   └── ...
+└── pit/                                <span class="new">(new package)</span>
+    ├── __init__.py                     <span class="new">new</span>
+    ├── visualizer.py                   <span class="new">new — orchestrator</span>
+    ├── layout.py                       <span class="new">new — page coords (TimelineArea-equivalent)</span>
+    ├── renderer.py                     <span class="new">new — SVG draw</span>
+    ├── markers.py                      <span class="new">new — icon / shape resolution + draw helpers</span>
+    └── labella_adapter.py              <span class="new">new — thin wrapper around vendor/labella</span>
+
+ecalendar.py                            <span class="mod">(modify)</span> add `pit` subparser; reuse shared arg groups
+config/config.py                        <span class="mod">(modify)</span> add `pit_*` config fields
+config/theme_engine.py                  <span class="mod">(modify)</span> add `pit:` YAML section mapping
+tests/                                  <span class="new">new tests</span>
+└── test_pit_visualizer.py
+</div>
+
+<h3>3.1 Module responsibilities</h3>
+
+<table>
+  <thead><tr><th>Module</th><th>Responsibility</th><th>Key types / functions</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>pit/visualizer.py</code></td>
+      <td>Subclasses <code>BaseVisualizer</code>; advertises supported options (reusing the standard list from <code>BaseVisualizer.supported_options</code>); instantiates layout + renderer.</td>
+      <td><code>PITVisualizer</code></td>
+    </tr>
+    <tr>
+      <td><code>pit/layout.py</code></td>
+      <td>Computes page-level coords: margins, header/footer blocks (via shared <code>_generate_three_column_coords</code>), and a <code>PITArea</code> rectangle for the content region.</td>
+      <td><code>PITLayout.calculate(config)</code> → <code>CoordinateDict</code></td>
+    </tr>
+    <tr>
+      <td><code>pit/markers.py</code> <span class="rev-tag">NEW</span></td>
+      <td>Resolves the marker for a given event (DB icon → rule icon → config default → built-in shape) and produces SVG draw calls. Built-in shapes: <code>circle</code>, <code>diamond</code>, <code>square</code>, <code>triangle</code>, <code>star</code>. DB icons are colorized via the existing fill-replacement strategy used by the SVG-pattern code path.</td>
+      <td><code>resolve_marker(event, style, config, db)</code> → <code>MarkerSpec</code><br><code>draw_marker(svg, spec, x, y, color)</code></td>
+    </tr>
+    <tr>
+      <td><code>pit/labella_adapter.py</code></td>
+      <td>Filters events to point-in-time + milestones, builds labella <code>Node</code>s, runs <code>Force</code>, returns a list of <code>PITCallout</code> placements in absolute SVG coords. Handles <code>Side.BOTH</code> partitioning.</td>
+      <td><code>layout_pit_callouts(events, axis_origin, axis_length, config, direction, side)</code></td>
+    </tr>
+    <tr>
+      <td><code>pit/renderer.py</code></td>
+      <td>Draws axis, ticks (via shared <code>shared.timeband.build_segments</code>), markers, leaders, label boxes, and label text. Inherits <code>BaseSVGRenderer</code>. Uses <code>text_to_svg_group</code> for label text and the existing <code>_ensure_svg_pattern_def</code> path for label-box pattern fills.</td>
+      <td><code>PITRenderer._render_content()</code></td>
+    </tr>
+    <tr>
+      <td><code>visualizers/timeline/orientation.py</code></td>
+      <td><em>Reused unchanged.</em> Provides <code>Orientation</code>, <code>Side</code>, <code>labella_direction()</code>, <code>axis_to_xy()</code>, <code>perp_offset()</code>.</td>
+      <td>(import from timeline package)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Decision: share or duplicate <code>orientation.py</code>?</strong> Recommended: <em>share</em> — import directly from
+  <code>visualizers.timeline.orientation</code>. The module is already pure and has no timeline-specific state. If timeline-specific
+  drift becomes a concern later, lift the file to <code>shared/axis_orientation.py</code> as a follow-up.
+</div>
+
+<h3>3.2 Data flow</h3>
+
+<pre><code>ecalendar.py (pit subcommand)
+   │
+   ▼
+VisualizerFactory.create("pit")  →  PITVisualizer
+   │
+   ▼
+PITLayout.calculate(config)      →  {"PITArea": (x,y,w,h), "Header*": ..., "Footer*": ...}
+   │
+   ▼
+PITRenderer._render_content(config, coord, events, db, ...)
+   │
+   ├── filter events: keep only point-in-time + milestones (drop multi-day)
+   ├── compute axis geometry (origin, length, direction)
+   ├── build axis ticks via shared.timeband.build_segments({"unit": pit_tick_unit, ...})
+   ├── pit/labella_adapter.layout_pit_callouts(...)
+   │       │
+   │       ▼
+   │   vendor/labella  Force + Node + Renderer  →  placements + leader paths
+   │
+   ├── draw axis line + ticks
+   ├── for each placement:
+   │     ├── markers.resolve_marker → MarkerSpec (icon name or built-in shape)
+   │     ├── markers.draw_marker (with resolved color)
+   │     ├── draw leader (resolved LeaderStyle: stroke/width/dash/opacity/linecap)
+   │     ├── draw label box (rect + optional pattern fill via _ensure_svg_pattern_def)
+   │     └── draw label text (text_to_svg_group)
+   └── draw today line (optional)
+</code></pre>
+
+<h2>4. CLI Surface <span class="rev-tag">UPDATED</span></h2>
+
+<p>New subcommand <code>pit</code>. <strong>Reuses the shared visualizer argument groups</strong> already wired in <code>ecalendar.py</code> rather than re-declaring duplicates. The shared groups are added by the per-view loop around <code>ecalendar.py:367</code> (<code>for view_parser in (weekly, mini, ..., timeline, blockplan, compactplan, ...)</code>) — PIT joins that loop.</p>
+
+<h3>4.1 Inherited (no re-declaration)</h3>
+
+<table>
+  <thead><tr><th>Group</th><th>Flags PIT gets for free</th></tr></thead>
+  <tbody>
+    <tr><td>Date range</td><td><code>--start</code>, <code>--end</code></td></tr>
+    <tr><td>Output</td><td><code>--outputfile</code>, <code>--papersize</code>, <code>--orientation</code> <em>(page orientation — portrait/landscape)</em>, <code>--shrink</code></td></tr>
+    <tr><td>Margins / fonts / colors</td><td>standard shared group (header/footer left/center/right text + margins)</td></tr>
+    <tr><td>Theme</td><td><code>--theme</code></td></tr>
+    <tr><td><strong>Content filtering</strong></td><td><code>--noevents</code>, <code>--ignorecomplete</code>, <code>--milestones</code>, <code>--rollups</code>, <code>--includenotes</code>, <code>--WBS</code>, <code>--empty</code></td></tr>
+    <tr><td>Fiscal</td><td><code>--fiscal</code>, <code>--fiscal-year-offset</code> (PIT does <strong>not</strong> render fiscal bands but still honors the fiscal lookup for theming and label formatting)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <strong>Deliberately not re-introduced</strong> as PIT-specific flags:
+  <ul class="tight" style="margin: 0.3rem 0 0;">
+    <li><code>--milestones</code>, <code>--rollups</code>, <code>--WBS</code>, <code>--includenotes</code>, <code>--ignorecomplete</code>, <code>--noevents</code>, <code>--empty</code> — these are the canonical content-filter flags already used by <code>timeline</code>/<code>blockplan</code>/<code>compactplan</code>; PIT honors them via the same shared block.</li>
+    <li><code>--nodurations</code> — meaningless for PIT (durations are never drawn). Filtering happens unconditionally in the renderer's event filter step.</li>
+    <li><span class="strike">--show-notes / --no-notes</span> — superseded by the existing <code>--includenotes</code> flag.</li>
+    <li><span class="strike">--date-format (as a CLI flag)</span> — covered by the theme's <code>pit.date_format</code>; not promoted to CLI for v1.</li>
+  </ul>
+</div>
+
+<h3>4.2 PIT-specific flags</h3>
+
+<table>
+  <thead><tr><th>Flag</th><th>Default</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>--direction {horizontal,vertical}</code> <span class="rev-tag">RENAMED</span></td><td><code>horizontal</code></td><td>Axis direction. Renamed from <code>--orientation</code> to avoid collision with the existing page-orientation flag (<code>ecalendar.py:821</code>).</td></tr>
+    <tr><td><code>--label-side {primary,secondary,both}</code></td><td><code>both</code></td><td>Which side(s) of the axis the labels occupy.</td></tr>
+    <tr><td><code>--tick-unit {fiscal_quarter,fiscal_period,month,week,interval,date}</code> <span class="rev-tag">UPDATED</span></td><td><code>month</code></td><td>Axis tick granularity. Set matches the <code>unit</code> values accepted by <code>shared/timeband.py::build_segments</code> (lines 80–146), so PIT axis ticks reuse the same code path as every other timeband in the project.</td></tr>
+    <tr><td><code>--tick-interval N</code> <span class="rev-tag">NEW</span></td><td><code>1</code></td><td>For <code>--tick-unit interval</code>, days between ticks. Passes straight through as the timeband <code>interval</code> field.</td></tr>
+    <tr><td><code>--tick-label-format STR</code> <span class="rev-tag">NEW</span></td><td>unit default</td><td>Override the timeband <code>label_format</code> for axis ticks.</td></tr>
+    <tr><td><code>--today-line / --no-today-line</code></td><td><code>--today-line</code></td><td>Draw a perpendicular line at today's date.</td></tr>
+    <tr><td><code>--today-date YYYY-MM-DD</code> <span class="rev-tag">NEW</span></td><td>(real today)</td><td>Override the today-line position. Lets a future-dated presentation be prepared with the "correct" today indicator.</td></tr>
+    <tr><td><code>--today-label STR</code> <span class="rev-tag">NEW</span></td><td>(theme: <code>"today"</code>)</td><td>Override the today-line label text for this run.</td></tr>
+    <tr><td><code>--event-icon NAME</code> <span class="rev-tag">NEW</span></td><td>(none → circle)</td><td>DB icon name to use as the default event marker (overrides <code>pit_default_event_icon</code> for this run).</td></tr>
+    <tr><td><code>--milestone-icon NAME</code> <span class="rev-tag">NEW</span></td><td>(none → diamond)</td><td>DB icon name to use as the default milestone marker.</td></tr>
+    <tr><td><code>--marker-size FLOAT</code></td><td><code>7.0</code></td><td>Bounding-box size for built-in shapes and DB icons (icons scaled to fit).</td></tr>
+    <tr><td><code>--leader-dash STR</code> <span class="rev-tag">NEW</span></td><td>(solid)</td><td>SVG <code>stroke-dasharray</code> for leaders, e.g. <code>"4,2"</code>.</td></tr>
+  </tbody>
+</table>
+
+<p class="small">All other styling (colors, widths, opacities, label-box fill/pattern) is theme-driven — see §5 — so the CLI surface stays small.</p>
+
+<h3>4.3 Example invocations</h3>
+
+<pre><code># Horizontal, both sides, default theme — uses inherited --orientation
+# for the page (landscape) and the new --direction for the axis.
+uv run ecalendar.py pit --start 2026-01-01 --end 2026-12-31 \
+   --orientation landscape \
+   --direction horizontal --label-side both \
+   --tick-unit month \
+   --output output/pit_2026.svg
+
+# Vertical wall poster, milestones only, custom icons, accent theme
+uv run ecalendar.py pit --start 2026-01-01 --end 2026-12-31 \
+   --orientation portrait --papersize tabloid \
+   --direction vertical --label-side primary \
+   --milestones \
+   --milestone-icon "trophy" --marker-size 11 \
+   --tick-unit fiscal_quarter \
+   --theme accent \
+   --output output/pit_milestones_2026.svg
+
+# Fiscal-quarter ticks + custom dashed leaders, includes notes
+uv run ecalendar.py pit --start 2026-01-01 --end 2027-12-31 \
+   --fiscal "4-5-4" --tick-unit fiscal_quarter \
+   --includenotes --leader-dash "3,2" \
+   --output output/pit_program.svg
+</code></pre>
+
+<h2>5. Config &amp; Theme Integration <span class="rev-tag">UPDATED</span></h2>
+
+<h3>5.1 Palette &amp; pattern access</h3>
+
+<p>Every PIT color slot accepts the project's existing reference syntax. Resolved at render time through <code>ecalendar._resolve_palette_overrides()</code> against <code>db_access.get_all_palettes()</code>:</p>
+<ul class="tight">
+  <li><strong>Hex / CSS name</strong> — e.g. <code>"#2d5fae"</code>, <code>"steelblue"</code></li>
+  <li><strong>Single palette index</strong> — <code>"palette:Set1:3"</code> (named palette in the <code>palettes</code> DB table)</li>
+  <li><strong>Bulk palette list</strong> — top-level <code>event_palette</code>, <code>milestone_palette</code>, <code>label_palette</code> entries that hand out colors round-robin to events (mirrors the existing <code>month_palette</code> / <code>fiscal_palette</code> / <code>group_palette</code> mechanism)</li>
+</ul>
+
+<p>SVG <strong>patterns</strong> from the <code>patterns</code> DB table are usable as label-box fills via the same <code>_ensure_svg_pattern_def</code> code path already used by the weekly day-box hash decoration (see <code>MEMORY.md</code> → "SVG Pattern Decoration"). Pattern names referenced by PIT include all 35 patterns shipped in <code>calendar.db</code>.</p>
+
+<h3>5.2 New <code>CalendarConfig</code> fields</h3>
+
+<pre><code># config/config.py — added near existing timeline_* block
+
+# Geometry
+pit_direction: str = "horizontal"            # "horizontal" | "vertical"
+pit_label_side: str = "both"                 # "primary" | "secondary" | "both"
+pit_tick_unit: str = "month"                 # timeband unit (month/week/fiscal_quarter/...)
+pit_tick_interval: int = 1                   # for unit == "interval"
+pit_tick_label_format: str | None = None
+pit_show_today_line: bool = True
+pit_today_date: str | None = None            # YYYY-MM-DD; None → real today
+pit_today_line_label: str = "today"          # set "" to suppress label
+pit_marker_size: float = 7.0
+pit_dot_radius: float = 4.0
+pit_axis_stroke_width: float = 1.0
+pit_date_format: str = "MMM D"
+pit_date_text_offset: float = 6.0            # axis → date-text distance
+
+# SVG markers (v1 built-in: "arrow-head"; "none" disables). Each slot
+# has its own kind AND its own independently-set size, so the axis-tip
+# arrow can differ from the leader-tip arrow in the same SVG.
+pit_axis_marker_start:       str   = "none"
+pit_axis_marker_start_size:  float = 4.0
+pit_axis_marker_end:         str   = "arrow-head"
+pit_axis_marker_end_size:    float = 6.0
+
+pit_leader_marker_start:      str   = "none"
+pit_leader_marker_start_size: float = 3.0
+pit_leader_marker_end:        str   = "arrow-head"
+pit_leader_marker_end_size:   float = 5.0
+
+pit_today_line_marker_start:      str   = "none"
+pit_today_line_marker_start_size: float = 4.0
+pit_today_line_marker_end:        str   = "none"
+pit_today_line_marker_end_size:   float = 6.0
+
+# Marker icons (DB icon names; None = built-in shape)
+pit_default_event_icon: str | None = None
+pit_default_milestone_icon: str | None = None
+
+# Leader stroke (defaults; per-rule + per-side can override)
+pit_leader_stroke_width: float = 0.75
+pit_leader_stroke_dasharray: str | None = None
+pit_leader_stroke_opacity: float = 1.0
+pit_leader_stroke_linecap: str = "round"
+pit_leader_stroke_linejoin: str = "round"
+
+# Label box styling
+pit_label_stroke_width: float = 0.5
+pit_label_stroke_dasharray: str | None = None
+pit_label_fill_opacity: float = 0.0          # 0 = no fill; >0 = filled
+pit_label_corner_radius: float = 2.0
+pit_label_padding_x: float = 6.0
+pit_label_padding_y: float = 3.0
+
+# Theme overrides (None → use module defaults). All color slots accept
+# CSS / hex / "palette:NAME:INDEX".
+theme_pit_axis_color: str | None = None
+theme_pit_tick_color: str | None = None
+
+# Date label (drawn opposite the event label)
+theme_pit_date_text_color: str | None = None
+theme_pit_date_text_font_name: str | None = None
+theme_pit_date_text_font_size: float | None = None
+
+# Today line — full stroke vocabulary + label + marker-end
+theme_pit_today_line_color: str | None = None
+theme_pit_today_line_width: float | None = None
+theme_pit_today_line_dasharray: str | None = None
+theme_pit_today_line_opacity: float | None = None
+theme_pit_today_line_linecap: str | None = None
+theme_pit_today_line_linejoin: str | None = None
+theme_pit_today_line_label_color: str | None = None
+theme_pit_today_line_label_font_name: str | None = None
+theme_pit_today_line_label_font_size: float | None = None
+theme_pit_today_line_label_position: str | None = None    # start|middle|end
+
+# Built-in arrow-head marker default color (size is per-slot — see above)
+theme_pit_arrow_head_color: str | None = None
+
+theme_pit_dot_color: str | None = None
+theme_pit_milestone_color: str | None = None
+
+theme_pit_leader_color: str | None = None
+theme_pit_leader_primary_color: str | None = None     # per-side override
+theme_pit_leader_secondary_color: str | None = None
+
+theme_pit_label_stroke_color: str | None = None
+theme_pit_label_fill_color: str | None = None
+theme_pit_label_pattern: str | None = None            # DB pattern name
+theme_pit_label_text_color: str | None = None
+
+# Bulk palette references (resolved by _resolve_palette_overrides())
+theme_pit_event_palette: str | None = None            # e.g. "Set1"
+theme_pit_milestone_palette: str | None = None        # e.g. "Dark2"
+theme_pit_label_palette: str | None = None            # round-robin label fills
+</code></pre>
+
+<h3>5.3 Theme YAML section</h3>
+
+<p>Add a <code>pit:</code> block to each of the 7 themes (slot between <code>timeline:</code> and <code>blockplan:</code> per the canonical order in <code>MEMORY.md</code>):</p>
+
+<pre><code>pit:
+  # Axis (with independent start + end markers, each with its own size)
+  axis:
+    color: "#333333"
+    width: 1.0
+    marker_start: "none"                 # "arrow-head" | "none" | custom id
+    marker_start_size: 4.0
+    marker_end: "arrow-head"
+    marker_end_size: 6.0                 # larger terminal arrowhead
+  tick_color: "#666666"
+  tick_unit: "month"
+  date_format: "MMM D"
+
+  # Date label (opposite-side text at marker's intersection with axis)
+  date_text:
+    color: "#444"
+    font_name: "Roboto-Regular"
+    font_size: 9
+    offset: 6.0                          # axis → text distance
+
+  # Markers
+  default_event_icon: null               # built-in circle
+  default_milestone_icon: "diamond-fill" # DB icon
+  dot_color: "palette:Set1:1"
+  milestone_color: "palette:Set1:0"
+  event_palette: "Set3"
+  milestone_palette: "Dark2"
+
+  # Leader strokes + independent start/end markers — global + per-side
+  leader:
+    color: "#555"
+    width: 0.75
+    dasharray: null
+    opacity: 1.0
+    linecap: "round"
+    marker_start: "none"                 # axis end of the leader
+    marker_start_size: 3.0
+    marker_end: "arrow-head"             # ▶ at the label end
+    marker_end_size: 5.0
+  leader_primary:
+    color: "palette:Set1:2"
+    marker_end_size: 6.0                 # bigger arrow on primary side
+  leader_secondary:
+    color: "palette:Set1:4"
+    dasharray: "3,2"
+    marker_start: "arrow-head"           # arrow on both ends, secondary only
+    marker_start_size: 3.0
+
+  # Today line — fully themeable + custom label + future-date capable
+  today_line:
+    color: "#c00"
+    width: 1.0
+    dasharray: "4,2"
+    opacity: 0.85
+    linecap: "round"
+    linejoin: "round"
+    label: "today"                       # "" suppresses the label
+    label_color: "#c00"
+    label_font_name: "Roboto-Bold"
+    label_font_size: 9
+    label_position: "end"                # start | middle | end
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "none"                   # set to "arrow-head" to point into the future
+    marker_end_size: 6.0
+
+  # Built-in arrow-head marker default color (sizes are per-slot above)
+  arrow_head:
+    color: "#333"
+
+  # Label boxes — full stroke / fill / pattern vocabulary
+  label:
+    stroke_color: "#222"
+    stroke_width: 0.5
+    stroke_dasharray: null
+    fill_color: "palette:Pastel1:1"
+    fill_opacity: 0.85
+    pattern: "diagonal-stripes"
+    pattern_opacity: 0.15
+    text_color: "#1b1f24"
+    corner_radius: 2.0
+    padding_x: 6.0
+    padding_y: 3.0
+  label_palette: "Set3"
+
+  # Per-rule overrides supported in the global style_rules list:
+  #   - match: { groups: ["release"] }
+  #     marker_icon: "rocket"
+  #     leader:
+  #       color: "#c33"
+  #       dasharray: "4,2"
+  #       marker_start: "arrow-head"
+  #       marker_start_size: 4.0
+  #       marker_end: "arrow-head"
+  #       marker_end_size: 7.0          # double-ended, asymmetric
+  #     label: { fill_color: "palette:Reds:2", pattern: "circuit-board" }
+</code></pre>
+
+<h3>5.4 Theme-engine wiring</h3>
+
+<p>Register mappings in <code>config/theme_engine.py</code> alongside existing entries:</p>
+
+<pre><code>("pit", "axis_color"):              "theme_pit_axis_color",
+("pit", "tick_color"):              "theme_pit_tick_color",
+("pit", "today_line_color"):        "theme_pit_today_line_color",
+("pit", "tick_unit"):               "pit_tick_unit",
+("pit", "date_format"):             "pit_date_format",
+("pit", "default_event_icon"):      "pit_default_event_icon",
+("pit", "default_milestone_icon"):  "pit_default_milestone_icon",
+("pit", "dot_color"):               "theme_pit_dot_color",
+("pit", "milestone_color"):         "theme_pit_milestone_color",
+("pit", "event_palette"):           "theme_pit_event_palette",
+("pit", "milestone_palette"):       "theme_pit_milestone_palette",
+("pit", "leader"):                  "_pit_leader_block",      # decomposed
+("pit", "leader_primary"):          "_pit_leader_primary_block",
+("pit", "leader_secondary"):        "_pit_leader_secondary_block",
+("pit", "label"):                   "_pit_label_block",       # decomposed
+("pit", "label_palette"):           "theme_pit_label_palette",
+</code></pre>
+
+<p class="small">Block-style theme entries (<code>leader:</code>, <code>label:</code>) are decomposed into their individual <code>theme_pit_*</code> fields by the theme engine, mirroring how <code>blockplan.swimlanes</code> is handled (see <code>MEMORY.md</code> → "Blockplan Swimlane Configuration").</p>
+
+<h3>5.5 Style-rule additions</h3>
+
+<p>The shared <code>StyleEngine</code> already supports per-rule color and pattern fields. PIT extends the resolved <code>StyleResult</code> consumers to read three additional optional rule keys:</p>
+
+<table>
+  <thead><tr><th>Rule key</th><th>Applies to</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>marker_icon: "name"</code></td><td>Marker</td><td>Replaces built-in shape with the named DB icon.</td></tr>
+    <tr><td><code>leader: { color, width, dasharray, opacity, linecap, linejoin }</code></td><td>Leader</td><td>Per-rule leader stroke override.</td></tr>
+    <tr><td><code>label: { stroke_color, stroke_width, stroke_dasharray, fill_color, fill_opacity, pattern, pattern_opacity, text_color, corner_radius }</code></td><td>Label box</td><td>Per-rule full label styling, including DB pattern fill.</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Labella Integration Notes</h2>
+
+<ol class="tight">
+  <li>
+    Build <code>Node(idealPos, width, data=event)</code> for each event.
+    <ul>
+      <li>Horizontal: <code>idealPos</code> = pixel offset from axis start; <code>width</code> = measured text width + padding.</li>
+      <li>Vertical: <code>idealPos</code> = pixel offset down the axis; <code>width</code> = line-height extent.</li>
+    </ul>
+  </li>
+  <li>Run <code>Force(nodes, options={"lineSpacing": ..., "minPos": 0, "maxPos": axis_length}).compute()</code>.</li>
+  <li>Build leader paths via <code>Renderer(direction=labella_direction(direction, side), nodeHeight=..., ...).layout(nodes)</code> then <code>.generatePath(nodes)</code> — emit the bezier <code>d</code> in axis-local coords.</li>
+  <li>Pair each placement with the absolute <code>axis_origin</code> and wrap leader paths in <code>&lt;g transform="translate(ox,oy)"&gt;</code> at render time. Identical to the proven timeline approach.</li>
+  <li><code>Side.BOTH</code> handling: partition events with chronological alternation (mirror <code>_partition_for_both()</code> in <code>visualizers/timeline/labella_adapter.py</code>) and run labella twice — once per side — with opposing directions.</li>
+  <li><strong>Per-marker stroke styling</strong> is applied <em>after</em> labella returns geometry — labella sees only positions and widths.</li>
+</ol>
+
+<h2>7. Planned Output Examples</h2>
+
+<div class="grid">
+  <div class="panel">
+    <h4>output/pit_2026_horizontal.svg</h4>
+    <ul class="tight">
+      <li>Letter landscape, both-side labels</li>
+      <li>~12 events across the year</li>
+      <li>Default circle dots, diamond milestones</li>
+      <li>Month ticks, today line at 2026-06-06</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h4>output/pit_2026_vertical.svg</h4>
+    <ul class="tight">
+      <li>Tabloid portrait, primary-side (right) labels</li>
+      <li>Same events, vertical axis</li>
+      <li>Fiscal-quarter ticks (<code>--tick-unit fiscal_quarter</code>)</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h4>output/pit_iconmarkers.svg <span class="rev-tag">NEW</span></h4>
+    <ul class="tight">
+      <li>Horizontal, both sides</li>
+      <li>Per-rule DB icon markers (release → <code>rocket</code>, review → <code>magnifier</code>, ship → <code>truck</code>)</li>
+      <li>Leaders colored from <code>palette:Set1</code></li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h4>output/pit_themedlabels.svg <span class="rev-tag">NEW</span></h4>
+    <ul class="tight">
+      <li>Vertical, primary side</li>
+      <li>Label boxes with <code>diagonal-stripes</code> DB pattern fill at 15% opacity</li>
+      <li>Dashed secondary-side leaders (<code>"3,2"</code>)</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h4>output/pit_milestones_only.svg</h4>
+    <ul class="tight">
+      <li>Horizontal, <code>--milestones</code></li>
+      <li>Trophy icons for each milestone</li>
+      <li>Single-line labels (notes omitted via lack of <code>--includenotes</code>)</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h4>output/pit_release_program.svg</h4>
+    <ul class="tight">
+      <li>Vertical, both-side labels</li>
+      <li>Release-train themed dataset</li>
+      <li>Demonstrates dense-cluster label routing</li>
+    </ul>
+  </div>
+</div>
+
+<h2>8. Test Plan</h2>
+
+<table>
+  <thead><tr><th>Test</th><th>What it verifies</th></tr></thead>
+  <tbody>
+    <tr><td><code>test_pit_factory_registered</code></td><td><code>VisualizerFactory.create("pit")</code> returns a <code>PITVisualizer</code>.</td></tr>
+    <tr><td><code>test_pit_layout_coords</code></td><td><code>PITLayout.calculate()</code> returns a <code>PITArea</code> rectangle inside the page margins.</td></tr>
+    <tr><td><code>test_pit_filters_durations</code></td><td>Multi-day events are dropped.</td></tr>
+    <tr><td><code>test_pit_direction_flag</code></td><td><code>--direction vertical</code> produces a vertical axis line; <code>--orientation</code> still controls page only.</td></tr>
+    <tr><td><code>test_pit_inherits_filter_flags</code></td><td><code>--milestones</code>, <code>--ignorecomplete</code>, <code>--rollups</code>, <code>--WBS</code>, <code>--includenotes</code> all parse and propagate to config without duplication.</td></tr>
+    <tr><td><code>test_pit_tick_units</code></td><td>Each timeband unit (<code>month</code>, <code>week</code>, <code>fiscal_quarter</code>, <code>fiscal_period</code>, <code>interval</code>, <code>date</code>) produces the expected tick count for a known date range.</td></tr>
+    <tr><td><code>test_pit_marker_resolution</code> <span class="rev-tag">NEW</span></td><td>Resolution order (event.icon → rule.marker_icon → config default → built-in shape) honored.</td></tr>
+    <tr><td><code>test_pit_icon_colorization</code> <span class="rev-tag">NEW</span></td><td>DB icon glyph <code>fill="#000"</code> is replaced with the resolved marker color.</td></tr>
+    <tr><td><code>test_pit_leader_stroke_attrs</code> <span class="rev-tag">NEW</span></td><td>Per-rule <code>leader: { dasharray: "4,2", opacity: 0.5 }</code> propagates to SVG <code>&lt;path stroke-dasharray="4,2" stroke-opacity="0.5"&gt;</code>.</td></tr>
+    <tr><td><code>test_pit_label_pattern_fill</code> <span class="rev-tag">NEW</span></td><td>Label boxes with <code>pattern: "diagonal-stripes"</code> emit a <code>&lt;defs&gt;&lt;pattern&gt;</code> and a <code>fill="url(#pat-...)"</code> rect.</td></tr>
+    <tr><td><code>test_pit_palette_reference</code> <span class="rev-tag">NEW</span></td><td><code>palette:Set1:2</code> resolves to the expected hex via <code>db.get_all_palettes()</code>.</td></tr>
+    <tr><td><code>test_pit_both_side_partition</code></td><td>With <code>--label-side both</code>, labels appear on both sides; partition is balanced.</td></tr>
+    <tr><td><code>test_pit_today_line</code></td><td>Today line is rendered when enabled, absent when disabled.</td></tr>
+    <tr><td><code>test_pit_today_line_themeable</code> <span class="rev-tag">NEW</span></td><td>All stroke attrs (color/width/dasharray/opacity/linecap/linejoin), label text, and label position propagate to the SVG.</td></tr>
+    <tr><td><code>test_pit_today_date_override</code> <span class="rev-tag">NEW</span></td><td><code>--today-date 2027-01-15</code> moves the today line to that date, ignoring the real clock.</td></tr>
+    <tr><td><code>test_pit_date_opposite_side</code> <span class="rev-tag">NEW</span></td><td>For each placement, the date string is rendered on the opposite side of the axis from its label, at the marker's axis-intersection Y/X (not the displaced label Y/X).</td></tr>
+    <tr><td><code>test_pit_marker_end_arrow_axis</code> <span class="rev-tag">NEW</span></td><td>Axis line gets <code>marker-end="url(#marker-arrow-head-...)"</code> when theme enables it; <code>&lt;defs&gt;</code> contains the matching <code>&lt;marker&gt;</code>.</td></tr>
+    <tr><td><code>test_pit_marker_start_arrow_axis</code> <span class="rev-tag">NEW</span></td><td>Axis line gets <code>marker-start="url(#marker-arrow-head-...)"</code> when set, independently of <code>marker-end</code>.</td></tr>
+    <tr><td><code>test_pit_marker_end_arrow_leader</code> <span class="rev-tag">NEW</span></td><td>Leader paths emit <code>marker-end</code> on the label end, in both horizontal and vertical layouts and both sides.</td></tr>
+    <tr><td><code>test_pit_marker_start_arrow_leader</code> <span class="rev-tag">NEW</span></td><td>Leader paths emit <code>marker-start</code> on the axis end when set; per-side overrides honored.</td></tr>
+    <tr><td><code>test_pit_marker_independent_sizes</code> <span class="rev-tag">NEW</span></td><td>Axis end (size 6), leader end (size 5), leader start (size 3) each produce a distinct <code>&lt;marker&gt;</code> in <code>&lt;defs&gt;</code> with the requested <code>markerWidth</code>/<code>markerHeight</code>. Dedup is per (kind, color, size) tuple — no clobbering.</td></tr>
+    <tr><td><code>test_pit_marker_none_emits_nothing</code> <span class="rev-tag">NEW</span></td><td>Setting any marker slot to <code>"none"</code> omits the SVG attribute and does <em>not</em> inject an unused <code>&lt;marker&gt;</code>.</td></tr>
+    <tr><td><code>test_pit_today_line_markers</code> <span class="rev-tag">NEW</span></td><td>Today line accepts independent <code>marker_start</code> + <code>marker_end</code> with independent sizes.</td></tr>
+    <tr><td><code>test_pit_density_warning</code> <span class="rev-tag">NEW</span></td><td>With &gt; 80 events on a side, the logger emits a WARNING and the SVG <code>&lt;desc&gt;</code> records the over-budget condition.</td></tr>
+    <tr><td><code>test_pit_icon_sizing</code> <span class="rev-tag">NEW</span></td><td>16×8 and 8×16 glyphs each render with their longest side at <code>pit_marker_size</code> and centered on the dot.</td></tr>
+    <tr><td><code>test_pit_label_fill_precedence</code> <span class="rev-tag">NEW</span></td><td>Verifies per-rule &gt; per-side &gt; <code>label_fill_color</code> &gt; <code>label_palette</code> (round-robin).</td></tr>
+    <tr><td><code>test_pit_drops_multiday</code> <span class="rev-tag">NEW</span></td><td>Multi-day events are dropped; stderr summary line emitted.</td></tr>
+    <tr><td><code>test_pit_theme_application</code></td><td><code>theme_pit_axis_color</code> propagates to the axis stroke attribute.</td></tr>
+  </tbody>
+</table>
+
+<p class="small">Run: <code>uv run python -m pytest tests/test_pit_visualizer.py -v</code></p>
+
+<h2>9. Implementation Order</h2>
+
+<ol class="tight">
+  <li>Add <code>pit_*</code> fields to <code>CalendarConfig</code> + <code>theme_pit_*</code> overrides; add <code>__post_init__</code> validation for <code>pit_direction</code>, <code>pit_label_side</code>, <code>pit_tick_unit</code>.</li>
+  <li>Create <code>visualizers/pit/</code> package skeleton (5 files, stubs).</li>
+  <li>Implement <code>PITLayout</code> — page-level coords only.</li>
+  <li>Implement <code>pit/markers.py</code>: marker resolution + draw helpers for built-in shapes; DB icon path piggybacks on existing icon colorization.</li>
+  <li>Implement <code>pit/labella_adapter.py</code> by adapting the timeline adapter, removing duration logic, keeping direction + Side.BOTH handling.</li>
+  <li>Implement <code>PITRenderer</code>: axis → ticks (via <code>shared.timeband.build_segments</code>) → markers → leaders → label boxes (with stroke/fill/pattern) → label text → today line.</li>
+  <li>Extend <code>StyleEngine</code> result consumer in <code>pit/renderer.py</code> to read the new rule keys (<code>marker_icon</code>, <code>leader</code>, <code>label</code>).</li>
+  <li>Wire factory + ecalendar subparser; join the shared arg-group loop; add only the <code>--direction</code>, <code>--label-side</code>, <code>--tick-unit</code>, <code>--tick-interval</code>, <code>--tick-label-format</code>, <code>--today-line</code>, <code>--event-icon</code>, <code>--milestone-icon</code>, <code>--marker-size</code>, <code>--leader-dash</code> flags.</li>
+  <li>Add <code>pit:</code> YAML block to all 7 themes; add theme-engine mappings, including the decomposed <code>leader:</code> / <code>label:</code> block handling.</li>
+  <li>Smoke-test from CLI against a real DB.</li>
+  <li>Write unit tests; capture sample SVGs into <code>output/</code>.</li>
+  <li>Document the subcommand in <code>USER_GUIDE.md</code>.</li>
+</ol>
+
+<h2>10. Decisions <span class="rev-tag">RESOLVED</span></h2>
+
+<p>The v2 open questions have been resolved. The decisions below are now part of the spec.</p>
+
+<table>
+  <thead><tr><th>#</th><th>Question</th><th>Decision</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>How to handle multi-day events?</td>
+      <td>
+        <strong>Drop entirely.</strong> The renderer's event-filter step removes any event with <code>start != end</code> before the labella pass. A summary line is emitted on stderr — <code>"PIT: skipped N multi-day events (use the timeline visualizer for durations)"</code> — so the omission is never silent. Documented as a hard limitation in <code>USER_GUIDE.md</code>.
+      </td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Density limit when labella struggles to converge.</td>
+      <td>
+        <strong>Hard cap at 80 events per side.</strong> The adapter counts events after the side-partition step. If either side exceeds 80, the renderer:
+        <ul class="tight" style="margin: 0.3rem 0 0 1rem;">
+          <li>logs a <code>WARNING</code> via the project's standard logger,</li>
+          <li>writes the same warning into the SVG <code>&lt;desc&gt;</code> metadata block (so the SVG itself records that it was over-budget),</li>
+          <li>still proceeds with the layout (labella's own bail-out remains the final safety net).</li>
+        </ul>
+        Constant: <code>PIT_MAX_EVENTS_PER_SIDE = 80</code> in <code>pit/labella_adapter.py</code> so it is testable and tunable.
+      </td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Icon sizing for non-square DB glyphs.</td>
+      <td>
+        <strong>Scale to fit the longest side, then center on the marker point.</strong> Implementation in <code>pit/markers.py::draw_marker()</code>:
+        <ol class="tight" style="margin: 0.3rem 0 0 1rem;">
+          <li>Parse glyph viewBox; compute <code>scale = pit_marker_size / max(viewBox.w, viewBox.h)</code>.</li>
+          <li>Translate so glyph's viewBox center coincides with the marker (<code>x_dot</code>, <code>y_dot</code>).</li>
+          <li>Apply colorization via the existing <code>fill="#000"</code> → resolved color substitution.</li>
+        </ol>
+        Test <code>test_pit_icon_sizing</code> verifies a 16×8 glyph and an 8×16 glyph both render with their longest side at <code>pit_marker_size</code> and centered on the dot.
+      </td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Label fill precedence when both an explicit color and a palette are set.</td>
+      <td>
+        <strong>Explicit per-rule &gt; per-side &gt; <code>label_fill_color</code> &gt; <code>label_palette</code> (round-robin).</strong> Implemented in <code>pit/renderer.py::_resolve_label_fill()</code>. The palette is only consulted when every more-specific source returns <code>None</code>. Round-robin order is the chronological event order (stable, deterministic). Test <code>test_pit_label_fill_precedence</code> exercises all four levels with overlap.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>11. Out of Scope (Deferred)</h2>
+<ul class="tight">
+  <li>Duration bars (already served by <code>timeline</code>).</li>
+  <li>Fiscal period / quarter band rows.</li>
+  <li>Rollups and WBS hierarchies (filtered via shared flags but not visualized differently).</li>
+  <li>Icon band.</li>
+  <li>Continuation icons (no off-page content yet — single page only).</li>
+  <li>Multi-page / overflow SVG output.</li>
+</ul>
+
+<h2>12. External CSS Styleability via <code>ec-*</code> Classes <span class="rev-tag">NEW</span></h2>
+
+<p>PIT joins the project's existing CSS-class convention so users can re-skin the SVG <strong>after</strong> render without re-running ecalendar. The mechanism is already in place across the codebase:</p>
+
+<ul class="tight">
+  <li><code>BaseSVGRenderer._draw_rect()</code> / <code>_draw_text()</code> / <code>_draw_line()</code> / <code>_draw_group()</code> all accept a <code>css_class</code> parameter (<code>renderers/svg_base.py:99,161,235,275</code>).</li>
+  <li>A <code>&lt;style&gt;</code> block is auto-injected via <code>drawing.append_css()</code> from <code>ThemeStyles.element_bindings</code> by <code>renderers/css_generator.py::generate_css()</code>.</li>
+  <li>Theme YAML element bindings (<code>elements:</code> block) populate <code>ThemeStyles</code>; <code>config.get_text_style("ec-…")</code> / <code>get_line_style</code> / <code>get_box_style</code> are the resolver APIs (<code>config/config.py:1245+</code>).</li>
+  <li>The existing <code>timeline</code> visualizer demonstrates the pattern with: <code>ec-axis-line</code>, <code>ec-axis-tick</code>, <code>ec-callout-leader</code>, <code>ec-callout-box</code>, <code>ec-milestone-marker</code>, <code>ec-event-date</code>, <code>ec-tick-label</code>, <code>ec-today-line</code>, <code>ec-today-label</code>.</li>
+</ul>
+
+<h3>12.1 PIT CSS class inventory</h3>
+
+<p>PIT reuses every applicable class from the existing inventory and adds five PIT-specific ones (prefix <code>ec-pit-</code> only when the element does not exist elsewhere — otherwise share):</p>
+
+<table>
+  <thead><tr><th>Class</th><th>Applied to</th><th>Style resolver</th><th>Reused?</th></tr></thead>
+  <tbody>
+    <tr><td><code>ec-axis-line</code></td><td>The main axis <code>&lt;line&gt;</code></td><td><code>get_line_style</code></td><td>Reused from timeline</td></tr>
+    <tr><td><code>ec-axis-tick</code></td><td>Each tick mark on the axis</td><td><code>get_line_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-tick-label</code></td><td>Tick text (e.g. "Apr'26")</td><td><code>get_text_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-callout-leader</code></td><td>Each leader <code>&lt;path&gt;</code> from marker → label</td><td><code>get_line_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-callout-box</code></td><td>Each label box <code>&lt;rect&gt;</code></td><td><code>get_box_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-event-name</code></td><td>Primary text inside each label box</td><td><code>get_text_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-event-notes</code></td><td>Secondary (notes) text inside each label box</td><td><code>get_text_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-event-date</code></td><td>Date label drawn on the opposite side of the axis</td><td><code>get_text_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-milestone-marker</code></td><td>Milestone marker (diamond or icon)</td><td><code>get_box_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-today-line</code></td><td>The today vertical/horizontal line</td><td><code>get_line_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-today-label</code></td><td>The today label text ("today" by default)</td><td><code>get_text_style</code></td><td>Reused</td></tr>
+    <tr><td><code>ec-pit-event-marker</code> <span class="rev-tag">NEW</span></td><td>Non-milestone event marker (dot or icon)</td><td><code>get_box_style</code></td><td>New</td></tr>
+    <tr><td><code>ec-pit-marker-arrow-head</code> <span class="rev-tag">NEW</span></td><td>Built-in <code>&lt;marker&gt;</code> arrow-head polygon</td><td><code>get_box_style</code></td><td>New</td></tr>
+    <tr><td><code>ec-pit-callout-group</code> <span class="rev-tag">NEW</span></td><td><code>&lt;g&gt;</code> wrapping each (marker + leader + box + text + date) tuple — lets users target one event with <code>g.ec-pit-callout-group[data-event-id="…"]</code></td><td>n/a (group)</td><td>New</td></tr>
+    <tr><td><code>ec-pit-side-primary</code> / <code>ec-pit-side-secondary</code> <span class="rev-tag">NEW</span></td><td>Side selector class added on the callout group</td><td>n/a</td><td>New</td></tr>
+    <tr><td><code>ec-pit-axis-group</code> <span class="rev-tag">NEW</span></td><td>The <code>&lt;g&gt;</code> wrapping axis + ticks + tick labels — for whole-axis styling</td><td>n/a (group)</td><td>New</td></tr>
+  </tbody>
+</table>
+
+<h3>12.2 Stable <code>data-*</code> attributes</h3>
+
+<p>Beyond classes, PIT emits a small set of stable <code>data-*</code> attributes on the callout group so external CSS can target individual events:</p>
+
+<pre><code>&lt;g class="ec-pit-callout-group ec-pit-side-primary"
+   data-event-id="42"
+   data-event-date="2026-04-01"
+   data-milestone="false"
+   data-priority="2"
+   data-groups="release,marketing"&gt;
+   &lt;path class="ec-callout-leader" .../&gt;
+   &lt;rect class="ec-callout-box"   .../&gt;
+   &lt;g    class="ec-pit-event-marker"&gt; ... &lt;/g&gt;
+   ...
+&lt;/g&gt;</code></pre>
+
+<p>This lets a downstream stylesheet do, for example:</p>
+
+<pre><code>/* highlight all releases regardless of theme */
+g.ec-pit-callout-group[data-groups~="release"] .ec-callout-box {
+  stroke: #c00;
+  stroke-width: 2;
+}
+
+/* hide notes on tiny print runs */
+@media print and (max-width: 8.5in) {
+  .ec-event-notes { display: none; }
+}
+
+/* swap axis color without re-rendering */
+.ec-axis-line { stroke: navy; }
+</code></pre>
+
+<h3>12.3 Theme YAML <code>elements:</code> bindings</h3>
+
+<p>Each PIT theme YAML grows an <code>elements:</code> block (the same machinery weekly/timeline already use). The theme engine routes these into <code>ThemeStyles.element_bindings</code>, which <code>css_generator.generate_css()</code> compiles to CSS rules:</p>
+
+<pre><code>elements:
+  ec-axis-line:        { stroke: "#333", stroke_width: 1.0 }
+  ec-axis-tick:        { stroke: "#666", stroke_width: 0.5 }
+  ec-tick-label:       { text_style: "ec-tick-label", color: "#444" }
+  ec-callout-leader:   { stroke: "#555", stroke_width: 0.75 }
+  ec-callout-box:      { fill: "palette:Pastel1:1", stroke: "#222", stroke_width: 0.5 }
+  ec-event-name:       { color: "#1b1f24" }
+  ec-event-notes:      { color: "#5a6470" }
+  ec-event-date:       { color: "#444" }
+  ec-milestone-marker: { fill: "palette:Set1:0", stroke: "none" }
+  ec-today-line:       { stroke: "#c00", stroke_width: 1.0, stroke_dasharray: "4,2" }
+  ec-today-label:      { color: "#c00" }
+  ec-pit-event-marker: { fill: "palette:Set1:1", stroke: "none" }
+  ec-pit-marker-arrow-head: { fill: "#333" }
+</code></pre>
+
+<p>The <code>pit:</code> block from §5 remains — but it now defines <em>defaults</em> that flow into the element bindings, with the <code>elements:</code> block as the override layer. The chain is:</p>
+
+<pre><code>pit.* fields (defaults)
+       │
+       ▼
+ThemeStyles.element_bindings  ←  elements: YAML block (theme override)
+       │
+       ▼
+generate_css()  →  &lt;style&gt; injected into SVG
+       │
+       ▼
+SVG presentation attributes (per-instance inline) ← rule-engine overrides
+                                                    (palettes, per-rule)
+       ▲
+       │
+External user stylesheet (loaded into the SVG editor / browser
+DOM after the fact) — highest cascade priority, can override CSS class rules</code></pre>
+
+<h3>12.4 The inline-style footgun</h3>
+
+<div class="callout">
+  <strong>CSS beats SVG presentation attributes in the cascade — but inline <code>style=""</code> beats CSS classes.</strong>
+  The existing renderer protects against this by listing classes that always carry per-instance inline styles in <code>_INLINE_STYLED_CLASSES</code> (<code>renderers/css_generator.py:21</code>) — for those classes, CSS rule emission is suppressed entirely so external stylesheets can take effect.
+</div>
+
+<p>For PIT, the following classes are added to <code>_INLINE_STYLED_CLASSES</code> because the renderer writes per-instance presentation attributes that must survive external CSS overrides:</p>
+
+<ul class="tight">
+  <li><code>ec-pit-event-marker</code> — fill is set per-event by the rule engine / palette round-robin.</li>
+  <li><code>ec-milestone-marker</code> — same.</li>
+  <li><code>ec-callout-leader</code> — stroke is per-side / per-rule.</li>
+  <li><code>ec-callout-box</code> — fill is per-event (palette round-robin) and pattern URLs are per-event.</li>
+</ul>
+
+<p>For these classes, PIT uses <code>css_class=</code> to <em>tag</em> the element (so external CSS can still target it by selector) but writes the actual <code>fill</code>/<code>stroke</code>/etc. as SVG presentation attributes. End users supplying an external stylesheet must use <code>!important</code> to override per-instance styling on those four classes — documented in <code>USER_GUIDE.md</code>.</p>
+
+<p>The "always-themeable" classes (no inline style, fully CSS-driven) are:</p>
+
+<ul class="tight">
+  <li><code>ec-axis-line</code>, <code>ec-axis-tick</code>, <code>ec-tick-label</code></li>
+  <li><code>ec-event-name</code>, <code>ec-event-notes</code>, <code>ec-event-date</code></li>
+  <li><code>ec-today-line</code>, <code>ec-today-label</code></li>
+  <li><code>ec-pit-marker-arrow-head</code></li>
+</ul>
+
+<h3>12.5 Tests</h3>
+
+<table>
+  <thead><tr><th>Test</th><th>What it verifies</th></tr></thead>
+  <tbody>
+    <tr><td><code>test_pit_emits_ec_classes</code></td><td>Every drawn axis line, tick, leader, label, marker, today line carries the expected <code>ec-*</code> class.</td></tr>
+    <tr><td><code>test_pit_callout_group_data_attrs</code></td><td>Each callout group has <code>data-event-id</code>, <code>data-event-date</code>, <code>data-milestone</code>, <code>data-priority</code>, <code>data-groups</code>.</td></tr>
+    <tr><td><code>test_pit_side_class</code></td><td><code>ec-pit-side-primary</code> / <code>ec-pit-side-secondary</code> applied correctly under Side.BOTH.</td></tr>
+    <tr><td><code>test_pit_css_style_block_injected</code></td><td>The SVG contains a <code>&lt;style&gt;</code> with rules for all non-inline-styled PIT classes.</td></tr>
+    <tr><td><code>test_pit_inline_styled_classes_have_no_css</code></td><td><code>ec-pit-event-marker</code>, <code>ec-milestone-marker</code>, <code>ec-callout-leader</code>, <code>ec-callout-box</code> are in <code>_INLINE_STYLED_CLASSES</code> and do not appear as CSS selectors in the injected stylesheet.</td></tr>
+    <tr><td><code>test_pit_external_css_override</code></td><td>Smoke test: load the rendered SVG with an extra stylesheet that re-skins <code>.ec-axis-line</code>; confirm the resolved style is the override.</td></tr>
+  </tbody>
+</table>
+
+<hr>
+<p class="small">Plan version: v5 — 2026-06-06 · target subcommand: <code>uv run ecalendar.py pit ...</code></p>
+
+</body>
+</html>
