@@ -117,6 +117,82 @@ def _append_perp_stub(
     )
 
 
+def _prepend_perp_stub(
+    path_d: str, direction: Orientation, stub: float
+) -> str:
+    """Make a leader's first segment a straight perpendicular stub.
+
+    Mirror of :func:`_append_perp_stub` on the axis side. labella's first
+    cubic leaves the axis with a perpendicular tangent (``c1.x == sx`` for
+    horizontal axes, ``c1.y == sy`` for vertical), but the visible curve
+    bends away at a shallow angle. A ``marker_start`` rendered with
+    ``orient="auto"`` aligns to that endpoint tangent (perpendicular) and
+    appears detached from the curve.
+
+    We insert an ``L`` from the original axis point to a point pulled
+    ``stub`` units along the perpendicular (toward ``c1``), then start the
+    cubic from that pulled point. Since ``c1`` is unchanged and remains
+    collinear with the new start on the perpendicular axis, the curve's
+    entry tangent stays perpendicular — no cusp.
+
+    Args:
+        path_d: The leader path ``d`` string (starts with ``M`` followed
+            by a cubic ``C``).
+        direction: Axis orientation (horizontal → vary y; vertical → x).
+        stub: Desired stub length in user units. ``<= 0`` is a no-op.
+
+    Returns:
+        The rewritten path, or the original if it can't be parsed or the
+        first cubic has no perpendicular extent to trim.
+    """
+    if stub <= 0 or not path_d:
+        return path_d
+    if not path_d.lstrip().startswith("M"):
+        return path_d
+    c_idx = path_d.find("C")
+    if c_idx < 0:
+        return path_d
+    m_nums = _PATH_NUM_RE.findall(path_d[:c_idx])
+    if len(m_nums) < 2:
+        return path_d
+    sx, sy = float(m_nums[-2]), float(m_nums[-1])
+
+    # Locate the 6 numbers of the first cubic and the index just past them.
+    tail_start = -1
+    found = 0
+    for m in _PATH_NUM_RE.finditer(path_d, c_idx + 1):
+        found += 1
+        if found == 6:
+            tail_start = m.end()
+            break
+    if found < 6 or tail_start < 0:
+        return path_d
+    cubic_nums = _PATH_NUM_RE.findall(path_d[c_idx + 1:tail_start])
+    c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in cubic_nums[:6])
+    tail = path_d[tail_start:]
+
+    if direction is Orientation.HORIZONTAL:
+        # Perpendicular is vertical: trim along y, keep x.
+        span = c1y - sy
+        if span == 0:
+            return path_d
+        s = min(stub, 0.85 * abs(span))
+        qx, qy = sx, sy + s * (1.0 if span > 0 else -1.0)
+    else:
+        # Perpendicular is horizontal: trim along x, keep y.
+        span = c1x - sx
+        if span == 0:
+            return path_d
+        s = min(stub, 0.85 * abs(span))
+        qx, qy = sx + s * (1.0 if span > 0 else -1.0), sy
+
+    return (
+        f"M {sx:.8f} {sy:.8f} L {qx:.8f} {qy:.8f} "
+        f"C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} {ex:.8f} {ey:.8f}"
+        f"{tail}"
+    )
+
+
 @dataclass(frozen=True)
 class PITPlacement:
     """One labella-placed PIT callout, ready for the renderer to draw.
@@ -441,6 +517,9 @@ def _layout_one_side(
         leader = renderer.generatePath(n)
         leader = _append_perp_stub(
             leader, direction, float(config.pit_leader_end_stub)
+        )
+        leader = _prepend_perp_stub(
+            leader, direction, float(config.pit_leader_start_stub)
         )
 
         placements.append(

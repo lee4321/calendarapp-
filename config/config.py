@@ -728,6 +728,10 @@ class CalendarConfig:
     # the head visually detached. A short straight perpendicular stub gives
     # the arrowhead a genuinely perpendicular segment to sit on. 0 disables.
     pit_leader_end_stub: float = 6.0
+    # Same idea on the axis side: a straight perpendicular stub at the dot
+    # so a marker_start with orient="auto" sits flush on the leader. 0
+    # disables.
+    pit_leader_start_stub: float = 6.0
 
     # Label box defaults
     pit_label_stroke_width: float = 0.5
