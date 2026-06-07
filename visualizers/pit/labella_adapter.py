@@ -28,6 +28,7 @@ import arrow
 from config.config import CalendarConfig, get_font_path
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from vendor.labella import Force, Node, Renderer
 
 # Reuse the timeline package's orientation primitives — they are pure and
@@ -164,6 +165,27 @@ def _notes_size(config: CalendarConfig) -> float:
     return float(config.pit_notes_text_font_size or _name_size(config) * 0.85)
 
 
+def _date_size(config: CalendarConfig) -> float:
+    return float(
+        getattr(config, "theme_pit_date_text_font_size", None)
+        or _name_size(config) * 0.85
+    )
+
+
+def _inline_date(config: CalendarConfig) -> bool:
+    """True when the event date is rendered inside the label box."""
+    return getattr(config, "pit_date_placement", "inline") == "inline"
+
+
+def _date_string(event: Event, config: CalendarConfig) -> str:
+    """Formatted event date, or '' if it can't be parsed."""
+    try:
+        day = arrow.get(event.start, "YYYYMMDD")
+        return format_arrow_date(day, config.pit_date_format)
+    except Exception:
+        return ""
+
+
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
     """Horizontal text extent of the longest line in the label."""
     name_path = _resolve_font_path(config.pit_name_text_font_name)
@@ -183,15 +205,37 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
             if notes_path
             else len(event.notes) * notes_size * 0.5
         )
-    return max(name_w, notes_w)
+    date_w = 0.0
+    if _inline_date(config):
+        date_text = _date_string(event, config)
+        date_path = _resolve_font_path(
+            getattr(config, "theme_pit_date_text_font_name", None)
+            or config.pit_name_text_font_name
+        )
+        date_size = _date_size(config)
+        date_w = (
+            string_width(date_text, date_path, date_size)
+            if date_path
+            else len(date_text) * date_size * 0.5
+        )
+    return max(name_w, notes_w, date_w)
 
 
 def _line_height_extent(config: CalendarConfig) -> float:
-    """Vertical extent of a single label box (one line + optional notes)."""
+    """Vertical extent of a single label box.
+
+    One name line, plus an optional notes line, plus the date line when
+    ``pit_date_placement == "inline"`` (so the box grows to fit it).
+    """
     name_size = _name_size(config)
     notes_size = _notes_size(config)
     has_notes = getattr(config, "includenotes", False)
-    return name_size * 1.2 + (notes_size * 1.2 if has_notes else 0.0) + 4.0
+    extent = name_size * 1.2 + 4.0
+    if has_notes:
+        extent += notes_size * 1.2
+    if _inline_date(config):
+        extent += _date_size(config) * 1.2
+    return extent
 
 
 def _node_along_axis_extent(

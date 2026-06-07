@@ -1154,6 +1154,8 @@ class ThemeEngine:
                 v = _flt(date_text["offset"])
                 if v is not None:
                     config.pit_date_text_offset = v
+            if "placement" in date_text:
+                config.pit_date_placement = str(date_text["placement"])
 
         # --- pit.leader (global leader defaults) ---
         def _apply_leader(d: dict, side: str = "global") -> None:

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.3"
+__version__ = "26.06.07.4"
 
 import argparse
 import logging
@@ -1320,6 +1320,18 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="For --tick-unit interval, days between ticks (default: 1).",
     )
     pit_group.add_argument(
+        "--date-placement",
+        type=str,
+        default=None,
+        choices=["inline", "axis", "none"],
+        help=(
+            "Where each event date is drawn: inline (a line inside the "
+            "label box, with the name/notes — never collides; default), "
+            "axis (opposite the axis at the marker — the ruler look, but "
+            "dates collide when events cluster), or none."
+        ),
+    )
+    pit_group.add_argument(
         "--today-line",
         dest="pit_today_line",
         action="store_true",
@@ -1708,6 +1720,8 @@ def _apply_args_to_config(
         config.pit_label_side = args.label_side
     if getattr(args, "tick_unit", None) is not None:
         config.pit_tick_unit = args.tick_unit
+    if getattr(args, "date_placement", None) is not None:
+        config.pit_date_placement = args.date_placement
     if getattr(args, "tick_interval", None) is not None:
         config.pit_tick_interval = args.tick_interval
     if getattr(args, "pit_today_line", None) is not None:

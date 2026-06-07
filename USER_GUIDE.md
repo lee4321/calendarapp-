@@ -1843,7 +1843,7 @@ The `pit` subcommand generates a clean **Points-in-Time** SVG: a single axis lin
 
 ### Visual aesthetic
 
-A single horizontal (or vertical) axis spans the project date range. Each event appears as a marker (filled circle, diamond, or DB icon glyph) on the axis, with a curved leader rising to a labeled box on the primary or secondary side. Date text appears on the opposite side of the axis from the label, at the marker's axis position — not the displaced label position. An optional "today" line crosses the axis as a perpendicular dashed rule.
+A single horizontal (or vertical) axis spans the project date range. Each event appears as a marker (filled circle, diamond, or DB icon glyph) on the axis, with a curved leader rising to a labeled box on the primary or secondary side. The box holds the event name, optional notes, and (by default) the date — see `--date-placement` to move the date back onto the axis or hide it. An optional "today" line crosses the axis as a perpendicular dashed rule.
 
 ### Usage examples
 
@@ -1907,6 +1907,7 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, or `date`. |
 | `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
 | `--tick-label-format` | | unit default | Override the tick label format string. |
+| `--date-placement` | | `inline` | Where each event date is drawn: `inline` (a line inside the label box, alongside the name/notes — the box grows to fit, and dates inherit the boxes' collision-free multi-row spacing so they never overlap), `axis` (opposite the axis at the marker — the "ruler tick" look, but dates collide when events cluster), or `none`. Equivalent to `pit.date_text.placement`. |
 | `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. |
 | `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
 | `--today-label` | | theme: `"today"` | Override the label text on the today line for this run. |
@@ -1941,7 +1942,9 @@ pit:
     color: "#444"
     font_name: Roboto-Regular
     font_size: 9
-    offset: 6.0               # distance from axis to date text
+    offset: 6.0               # distance from axis to date text (axis mode)
+    placement: inline         # inline | axis | none — inline puts the date
+                              # inside the label box so dates never collide
 
   default_event_icon: null    # DB icon name or null (built-in circle)
   default_milestone_icon: null  # DB icon name or null (built-in diamond)

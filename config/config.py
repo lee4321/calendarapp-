@@ -687,6 +687,14 @@ class CalendarConfig:
     pit_axis_stroke_width: float = 1.0
     pit_date_format: str = "MMM D"
     pit_date_text_offset: float = 6.0
+    # Where the event date is drawn:
+    #   "inline" — as a line inside the label box (with name/notes); the
+    #              box grows to fit. Dates inherit the boxes' collision-free
+    #              multi-row spacing, so they never overlap (default).
+    #   "axis"   — on the opposite side of the axis at the marker. The
+    #              "ruler tick" look, but dates collide when events cluster.
+    #   "none"   — suppress the date entirely.
+    pit_date_placement: str = "inline"
 
     # Marker icons (DB icon names; None = built-in shape)
     pit_default_event_icon: str | None = None
@@ -1250,6 +1258,11 @@ class CalendarConfig:
             raise ValueError(
                 f"pit_leader_label_anchor must be 'start', 'center', or "
                 f"'end', got {self.pit_leader_label_anchor!r}"
+            )
+        if self.pit_date_placement not in ("inline", "axis", "none"):
+            raise ValueError(
+                f"pit_date_placement must be 'inline', 'axis', or 'none', "
+                f"got {self.pit_date_placement!r}"
             )
         _pit_tick_units = {
             "month", "week", "fiscal_quarter", "fiscal_period",

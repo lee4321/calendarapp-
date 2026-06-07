@@ -651,13 +651,80 @@ def test_pit_both_side_partition():
     assert not p_ids & s_ids
 
 
-def test_pit_date_opposite_side(tmp_path):
-    """Date labels are rendered on the opposite side of the axis from labels."""
-    svg = _render_pit(tmp_path, _events_dicts(2))
-    # The ec-event-date class marks date text.
+def _callout_box_height(svg: str) -> float:
+    """Uniform ec-callout-box height (all boxes share one in horizontal)."""
+    hs = {
+        float(h)
+        for h in re.findall(
+            r'<rect x="[0-9.]+" y="[0-9.]+" width="[0-9.]+" '
+            r'height="([0-9.]+)"[^>]*ec-callout-box',
+            svg,
+        )
+    }
+    assert hs
+    return max(hs)
+
+
+def _date_baselines(svg: str) -> list[tuple[float, float]]:
+    """(x, y) baseline of each ec-event-date group via its parent translate."""
+    out: list[tuple[float, float]] = []
+    for m in re.finditer(r"ec-event-date", svg):
+        pre = svg[max(0, m.start() - 240): m.start()]
+        tr = re.findall(r"translate\(([0-9.]+),\s*([0-9.]+)\)", pre)
+        if tr:
+            out.append((float(tr[-1][0]), float(tr[-1][1])))
+    return out
+
+
+def test_pit_date_inline_is_default(tmp_path):
+    """By default the date is drawn inside each label box (option 1)."""
+    svg = _render_pit(tmp_path, _events_dicts(3))
     assert "ec-event-date" in svg
-    # And there should be at least one callout group containing a date label.
-    assert 'class="ec-pit-callout-group' in svg
+    boxes = [
+        (float(x), float(y), float(w), float(h))
+        for x, y, w, h in re.findall(
+            r'<rect x="([0-9.]+)" y="([0-9.]+)" width="([0-9.]+)" '
+            r'height="([0-9.]+)"[^>]*ec-callout-box',
+            svg,
+        )
+    ]
+    dates = _date_baselines(svg)
+    assert dates
+    # Every inline date baseline falls within some callout box.
+    for dx, dy in dates:
+        assert any(
+            bx - 1 <= dx <= bx + bw + 1 and by - 2 <= dy <= by + bh + 3
+            for bx, by, bw, bh in boxes
+        ), f"inline date at ({dx},{dy}) is not inside any box"
+
+
+def _render_pit_placement(tmp_path: Path, placement: str) -> str:
+    config = _make_config(tmp_path / placement)
+    config.pit_date_placement = placement
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+    return Path(config.outputfile).read_text(encoding="utf-8")
+
+
+def test_pit_date_inline_grows_box_vs_axis(tmp_path):
+    """Inline placement grows the box (date line); axis/none do not."""
+    h_inline = _callout_box_height(_render_pit_placement(tmp_path, "inline"))
+    h_axis = _callout_box_height(_render_pit_placement(tmp_path, "axis"))
+    h_none = _callout_box_height(_render_pit_placement(tmp_path, "none"))
+    assert h_inline > h_axis
+    assert h_axis == h_none  # neither reserves a date line in the box
+
+
+def test_pit_date_placement_none_suppresses(tmp_path):
+    """placement == none emits no date text at all."""
+    svg = _render_pit_placement(tmp_path, "none")
+    assert "ec-event-date" not in svg
+
+
+def test_pit_date_placement_axis_renders_dates(tmp_path):
+    """placement == axis still renders dates (the legacy opposite-side look)."""
+    svg = _render_pit_placement(tmp_path, "axis")
+    assert "ec-event-date" in svg
 
 
 # ---------------------------------------------------------------------------

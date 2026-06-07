@@ -444,6 +444,7 @@ class PITRenderer(BaseSVGRenderer):
         )
         date_offset = float(config.pit_date_text_offset)
         date_fmt = config.pit_date_format
+        date_placement = getattr(config, "pit_date_placement", "inline")
 
         for i, p in enumerate(placements):
             ev = p.event
@@ -569,35 +570,49 @@ class PITRenderer(BaseSVGRenderer):
                         f'class="ec-pit-label-pattern"/>'
                     ))
 
-            # Label text — name + (optional) notes.
+            # Label text — name, optional notes, then the inline date.
             tx = p.x_label + eff_pad_x
             ty = p.y_label + eff_pad_y + name_size
+            text_max_w = max(8.0, p.label_w - 2 * eff_pad_x)
             self._draw_text(
                 tx, ty, ev.task_name, name_font, name_size,
                 fill=eff_label_text_color,
                 anchor="start",
-                max_width=max(8.0, p.label_w - 2 * eff_pad_x),
+                max_width=text_max_w,
                 css_class="ec-event-name",
             )
+            line_y = ty
             if show_notes and ev.notes:
-                ny = ty + notes_size * 1.2
+                line_y += notes_size * 1.2
                 self._draw_text(
-                    tx, ny, ev.notes, notes_font, notes_size,
+                    tx, line_y, ev.notes, notes_font, notes_size,
                     fill=eff_label_notes_color,
                     anchor="start",
-                    max_width=max(8.0, p.label_w - 2 * eff_pad_x),
+                    max_width=text_max_w,
                     css_class="ec-event-notes",
                 )
 
-            # Date on the opposite side of the axis from the label,
-            # anchored at the marker (not the displaced label).
-            date_side = opposite(p.side)
             try:
                 day = arrow.get(ev.start, "YYYYMMDD")
                 date_text = format_arrow_date(day, date_fmt)
             except Exception:
                 date_text = ""
-            if date_text:
+
+            if date_text and date_placement == "inline":
+                # Date as a line inside the box, below name/notes. The box
+                # was sized to fit it, so it inherits the boxes' spacing.
+                line_y += date_size * 1.2
+                self._draw_text(
+                    tx, line_y, date_text, date_font, date_size,
+                    fill=date_color,
+                    anchor="start",
+                    max_width=text_max_w,
+                    css_class="ec-event-date",
+                )
+            elif date_text and date_placement == "axis":
+                # Date on the opposite side of the axis from the label,
+                # anchored at the marker (not the displaced label).
+                date_side = opposite(p.side)
                 if direction is Orientation.HORIZONTAL:
                     if date_side is Side.PRIMARY:
                         dx, dy = p.x_dot, p.y_dot - date_offset
