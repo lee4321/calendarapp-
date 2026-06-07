@@ -84,6 +84,15 @@ class StyleResult:
     icon_color: str | None = None
     # Render hint (vertical_line apply_to): "start" | "center" | "end"
     align: str | None = None
+    # PIT-specific: per-rule marker icon name (DB icon key)
+    marker_icon: str | None = None
+    # PIT-specific: per-rule leader stroke overrides (dict with color/width/
+    # dasharray/opacity/linecap/linejoin/marker_start/marker_end/etc.)
+    leader_override: dict | None = None
+    # PIT-specific: per-rule label box overrides (dict with stroke_color/
+    # stroke_width/fill_color/fill_opacity/pattern/pattern_opacity/
+    # text_color/corner_radius/padding_x/padding_y)
+    label_override: dict | None = None
 
     def is_empty(self) -> bool:
         return all(
@@ -93,7 +102,8 @@ class StyleResult:
                 self.pattern, self.pattern_color, self.pattern_opacity,
                 self.stroke_color, self.stroke_width, self.stroke_opacity,
                 self.stroke_dasharray, self.icon, self.icon_color,
-                self.align,
+                self.align, self.marker_icon, self.leader_override,
+                self.label_override,
             )
         ) and not self.text
 
@@ -168,6 +178,18 @@ class StyleResult:
             self.icon_color = other.icon_color
         if other.align is not None:
             self.align = other.align
+        if other.marker_icon is not None:
+            self.marker_icon = other.marker_icon
+        if other.leader_override is not None:
+            if self.leader_override is None:
+                self.leader_override = dict(other.leader_override)
+            else:
+                self.leader_override = {**self.leader_override, **other.leader_override}
+        if other.label_override is not None:
+            if self.label_override is None:
+                self.label_override = dict(other.label_override)
+            else:
+                self.label_override = {**self.label_override, **other.label_override}
         for key, ts in other.text.items():
             if key in self.text:
                 self.text[key].merge(ts)
@@ -434,6 +456,18 @@ def _build_style_result(rule_style: dict) -> StyleResult:
     if "align" in rule_style:
         raw = rule_style["align"]
         sr.align = str(raw).strip().lower() if raw else None
+    # PIT-specific keys — read from the rule top-level (not nested under
+    # style:) so they can be authored alongside match/apply_to/style.
+    # _build_style_result is called with rule["style"], so these live at
+    # the same level as fill/stroke; authors write them directly under
+    # the rule dict's style: block.
+    if "marker_icon" in rule_style:
+        raw = rule_style["marker_icon"]
+        sr.marker_icon = str(raw).strip() if raw else None
+    if "leader" in rule_style and isinstance(rule_style["leader"], dict):
+        sr.leader_override = dict(rule_style["leader"])
+    if "label" in rule_style and isinstance(rule_style["label"], dict):
+        sr.label_override = dict(rule_style["label"])
 
     return sr
 

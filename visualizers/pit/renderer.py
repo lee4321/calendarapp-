@@ -23,6 +23,8 @@ import drawsvg
 
 from renderers.svg_base import BaseSVGRenderer
 from shared.data_models import Event
+from shared.rule_engine import StyleEngine, StyleResult
+from visualizers.weekly.renderer import WeeklyCalendarRenderer
 from visualizers.pit.labella_adapter import (
     PITPlacement,
     layout_pit_callouts,
@@ -53,6 +55,20 @@ def _xml_escape(s: str) -> str:
     )
 
 
+def _pit_style_rules(config: "CalendarConfig") -> list:
+    """Source the raw style_rules list for the PIT StyleEngine.
+
+    Mirrors _timeline_style_rules: prefers the parsed UnifiedTheme so the
+    renderer doesn't depend on the legacy theme_style_rules bridge.
+    """
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        rules = theme.sections.get("style_rules")
+        if isinstance(rules, list):
+            return rules
+    return list(getattr(config, "theme_style_rules", None) or [])
+
+
 class PITRenderer(BaseSVGRenderer):
     """Renderer for the PIT (Points in Time) visualization.
 
@@ -80,6 +96,9 @@ class PITRenderer(BaseSVGRenderer):
         """Render the PIT axis + callouts. Returns (overflow_count, [])."""
         # Reset per-render state.
         self._pit_marker_ids = {}
+        # Reset SVG pattern dedup caches (mirrors weekly renderer pattern).
+        self._pattern_svg_cache: dict[str, str] = {}
+        self._registered_pattern_ids: set[str] = set()
         area_x, area_y, area_w, area_h = coordinates.get(
             "PITArea", (0.0, 0.0, config.pageX, config.pageY)
         )
@@ -154,21 +173,34 @@ class PITRenderer(BaseSVGRenderer):
             pos_for_day=pos_for_day,
         )
 
-        # 6) Load DB icon cache (best-effort) and draw the SVG.
-        #    Order:
-        #      - <g class="ec-pit-axis-group"> axis + (future ticks)
-        #      - today line (above axis, below callouts)
-        #      - one <g class="ec-pit-callout-group ec-pit-side-…"
-        #            data-…> per event, holding its leader, marker,
-        #        label box, label texts, and date label.
+        # 6) Load DB caches (icons + patterns), build StyleEngine, resolve
+        #    per-event styles, then draw the SVG.
         self._load_icon_svg_cache(db)
+        self._db = db  # stash for palette lookups in _draw_callout_groups
+        try:
+            self._pattern_svg_cache = db.get_all_patterns()
+        except Exception:
+            self._pattern_svg_cache = {}
+
+        style_engine = StyleEngine(_pit_style_rules(config))
+        # Map placement index → StyleResult so callout drawing can read it.
+        per_event_styles: dict[int, StyleResult] = {}
+        for i, p in enumerate(placements):
+            per_event_styles[i] = style_engine.evaluate_event(p.event)
+
+        # Draw:
+        #   - <g class="ec-pit-axis-group"> axis
+        #   - today line (above axis, below callouts)
+        #   - per-event callout groups
         self._draw_axis_group(config, axis_origin, axis_end)
         if config.pit_show_today_line:
             self._draw_today_line(
                 config, start, end, axis_origin, axis_end, direction,
                 pos_for_day,
             )
-        self._draw_callout_groups(config, placements, direction, side)
+        self._draw_callout_groups(
+            config, placements, direction, side, per_event_styles
+        )
 
         return 0, []
 
@@ -252,12 +284,90 @@ class PITRenderer(BaseSVGRenderer):
         self._draw_axis(config, axis_origin, axis_end)
         self._drawing.append(drawsvg.Raw('</g>'))
 
+    # ------------------------------------------------------------------
+    # SVG pattern helpers (delegate to WeeklyCalendarRenderer statics)
+    # ------------------------------------------------------------------
+    def _ensure_svg_pattern_def(
+        self,
+        pattern_name: str,
+        color: str | None,
+    ) -> str | None:
+        """Inject (once) a DB pattern <defs> entry and return its id."""
+        raw_svg = self._pattern_svg_cache.get(pattern_name) if pattern_name else None
+        if not raw_svg:
+            return None
+
+        import re as _re
+        safe_color = (color or "black").replace("#", "").replace(" ", "_")
+        safe_name = _re.sub(r"[^a-zA-Z0-9_-]", "_", pattern_name)
+        pat_id = f"pat-{safe_name}-{safe_color}"
+
+        if pat_id in self._registered_pattern_ids:
+            return pat_id
+
+        tile_w, tile_h = WeeklyCalendarRenderer._parse_svg_tile_size(raw_svg)
+        colorized = WeeklyCalendarRenderer._colorize_pattern_svg(raw_svg, color)
+        inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
+        pattern_xml = (
+            f'<pattern id="{pat_id}" x="0" y="0" '
+            f'width="{tile_w}" height="{tile_h}" '
+            f'patternUnits="userSpaceOnUse">'
+            f"{inner}"
+            f"</pattern>"
+        )
+        self._drawing.append_def(drawsvg.Raw(pattern_xml))
+        self._registered_pattern_ids.add(pat_id)
+        return pat_id
+
+    # ------------------------------------------------------------------
+    # Label fill resolution
+    # ------------------------------------------------------------------
+    def _resolve_label_fill(
+        self,
+        config: "CalendarConfig",
+        event_index: int,
+        side: Side,
+        label_override: dict | None,
+    ) -> tuple[str, float]:
+        """Return (fill_color, fill_opacity) for a label box.
+
+        Precedence:
+          1. per-rule label_override["fill_color"] / ["fill_opacity"]
+          2. per-side theme_pit_label_{primary|secondary}_fill_color (not in
+             config yet — reserved for future theme decomposition; skipped)
+          3. theme_pit_label_fill_color
+          4. theme_pit_label_palette (round-robin by chronological index)
+          5. module default: ("none", 0.0)
+        """
+        # 1) Per-rule override.
+        if label_override:
+            fc = label_override.get("fill_color")
+            fo = label_override.get("fill_opacity")
+            if fc is not None:
+                return str(fc), float(fo) if fo is not None else float(config.pit_label_fill_opacity)
+
+        # 3) Global theme fill color.
+        if config.theme_pit_label_fill_color:
+            return config.theme_pit_label_fill_color, float(config.pit_label_fill_opacity)
+
+        # 4) Palette round-robin.
+        palette_name = config.theme_pit_label_palette
+        if palette_name:
+            palette = self._label_palette_cache.get(palette_name)
+            if palette and len(palette) > 0:
+                color = palette[event_index % len(palette)]
+                return str(color), float(config.pit_label_fill_opacity) or 0.85
+
+        # 5) Default.
+        return "none", float(config.pit_label_fill_opacity)
+
     def _draw_callout_groups(
         self,
         config: "CalendarConfig",
         placements: list[PITPlacement],
         direction: Orientation,
         side_config: Side,
+        per_event_styles: dict[int, StyleResult] | None = None,
     ) -> None:
         """Emit one <g class="ec-pit-callout-group ec-pit-side-…"
         data-…> per placement containing its leader, marker, box, label
@@ -266,27 +376,28 @@ class PITRenderer(BaseSVGRenderer):
         if not placements:
             return
 
-        # Pre-compute shared styling values once.
-        leader_color = config.theme_pit_leader_color or "#555555"
-        leader_width = float(config.pit_leader_stroke_width)
-        leader_opacity = float(config.pit_leader_stroke_opacity)
-        leader_dasharray = config.pit_leader_stroke_dasharray
-        leader_linecap = config.pit_leader_stroke_linecap
-        leader_linejoin = config.pit_leader_stroke_linejoin
-        leader_arrow_color = config.theme_pit_arrow_head_color or leader_color
-        ms_id = self._ensure_marker_def(
-            config.pit_leader_marker_start, leader_arrow_color,
-            float(config.pit_leader_marker_start_size),
-        )
-        me_id = self._ensure_marker_def(
-            config.pit_leader_marker_end, leader_arrow_color,
-            float(config.pit_leader_marker_end_size),
-        )
-        ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
-        me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
-        dash_attr = (
-            f' stroke-dasharray="{leader_dasharray}"' if leader_dasharray else ""
-        )
+        per_event_styles = per_event_styles or {}
+
+        # Build label palette cache for round-robin fill resolution.
+        self._label_palette_cache: dict[str, list] = {}
+        palette_name = config.theme_pit_label_palette
+        if palette_name and hasattr(self, "_db") and self._db:
+            try:
+                palettes = self._db.get_all_palettes()
+                if palette_name in palettes:
+                    self._label_palette_cache[palette_name] = palettes[palette_name]
+            except Exception:
+                pass
+
+        # Pre-compute shared (non-per-rule) styling values once.
+        # Leader defaults — per-rule overrides are applied inside the loop.
+        global_leader_color = config.theme_pit_leader_color or "#555555"
+        global_leader_width = float(config.pit_leader_stroke_width)
+        global_leader_opacity = float(config.pit_leader_stroke_opacity)
+        global_leader_dasharray = config.pit_leader_stroke_dasharray
+        global_leader_linecap = config.pit_leader_stroke_linecap
+        global_leader_linejoin = config.pit_leader_stroke_linejoin
+        leader_arrow_color = config.theme_pit_arrow_head_color or global_leader_color
 
         # Marker defaults
         dot_color_default = config.theme_pit_dot_color or "#2d5fae"
@@ -295,12 +406,12 @@ class PITRenderer(BaseSVGRenderer):
         dot_size = float(config.pit_dot_radius) * 2.0
         icon_map = getattr(self, "_icon_svg_map", {}) or {}
 
-        # Label-box style
-        label_stroke = config.theme_pit_label_stroke_color or "#444444"
-        label_sw = float(config.pit_label_stroke_width)
-        label_rx = float(config.pit_label_corner_radius)
-        label_fill_color = config.theme_pit_label_fill_color or "none"
-        label_fill_opacity = float(config.pit_label_fill_opacity)
+        # Label-box defaults (per-rule can override)
+        default_label_stroke = config.theme_pit_label_stroke_color or "#444444"
+        default_label_sw = float(config.pit_label_stroke_width)
+        default_label_rx = float(config.pit_label_corner_radius)
+        default_label_pattern = config.theme_pit_label_pattern
+        default_label_pattern_opacity = float(getattr(config, "hash_pattern_opacity", 0.15))
 
         # Label text fonts
         name_font = (
@@ -334,8 +445,45 @@ class PITRenderer(BaseSVGRenderer):
         date_offset = float(config.pit_date_text_offset)
         date_fmt = config.pit_date_format
 
-        for p in placements:
+        for i, p in enumerate(placements):
             ev = p.event
+            sr: StyleResult = per_event_styles.get(i, StyleResult())
+            leader_ovr: dict = sr.leader_override or {}
+            label_ovr: dict = sr.label_override or {}
+
+            # Per-side leader color override.
+            if p.side is Side.PRIMARY:
+                side_leader_color = config.theme_pit_leader_primary_color
+            else:
+                side_leader_color = config.theme_pit_leader_secondary_color
+
+            # Resolve effective leader attributes (per-rule > per-side > global).
+            leader_color = (
+                leader_ovr.get("color")
+                or side_leader_color
+                or global_leader_color
+            )
+            leader_width = float(leader_ovr.get("width") or global_leader_width)
+            leader_opacity = float(leader_ovr.get("opacity") or global_leader_opacity)
+            leader_dasharray = leader_ovr.get("dasharray") or global_leader_dasharray
+            leader_linecap = leader_ovr.get("linecap") or global_leader_linecap
+            leader_linejoin = leader_ovr.get("linejoin") or global_leader_linejoin
+
+            # Per-rule leader markers (fall back to global config).
+            l_ms_kind = leader_ovr.get("marker_start") or config.pit_leader_marker_start
+            l_ms_size = float(leader_ovr.get("marker_start_size") or config.pit_leader_marker_start_size)
+            l_me_kind = leader_ovr.get("marker_end") or config.pit_leader_marker_end
+            l_me_size = float(leader_ovr.get("marker_end_size") or config.pit_leader_marker_end_size)
+            l_arrow_color = leader_ovr.get("arrow_color") or leader_arrow_color
+
+            ms_id = self._ensure_marker_def(l_ms_kind, l_arrow_color, l_ms_size)
+            me_id = self._ensure_marker_def(l_me_kind, l_arrow_color, l_me_size)
+            ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
+            me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
+            dash_attr = (
+                f' stroke-dasharray="{leader_dasharray}"' if leader_dasharray else ""
+            )
+
             side_class = (
                 "ec-pit-side-primary" if p.side is Side.PRIMARY
                 else "ec-pit-side-secondary"
@@ -365,8 +513,8 @@ class PITRenderer(BaseSVGRenderer):
                     f'</g>'
                 ))
 
-            # Marker.
-            spec = resolve_marker(ev, config=config, icon_svg_map=icon_map)
+            # Marker — passes style_result so per-rule marker_icon is honored.
+            spec = resolve_marker(ev, config=config, icon_svg_map=icon_map, style_result=sr)
             base_color = ms_color_default if ev.milestone else dot_color_default
             color = ev.color or base_color
             if spec.is_icon:
@@ -381,34 +529,63 @@ class PITRenderer(BaseSVGRenderer):
                 strip_svg_wrapper=self._strip_svg_wrapper,
             )
 
-            # Label box.
-            self._draw_rect(
-                p.x_label, p.y_label, p.label_w, p.label_h,
-                fill=label_fill_color,
-                stroke=label_stroke,
-                fill_opacity=label_fill_opacity,
-                stroke_width=label_sw,
-                rx=label_rx,
-                css_class="ec-callout-box",
+            # Resolve label-box style (per-rule > global theme > defaults).
+            eff_label_stroke = label_ovr.get("stroke_color") or default_label_stroke
+            eff_label_sw = float(label_ovr.get("stroke_width") or default_label_sw)
+            eff_label_rx = float(label_ovr.get("corner_radius") or default_label_rx)
+            eff_label_text_color = label_ovr.get("text_color") or name_color
+            eff_label_notes_color = label_ovr.get("text_color") or notes_color
+            eff_pad_x = float(label_ovr.get("padding_x") or pad_x)
+            eff_pad_y = float(label_ovr.get("padding_y") or pad_y)
+            # Fill with precedence chain (per-rule > theme color > palette).
+            eff_fill, eff_fill_opacity = self._resolve_label_fill(
+                config, i, p.side, label_ovr if label_ovr else None
+            )
+            # Pattern fill (per-rule > global theme default).
+            eff_pattern = label_ovr.get("pattern") or default_label_pattern
+            eff_pattern_opacity = float(
+                label_ovr.get("pattern_opacity") or default_label_pattern_opacity
             )
 
+            # Label box — draw rect first, then optional pattern overlay.
+            self._draw_rect(
+                p.x_label, p.y_label, p.label_w, p.label_h,
+                fill=eff_fill,
+                stroke=eff_label_stroke,
+                fill_opacity=eff_fill_opacity,
+                stroke_width=eff_label_sw,
+                rx=eff_label_rx,
+                css_class="ec-callout-box",
+            )
+            if eff_pattern:
+                pat_id = self._ensure_svg_pattern_def(eff_pattern, eff_label_stroke)
+                if pat_id:
+                    self._drawing.append(drawsvg.Raw(
+                        f'<rect x="{p.x_label:.2f}" y="{p.y_label:.2f}" '
+                        f'width="{p.label_w:.2f}" height="{p.label_h:.2f}" '
+                        f'fill="url(#{pat_id})" '
+                        f'fill-opacity="{eff_pattern_opacity}" '
+                        f'rx="{eff_label_rx:.2f}" stroke="none" '
+                        f'class="ec-pit-label-pattern"/>'
+                    ))
+
             # Label text — name + (optional) notes.
-            tx = p.x_label + pad_x
-            ty = p.y_label + pad_y + name_size
+            tx = p.x_label + eff_pad_x
+            ty = p.y_label + eff_pad_y + name_size
             self._draw_text(
                 tx, ty, ev.task_name, name_font, name_size,
-                fill=name_color,
+                fill=eff_label_text_color,
                 anchor="start",
-                max_width=max(8.0, p.label_w - 2 * pad_x),
+                max_width=max(8.0, p.label_w - 2 * eff_pad_x),
                 css_class="ec-event-name",
             )
             if show_notes and ev.notes:
                 ny = ty + notes_size * 1.2
                 self._draw_text(
                     tx, ny, ev.notes, notes_font, notes_size,
-                    fill=notes_color,
+                    fill=eff_label_notes_color,
                     anchor="start",
-                    max_width=max(8.0, p.label_w - 2 * pad_x),
+                    max_width=max(8.0, p.label_w - 2 * eff_pad_x),
                     css_class="ec-event-notes",
                 )
 

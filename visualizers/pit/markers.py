@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 import drawsvg
 
 from shared.data_models import Event
+from shared.rule_engine import StyleResult
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -74,15 +75,22 @@ def resolve_marker(
     *,
     config: "CalendarConfig",
     icon_svg_map: dict[str, str] | None = None,
+    style_result: "StyleResult | None" = None,
 ) -> MarkerSpec:
     """Pick the marker for one event using the precedence chain.
 
+    Precedence (highest → lowest):
+      1. Per-event ``event.icon`` (DB column)
+      2. Per-rule ``marker_icon`` from ``style_result``
+      3. Config default (``pit_default_event_icon`` / ``pit_default_milestone_icon``)
+      4. Built-in shape (circle for events, diamond for milestones)
+
     Args:
         event: The Event being drawn.
-        config: For the per-visualizer defaults
-            (``pit_default_event_icon`` / ``pit_default_milestone_icon``).
+        config: For the per-visualizer defaults.
         icon_svg_map: Optional preloaded icon name → SVG markup map.
-            When None, only built-in shapes are returned.
+        style_result: Resolved StyleResult for this event (may carry
+            ``marker_icon`` from a matched style rule).
 
     Returns:
         A MarkerSpec ready to hand to ``draw_marker``.
@@ -90,25 +98,30 @@ def resolve_marker(
     is_milestone = bool(event.milestone)
     css = "ec-milestone-marker" if is_milestone else "ec-pit-event-marker"
 
-    # 1) Per-event icon override.
-    if event.icon and icon_svg_map:
-        key = str(event.icon).strip().lower()
-        svg = icon_svg_map.get(key)
-        if svg:
-            return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+    def _lookup(name: str) -> str | None:
+        if not name or not icon_svg_map:
+            return None
+        return icon_svg_map.get(str(name).strip().lower())
 
-    # 2) Per-rule (Phase 7) — not honored yet.
+    # 1) Per-event icon override.
+    svg = _lookup(event.icon or "")
+    if svg:
+        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+
+    # 2) Per-rule marker_icon from StyleResult.
+    rule_icon = getattr(style_result, "marker_icon", None) if style_result else None
+    svg = _lookup(rule_icon or "")
+    if svg:
+        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
 
     # 3) Config default for this event type.
     default_name = (
         config.pit_default_milestone_icon if is_milestone
         else config.pit_default_event_icon
     )
-    if default_name and icon_svg_map:
-        key = str(default_name).strip().lower()
-        svg = icon_svg_map.get(key)
-        if svg:
-            return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+    svg = _lookup(default_name or "")
+    if svg:
+        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
 
     # 4) Built-in shape.
     shape = "diamond" if is_milestone else "circle"
