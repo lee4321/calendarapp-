@@ -666,6 +666,104 @@ class CalendarConfig:
     timeline_labella_min_pos: float | None = None
     timeline_labella_max_pos: float | None = None
 
+    # =========================================================================
+    # PIT (Points in Time) visualizer config
+    # =========================================================================
+    # Axis direction. Renamed from --orientation (which is page orientation)
+    # to --direction to avoid collision.
+    pit_direction: str = "horizontal"            # "horizontal" | "vertical"
+    pit_label_side: str = "both"                 # "primary" | "secondary" | "both"
+    # Tick granularity uses the project-wide timeband units.
+    pit_tick_unit: str = "month"                 # month|week|fiscal_quarter|fiscal_period|interval|date
+    pit_tick_interval: int = 1                   # for unit == "interval"
+    pit_tick_label_format: str | None = None
+
+    pit_show_today_line: bool = True
+    pit_today_date: str | None = None            # YYYYMMDD; None → real today
+    pit_today_line_label: str = "today"          # "" suppresses the label
+
+    pit_marker_size: float = 7.0
+    pit_dot_radius: float = 4.0
+    pit_axis_stroke_width: float = 1.0
+    pit_date_format: str = "MMM D"
+    pit_date_text_offset: float = 6.0
+
+    # Marker icons (DB icon names; None = built-in shape)
+    pit_default_event_icon: str | None = None
+    pit_default_milestone_icon: str | None = None
+
+    # Leader stroke defaults (per-rule / per-side may override)
+    pit_leader_stroke_width: float = 0.75
+    pit_leader_stroke_dasharray: str | None = None
+    pit_leader_stroke_opacity: float = 1.0
+    pit_leader_stroke_linecap: str = "round"
+    pit_leader_stroke_linejoin: str = "round"
+
+    # Label box defaults
+    pit_label_stroke_width: float = 0.5
+    pit_label_stroke_dasharray: str | None = None
+    pit_label_fill_opacity: float = 0.0          # 0 = no fill (transparent box)
+    pit_label_corner_radius: float = 2.0
+    pit_label_padding_x: float = 6.0
+    pit_label_padding_y: float = 3.0
+
+    # SVG markers — each slot has its own kind + size, independently.
+    pit_axis_marker_start: str = "none"
+    pit_axis_marker_start_size: float = 4.0
+    pit_axis_marker_end: str = "arrow-head"
+    pit_axis_marker_end_size: float = 6.0
+
+    pit_leader_marker_start: str = "none"
+    pit_leader_marker_start_size: float = 3.0
+    pit_leader_marker_end: str = "arrow-head"
+    pit_leader_marker_end_size: float = 5.0
+
+    pit_today_line_marker_start: str = "none"
+    pit_today_line_marker_start_size: float = 4.0
+    pit_today_line_marker_end: str = "none"
+    pit_today_line_marker_end_size: float = 6.0
+
+    # Labella tuning (PIT-local copies so timeline and PIT can diverge)
+    pit_labella_layer_gap: float = 8.0
+    pit_labella_node_height: float = 24.0
+    pit_labella_density: float = 0.75
+
+    # Theme overrides (None → use module defaults). All color slots accept
+    # CSS / hex / "palette:NAME:INDEX" via _resolve_palette_overrides.
+    theme_pit_axis_color: str | None = None
+    theme_pit_tick_color: str | None = None
+    theme_pit_date_text_color: str | None = None
+    theme_pit_date_text_font_name: str | None = None
+    theme_pit_date_text_font_size: float | None = None
+    theme_pit_today_line_color: str | None = None
+    theme_pit_today_line_width: float | None = None
+    theme_pit_today_line_dasharray: str | None = None
+    theme_pit_today_line_opacity: float | None = None
+    theme_pit_today_line_linecap: str | None = None
+    theme_pit_today_line_linejoin: str | None = None
+    theme_pit_today_line_label_color: str | None = None
+    theme_pit_today_line_label_font_name: str | None = None
+    theme_pit_today_line_label_font_size: float | None = None
+    theme_pit_today_line_label_position: str | None = None  # start|middle|end
+    theme_pit_dot_color: str | None = None
+    theme_pit_milestone_color: str | None = None
+    theme_pit_leader_color: str | None = None
+    theme_pit_leader_primary_color: str | None = None
+    theme_pit_leader_secondary_color: str | None = None
+    theme_pit_label_stroke_color: str | None = None
+    theme_pit_label_fill_color: str | None = None
+    theme_pit_label_pattern: str | None = None
+    theme_pit_label_text_color: str | None = None
+    theme_pit_event_palette: str | None = None
+    theme_pit_milestone_palette: str | None = None
+    theme_pit_label_palette: str | None = None
+    theme_pit_arrow_head_color: str | None = None
+    # Per-event font fields (mirror timeline_* equivalents)
+    pit_name_text_font_name: str | None = None
+    pit_name_text_font_size: float | None = None
+    pit_notes_text_font_name: str | None = None
+    pit_notes_text_font_size: float | None = None
+
     # Blockplan styling and behavior.
     # Phase 2 strip dropped dead fields with no readers post-Phase-1:
     # background_color (page bg from box:background), band_row_height
@@ -1123,6 +1221,25 @@ class CalendarConfig:
             raise ValueError(
                 f"timeline_label_side must be 'primary', 'secondary', or 'both', "
                 f"got {self.timeline_label_side!r}"
+            )
+        if self.pit_direction not in ("horizontal", "vertical"):
+            raise ValueError(
+                f"pit_direction must be 'horizontal' or 'vertical', "
+                f"got {self.pit_direction!r}"
+            )
+        if self.pit_label_side not in ("primary", "secondary", "both"):
+            raise ValueError(
+                f"pit_label_side must be 'primary', 'secondary', or 'both', "
+                f"got {self.pit_label_side!r}"
+            )
+        _pit_tick_units = {
+            "month", "week", "fiscal_quarter", "fiscal_period",
+            "interval", "date", "year",
+        }
+        if self.pit_tick_unit not in _pit_tick_units:
+            raise ValueError(
+                f"pit_tick_unit must be one of {sorted(_pit_tick_units)}, "
+                f"got {self.pit_tick_unit!r}"
             )
         if self.weekend_days is not None:
             if not isinstance(self.weekend_days, list) or not all(

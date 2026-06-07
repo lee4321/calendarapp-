@@ -26,6 +26,15 @@ _INLINE_STYLED_CLASSES: frozenset[str] = frozenset({
     "ec-vline",
     "ec-vline-fill",
     "ec-background",
+    # PIT: per-event colors / patterns / strokes are set inline by the
+    # renderer (resolved through the style-rule engine and palette
+    # round-robin). Emitting CSS rules here would clobber them in the
+    # cascade. External user stylesheets must use !important to override
+    # these — documented in USER_GUIDE.md.
+    "ec-pit-event-marker",
+    "ec-callout-leader",
+    "ec-callout-box",
+    "ec-milestone-marker",
 })
 
 

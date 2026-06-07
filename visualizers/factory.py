@@ -33,6 +33,7 @@ class VisualizerFactory:
             from visualizers.timeline.visualizer import TimelineVisualizer
             from visualizers.blockplan.visualizer import BlockPlanVisualizer
             from visualizers.compactplan.visualizer import CompactPlanVisualizer
+            from visualizers.pit.visualizer import PITVisualizer
 
             cls._visualizers = {
                 "weekly": WeeklyCalendarVisualizer,
@@ -42,6 +43,7 @@ class VisualizerFactory:
                 "timeline": TimelineVisualizer,
                 "blockplan": BlockPlanVisualizer,
                 "compactplan": CompactPlanVisualizer,
+                "pit": PITVisualizer,
             }
 
     @classmethod

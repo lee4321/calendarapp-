@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.05.25.1"
+__version__ = "26.06.07.0"
 
 import argparse
 import logging
@@ -285,6 +285,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     mini_icon = sub.add_parser("mini-icon", help="Generate a mini calendar with icons for day numbers")
     text_mini = sub.add_parser("text-mini", help="Generate a text only mini calendar")
     timeline = sub.add_parser("timeline", help="Generate a SVG timeline")
+    pit = sub.add_parser(
+        "pit",
+        help="Generate a SVG Points-in-Time timeline (single-day events + milestones)",
+    )
     blockplan = sub.add_parser("blockplan", help="Generate a SVG blockplan")
     compactplan = sub.add_parser(
         "compactplan",
@@ -343,6 +347,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "mini-icon",
             "text-mini",
             "timeline",
+            "pit",
             "blockplan",
             "compactplan",
             "excelheader",
@@ -364,7 +369,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # If a flag belongs to every view, add it in these loops rather than
     # copy-pasting per-subcommand definitions.
     # Positional arguments for calendar views
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan, excelheader, excelblockplan, exportdata):
+    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan, excelheader, excelblockplan, exportdata):
         view_parser.add_argument(
             "begin",
             type=str,
@@ -762,6 +767,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         mini_icon,
         text_mini,
         timeline,
+        pit,
         blockplan,
         compactplan,
         excelheader,
@@ -788,7 +794,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         )
 
     # SVG-producing views (text-mini is excluded — it produces plain text, not SVG)
-    _svg_views = (weekly, mini, mini_icon, timeline, blockplan, compactplan)
+    _svg_views = (weekly, mini, mini_icon, timeline, pit, blockplan, compactplan)
 
     # Output options (SVG views: all options; text-mini: outputfile only)
     for view_parser in _svg_views:
@@ -1271,8 +1277,109 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Fill opacity for duration bar rectangles (default: 0.25).",
     )
 
+    # =====================================================================
+    # PIT (Points in Time) options
+    # =====================================================================
+    pit_group = pit.add_argument_group("PIT Options")
+    pit_group.add_argument(
+        "--direction",
+        type=str,
+        default=None,
+        choices=["horizontal", "vertical"],
+        help=(
+            "Axis direction (default: horizontal). Note: --orientation "
+            "remains the page-orientation flag (portrait/landscape)."
+        ),
+    )
+    pit_group.add_argument(
+        "--label-side",
+        type=str,
+        default=None,
+        choices=["primary", "secondary", "both"],
+        help=(
+            "Which side(s) of the axis the labels occupy. primary = above "
+            "(horizontal) / right (vertical); secondary = below / left; "
+            "both = chronologically alternating. Default: both."
+        ),
+    )
+    pit_group.add_argument(
+        "--tick-unit",
+        type=str,
+        default=None,
+        choices=[
+            "month", "week", "fiscal_quarter", "fiscal_period",
+            "interval", "date", "year",
+        ],
+        help="Axis tick granularity (timeband unit). Default: month.",
+    )
+    pit_group.add_argument(
+        "--tick-interval",
+        type=int,
+        default=None,
+        metavar="DAYS",
+        help="For --tick-unit interval, days between ticks (default: 1).",
+    )
+    pit_group.add_argument(
+        "--today-line",
+        dest="pit_today_line",
+        action="store_true",
+        default=None,
+        help="Draw the today line (default: on).",
+    )
+    pit_group.add_argument(
+        "--no-today-line",
+        dest="pit_today_line",
+        action="store_false",
+        help="Suppress the today line.",
+    )
+    pit_group.add_argument(
+        "--today-date",
+        type=str,
+        default=None,
+        metavar="YYYYMMDD",
+        help=(
+            "Override the today-line position. Lets a forward-dated "
+            "presentation be prepared with the 'correct' today indicator."
+        ),
+    )
+    pit_group.add_argument(
+        "--today-label",
+        type=str,
+        default=None,
+        metavar="TEXT",
+        help='Today-line label text (default: "today"; "" suppresses).',
+    )
+    pit_group.add_argument(
+        "--event-icon",
+        type=str,
+        default=None,
+        metavar="NAME",
+        help="DB icon name used as the default event marker (overrides circle).",
+    )
+    pit_group.add_argument(
+        "--milestone-icon",
+        type=str,
+        default=None,
+        metavar="NAME",
+        help="DB icon name used as the default milestone marker (overrides diamond).",
+    )
+    pit_group.add_argument(
+        "--marker-size",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help="Bounding-box size for built-in shapes and DB icons (default: 7.0).",
+    )
+    pit_group.add_argument(
+        "--leader-dash",
+        type=str,
+        default=None,
+        metavar="DASHARRAY",
+        help='SVG stroke-dasharray for leaders, e.g. "4,2".',
+    )
+
     # Fiscal calendar options — all calendar views
-    _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, blockplan, compactplan)
+    _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan)
     for _vp in _fiscal_views:
         _fg = _vp.add_argument_group("Fiscal Calendar Options")
         _fg.add_argument(
@@ -1336,6 +1443,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         mini_icon,
         text_mini,
         timeline,
+        pit,
         blockplan,
         compactplan,
         excelheader,
@@ -1558,6 +1666,30 @@ def _apply_args_to_config(
         config.timeline_label_fill_opacity = args.label_fill_opacity
     if getattr(args, "duration_fill_opacity", None) is not None:
         config.timeline_duration_bar_fill_opacity = args.duration_fill_opacity
+
+    # PIT options
+    if getattr(args, "direction", None) is not None:
+        config.pit_direction = args.direction
+    if getattr(args, "label_side", None) is not None:
+        config.pit_label_side = args.label_side
+    if getattr(args, "tick_unit", None) is not None:
+        config.pit_tick_unit = args.tick_unit
+    if getattr(args, "tick_interval", None) is not None:
+        config.pit_tick_interval = args.tick_interval
+    if getattr(args, "pit_today_line", None) is not None:
+        config.pit_show_today_line = args.pit_today_line
+    if getattr(args, "today_date", None) is not None:
+        config.pit_today_date = args.today_date
+    if getattr(args, "today_label", None) is not None:
+        config.pit_today_line_label = args.today_label
+    if getattr(args, "event_icon", None) is not None:
+        config.pit_default_event_icon = args.event_icon
+    if getattr(args, "milestone_icon", None) is not None:
+        config.pit_default_milestone_icon = args.milestone_icon
+    if getattr(args, "marker_size", None) is not None:
+        config.pit_marker_size = args.marker_size
+    if getattr(args, "leader_dash", None) is not None:
+        config.pit_leader_stroke_dasharray = args.leader_dash
 
     # Fiscal calendar
     if getattr(args, "fiscal", None):
@@ -3066,7 +3198,7 @@ def run(argv: list[str] | None = None) -> int:
     # the subcommand so each visualizer produces a recognizable file
     # (e.g. weekly202605251040.svg, blockplan202605251040.svg).
     _svg_visualizer_commands = {
-        "weekly", "mini", "mini-icon", "timeline", "blockplan", "compactplan",
+        "weekly", "mini", "mini-icon", "timeline", "pit", "blockplan", "compactplan",
     }
     if (
         getattr(args, "outputfile", None) == default_output
