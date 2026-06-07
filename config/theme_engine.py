@@ -423,6 +423,19 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # vertical_line_fill_opacity (XLSX borders are color+style only),
     # federal_holiday_icon / company_holiday_icon / weekend_icon (XLSX
     # cells render glyphs as fills, not as icon SVGs).
+    # PIT (Points in Time) — scalar mappings.
+    # Nested sub-blocks (axis, leader, label, today_line, etc.) are
+    # handled by ThemeEngine._apply_pit_blocks() called from apply().
+    ("pit", "tick_color"): "theme_pit_tick_color",
+    ("pit", "tick_unit"): "pit_tick_unit",
+    ("pit", "date_format"): "pit_date_format",
+    ("pit", "default_event_icon"): "pit_default_event_icon",
+    ("pit", "default_milestone_icon"): "pit_default_milestone_icon",
+    ("pit", "dot_color"): "theme_pit_dot_color",
+    ("pit", "milestone_color"): "theme_pit_milestone_color",
+    ("pit", "event_palette"): "theme_pit_event_palette",
+    ("pit", "milestone_palette"): "theme_pit_milestone_palette",
+    ("pit", "label_palette"): "theme_pit_label_palette",
 }
 
 # Valid top-level sections in a theme file
@@ -467,6 +480,8 @@ VALID_SECTIONS = frozenset(
         # Per-theme overrides of the built-in element catalog
         # (config/element_catalog.yaml).
         "element_overrides",
+        # PIT (Points in Time) visualizer
+        "pit",
     }
 )
 
@@ -951,6 +966,9 @@ class ThemeEngine:
         # Apply color maps
         self._apply_color_maps(config)
 
+        # Apply PIT sub-block decomposition (axis/leader/label/today_line/etc.)
+        self._apply_pit_blocks(config)
+
         # Resolve band placement lists against the top-level time_bands catalog.
         # Post-migration themes ship a catalog of named bands at the top level
         # and per-visualizer placement lists (compact_plan.bands,
@@ -1070,6 +1088,192 @@ class ThemeEngine:
         ("timeline",     "top_bands",     "timeline_top_time_bands"),
         ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
     )
+
+    def _apply_pit_blocks(self, config: "CalendarConfig") -> None:
+        """Decompose the pit: YAML sub-blocks into individual config fields.
+
+        Simple scalar keys from pit: are handled by THEME_TO_CONFIG_MAP.
+        Nested blocks (axis, leader, leader_primary, leader_secondary,
+        today_line, date_text, arrow_head, label) are handled here so each
+        sub-key is written to its individual theme_pit_* or pit_* field.
+        """
+        pit = self._theme_data.get("pit", {})
+        if not isinstance(pit, dict):
+            return
+
+        def _str(v: Any) -> str | None:
+            return str(v) if v is not None else None
+
+        def _flt(v: Any) -> float | None:
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
+        # --- pit.axis ---
+        axis = pit.get("axis", {})
+        if isinstance(axis, dict):
+            if "color" in axis:
+                config.theme_pit_axis_color = _str(axis["color"])
+            if "width" in axis:
+                v = _flt(axis["width"])
+                if v is not None:
+                    config.pit_axis_stroke_width = v
+            if "marker_start" in axis:
+                config.pit_axis_marker_start = str(axis["marker_start"])
+            if "marker_start_size" in axis:
+                v = _flt(axis["marker_start_size"])
+                if v is not None:
+                    config.pit_axis_marker_start_size = v
+            if "marker_end" in axis:
+                config.pit_axis_marker_end = str(axis["marker_end"])
+            if "marker_end_size" in axis:
+                v = _flt(axis["marker_end_size"])
+                if v is not None:
+                    config.pit_axis_marker_end_size = v
+
+        # --- pit.date_text ---
+        date_text = pit.get("date_text", {})
+        if isinstance(date_text, dict):
+            if "color" in date_text:
+                config.theme_pit_date_text_color = _str(date_text["color"])
+            if "font_name" in date_text:
+                config.theme_pit_date_text_font_name = _str(date_text["font_name"])
+            if "font_size" in date_text:
+                v = _flt(date_text["font_size"])
+                if v is not None:
+                    config.theme_pit_date_text_font_size = v
+            if "offset" in date_text:
+                v = _flt(date_text["offset"])
+                if v is not None:
+                    config.pit_date_text_offset = v
+
+        # --- pit.leader (global leader defaults) ---
+        def _apply_leader(d: dict, side: str = "global") -> None:
+            if not isinstance(d, dict):
+                return
+            if side == "global":
+                if "color" in d:
+                    config.theme_pit_leader_color = _str(d["color"])
+                if "width" in d:
+                    v = _flt(d["width"])
+                    if v is not None:
+                        config.pit_leader_stroke_width = v
+                if "dasharray" in d:
+                    config.pit_leader_stroke_dasharray = _str(d["dasharray"])
+                if "opacity" in d:
+                    v = _flt(d["opacity"])
+                    if v is not None:
+                        config.pit_leader_stroke_opacity = v
+                if "linecap" in d:
+                    config.pit_leader_stroke_linecap = str(d["linecap"])
+                if "linejoin" in d:
+                    config.pit_leader_stroke_linejoin = str(d["linejoin"])
+                if "marker_start" in d:
+                    config.pit_leader_marker_start = str(d["marker_start"])
+                if "marker_start_size" in d:
+                    v = _flt(d["marker_start_size"])
+                    if v is not None:
+                        config.pit_leader_marker_start_size = v
+                if "marker_end" in d:
+                    config.pit_leader_marker_end = str(d["marker_end"])
+                if "marker_end_size" in d:
+                    v = _flt(d["marker_end_size"])
+                    if v is not None:
+                        config.pit_leader_marker_end_size = v
+            elif side == "primary":
+                if "color" in d:
+                    config.theme_pit_leader_primary_color = _str(d["color"])
+            elif side == "secondary":
+                if "color" in d:
+                    config.theme_pit_leader_secondary_color = _str(d["color"])
+
+        _apply_leader(pit.get("leader", {}), "global")
+        _apply_leader(pit.get("leader_primary", {}), "primary")
+        _apply_leader(pit.get("leader_secondary", {}), "secondary")
+
+        # --- pit.today_line ---
+        tl = pit.get("today_line", {})
+        if isinstance(tl, dict):
+            if "color" in tl:
+                config.theme_pit_today_line_color = _str(tl["color"])
+            if "width" in tl:
+                v = _flt(tl["width"])
+                if v is not None:
+                    config.theme_pit_today_line_width = v
+            if "dasharray" in tl:
+                config.theme_pit_today_line_dasharray = _str(tl["dasharray"])
+            if "opacity" in tl:
+                v = _flt(tl["opacity"])
+                if v is not None:
+                    config.theme_pit_today_line_opacity = v
+            if "linecap" in tl:
+                config.theme_pit_today_line_linecap = _str(tl["linecap"])
+            if "linejoin" in tl:
+                config.theme_pit_today_line_linejoin = _str(tl["linejoin"])
+            if "label" in tl:
+                config.pit_today_line_label = str(tl["label"]) if tl["label"] is not None else ""
+            if "label_color" in tl:
+                config.theme_pit_today_line_label_color = _str(tl["label_color"])
+            if "label_font_name" in tl:
+                config.theme_pit_today_line_label_font_name = _str(tl["label_font_name"])
+            if "label_font_size" in tl:
+                v = _flt(tl["label_font_size"])
+                if v is not None:
+                    config.theme_pit_today_line_label_font_size = v
+            if "label_position" in tl:
+                config.theme_pit_today_line_label_position = _str(tl["label_position"])
+            if "marker_start" in tl:
+                config.pit_today_line_marker_start = str(tl["marker_start"])
+            if "marker_start_size" in tl:
+                v = _flt(tl["marker_start_size"])
+                if v is not None:
+                    config.pit_today_line_marker_start_size = v
+            if "marker_end" in tl:
+                config.pit_today_line_marker_end = str(tl["marker_end"])
+            if "marker_end_size" in tl:
+                v = _flt(tl["marker_end_size"])
+                if v is not None:
+                    config.pit_today_line_marker_end_size = v
+
+        # --- pit.arrow_head ---
+        ah = pit.get("arrow_head", {})
+        if isinstance(ah, dict) and "color" in ah:
+            config.theme_pit_arrow_head_color = _str(ah["color"])
+
+        # --- pit.label ---
+        lbl = pit.get("label", {})
+        if isinstance(lbl, dict):
+            if "stroke_color" in lbl:
+                config.theme_pit_label_stroke_color = _str(lbl["stroke_color"])
+            if "stroke_width" in lbl:
+                v = _flt(lbl["stroke_width"])
+                if v is not None:
+                    config.pit_label_stroke_width = v
+            if "stroke_dasharray" in lbl:
+                config.pit_label_stroke_dasharray = _str(lbl["stroke_dasharray"])
+            if "fill_color" in lbl:
+                config.theme_pit_label_fill_color = _str(lbl["fill_color"])
+            if "fill_opacity" in lbl:
+                v = _flt(lbl["fill_opacity"])
+                if v is not None:
+                    config.pit_label_fill_opacity = v
+            if "pattern" in lbl:
+                config.theme_pit_label_pattern = _str(lbl["pattern"])
+            if "text_color" in lbl:
+                config.theme_pit_label_text_color = _str(lbl["text_color"])
+            if "corner_radius" in lbl:
+                v = _flt(lbl["corner_radius"])
+                if v is not None:
+                    config.pit_label_corner_radius = v
+            if "padding_x" in lbl:
+                v = _flt(lbl["padding_x"])
+                if v is not None:
+                    config.pit_label_padding_x = v
+            if "padding_y" in lbl:
+                v = _flt(lbl["padding_y"])
+                if v is not None:
+                    config.pit_label_padding_y = v
 
     def _apply_band_placements(self, config: "CalendarConfig") -> None:
         """Expand placement-list references against the top-level time_bands catalog.

@@ -242,6 +242,77 @@ timeline:
   date:
     font_family: Roboto-Bold
     font_color: dodgerblue
+pit:
+  axis:
+    color: "#333333"
+    width: 1.5
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "arrow-head"
+    marker_end_size: 6.0
+  tick_color: "#555555"
+  tick_unit: month
+  date_format: "MMM D"
+  date_text:
+    color: "#444444"
+    font_name: Roboto-Regular
+    font_size: 9
+    offset: 6.0
+  default_event_icon: null
+  default_milestone_icon: null
+  dot_color: dodgerblue
+  milestone_color: tomato
+  event_palette: Set3
+  milestone_palette: Set1
+  leader:
+    color: "#555555"
+    width: 0.75
+    dasharray: null
+    opacity: 1.0
+    linecap: round
+    marker_start: "none"
+    marker_start_size: 3.0
+    marker_end: "arrow-head"
+    marker_end_size: 5.0
+  leader_primary:
+    color: dodgerblue
+    marker_end_size: 6.0
+  leader_secondary:
+    color: darkorange
+    dasharray: "3,2"
+    marker_start: "none"
+    marker_start_size: 3.0
+  today_line:
+    color: tomato
+    width: 1.25
+    dasharray: "4,2"
+    opacity: 0.85
+    linecap: round
+    linejoin: round
+    label: today
+    label_color: tomato
+    label_font_name: Roboto-Bold
+    label_font_size: 9
+    label_position: end
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "none"
+    marker_end_size: 6.0
+  arrow_head:
+    color: "#333333"
+  label:
+    stroke_color: "#333333"
+    stroke_width: 0.5
+    stroke_dasharray: null
+    fill_color: lightyellow
+    fill_opacity: 0.85
+    pattern: null
+    pattern_opacity: 0.15
+    text_color: "#1b1f24"
+    corner_radius: 2.0
+    padding_x: 6.0
+    padding_y: 3.0
+  label_palette: Set3
 compact_plan:
   palette:
     - deeppink

@@ -228,6 +228,77 @@ timeline:
   date:
     font_family: Roboto-Bold
     font_color: aliceblue
+pit:
+  axis:
+    color: lightgrey
+    width: 1.5
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "arrow-head"
+    marker_end_size: 6.0
+  tick_color: "#aaaaaa"
+  tick_unit: month
+  date_format: "MMM D"
+  date_text:
+    color: "#888888"
+    font_name: Roboto-Regular
+    font_size: 9
+    offset: 6.0
+  default_event_icon: null
+  default_milestone_icon: null
+  dot_color: "#b3cde3"
+  milestone_color: lightsteelblue
+  event_palette: Pastel1
+  milestone_palette: Set3
+  leader:
+    color: lightgrey
+    width: 0.75
+    dasharray: null
+    opacity: 1.0
+    linecap: round
+    marker_start: "none"
+    marker_start_size: 3.0
+    marker_end: "arrow-head"
+    marker_end_size: 5.0
+  leader_primary:
+    color: lightsteelblue
+    marker_end_size: 6.0
+  leader_secondary:
+    color: "#b3cde3"
+    dasharray: "3,2"
+    marker_start: "none"
+    marker_start_size: 3.0
+  today_line:
+    color: coral
+    width: 1.0
+    dasharray: "4,2"
+    opacity: 0.85
+    linecap: round
+    linejoin: round
+    label: today
+    label_color: coral
+    label_font_name: Roboto-Bold
+    label_font_size: 9
+    label_position: end
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "none"
+    marker_end_size: 6.0
+  arrow_head:
+    color: "#aaaaaa"
+  label:
+    stroke_color: lightgrey
+    stroke_width: 0.5
+    stroke_dasharray: null
+    fill_color: "#fef9f0"
+    fill_opacity: 0.85
+    pattern: null
+    pattern_opacity: 0.12
+    text_color: "#333333"
+    corner_radius: 3.0
+    padding_x: 6.0
+    padding_y: 3.0
+  label_palette: Pastel1
 compact_plan:
   palette:
     - lightskyblue
