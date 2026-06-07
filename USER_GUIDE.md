@@ -11,6 +11,7 @@ This guide is generated from the current codebase (`ecalendar.py`, `config/theme
 | `mini-icon` | Generate a mini calendar SVG using icon images for day numbers instead of numerals. |
 | `text-mini` | Generate a text mini calendar. |
 | `timeline` | Generate a timeline SVG. |
+| `pit` | Generate a Points-in-Time SVG (clean axis + marker-per-event + bezier leaders). |
 | `blockplan` | Generate a blockplan SVG. |
 | `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
 | `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
@@ -1833,6 +1834,257 @@ Anything that controls *appearance* — fills, strokes, fonts, colors, patterns,
 - `colors.*_palette` keys reference DB palette names and resolve during render.
 - Run `ecalendar.py help <subcommand>` for allowed values and focused help output.
 - Run `uv run python tools/validate_theme.py <theme.yaml>` to check a theme against the unified schema.
+
+---
+
+## PIT (Points in Time) Subcommand
+
+The `pit` subcommand generates a clean **Points-in-Time** SVG: a single axis line with one marker per event, connected by a labella-spaced bezier leader to a non-overlapping label box. It is the lightest-weight timeline style — no duration bars, no fiscal bands, no WBS hierarchy — designed for milestone charts, roadmaps, and presentation decks where clarity trumps density.
+
+### Visual aesthetic
+
+A single horizontal (or vertical) axis spans the project date range. Each event appears as a marker (filled circle, diamond, or DB icon glyph) on the axis, with a curved leader rising to a labeled box on the primary or secondary side. Date text appears on the opposite side of the axis from the label, at the marker's axis position — not the displaced label position. An optional "today" line crosses the axis as a perpendicular dashed rule.
+
+### Usage examples
+
+```bash
+# Horizontal, both-side labels, default theme (landscape page)
+uv run python ecalendar.py pit 20260101 20261231 \
+  --orientation landscape --direction horizontal --label-side both \
+  --tick-unit month --outputfile output/pit_2026.svg
+
+# Vertical poster, milestones only, custom icons, accent theme
+uv run python ecalendar.py pit 20260101 20261231 \
+  --orientation portrait --papersize tabloid \
+  --direction vertical --label-side primary \
+  --milestones \
+  --milestone-icon trophy --marker-size 11 \
+  --tick-unit fiscal_quarter \
+  --theme accent \
+  --outputfile output/pit_milestones_2026.svg
+
+# Fiscal-quarter ticks, dashed leaders, includes notes
+uv run python ecalendar.py pit 20260101 20271231 \
+  --fiscal "4-5-4" --tick-unit fiscal_quarter \
+  --includenotes --leader-dash "3,2" \
+  --outputfile output/pit_program.svg
+
+# Future-dated "today" line for a board presentation
+uv run python ecalendar.py pit 20260101 20261231 \
+  --today-date 20260901 --today-label "As of Q3" \
+  --outputfile output/pit_q3_presentation.svg
+
+# Custom themed output (dark theme, vertical direction)
+uv run python ecalendar.py pit 20260101 20261231 \
+  --theme dark --direction vertical --label-side both \
+  --event-icon dot --milestone-icon diamond \
+  --outputfile output/pit_dark.svg
+```
+
+### Inherited content-filter flags
+
+These flags are shared with other visualizers and apply identically to `pit`:
+
+| Flag | Short | Description |
+|---|---|---|
+| `--noevents` | `-ne` | Exclude regular (non-milestone) events |
+| `--milestones` | `-ms` | Include milestone events |
+| `--rollups` | `-ro` | Include rollup events |
+| `--ignorecomplete` | `-ic` | Skip events marked 100% complete |
+| `--includenotes` | `-in` | Render the Notes field as a second label line |
+| `--WBS` | | WBS filter expression (prefix-based, comma-separated, `!` excludes) |
+| `--empty` | `-e` | Render with no events (blank axis) |
+| `--status` | | Event status filter (active, draft, cancelled, on_hold, all) |
+
+Multi-day duration events are **always dropped** — PIT renders only point-in-time events and milestones. Use the `timeline` subcommand for durations.
+
+### PIT-specific flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--direction` | | `horizontal` | Axis direction: `horizontal` or `vertical`. **Note:** this is distinct from `--orientation` which controls page rotation. |
+| `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. |
+| `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, or `date`. |
+| `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
+| `--tick-label-format` | | unit default | Override the tick label format string. |
+| `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. |
+| `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
+| `--today-label` | | theme: `"today"` | Override the label text on the today line for this run. |
+| `--event-icon` | | none (circle) | DB icon name to use as the default event marker for this run. |
+| `--milestone-icon` | | none (diamond) | DB icon name to use as the default milestone marker for this run. |
+| `--marker-size` | | `7.0` | Bounding-box size (in points) for built-in shapes and DB icon glyphs. |
+| `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
+
+### Theme bindings
+
+Add a `pit:` block to your theme YAML between the `timeline:` and `blockplan:` sections. All seven built-in themes include a pre-built `pit:` block.
+
+```yaml
+pit:
+  axis:
+    color: "#333333"
+    width: 1.5
+    marker_start: "none"        # "arrow-head" | "none" | custom-id
+    marker_start_size: 4.0
+    marker_end: "arrow-head"    # arrowhead at the end of the axis
+    marker_end_size: 6.0
+  tick_color: "#666666"
+  tick_unit: month
+  date_format: "MMM D"
+
+  date_text:
+    color: "#444"
+    font_name: Roboto-Regular
+    font_size: 9
+    offset: 6.0               # distance from axis to date text
+
+  default_event_icon: null    # DB icon name or null (built-in circle)
+  default_milestone_icon: null  # DB icon name or null (built-in diamond)
+  dot_color: steelblue
+  milestone_color: gold
+  event_palette: Pastel1      # round-robin palette for event markers
+  milestone_palette: Set1
+
+  leader:
+    color: grey
+    width: 0.75
+    dasharray: null
+    opacity: 1.0
+    linecap: round
+    marker_start: "none"      # axis-end of each leader
+    marker_start_size: 3.0
+    marker_end: "arrow-head"  # ▶ at the label end
+    marker_end_size: 5.0
+  leader_primary:
+    color: deepskyblue        # override color for primary-side leaders
+    marker_end_size: 6.0
+  leader_secondary:
+    color: steelblue
+    dasharray: "3,2"          # dashed secondary leaders
+
+  today_line:
+    color: tomato
+    width: 1.0
+    dasharray: "4,2"
+    opacity: 0.85
+    linecap: round
+    label: today
+    label_color: tomato
+    label_font_name: Roboto-Bold
+    label_font_size: 9
+    label_position: end       # start | middle | end
+    marker_start: "none"
+    marker_end: "none"        # set to "arrow-head" to point into the future
+
+  arrow_head:
+    color: grey               # fill color for all built-in arrowheads
+
+  label:
+    stroke_color: lightgrey
+    stroke_width: 0.5
+    fill_color: aliceblue
+    fill_opacity: 0.85
+    pattern: null             # DB pattern name (e.g. "diagonal-stripes")
+    pattern_opacity: 0.15
+    text_color: "#1b1f24"
+    corner_radius: 2.0
+    padding_x: 6.0
+    padding_y: 3.0
+  label_palette: Pastel1      # round-robin palette for label box fills
+```
+
+#### Per-rule overrides in `style_rules`
+
+The following extra keys are recognized inside a rule's `style:` block when `apply_to: event` (or `apply_to: all`):
+
+| Key | Type | Effect |
+|---|---|---|
+| `marker_icon` | `"icon-name"` | Replace the built-in shape with the named DB icon. |
+| `leader` | `{color, width, dasharray, opacity, linecap, linejoin, marker_start, marker_end, ...}` | Per-rule leader stroke override. Merges with (and wins over) the side and global defaults. |
+| `label` | `{stroke_color, stroke_width, stroke_dasharray, fill_color, fill_opacity, pattern, pattern_opacity, text_color, corner_radius}` | Per-rule label box override. |
+
+Example:
+```yaml
+style_rules:
+  - name: Release milestones
+    apply_to: event
+    select:
+      resource_group: release
+      milestone: true
+    style:
+      marker_icon: "rocket"
+      leader:
+        color: "#c33"
+        dasharray: "4,2"
+        marker_end: "arrow-head"
+        marker_end_size: 7.0
+      label:
+        fill_color: "palette:Reds:2"
+        fill_opacity: 0.9
+        pattern: "circuit-board"
+        pattern_opacity: 0.12
+```
+
+### `ec-pit-*` CSS classes
+
+The following CSS classes are emitted on PIT SVG elements for external stylesheet targeting:
+
+| Class | Element |
+|---|---|
+| `ec-pit-axis-group` | `<g>` wrapping the axis line and ticks |
+| `ec-axis-line` | The axis `<line>` element |
+| `ec-pit-callout-group` | `<g>` wrapping all elements for one event |
+| `ec-pit-side-primary` | Added to the callout group for primary-side events |
+| `ec-pit-side-secondary` | Added to the callout group for secondary-side events |
+| `ec-callout-leader` | `<g>` wrapping the leader `<path>` |
+| `ec-callout-box` | The label box `<rect>` |
+| `ec-pit-event-marker` | Non-milestone marker glyph or shape |
+| `ec-milestone-marker` | Milestone marker glyph or shape |
+| `ec-event-name` | Label name text `<g>` |
+| `ec-event-notes` | Label notes text `<g>` (present only when `--includenotes`) |
+| `ec-event-date` | Opposite-side date text `<g>` |
+| `ec-today-line` | The today `<line>` element |
+| `ec-today-label` | The today-line label text `<g>` |
+| `ec-pit-marker-arrow-head` | Built-in `<marker>` elements in `<defs>` |
+| `ec-pit-label-pattern` | Pattern overlay `<rect>` on a label box |
+
+Each callout group also carries `data-*` attributes for JavaScript filtering:
+- `data-event-date` — YYYYMMDD string
+- `data-milestone` — `"true"` / `"false"`
+- `data-priority` — integer priority value
+- `data-groups` — resource group string
+
+### External CSS styling guide
+
+The four **inline-styled** classes — `ec-pit-event-marker`, `ec-milestone-marker`, `ec-callout-leader`, `ec-callout-box` — carry their fill/stroke as inline `style="..."` attributes so per-event theme colors are always honored. To override them from an external stylesheet you **must** use `!important`:
+
+```css
+/* Override all event markers to a flat blue */
+.ec-pit-event-marker {
+  fill: #2d5fae !important;
+}
+
+/* Target only primary-side leaders */
+.ec-pit-side-primary .ec-callout-leader path {
+  stroke: royalblue !important;
+  stroke-dasharray: 4 2 !important;
+}
+
+/* Style all label boxes */
+.ec-callout-box {
+  fill: lavender !important;
+  fill-opacity: 0.9 !important;
+  stroke: steelblue !important;
+}
+```
+
+All other `ec-*` classes use presentation attributes (not inline style), so a plain CSS rule (without `!important`) is sufficient to override them.
+
+### Hard limitations
+
+- **No multi-day events.** Duration events are silently dropped. Use the `timeline` subcommand for durations and duration bars.
+- **80-events-per-side soft cap.** Above 80 events on a single axis side, labella's Force algorithm may not converge cleanly. A `WARNING` is logged and the SVG is still produced, but label spacing may be suboptimal. Split the date range or use `--WBS` / `--milestones` filtering to reduce density.
+- **No fiscal bands, WBS groups, or icon bands.** These are supported by `timeline` and `blockplan`; PIT intentionally omits them for visual clarity.
 
 ---
 
