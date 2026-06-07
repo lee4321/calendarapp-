@@ -222,6 +222,10 @@ timeline:
     font_family: Roboto-Bold
     font_color: palette:Accent:3
 pit:
+  labella:
+    layer_gap: 8
+    node_height: 24
+    density: 0.75
   axis:
     color: "#cccccc"
     width: 1.5

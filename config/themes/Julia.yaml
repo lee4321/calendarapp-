@@ -220,6 +220,10 @@ timeline_events:
   box_width: 50
   box_height: 20
 pit:
+  labella:
+    layer_gap: 8
+    node_height: 24
+    density: 0.75
   axis:
     color: lightsteelblue
     width: 1.5

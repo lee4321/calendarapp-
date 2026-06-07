@@ -204,6 +204,10 @@ timeline:
     font_family: Roboto-Bold
     font_color: lightskyblue
 pit:
+  labella:
+    layer_gap: 8
+    node_height: 24
+    density: 0.75
   axis:
     color: "#666666"
     width: 1.5

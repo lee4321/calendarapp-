@@ -229,6 +229,10 @@ timeline_durations:
   date_font_size: 9
   date_color: grey
 pit:
+  labella:
+    layer_gap: 8
+    node_height: 24
+    density: 0.75
   axis:
     color: lightgrey
     width: 1.5
