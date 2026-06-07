@@ -48,6 +48,10 @@ _KNOWN_NON_ELEMENT_CLASSES: set[str] = {
     "ec-current-day",
     "ec-holiday",
     "ec-nonworkday",
+    # PIT group wrapper + callout side modifiers (also in catalog modifiers:).
+    "ec-pit-axis-group",
+    "ec-pit-side-primary",
+    "ec-pit-side-secondary",
 }
 
 

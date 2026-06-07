@@ -279,16 +279,16 @@ and a curved leader joining each marker to a non-overlapping label box.
     <strong>Axis line</strong> <span class="rev-tag">UPDATED</span> — single thin stroke spanning the project date range, with ticks at the chosen <em>timeband</em> granularity (see §4). Accepts independent SVG <code>marker-start</code> <em>and</em> <code>marker-end</code> references, each with its own size. Useful patterns: a small dot or tick on <code>marker-start</code> (the "origin" tip) plus an <code>arrow-head</code> on <code>marker-end</code> (the "future" tip), with separate sizes. For v1 a built-in <code>arrow-head</code> marker is auto-injected into <code>&lt;defs&gt;</code> per (kind, color, size) tuple; theme fields accept <code>"arrow-head"</code>, <code>"none"</code>, or any user-defined marker id.
   </li>
   <li>
-    <strong>Event marker</strong> <span class="rev-tag">UPDATED</span> — by default a filled circle at the date's axis position. May be replaced by an SVG icon from <code>calendar.db</code>'s <code>icons</code> table. Resolution order:
+    <strong>Event axis marker</strong> <span class="rev-tag">UPDATED</span> — always a filled circle of radius <code>pit_dot_radius</code> at the date's axis position. DB icons are no longer placed on the axis; the precedence chain below now drives a glyph drawn <em>inside the label box</em>, on the name baseline and to the left of the name text:
     <ol class="tight" style="margin: 0.3rem 0 0.5rem 1.2rem;">
       <li>Per-event <code>event.icon</code> (DB column) if set.</li>
       <li>Style-rule <code>marker_icon: "name"</code> (matches today's <code>pattern:</code> rule mechanism).</li>
       <li>Config <code>pit_default_event_icon</code> (theme-overridable).</li>
-      <li>Fallback: filled circle of radius <code>pit_dot_radius</code>.</li>
+      <li>None — label name starts at the left padding edge.</li>
     </ol>
   </li>
   <li>
-    <strong>Milestone marker</strong> <span class="rev-tag">UPDATED</span> — by default a filled diamond. Replaceable by a DB icon via the same precedence chain rooted at <code>pit_default_milestone_icon</code> (and per-rule <code>milestone_icon: "name"</code>). Icon glyphs are colored using the same color resolution path as the diamond fill, so themes and rules continue to drive color even when the shape comes from a glyph.</li>
+    <strong>Milestone axis marker</strong> <span class="rev-tag">UPDATED</span> — always a filled diamond. The same per-event / per-rule / config-default precedence chain rooted at <code>pit_default_milestone_icon</code> drives a label-box icon (drawn inside the box, left of the name), never the axis glyph. Label-box icons are colorized using the resolved marker color.</li>
   <li>
     <strong>Leader</strong> <span class="rev-tag">UPDATED</span> — labella's bezier path from marker to label box. Now exposes a full SVG stroke attribute set:
     <ul class="tight">
@@ -488,9 +488,11 @@ PITRenderer._render_content(config, coord, events, db, ...)
     <tr><td><code>--today-line / --no-today-line</code></td><td><code>--today-line</code></td><td>Draw a perpendicular line at today's date.</td></tr>
     <tr><td><code>--today-date YYYY-MM-DD</code> <span class="rev-tag">NEW</span></td><td>(real today)</td><td>Override the today-line position. Lets a future-dated presentation be prepared with the "correct" today indicator.</td></tr>
     <tr><td><code>--today-label STR</code> <span class="rev-tag">NEW</span></td><td>(theme: <code>"today"</code>)</td><td>Override the today-line label text for this run.</td></tr>
-    <tr><td><code>--event-icon NAME</code> <span class="rev-tag">NEW</span></td><td>(none → circle)</td><td>DB icon name to use as the default event marker (overrides <code>pit_default_event_icon</code> for this run).</td></tr>
-    <tr><td><code>--milestone-icon NAME</code> <span class="rev-tag">NEW</span></td><td>(none → diamond)</td><td>DB icon name to use as the default milestone marker.</td></tr>
-    <tr><td><code>--marker-size FLOAT</code></td><td><code>7.0</code></td><td>Bounding-box size for built-in shapes and DB icons (icons scaled to fit).</td></tr>
+    <tr><td><code>--event-icon NAME</code> <span class="rev-tag">UPDATED</span></td><td>(none)</td><td>DB icon name drawn inside each event's label box, on the name baseline and to the left of the name. Does <em>not</em> change the axis marker (always a built-in circle).</td></tr>
+    <tr><td><code>--milestone-icon NAME</code> <span class="rev-tag">UPDATED</span></td><td>(none)</td><td>DB icon name drawn inside each milestone's label box, left of the name. Does <em>not</em> change the axis marker (always a built-in diamond).</td></tr>
+    <tr><td><code>--label-icon-size FLOAT</code> <span class="rev-tag">NEW</span></td><td>name font size</td><td>Longest viewBox side (points) of the label-box icon glyph.</td></tr>
+    <tr><td><code>--label-icon-gap FLOAT</code> <span class="rev-tag">NEW</span></td><td><code>4.0</code></td><td>Horizontal gap (points) between the label icon and the start of the event name.</td></tr>
+    <tr><td><code>--marker-size FLOAT</code></td><td><code>7.0</code></td><td>Bounding-box size of the axis marker (built-in circle / diamond) in points.</td></tr>
     <tr><td><code>--leader-dash STR</code> <span class="rev-tag">NEW</span></td><td>(solid)</td><td>SVG <code>stroke-dasharray</code> for leaders, e.g. <code>"4,2"</code>.</td></tr>
   </tbody>
 </table>

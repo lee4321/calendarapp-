@@ -232,6 +232,10 @@ pit:
     font_name: Roboto-Regular
     font_size: 9
     offset: 6.0
+  # Optional DB icon names drawn INSIDE the callout label box,
+  # left of the event name. Leave null for plain text-only labels.
+  # The axis marker is always a built-in shape (circle for events,
+  # diamond for milestones) and is NOT affected by these settings.
   default_event_icon: null
   default_milestone_icon: null
   dot_color: "#2c7bb6"

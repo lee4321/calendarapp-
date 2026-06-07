@@ -186,8 +186,31 @@ def _date_string(event: Event, config: CalendarConfig) -> str:
         return ""
 
 
-def _measured_text_width(event: Event, config: CalendarConfig) -> float:
-    """Horizontal text extent of the longest line in the label."""
+def _label_icon_size(config: CalendarConfig) -> float:
+    """Pixel size of the label-box icon glyph (longest viewBox side)."""
+    explicit = getattr(config, "pit_label_icon_size", None)
+    if explicit is not None and float(explicit) > 0:
+        return float(explicit)
+    return _name_size(config)
+
+
+def _label_icon_gap(config: CalendarConfig) -> float:
+    """Gap between the label icon's right edge and the name text."""
+    return float(getattr(config, "pit_label_icon_gap", 4.0) or 0.0)
+
+
+def _measured_text_width(
+    event: Event,
+    config: CalendarConfig,
+    *,
+    extra_name_width: float = 0.0,
+) -> float:
+    """Horizontal text extent of the longest line in the label.
+
+    ``extra_name_width`` is appended to the *name* line only — the
+    label icon (when present) is drawn left of the name on the same
+    baseline, so notes and inline-date lines are unaffected.
+    """
     name_path = _resolve_font_path(config.pit_name_text_font_name)
     notes_path = _resolve_font_path(config.pit_notes_text_font_name)
     name_size = _name_size(config)
@@ -198,6 +221,7 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
         if name_path
         else len(event.task_name or "") * name_size * 0.5
     )
+    name_w += max(0.0, float(extra_name_width))
     notes_w = 0.0
     if event.notes and config.include_notes:
         notes_w = (
@@ -239,7 +263,11 @@ def _line_height_extent(config: CalendarConfig) -> float:
 
 
 def _node_along_axis_extent(
-    event: Event, config: CalendarConfig, direction: Orientation
+    event: Event,
+    config: CalendarConfig,
+    direction: Orientation,
+    *,
+    extra_name_width: float = 0.0,
 ) -> float:
     """Return the value passed as `Node.width` to labella.
 
@@ -248,13 +276,20 @@ def _node_along_axis_extent(
     Vertical   → label vertical height.
     """
     if direction is Orientation.HORIZONTAL:
-        measured = _measured_text_width(event, config) + 2.0 * _LABEL_PAD_X
+        measured = (
+            _measured_text_width(event, config, extra_name_width=extra_name_width)
+            + 2.0 * _LABEL_PAD_X
+        )
         return max(measured, 24.0)
     return _line_height_extent(config)
 
 
 def _renderer_node_height(
-    events: Sequence[Event], config: CalendarConfig, direction: Orientation
+    events: Sequence[Event],
+    config: CalendarConfig,
+    direction: Orientation,
+    *,
+    extra_width_for_event: Callable[[Event], float] | None = None,
 ) -> float:
     """Per-layer extent perpendicular to the axis.
 
@@ -263,8 +298,20 @@ def _renderer_node_height(
     """
     if direction is Orientation.HORIZONTAL:
         return max(_line_height_extent(config), config.pit_labella_node_height)
+
+    def _extra(ev: Event) -> float:
+        if extra_width_for_event is None:
+            return 0.0
+        try:
+            return float(extra_width_for_event(ev) or 0.0)
+        except Exception:
+            return 0.0
+
     widest = max(
-        (_measured_text_width(e, config) for e in events),
+        (
+            _measured_text_width(e, config, extra_name_width=_extra(e))
+            for e in events
+        ),
         default=0.0,
     )
     return max(widest + 2.0 * _LABEL_PAD_X, 40.0)
@@ -297,6 +344,7 @@ def _layout_one_side(
     side: Side,
     config: CalendarConfig,
     pos_for_day: Callable[[arrow.Arrow], float],
+    extra_width_for_event: Callable[[Event], float] | None = None,
 ) -> list[PITPlacement]:
     """Run labella for one concrete side and return placements."""
     if not events:
@@ -312,8 +360,19 @@ def _layout_one_side(
         )
 
     direction_str = labella_direction(direction, side)
-    node_height = _renderer_node_height(events, config, direction)
+    node_height = _renderer_node_height(
+        events, config, direction,
+        extra_width_for_event=extra_width_for_event,
+    )
     layer_gap = float(config.pit_labella_layer_gap)
+
+    def _extra(ev: Event) -> float:
+        if extra_width_for_event is None:
+            return 0.0
+        try:
+            return float(extra_width_for_event(ev) or 0.0)
+        except Exception:
+            return 0.0
 
     # Build nodes.
     nodes: list[Node] = []
@@ -323,7 +382,9 @@ def _layout_one_side(
         except (arrow.ParserError, ValueError):
             continue
         ideal = pos_for_day(day)
-        width = _node_along_axis_extent(ev, config, direction)
+        width = _node_along_axis_extent(
+            ev, config, direction, extra_name_width=_extra(ev),
+        )
         nodes.append(Node(idealPos=ideal, width=width, data=ev))
 
     if not nodes:
@@ -410,6 +471,7 @@ def layout_pit_callouts(
     side: Side,
     config: CalendarConfig,
     pos_for_day: Callable[[arrow.Arrow], float],
+    extra_width_for_event: Callable[[Event], float] | None = None,
 ) -> list[PITPlacement]:
     """Return labella-placed PIT callouts for the given events.
 
@@ -443,6 +505,7 @@ def layout_pit_callouts(
             side=Side.PRIMARY,
             config=config,
             pos_for_day=pos_for_day,
+            extra_width_for_event=extra_width_for_event,
         )
         secondary = _layout_one_side(
             secondary_events,
@@ -452,6 +515,7 @@ def layout_pit_callouts(
             side=opposite(Side.PRIMARY),
             config=config,
             pos_for_day=pos_for_day,
+            extra_width_for_event=extra_width_for_event,
         )
         return primary + secondary
 
@@ -463,4 +527,5 @@ def layout_pit_callouts(
         side=side,
         config=config,
         pos_for_day=pos_for_day,
+        extra_width_for_event=extra_width_for_event,
     )
