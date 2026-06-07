@@ -1719,14 +1719,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if font_setting:
             if font_setting in FONT_REGISTRY:
                 return font_setting
-        # Try base italic or regular font from config
+        # Try notes/base compactplan font from config
         if italic:
             candidates = [
-                getattr(config, "notes_font", None),
-                getattr(config, "base_font", None),
+                getattr(config, "compactplan_notes_text_font_name", None),
+                getattr(config, "compactplan_text_font_name", None),
             ]
         else:
-            candidates = [getattr(config, "base_font", None)]
+            candidates = [getattr(config, "compactplan_text_font_name", None)]
         for c in candidates:
             if c and c in FONT_REGISTRY:
                 return c
