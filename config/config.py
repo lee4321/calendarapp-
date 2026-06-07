@@ -674,9 +674,12 @@ class CalendarConfig:
     pit_direction: str = "horizontal"            # "horizontal" | "vertical"
     pit_label_side: str = "both"                 # "primary" | "secondary" | "both"
     # Tick granularity uses the project-wide timeband units.
-    pit_tick_unit: str = "month"                 # month|week|fiscal_quarter|fiscal_period|interval|date
+    pit_tick_unit: str = "month"                 # month|week|fiscal_quarter|fiscal_period|interval|date|year
     pit_tick_interval: int = 1                   # for unit == "interval"
     pit_tick_label_format: str | None = None
+    pit_show_ticks: bool = True                  # draw axis ticks at all
+    pit_tick_length: float = 5.0                 # half-length of each tick mark (each side of axis)
+    pit_show_tick_labels: bool = True            # draw the per-segment tick label
 
     pit_show_today_line: bool = True
     pit_today_date: str | None = None            # YYYYMMDD; None → real today

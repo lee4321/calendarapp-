@@ -367,6 +367,60 @@ def test_pit_today_date_override(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Axis ticks
+# ---------------------------------------------------------------------------
+
+
+def _render_pit_ticks(tmp_path: Path, **kw) -> str:
+    config = _make_config(tmp_path, start="20260201", end="20260501")
+    for k, v in kw.items():
+        setattr(config, k, v)
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+    return Path(config.outputfile).read_text(encoding="utf-8")
+
+
+def test_pit_ticks_drawn_by_default(tmp_path):
+    """Axis ticks (and labels) render out of the box (default month unit)."""
+    svg = _render_pit_ticks(tmp_path)
+    assert svg.count('class="ec-axis-tick"') >= 3      # Feb..May boundaries
+    assert "ec-label" in svg
+
+
+def test_pit_ticks_week_denser_than_month(tmp_path):
+    """A finer tick unit yields more ticks over the same range."""
+    n_month = _render_pit_ticks(tmp_path / "m", pit_tick_unit="month").count(
+        'class="ec-axis-tick"'
+    )
+    n_week = _render_pit_ticks(tmp_path / "w", pit_tick_unit="week").count(
+        'class="ec-axis-tick"'
+    )
+    assert n_week > n_month
+
+
+def test_pit_show_ticks_false_suppresses(tmp_path):
+    """pit_show_ticks == False draws no ticks at all."""
+    svg = _render_pit_ticks(tmp_path, pit_show_ticks=False)
+    assert 'class="ec-axis-tick"' not in svg
+    assert "ec-label" not in svg
+
+
+def test_pit_tick_labels_can_be_suppressed(tmp_path):
+    """Marks without labels when pit_show_tick_labels == False."""
+    svg = _render_pit_ticks(
+        tmp_path, pit_tick_unit="week", pit_show_tick_labels=False
+    )
+    assert 'class="ec-axis-tick"' in svg
+    assert "ec-label" not in svg
+
+
+def test_pit_ticks_vertical(tmp_path):
+    """Ticks render for a vertical axis too."""
+    svg = _render_pit_ticks(tmp_path, direction="vertical")
+    assert 'class="ec-axis-tick"' in svg
+
+
+# ---------------------------------------------------------------------------
 # Markers
 # ---------------------------------------------------------------------------
 

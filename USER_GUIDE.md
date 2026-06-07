@@ -1904,9 +1904,12 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 |---|---|---|---|
 | `--direction` | | `horizontal` | Axis direction: `horizontal` or `vertical`. **Note:** this is distinct from `--orientation` which controls page rotation. |
 | `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. |
-| `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, or `date`. |
+| `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. A perpendicular tick mark is drawn at each segment boundary with the segment label centered in its span. |
 | `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
-| `--tick-label-format` | | unit default | Override the tick label format string. |
+| `--tick-label-format` | | unit default | Arrow date format for tick labels (e.g. `MMM D`). For `week`/`interval` units the timeband label (e.g. `Week 6`) is used when omitted. |
+| `--tick-length` | | `5.0` | Half-length (points) of each tick mark, drawn on each side of the axis. |
+| `--no-ticks` | | (ticks on) | Suppress axis tick marks and labels entirely. |
+| `--no-tick-labels` | | (labels on) | Draw the tick marks but omit their labels. |
 | `--date-placement` | | `inline` | Where each event date is drawn: `inline` (a line inside the label box, alongside the name/notes — the box grows to fit, and dates inherit the boxes' collision-free multi-row spacing so they never overlap), `axis` (opposite the axis at the marker — the "ruler tick" look, but dates collide when events cluster), or `none`. Equivalent to `pit.date_text.placement`. |
 | `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. |
 | `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
@@ -1933,7 +1936,12 @@ pit:
     marker_end: "arrow-head"    # arrowhead at the end of the axis
     marker_end_size: 6.0
   tick_color: "#666666"
-  tick_unit: month
+  tick_unit: month             # month|week|fiscal_quarter|fiscal_period|interval|date|year
+  tick_interval: 1             # days between ticks when tick_unit: interval
+  tick_label_format: null      # Arrow format for tick labels; null = unit default
+  tick_length: 5.0             # half-length of each tick mark, per side
+  show_ticks: true             # set false to hide axis ticks
+  show_tick_labels: true       # set false for tick marks without labels
   date_format: "MMM D"
   leader_label_anchor: center   # center | start | end — where the leader
                                 # meets the label box (center is collision-free)

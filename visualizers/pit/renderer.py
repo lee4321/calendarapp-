@@ -16,6 +16,7 @@ The renderer never imports labella directly — it goes through
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 import arrow
@@ -24,6 +25,7 @@ import drawsvg
 from renderers.svg_base import BaseSVGRenderer
 from shared.data_models import Event
 from shared.rule_engine import StyleEngine, StyleResult
+from shared.timeband import build_segments
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 from visualizers.pit.labella_adapter import (
     PITPlacement,
@@ -189,10 +191,13 @@ class PITRenderer(BaseSVGRenderer):
             per_event_styles[i] = style_engine.evaluate_event(p.event)
 
         # Draw:
-        #   - <g class="ec-pit-axis-group"> axis
+        #   - <g class="ec-pit-axis-group"> axis + ticks
         #   - today line (above axis, below callouts)
         #   - per-event callout groups
-        self._draw_axis_group(config, axis_origin, axis_end)
+        self._draw_axis_group(
+            config, axis_origin, axis_end, start, end, direction,
+            pos_for_day, db,
+        )
         if config.pit_show_today_line:
             self._draw_today_line(
                 config, start, end, axis_origin, axis_end, direction,
@@ -278,11 +283,143 @@ class PITRenderer(BaseSVGRenderer):
         config: "CalendarConfig",
         axis_origin: tuple[float, float],
         axis_end: tuple[float, float],
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        direction: Orientation,
+        pos_for_day,
+        db: "CalendarDB",
     ) -> None:
-        """Wrap the axis line (and future ticks) in ec-pit-axis-group."""
+        """Wrap the axis line and its ticks in ec-pit-axis-group."""
         self._drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
+        if config.pit_show_ticks:
+            self._draw_axis_ticks(
+                config, start, end, axis_origin, direction, pos_for_day, db,
+            )
         self._draw_axis(config, axis_origin, axis_end)
         self._drawing.append(drawsvg.Raw('</g>'))
+
+    # ------------------------------------------------------------------
+    # Axis ticks (timeband segments → perpendicular marks + labels)
+    # ------------------------------------------------------------------
+    def _pit_tick_segments(
+        self,
+        config: "CalendarConfig",
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        db: "CalendarDB",
+    ) -> list[tuple[date, date, str]]:
+        """Return (start, end_exclusive, label) tick segments for the axis.
+
+        Delegates unit handling to shared.timeband.build_segments so PIT
+        ticks match every other timeband-driven visualizer. ``year`` is
+        handled locally since build_segments has no year unit.
+        """
+        start_d = start.floor("day").date()
+        end_d = end.floor("day").date()
+        unit = str(config.pit_tick_unit or "month").strip().lower()
+
+        if unit == "year":
+            segs: list[tuple[date, date, str]] = []
+            fmt = config.pit_tick_label_format or "YYYY"
+            for yr in range(start_d.year, end_d.year + 1):
+                seg_start = max(date(yr, 1, 1), start_d)
+                seg_end = min(date(yr + 1, 1, 1), end_d + timedelta(days=1))
+                if seg_start < seg_end:
+                    label = format_arrow_date(arrow.get(date(yr, 1, 1)), fmt)
+                    segs.append((seg_start, seg_end, label))
+            return segs
+
+        band: dict = {"unit": unit, "interval_days": int(config.pit_tick_interval)}
+        if config.pit_tick_label_format:
+            band["label_format"] = config.pit_tick_label_format
+
+        visible_days: list[date] = []
+        d = start_d
+        while d <= end_d:
+            visible_days.append(d)
+            d += timedelta(days=1)
+
+        segments = build_segments(
+            band, start_d, end_d, config,
+            visible_days=visible_days,
+            db=db,
+            week_start_default=0,
+            fiscal_year_start_month_default=int(
+                getattr(config, "fiscal_year_start_month", 2) or 2
+            ),
+        )
+        return [(s.start, s.end_exclusive, s.label) for s in segments]
+
+    def _draw_axis_ticks(
+        self,
+        config: "CalendarConfig",
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_origin: tuple[float, float],
+        direction: Orientation,
+        pos_for_day,
+        db: "CalendarDB",
+    ) -> None:
+        """Draw a perpendicular tick at each segment boundary, with the
+        segment label centered within its span."""
+        segments = self._pit_tick_segments(config, start, end, db)
+        if not segments:
+            return
+
+        tick_color = (
+            config.theme_pit_tick_color
+            or config.theme_pit_axis_color
+            or "#666666"
+        )
+        tick_len = float(config.pit_tick_length)
+        show_labels = bool(config.pit_show_tick_labels)
+        label_size = float(
+            config.theme_pit_date_text_font_size
+            or (float(config.pit_name_text_font_size or 11.0) * 0.8)
+        )
+        label_font = (
+            config.theme_pit_date_text_font_name
+            or config.pit_name_text_font_name
+            or "Roboto-Regular"
+        )
+        ox, oy = axis_origin
+
+        def _pos(d: date) -> float:
+            return pos_for_day(arrow.Arrow(d.year, d.month, d.day))
+
+        for seg_start, seg_end, label in segments:
+            p0 = _pos(seg_start)
+            p1 = _pos(seg_end)
+            if direction is Orientation.HORIZONTAL:
+                tx = ox + p0
+                self._draw_line(
+                    tx, oy - tick_len, tx, oy + tick_len,
+                    stroke=tick_color, stroke_width=1.0,
+                    css_class="ec-axis-tick",
+                )
+                if show_labels and label:
+                    lx = ox + (p0 + p1) / 2.0
+                    self._draw_text(
+                        lx, oy + tick_len + label_size, label,
+                        label_font, label_size,
+                        fill=tick_color, anchor="middle",
+                        css_class="ec-label",
+                    )
+            else:
+                ty = oy + p0
+                self._draw_line(
+                    ox - tick_len, ty, ox + tick_len, ty,
+                    stroke=tick_color, stroke_width=1.0,
+                    css_class="ec-axis-tick",
+                )
+                if show_labels and label:
+                    ly = oy + (p0 + p1) / 2.0 + label_size * 0.35
+                    self._draw_text(
+                        ox - tick_len - 2.0, ly, label,
+                        label_font, label_size,
+                        fill=tick_color, anchor="end",
+                        css_class="ec-label",
+                    )
 
     # ------------------------------------------------------------------
     # SVG pattern helpers (delegate to WeeklyCalendarRenderer statics)

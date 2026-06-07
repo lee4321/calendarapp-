@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.4"
+__version__ = "26.06.07.5"
 
 import argparse
 import logging
@@ -1320,6 +1320,37 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="For --tick-unit interval, days between ticks (default: 1).",
     )
     pit_group.add_argument(
+        "--tick-label-format",
+        type=str,
+        default=None,
+        metavar="FMT",
+        help=(
+            "Arrow date format for tick labels (e.g. 'MMM D'). For week/"
+            "interval units the timeband label is used when omitted."
+        ),
+    )
+    pit_group.add_argument(
+        "--tick-length",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help="Half-length of each axis tick mark, per side (default: 5.0).",
+    )
+    pit_group.add_argument(
+        "--no-ticks",
+        dest="pit_show_ticks",
+        action="store_false",
+        default=None,
+        help="Suppress axis tick marks and labels.",
+    )
+    pit_group.add_argument(
+        "--no-tick-labels",
+        dest="pit_show_tick_labels",
+        action="store_false",
+        default=None,
+        help="Draw tick marks but no tick labels.",
+    )
+    pit_group.add_argument(
         "--date-placement",
         type=str,
         default=None,
@@ -1724,6 +1755,14 @@ def _apply_args_to_config(
         config.pit_date_placement = args.date_placement
     if getattr(args, "tick_interval", None) is not None:
         config.pit_tick_interval = args.tick_interval
+    if getattr(args, "tick_label_format", None) is not None:
+        config.pit_tick_label_format = args.tick_label_format
+    if getattr(args, "tick_length", None) is not None:
+        config.pit_tick_length = args.tick_length
+    if getattr(args, "pit_show_ticks", None) is not None:
+        config.pit_show_ticks = args.pit_show_ticks
+    if getattr(args, "pit_show_tick_labels", None) is not None:
+        config.pit_show_tick_labels = args.pit_show_tick_labels
     if getattr(args, "pit_today_line", None) is not None:
         config.pit_show_today_line = args.pit_today_line
     if getattr(args, "today_date", None) is not None:

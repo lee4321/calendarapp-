@@ -428,6 +428,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # handled by ThemeEngine._apply_pit_blocks() called from apply().
     ("pit", "tick_color"): "theme_pit_tick_color",
     ("pit", "tick_unit"): "pit_tick_unit",
+    ("pit", "tick_interval"): "pit_tick_interval",
+    ("pit", "tick_label_format"): "pit_tick_label_format",
+    ("pit", "tick_length"): "pit_tick_length",
+    ("pit", "show_ticks"): "pit_show_ticks",
+    ("pit", "show_tick_labels"): "pit_show_tick_labels",
     ("pit", "date_format"): "pit_date_format",
     ("pit", "leader_label_anchor"): "pit_leader_label_anchor",
     ("pit", "default_event_icon"): "pit_default_event_icon",
