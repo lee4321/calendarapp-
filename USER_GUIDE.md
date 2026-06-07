@@ -1914,6 +1914,7 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--milestone-icon` | | none (diamond) | DB icon name to use as the default milestone marker for this run. |
 | `--marker-size` | | `7.0` | Bounding-box size (in points) for built-in shapes and DB icon glyphs. |
 | `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
+| `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
 
 ### Theme bindings
 
@@ -1931,6 +1932,8 @@ pit:
   tick_color: "#666666"
   tick_unit: month
   date_format: "MMM D"
+  leader_label_anchor: center   # center | start | end — where the leader
+                                # meets the label box (center is collision-free)
 
   date_text:
     color: "#444"

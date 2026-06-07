@@ -706,6 +706,14 @@ class CalendarConfig:
     pit_label_corner_radius: float = 2.0
     pit_label_padding_x: float = 6.0
     pit_label_padding_y: float = 3.0
+    # Where, along the axis, the leader meets the label box.
+    #   "center" — leader joins the middle of the box (default; matches
+    #              labella's centered overlap model, so boxes never collide)
+    #   "start"  — leader joins the leading edge (top/left) of the box
+    #   "end"    — leader joins the trailing edge (bottom/right) of the box
+    # "start"/"end" can overlap on dense timelines because labella reserves
+    # space centered on the marker; "center" is the collision-free choice.
+    pit_leader_label_anchor: str = "center"
 
     # SVG markers — each slot has its own kind + size, independently.
     pit_axis_marker_start: str = "none"
@@ -1231,6 +1239,11 @@ class CalendarConfig:
             raise ValueError(
                 f"pit_label_side must be 'primary', 'secondary', or 'both', "
                 f"got {self.pit_label_side!r}"
+            )
+        if self.pit_leader_label_anchor not in ("start", "center", "end"):
+            raise ValueError(
+                f"pit_leader_label_anchor must be 'start', 'center', or "
+                f"'end', got {self.pit_leader_label_anchor!r}"
             )
         _pit_tick_units = {
             "month", "week", "fiscal_quarter", "fiscal_period",

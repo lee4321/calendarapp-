@@ -60,6 +60,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "timeline",
     "timeline_events",
     "timeline_durations",
+    "pit",
     "compact_plan",
     "blockplan",
     "excelheader",

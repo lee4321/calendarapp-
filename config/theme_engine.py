@@ -429,6 +429,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("pit", "tick_color"): "theme_pit_tick_color",
     ("pit", "tick_unit"): "pit_tick_unit",
     ("pit", "date_format"): "pit_date_format",
+    ("pit", "leader_label_anchor"): "pit_leader_label_anchor",
     ("pit", "default_event_icon"): "pit_default_event_icon",
     ("pit", "default_milestone_icon"): "pit_default_milestone_icon",
     ("pit", "dot_color"): "theme_pit_dot_color",

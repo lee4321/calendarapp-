@@ -240,6 +240,14 @@ def _layout_one_side(
     )
     renderer.layout(nodes)
 
+    # Where the leader meets the box along the axis. labella reserves
+    # space centered on each node's currentPos, but its renderer reports
+    # the box origin (n.x / n.y) at currentPos itself — i.e. the leading
+    # edge. Shifting the box back onto currentPos ("center") makes the
+    # drawn geometry match labella's overlap model, so boxes that labella
+    # placed without collision actually render without collision.
+    anchor = getattr(config, "pit_leader_label_anchor", "center")
+
     placements: list[PITPlacement] = []
     ox, oy = axis_origin
     for n in nodes:
@@ -247,6 +255,18 @@ def _layout_one_side(
         y_label = oy + n.y
         label_w = n.dx
         label_h = n.dy
+
+        # Re-anchor along the axis. Horizontal → shift x; vertical → y.
+        if direction is Orientation.HORIZONTAL:
+            if anchor == "center":
+                x_label -= label_w / 2.0
+            elif anchor == "end":
+                x_label -= label_w
+        else:
+            if anchor == "center":
+                y_label -= label_h / 2.0
+            elif anchor == "end":
+                y_label -= label_h
 
         x_dot, y_dot = axis_to_xy(n.idealPos, direction, axis_origin)
         leader = renderer.generatePath(n)

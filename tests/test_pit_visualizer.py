@@ -187,6 +187,76 @@ def test_pit_direction_flag(tmp_path):
     assert svg_h != svg_v
 
 
+def _callout_box_rows(svg: str) -> dict[int, list[tuple[float, float]]]:
+    """Group ec-callout-box rects into rows keyed by rounded y → [(x0, x1)]."""
+    from collections import defaultdict
+
+    rows: dict[int, list[tuple[float, float]]] = defaultdict(list)
+    for m in re.finditer(
+        r'<rect x="([0-9.]+)" y="([0-9.]+)" width="([0-9.]+)" '
+        r'height="([0-9.]+)"[^>]*ec-callout-box',
+        svg,
+    ):
+        x, y, w, _h = (float(g) for g in m.groups())
+        rows[round(y)].append((x, x + w))
+    return rows
+
+
+def _leader_endpoints(svg: str) -> list[float]:
+    """Absolute x of each callout leader's final waypoint."""
+    out: list[float] = []
+    for g in re.findall(
+        r"<g class=\"ec-pit-callout-group.*?</g>\s*</g>", svg, re.S
+    ):
+        tr = re.search(
+            r"translate\(([0-9.]+),[0-9.-]+\).*?<path d=\"(.*?)\"", g, re.S
+        )
+        if not tr:
+            continue
+        ox = float(tr.group(1))
+        nums = re.findall(r"-?[0-9.]+", tr.group(2))
+        out.append(ox + float(nums[-2]))  # x of final coordinate
+    return out
+
+
+def test_pit_leader_anchor_center_aligns_box_middle(tmp_path):
+    """Default 'center' anchor: leader endpoint == horizontal box center."""
+    svg = _render_pit(tmp_path, _events_dicts(6))
+    rows = _callout_box_rows(svg)
+    centers = sorted(
+        (x0 + x1) / 2 for boxes in rows.values() for (x0, x1) in boxes
+    )
+    leaders = sorted(_leader_endpoints(svg))
+    assert centers and leaders
+    assert len(centers) == len(leaders)
+    for c, l in zip(centers, leaders):
+        assert abs(c - l) < 0.5
+
+
+def test_pit_leader_anchor_center_no_row_overlap(tmp_path):
+    """'center' anchor renders without per-row box overlap (labella's model)."""
+    svg = _render_pit(tmp_path, _events_dicts(6))
+    for boxes in _callout_box_rows(svg).values():
+        boxes.sort()
+        for (x0, x1), (nx0, _nx1) in zip(boxes, boxes[1:]):
+            assert nx0 >= x1 - 0.01, "callout boxes overlap on the same row"
+
+
+def test_pit_leader_anchor_start_puts_box_after_endpoint(tmp_path):
+    """'start' anchor: leader endpoint sits at the box leading (left) edge."""
+    config = _make_config(tmp_path)
+    config.pit_leader_label_anchor = "start"
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(6), _DummyDB())
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+    rows = _callout_box_rows(svg)
+    lefts = sorted(x0 for boxes in rows.values() for (x0, _x1) in boxes)
+    leaders = sorted(_leader_endpoints(svg))
+    assert len(lefts) == len(leaders)
+    for left, l in zip(lefts, leaders):
+        assert abs(left - l) < 0.5
+
+
 def test_pit_inherits_filter_flags(tmp_path):
     """Content-filter flags propagate to config without error."""
     config = _make_config(tmp_path)

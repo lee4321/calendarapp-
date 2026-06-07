@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.0"
+__version__ = "26.06.07.1"
 
 import argparse
 import logging
@@ -1377,6 +1377,18 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         metavar="DASHARRAY",
         help='SVG stroke-dasharray for leaders, e.g. "4,2".',
     )
+    pit_group.add_argument(
+        "--leader-label-anchor",
+        type=str,
+        default=None,
+        choices=["start", "center", "end"],
+        help=(
+            "Where the leader meets the label box along the axis. "
+            "center (default) joins the box middle and never collides; "
+            "start/end join the leading/trailing edge and may overlap on "
+            "dense timelines."
+        ),
+    )
 
     # Fiscal calendar options — all calendar views
     _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan)
@@ -1690,6 +1702,8 @@ def _apply_args_to_config(
         config.pit_marker_size = args.marker_size
     if getattr(args, "leader_dash", None) is not None:
         config.pit_leader_stroke_dasharray = args.leader_dash
+    if getattr(args, "leader_label_anchor", None) is not None:
+        config.pit_leader_label_anchor = args.leader_label_anchor
 
     # Fiscal calendar
     if getattr(args, "fiscal", None):
