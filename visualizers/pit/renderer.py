@@ -345,7 +345,7 @@ class PITRenderer(BaseSVGRenderer):
             db=db,
             week_start_default=0,
             fiscal_year_start_month_default=int(
-                getattr(config, "fiscal_year_start_month", 2) or 2
+                getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
             ),
         )
         return [(s.start, s.end_exclusive, s.label) for s in segments]
