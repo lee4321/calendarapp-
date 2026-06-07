@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.2"
+__version__ = "26.06.07.3"
 
 import argparse
 import logging
@@ -1400,6 +1400,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "and widen row-to-row spacing."
         ),
     )
+    pit_group.add_argument(
+        "--leader-stub",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help=(
+            "Length of the straight perpendicular segment where each leader "
+            "meets its label box (default: 6.0). Keeps the arrowhead flush "
+            "with the line; 0 disables. Equivalent to pit.leader.end_stub."
+        ),
+    )
 
     # Fiscal calendar options — all calendar views
     _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan)
@@ -1717,6 +1728,8 @@ def _apply_args_to_config(
         config.pit_leader_label_anchor = args.leader_label_anchor
     if getattr(args, "leader_length", None) is not None:
         config.pit_labella_layer_gap = args.leader_length
+    if getattr(args, "leader_stub", None) is not None:
+        config.pit_leader_end_stub = args.leader_stub
 
     # Fiscal calendar
     if getattr(args, "fiscal", None):

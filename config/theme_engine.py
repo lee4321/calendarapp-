@@ -1188,6 +1188,10 @@ class ThemeEngine:
                     v = _flt(d["marker_end_size"])
                     if v is not None:
                         config.pit_leader_marker_end_size = v
+                if "end_stub" in d:
+                    v = _flt(d["end_stub"])
+                    if v is not None:
+                        config.pit_leader_end_stub = v
             elif side == "primary":
                 if "color" in d:
                     config.theme_pit_leader_primary_color = _str(d["color"])

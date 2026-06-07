@@ -285,6 +285,44 @@ def test_pit_leader_length_tracks_layer_gap(tmp_path):
     assert abs(g32 - 32.0) < 0.5
 
 
+def test_pit_leader_end_stub_appends_perpendicular_segment(tmp_path):
+    """A non-zero end_stub makes each leader finish with a straight,
+    axis-perpendicular L segment so the arrowhead sits flush."""
+    config = _make_config(tmp_path, side="primary")
+    config.pit_leader_end_stub = 6.0
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(5), _DummyDB())
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+    leaders = re.findall(r'ec-callout-leader"><path d="([^"]*)"', svg)
+    assert leaders
+    for d in leaders:
+        d = d.strip()
+        # Ends with an explicit straight segment …
+        m = re.search(r"L\s+(-?[0-9.]+)\s+(-?[0-9.]+)\s*$", d)
+        assert m, f"leader does not end with an L segment: {d!r}"
+        # … and the cubic before it shares the same x (horizontal axis →
+        # vertical, perpendicular final segment).
+        cub = re.search(
+            r"C[^LC]*?(-?[0-9.]+)\s+(-?[0-9.]+)\s*$",
+            d[: d.rfind("L")],
+        )
+        assert cub
+        assert abs(float(cub.group(1)) - float(m.group(1))) < 1e-6
+
+
+def test_pit_leader_end_stub_zero_is_pure_bezier(tmp_path):
+    """end_stub == 0 leaves the labella bezier untouched (no trailing L)."""
+    config = _make_config(tmp_path, side="primary")
+    config.pit_leader_end_stub = 0.0
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(5), _DummyDB())
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+    leaders = re.findall(r'ec-callout-leader"><path d="([^"]*)"', svg)
+    assert leaders
+    for d in leaders:
+        assert not re.search(r"L\s+-?[0-9.]+\s+-?[0-9.]+\s*$", d.strip())
+
+
 def test_pit_inherits_filter_flags(tmp_path):
     """Content-filter flags propagate to config without error."""
     config = _make_config(tmp_path)

@@ -19,6 +19,7 @@ Mirrors `visualizers/timeline/labella_adapter.py` but:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Callable, Sequence
 
@@ -50,6 +51,69 @@ PIT_MAX_EVENTS_PER_SIDE: int = 80
 
 _LABEL_PAD_X: float = 6.0
 _FALLBACK_FONT: str = "Roboto-Bold"
+
+# Matches a signed int/float (incl. scientific notation) in an SVG path.
+_PATH_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+
+
+def _append_perp_stub(
+    path_d: str, direction: Orientation, stub: float
+) -> str:
+    """Make a leader's final segment a straight perpendicular stub.
+
+    labella ends each leader with a cubic Bézier whose *endpoint tangent*
+    is perpendicular to the axis, but the visible curve arrives at a
+    shallow angle. An ``orient="auto"`` arrowhead orients to that exact
+    endpoint tangent (perpendicular), so the head points straight at the
+    box while the line comes in diagonally — they look detached.
+
+    We pull the final cubic back by ``stub`` units along the perpendicular
+    (toward the axis) and append a straight ``L`` to the original box
+    endpoint. The last drawn segment is then genuinely perpendicular, so
+    the arrowhead sits flush on it. labella always sets the final control
+    point collinear with the endpoint on the perpendicular axis
+    (``c2.x == ex`` horizontal / ``c2.y == ey`` vertical), so trimming the
+    endpoint keeps the curve's exit tangent perpendicular — no cusp.
+
+    Args:
+        path_d: The leader path ``d`` string (ends with a cubic ``C``).
+        direction: Axis orientation (horizontal → vary y; vertical → x).
+        stub: Desired stub length in user units. ``<= 0`` is a no-op.
+
+    Returns:
+        The rewritten path, or the original if it can't be parsed or the
+        final cubic has no perpendicular extent to trim.
+    """
+    if stub <= 0 or not path_d:
+        return path_d
+    i = path_d.rfind("C")
+    if i < 0:
+        return path_d
+    head = path_d[:i]
+    nums = _PATH_NUM_RE.findall(path_d[i + 1:])
+    if len(nums) < 6:
+        return path_d
+    c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in nums[-6:])
+
+    if direction is Orientation.HORIZONTAL:
+        # Perpendicular is vertical: trim along y, keep x.
+        span = ey - c2y
+        if span == 0:
+            return path_d
+        s = min(stub, 0.85 * abs(span))
+        qx, qy = ex, ey - s * (1.0 if span > 0 else -1.0)
+    else:
+        # Perpendicular is horizontal: trim along x, keep y.
+        span = ex - c2x
+        if span == 0:
+            return path_d
+        s = min(stub, 0.85 * abs(span))
+        qx, qy = ex - s * (1.0 if span > 0 else -1.0), ey
+
+    return (
+        f"{head}C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} "
+        f"{qx:.8f} {qy:.8f} L {ex:.8f} {ey:.8f}"
+    )
 
 
 @dataclass(frozen=True)
@@ -270,6 +334,9 @@ def _layout_one_side(
 
         x_dot, y_dot = axis_to_xy(n.idealPos, direction, axis_origin)
         leader = renderer.generatePath(n)
+        leader = _append_perp_stub(
+            leader, direction, float(config.pit_leader_end_stub)
+        )
 
         placements.append(
             PITPlacement(

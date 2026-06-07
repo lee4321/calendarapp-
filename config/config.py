@@ -698,6 +698,12 @@ class CalendarConfig:
     pit_leader_stroke_opacity: float = 1.0
     pit_leader_stroke_linecap: str = "round"
     pit_leader_stroke_linejoin: str = "round"
+    # Length (points) of the straight perpendicular segment at the box end
+    # of each leader. labella's bezier arrives at the box at a shallow
+    # angle while an orient="auto" arrowhead points perpendicular, leaving
+    # the head visually detached. A short straight perpendicular stub gives
+    # the arrowhead a genuinely perpendicular segment to sit on. 0 disables.
+    pit_leader_end_stub: float = 6.0
 
     # Label box defaults
     pit_label_stroke_width: float = 0.5

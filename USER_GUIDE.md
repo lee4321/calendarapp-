@@ -1916,6 +1916,7 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
 | `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
 | `--leader-length` | | `8.0` | Distance (in points) from the axis to the first row of labels — i.e. the leader length. Larger values lengthen leaders and widen row-to-row spacing. Equivalent to the theme's `pit.labella.layer_gap`. |
+| `--leader-stub` | | `6.0` | Length (in points) of the straight, axis-perpendicular segment where each leader meets its label box. labella's leader béziers arrive at a shallow angle while an `orient="auto"` arrowhead points perpendicular, leaving the head visually detached; the stub gives the arrowhead a genuinely perpendicular segment to sit on. `0` disables (pure bézier). Equivalent to `pit.leader.end_stub`. |
 
 ### Theme bindings
 
@@ -1959,6 +1960,8 @@ pit:
     marker_start_size: 3.0
     marker_end: "arrow-head"  # ▶ at the label end
     marker_end_size: 5.0
+    end_stub: 6.0             # straight perpendicular segment at the box end
+                              # so the arrowhead sits flush (0 = pure bezier)
   leader_primary:
     color: deepskyblue        # override color for primary-side leaders
     marker_end_size: 6.0
