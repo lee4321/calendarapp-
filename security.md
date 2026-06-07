@@ -3,9 +3,10 @@
 ## Context
 The CalendarApp currently has no access control — all events and special days are visible to everyone. The database schema already has `events.user_id` and `specialdays.company`/`specialdays.user` columns but they're unused by the CLI and visualizers. This plan adds authentication (password-based) and authorization (user sees only their events, company's special days) to the CLI.
 
-To create companies and users a new tool will be built that allows:
-+ add company 
-+ add user to company 
+To create companies and users build new tool(s) that allows:
++ add/update/activate/deactivate companies 
++ add/update/activate/deactivate users associated with companies
++ import users from csv 
 + 
 
 ---
@@ -34,13 +35,16 @@ CREATE TABLE IF NOT EXISTS companies (
 
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    employeeid    TEXT,
     username      TEXT NOT NULL UNIQUE,
+    employeeid    TEXT,
     password_hash TEXT NOT NULL,
     company_id    INTEGER NOT NULL REFERENCES companies(id),
-    givenname     TEXT,
-    familyname    TEXT,
+    givennames     TEXT,
+    familynames    TEXT,
     email         TEXT,
+    telephone     TEXT,
+
+
     active        INTEGER DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);

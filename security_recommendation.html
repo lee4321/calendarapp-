@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Evaluation of security.md</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1.5em; line-height: 1.55; color: #222; }
+  h1 { border-bottom: 2px solid #444; padding-bottom: 0.3em; }
+  h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.2em; margin-top: 1.8em; }
+  h3 { margin-top: 1.4em; }
+  code { background: #f3f3f3; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.92em; }
+  pre { background: #f6f8fa; padding: 0.8em; border-radius: 5px; overflow-x: auto; }
+  ul { padding-left: 1.4em; }
+  li { margin: 0.35em 0; }
+  strong { color: #111; }
+  .critical { color: #b00020; }
+  .design { color: #b87000; }
+  .missing { color: #1a5fb4; }
+  .nit { color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Evaluation of <code>security.md</code></h1>
+
+<p>A solid skeleton but it's a feature plan, not a security plan — the threat model and several core controls are missing. Below are the gaps grouped by severity.</p>
+
+<h2 class="critical">Critical gaps</h2>
+
+<p><strong>1. No auth on the admin tools (<code>tools/authorize.py</code>, <code>tools/defaults.py</code>).</strong> Anyone with shell access can <code>add-user</code>, <code>resetpassword</code>, or <code>deactivate</code> any account — including their own privilege escalation. There's no notion of an admin role or a "must authenticate as admin before invoking these subcommands" gate. <code>resetpassword</code> in particular has no current-password check.</p>
+
+<p><strong>2. Password hashing is under-specified.</strong> "hashlib.pbkdf2_hmac() + random salt" leaves:</p>
+<ul>
+  <li>Algorithm (must be <code>sha256</code> minimum), iteration count (OWASP 2023+: ≥600k for SHA-256), salt length (≥16 bytes from <code>secrets.token_bytes</code>).</li>
+  <li>Storage format. Recommend a composite string <code>pbkdf2_sha256$&lt;iter&gt;$&lt;salt_b64&gt;$&lt;hash_b64&gt;</code> so iterations can be upgraded without breaking existing hashes.</li>
+  <li><code>verify_password</code> must use <code>hmac.compare_digest</code> (timing-safe), not <code>==</code>.</li>
+  <li>Consider <code>argon2-cffi</code> instead — PBKDF2 is acceptable but argon2id is the modern default.</li>
+</ul>
+
+<p><strong>3. Password on CLI (<code>--password</code> / <code>-pw</code>).</strong> Leaks to shell history, <code>ps aux</code>, process accounting, CI logs. Recommend:</p>
+<ul>
+  <li>Drop the flag in interactive paths; always prompt via <code>getpass</code>.</li>
+  <li>For automation, read from <code>$CALENDARAPP_PASSWORD</code> env var or <code>--password-stdin</code> (the docker/git pattern).</li>
+  <li>If you keep <code>--password</code> for tests, gate it behind <code>--password</code> only when stdin is not a TTY, and document the risk.</li>
+</ul>
+
+<p><strong>4. Default admin <code>admin / changeme</code>.</strong> No first-login rotation requirement. Combined with seeding into <code>calendar.db</code> (which is checked into the repo per <code>git status</code>), this would ship default creds. Recommend: refuse to authenticate if <code>password_hash</code> matches the seeded "changeme" hash until rotated, or generate a random password at seed time and print it once.</p>
+
+<p><strong>5. Authorization is read-only.</strong> Plan filters <code>get_all_events_in_range</code> and special-day queries but doesn't touch event ingest (<code>importers/</code>), update, or delete paths. A user with DB access can still write events under another <code>user_id</code>. If the threat is "users on shared host", you also need write-side checks; if the threat is only "shared SVG output", say so explicitly.</p>
+
+<h2 class="design">Design issues</h2>
+
+<p><strong>6. Inconsistent <code>--userid</code> vs <code>--username</code> vs <code>--user-id</code>.</strong> Step 5a says <code>--username</code>, 5b says <code>--userid</code>, Step 6 uses <code>--user-id</code>, verification uses <code>--userid 1</code>. Pick one — recommend <code>--username</code> for login (humans don't memorize IDs) and <code>--user-id</code> only in admin tooling.</p>
+
+<p><strong>7. <code>specialdays.company</code> is free-form TEXT, not <code>company_id</code> FK.</strong> Plan filters by <code>config.company_name</code> (Step 4, Step 7). A company rename silently orphans rows; misspellings silently grant or deny access. Recommend:</p>
+<ul>
+  <li>Add <code>company_id INTEGER REFERENCES companies(id)</code> to <code>specialdays</code>, backfill, and filter by ID.</li>
+  <li>Keep <code>company</code> text as a display-only legacy column or drop it after migration.</li>
+</ul>
+
+<p><strong>8. <code>specialdays.user</code> column is ignored.</strong> Plan only filters by company but schema already supports per-user special days. Either filter by <code>user_id</code> too or drop the column.</p>
+
+<p><strong>9. Username uniqueness is global.</strong> <code>UNIQUE(username)</code> across the table prevents two companies from both having "alice". Decide: email-as-username (global unique is fine) or <code>UNIQUE(company_id, username)</code> (multi-tenant scoping).</p>
+
+<p><strong>10. SQLite FKs are off by default.</strong> <code>REFERENCES companies(id)</code> does nothing unless <code>PRAGMA foreign_keys = ON</code> is set on every connection. Add this to <code>CalendarDB</code>'s connect path.</p>
+
+<p><strong>11. Hard delete vs soft delete.</strong> Soft delete exists (<code>active=0</code>); the plan also exposes <code>delete --user-id</code> / <code>delete --company-id</code> with no cascade rules. What happens to events owned by a deleted user? Recommend: drop hard-delete from the tool, or require <code>--force</code> plus explicit cascade behavior.</p>
+
+<p><strong>12. CSV import is in the "context" bullet at the top but never specified.</strong> Format, password handling (column? generated? forced-rotate?), error/duplicate handling, dry-run mode — all undefined.</p>
+
+<h2 class="missing">Missing controls</h2>
+
+<p><strong>13. No rate limit / lockout.</strong> Brute force against <code>--password</code> is unbounded. Add <code>failed_attempts</code> and <code>locked_until</code> columns on <code>users</code>, lock after N failures with exponential backoff.</p>
+
+<p><strong>14. No audit columns.</strong> Add <code>created_at</code>, <code>updated_at</code>, <code>last_login_at</code>, <code>password_changed_at</code> to both tables. Optional but recommended: an <code>auth_audit_log</code> table for admin actions (who reset whose password, who deactivated whom).</p>
+
+<p><strong>15. No self-service password change.</strong> Only admin-driven reset. Add <code>ecalendar.py change-password</code> or similar.</p>
+
+<p><strong>16. <code>company_defaults.logo</code> and font path fields.</strong> If these are read from disk at render time, you have a path-traversal vector — a malicious admin could point <code>logo</code> at <code>/etc/passwd</code> and exfiltrate via SVG. Constrain to a known directory or require resource IDs.</p>
+
+<h2 class="nit">Smaller nits</h2>
+
+<ul>
+  <li><strong>17.</strong> Step 4 says "append <code>AND user_id = ?</code> when set" — explicitly call out: use parameterized queries, never f-strings, even for the optional clause.</li>
+  <li><strong>18.</strong> <code>events.user_id</code> is currently <code>NOT NULL</code> (per schema dump) — the seed script's "update orphan events" is a no-op unless there's a sentinel value. Verify and adjust.</li>
+  <li><strong>19.</strong> The <code>companyspecialdays</code> view is <code>SELECT * FROM specialdays</code> — it adds nothing. Either make it actually filter (requires per-session view, not a great fit for SQLite) or remove it and query the table directly.</li>
+  <li><strong>20.</strong> Authorization on the <code>exportdata</code> subcommand (line 169) deserves a callout — bulk export is the highest-value target for data exfiltration; consider logging every export with user_id + range.</li>
+  <li><strong>21.</strong> Path note: memory says top-level <code>db_access.py</code>, plan says <code>shared/db_access.py</code>. Code is at <code>shared/db_access.py</code> — confirm and update memory if the file moved.</li>
+  <li><strong>22.</strong> Tests should include explicit <em>negative</em> authorization tests: user A authenticated, requests range containing user B's events, asserts B's events are absent from output (not just from the DB query).</li>
+</ul>
+
+<h2>Library support</h2>
+
+<p>No single module satisfies most of the gaps above — admin role, authorization gates, write-side checks, audit log, FK pragma, CSV import policy, and the threat model are all application-level work. The one clean library win is password hashing.</p>
+
+<ul>
+  <li><strong><code>passlib</code></strong> — directly addresses gap #2. <code>passlib.hash.pbkdf2_sha256</code> produces exactly the composite <code>pbkdf2_sha256$&lt;iter&gt;$&lt;salt&gt;$&lt;hash&gt;</code> format recommended above, handles timing-safe verify, and supports <code>CryptContext</code> for iteration upgrades without breaking existing hashes. Switching to argon2 later is a one-line config change.</li>
+  <li><strong><code>argon2-cffi</code></strong> — alternative if you want to skip PBKDF2 and adopt argon2id directly. Smaller surface area than passlib.</li>
+</ul>
+
+<p>Stdlib already covers adjacent items: <code>hmac.compare_digest</code> (timing-safe compare for gap #2), <code>secrets.token_bytes</code> (salt generation), <code>getpass.getpass</code> (interactive prompt for gap #3).</p>
+
+<p>For the remaining gaps:</p>
+<ul>
+  <li><strong>Rate limit / lockout (#13)</strong> — hand-rolled against the <code>users</code> table. Web-oriented libraries (<code>limits</code>, <code>slowapi</code>) assume a framework and don't fit a CLI.</li>
+  <li><strong>Admin role, authz filtering, audit log, FK pragma, logo path traversal (#1, #5, #10, #14, #16)</strong> — application code in the CLI and <code>shared/db_access.py</code>.</li>
+  <li>If auth ever moves into a web context, <code>authlib</code> or <code>flask-security-too</code> bundle more of this, but that's a larger commitment than the CLI tool this plan describes.</li>
+</ul>
+
+<p>Recommendation: adopt <code>passlib</code> for #2, use stdlib for #3, and treat everything else as design work.</p>
+
+<h2>Recommended additions before implementation</h2>
+
+<ol>
+  <li>Write a one-paragraph <strong>threat model</strong>: who the adversary is (other authenticated users? shell users on the same host? someone with the .db file?), what they're trying to access, and which of those threats this plan addresses vs. accepts. Several gaps above resolve themselves once that's pinned down.</li>
+  <li>Decide on <strong>admin role</strong> (new <code>users.is_admin</code> column or a separate <code>admins</code> table) and gate the admin tools on it. Without this, Steps 6a/6b are unsafe to ship.</li>
+  <li>Specify the <strong>password hash format string</strong> and <strong>iteration policy</strong> in Step 2.</li>
+  <li>Replace <code>company_name</code> filtering with <strong><code>company_id</code> filtering</strong> end-to-end (Steps 3, 4, 7).</li>
+  <li>Decide and document the <strong><code>--password</code> policy</strong> (prompt-only, stdin, or env var).</li>
+</ol>
+
+</body>
+</html>
