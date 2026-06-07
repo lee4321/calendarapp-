@@ -188,6 +188,48 @@ class TestParseDate:
         assert CompactPlanRenderer._parse_date("not-a-date") is None
 
 
+class TestResolveFont:
+    def test_explicit_setting_honored(self):
+        config = create_calendar_config()
+        font = CompactPlanRenderer._resolve_font("AmericanTypewriter-Bold", config)
+        assert font == "AmericanTypewriter-Bold"
+
+    def test_unknown_setting_falls_back_to_config_base(self):
+        config = create_calendar_config()
+        config.compactplan_text_font_name = "AmericanTypewriter-Light"
+        font = CompactPlanRenderer._resolve_font("NotARealFont", config)
+        assert font == "AmericanTypewriter-Light"
+
+    def test_none_setting_uses_config_base(self):
+        config = create_calendar_config()
+        config.compactplan_text_font_name = "AmericanTypewriter-Medium"
+        font = CompactPlanRenderer._resolve_font(None, config)
+        assert font == "AmericanTypewriter-Medium"
+
+    def test_italic_prefers_notes_font(self):
+        config = create_calendar_config()
+        config.compactplan_notes_text_font_name = "AmericanTypewriter-Cond"
+        config.compactplan_text_font_name = "AmericanTypewriter-Bold"
+        font = CompactPlanRenderer._resolve_font(None, config, italic=True)
+        assert font == "AmericanTypewriter-Cond"
+
+    def test_italic_falls_back_to_base_font(self):
+        config = create_calendar_config()
+        config.compactplan_notes_text_font_name = None
+        config.compactplan_text_font_name = "AmericanTypewriter-Bold"
+        font = CompactPlanRenderer._resolve_font(None, config, italic=True)
+        assert font == "AmericanTypewriter-Bold"
+
+    def test_safe_fallback_when_nothing_configured(self):
+        from config.config import Fonts
+
+        config = create_calendar_config()
+        config.compactplan_text_font_name = None
+        config.compactplan_notes_text_font_name = None
+        font = CompactPlanRenderer._resolve_font(None, config)
+        assert font == Fonts.RC_LIGHT
+
+
 class TestVisibleDays:
     def test_workweek_excludes_weekends(self):
         start = date(2026, 3, 9)   # Monday
