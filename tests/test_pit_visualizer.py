@@ -329,7 +329,7 @@ def test_pit_inherits_filter_flags(tmp_path):
     config.milestones = True
     config.ignorecomplete = True
     config.rollups = False
-    config.includenotes = True
+    config.include_notes = True
     config.WBS = None
     config.noevents = False
     config.empty = False
@@ -339,6 +339,26 @@ def test_pit_inherits_filter_flags(tmp_path):
     renderer = PITRenderer()
     renderer.render(config, coords, _events_dicts(), _DummyDB())
     assert Path(config.outputfile).exists()
+
+
+def test_pit_notes_rendered_when_include_notes(tmp_path):
+    """--includenotes (config.include_notes) draws notes inside the box."""
+    config = _make_config(tmp_path)
+    config.include_notes = True
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+    assert "ec-event-notes" in svg
+
+
+def test_pit_notes_absent_by_default(tmp_path):
+    """Notes are suppressed when include_notes is False (the default)."""
+    config = _make_config(tmp_path)
+    assert config.include_notes is False
+    coords = PITLayout().calculate(config)
+    PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+    assert "ec-event-notes" not in svg
 
 
 def test_pit_tick_units(tmp_path):

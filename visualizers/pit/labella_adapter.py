@@ -199,7 +199,7 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
         else len(event.task_name or "") * name_size * 0.5
     )
     notes_w = 0.0
-    if event.notes and getattr(config, "includenotes", False):
+    if event.notes and config.include_notes:
         notes_w = (
             string_width(event.notes, notes_path, notes_size)
             if notes_path
@@ -229,7 +229,7 @@ def _line_height_extent(config: CalendarConfig) -> float:
     """
     name_size = _name_size(config)
     notes_size = _notes_size(config)
-    has_notes = getattr(config, "includenotes", False)
+    has_notes = config.include_notes
     extent = name_size * 1.2 + 4.0
     if has_notes:
         extent += notes_size * 1.2

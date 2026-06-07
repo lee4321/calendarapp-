@@ -567,7 +567,7 @@ class PITRenderer(BaseSVGRenderer):
         notes_color = config.theme_pit_label_text_color or "#5a6470"
         pad_x = float(config.pit_label_padding_x)
         pad_y = float(config.pit_label_padding_y)
-        show_notes = bool(getattr(config, "includenotes", False))
+        show_notes = bool(config.include_notes)
 
         # Date-label style
         date_color = config.theme_pit_date_text_color or "#444444"
