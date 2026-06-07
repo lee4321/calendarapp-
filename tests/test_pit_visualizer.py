@@ -28,6 +28,8 @@ from visualizers.pit.markers import (
     BUILTIN_SHAPES,
     MarkerSpec,
     _FILL_REPLACE_RE,
+    draw_label_icon,
+    resolve_label_icon,
     resolve_marker,
 )
 from visualizers.pit.renderer import PITRenderer
@@ -445,34 +447,69 @@ def test_pit_ticks_vertical(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_pit_marker_resolution():
-    """Resolution order: event.icon > rule.marker_icon > config default > shape."""
+def test_pit_axis_marker_is_always_a_shape():
+    """The PIT axis marker is a built-in shape regardless of icon config.
+
+    DB icons are no longer drawn on the axis — they live in the label box.
+    The axis is always circle (events) or diamond (milestones).
+    """
+    icon_map = {"myicon": '<svg viewBox="0 0 10 10"><path/></svg>'}
+    config = create_calendar_config()
+    config = setfontsizes(config)
+
+    # Regular event → circle, even when a per-event icon is set.
+    ev = Event(task_name="E", start="20260101", end="20260101", icon="myicon")
+    spec = resolve_marker(ev, config=config, icon_svg_map=icon_map)
+    assert spec.kind == "shape"
+    assert spec.shape == "circle"
+    assert spec.is_icon is False
+
+    # Milestone → diamond, even when a per-rule marker_icon is set.
+    ms = Event(task_name="M", start="20260101", end="20260101", milestone=True)
+    sr = StyleResult(marker_icon="myicon")
+    spec_ms = resolve_marker(ms, config=config, icon_svg_map=icon_map, style_result=sr)
+    assert spec_ms.kind == "shape"
+    assert spec_ms.shape == "diamond"
+
+    # Config default does NOT override the axis either.
+    config.pit_default_event_icon = "myicon"
+    config.pit_default_milestone_icon = "myicon"
+    assert resolve_marker(Event(task_name="x", start="20260101", end="20260101"),
+                          config=config, icon_svg_map=icon_map).shape == "circle"
+    assert resolve_marker(Event(task_name="x", start="20260101", end="20260101", milestone=True),
+                          config=config, icon_svg_map=icon_map).shape == "diamond"
+
+
+def test_pit_label_icon_resolution():
+    """Label-icon precedence: event.icon > rule.marker_icon > config default > None."""
     icon_map = {"myicon": '<svg viewBox="0 0 10 10"><path/></svg>'}
     config = create_calendar_config()
     config = setfontsizes(config)
     config.pit_default_event_icon = None
+    config.pit_default_milestone_icon = None
 
-    # No icon anywhere → built-in shape.
+    # No icon anywhere → None (label name starts at left padding).
     ev = Event(task_name="E", start="20260101", end="20260101")
-    spec = resolve_marker(ev, config=config, icon_svg_map=icon_map)
-    assert spec.kind == "shape"
-    assert spec.shape == "circle"
+    assert resolve_label_icon(ev, config=config, icon_svg_map=icon_map) is None
 
-    # Per-event icon → icon beats shape.
+    # Per-event icon → returned.
     ev2 = Event(task_name="E", start="20260101", end="20260101", icon="myicon")
-    spec2 = resolve_marker(ev2, config=config, icon_svg_map=icon_map)
-    assert spec2.kind == "icon"
+    assert resolve_label_icon(ev2, config=config, icon_svg_map=icon_map) == icon_map["myicon"]
 
-    # Per-rule marker_icon beats config default but yields to event.icon.
+    # Per-rule marker_icon takes effect when event.icon is empty.
     sr = StyleResult(marker_icon="myicon")
     ev3 = Event(task_name="E", start="20260101", end="20260101")
-    spec3 = resolve_marker(ev3, config=config, icon_svg_map=icon_map, style_result=sr)
-    assert spec3.kind == "icon"
+    assert resolve_label_icon(ev3, config=config, icon_svg_map=icon_map, style_result=sr) == icon_map["myicon"]
 
-    # Config default used when no event or rule icon.
+    # Config default used when neither event nor rule supplies one.
     config.pit_default_event_icon = "myicon"
-    spec4 = resolve_marker(ev, config=config, icon_svg_map=icon_map)
-    assert spec4.kind == "icon"
+    assert resolve_label_icon(ev, config=config, icon_svg_map=icon_map) == icon_map["myicon"]
+
+    # Milestones use the milestone default.
+    config.pit_default_event_icon = None
+    config.pit_default_milestone_icon = "myicon"
+    ms = Event(task_name="M", start="20260101", end="20260101", milestone=True)
+    assert resolve_label_icon(ms, config=config, icon_svg_map=icon_map) == icon_map["myicon"]
 
 
 def test_pit_icon_colorization():
@@ -483,25 +520,55 @@ def test_pit_icon_colorization():
     assert "#000000" not in colored
 
 
-def test_pit_icon_sizing():
-    """16×8 and 8×16 glyphs each scale so the longest side = marker_size."""
-    from visualizers.pit.markers import _draw_icon_marker
+def test_pit_label_icon_drawing():
+    """draw_label_icon emits a colorized, scaled glyph anchored at x_left."""
     import drawsvg
+    from renderers.svg_base import BaseSVGRenderer
 
     drawing = drawsvg.Drawing(100, 100)
-    spec_wide = MarkerSpec(kind="icon", icon_svg='<svg viewBox="0 0 16 8"><path/></svg>')
-    spec_tall = MarkerSpec(kind="icon", icon_svg='<svg viewBox="0 0 8 16"><path/></svg>')
-
-    # Just verify these don't raise and produce a <g transform> element.
-    from renderers.svg_base import BaseSVGRenderer
-    for spec in (spec_wide, spec_tall):
-        _draw_icon_marker(
-            drawing, spec, cx=50.0, cy=50.0,
-            size=10.0, color="red",
+    raw_wide = '<svg viewBox="0 0 16 8"><path fill="#000" d="M0 0Z"/></svg>'
+    raw_tall = '<svg viewBox="0 0 8 16"><path fill="#000" d="M0 0Z"/></svg>'
+    for raw in (raw_wide, raw_tall):
+        draw_label_icon(
+            drawing, raw,
+            x_left=20.0, y_center=40.0,
+            size=10.0, color="tomato",
             strip_svg_wrapper=BaseSVGRenderer._strip_svg_wrapper,
         )
-    # Both appended something.
+    # Both calls emitted a <g> wrapper.
     assert len(drawing.elements) == 2
+    out = drawing.as_svg()
+    assert 'class="ec-pit-label-icon"' in out
+    assert 'fill="tomato"' in out
+
+
+def test_pit_label_icon_drawn_in_box_not_on_axis(tmp_path):
+    """Per-event Icon column drives a glyph INSIDE the label box, not the axis.
+
+    The axis marker stays a built-in shape (no ``<g>`` with the
+    icon-marker class is emitted on the axis); the label gains a
+    ``ec-pit-label-icon`` group.
+    """
+    icon_svg = '<svg viewBox="0 0 10 10"><path fill="#000000" d="M5 5z"/></svg>'
+    config = _make_config(tmp_path)
+    coords = PITLayout().calculate(config)
+    events = [
+        {
+            "Task_Name": "E1",
+            "Start": "20260115",
+            "End": "20260115",
+            "Icon": "bookmark",
+        }
+    ]
+    db = _IconDB("bookmark", icon_svg)
+    renderer = PITRenderer()
+    renderer.render(config, coords, events, db)
+    svg = Path(config.outputfile).read_text(encoding="utf-8")
+
+    # The axis marker for a regular event is always a circle.
+    assert 'class="ec-pit-event-marker"' in svg
+    # The label-box icon was emitted with the new CSS class.
+    assert 'class="ec-pit-label-icon"' in svg
 
 
 # ---------------------------------------------------------------------------

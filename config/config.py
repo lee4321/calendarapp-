@@ -699,9 +699,22 @@ class CalendarConfig:
     #   "none"   — suppress the date entirely.
     pit_date_placement: str = "inline"
 
-    # Marker icons (DB icon names; None = built-in shape)
+    # Label-box icons (DB icon names; None = no icon).
+    # The PIT axis marker is ALWAYS a built-in shape (circle for events,
+    # diamond for milestones) — icons are never placed on the axis.
+    # These config defaults are drawn *inside the callout label box*,
+    # on the same baseline as the event name and to its left. They
+    # apply when the event has no per-event ``Icon`` column value and
+    # no matched style rule supplied a ``marker_icon`` override.
     pit_default_event_icon: str | None = None
     pit_default_milestone_icon: str | None = None
+
+    # Label-icon sizing. ``size`` defaults to the name font size so the
+    # glyph fits cleanly on the name baseline; ``gap`` is the horizontal
+    # space (points) between the icon's right edge and the start of the
+    # name text.
+    pit_label_icon_size: float | None = None
+    pit_label_icon_gap: float = 4.0
 
     # Leader stroke defaults (per-rule / per-side may override)
     pit_leader_stroke_width: float = 0.75

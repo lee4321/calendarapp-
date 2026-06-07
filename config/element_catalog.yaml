@@ -48,6 +48,7 @@ elements:
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
   ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
   ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }
+  ec-pit-label-pattern: { kind: box, token: default, scope: [pit],                              description: "PIT pattern-fill overlay rect on a callout label box" }
 
   # ── Line ───────────────────────────────────────────────────────────────────
   ec-grid-line:      { kind: line, token: grid,      scope: [all],                              description: "Cell / grid boundary" }
@@ -74,6 +75,9 @@ elements:
   ec-continuation-icon: { kind: icon, token: duration,  scope: [compactplan],                      description: "Continuation arrow for clipped durations" }
   ec-legend-swatch:     { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend color swatch" }
   ec-legend-icon:       { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend item icon" }
+  ec-pit-event-marker:  { kind: icon, token: event,     scope: [pit],                              description: "PIT event marker glyph on the axis" }
+  ec-pit-label-icon:    { kind: icon, token: event,     scope: [pit],                              description: "PIT label-box icon glyph (left of event name)" }
+  ec-pit-marker-arrow-head: { kind: icon, token: event, scope: [pit],                              description: "PIT leader arrowhead <marker> glyph" }
 
 
 # Modifier classes — applied alongside an element class to convey extra state.
@@ -84,3 +88,7 @@ modifiers:
   - ec-nonworkday
   - ec-current-day
   - ec-adjacent
+  # PIT structural/side modifiers — group wrapper + callout side state.
+  - ec-pit-axis-group
+  - ec-pit-side-primary
+  - ec-pit-side-secondary

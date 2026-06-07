@@ -1853,7 +1853,8 @@ uv run python ecalendar.py pit 20260101 20261231 \
   --orientation landscape --direction horizontal --label-side both \
   --tick-unit month --outputfile output/pit_2026.svg
 
-# Vertical poster, milestones only, custom icons, accent theme
+# Vertical poster, milestones only, label-box trophy icons, accent theme
+# (axis still uses the built-in diamond for each milestone — icons live in the box.)
 uv run python ecalendar.py pit 20260101 20261231 \
   --orientation portrait --papersize tabloid \
   --direction vertical --label-side primary \
@@ -1874,7 +1875,9 @@ uv run python ecalendar.py pit 20260101 20261231 \
   --today-date 20260901 --today-label "As of Q3" \
   --outputfile output/pit_q3_presentation.svg
 
-# Custom themed output (dark theme, vertical direction)
+# Custom themed output (dark theme, vertical direction) — DB icons
+# in the label boxes alongside the event names, axis still uses the
+# built-in circle/diamond shapes.
 uv run python ecalendar.py pit 20260101 20261231 \
   --theme dark --direction vertical --label-side both \
   --event-icon dot --milestone-icon diamond \
@@ -1914,9 +1917,11 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. |
 | `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
 | `--today-label` | | theme: `"today"` | Override the label text on the today line for this run. |
-| `--event-icon` | | none (circle) | DB icon name to use as the default event marker for this run. |
-| `--milestone-icon` | | none (diamond) | DB icon name to use as the default milestone marker for this run. |
-| `--marker-size` | | `7.0` | Bounding-box size (in points) for built-in shapes and DB icon glyphs. |
+| `--event-icon` | | none | DB icon name drawn **inside each event's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |
+| `--milestone-icon` | | none | DB icon name drawn **inside each milestone's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |
+| `--label-icon-size` | | name font size | Longest viewBox side (points) of the label-box icon. |
+| `--label-icon-gap` | | `4.0` | Horizontal gap (points) between the label-box icon and the start of the event name. |
+| `--marker-size` | | `7.0` | Bounding-box size (in points) of the axis marker (built-in circle / diamond). |
 | `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
 | `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
 | `--leader-length` | | `8.0` | Distance (in points) from the axis to the first row of labels — i.e. the leader length. Larger values lengthen leaders and widen row-to-row spacing. Equivalent to the theme's `pit.labella.layer_gap`. |
@@ -1954,8 +1959,12 @@ pit:
     placement: inline         # inline | axis | none — inline puts the date
                               # inside the label box so dates never collide
 
-  default_event_icon: null    # DB icon name or null (built-in circle)
-  default_milestone_icon: null  # DB icon name or null (built-in diamond)
+  # Label-box icons (drawn inside the callout box, left of the event name).
+  # The axis marker is always a built-in shape and is NOT affected by these.
+  default_event_icon: null      # DB icon name or null (no icon)
+  default_milestone_icon: null  # DB icon name or null (no icon)
+  label_icon_size: null         # null = use the name font size
+  label_icon_gap: 4.0           # gap between icon and name (points)
   dot_color: steelblue
   milestone_color: gold
   event_palette: Pastel1      # round-robin palette for event markers

@@ -31,7 +31,12 @@ from visualizers.pit.labella_adapter import (
     PITPlacement,
     layout_pit_callouts,
 )
-from visualizers.pit.markers import draw_marker, resolve_marker
+from visualizers.pit.markers import (
+    draw_label_icon,
+    draw_marker,
+    resolve_label_icon,
+    resolve_marker,
+)
 from shared.date_utils import format_arrow_date
 from visualizers.timeline.orientation import Orientation, Side, opposite
 
@@ -164,19 +169,8 @@ class PITRenderer(BaseSVGRenderer):
             offset = (day - start).days
             return max(0.0, min(float(offset) / total_days * axis_length, axis_length))
 
-        # 5) Ask labella to place the callouts.
-        placements = layout_pit_callouts(
-            point_events,
-            axis_origin=axis_origin,
-            axis_length=axis_length,
-            direction=direction,
-            side=side,
-            config=config,
-            pos_for_day=pos_for_day,
-        )
-
-        # 6) Load DB caches (icons + patterns), build StyleEngine, resolve
-        #    per-event styles, then draw the SVG.
+        # 5) Load DB caches (icons + patterns) and build StyleEngine BEFORE
+        #    layout, so the label-box icon width can be reserved per event.
         self._load_icon_svg_cache(db)
         self._db = db  # stash for palette lookups in _draw_callout_groups
         try:
@@ -185,10 +179,57 @@ class PITRenderer(BaseSVGRenderer):
             self._pattern_svg_cache = {}
 
         style_engine = StyleEngine(_pit_style_rules(config))
+        icon_map = getattr(self, "_icon_svg_map", {}) or {}
+
+        # Pre-resolve per-event style + label-icon presence so the layout
+        # adapter can reserve extra width for events that get a glyph.
+        event_styles: dict[int, StyleResult] = {}
+        event_icon_svgs: dict[int, str | None] = {}
+        for ev in point_events:
+            sr = style_engine.evaluate_event(ev)
+            event_styles[id(ev)] = sr
+            event_icon_svgs[id(ev)] = resolve_label_icon(
+                ev, config=config, icon_svg_map=icon_map, style_result=sr,
+            )
+
+        # Label-icon geometry constants used both here and in the draw pass.
+        label_icon_size = float(
+            getattr(config, "pit_label_icon_size", None)
+            or (config.pit_name_text_font_size or 11.0)
+        )
+        label_icon_gap = float(getattr(config, "pit_label_icon_gap", 4.0) or 0.0)
+        icon_extra = label_icon_size + label_icon_gap
+
+        def _extra_width_for_event(ev: Event) -> float:
+            return icon_extra if event_icon_svgs.get(id(ev)) else 0.0
+
+        # 6) Ask labella to place the callouts, with reserved icon space.
+        placements = layout_pit_callouts(
+            point_events,
+            axis_origin=axis_origin,
+            axis_length=axis_length,
+            direction=direction,
+            side=side,
+            config=config,
+            pos_for_day=pos_for_day,
+            extra_width_for_event=_extra_width_for_event,
+        )
+
         # Map placement index → StyleResult so callout drawing can read it.
-        per_event_styles: dict[int, StyleResult] = {}
-        for i, p in enumerate(placements):
-            per_event_styles[i] = style_engine.evaluate_event(p.event)
+        per_event_styles: dict[int, StyleResult] = {
+            i: event_styles.get(id(p.event), StyleResult())
+            for i, p in enumerate(placements)
+        }
+        # Same mapping for the pre-resolved label-icon SVG (or None).
+        per_event_label_icons: dict[int, str | None] = {
+            i: event_icon_svgs.get(id(p.event))
+            for i, p in enumerate(placements)
+        }
+        # Stash on self so _draw_callout_groups can read them without an
+        # extra parameter (matches the existing per_event_styles pattern).
+        self._pit_label_icons = per_event_label_icons
+        self._pit_label_icon_size = label_icon_size
+        self._pit_label_icon_gap = label_icon_gap
 
         # Draw:
         #   - <g class="ec-pit-axis-group"> axis + ticks
@@ -541,7 +582,6 @@ class PITRenderer(BaseSVGRenderer):
         ms_color_default = config.theme_pit_milestone_color or "#c0392b"
         marker_size = float(config.pit_marker_size)
         dot_size = float(config.pit_dot_radius) * 2.0
-        icon_map = getattr(self, "_icon_svg_map", {}) or {}
 
         # Label-box defaults (per-rule can override)
         default_label_stroke = config.theme_pit_label_stroke_color or "#444444"
@@ -651,20 +691,19 @@ class PITRenderer(BaseSVGRenderer):
                     f'</g>'
                 ))
 
-            # Marker — passes style_result so per-rule marker_icon is honored.
-            spec = resolve_marker(ev, config=config, icon_svg_map=icon_map, style_result=sr)
+            # Axis marker — always a built-in shape (circle for events,
+            # diamond for milestones). DB icons are drawn inside the
+            # label box instead (see further below).
+            spec = resolve_marker(ev)
             base_color = ms_color_default if ev.milestone else dot_color_default
             color = ev.color or base_color
-            if spec.is_icon:
+            if ev.milestone:
                 m_size = marker_size
-            elif spec.shape == "circle" and not ev.milestone:
-                m_size = dot_size
             else:
-                m_size = marker_size
+                m_size = dot_size
             draw_marker(
                 self._drawing, spec, p.x_dot, p.y_dot,
                 size=m_size, color=color,
-                strip_svg_wrapper=self._strip_svg_wrapper,
             )
 
             # Resolve label-box style (per-rule > global theme > defaults).
@@ -711,11 +750,45 @@ class PITRenderer(BaseSVGRenderer):
             tx = p.x_label + eff_pad_x
             ty = p.y_label + eff_pad_y + name_size
             text_max_w = max(8.0, p.label_w - 2 * eff_pad_x)
+
+            # Resolve the (pre-computed) label-box icon for this event.
+            # When present, draw it on the same baseline as the name and
+            # shift the name's starting x to the right by icon + gap.
+            label_icon_svg = (
+                getattr(self, "_pit_label_icons", {}) or {}
+            ).get(i)
+            label_icon_sz = float(
+                getattr(self, "_pit_label_icon_size", 0.0) or 0.0
+            )
+            label_icon_gp = float(
+                getattr(self, "_pit_label_icon_gap", 0.0) or 0.0
+            )
+            name_tx = tx
+            if label_icon_svg and label_icon_sz > 0:
+                # Vertical center of the name's cap-height row (visually).
+                icon_y_center = ty - name_size * 0.35
+                draw_label_icon(
+                    self._drawing,
+                    label_icon_svg,
+                    x_left=tx,
+                    y_center=icon_y_center,
+                    size=label_icon_sz,
+                    color=color,
+                    strip_svg_wrapper=self._strip_svg_wrapper,
+                )
+                # Push the name right so it clears the icon.
+                shift = label_icon_sz + label_icon_gp
+                name_tx = tx + shift
+                # Keep the *name* text from being clipped by the icon.
+                name_max_w = max(8.0, text_max_w - shift)
+            else:
+                name_max_w = text_max_w
+
             self._draw_text(
-                tx, ty, ev.task_name, name_font, name_size,
+                name_tx, ty, ev.task_name, name_font, name_size,
                 fill=eff_label_text_color,
                 anchor="start",
-                max_width=text_max_w,
+                max_width=name_max_w,
                 css_class="ec-event-name",
             )
             line_y = ty

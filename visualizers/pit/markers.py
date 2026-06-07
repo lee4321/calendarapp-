@@ -1,27 +1,36 @@
 """
 PIT marker resolution + draw helpers.
 
-Markers are the on-axis glyphs (one per event) where leader lines
-originate. PIT supports two flavors:
+There are two distinct glyphs per event in PIT:
 
-* **Built-in shapes** — ``circle``, ``diamond``, ``square``,
-  ``triangle``, ``star``. Drawn as native SVG primitives.
-* **DB icons** — any name from the ``icons`` table in ``calendar.db``.
-  Loaded via ``BaseSVGRenderer._resolve_icon_svg`` (already inherited),
-  scaled to fit the longest viewBox side, centered on the marker
-  position, and colorized by replacing ``fill="#000"`` /
-  ``fill="black"`` with the resolved marker color.
+* **Axis marker** — the glyph drawn *on the axis* where the leader
+  line originates. PIT no longer supports DB icons on the axis; the
+  axis marker is always a built-in shape:
 
-Resolution precedence (per v5 plan §2):
+    - ``circle``  for ordinary events
+    - ``diamond`` for milestones (``event.milestone == True``)
+
+  ``resolve_marker`` returns the ``MarkerSpec`` for the axis glyph and
+  ``draw_marker`` paints it.
+
+* **Label icon** — an optional DB icon drawn *inside the label box*,
+  on the same baseline as the event name and to its left. This is
+  where per-event / per-rule / per-theme icons now live.
+
+  ``resolve_label_icon`` returns the raw SVG markup for the icon (or
+  ``None`` when no icon applies), and ``draw_label_icon`` paints it.
+
+Resolution precedence for the **label icon** (highest → lowest):
 
   1. Per-event ``event.icon`` (DB column ``Icon``)
-  2. Style-rule ``marker_icon: "name"`` (Phase 7 — not yet honored)
+  2. Style-rule ``marker_icon: "name"`` from a matched StyleResult
   3. Config default — ``pit_default_event_icon`` for non-milestones,
      ``pit_default_milestone_icon`` for milestones
-  4. Built-in shape — circle for events, diamond for milestones
+  4. None — no icon, label name starts at the left padding edge.
 
 This module is the single source of truth for what shape/icon to draw;
-the renderer calls ``resolve_marker`` then ``draw_marker``.
+the renderer calls ``resolve_marker`` + ``draw_marker`` for the axis
+and ``resolve_label_icon`` + ``draw_label_icon`` for the label box.
 """
 
 from __future__ import annotations
@@ -47,20 +56,23 @@ BUILTIN_SHAPES: frozenset[str] = frozenset({
 
 @dataclass(frozen=True)
 class MarkerSpec:
-    """Resolved marker for one event.
+    """Resolved axis marker for one event.
 
-    Either ``icon_svg`` is set (a DB icon's raw SVG markup) or
-    ``shape`` names a built-in. Never both.
+    The axis marker is always a built-in shape — DB icons are rendered
+    inside the label box (see ``resolve_label_icon``), never on the
+    axis. ``kind`` is retained as ``"shape"`` to keep the dataclass
+    shape stable for downstream consumers.
     """
 
-    kind: str             # "icon" | "shape"
-    shape: str = ""       # one of BUILTIN_SHAPES (when kind == "shape")
-    icon_svg: str = ""    # raw SVG markup (when kind == "icon")
+    kind: str = "shape"   # always "shape" — retained for API stability
+    shape: str = ""       # one of BUILTIN_SHAPES
     css_class: str = ""   # ec-pit-event-marker / ec-milestone-marker
 
     @property
     def is_icon(self) -> bool:
-        return self.kind == "icon"
+        # Axis markers are never icons. Kept for backward compatibility
+        # with callers that branch on this property.
+        return False
 
 
 # Pattern used to colorize a DB icon glyph. Mirrors the SVG-pattern
@@ -73,30 +85,49 @@ _FILL_REPLACE_RE = re.compile(
 def resolve_marker(
     event: Event,
     *,
-    config: "CalendarConfig",
-    icon_svg_map: dict[str, str] | None = None,
-    style_result: "StyleResult | None" = None,
+    config: "CalendarConfig" = None,           # kept for signature stability
+    icon_svg_map: dict[str, str] | None = None, # ignored — axis uses shapes
+    style_result: "StyleResult | None" = None,  # ignored — axis uses shapes
 ) -> MarkerSpec:
-    """Pick the marker for one event using the precedence chain.
+    """Pick the axis marker for one event.
 
-    Precedence (highest → lowest):
-      1. Per-event ``event.icon`` (DB column)
-      2. Per-rule ``marker_icon`` from ``style_result``
-      3. Config default (``pit_default_event_icon`` / ``pit_default_milestone_icon``)
-      4. Built-in shape (circle for events, diamond for milestones)
+    PIT axis markers are always built-in shapes:
 
-    Args:
-        event: The Event being drawn.
-        config: For the per-visualizer defaults.
-        icon_svg_map: Optional preloaded icon name → SVG markup map.
-        style_result: Resolved StyleResult for this event (may carry
-            ``marker_icon`` from a matched style rule).
+      * ``diamond`` for milestones (``event.milestone == True``)
+      * ``circle`` for ordinary events
 
-    Returns:
-        A MarkerSpec ready to hand to ``draw_marker``.
+    The ``config``, ``icon_svg_map``, and ``style_result`` parameters
+    are retained for signature stability — callers may still pass them
+    — but they no longer influence the axis glyph. DB icons now live
+    inside the label box (see ``resolve_label_icon``).
     """
     is_milestone = bool(event.milestone)
     css = "ec-milestone-marker" if is_milestone else "ec-pit-event-marker"
+    shape = "diamond" if is_milestone else "circle"
+    return MarkerSpec(kind="shape", shape=shape, css_class=css)
+
+
+def resolve_label_icon(
+    event: Event,
+    *,
+    config: "CalendarConfig",
+    icon_svg_map: dict[str, str] | None = None,
+    style_result: "StyleResult | None" = None,
+) -> str | None:
+    """Return raw SVG markup for the event's label icon, or ``None``.
+
+    Precedence (highest → lowest):
+
+      1. Per-event ``event.icon`` (DB column)
+      2. Per-rule ``marker_icon`` from ``style_result``
+      3. Config default (``pit_default_event_icon`` /
+         ``pit_default_milestone_icon``)
+      4. None — no icon should be drawn in the label box.
+
+    The returned string is the raw glyph SVG as stored in the
+    ``icons`` table; ``draw_label_icon`` strips the outer ``<svg>``
+    wrapper and colorizes the fills.
+    """
 
     def _lookup(name: str) -> str | None:
         if not name or not icon_svg_map:
@@ -106,26 +137,26 @@ def resolve_marker(
     # 1) Per-event icon override.
     svg = _lookup(event.icon or "")
     if svg:
-        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+        return svg
 
     # 2) Per-rule marker_icon from StyleResult.
     rule_icon = getattr(style_result, "marker_icon", None) if style_result else None
     svg = _lookup(rule_icon or "")
     if svg:
-        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+        return svg
 
     # 3) Config default for this event type.
+    is_milestone = bool(event.milestone)
     default_name = (
         config.pit_default_milestone_icon if is_milestone
         else config.pit_default_event_icon
     )
     svg = _lookup(default_name or "")
     if svg:
-        return MarkerSpec(kind="icon", icon_svg=svg, css_class=css)
+        return svg
 
-    # 4) Built-in shape.
-    shape = "diamond" if is_milestone else "circle"
-    return MarkerSpec(kind="shape", shape=shape, css_class=css)
+    # 4) No icon.
+    return None
 
 
 def draw_marker(
@@ -136,20 +167,9 @@ def draw_marker(
     *,
     size: float,
     color: str,
-    strip_svg_wrapper,
+    strip_svg_wrapper=None,   # kept for signature stability; unused
 ) -> None:
-    """Draw ``spec`` centered on (x, y) in absolute SVG coords.
-
-    For built-in shapes ``size`` is treated as a bounding-box side; for
-    icons ``size`` sets the longest viewBox side after scaling.
-
-    The ``strip_svg_wrapper`` parameter is the inherited
-    ``BaseSVGRenderer._strip_svg_wrapper`` static method; passing it in
-    avoids a coupling between markers.py and svg_base.
-    """
-    if spec.is_icon:
-        _draw_icon_marker(drawing, spec, x, y, size, color, strip_svg_wrapper)
-        return
+    """Draw the axis marker (always a built-in shape) centered on (x, y)."""
     _draw_shape_marker(drawing, spec.shape, x, y, size, color, spec.css_class)
 
 
@@ -229,40 +249,86 @@ _VIEWBOX_RE = re.compile(
 )
 
 
-def _draw_icon_marker(
+def draw_label_icon(
     drawing,
-    spec: MarkerSpec,
+    icon_svg: str,
+    x_left: float,
+    y_center: float,
+    *,
+    size: float,
+    color: str,
+    strip_svg_wrapper,
+    css_class: str = "ec-pit-label-icon",
+) -> None:
+    """Draw a DB icon glyph anchored to (x_left, y_center).
+
+    ``x_left`` is the leftmost x of the glyph's bounding box;
+    ``y_center`` is the vertical center the glyph is drawn around. The
+    glyph is scaled so the longest viewBox side equals ``size`` and
+    its black fills are recolored to ``color`` — same colorization
+    path as the (legacy) axis-icon code.
+    """
+    cx = x_left + size / 2.0
+    cy = y_center
+    _draw_icon_at_center(
+        drawing, icon_svg, cx, cy, size, color, strip_svg_wrapper, css_class,
+    )
+
+
+def _draw_icon_at_center(
+    drawing,
+    icon_svg: str,
     cx: float,
     cy: float,
     size: float,
     color: str,
     strip_svg_wrapper,
+    css_class: str,
 ) -> None:
-    """Draw a DB icon glyph centered on (cx, cy), longest side = size."""
-    raw = spec.icon_svg or ""
-    # Find the viewBox so we know how to scale.
+    """Shared scale-and-translate glyph emit, centered on (cx, cy)."""
+    raw = icon_svg or ""
     m = _VIEWBOX_RE.search(raw)
     if m:
-        vw = float(m.group(3))
-        vh = float(m.group(4))
         vx = float(m.group(1))
         vy = float(m.group(2))
+        vw = float(m.group(3))
+        vh = float(m.group(4))
     else:
         vw, vh, vx, vy = 100.0, 100.0, 0.0, 0.0
 
     longest = max(vw, vh) or 1.0
     scale = size / longest
 
-    # Translate the (vx + vw/2, vy + vh/2) viewBox center to (cx, cy).
     tx = cx - (vx + vw / 2.0) * scale
     ty = cy - (vy + vh / 2.0) * scale
 
     inner = strip_svg_wrapper(raw)
-    # Colorize: replace black fills with the resolved color so the glyph
-    # picks up the theme/rule color.
     colored = _FILL_REPLACE_RE.sub(f'fill="{color}"', inner)
 
     drawing.append(drawsvg.Raw(
         f'<g transform="translate({tx:.2f},{ty:.2f}) scale({scale:.4f})" '
-        f'class="{spec.css_class}">{colored}</g>'
+        f'class="{css_class}">{colored}</g>'
     ))
+
+
+# ---------------------------------------------------------------------------
+# Back-compat shim — older tests imported ``_draw_icon_marker`` directly.
+# Now that the axis no longer draws icons, the symbol is repointed at the
+# label-box drawing path so callers that just want to verify sizing still
+# work. The (cx, cy) signature is preserved.
+# ---------------------------------------------------------------------------
+def _draw_icon_marker(
+    drawing,
+    spec: "MarkerSpec | object",
+    cx: float,
+    cy: float,
+    size: float,
+    color: str,
+    strip_svg_wrapper,
+) -> None:
+    """Deprecated — kept so older tests still import successfully."""
+    icon_svg = getattr(spec, "icon_svg", "") or ""
+    _draw_icon_at_center(
+        drawing, icon_svg, cx, cy, size, color,
+        strip_svg_wrapper, "ec-pit-label-icon",
+    )

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.5"
+__version__ = "26.06.07.6"
 
 import argparse
 import logging
@@ -1397,21 +1397,53 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="NAME",
-        help="DB icon name used as the default event marker (overrides circle).",
+        help=(
+            "DB icon name drawn inside each event's label box, on the "
+            "name line and to the left of the name. Does NOT change the "
+            "axis marker (always a built-in circle)."
+        ),
     )
     pit_group.add_argument(
         "--milestone-icon",
         type=str,
         default=None,
         metavar="NAME",
-        help="DB icon name used as the default milestone marker (overrides diamond).",
+        help=(
+            "DB icon name drawn inside each milestone's label box, on "
+            "the name line and to the left of the name. Does NOT change "
+            "the axis marker (always a built-in diamond)."
+        ),
     )
     pit_group.add_argument(
         "--marker-size",
         type=float,
         default=None,
         metavar="POINTS",
-        help="Bounding-box size for built-in shapes and DB icons (default: 7.0).",
+        help=(
+            "Bounding-box size of the axis marker (built-in circle / "
+            "diamond) in points (default: 7.0)."
+        ),
+    )
+    pit_group.add_argument(
+        "--label-icon-size",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help=(
+            "Longest viewBox side of the label-box icon, in points. "
+            "Defaults to the event-name font size so the glyph fits "
+            "cleanly on the name baseline."
+        ),
+    )
+    pit_group.add_argument(
+        "--label-icon-gap",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help=(
+            "Horizontal gap (points) between the label-box icon and the "
+            "start of the event name (default: 4.0)."
+        ),
     )
     pit_group.add_argument(
         "--leader-dash",
@@ -1775,6 +1807,10 @@ def _apply_args_to_config(
         config.pit_default_milestone_icon = args.milestone_icon
     if getattr(args, "marker_size", None) is not None:
         config.pit_marker_size = args.marker_size
+    if getattr(args, "label_icon_size", None) is not None:
+        config.pit_label_icon_size = args.label_icon_size
+    if getattr(args, "label_icon_gap", None) is not None:
+        config.pit_label_icon_gap = args.label_icon_gap
     if getattr(args, "leader_dash", None) is not None:
         config.pit_leader_stroke_dasharray = args.leader_dash
     if getattr(args, "leader_label_anchor", None) is not None:
