@@ -248,12 +248,14 @@ pit:
   # Two tick rows: bold month labels over a light weekly grid.
   ticks:
     - unit: month
-      show_labels: true 
+      show_labels: true
       label_format: MMMM
+      label_align: start        # align the month name with its first-of-month tick
       tick_length: 8.0
       label_gap: 10.0
     - unit: interval
       interval_days: 7
+      prefix: "Week of "
       label_format: MM/DD
       show_labels: true
       max_label_count: 400      # raise the default 60-label cap so daily

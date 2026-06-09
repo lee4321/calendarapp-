@@ -516,6 +516,74 @@ def test_pit_interval_label_format_uses_date(tmp_path):
     assert [lbl for _, _, lbl in counter][:2] == ["Sprint 1", "Sprint 2"]
 
 
+def test_pit_interval_prefix_with_date_format(tmp_path):
+    """prefix combines with label_format to produce "Week of 02/01" labels."""
+    import arrow
+
+    from config.config import CalendarConfig
+    from visualizers.pit.renderer import PITRenderer
+
+    r = PITRenderer.__new__(PITRenderer)
+    cfg = CalendarConfig()
+    s, e = arrow.get("2026-02-01"), arrow.get("2026-04-01")
+
+    segs = PITRenderer._pit_tick_segments(
+        r, cfg,
+        {"unit": "interval", "interval_days": 7, "prefix": "Week of ", "label_format": "MM/DD"},
+        s, e, None,
+    )
+    assert [lbl for _, _, lbl in segs][:3] == [
+        "Week of 02/01", "Week of 02/08", "Week of 02/15"
+    ]
+
+
+def _first_label_glyph_x(svg: str) -> float:
+    """X coordinate of the first glyph in the first ec-label group."""
+    import re
+
+    m = re.search(r'class="ec-label"[^>]*>\s*<path[^>]*translate\(([-\d.]+),', svg)
+    assert m, "no ec-label glyph found"
+    return float(m.group(1))
+
+
+def test_pit_tick_label_align_start_vs_center(tmp_path):
+    """label_align: start anchors the label at the segment's start tick, so
+    its first glyph sits left of where a centered label would start."""
+
+    def render(align):
+        config = _make_config(tmp_path / align, start="20260201", end="20260530")
+        config.pit_ticks = [
+            {"unit": "month", "label_format": "MMMM", "label_align": align,
+             "tick_length": 8.0, "label_gap": 10.0}
+        ]
+        coords = PITLayout().calculate(config)
+        PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+        return Path(config.outputfile).read_text(encoding="utf-8")
+
+    start_x = _first_label_glyph_x(render("start"))
+    center_x = _first_label_glyph_x(render("center"))
+    # A start-anchored label begins right at the segment's start tick; a
+    # centered one sits at the span midpoint, so it begins further right.
+    assert start_x < center_x
+
+
+def test_pit_tick_label_align_synonyms(tmp_path):
+    """left/right are accepted as synonyms for start/end."""
+
+    def render(align):
+        config = _make_config(tmp_path / str(align), start="20260201", end="20260530")
+        config.pit_ticks = [
+            {"unit": "month", "label_format": "MMMM", "label_align": align,
+             "tick_length": 8.0, "label_gap": 10.0}
+        ]
+        coords = PITLayout().calculate(config)
+        PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+        return Path(config.outputfile).read_text(encoding="utf-8")
+
+    assert _first_label_glyph_x(render("left")) == _first_label_glyph_x(render("start"))
+    assert _first_label_glyph_x(render("right")) == _first_label_glyph_x(render("end"))
+
+
 # ---------------------------------------------------------------------------
 # Markers
 # ---------------------------------------------------------------------------

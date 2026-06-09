@@ -2062,7 +2062,7 @@ the segment label within its span. Per-band keys:
 | `unit` | `month` | Tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. |
 | `interval_days` (`interval`) | `14` | Days between ticks when `unit: interval`. |
 | `label_format` (`date_format`) | unit default | When set, an **Arrow date format applied to each tick's own date** (e.g. `MMM D`, `M/D`, `D`) — independent of the unit. When omitted, the unit's own generated label is used (see "Labeling date-interval ticks" below). |
-| `prefix` | `""` | For `unit: interval` *without* `label_format`: text prepended to the running index (e.g. `prefix: "Sprint "` → `Sprint 1`, `Sprint 2`). |
+| `prefix` | `""` | Text prepended to the label. Without `label_format` it prefixes the `interval` running index (`prefix: "Sprint "` → `Sprint 1`, `Sprint 2`); with `label_format` it prefixes the formatted date (`prefix: "Week of "` + `label_format: "MM/DD"` → `Week of 02/01`). |
 | `start_index` | `1` | For `unit: interval` counter labels: the index of the first tick. |
 | `max_index` | none | For `unit: interval` counter labels: wrap the index back to `start_index` after this value. |
 | `anchor_date` | range start | For `unit: interval`: `YYYY-MM-DD` date the intervals are measured from, so boundaries stay fixed regardless of the visible range. |
@@ -2079,6 +2079,7 @@ the segment label within its span. Per-band keys:
 | `label_opacity` | `1.0` | Opacity (0–1) of this band's labels. |
 | `label_offset` | auto | Distance (points) of the label baseline from the axis. Overrides the auto offset; use to place a finer row's labels closer to the axis than a coarser row. |
 | `label_gap` | — | Alternative to `label_offset`: offset = `tick_length + label_gap`. |
+| `label_align` | `center` | Where the label sits along the axis relative to its segment: `center` (centered in the span between this tick and the next), `start` (anchored at this tick — the segment's start boundary, e.g. the first of the month), or `end` (anchored at the next boundary). `left`/`right` are accepted as synonyms for `start`/`end`. |
 
 Example — month names with a light weekly grid beneath them:
 
@@ -2097,7 +2098,23 @@ pit:
 ```
 
 Both axis directions are supported: on a vertical axis the rows stack to the
-left of the axis instead of below it.
+left of the axis instead of below it. `label_align` follows the axis: `start`
+aligns with the top boundary on a vertical axis and the left boundary on a
+horizontal one.
+
+By default labels are centered in their span. To make a month name line up
+with the tick marking the **first of the month** (rather than floating in the
+middle of the month), set `label_align: start`:
+
+```yaml
+pit:
+  ticks:
+    - unit: month
+      label_format: MMMM
+      label_align: start        # "February" starts at the Feb 1 tick
+      tick_length: 8.0
+      label_gap: 10.0
+```
 
 ##### Labeling date-interval ticks
 
@@ -2126,6 +2143,18 @@ labeled depends on whether you give a `label_format`:
         interval_days: 14
         prefix: "Sprint "        # → "Sprint 1", "Sprint 2", "Sprint 3", ...
         start_index: 1
+  ```
+
+- **A prefixed date** — combine `prefix` *with* `label_format`. The prefix is
+  prepended to the formatted date:
+
+  ```yaml
+  pit:
+    ticks:
+      - unit: interval
+        interval_days: 7
+        prefix: "Week of "       # → "Week of 02/01", "Week of 02/08", ...
+        label_format: "MM/DD"
   ```
 
 The same rule applies to every unit: any unit gains date labels when you add a

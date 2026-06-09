@@ -383,14 +383,18 @@ class PITRenderer(BaseSVGRenderer):
         (or ``date_format``) is given it is treated as an Arrow *date* format
         applied to each tick's own date — independent of the band unit. This
         lets any unit (including ``interval``) produce dated tick labels like
-        "MMM D". When no format is given, the unit's own generated label is
-        used (e.g. the running index for ``interval``, "Week N" for ``week``,
-        "FY26 Q1" for ``fiscal_quarter``).
+        "MMM D". A ``prefix`` string, when present, is prepended to the
+        formatted date so e.g. ``prefix: "Week of "`` + ``label_format:
+        "MM/DD"`` yields "Week of 02/01". When no format is given, the unit's
+        own generated label is used (e.g. the running index for ``interval``
+        — which also honors ``prefix`` — "Week N" for ``week``, "FY26 Q1" for
+        ``fiscal_quarter``).
         """
         start_d = start.floor("day").date()
         end_d = end.floor("day").date()
         unit = str(band.get("unit") or "month").strip().lower()
         label_fmt = band.get("label_format") or band.get("date_format")
+        prefix = str(band.get("prefix") or "")
 
         if unit == "year":
             segs: list[tuple[date, date, str]] = []
@@ -399,7 +403,7 @@ class PITRenderer(BaseSVGRenderer):
                 seg_start = max(date(yr, 1, 1), start_d)
                 seg_end = min(date(yr + 1, 1, 1), end_d + timedelta(days=1))
                 if seg_start < seg_end:
-                    label = format_arrow_date(arrow.get(date(yr, 1, 1)), fmt)
+                    label = prefix + format_arrow_date(arrow.get(date(yr, 1, 1)), fmt)
                     segs.append((seg_start, seg_end, label))
             return segs
 
@@ -428,8 +432,11 @@ class PITRenderer(BaseSVGRenderer):
         )
         out: list[tuple[date, date, str]] = []
         for s in segments:
+            # With a date format, the prefix is prepended here (build_segments
+            # only applies prefix to its own index labels). Without a format,
+            # the unit's generated label already includes any prefix.
             label = (
-                format_arrow_date(arrow.get(s.start), label_fmt)
+                prefix + format_arrow_date(arrow.get(s.start), label_fmt)
                 if label_fmt
                 else s.label
             )
@@ -447,7 +454,9 @@ class PITRenderer(BaseSVGRenderer):
         db: "CalendarDB",
     ) -> None:
         """Draw one row of ticks per band, each perpendicular tick at a
-        segment boundary with the segment label centered within its span.
+        segment boundary with the segment label positioned per the band's
+        ``label_align`` (``center`` by default, ``start`` to align with the
+        boundary tick, ``end`` with the next boundary).
 
         A single band reproduces the legacy single-tick behavior; multiple
         bands (via ``config.pit_ticks``) stack additional tick rows, each
@@ -516,6 +525,20 @@ class PITRenderer(BaseSVGRenderer):
             else:
                 label_off = tick_len
 
+            # How the label sits relative to its segment along the axis:
+            #   "center" (default) — centered in the span between this tick
+            #                        and the next.
+            #   "start"            — anchored at this tick (the segment's
+            #                        start boundary, e.g. the first of the
+            #                        month) so the label aligns with it.
+            #   "end"              — anchored at the next boundary.
+            # "left"/"right" are accepted as synonyms for start/end.
+            label_align = str(band.get("label_align", "center")).strip().lower()
+            if label_align in ("left", "top"):
+                label_align = "start"
+            elif label_align in ("right", "bottom"):
+                label_align = "end"
+
             for seg_start, seg_end, label in segments:
                 p0 = _pos(seg_start)
                 p1 = _pos(seg_end)
@@ -528,12 +551,17 @@ class PITRenderer(BaseSVGRenderer):
                         css_class="ec-axis-tick",
                     )
                     if show_labels and label:
-                        lx = ox + (p0 + p1) / 2.0
+                        if label_align == "start":
+                            lx, l_anchor = tx, "start"
+                        elif label_align == "end":
+                            lx, l_anchor = ox + p1, "end"
+                        else:
+                            lx, l_anchor = ox + (p0 + p1) / 2.0, "middle"
                         self._draw_text(
                             lx, oy + label_off, label,
                             label_font, label_size,
                             fill=label_color, fill_opacity=label_opacity,
-                            anchor="middle",
+                            anchor=l_anchor,
                             css_class="ec-label",
                         )
                 else:
@@ -545,7 +573,13 @@ class PITRenderer(BaseSVGRenderer):
                         css_class="ec-axis-tick",
                     )
                     if show_labels and label:
-                        ly = oy + (p0 + p1) / 2.0 + label_size * 0.35
+                        if label_align == "start":
+                            lpos = p0
+                        elif label_align == "end":
+                            lpos = p1
+                        else:
+                            lpos = (p0 + p1) / 2.0
+                        ly = oy + lpos + label_size * 0.35
                         self._draw_text(
                             ox - label_off - 2.0, ly, label,
                             label_font, label_size,
