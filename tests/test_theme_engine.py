@@ -485,7 +485,7 @@ class TestThemeEngineColorMaps:
 
     def test_group_palette_applied(self):
         config = self._load_builtin("vibrant")
-        assert config.theme_group_palette == "PairedColor12Steps"
+        assert config.theme_group_palette == "pastel1"
 
     def test_group_colors_list_overridden_explicit(self):
         """Explicit group_colors: list (not palette) should override config.group_colors."""
