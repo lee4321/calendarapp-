@@ -584,6 +584,55 @@ def test_pit_tick_label_align_synonyms(tmp_path):
     assert _first_label_glyph_x(render("right")) == _first_label_glyph_x(render("end"))
 
 
+def _first_label_glyph_xy(svg: str) -> tuple[float, float]:
+    """(x, y) of the first glyph in the first ec-label group."""
+    import re
+
+    m = re.search(
+        r'class="ec-label"[^>]*>\s*<path[^>]*translate\(([-\d.]+),([-\d.]+)', svg
+    )
+    assert m, "no ec-label glyph found"
+    return float(m.group(1)), float(m.group(2))
+
+
+def test_pit_tick_labels_opposite_box_side_vertical(tmp_path):
+    """On a vertical axis the tick labels sit on the opposite side of the
+    axis from the callout boxes: left for primary, right for secondary."""
+
+    def render(side):
+        config = _make_config(tmp_path / side, start="20260201", end="20260530")
+        config.pit_direction = "vertical"
+        config.pit_label_side = side
+        config.pit_ticks = [{"unit": "month", "label_format": "MMMM"}]
+        coords = PITLayout().calculate(config)
+        PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+        return Path(config.outputfile).read_text(encoding="utf-8")
+
+    prim_x, _ = _first_label_glyph_xy(render("primary"))
+    sec_x, _ = _first_label_glyph_xy(render("secondary"))
+    # secondary boxes are on the left → labels flip to the right (larger x).
+    assert sec_x > prim_x
+
+
+def test_pit_tick_labels_opposite_box_side_horizontal(tmp_path):
+    """On a horizontal axis the tick labels sit below the axis for primary
+    (boxes above) and above the axis for secondary (boxes below)."""
+
+    def render(side):
+        config = _make_config(tmp_path / side, start="20260201", end="20260530")
+        config.pit_direction = "horizontal"
+        config.pit_label_side = side
+        config.pit_ticks = [{"unit": "month", "label_format": "MMMM"}]
+        coords = PITLayout().calculate(config)
+        PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
+        return Path(config.outputfile).read_text(encoding="utf-8")
+
+    _, prim_y = _first_label_glyph_xy(render("primary"))
+    _, sec_y = _first_label_glyph_xy(render("secondary"))
+    # secondary boxes are below → labels flip above the axis (smaller y).
+    assert sec_y < prim_y
+
+
 # ---------------------------------------------------------------------------
 # Markers
 # ---------------------------------------------------------------------------

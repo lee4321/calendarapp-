@@ -2102,6 +2102,13 @@ left of the axis instead of below it. `label_align` follows the axis: `start`
 aligns with the top boundary on a vertical axis and the left boundary on a
 horizontal one.
 
+Tick labels are always drawn on the **opposite side of the axis from the
+callout label boxes**, so they never overlap the events. With
+`--label-side primary` the boxes sit above (horizontal) / right (vertical) and
+the tick labels go below / left; with `--label-side secondary` the boxes and
+tick labels swap sides. `--label-side both` keeps the default below / left
+placement for the tick labels.
+
 By default labels are centered in their span. To make a month name line up
 with the tick marking the **first of the month** (rather than floating in the
 middle of the month), set `label_align: start`:

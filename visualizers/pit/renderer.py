@@ -237,7 +237,7 @@ class PITRenderer(BaseSVGRenderer):
         #   - per-event callout groups
         self._draw_axis_group(
             config, axis_origin, axis_end, start, end, direction,
-            pos_for_day, db,
+            pos_for_day, db, side,
         )
         if config.pit_show_today_line:
             self._draw_today_line(
@@ -329,12 +329,14 @@ class PITRenderer(BaseSVGRenderer):
         direction: Orientation,
         pos_for_day,
         db: "CalendarDB",
+        side: Side = Side.PRIMARY,
     ) -> None:
         """Wrap the axis line and its ticks in ec-pit-axis-group."""
         self._drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
         if config.pit_show_ticks:
             self._draw_axis_ticks(
                 config, start, end, axis_origin, direction, pos_for_day, db,
+                side,
             )
         self._draw_axis(config, axis_origin, axis_end)
         self._drawing.append(drawsvg.Raw('</g>'))
@@ -452,11 +454,17 @@ class PITRenderer(BaseSVGRenderer):
         direction: Orientation,
         pos_for_day,
         db: "CalendarDB",
+        side: Side = Side.PRIMARY,
     ) -> None:
         """Draw one row of ticks per band, each perpendicular tick at a
         segment boundary with the segment label positioned per the band's
         ``label_align`` (``center`` by default, ``start`` to align with the
         boundary tick, ``end`` with the next boundary).
+
+        Tick labels are placed on the opposite side of the axis from the
+        callout label boxes: for ``Side.SECONDARY`` the boxes occupy the
+        below/left side, so the labels flip to above/right. ``Side.PRIMARY``
+        and ``Side.BOTH`` keep the default below/left placement.
 
         A single band reproduces the legacy single-tick behavior; multiple
         bands (via ``config.pit_ticks``) stack additional tick rows, each
@@ -483,6 +491,11 @@ class PITRenderer(BaseSVGRenderer):
             or "Roboto-Regular"
         )
         ox, oy = axis_origin
+
+        # Tick labels go on the opposite side of the axis from the callout
+        # boxes. Boxes occupy below/left for SECONDARY, so labels flip to
+        # above/right; PRIMARY and BOTH keep the default below/left.
+        flip_labels = side is Side.SECONDARY
 
         def _pos(d: date) -> float:
             return pos_for_day(arrow.Arrow(d.year, d.month, d.day))
@@ -557,8 +570,9 @@ class PITRenderer(BaseSVGRenderer):
                             lx, l_anchor = ox + p1, "end"
                         else:
                             lx, l_anchor = ox + (p0 + p1) / 2.0, "middle"
+                        ly = oy - label_off if flip_labels else oy + label_off
                         self._draw_text(
-                            lx, oy + label_off, label,
+                            lx, ly, label,
                             label_font, label_size,
                             fill=label_color, fill_opacity=label_opacity,
                             anchor=l_anchor,
@@ -580,11 +594,15 @@ class PITRenderer(BaseSVGRenderer):
                         else:
                             lpos = (p0 + p1) / 2.0
                         ly = oy + lpos + label_size * 0.35
+                        if flip_labels:
+                            lx, l_anchor = ox + label_off + 2.0, "start"
+                        else:
+                            lx, l_anchor = ox - label_off - 2.0, "end"
                         self._draw_text(
-                            ox - label_off - 2.0, ly, label,
+                            lx, ly, label,
                             label_font, label_size,
                             fill=label_color, fill_opacity=label_opacity,
-                            anchor="end",
+                            anchor=l_anchor,
                             css_class="ec-label",
                         )
 
