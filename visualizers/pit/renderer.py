@@ -342,26 +342,59 @@ class PITRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     # Axis ticks (timeband segments → perpendicular marks + labels)
     # ------------------------------------------------------------------
+    def _pit_tick_bands(self, config: "CalendarConfig") -> list[dict]:
+        """Return the list of tick-band dicts to draw on the axis.
+
+        When ``config.pit_ticks`` is set it takes precedence (a single dict is
+        normalized to a one-element list); otherwise a single band is
+        synthesized from the scalar ``pit_tick_*`` fields for backward
+        compatibility.
+        """
+        raw = getattr(config, "pit_ticks", None)
+        if raw:
+            bands = [raw] if isinstance(raw, dict) else list(raw)
+            return [b for b in bands if isinstance(b, dict)]
+
+        band: dict = {
+            "unit": config.pit_tick_unit or "month",
+            "interval_days": config.pit_tick_interval,
+            "show_labels": config.pit_show_tick_labels,
+            "tick_length": config.pit_tick_length,
+        }
+        if config.pit_tick_label_format:
+            band["label_format"] = config.pit_tick_label_format
+        return [band]
+
     def _pit_tick_segments(
         self,
         config: "CalendarConfig",
+        band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
         db: "CalendarDB",
     ) -> list[tuple[date, date, str]]:
-        """Return (start, end_exclusive, label) tick segments for the axis.
+        """Return (start, end_exclusive, label) tick segments for one band.
 
         Delegates unit handling to shared.timeband.build_segments so PIT
         ticks match every other timeband-driven visualizer. ``year`` is
         handled locally since build_segments has no year unit.
+
+        Label rule (matches the timeline visualizer): when ``label_format``
+        (or ``date_format``) is given it is treated as an Arrow *date* format
+        applied to each tick's own date — independent of the band unit. This
+        lets any unit (including ``interval``) produce dated tick labels like
+        "MMM D". When no format is given, the unit's own generated label is
+        used (e.g. the running index for ``interval``, "Week N" for ``week``,
+        "FY26 Q1" for ``fiscal_quarter``).
         """
         start_d = start.floor("day").date()
         end_d = end.floor("day").date()
-        unit = str(config.pit_tick_unit or "month").strip().lower()
+        unit = str(band.get("unit") or "month").strip().lower()
+        label_fmt = band.get("label_format") or band.get("date_format")
 
         if unit == "year":
             segs: list[tuple[date, date, str]] = []
-            fmt = config.pit_tick_label_format or "YYYY"
+            fmt = label_fmt or "YYYY"
             for yr in range(start_d.year, end_d.year + 1):
                 seg_start = max(date(yr, 1, 1), start_d)
                 seg_end = min(date(yr + 1, 1, 1), end_d + timedelta(days=1))
@@ -370,9 +403,13 @@ class PITRenderer(BaseSVGRenderer):
                     segs.append((seg_start, seg_end, label))
             return segs
 
-        band: dict = {"unit": unit, "interval_days": int(config.pit_tick_interval)}
-        if config.pit_tick_label_format:
-            band["label_format"] = config.pit_tick_label_format
+        # Forward the full band so unit-specific keys (interval prefix,
+        # start_index, anchor_date, week start, etc.) reach build_segments;
+        # it reads only the keys it knows and ignores PIT styling keys.
+        seg_band: dict = dict(band)
+        seg_band["unit"] = unit
+        if "interval_days" not in seg_band and band.get("interval") is not None:
+            seg_band["interval_days"] = int(band.get("interval") or 1)
 
         visible_days: list[date] = []
         d = start_d
@@ -381,7 +418,7 @@ class PITRenderer(BaseSVGRenderer):
             d += timedelta(days=1)
 
         segments = build_segments(
-            band, start_d, end_d, config,
+            seg_band, start_d, end_d, config,
             visible_days=visible_days,
             db=db,
             week_start_default=0,
@@ -389,7 +426,15 @@ class PITRenderer(BaseSVGRenderer):
                 getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
             ),
         )
-        return [(s.start, s.end_exclusive, s.label) for s in segments]
+        out: list[tuple[date, date, str]] = []
+        for s in segments:
+            label = (
+                format_arrow_date(arrow.get(s.start), label_fmt)
+                if label_fmt
+                else s.label
+            )
+            out.append((s.start, s.end_exclusive, label))
+        return out
 
     def _draw_axis_ticks(
         self,
@@ -401,24 +446,29 @@ class PITRenderer(BaseSVGRenderer):
         pos_for_day,
         db: "CalendarDB",
     ) -> None:
-        """Draw a perpendicular tick at each segment boundary, with the
-        segment label centered within its span."""
-        segments = self._pit_tick_segments(config, start, end, db)
-        if not segments:
+        """Draw one row of ticks per band, each perpendicular tick at a
+        segment boundary with the segment label centered within its span.
+
+        A single band reproduces the legacy single-tick behavior; multiple
+        bands (via ``config.pit_ticks``) stack additional tick rows, each
+        with its own unit, styling, and label offset away from the axis.
+        """
+        bands = self._pit_tick_bands(config)
+        if not bands:
             return
 
-        tick_color = (
+        default_tick_color = (
             config.theme_pit_tick_color
             or config.theme_pit_axis_color
             or "#666666"
         )
-        tick_len = float(config.pit_tick_length)
-        show_labels = bool(config.pit_show_tick_labels)
-        label_size = float(
+        default_tick_len = float(config.pit_tick_length)
+        default_show_labels = bool(config.pit_show_tick_labels)
+        default_label_size = float(
             config.theme_pit_date_text_font_size
             or (float(config.pit_name_text_font_size or 11.0) * 0.8)
         )
-        label_font = (
+        default_label_font = (
             config.theme_pit_date_text_font_name
             or config.pit_name_text_font_name
             or "Roboto-Regular"
@@ -428,39 +478,81 @@ class PITRenderer(BaseSVGRenderer):
         def _pos(d: date) -> float:
             return pos_for_day(arrow.Arrow(d.year, d.month, d.day))
 
-        for seg_start, seg_end, label in segments:
-            p0 = _pos(seg_start)
-            p1 = _pos(seg_end)
-            if direction is Orientation.HORIZONTAL:
-                tx = ox + p0
-                self._draw_line(
-                    tx, oy - tick_len, tx, oy + tick_len,
-                    stroke=tick_color, stroke_width=1.0,
-                    css_class="ec-axis-tick",
-                )
-                if show_labels and label:
-                    lx = ox + (p0 + p1) / 2.0
-                    self._draw_text(
-                        lx, oy + tick_len + label_size, label,
-                        label_font, label_size,
-                        fill=tick_color, anchor="middle",
-                        css_class="ec-label",
-                    )
+        for band in bands:
+            segments = self._pit_tick_segments(config, band, start, end, db)
+            if not segments:
+                continue
+
+            tick_len = float(band.get("tick_length", default_tick_len))
+            tick_color = str(band.get("tick_color") or default_tick_color)
+            tick_width = float(band.get("tick_width", 1.0))
+            _t_op = band.get("tick_opacity")
+            tick_opacity = float(_t_op) if _t_op is not None else 1.0
+            tick_dash = band.get("tick_dasharray")
+
+            label_size = float(
+                band.get("label_font_size") or band.get("font_size") or default_label_size
+            )
+            label_font = str(band.get("font") or default_label_font)
+            label_color = str(
+                band.get("label_color") or band.get("font_color") or tick_color
+            )
+            _l_op = band.get("label_opacity")
+            label_opacity = float(_l_op) if _l_op is not None else 1.0
+            show_labels = bool(
+                band.get("show_labels", default_show_labels)
+            ) and len(segments) <= int(band.get("max_label_count", 60))
+
+            # Distance of the label baseline away from the axis (on the label
+            # side). Defaults preserve the legacy single-band placement.
+            _l_off = band.get("label_offset")
+            _l_gap = band.get("label_gap")
+            if _l_off is not None:
+                label_off = float(_l_off)
+            elif _l_gap is not None:
+                label_off = tick_len + float(_l_gap)
+            elif direction is Orientation.HORIZONTAL:
+                label_off = tick_len + label_size
             else:
-                ty = oy + p0
-                self._draw_line(
-                    ox - tick_len, ty, ox + tick_len, ty,
-                    stroke=tick_color, stroke_width=1.0,
-                    css_class="ec-axis-tick",
-                )
-                if show_labels and label:
-                    ly = oy + (p0 + p1) / 2.0 + label_size * 0.35
-                    self._draw_text(
-                        ox - tick_len - 2.0, ly, label,
-                        label_font, label_size,
-                        fill=tick_color, anchor="end",
-                        css_class="ec-label",
+                label_off = tick_len
+
+            for seg_start, seg_end, label in segments:
+                p0 = _pos(seg_start)
+                p1 = _pos(seg_end)
+                if direction is Orientation.HORIZONTAL:
+                    tx = ox + p0
+                    self._draw_line(
+                        tx, oy - tick_len, tx, oy + tick_len,
+                        stroke=tick_color, stroke_width=tick_width,
+                        stroke_opacity=tick_opacity, stroke_dasharray=tick_dash,
+                        css_class="ec-axis-tick",
                     )
+                    if show_labels and label:
+                        lx = ox + (p0 + p1) / 2.0
+                        self._draw_text(
+                            lx, oy + label_off, label,
+                            label_font, label_size,
+                            fill=label_color, fill_opacity=label_opacity,
+                            anchor="middle",
+                            css_class="ec-label",
+                        )
+                else:
+                    ty = oy + p0
+                    self._draw_line(
+                        ox - tick_len, ty, ox + tick_len, ty,
+                        stroke=tick_color, stroke_width=tick_width,
+                        stroke_opacity=tick_opacity, stroke_dasharray=tick_dash,
+                        css_class="ec-axis-tick",
+                    )
+                    if show_labels and label:
+                        ly = oy + (p0 + p1) / 2.0 + label_size * 0.35
+                        self._draw_text(
+                            ox - label_off - 2.0, ly, label,
+                            label_font, label_size,
+                            fill=label_color, fill_opacity=label_opacity,
+                            anchor="end",
+                            css_class="ec-label",
+                        )
 
     # ------------------------------------------------------------------
     # SVG pattern helpers (delegate to WeeklyCalendarRenderer statics)

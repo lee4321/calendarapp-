@@ -1909,7 +1909,7 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. Equivalent to `pit.label_side`. |
 | `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. A perpendicular tick mark is drawn at each segment boundary with the segment label centered in its span. |
 | `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
-| `--tick-label-format` | | unit default | Arrow date format for tick labels (e.g. `MMM D`). For `week`/`interval` units the timeband label (e.g. `Week 6`) is used when omitted. |
+| `--tick-label-format` | | unit default | Arrow date format applied to each tick's own date (e.g. `MMM D`, `M/D`, `D`), for any `--tick-unit` including `interval`. When omitted, the unit's own label is used instead (the running index for `interval`, `Week N` for `week`, `FY26 Q1` for `fiscal_quarter`, etc.). |
 | `--tick-length` | | `5.0` | Half-length (points) of each tick mark, drawn on each side of the axis. |
 | `--no-ticks` | | (ticks on) | Suppress axis tick marks and labels entirely. |
 | `--no-tick-labels` | | (labels on) | Draw the tick marks but omit their labels. |
@@ -1950,6 +1950,20 @@ pit:
   tick_length: 5.0             # half-length of each tick mark, per side
   show_ticks: true             # set false to hide axis ticks
   show_tick_labels: true       # set false for tick marks without labels
+
+  # Optional: multiple tick rows (overrides the single tick_* scalars above).
+  # See "Multiple tick bands" below. Accepts a list of band dicts (or a
+  # single dict for one band).
+  ticks:
+    - unit: month              # coarse row: a tick + centered label per month
+      label_format: MMM
+      tick_length: 8.0
+      label_gap: 16.0          # push this row's labels further from the axis
+    - unit: week               # fine row: weekly ticks, no labels
+      show_labels: false
+      tick_length: 3.0
+      tick_opacity: 0.4
+
   date_format: "MMM D"
   leader_label_anchor: center   # center | start | end — where the leader
                                 # meets the label box (center is collision-free)
@@ -2028,6 +2042,98 @@ pit:
     node_height: 24.0         # label box thickness perpendicular to the axis
     density: 0.75             # 0–1; lower packs fewer labels per row (more rows)
 ```
+
+#### Multiple tick bands
+
+By default the axis draws a single row of ticks driven by the scalar
+`tick_unit` / `tick_interval` / `tick_label_format` / `tick_length` /
+`show_tick_labels` fields. To stack several tick rows at different
+granularities — e.g. month names over light weekly ticks — set `pit.ticks`
+to a **list of band dicts** instead. When `ticks` is present it **overrides**
+the scalar `tick_*` fields entirely; each band becomes its own row of tick
+marks (and optional centered labels). A single dict is accepted as shorthand
+for a one-band list. This mirrors the `timeline` visualizer's `ticks:` block.
+
+Each band draws a tick at every segment boundary for its unit and centers
+the segment label within its span. Per-band keys:
+
+| Key | Default | Effect |
+|---|---|---|
+| `unit` | `month` | Tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. |
+| `interval_days` (`interval`) | `14` | Days between ticks when `unit: interval`. |
+| `label_format` (`date_format`) | unit default | When set, an **Arrow date format applied to each tick's own date** (e.g. `MMM D`, `M/D`, `D`) — independent of the unit. When omitted, the unit's own generated label is used (see "Labeling date-interval ticks" below). |
+| `prefix` | `""` | For `unit: interval` *without* `label_format`: text prepended to the running index (e.g. `prefix: "Sprint "` → `Sprint 1`, `Sprint 2`). |
+| `start_index` | `1` | For `unit: interval` counter labels: the index of the first tick. |
+| `max_index` | none | For `unit: interval` counter labels: wrap the index back to `start_index` after this value. |
+| `anchor_date` | range start | For `unit: interval`: `YYYY-MM-DD` date the intervals are measured from, so boundaries stay fixed regardless of the visible range. |
+| `show_labels` | `true` | Set `false` to draw tick marks for this band without labels. |
+| `max_label_count` | `60` | Suppress labels for this band when it would draw more than this many. |
+| `tick_length` | `5.0` | Half-length (points) of this band's tick marks, per side of the axis. |
+| `tick_color` | theme `tick_color` | Stroke color for this band's ticks. |
+| `tick_width` | `1.0` | Stroke width (points) of this band's ticks. |
+| `tick_opacity` | `1.0` | Stroke opacity (0–1) of this band's ticks. |
+| `tick_dasharray` | none | SVG `stroke-dasharray` for this band's ticks. |
+| `label_color` (`font_color`) | this band's `tick_color` | Color of this band's labels. |
+| `label_font_size` (`font_size`) | theme date-text size | Font size (points) of this band's labels. |
+| `font` | theme date-text font | Font name for this band's labels. |
+| `label_opacity` | `1.0` | Opacity (0–1) of this band's labels. |
+| `label_offset` | auto | Distance (points) of the label baseline from the axis. Overrides the auto offset; use to place a finer row's labels closer to the axis than a coarser row. |
+| `label_gap` | — | Alternative to `label_offset`: offset = `tick_length + label_gap`. |
+
+Example — month names with a light weekly grid beneath them:
+
+```yaml
+pit:
+  ticks:
+    - unit: month
+      label_format: MMM
+      tick_length: 8.0
+      label_gap: 16.0          # month labels sit farther from the axis
+      tick_width: 0.8
+    - unit: week
+      show_labels: false       # weekly ticks only, no labels
+      tick_length: 3.0
+      tick_opacity: 0.4
+```
+
+Both axis directions are supported: on a vertical axis the rows stack to the
+left of the axis instead of below it.
+
+##### Labeling date-interval ticks
+
+`unit: interval` places a tick every `interval_days` days. How those ticks are
+labeled depends on whether you give a `label_format`:
+
+- **Calendar dates** — set `label_format` to an Arrow date format. The label is
+  the actual date at each tick (every Nth day):
+
+  ```yaml
+  pit:
+    ticks:
+      - unit: interval
+        interval_days: 14         # a tick every two weeks
+        label_format: "MMM D"     # → "Feb 1", "Feb 15", "Mar 1", ...
+        anchor_date: "2026-02-01" # optional: pin the interval boundaries
+  ```
+
+- **A running counter** (sprints, cycles, etc.) — omit `label_format`. The label
+  is a running index you can shape with `prefix` / `start_index` / `max_index`:
+
+  ```yaml
+  pit:
+    ticks:
+      - unit: interval
+        interval_days: 14
+        prefix: "Sprint "        # → "Sprint 1", "Sprint 2", "Sprint 3", ...
+        start_index: 1
+  ```
+
+The same rule applies to every unit: any unit gains date labels when you add a
+`label_format` (e.g. `unit: week` + `label_format: "MMM D"` labels each week
+start with its date instead of `Week N`), and falls back to the unit's own
+label (`Week N`, `FY26 Q1`, the interval index, …) when you omit it. Use
+`MMMM`/`MMM` for month names, `D` for the day of month, `M/D` or `YYYY-MM-DD`
+for full dates. This matches the `timeline` visualizer's tick behavior.
 
 #### Per-rule overrides in `style_rules`
 

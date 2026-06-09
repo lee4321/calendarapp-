@@ -233,6 +233,20 @@ pit:
     marker_end_size: 6.0
   tick_color: steelblue
   tick_unit: month
+  # Two tick rows: fiscal quarters labeled above monthly ticks.
+  ticks:
+    - unit: fiscal_quarter
+      tick_length: 9.0
+      tick_color: steelblue
+      label_color: steelblue
+      label_gap: 16.0
+    - unit: month
+      label_format: MMM
+      tick_length: 4.0
+      tick_color: lightsteelblue
+      tick_opacity: 0.6
+      label_font_size: 7
+      label_color: slategrey
   date_format: "MMM D"
   date_text:
     color: slategrey

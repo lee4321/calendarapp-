@@ -236,6 +236,20 @@ pit:
     marker_end_size: 6.0
   tick_color: cadetblue
   tick_unit: month
+  # Two tick rows: month labels over a light weekly grid.
+  ticks:
+    - unit: month
+      label_format: MMM
+      font: JuliaMono-Regular
+      tick_length: 8.0
+      tick_color: cadetblue
+      label_color: cadetblue
+      label_gap: 16.0
+    - unit: week
+      show_labels: false
+      tick_length: 3.0
+      tick_color: lightsteelblue
+      tick_opacity: 0.5
   date_format: "MMM D"
   date_text:
     color: slategrey

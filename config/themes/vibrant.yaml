@@ -257,8 +257,21 @@ pit:
     marker_start_size: 4.0
     marker_end: "arrow-head"
     marker_end_size: 10
-  tick_color: black 
+  tick_color: black
   tick_unit:  month
+  # Two tick rows: bold month labels over a light weekly grid.
+  ticks:
+    - unit: month
+      label_format: MMM
+      tick_length: 9.0
+      tick_color: black
+      label_color: black
+      label_gap: 16.0
+    - unit: week
+      show_labels: false
+      tick_length: 3.0
+      tick_color: darkgrey
+      tick_opacity: 0.5
   date_format: "MM/DD"
   date_text:
     color: "#444444"

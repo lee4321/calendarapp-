@@ -680,6 +680,14 @@ class CalendarConfig:
     pit_show_ticks: bool = True                  # draw axis ticks at all
     pit_tick_length: float = 5.0                 # half-length of each tick mark (each side of axis)
     pit_show_tick_labels: bool = True            # draw the per-segment tick label
+    # Multiple tick bands (mirrors ``timeline_ticks``). When set, this
+    # overrides the single-band scalar fields above and draws one row of
+    # ticks per band. Accepts a dict (one band) or a list of dicts. Per-band
+    # keys: unit, interval_days, label_format, show_labels, tick_length,
+    # tick_color, tick_width, tick_opacity, tick_dasharray, label_color,
+    # label_font_size/font_size, font, label_opacity, label_offset/label_gap,
+    # max_label_count.
+    pit_ticks: dict | list | None = None
 
     pit_show_today_line: bool = True
     pit_today_date: str | None = None            # YYYYMMDD; None → real today

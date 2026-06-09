@@ -442,6 +442,80 @@ def test_pit_ticks_vertical(tmp_path):
     assert 'class="ec-axis-tick"' in svg
 
 
+def test_pit_ticks_multiple_bands(tmp_path):
+    """pit_ticks with two bands draws more ticks than either alone."""
+    n_month = _render_pit_ticks(
+        tmp_path / "m", pit_ticks=[{"unit": "month"}]
+    ).count('class="ec-axis-tick"')
+    n_both = _render_pit_ticks(
+        tmp_path / "mw",
+        pit_ticks=[{"unit": "month"}, {"unit": "week"}],
+    ).count('class="ec-axis-tick"')
+    assert n_both > n_month
+
+
+def test_pit_ticks_overrides_scalar_unit(tmp_path):
+    """pit_ticks takes precedence over the scalar pit_tick_unit field."""
+    # Scalar says month, but the band list says week → expect week density.
+    n = _render_pit_ticks(
+        tmp_path,
+        pit_tick_unit="month",
+        pit_ticks=[{"unit": "week"}],
+    ).count('class="ec-axis-tick"')
+    n_month = _render_pit_ticks(
+        tmp_path / "m2", pit_ticks=[{"unit": "month"}]
+    ).count('class="ec-axis-tick"')
+    assert n > n_month
+
+
+def test_pit_ticks_single_dict_accepted(tmp_path):
+    """A bare dict (not a list) is normalized to one band."""
+    svg = _render_pit_ticks(tmp_path, pit_ticks={"unit": "month"})
+    assert 'class="ec-axis-tick"' in svg
+
+
+def test_pit_ticks_per_band_show_labels(tmp_path):
+    """A band can suppress its own labels while still drawing tick marks."""
+    svg = _render_pit_ticks(
+        tmp_path,
+        pit_ticks=[{"unit": "week", "show_labels": False}],
+    )
+    assert 'class="ec-axis-tick"' in svg
+    assert "ec-label" not in svg
+
+
+def test_pit_interval_label_format_uses_date(tmp_path):
+    """interval unit + label_format yields dated labels (timeline parity)."""
+    import arrow
+
+    from config.config import CalendarConfig
+    from visualizers.pit.renderer import PITRenderer
+
+    r = PITRenderer.__new__(PITRenderer)
+    cfg = CalendarConfig()
+    s, e = arrow.get("2026-02-01"), arrow.get("2026-04-01")
+
+    dated = PITRenderer._pit_tick_segments(
+        r, cfg, {"unit": "interval", "interval_days": 14, "label_format": "MMM D"},
+        s, e, None,
+    )
+    assert [lbl for _, _, lbl in dated][:3] == ["Feb 1", "Feb 15", "Mar 1"]
+
+    # interval alias is accepted in place of interval_days.
+    aliased = PITRenderer._pit_tick_segments(
+        r, cfg, {"unit": "interval", "interval": 14, "label_format": "M/D"},
+        s, e, None,
+    )
+    assert [lbl for _, _, lbl in aliased][:2] == ["2/1", "2/15"]
+
+    # No label_format → running index; prefix customizes it.
+    counter = PITRenderer._pit_tick_segments(
+        r, cfg, {"unit": "interval", "interval_days": 14, "prefix": "Sprint "},
+        s, e, None,
+    )
+    assert [lbl for _, _, lbl in counter][:2] == ["Sprint 1", "Sprint 2"]
+
+
 # ---------------------------------------------------------------------------
 # Markers
 # ---------------------------------------------------------------------------

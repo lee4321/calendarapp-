@@ -3,13 +3,13 @@ theme:
   version: '2.0'
   description: The original CalendarApp styling — unified theme model
 base:
-  font_family: RobotoCondensed-Light
+  font_family: FiraSansExtraCondensed-Regular
   default_missing_icon: applet-closed
 header:
-  font_family: RobotoCondensed-Light
+  font_family: FiraSansExtraCondensed-Regular
   font_color: grey
 footer:
-  font_family: RobotoCondensed-Light
+  font_family: FiraSansExtraCondensed-Regular
   font_color: grey
 events:
   icon_color: navy
@@ -232,7 +232,7 @@ pit:
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both
   labella:
-    layer_gap: 30
+    layer_gap: 50
     node_height: 24
     density: 0.50
   axis:
@@ -245,10 +245,25 @@ pit:
     marker_end_size: 6.0
   tick_color: grey
   tick_unit: month
+  # Two tick rows: bold month labels over a light weekly grid.
+  ticks:
+    - unit: month
+      show_labels: true 
+      label_format: MMMM
+      tick_length: 8.0
+      label_gap: 10.0
+    - unit: interval
+      interval_days: 7
+      label_format: MM/DD
+      show_labels: true
+      max_label_count: 400      # raise the default 60-label cap so daily
+                                # numbers still show over multi-month ranges
+      tick_length: 3.0
+      tick_opacity: 0.4
   date_format: "MMM D"
   date_text:
     color: grey
-    font_name: Roboto-Regular
+    font_name: FiraSansExtraCondensed-Regular
     font_size: 9
     offset: 6.0
   # Optional DB icon names drawn INSIDE the callout label box,

@@ -245,6 +245,19 @@ pit:
     marker_end_size: 6.0
   tick_color: "#aaaaaa"
   tick_unit: month
+  # Two tick rows: month labels over a light weekly grid.
+  ticks:
+    - unit: month
+      label_format: MMM
+      tick_length: 8.0
+      tick_color: "#888888"
+      label_color: "#888888"
+      label_gap: 16.0
+    - unit: week
+      show_labels: false
+      tick_length: 3.0
+      tick_color: "#cccccc"
+      tick_opacity: 0.6
   date_format: "MMM D"
   date_text:
     color: "#888888"
