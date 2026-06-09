@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.07.6"
+__version__ = "26.06.09.0"
 
 import argparse
 import logging
@@ -1899,6 +1899,10 @@ def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -
 
     Currently guarded flags:
         --mini-no-adjacent → forces config.mini_show_adjacent = False
+        PIT --direction / --label-side / --marker-size / --label-icon-size /
+        --label-icon-gap / --today-line / --no-today-line → re-asserted over
+        the theme's pit.direction / label_side / axis.marker_size /
+        label.icon_size / label.icon_gap / today_line.show keys.
 
     Called by:
         run() immediately after the second theme_engine.apply(config) call.
@@ -1909,6 +1913,21 @@ def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -
     """
     if getattr(args, "mini_no_adjacent", False):
         config.mini_show_adjacent = False
+
+    # PIT scalars that are now theme-configurable: an explicit CLI flag must
+    # still win over the theme value the second theme.apply() restores.
+    if getattr(args, "direction", None) is not None:
+        config.pit_direction = args.direction
+    if getattr(args, "label_side", None) is not None:
+        config.pit_label_side = args.label_side
+    if getattr(args, "marker_size", None) is not None:
+        config.pit_marker_size = args.marker_size
+    if getattr(args, "label_icon_size", None) is not None:
+        config.pit_label_icon_size = args.label_icon_size
+    if getattr(args, "label_icon_gap", None) is not None:
+        config.pit_label_icon_gap = args.label_icon_gap
+    if getattr(args, "pit_today_line", None) is not None:
+        config.pit_show_today_line = args.pit_today_line
 
 
 # =============================================================================

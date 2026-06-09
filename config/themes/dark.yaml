@@ -204,6 +204,8 @@ timeline:
     font_family: Roboto-Bold
     font_color: lightskyblue
 pit:
+  direction: horizontal      # horizontal | vertical
+  label_side: both           # primary | secondary | both
   labella:
     layer_gap: 8
     node_height: 24
@@ -211,6 +213,7 @@ pit:
   axis:
     color: "#666666"
     width: 1.5
+    marker_size: 7.0          # bounding box of built-in circle/diamond
     marker_start: "none"
     marker_start_size: 4.0
     marker_end: "arrow-head"
@@ -252,6 +255,7 @@ pit:
     marker_start: "none"
     marker_start_size: 3.0
   today_line:
+    show: true
     color: "#cc4444"
     width: 1.0
     dasharray: "4,2"
@@ -281,6 +285,8 @@ pit:
     corner_radius: 2.0
     padding_x: 6.0
     padding_y: 3.0
+    icon_size: null            # null = match event-name font size
+    icon_gap: 4.0
   label_palette: Dark2
 compact_plan:
   palette:

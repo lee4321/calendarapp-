@@ -1905,8 +1905,8 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
-| `--direction` | | `horizontal` | Axis direction: `horizontal` or `vertical`. **Note:** this is distinct from `--orientation` which controls page rotation. |
-| `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. |
+| `--direction` | | `horizontal` | Axis direction: `horizontal` or `vertical`. **Note:** this is distinct from `--orientation` which controls page rotation. Equivalent to `pit.direction`. |
+| `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. Equivalent to `pit.label_side`. |
 | `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. A perpendicular tick mark is drawn at each segment boundary with the segment label centered in its span. |
 | `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
 | `--tick-label-format` | | unit default | Arrow date format for tick labels (e.g. `MMM D`). For `week`/`interval` units the timeband label (e.g. `Week 6`) is used when omitted. |
@@ -1914,14 +1914,14 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | `--no-ticks` | | (ticks on) | Suppress axis tick marks and labels entirely. |
 | `--no-tick-labels` | | (labels on) | Draw the tick marks but omit their labels. |
 | `--date-placement` | | `inline` | Where each event date is drawn: `inline` (a line inside the label box, alongside the name/notes — the box grows to fit, and dates inherit the boxes' collision-free multi-row spacing so they never overlap), `axis` (opposite the axis at the marker — the "ruler tick" look, but dates collide when events cluster), or `none`. Equivalent to `pit.date_text.placement`. |
-| `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. |
+| `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. Equivalent to `pit.today_line.show`. |
 | `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
 | `--today-label` | | theme: `"today"` | Override the label text on the today line for this run. |
 | `--event-icon` | | none | DB icon name drawn **inside each event's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |
 | `--milestone-icon` | | none | DB icon name drawn **inside each milestone's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |
-| `--label-icon-size` | | name font size | Longest viewBox side (points) of the label-box icon. |
-| `--label-icon-gap` | | `4.0` | Horizontal gap (points) between the label-box icon and the start of the event name. |
-| `--marker-size` | | `7.0` | Bounding-box size (in points) of the axis marker (built-in circle / diamond). |
+| `--label-icon-size` | | name font size | Longest viewBox side (points) of the label-box icon. Equivalent to `pit.label.icon_size`. |
+| `--label-icon-gap` | | `4.0` | Horizontal gap (points) between the label-box icon and the start of the event name. Equivalent to `pit.label.icon_gap`. |
+| `--marker-size` | | `7.0` | Bounding-box size (in points) of the axis marker (built-in circle / diamond). Equivalent to `pit.axis.marker_size`. |
 | `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
 | `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
 | `--leader-length` | | `8.0` | Distance (in points) from the axis to the first row of labels — i.e. the leader length. Larger values lengthen leaders and widen row-to-row spacing. Equivalent to the theme's `pit.labella.layer_gap`. |
@@ -1933,9 +1933,12 @@ Add a `pit:` block to your theme YAML between the `timeline:` and `blockplan:` s
 
 ```yaml
 pit:
+  direction: horizontal        # horizontal | vertical (distinct from page --orientation)
+  label_side: both             # primary | secondary | both
   axis:
     color: "#333333"
     width: 1.5
+    marker_size: 7.0           # bounding box of the built-in circle/diamond marker
     marker_start: "none"        # "arrow-head" | "none" | custom-id
     marker_start_size: 4.0
     marker_end: "arrow-head"    # arrowhead at the end of the axis
@@ -1963,8 +1966,6 @@ pit:
   # The axis marker is always a built-in shape and is NOT affected by these.
   default_event_icon: null      # DB icon name or null (no icon)
   default_milestone_icon: null  # DB icon name or null (no icon)
-  label_icon_size: null         # null = use the name font size
-  label_icon_gap: 4.0           # gap between icon and name (points)
   dot_color: steelblue
   milestone_color: gold
   event_palette: Pastel1      # round-robin palette for event markers
@@ -1990,6 +1991,7 @@ pit:
     dasharray: "3,2"          # dashed secondary leaders
 
   today_line:
+    show: true                # set false to suppress the today line
     color: tomato
     width: 1.0
     dasharray: "4,2"
@@ -2017,6 +2019,8 @@ pit:
     corner_radius: 2.0
     padding_x: 6.0
     padding_y: 3.0
+    icon_size: null           # label-box icon longest side; null = name font size
+    icon_gap: 4.0             # gap (points) between the icon and the event name
   label_palette: Pastel1      # round-robin palette for label box fills
 
   labella:                    # label-placement tuning

@@ -426,6 +426,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # PIT (Points in Time) — scalar mappings.
     # Nested sub-blocks (axis, leader, label, today_line, etc.) are
     # handled by ThemeEngine._apply_pit_blocks() called from apply().
+    ("pit", "direction"): "pit_direction",
+    ("pit", "label_side"): "pit_label_side",
     ("pit", "tick_color"): "theme_pit_tick_color",
     ("pit", "tick_unit"): "pit_tick_unit",
     ("pit", "tick_interval"): "pit_tick_interval",
@@ -1143,6 +1145,11 @@ class ThemeEngine:
                 v = _flt(axis["marker_end_size"])
                 if v is not None:
                     config.pit_axis_marker_end_size = v
+            # Bounding-box size of the built-in axis marker (circle/diamond).
+            if "marker_size" in axis:
+                v = _flt(axis["marker_size"])
+                if v is not None:
+                    config.pit_marker_size = v
 
         # --- pit.date_text ---
         date_text = pit.get("date_text", {})
@@ -1213,6 +1220,8 @@ class ThemeEngine:
         # --- pit.today_line ---
         tl = pit.get("today_line", {})
         if isinstance(tl, dict):
+            if "show" in tl:
+                config.pit_show_today_line = bool(tl["show"])
             if "color" in tl:
                 config.theme_pit_today_line_color = _str(tl["color"])
             if "width" in tl:
@@ -1292,6 +1301,13 @@ class ThemeEngine:
                 v = _flt(lbl["padding_y"])
                 if v is not None:
                     config.pit_label_padding_y = v
+            # Label-box icon sizing (glyph longest side / gap before name).
+            if "icon_size" in lbl:
+                config.pit_label_icon_size = _flt(lbl["icon_size"])
+            if "icon_gap" in lbl:
+                v = _flt(lbl["icon_gap"])
+                if v is not None:
+                    config.pit_label_icon_gap = v
 
     def _apply_band_placements(self, config: "CalendarConfig") -> None:
         """Expand placement-list references against the top-level time_bands catalog.
