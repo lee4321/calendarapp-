@@ -263,16 +263,26 @@ pit:
   ticks:
     - unit: month
       label_format: MMM
+      label_side: below         # month names beneath the axis
       tick_length: 9.0
       tick_color: black
       label_color: black
       label_gap: 16.0
     - unit: week
-      show_labels: false
+      show_labels: true
+      label_format: DD
+      label_side: above         # day numbers above, clear of the month names
+      label_color: dimgrey
+      label_font_size: 6
+      max_label_count: 400
       tick_length: 3.0
       tick_color: darkgrey
       tick_opacity: 0.5
   date_format: "MM/DD"
+  name_text:
+    font_name: RobotoCondensed-Bold     # PIT callout event-name font
+  notes_text:
+    font_name: RobotoCondensed-Italic   # PIT callout notes font
   date_text:
     color: "#444444"
     font_name: Roboto-Regular

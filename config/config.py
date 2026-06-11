@@ -686,7 +686,9 @@ class CalendarConfig:
     # keys: unit, interval_days, label_format, show_labels, tick_length,
     # tick_color, tick_width, tick_opacity, tick_dasharray, label_color,
     # label_font_size/font_size, font, label_opacity, label_offset/label_gap,
-    # max_label_count.
+    # max_label_count, label_align, label_side. ``label_side`` pins the band's
+    # labels to a side of the axis ("above"/"below" horizontal, "left"/"right"
+    # vertical, or "primary"/"secondary"); default follows the callout side.
     pit_ticks: dict | list | None = None
 
     pit_show_today_line: bool = True

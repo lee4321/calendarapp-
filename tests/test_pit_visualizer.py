@@ -484,6 +484,90 @@ def test_pit_ticks_per_band_show_labels(tmp_path):
     assert "ec-label" not in svg
 
 
+def _tick_label_coords(svg: str, axis: str = "y") -> list[float]:
+    """Return the baseline coordinates of every tick label (``ec-label``).
+
+    ``axis="y"`` returns baseline Y values (for a horizontal axis),
+    ``axis="x"`` returns the first glyph's X (for a vertical axis). Only
+    tick labels carry the ``ec-label`` class; callouts use other classes.
+    """
+    idx = 1 if axis == "y" else 0
+    coords: list[float] = []
+    for grp in re.findall(r'class="ec-label">(.*?)</g>', svg):
+        m = re.findall(r"translate\(([-\d.]+),([-\d.]+)\)", grp)
+        if m:
+            coords.append(float(m[0][idx]))
+    return coords
+
+
+def test_pit_tick_label_side_horizontal(tmp_path):
+    """label_side pins horizontal-axis labels above vs below the axis."""
+    above = _render_pit_ticks(
+        tmp_path / "a", pit_ticks=[{"unit": "month", "label_side": "above"}]
+    )
+    below = _render_pit_ticks(
+        tmp_path / "b", pit_ticks=[{"unit": "month", "label_side": "below"}]
+    )
+    ya = _tick_label_coords(above, "y")
+    yb = _tick_label_coords(below, "y")
+    assert ya and yb
+    # SVG Y grows downward: "above" labels sit at smaller Y than "below".
+    assert max(ya) < min(yb)
+
+
+def test_pit_tick_label_side_vertical(tmp_path):
+    """label_side pins vertical-axis labels left vs right of the axis."""
+    right = _render_pit_ticks(
+        tmp_path / "r",
+        pit_direction="vertical",
+        pit_ticks=[{"unit": "month", "label_side": "right"}],
+    )
+    left = _render_pit_ticks(
+        tmp_path / "l",
+        pit_direction="vertical",
+        pit_ticks=[{"unit": "month", "label_side": "left"}],
+    )
+    xr = _tick_label_coords(right, "x")
+    xl = _tick_label_coords(left, "x")
+    assert xr and xl
+    assert min(xr) > max(xl)
+
+
+def test_pit_tick_label_side_overrides_callout_side(tmp_path):
+    """A band's label_side beats the callout-driven default placement."""
+    # pit_label_side="secondary" would default tick labels ABOVE the axis;
+    # the band forces them BELOW, so they must land at larger Y.
+    forced = _render_pit_ticks(
+        tmp_path / "f",
+        pit_label_side="secondary",
+        pit_ticks=[{"unit": "month", "label_side": "below"}],
+    )
+    default = _render_pit_ticks(
+        tmp_path / "d",
+        pit_label_side="secondary",
+        pit_ticks=[{"unit": "month"}],
+    )
+    yf = _tick_label_coords(forced, "y")
+    yd = _tick_label_coords(default, "y")
+    assert yf and yd
+    assert min(yf) > max(yd)
+
+
+def test_pit_tick_label_side_default_follows_callout(tmp_path):
+    """Without label_side, a band follows the callout side (unchanged)."""
+    explicit = _render_pit_ticks(
+        tmp_path / "e",
+        pit_label_side="secondary",
+        pit_ticks=[{"unit": "month", "label_side": "above"}],
+    )
+    implicit = _render_pit_ticks(
+        tmp_path / "i",
+        pit_label_side="secondary",
+        pit_ticks=[{"unit": "month"}],
+    )
+    assert _tick_label_coords(explicit, "y") == _tick_label_coords(implicit, "y")
+
+
 def test_pit_interval_label_format_uses_date(tmp_path):
     """interval unit + label_format yields dated labels (timeline parity)."""
     import arrow

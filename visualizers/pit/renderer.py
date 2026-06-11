@@ -461,10 +461,14 @@ class PITRenderer(BaseSVGRenderer):
         ``label_align`` (``center`` by default, ``start`` to align with the
         boundary tick, ``end`` with the next boundary).
 
-        Tick labels are placed on the opposite side of the axis from the
-        callout label boxes: for ``Side.SECONDARY`` the boxes occupy the
-        below/left side, so the labels flip to above/right. ``Side.PRIMARY``
-        and ``Side.BOTH`` keep the default below/left placement.
+        By default tick labels are placed on the opposite side of the axis
+        from the callout label boxes: for ``Side.SECONDARY`` the boxes occupy
+        the below/left side, so the labels flip to above/right; ``Side.PRIMARY``
+        and ``Side.BOTH`` keep the default below/left placement. A band may
+        override this with ``label_side`` to pin its labels to a specific side
+        of the axis regardless of the callout side: ``above``/``below`` for a
+        horizontal axis, ``left``/``right`` for a vertical one (``primary`` /
+        ``secondary`` work for either orientation).
 
         A single band reproduces the legacy single-tick behavior; multiple
         bands (via ``config.pit_ticks``) stack additional tick rows, each
@@ -552,6 +556,19 @@ class PITRenderer(BaseSVGRenderer):
             elif label_align in ("right", "bottom"):
                 label_align = "end"
 
+            # Which side of the axis this band's labels sit on. Defaults to
+            # the callout-driven side (``flip_labels``); a band can override:
+            #   horizontal axis: "above"/"top" vs "below"/"bottom"
+            #   vertical axis:   "right" vs "left"
+            #   "secondary"/"primary" work for either orientation.
+            _side = str(band.get("label_side", "")).strip().lower()
+            if _side in ("above", "top", "right", "secondary"):
+                band_flip = True
+            elif _side in ("below", "bottom", "left", "primary"):
+                band_flip = False
+            else:
+                band_flip = flip_labels
+
             for seg_start, seg_end, label in segments:
                 p0 = _pos(seg_start)
                 p1 = _pos(seg_end)
@@ -570,7 +587,7 @@ class PITRenderer(BaseSVGRenderer):
                             lx, l_anchor = ox + p1, "end"
                         else:
                             lx, l_anchor = ox + (p0 + p1) / 2.0, "middle"
-                        ly = oy - label_off if flip_labels else oy + label_off
+                        ly = oy - label_off if band_flip else oy + label_off
                         self._draw_text(
                             lx, ly, label,
                             label_font, label_size,
@@ -594,7 +611,7 @@ class PITRenderer(BaseSVGRenderer):
                         else:
                             lpos = (p0 + p1) / 2.0
                         ly = oy + lpos + label_size * 0.35
-                        if flip_labels:
+                        if band_flip:
                             lx, l_anchor = ox + label_off + 2.0, "start"
                         else:
                             lx, l_anchor = ox - label_off - 2.0, "end"

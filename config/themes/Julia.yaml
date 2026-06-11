@@ -240,17 +240,28 @@ pit:
   ticks:
     - unit: month
       label_format: MMM
+      label_side: below         # month names beneath the axis
       font: JuliaMono-Regular
       tick_length: 8.0
       tick_color: cadetblue
       label_color: cadetblue
       label_gap: 16.0
     - unit: week
-      show_labels: false
+      show_labels: true
+      label_format: DD
+      label_side: above         # day numbers above, clear of the month names
+      font: JuliaMono-Regular
+      label_color: lightsteelblue
+      label_font_size: 6
+      max_label_count: 400
       tick_length: 3.0
       tick_color: lightsteelblue
       tick_opacity: 0.5
   date_format: "MMM D"
+  name_text:
+    font_name: JuliaMono-Regular        # PIT callout event-name font
+  notes_text:
+    font_name: JuliaMono-RegularItalic  # PIT callout notes font
   date_text:
     color: slategrey
     font_name: JuliaMono-Regular

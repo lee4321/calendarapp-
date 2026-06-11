@@ -120,6 +120,25 @@ class TestThemeEngineCascading:
         assert config.weekly_name_text_font_name == "Roboto-Bold"
         assert config.weekly_notes_text_font_name == "Roboto-Bold"
 
+    def test_pit_name_notes_text_fonts_map_from_theme(self):
+        """pit.name_text/notes_text font_name + font_size reach config so the
+        PIT visualizer no longer has to borrow the timeline fonts."""
+        engine = self._make_engine(
+            {
+                "theme": {"name": "Test"},
+                "pit": {
+                    "name_text": {"font_name": "Offside-Regular", "font_size": 12},
+                    "notes_text": {"font_name": "JuliaMono-Regular", "font_size": 8},
+                },
+            }
+        )
+        config = create_calendar_config()
+        engine.apply(config)
+        assert config.pit_name_text_font_name == "Offside-Regular"
+        assert config.pit_name_text_font_size == 12
+        assert config.pit_notes_text_font_name == "JuliaMono-Regular"
+        assert config.pit_notes_text_font_size == 8
+
     def test_section_level_used_when_no_element_level(self):
         """header.font_family applies to header.left when left has no font_family."""
         engine = self._make_engine(

@@ -1968,6 +1968,13 @@ pit:
   leader_label_anchor: center   # center | start | end — where the leader
                                 # meets the label box (center is collision-free)
 
+  name_text:                  # callout event-name font
+    font_name: Offside-Regular
+    font_size: 11
+  notes_text:                 # callout notes font (shown when --notes is on)
+    font_name: Offside-Regular
+    font_size: 9
+
   date_text:
     color: "#444"
     font_name: Roboto-Regular
@@ -2043,6 +2050,25 @@ pit:
     density: 0.75             # 0–1; lower packs fewer labels per row (more rows)
 ```
 
+##### Callout text fonts (`name_text` / `notes_text`)
+
+`pit.name_text` and `pit.notes_text` set the fonts for the event name and notes
+inside each callout box. Resolution is **fallback-chained**, highest priority
+first:
+
+1. `pit.name_text.font_name` / `pit.notes_text.font_name` (this block).
+2. `timeline.name_text.font_name` / `timeline.notes_text.font_name` — PIT
+   borrows the timeline fonts when its own are unset.
+3. Built-in defaults `Roboto-Bold` (name) and `Roboto-Regular` (notes).
+
+> **Note:** before these keys existed, the PIT visualizer had *no* font hook of
+> its own, so it always fell to step 2 — changing the PIT event font meant
+> editing `timeline.name_text`, which also restyled the timeline. Set
+> `pit.name_text` / `pit.notes_text` to give PIT its own font independent of the
+> timeline. The font name must be one registered in `FONT_REGISTRY` (e.g. the
+> `Roboto*`, `RobotoCondensed*`, `FiraSans*`, `Offside-Regular`, `JuliaMono*`
+> families); unregistered names are ignored with a warning and fall through.
+
 #### Multiple tick bands
 
 By default the axis draws a single row of ticks driven by the scalar
@@ -2080,6 +2106,7 @@ the segment label within its span. Per-band keys:
 | `label_offset` | auto | Distance (points) of the label baseline from the axis. Overrides the auto offset; use to place a finer row's labels closer to the axis than a coarser row. |
 | `label_gap` | — | Alternative to `label_offset`: offset = `tick_length + label_gap`. |
 | `label_align` | `center` | Where the label sits along the axis relative to its segment: `center` (centered in the span between this tick and the next), `start` (anchored at this tick — the segment's start boundary, e.g. the first of the month), or `end` (anchored at the next boundary). `left`/`right` are accepted as synonyms for `start`/`end`. |
+| `label_side` | follows callout side | Which side of the axis this band's labels sit on, overriding the default (which is opposite the callout boxes). Horizontal axis: `above` / `below`; vertical axis: `left` / `right`. `primary` / `secondary` (or `top` / `bottom`) also work for either orientation. Lets different bands sit on opposite sides of the same axis. |
 
 Example — month names with a light weekly grid beneath them:
 
@@ -2102,12 +2129,28 @@ left of the axis instead of below it. `label_align` follows the axis: `start`
 aligns with the top boundary on a vertical axis and the left boundary on a
 horizontal one.
 
-Tick labels are always drawn on the **opposite side of the axis from the
+By default tick labels are drawn on the **opposite side of the axis from the
 callout label boxes**, so they never overlap the events. With
 `--label-side primary` the boxes sit above (horizontal) / right (vertical) and
 the tick labels go below / left; with `--label-side secondary` the boxes and
 tick labels swap sides. `--label-side both` keeps the default below / left
 placement for the tick labels.
+
+To pin a band's labels to a specific side regardless of the callout side — or
+to place two bands on **opposite** sides of the same axis — set `label_side`
+per band. Use `above` / `below` on a horizontal axis and `left` / `right` on a
+vertical one (`primary` / `secondary` work for either):
+
+```yaml
+pit:
+  ticks:
+    - unit: month
+      label_format: MMM YY
+      label_side: below        # month names beneath the axis
+    - unit: week
+      label_format: "W{week}"
+      label_side: above        # week numbers above the axis
+```
 
 By default labels are centered in their span. To make a month name line up
 with the tick marking the **first of the month** (rather than floating in the

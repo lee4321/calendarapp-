@@ -21,7 +21,7 @@ durations:
 watermark:
   text: null
   color: blue
-  font_family: RobotoCondensed-Light
+  font_family: Offside-Regular
   opacity: 0.5
   font_size: null
   resize_mode: fit
@@ -55,7 +55,7 @@ colors:
     d: grey
 weekly:
   day_names:
-    font_family: RobotoCondensed-LightItalic
+    font_family: Offside-Regular
     font_color: grey
   week_numbers:
     font_family: RobotoCondensed-Bold
@@ -68,16 +68,16 @@ weekly:
     stroke_dasharray: null
     fill_color: grey
     fill_opacity: 0.25
-    number_font: RobotoCondensed-Light
+    number_font: Offside-Regular
     number_color: white
     icon_color: red
     font_color: navy
     hash_pattern_opacity: 0.1
   name_text:
-    font_name: RobotoCondensed-Light
+    font_name: Offside-Regular
     font_color: navy
   notes_text:
-    font_name: RobotoCondensed-LightItalic
+    font_name: Offside-Regular
     font_color: darkgrey
   overflow:
     icon: warningtriangle
@@ -129,10 +129,10 @@ mini_details:
   header_font_size: null
   header_color: grey
   name_text:
-    font_name: RobotoCondensed-Light
+    font_name: Offside-Regular
     font_color: black
   notes_text:
-    font_name: RobotoCondensed-LightItalic
+    font_name: Offside-Regular
     font_color: darkgrey
   separator_stroke_dasharray: null
   headers:
@@ -242,27 +242,34 @@ pit:
     marker_start: "none"
     marker_start_size: 4.0
     marker_end: "arrow-head"
-    marker_end_size: 6.0
+    marker_end_size: 8
   tick_color: grey
-  tick_unit: month
+  # tick_unit: month
   # Two tick rows: bold month labels over a light weekly grid.
   ticks:
     - unit: month
       show_labels: true
       label_format: MMMM
       label_align: start        # align the month name with its first-of-month tick
+      label_side: below         # month names beneath the axis
       tick_length: 8.0
-      label_gap: 10.0
-    - unit: interval
-      interval_days: 7
-      prefix: "Week of "
-      label_format: MM/DD
+      label_gap: 16.0
+    - unit: week
+      week_start: 0
+      label_align: start
+      label_format: ddd DD
+      label_side: above         # weekday labels above, clear of the month names
       show_labels: true
       max_label_count: 400      # raise the default 60-label cap so daily
                                 # numbers still show over multi-month ranges
-      tick_length: 3.0
-      tick_opacity: 0.4
+      tick_length: 4.0
+      label_gap: 4.0
+      tick_opacity: 0.5
   date_format: "MMM D"
+  name_text:
+    font_name: Offside-Regular        # PIT callout event-name font
+  notes_text:
+    font_name: Offside-Regular        # PIT callout notes font
   date_text:
     color: grey
     font_name: FiraSansExtraCondensed-Regular
@@ -409,7 +416,7 @@ blockplan:
   lane_label_rotation: 0
   lane_split_ratio: 0.5
   event_show_date: true
-  event_date_font: RobotoCondensed-Light
+  event_date_font: Offside-Regular
   event_date_font_size: null
   event_date_color: grey
   event_date_format: M/D
@@ -420,7 +427,7 @@ blockplan:
   vertical_line_opacity: 0.85
   vertical_line_fill_color: none
   vertical_line_fill_opacity: 0.2
-  duration_date_font: RobotoCondensed-Light
+  duration_date_font: Offside-Regular
   duration_fill_opacity: 0.35
   duration_stroke_color: null
   duration_stroke_width: 1.0
@@ -429,7 +436,7 @@ blockplan:
   duration_bar_height: 8.0
   duration_icon_visible: true
   name_text:
-    font_name: RobotoCondensed-Light
+    font_name: Offside-Regular
     font_color: navy
   duration_show_start_date: true
   duration_show_end_date: true
@@ -498,7 +505,7 @@ style_rules:
     define: text
     as: heading
     style:
-      font: RobotoCondensed-Light
+      font: Offside-Regular
       size: 10
       color: grey
   - name: text:heading — papersize override
@@ -522,21 +529,21 @@ style_rules:
     define: text
     as: body
     style:
-      font: RobotoCondensed-Light
+      font: Offside-Regular
       size: 8
       color: navy
   - name: define text:body_secondary
     define: text
     as: body_secondary
     style:
-      font: RobotoCondensed-LightItalic
+      font: Offside-Regular
       size: 7
       color: darkgrey
   - name: define text:label
     define: text
     as: label
     style:
-      font: RobotoCondensed-LightItalic
+      font: Offside-Regular
       size: 7
       color: grey
   - name: define text:label_bold
@@ -550,14 +557,14 @@ style_rules:
     define: text
     as: caption
     style:
-      font: RobotoCondensed-Light
+      font: Offside-Regular
       size: 6
       color: grey
   - name: define text:day_number
     define: text
     as: day_number
     style:
-      font: RobotoCondensed-Light
+      font: Offside-Regular
       size: 10
       color: white
   - name: define text:month_title

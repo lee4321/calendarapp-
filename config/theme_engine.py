@@ -445,6 +445,12 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("pit", "event_palette"): "theme_pit_event_palette",
     ("pit", "milestone_palette"): "theme_pit_milestone_palette",
     ("pit", "label_palette"): "theme_pit_label_palette",
+    # Callout label text fonts. Without these the PIT renderer falls back to
+    # the timeline name_text/notes_text fonts (then hardcoded Roboto-*).
+    ("pit.name_text", "font_name"): "pit_name_text_font_name",
+    ("pit.name_text", "font_size"): "pit_name_text_font_size",
+    ("pit.notes_text", "font_name"): "pit_notes_text_font_name",
+    ("pit.notes_text", "font_size"): "pit_notes_text_font_size",
     # labella label-placement tuning. layer_gap is the axis→label gap,
     # i.e. the visible leader length (also sets row-to-row spacing with
     # node_height). Mirrors the timeline.labella block.

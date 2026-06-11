@@ -236,18 +236,24 @@ pit:
   # Two tick rows: fiscal quarters labeled above monthly ticks.
   ticks:
     - unit: fiscal_quarter
+      label_side: below         # quarter labels beneath the axis
       tick_length: 9.0
       tick_color: steelblue
       label_color: steelblue
       label_gap: 16.0
     - unit: month
       label_format: MMM
+      label_side: above         # month names above, clear of the quarter labels
       tick_length: 4.0
       tick_color: lightsteelblue
       tick_opacity: 0.6
       label_font_size: 7
       label_color: slategrey
   date_format: "MMM D"
+  name_text:
+    font_name: RobotoCondensed-Regular  # PIT callout event-name font
+  notes_text:
+    font_name: RobotoCondensed-Italic   # PIT callout notes font
   date_text:
     color: slategrey
     font_name: Roboto-Regular
