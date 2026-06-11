@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.09.0"
+__version__ = "26.06.11.0"
 
 import argparse
 import logging
@@ -3017,6 +3017,8 @@ def _generate_iconsheet_svg(
     import math
     import re
 
+    from renderers.svg_base import BaseSVGRenderer
+
     MARGIN = 40
     TITLE_H = 55
     ICON_SIZE = 24  # cell size in the sheet's coordinate space
@@ -3050,7 +3052,8 @@ def _generate_iconsheet_svg(
         r'viewBox=["\'][\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)["\']', re.IGNORECASE
     )
     _preamble_re = re.compile(
-        r"^(?:<\?xml\b[^?]*\?>|<!DOCTYPE\b[^>]*>|\s)*", re.IGNORECASE | re.DOTALL
+        r"^(?:<\?xml\b[^?]*\?>|<!DOCTYPE\b[^>]*>|<!--.*?-->|\s)*",
+        re.IGNORECASE | re.DOTALL,
     )
 
     for i, row in enumerate(icons):
@@ -3097,6 +3100,10 @@ def _generate_iconsheet_svg(
             svg_colored,
             count=1,
         )
+
+        # Strip comments, collapse whitespace, and truncate long fractional
+        # coordinates so the sheet stays small (icon path data dominates size).
+        embedded = BaseSVGRenderer._minify_svg_markup(embedded)
 
         lines.append(f"  {embedded}")
 
@@ -3148,6 +3155,7 @@ def _generate_patternsheet_svg(
     import math
     import re
 
+    from renderers.svg_base import BaseSVGRenderer
     from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
     MARGIN = 40
@@ -3195,6 +3203,7 @@ def _generate_patternsheet_svg(
                 tile_w *= scale
                 tile_h *= scale
 
+            inner = BaseSVGRenderer._minify_svg_markup(inner)
             defs.append(
                 f'    <pattern id="{pat_id}" x="0" y="0"'
                 f' width="{tile_w}" height="{tile_h}"'
