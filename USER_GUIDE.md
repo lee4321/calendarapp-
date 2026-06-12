@@ -85,9 +85,11 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 |---|---|---|---|---|
 | `--WBS` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Stroke/glyph color (icons & patterns default `#333333`; fontsheet default `#222222`) | `iconsheet`: default `#333333`; `patternsheet`: default `#333333`; `fontsheet`: default `#222222` |
+| `--columns`, `-cols` | `N` | `iconsheet` | Number of icon columns per page (requires `--paginate`) | `iconsheet`: default `8` |
 | `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `excelheader`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. `US`) or a comma-separated list (e.g. `US,CA,GB`). If omitted on render commands, all holidays from the government table are included; `exportdata` defaults to `US,CA`. |  |
 | `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
 | `--duration-fill-opacity`, `-dfo` | `0.0-1.0` | `timeline` | Fill opacity for duration bar rectangles (default: 0.25). |  |
+| `--embed-data` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed the source event data (CSV) inside the SVG metadata so the rendered file carries its own data provenance. | default `False` |
 | `--empty`, `-e` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) | `blockplan`: default `False` |
 | `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter items by name substring (case-insensitive) |  |
 | `--fullset` |  | `fontsheet` | Show every glyph in the font instead of the three fixed sample rows | `fontsheet`: default `False` |
@@ -120,11 +122,14 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
 | `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. | |
 | `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
+| `--paginate` |  | `iconsheet` | Split icons across multiple printable SVG pages instead of one large sheet; enables `--columns`/`--rows`. | `iconsheet`: default `False` |
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
 | `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
 | `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
+| `--rows`, `-rows` | `N` | `iconsheet` | Number of icon rows per page (requires `--paginate`) | `iconsheet`: default `10` |
 | `--shade`, `-sh` |  | `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
 | `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
+| `--sized` | `N` | `iconsheet` | Icon render box size in points (one integer sets width = height; label/spacing gaps unchanged). Requires `--paginate`. | `iconsheet`: default `24` |
 | `--status` | `LIST` | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include. Allowed values: `active`, `draft`, `cancelled`, `archived`, `on-hold`. Use `all` for no filter. Default: `active`. See [Event Status](#event-status) for details. | default `active` |
 | `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
@@ -320,6 +325,8 @@ No positional arguments. Use `--filter` to narrow the rendered grid by pattern n
 ### `iconsheet`
 
 No positional arguments. Use `--filter` to narrow the rendered grid by icon name and `--color` to set the stroke color (default `#333333`). Run `ecalendar.py icons` to discover icon names.
+
+By default a single SVG containing every (name-sorted) icon is produced, with the sheet title as its header. Pass `--paginate` to instead split the icons across multiple printable "pages": `--columns`/`-cols` sets the icons per row (default `8`) and `--rows`/`-rows` sets the rows per page (default `10`), giving 80 icons per page by default. `--sized N` sets the icon render box to `N×N` points (default `24`); the label and spacing gaps are unchanged so larger icons simply get larger cells. `--columns`/`--rows`/`--sized` are only valid together with `--paginate`. When paginating, a `_pNN` suffix is inserted before the file extension (e.g. `iconsheet_p01.svg`, `iconsheet_p02.svg`), and each page header shows the first and last icon name on that page joined by `to` — for example `10baseT  to  C-squircle` (the icon count is omitted on paginated pages, since icon names can themselves contain dashes).
 
 ### `colorsheet`
 
