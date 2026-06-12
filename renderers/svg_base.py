@@ -736,51 +736,11 @@ class BaseSVGRenderer(ABC):
             return None
         return self._icon_svg_map.get(key)
 
-    # Matches a numeric token that has a fractional part (and optional
-    # exponent).  Requiring the decimal point keeps integers — and digit runs
-    # inside hex colours like ``#000000`` — untouched, so only long fractional
-    # coordinates are shortened.
-    _SVG_FLOAT_RE = re.compile(r"-?\d*\.\d+(?:[eE][-+]?\d+)?")
     _SVG_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
     @staticmethod
-    def _truncate_svg_numbers(markup: str, ndigits: int = 2) -> str:
-        """Round fractional numbers in SVG markup to ``ndigits`` decimals.
-
-        Trailing zeros, a trailing ``.``, and a redundant leading ``0`` are all
-        dropped, so ``1.00`` → ``1``, ``0.150`` → ``.15`` and ``-0.5`` → ``-.5``.
-        Integers and hex colours are left alone because the pattern only matches
-        tokens containing a decimal point.
-
-        Path data packs numbers using the decimal point as a delimiter
-        (``1.6.865`` == ``1.6`` then ``.865``).  When a packed number rounds to a
-        bare integer it loses that delimiter, which would merge it with the
-        following coordinate (``1.001.5`` → ``1.5``).  To stay correct, a single
-        space is reinserted whenever an integer result abuts a following digit or
-        ``.``.
-        """
-
-        def _shorten(m: "re.Match[str]") -> str:
-            v = round(float(m.group()), ndigits)
-            if v == 0:
-                s = "0"
-            else:
-                s = f"{v:.{ndigits}f}".rstrip("0").rstrip(".")
-                if s.startswith("0."):
-                    s = s[1:]
-                elif s.startswith("-0."):
-                    s = "-" + s[2:]
-            if "." not in s:
-                nxt = m.string[m.end() : m.end() + 1]
-                if nxt == "." or nxt.isdigit():
-                    s += " "
-            return s
-
-        return BaseSVGRenderer._SVG_FLOAT_RE.sub(_shorten, markup)
-
-    @staticmethod
     def _minify_svg_markup(markup: str) -> str:
-        """Strip comments, collapse whitespace, and truncate fractional numbers.
+        """Strip comments and collapse whitespace in SVG markup.
 
         Used for embedded icon/pattern fragments so all ``ecalendar.py`` SVG
         output stays as small as possible.  Whitespace between tags is removed
@@ -790,7 +750,6 @@ class BaseSVGRenderer(ABC):
         markup = BaseSVGRenderer._SVG_COMMENT_RE.sub("", markup)
         markup = re.sub(r">\s+<", "><", markup)
         markup = re.sub(r"\s+", " ", markup)
-        markup = BaseSVGRenderer._truncate_svg_numbers(markup)
         return markup.strip()
 
     @staticmethod
