@@ -3,13 +3,13 @@ theme:
   version: '2.0'
   description: The original CalendarApp styling — unified theme model
 base:
-  font_family: FiraSansExtraCondensed-Regular
+  font_family: Offside-Regular
   default_missing_icon: applet-closed
 header:
-  font_family: FiraSansExtraCondensed-Regular
+  font_family: Offside-Regular
   font_color: grey
 footer:
-  font_family: FiraSansExtraCondensed-Regular
+  font_family: Offside-Regular
   font_color: grey
 events:
   icon_color: navy
@@ -58,7 +58,7 @@ weekly:
     font_family: Offside-Regular
     font_color: grey
   week_numbers:
-    font_family: RobotoCondensed-Bold
+    font_family: Offside-Regular
     font_color: yellow
     label_format: W{num:02d}
   day_box:
@@ -86,7 +86,7 @@ mini_calendar:
   cell_font: JuliaMono-Regular
   cell_bold_font: Roboto-Bold
   cell_font_size: null
-  title_font: RobotoCondensed-Bold
+  title_font: Offside-Regular
   title_font_size: null
   title_format: MMMM YYYY
   title_color: navy
@@ -122,10 +122,10 @@ mini_calendar:
   day_box: null
 mini_details:
   title_text: Event Details
-  title_font: RobotoCondensed-Bold
+  title_font: Offside-Regular
   title_font_size: null
   title_color: navy
-  header_font: RobotoCondensed-Bold
+  header_font: Offside-Regular
   header_font_size: null
   header_color: grey
   name_text:
@@ -158,6 +158,31 @@ text_mini:
   nonworkday_symbols: null
   duration_symbols: null
   duration_fill: null
+candybar:
+  show_week_numbers: true
+  cell_width: 0            # 0 = square cells (width == row height)
+  weeknum_col_ratio: 0.6   # week-number column width / day-cell width
+  month_col_ratio: 1.6     # month-box column width / day-cell width
+  grid_lines: true
+  grid_line_color: lightgrey
+  day_color: black
+  weekend_fill: null        # Sat/Sun day-cell tint (null = off)
+  weekend_opacity: 0.15
+  month_shading: false       # alternate day-cell tint per month
+  month_shade_opacity: 0.12
+  month_label_side: right
+  month_format: MMM
+  month:
+    font: Offside-Regular
+    color: navy
+    opacity: 1.0
+    bold: false
+    anchor: middle
+    rotation: 0
+  month_box:
+    fill: null
+    stroke: lightgrey
+    opacity: 1.0
 timeline:
   background_color: powderblue
   axis_color: lightgrey
@@ -214,7 +239,7 @@ timeline:
     font_name: Roboto-Bold
     font_color: deepskyblue
   notes_text:
-    font_name: RobotoCondensed-Bold
+    font_name: Offside-Regular
     font_color: deepskyblue
   date:
     font_family: Roboto-Bold
@@ -257,7 +282,7 @@ pit:
     - unit: week
       week_start: 0
       label_align: start
-      label_format: ddd DD
+      label_format: M/D
       label_side: above         # weekday labels above, clear of the month names
       show_labels: true
       max_label_count: 400      # raise the default 60-label cap so daily
@@ -265,14 +290,14 @@ pit:
       tick_length: 4.0
       label_gap: 4.0
       tick_opacity: 0.5
-  date_format: "MMM D"
+  date_format: "ddd MMM D"
   name_text:
     font_name: Offside-Regular        # PIT callout event-name font
   notes_text:
     font_name: Offside-Regular        # PIT callout notes font
   date_text:
     color: grey
-    font_name: FiraSansExtraCondensed-Regular
+    font_name: Offside-Regular
     font_size: 9
     offset: 6.0
   # Optional DB icon names drawn INSIDE the callout label box,
@@ -389,13 +414,13 @@ blockplan:
   show_unmatched_lane: true
   unmatched_lane_name: Other
   lane_match_mode: first
-  header_font: RobotoCondensed-Bold
+  header_font: Offside-Regular
   header_font_size: null
   header_label_color: black
   header_label_opacity: 1.0
   header_label_align_h: right
   header_heading_fill_color: none
-  band_font: RobotoCondensed-Bold
+  band_font: Offside-Regular
   band_font_size: null
   timeband_label_color: black
   timeband_label_opacity: 1.0
@@ -408,7 +433,7 @@ blockplan:
   timeband_fill_palette: accent
   timeband_fill_opacity: 1.0
   lane_heading_fill_color: none
-  lane_label_font: RobotoCondensed-Bold
+  lane_label_font: Offside-Regular
   lane_label_font_size: null
   lane_label_color: black
   lane_label_align_h: right
@@ -550,7 +575,7 @@ style_rules:
     define: text
     as: label_bold
     style:
-      font: RobotoCondensed-Bold
+      font: Offside-Regular
       size: 7
       color: yellow
   - name: define text:caption
@@ -571,7 +596,7 @@ style_rules:
     define: text
     as: month_title
     style:
-      font: RobotoCondensed-Bold
+      font: Offside-Regular
       size: 8
       color: navy
   - name: define box:default

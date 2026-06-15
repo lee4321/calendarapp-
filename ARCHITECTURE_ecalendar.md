@@ -72,7 +72,7 @@ __main__
         │     └── _resolve_palette_overrides()
         │               └── _resolve_single_palette_ref()
         │
-        └── [weekly / mini / mini-icon / text-mini / timeline / blockplan]
+        └── [weekly / mini / mini-icon / candybar / text-mini / timeline / blockplan]
               ├── _open_calendar_db()
               ├── _apply_args_to_config()
               ├── _apply_text_options()
@@ -188,7 +188,7 @@ all subcommands and their option groups.
 
 | Category | Subcommands |
 |---|---|
-| Calendar visualizers | `weekly`, `mini`, `mini-icon`, `text-mini`, `timeline`, `blockplan` |
+| Calendar visualizers | `weekly`, `mini`, `mini-icon`, `candybar`, `text-mini`, `timeline`, `blockplan` |
 | Inspection / listing | `themes`, `fonts`, `fontsheet`, `papersizes`, `patterns`, `icons`, `iconsheet`, `colors`, `colorsheet`, `palettes`, `palette` |
 | Output utilities | `excelheader` |
 | Help | `help` |
@@ -359,6 +359,7 @@ enumerated options that are too dynamic to encode in the static help strings
 - Fiscal calendar types — `weekly` only
 - Week number modes — `weekly` only
 - Mini calendar options — `mini`, `mini-icon`, `text-mini`
+- Candybar options — `candybar` (vertical year-strip; reuses the mini day-cell rule engine, adds merged month boxes with rotatable labels)
 - Today-line direction — `timeline` only
 - Icons guidance — all calendar views
 - Template variables — all calendar views

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.12.0"
+__version__ = "26.06.15.0"
 
 import argparse
 import logging
@@ -283,6 +283,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     weekly = sub.add_parser("weekly", help="Generate a SVG containing weekly calendar")
     mini = sub.add_parser("mini", help="Generate a SVG mini calendar")
     mini_icon = sub.add_parser("mini-icon", help="Generate a mini calendar with icons for day numbers")
+    candybar = sub.add_parser("candybar", help="Generate a SVG vertical year-strip (one row per ISO week)")
     text_mini = sub.add_parser("text-mini", help="Generate a text only mini calendar")
     timeline = sub.add_parser("timeline", help="Generate a SVG timeline")
     pit = sub.add_parser(
@@ -345,6 +346,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "weekly",
             "mini",
             "mini-icon",
+            "candybar",
             "text-mini",
             "timeline",
             "pit",
@@ -374,7 +376,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # If a flag belongs to every view, add it in these loops rather than
     # copy-pasting per-subcommand definitions.
     # Positional arguments for calendar views
-    for view_parser in (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan, excelheader, excelblockplan, exportdata):
+    for view_parser in (weekly, mini, mini_icon, candybar, text_mini, timeline, pit, blockplan, compactplan, excelheader, excelblockplan, exportdata):
         view_parser.add_argument(
             "begin",
             type=str,
@@ -810,6 +812,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         weekly,
         mini,
         mini_icon,
+        candybar,
         text_mini,
         timeline,
         pit,
@@ -839,7 +842,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         )
 
     # SVG-producing views (text-mini is excluded — it produces plain text, not SVG)
-    _svg_views = (weekly, mini, mini_icon, timeline, pit, blockplan, compactplan)
+    _svg_views = (weekly, mini, mini_icon, candybar, timeline, pit, blockplan, compactplan)
 
     # Output options (SVG views: all options; text-mini: outputfile only)
     for view_parser in _svg_views:
@@ -1256,6 +1259,68 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
 
+    # Candybar-specific options (vertical year-strip)
+    candybar_group = candybar.add_argument_group("Candybar Options")
+    candybar_group.add_argument(
+        "--candybar-row-height",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help="Fixed week-row height in points (default: 0 = auto-fit to page)",
+    )
+    candybar_group.add_argument(
+        "--candybar-cell-width",
+        type=float,
+        default=None,
+        metavar="POINTS",
+        help="Fixed day-cell width in points (default: 0 = square, width == row height)",
+    )
+    candybar_group.add_argument(
+        "--candybar-max-rows-per-page",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Split into side-by-side strips after N week rows (0 = single strip)",
+    )
+    candybar_group.add_argument(
+        "--candybar-suppress-weekends",
+        action="store_true",
+        default=None,
+        help="Drop Sat/Sun columns (default: weekends are shown)",
+    )
+    candybar_group.add_argument(
+        "--candybar-no-week-numbers",
+        action="store_true",
+        help="Hide the week-number column (shown by default)",
+    )
+    candybar_group.add_argument(
+        "--candybar-month-side",
+        type=str,
+        default=None,
+        choices=["left", "right"],
+        help="Side for the merged month-name box (default: right)",
+    )
+    candybar_group.add_argument(
+        "--candybar-month-rotation",
+        type=float,
+        default=None,
+        metavar="DEGREES",
+        help="Rotate the month-name label (e.g. -90 for vertical, reading up)",
+    )
+    candybar_group.add_argument(
+        "--candybar-weekend-fill",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help="Shade Sat/Sun day cells with this color (default: no weekend shading)",
+    )
+    candybar_group.add_argument(
+        "--candybar-month-shading",
+        action="store_true",
+        default=None,
+        help="Tint day cells per month (alternating bands; theme can set colors)",
+    )
+
     # Week number options (weekly, mini, mini-icon, text-mini)
     for view_parser in (weekly, mini, mini_icon, text_mini):
         wn_group = view_parser.add_argument_group("Week Number Options")
@@ -1533,7 +1598,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     )
 
     # Fiscal calendar options — all calendar views
-    _fiscal_views = (weekly, mini, mini_icon, text_mini, timeline, pit, blockplan, compactplan)
+    _fiscal_views = (weekly, mini, mini_icon, candybar, text_mini, timeline, pit, blockplan, compactplan)
     for _vp in _fiscal_views:
         _fg = _vp.add_argument_group("Fiscal Calendar Options")
         _fg.add_argument(
@@ -1564,7 +1629,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         )
 
     # --fiscal-colors: day-box period fill (weekly and mini)
-    for _vp in (weekly, mini, mini_icon):
+    for _vp in (weekly, mini, mini_icon, candybar):
         _vp._option_string_actions.get("--fiscal") and None  # guard: group already added above
         _fiscal_color_group = next(
             g for g in _vp._action_groups if g.title == "Fiscal Calendar Options"
@@ -1595,6 +1660,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         weekly,
         mini,
         mini_icon,
+        candybar,
         text_mini,
         timeline,
         pit,
@@ -1754,8 +1820,10 @@ def _apply_args_to_config(
     config.include_overflow = getattr(args, "overflow", False)
 
     # Shrink SVG to content bounding box.
-    # compactplan always shrinks by default; other views require --shrink.
-    shrink_default = getattr(args, "command", None) == "compactplan"
+    # compactplan and candybar always shrink by default (candybar is a narrow
+    # centered strip that otherwise leaves large blank margins); other views
+    # require --shrink.
+    shrink_default = getattr(args, "command", None) in ("compactplan", "candybar")
     config.shrink_to_content = getattr(args, "shrink", False) or shrink_default
     config.embed_data = getattr(args, "embed_data", False)
 
@@ -1810,6 +1878,26 @@ def _apply_args_to_config(
         config.include_mini_details = True
     if getattr(args, "mini_icon_set", None) is not None:
         config.mini_icon_set = args.mini_icon_set
+
+    # Candybar options
+    if getattr(args, "candybar_row_height", None) is not None:
+        config.candybar_row_height = args.candybar_row_height
+    if getattr(args, "candybar_cell_width", None) is not None:
+        config.candybar_cell_width = args.candybar_cell_width
+    if getattr(args, "candybar_max_rows_per_page", None) is not None:
+        config.candybar_max_rows_per_page = args.candybar_max_rows_per_page
+    if getattr(args, "candybar_suppress_weekends", None) is not None:
+        config.candybar_suppress_weekends = args.candybar_suppress_weekends
+    if getattr(args, "candybar_no_week_numbers", False):
+        config.candybar_show_week_numbers = False
+    if getattr(args, "candybar_month_side", None) is not None:
+        config.candybar_month_label_side = args.candybar_month_side
+    if getattr(args, "candybar_month_rotation", None) is not None:
+        config.candybar_month_rotation = args.candybar_month_rotation
+    if getattr(args, "candybar_weekend_fill", None) is not None:
+        config.candybar_weekend_fill = args.candybar_weekend_fill
+    if getattr(args, "candybar_month_shading", None):
+        config.candybar_month_shading = True
 
     # Timeline today-line options
     if getattr(args, "today_line_length", None) is not None:
@@ -2090,9 +2178,9 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         return
 
     # Sections that apply to specific subcommands
-    calendar_subcommands = {"weekly", "mini", "mini-icon", "text-mini", "timeline", "blockplan", "compactplan"}
+    calendar_subcommands = {"weekly", "mini", "mini-icon", "candybar", "text-mini", "timeline", "blockplan", "compactplan"}
     # SVG-producing views only (text-mini produces plain text, not SVG)
-    svg_calendar_subcommands = {"weekly", "mini", "mini-icon", "timeline", "blockplan", "compactplan"}
+    svg_calendar_subcommands = {"weekly", "mini", "mini-icon", "candybar", "timeline", "blockplan", "compactplan"}
     weekly_only = {"weekly"}
     mini_subcommands = {"mini", "mini-icon", "text-mini"}
     timeline_only = {"timeline"}
@@ -3493,7 +3581,7 @@ def run(argv: list[str] | None = None) -> int:
     # the subcommand so each visualizer produces a recognizable file
     # (e.g. weekly202605251040.svg, blockplan202605251040.svg).
     _svg_visualizer_commands = {
-        "weekly", "mini", "mini-icon", "timeline", "pit", "blockplan", "compactplan",
+        "weekly", "mini", "mini-icon", "candybar", "timeline", "pit", "blockplan", "compactplan",
     }
     if (
         getattr(args, "outputfile", None) == default_output

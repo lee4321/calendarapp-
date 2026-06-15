@@ -44,6 +44,7 @@ SUBCOMMAND_META: dict[str, dict[str, object]] = {
     "weekly":      {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "mini":        {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "mini-icon":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
+    "candybar":    {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "text-mini":   {"ext": ".txt",  "accepts_theme": False, "output_dir": "output"},
     "timeline":    {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "blockplan":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},

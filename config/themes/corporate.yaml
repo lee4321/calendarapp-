@@ -165,6 +165,32 @@ text_mini:
   nonworkday_symbols: null
   duration_symbols: null
   duration_fill: null
+candybar:
+  show_week_numbers: true
+  cell_width: 0            # 0 = square cells (width == row height)
+  weeknum_col_ratio: 0.6   # week-number column width / day-cell width
+  month_col_ratio: 1.6     # month-box column width / day-cell width
+  grid_lines: true
+  grid_line_color: lightsteelblue
+  day_color: black
+  weekend_fill: aliceblue        # Sat/Sun day-cell tint (null = off)
+  weekend_opacity: 0.15
+  month_shading: true       # alternate day-cell tint per month
+  month_shade_colors: ["none", "aliceblue"]
+  month_shade_opacity: 0.12
+  month_label_side: right
+  month_format: MMM
+  month:
+    font: RobotoCondensed-Bold
+    color: steelblue
+    opacity: 1.0
+    bold: false
+    anchor: middle
+    rotation: 0
+  month_box:
+    fill: aliceblue
+    stroke: lightsteelblue
+    opacity: 1.0
 timeline:
   background_color: midnightblue
   axis_color: aliceblue

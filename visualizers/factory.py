@@ -29,6 +29,7 @@ class VisualizerFactory:
             from visualizers.weekly.visualizer import WeeklyCalendarVisualizer
             from visualizers.mini.visualizer import MiniCalendarVisualizer
             from visualizers.mini_icon.visualizer import MiniIconCalendarVisualizer
+            from visualizers.candybar.visualizer import CandybarVisualizer
             from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
             from visualizers.timeline.visualizer import TimelineVisualizer
             from visualizers.blockplan.visualizer import BlockPlanVisualizer
@@ -39,6 +40,7 @@ class VisualizerFactory:
                 "weekly": WeeklyCalendarVisualizer,
                 "mini": MiniCalendarVisualizer,
                 "mini-icon": MiniIconCalendarVisualizer,
+                "candybar": CandybarVisualizer,
                 "text-mini": TextMiniCalendarVisualizer,
                 "timeline": TimelineVisualizer,
                 "blockplan": BlockPlanVisualizer,

@@ -1,0 +1,174 @@
+# Changelog
+
+Full git history (168 commits, oldest first reads bottom-up):
+
+- 2026-06-15 candybar: new vertical year-strip visualizer (one row per ISO week, week-number column, day cells, merged month boxes with rotatable labels; reuses the mini/mini-icon decoration + icon rule engine; supports weekend suppression and multi-strip pagination)
+- 2026-05-25 56b91618 excelheader: skip timeband segments outside the visible day range
+- 2026-05-25 91860a74 ecalendar: validate --begin/--end dates up front with friendly error
+- 2026-05-25 ae242895 ecalendar: name default outputs after the subcommand
+- 2026-05-25 86ed874b themes: move ec-* element bindings into a built-in catalog
+- 2026-05-22 5a169982 timeband: expose icon unit to all timeband consumers
+- 2026-05-21 9f7f97c4 excelblockplan: skip freeze pane at build time instead of clearing it
+- 2026-05-21 d60fddf0 excelblockplan: do not freeze panes
+- 2026-05-21 02c72b7f excelblockplan: right-align timeband headings so labels sit in column W
+- 2026-05-21 d569fd30 help: add excelheader and excelblockplan to help subcommand choices
+- 2026-05-21 e69b0c95 excelblockplan: new visualizer + share A-W layout with excelheader
+- 2026-05-21 9648037f docs: document import_specialdays usage in USER_GUIDE
+- 2026-05-21 49206963 specialdays: add import_specialdays.py with import_history tracking
+- 2026-05-21 7d99e8df events: wire up status column (filter, CLI, render, docs)
+- 2026-05-21 ddd829ee events: import/export full schema (status + early/late dates)
+- 2026-05-21 58a9c05c db: rename events.marks/specialdays.marks → tags
+- 2026-05-19 97784735 icons: honor theme size; add icon:continuation token
+- 2026-05-19 c9b92f48 weekly: align duration icon midline with name text
+- 2026-05-15 78bfbb74 fonts: add 28 missing TTFs referenced by themes
+- 2026-05-15 7c950042 TJXweekly: fix week_numbers font_size override; tweak colors and weekend rule
+- 2026-05-15 c572bcf7 weekly: fix overflow icon + reorganize day-number row layout
+- 2026-05-15 3f0a9ed6 Merge branch 'unified-style-rules'
+- 2026-05-15 d4c5f6d5 phase 4: final validation — full suite passes; design doc complete
+- 2026-05-15 581a4db8 phase 3: delete decompiler bridge; rewrite parsers to consume UnifiedTheme
+- 2026-05-15 6b01542d phase 3 partial: strip dead AxisStyle; document decompiler-removal blocker
+- 2026-05-15 7da45f83 phase 2 wave 3: strip tk.get(size) fallback chain in renderers
+- 2026-05-14 0ee09ccd phase 2 wave 2: bootstrap stub theme; call injector from setfontsizes
+- 2026-05-14 c1c4f171 phase 2 wave 2: inject heuristic size tokens after theme apply
+- 2026-05-14 98bc7d7a docs: mark Phase 2 wave 1 done; document wave 2 design
+- 2026-05-14 a79e9705 phase 2: strip dead weekly_/mini_/day_box_ fields
+- 2026-05-14 b577f307 phase 2: strip dead timeline_* fields
+- 2026-05-14 30d8bef3 phase 2: strip dead blockplan_* fields
+- 2026-05-14 e9862c78 phase 2: strip dead compactplan_* fields
+- 2026-05-14 63034253 phase 2: strip dead excelheader_* fields
+- 2026-05-14 7f55ef84 phase 2: strip dead theme_mini_*_color fields
+- 2026-05-14 1949c36e excelheader: source styling tokens from UnifiedTheme
+- 2026-05-14 ec613f70 phase 1.5: wire icon halo / box: token rendering
+- 2026-05-14 1b9ff7a0 timeline: source styling tokens from UnifiedTheme
+- 2026-05-14 baf13636 svg_base: source overflow-table styling tokens from UnifiedTheme
+- 2026-05-14 dadb3fb4 blockplan: source styling tokens from UnifiedTheme
+- 2026-05-14 c98d75fb weekly: source styling tokens from UnifiedTheme
+- 2026-05-14 47db833b theme_engine: synthesize box:day rules from colors.federal_holiday/company
+- 2026-05-14 8d1ea5eb setfontsizes: consult unified-theme tokens before page-height heuristic
+- 2026-05-14 d081ee17 TJX themes: palette refresh and per-theme tweaks
+- 2026-05-14 5a834d74 compactplan: add holiday list column, notes in legend, and ec-separator wiring
+- 2026-05-14 31f221a5 blockplan: honor box:band style rules and theme-configurable date inset
+- 2026-05-14 d6735faa rule_engine: accept unified-schema fill/stroke/dasharray keys
+- 2026-05-11 e568b705 db_access: case-insensitive palette name lookup
+- 2026-05-11 6221ce7b compactplan: legend swatch survives the .ec-legend-swatch CSS rule
+- 2026-05-11 a03801a7 compactplan: legend swatch + icon contrast match the actual bars
+- 2026-05-11 080c08bb docs: capture icon-halo wiring gap in cutover punch list
+- 2026-05-11 0cd76abc migrate_theme: drop unified-runtime-superseded legacy keys
+- 2026-05-11 5dce0a66 TJXcompactplan: comment out fields superseded by style_rules
+- 2026-05-11 fba5fa48 theme_engine: resolve band placements against top-level time_bands
+- 2026-05-11 6c5c009c theme_engine: recognize time_bands as a valid top-level section
+- 2026-05-11 a044a506 mini: honor theme default_missing_icon for unresolved day-cell icons
+- 2026-05-11 f2c89498 mini: place section separator below "Holidays & Special Days" heading
+- 2026-05-11 f2368b0b mini: list holidays + special days on the details page
+- 2026-05-11 b5272031 mini: draw day-cell backgrounds before duration bars
+- 2026-05-11 3e5bc8e5 docs: update RUNTIME_CUTOVER_TODO with status, pattern, and open issues
+- 2026-05-11 8f0ce7b5 mini: source styling tokens from UnifiedTheme
+- 2026-05-11 6a2f4244 svg_base: hoist UnifiedTheme token helper to BaseSVGRenderer
+- 2026-05-11 a416c0a9 mini-icon: read styling tokens from UnifiedTheme
+- 2026-05-11 02ad87fe compactplan: source style_rules from UnifiedTheme
+- 2026-05-10 30bbe59d docs: add RUNTIME_CUTOVER_TODO.md — punch list for remaining work
+- 2026-05-10 75b13e23 config: wire UnifiedTheme onto CalendarConfig.theme via ThemeEngine
+- 2026-05-10 26ce3543 docs: rewrite USER_GUIDE.md for the unified style_rules schema
+- 2026-05-10 d6b01b79 tests: add render completeness probe + fix SAMPLE.yaml font references
+- 2026-05-10 780b64c4 config: add style_rules → legacy-sections runtime bridge
+- 2026-05-10 5380b999 themes: apply unified-schema converter in-place to all 17 in-tree themes
+- 2026-05-10 a962868f tools: add validate_theme.py — CLI theme validator
+- 2026-05-10 e4ad057a tools: backfill missing required keys from basic.yaml in converter
+- 2026-05-10 e1f4ae6e tests: add end-to-end migration pipeline + completeness gap inventory
+- 2026-05-10 1d348f76 config: add required-keys registry and missing-key error formatting
+- 2026-05-10 3f878879 config: add unified theme loader, resolver, and tests
+- 2026-05-10 dd4f2f50 themes: rewrite SAMPLE.yaml as complete annotated reference
+- 2026-05-10 d99eeaba themes: add basic.yaml — minimum viable unified theme
+- 2026-05-10 b2147997 tools: add unified-schema theme migrator
+- 2026-05-10 ee12dfa2 docs: add no-defaults policy and reference-theme requirements
+- 2026-05-10 3b9371af docs: expand design with full USER_GUIDE.md reconciliation
+- 2026-05-10 92f935a9 docs: add unified style_rules theme schema design
+- 2026-05-10 11e87163 themes: split TJX into per-visualization theme files
+- 2026-05-09 210b20a4 palettesheet: default output to palettesheet.svg
+- 2026-05-09 df6b4b54 palettesheet: render all palettes when name is omitted
+- 2026-05-09 e54fb70f docs: add WeekendRedesign design doc for configurable weekend days
+- 2026-05-09 c35a29eb docs: audit USER_GUIDE for current CLI surface
+- 2026-05-09 28c9692e blockplan: integrate vertical_lines into unified style_rules
+- 2026-05-09 a4c16a07 mini: honor mini_details_*_font_color for details rows
+- 2026-05-09 ac1ace60 mini: use ec-event-date text style for details start-date column
+- 2026-05-08 641b4c20 mini: support --shrink and fix details list under --noevents
+- 2026-05-08 00dfebdd themes/TJX: visual tuning + fix invisible compactplan legend text
+- 2026-05-08 ca125ee0 weekly: add left-continuation icon and start-date label on durations
+- 2026-05-08 fbea93ab weekly: add right-continuation icon and end-date label on durations
+- 2026-05-08 e31c33e0 weekly: position duration icon left of name text, not at day-box edge
+- 2026-05-08 63c719a8 weekly: draw icons on duration bars
+- 2026-05-07 50f3bc5c themes/TJX: fix invisible holiday title text
+- 2026-05-07 a1a6c8c2 visualizers: honor full StyleResult for event/duration style_rules
+- 2026-05-07 37c875f4 weekly: lower day-number baseline within top-clearance band
+- 2026-05-07 1d8dd2bf weekly: place pattern fill below day-number row
+- 2026-05-07 9eff9c77 patternsheet: fix invalid SVG from Inkscape pattern metadata
+- 2026-05-04 32e2db88 ecalendar: add patternsheet subcommand for previewing day-box patterns
+- 2026-05-03 ad97ab25 removed fonts that were unsuitable for calendars
+- 2026-05-02 b9f6a96f fix five failing tests across CLI, blockplan, weekly, and excelheader
+- 2026-04-30 9bef4cab blockplan: add continuation icons for clipped duration bars
+- 2026-04-30 a3f75cac timeline: add duration_icon_visible theme setting
+- 2026-04-29 682b5039 timeline: let equal-priority tick bands both draw labels
+- 2026-04-29 ae516d2e themes: support 'dd' format token for two-letter weekday (Mo, Tu, ...)
+- 2026-04-27 09bc0ef2 timeline: add government holiday icon row, filter out-of-range items
+- 2026-04-26 e146c03c weekly: shift holiday title/icon past in-box week-number label
+- 2026-04-26 5b6ea0f7 tjx: bump mini cell_font_size and switch nonworkday fill
+- 2026-04-26 84bfa4c1 mini: respect --weekends 0 (workweek mode)
+- 2026-04-26 b2e9d03e tjx: respect mini font sizes and unify week-number color
+- 2026-04-26 31d34964 tjx/mini: dotted grey grid lines around day cells
+- 2026-04-26 cd522a45 docs/tjx: document and adopt mini month_outline keys
+- 2026-04-26 200dc9ce mini: add per-month outline theme settings
+- 2026-04-25 3dd2a2fb TJX theme: tune timeline tick labels and duration sizing
+- 2026-04-25 46d3bd6d timeline: center duration title/notes and tighten fit budget
+- 2026-04-25 280d8432 timeline: raise axis when --noevents removes callout band
+- 2026-04-25 b4445ccc timeline: add per-band label_font_size for tick labels
+- 2026-04-25 0187d1f0 timeline: add per-band label_gap for axis-to-label spacing
+- 2026-04-25 d6fffb04 TJX theme: fix empty daily tick label format
+- 2026-04-25 53ed7944 TJX theme: raise max_label_count on daily tick band
+- 2026-04-25 648ab2d4 timeline: honor timeline.name_text/notes_text theme settings
+- 2026-04-25 4a20005c timeline: dedupe overlapping tick labels by unit frequency
+- 2026-04-25 0334fec1 timeline: tick labels reflect actual tick date and align to range edges
+- 2026-04-25 a7df0dec timeline: timebands, configurable ticks, continuation icons, shrink, style_rules
+- 2026-04-21 a13af21d TJX theme: blockplan layout and holiday icon refinements
+- 2026-04-21 ecb6de74 blockplan: suppress timeband label text when a non-workday icon is drawn
+- 2026-04-21 e397258b blockplan: per-type fill opacity for non-workday timeband cells
+- 2026-04-21 99e07413 blockplan: use per-holiday DB icon in timeband cells, matching weekly view
+- 2026-04-21 e6353dcd blockplan: draw non-workday icons in date/dow timeband cells
+- 2026-04-21 26db49b2 theme_engine: add style_rules and swimlane_rules to VALID_SECTIONS
+- 2026-04-21 87a793d1 RuleRedesign: unified style_rules / swimlane_rules engine (Phase 1–3)
+- 2026-04-21 84345af1 RuleRedesign: align wbs criterion with WBSFilter expression syntax
+- 2026-04-21 cc1f8b76 remove special_day and special_day_types — superseded by rule system
+- 2026-04-21 dcbd60f6 fix: _draw_rect emits fill as inline style so per-call colors beat CSS class
+- 2026-04-21 55ed21e2 fix: weekly renderer respects day_box stroke theme settings
+- 2026-04-20 a5ee4c6e glyph_cache: emit text fill as inline style so per-call overrides beat class CSS
+- 2026-04-20 0ebb416d blockplan: honor per-section notes_text and duration_date theme config
+- 2026-04-20 72a18139 blockplan: filter vertical_lines by day class; TJX theme highlights non-workdays
+- 2026-04-20 3aaab16f add non-workday classification for blockplan and excelheader timebands
+- 2026-04-20 33a2cb3b fix: blockplan honors timeband/duration/grid config and header label color
+- 2026-04-20 3e32ecc2 fix: restore timeband cell grid lines and fill opacity
+- 2026-04-20 2e5463e6 fix: resolve DB color names to hex before writing to SVG
+- 2026-04-20 dcf65063 fix: skip emitting CSS fill for transparent box_style tokens
+- 2026-03-29 b5d9866f add security plan, asset generators, and clean up old plan docs
+- 2026-03-27 c416a083 remove Roboto-Black fonts and update themes to use available font variants
+- 2026-03-25 3f3019c2 add minimal theme with fewest configuration settings
+- 2026-03-25 d6f40c65 migrate renderers to unified theme_styles API (Phase 8)
+- 2026-03-25 1007f041 add unified theme model with CSS styling across all SVG visualizers
+- 2026-03-25 ed2d2a0c remove government table fallback; use holidays package exclusively
+- 2026-03-25 181ea04d move version print before argparse so it shows even on errors
+- 2026-03-24 8ea994a2 add commented @ argument files for all 13 subcommands
+- 2026-03-24 5a3daf27 remove redundant _stroke_ from line element field names
+- 2026-03-24 13841082 rename legacy theme override fields to snake_case
+- 2026-03-24 b851924f rename watermark fields to follow standard naming conventions
+- 2026-03-24 d84f1c87 rename mini_nonworkday_shade to mini_nonworkday_fill_color
+- 2026-03-23 4a4cad28 add optional --embed-data flag to embed CSV event data inside SVG metadata
+- 2026-03-23 8253ebe4 uniformize event/duration text config fields across all visualizations
+- 2026-03-23 9db6e2fd round SVG attributes to 2 decimal places for cleaner output
+- 2026-03-23 275743a2 add icon band support to excelheader visualization
+- 2026-03-23 633bd6c3 make excelheader independent of blockplan configuration
+- 2026-03-23 5b2606b0 fixed help message after exportdata modification
+- 2026-03-23 6b3b0cd9 fixed error after palettesheet mod
+- 2026-03-23 0e10976d rename palette to palettesheet
+- 2026-03-23 78c61749 remove --version option
+- 2026-03-23 ba5af8b2 fix epilog text to remove config.py reference
+- 2026-03-23 b8a0a8d9 Add CalVer versioning (YY.MM.DD.NN) with auto-increment on commit
+- 2026-03-22 5af6d55b CLI cleanup, fiscal timeline bands, and holiday color uniformity
+- 2026-03-21 2a5975c3 Initial commit

@@ -25,6 +25,7 @@ elements:
   ec-tick-label:     { kind: text, token: label,          scope: [timeline, blockplan, compactplan],   description: "Axis tick label" }
   ec-day-number:     { kind: text, token: day_number,     scope: [weekly, mini, mini-icon],            description: "Day-of-month number" }
   ec-month-title:    { kind: text, token: month_title,    scope: [weekly, mini, mini-icon],            description: "Mini calendar month heading" }
+  ec-month-box-label: { kind: text, token: month_title,   scope: [candybar],                           description: "Candybar merged month-box label" }
   ec-week-number:    { kind: text, token: week_number,    scope: [weekly, mini, mini-icon],            description: "Week-number label" }
   ec-fiscal-label:   { kind: text, token: fiscal_label,   scope: [weekly, blockplan, compactplan],     description: "Fiscal period label" }
   ec-event-name:     { kind: text, token: event_name,     scope: [all],                                description: "Event/task name" }
@@ -43,6 +44,9 @@ elements:
   ec-background:     { kind: box, token: default,  scope: [all],                                description: "Page / area background" }
   ec-cell:           { kind: box, token: cell,     scope: [all],                                description: "Generic content cell background" }
   ec-day-box:        { kind: box, token: day,      scope: [weekly, mini, mini-icon],            description: "Day-box rectangle" }
+  ec-month-box:      { kind: box, token: cell,     scope: [candybar],                           description: "Candybar merged month-box rectangle" }
+  ec-month-band:     { kind: box, token: cell,     scope: [candybar],                           description: "Candybar per-month day-cell band shade" }
+  ec-weekend:        { kind: box, token: cell,     scope: [candybar],                           description: "Candybar weekend day-cell tint" }
   ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelheader], description: "Lane / heading-column cell" }
   ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelheader], description: "Time-band segment cell" }
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }

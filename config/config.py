@@ -195,6 +195,38 @@ class CalendarConfig:
     mini_week_number_label_format: str = "W{num}"
     mini_icon_set: str = "squares"  # Icon set for mini-icon view
 
+    # Candybar calendar settings (vertical year-strip: one row per ISO week)
+    candybar_row_height: float = 0.0  # 0 = auto-fit rows to page height
+    candybar_cell_width: float = 0.0  # day-cell width; 0 = square (== row height)
+    candybar_weeknum_col_ratio: float = 0.6  # week-number col width / day-cell width
+    candybar_month_col_ratio: float = 1.6  # month-box col width / day-cell width
+    candybar_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
+    candybar_suppress_weekends: bool | None = None  # None = inherit weekend_style
+    candybar_show_week_numbers: bool = True  # Show week-number column on the left
+    candybar_max_rows_per_page: int = 0  # 0 = single fit-to-page column (no paging)
+    candybar_grid_lines: bool = True  # Draw grid lines around day cells
+    candybar_grid_line_color: str = "lightgrey"
+    candybar_day_color: str = "black"  # Default day-number color
+    # Base cell shading (drawn under holiday/rule shade so those override it)
+    candybar_weekend_fill: str | None = None  # Sat/Sun column tint (None = off)
+    candybar_weekend_opacity: float = 0.15
+    candybar_month_shading: bool = False  # Alternate/per-month day-cell tint
+    candybar_month_shade_colors: list[str] = field(default_factory=list)  # cycled by month
+    candybar_month_shade_opacity: float = 0.12
+    # Month-name box (right-hand column spanning all of a month's week rows)
+    candybar_month_label_side: str = "right"  # "right" or "left"
+    candybar_month_font: str = Fonts.RC_BOLD
+    candybar_month_font_size: float | None = None  # None = derive from row height
+    candybar_month_color: str = "navy"
+    candybar_month_opacity: float = 1.0
+    candybar_month_bold: bool = False
+    candybar_month_anchor: str = "middle"  # SVG text-anchor: start/middle/end
+    candybar_month_rotation: float = 0.0  # Degrees; e.g. -90 = vertical, reading up
+    candybar_month_format: str = "MMM"  # Arrow format string for month label
+    candybar_month_box_fill: str | None = None  # None = no fill
+    candybar_month_box_stroke: str | None = "lightgrey"
+    candybar_month_box_opacity: float = 1.0
+
     # Text mini calendar settings
     text_mini_cell_width: int = 2
     text_mini_month_gap: int = 4

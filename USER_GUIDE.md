@@ -9,6 +9,7 @@ This guide is generated from the current codebase (`ecalendar.py`, `config/theme
 | `weekly` | Generate a weekly calendar SVG. |
 | `mini` | Generate a mini calendar SVG. |
 | `mini-icon` | Generate a mini calendar SVG using icon images for day numbers instead of numerals. |
+| `candybar` | Generate a vertical year-strip calendar SVG: one row per ISO week, a week-number column, day-of-month cells, and a merged month-name box spanning each month's rows. |
 | `text-mini` | Generate a text mini calendar. |
 | `timeline` | Generate a timeline SVG. |
 | `pit` | Generate a Points-in-Time SVG (clean axis + marker-per-event + bezier leaders). |
@@ -42,6 +43,12 @@ PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --weeknumbers --m
 
 # Mini-icon calendar with squircle day-number icons, 4 columns, landscape
 PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 -mis squircles --mini-columns 4 -o landscape -of mini_icon.svg
+
+# Candybar vertical year-strip for a full year
+PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 -th corporate -of candybar.svg
+
+# Candybar with weekends suppressed and vertical (rotated) month names
+PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 --candybar-suppress-weekends --candybar-month-rotation -90 -of candybar.svg
 
 # Timeline with custom today-line styling
 PYTHONPATH=. uv run python ecalendar.py timeline 20260101 20261231 -tll 120 -tld below -of timeline.svg
@@ -309,6 +316,58 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 
 **Inherited `mini` options** — all flags and config fields that apply to `mini` also apply to `mini-icon`, including:
 `--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--weekend-days`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
+
+### `candybar`
+
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format |  |
+| `END_DATE` | no | End date in YYYYMMDD format |  |
+
+#### `candybar` layout and behavior
+
+`candybar` renders a tall, narrow vertical year-strip — modeled on the *ISO Week Numbers* spreadsheet layout. Each **row is one ISO week** (Mon–Sun across seven columns), with a week-number column on the left and the day-of-month number in each day cell. The requested date range is **expanded out to whole-week boundaries** (start snaps back to its week-start day, end snaps forward to its week-end day) so the first and last rows are always complete weeks — no blank end cells. Boundary days from the adjacent month are shown with their day numbers and pick up any events/holidays on those dates.
+
+The number of rows is derived from the start/end dates — a full year produces ~53 rows. By default the rows are auto-scaled to fit the page height; set `--candybar-row-height` for a fixed row height, or `--candybar-max-rows-per-page` to split a long range into multiple side-by-side strips.
+
+**Box widths.** Day cells are **square by default** — their width equals the (auto-fit or fixed) row height — and the resulting strip is centered horizontally rather than stretched to fill the page. Widths are theme-configurable under the `candybar:` section:
+
+| Theme key | Default | Meaning |
+|---|---|---|
+| `cell_width` | `0` | Day-cell width in points. `0` = square (width == row height). |
+| `weeknum_col_ratio` | `0.6` | Week-number column width as a multiple of the day-cell width. |
+| `month_col_ratio` | `1.6` | Month-box column width as a multiple of the day-cell width. |
+
+`cell_width` can also be set on the command line with `--candybar-cell-width POINTS`; the two column ratios are theme-only.
+
+**Month box.** The right-hand column (or left, via `--candybar-month-side`) holds a **merged month-name box** that spans every week row belonging to that month. A week is attributed to the month of its last visible day, so a boundary week such as Jan 27–Feb 2 is labeled *Feb* (matching the spreadsheet reference). The month label supports the full set of SVG text attributes — font, size, color, opacity, anchor, and **rotation** (e.g. `--candybar-month-rotation -90` runs the name vertically, reading up the box). Box fill/stroke and label styling are theme-configurable under the `candybar:` section.
+
+**Decoration and icons.** Day cells use the **same rule engine as `mini`/`mini-icon`** — holidays, special days, events, and theme `style_rules` / `box:day` rules drive cell shading, SVG pattern decorations, milestone circles, and icon placement (`icon_replace` / `icon_append`). Day cells show the day number by default and swap in an icon only when a rule requests one.
+
+**Cell shading (months & weekends).** In addition to the rule engine, candybar has two built-in base shades drawn *under* the rule/holiday shade (so holidays still win):
+
+- **Month banding** — enable with `--candybar-month-shading` (or `candybar.month_shading: true`). Day cells are tinted per calendar month, cycling through `candybar.month_shade_colors` (a list of colors; `none` skips shading that month). With no colors set it defaults to `["none", "gainsboro"]` so alternate months are tinted. Opacity via `candybar.month_shade_opacity` (default 0.12).
+- **Weekend tint** — set `--candybar-weekend-fill COLOR` (or `candybar.weekend_fill`) to shade the Sat/Sun day cells, with `candybar.weekend_opacity` (default 0.15). Independent of the rule engine — plain weekends are tinted even when they aren't holidays. (Only visible when weekends are shown.)
+
+The `corporate` theme ships with both enabled as a demonstration.
+
+**Weekend suppression.** Candybar **shows weekends by default** (7-column Mon–Sun strip), independent of the `--weekends` / `weekend_style` setting. Pass `--candybar-suppress-weekends` (or set `candybar.suppress_weekends: true` in a theme) to drop the Sat/Sun columns for a 5-column Mon–Fri strip.
+
+**Candybar-specific options:**
+
+| Option | Argument | Description |
+|---|---|---|
+| `--candybar-row-height` | `POINTS` | Fixed week-row height (default: 0 = auto-fit to page). |
+| `--candybar-cell-width` | `POINTS` | Fixed day-cell width (default: 0 = square, width == row height). |
+| `--candybar-max-rows-per-page` | `N` | Split into side-by-side strips after N rows (0 = single strip). |
+| `--candybar-suppress-weekends` |  | Drop Sat/Sun columns (default: weekends are shown). |
+| `--candybar-no-week-numbers` |  | Hide the week-number column (shown by default). |
+| `--candybar-month-side` | `{left,right}` | Side for the merged month box (default: right). |
+| `--candybar-month-rotation` | `DEGREES` | Rotate the month-name label (e.g. -90 for vertical). |
+| `--candybar-weekend-fill` | `COLOR` | Shade Sat/Sun day cells (default: no weekend shading). |
+| `--candybar-month-shading` |  | Tint day cells per month (alternating bands; theme sets colors). |
+
+Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and all event filter flags).
 
 ### `palettesheet`
 

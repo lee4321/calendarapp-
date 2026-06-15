@@ -57,6 +57,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "mini_calendar",
     "mini_details",
     "text_mini",
+    "candybar",
     "timeline",
     "timeline_events",
     "timeline_durations",
