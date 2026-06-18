@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.15.0"
+__version__ = "26.06.18.0"
 
 import argparse
 import logging
@@ -2592,13 +2592,45 @@ def _write_exportdata_csv(events: list[dict], out_path: "Path") -> None:
 # =============================================================================
 
 
+def _hex_hsv_sort_key(color: str) -> tuple:
+    """
+    HSV sort key for a hex colour string, matching the colorsheet ordering.
+
+    Parses a ``#RRGGBB`` (or ``RRGGBB``) string into RGB, then returns the
+    ``(hue, saturation, value)`` tuple used to sort swatches.  This is the same
+    perceptual-hue ordering applied to the ``colorsheet`` output: achromatic
+    colours (blacks/greys/whites) first, then reds, oranges, yellows, greens,
+    blues, purples.
+
+    Args:
+        color: Hex colour string, with or without a leading ``#``.
+
+    Returns:
+        ``(h, s, v)`` tuple of floats in 0–1, suitable as a ``sorted`` key.
+    """
+    import colorsys
+
+    hx = color.lstrip("#")
+    if len(hx) == 3:
+        hx = "".join(c * 2 for c in hx)
+    try:
+        red = int(hx[0:2], 16) / 255.0
+        green = int(hx[2:4], 16) / 255.0
+        blue = int(hx[4:6], 16) / 255.0
+    except (ValueError, IndexError):
+        return (0.0, 0.0, 0.0)
+    return colorsys.rgb_to_hsv(red, green, blue)
+
+
 def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> None:
     """
     Write a standalone SVG file showing a colour palette as a grid of swatches.
 
     Each swatch displays the colour as a filled box with its hex value as a
-    label below.  Up to 10 columns; additional rows are added for larger
-    palettes.  The title bar shows the palette name and total colour count.
+    label below.  Up to 12 columns; additional rows are added for larger
+    palettes.  Swatches are sorted by perceptual hue (the same HSV ordering
+    used by the colorsheet).  The title bar shows the palette name and total
+    colour count.
 
     Provides a quick visual reference so users can choose palettes for their
     themes without needing to render a full calendar.
@@ -2616,6 +2648,7 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
     MARGIN = 40
     TITLE_H = 55
 
+    colors = sorted(colors, key=_hex_hsv_sort_key)
     n = len(colors)
 
     lines: list[str] = []
@@ -2625,7 +2658,7 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
     LABEL_H = 26
     GAP_X = 10
     GAP_Y = 14
-    MAX_COLS = 10
+    MAX_COLS = 12
     CELL_W = BOX_W + GAP_X
     CELL_H = BOX_H + LABEL_H + GAP_Y
 
@@ -2674,7 +2707,8 @@ def _generate_all_palettes_svg(
 
     Palettes are rendered top-to-bottom in alphabetical order. Each section has
     a title row (palette name + colour count) followed by a grid of swatches
-    (up to 10 per row), matching the layout used by ``_generate_palette_svg``.
+    (up to 12 per row), sorted by perceptual hue (the same HSV ordering used by
+    the colorsheet), matching the layout used by ``_generate_palette_svg``.
 
     Called by:
         run() when args.command == "palettesheet" and no palette name is given.
@@ -2690,10 +2724,11 @@ def _generate_all_palettes_svg(
     LABEL_H = 26
     GAP_X = 10
     GAP_Y = 14
-    MAX_COLS = 10
+    MAX_COLS = 12
     CELL_W = BOX_W + GAP_X
     CELL_H = BOX_H + LABEL_H + GAP_Y
 
+    palettes = {n: sorted(c, key=_hex_hsv_sort_key) for n, c in palettes.items()}
     names = sorted(palettes.keys())
 
     max_cols_used = min(
