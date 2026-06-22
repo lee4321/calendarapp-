@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventCalendar — Functional Requirements</title>
+<style>
+  :root {
+    --ink: #1f2933;
+    --muted: #5b6770;
+    --accent: #2f6f9f;
+    --accent-soft: #eaf2f8;
+    --rule: #d7dde3;
+    --code-bg: #f4f6f8;
+    --tag-bg: #e7eef4;
+    --shall: #b1400d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.55;
+    margin: 0;
+    background: #fff;
+  }
+  .wrap { max-width: 950px; margin: 0 auto; padding: 48px 32px 96px; }
+  header.doc {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 8px;
+  }
+  header.doc h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header.doc .sub { color: var(--muted); font-size: 1.02rem; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-size: 0.85rem; color: var(--muted); margin: 14px 0 0;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  nav.toc {
+    background: var(--accent-soft);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 32px 0;
+    columns: 2;
+    column-gap: 40px;
+    font-size: 0.92rem;
+  }
+  nav.toc h2 { margin: 0 0 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); column-span: all; }
+  nav.toc a { color: var(--ink); text-decoration: none; display: block; padding: 2px 0; break-inside: avoid; }
+  nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  h2.section {
+    font-size: 1.3rem;
+    margin: 48px 0 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: 20px;
+  }
+  h2.section .num { color: var(--accent); font-weight: 700; margin-right: 10px; }
+  .section-intro { color: var(--muted); margin: 4px 0 18px; font-size: 0.95rem; }
+
+  .req {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 0 18px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eef1f4;
+    align-items: baseline;
+  }
+  .req:last-child { border-bottom: none; }
+  .req .id {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--tag-bg);
+    border-radius: 4px;
+    padding: 2px 7px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .req .body { font-size: 0.96rem; }
+  .req .body .shall { color: var(--shall); font-weight: 600; }
+  .req .note { display: block; color: var(--muted); font-size: 0.85rem; margin-top: 3px; }
+
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #324;
+  }
+  .pill {
+    display: inline-block; font-size: 0.72rem; font-weight: 600;
+    background: var(--accent); color: #fff; border-radius: 10px;
+    padding: 1px 9px; margin-left: 6px; vertical-align: middle;
+  }
+  table.caps {
+    width: 100%; border-collapse: collapse; margin: 14px 0 4px; font-size: 0.88rem;
+  }
+  table.caps th, table.caps td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.caps th { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  table.caps td:first-child { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; white-space: nowrap; color: var(--accent); }
+  table.appx { width: 100%; border-collapse: collapse; margin: 14px 0 4px; font-size: 0.88rem; }
+  table.appx th, table.appx td { text-align: left; padding: 9px 11px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.appx th { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  table.appx td:first-child { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.78rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  table.appx tr td:nth-child(2) { font-weight: 600; width: 150px; }
+  table.appx .q { color: var(--shall); }
+  .subhead { font-size: 1.02rem; font-weight: 600; margin: 26px 0 2px; color: var(--ink); }
+  .subhead .tag { font-size: 0.72rem; font-weight: 600; color: #fff; background: var(--muted); border-radius: 10px; padding: 1px 9px; margin-left: 8px; vertical-align: middle; }
+  footer.doc { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.82rem; }
+  .legend { font-size: 0.85rem; color: var(--muted); background: var(--code-bg); border-left: 3px solid var(--accent); padding: 10px 16px; border-radius: 0 6px 6px 0; margin: 18px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>EventCalendar — Functional Requirements Specification</h1>
+  <div class="sub">A capability-oriented description of the calendar / schedule visualization generator.</div>
+  <div class="meta">
+    <span><b>Subject:</b> <code>ecalendar</code> CLI and supporting modules</span>
+    <span><b>Application version:</b> 26.06.18.0</span>
+    <span><b>Document date:</b> 2026-06-22</span>
+    <span><b>Basis:</b> reverse-engineered from source</span>
+  </div>
+</header>
+
+<div class="legend">
+  This document describes <b>what the system does</b> (its observable functional capability), independent of how
+  the code is organized. Requirements use <span class="shall" style="color:#b1400d;font-weight:600">shall</span> for
+  mandatory behavior. Each requirement carries a stable identifier (e.g. <code>FR-VW-03</code>) grouped by capability area.
+</div>
+
+<nav class="toc">
+  <h2>Capability Areas</h2>
+  <a href="#s1">1 &nbsp; Product Scope &amp; Outputs</a>
+  <a href="#s2">2 &nbsp; Command-Line Invocation</a>
+  <a href="#s3">3 &nbsp; Date Range Determination</a>
+  <a href="#s4">4 &nbsp; Data Sources &amp; Event Model</a>
+  <a href="#s5">5 &nbsp; Content Filtering</a>
+  <a href="#s6">6 &nbsp; Holidays &amp; Non-Working Days</a>
+  <a href="#s7">7 &nbsp; Calendar Visualizers</a>
+  <a href="#s8">8 &nbsp; Timeline &amp; Plan Visualizers</a>
+  <a href="#s9">9 &nbsp; Spreadsheet Outputs</a>
+  <a href="#s10">10 &nbsp; Data Export</a>
+  <a href="#s11">11 &nbsp; Fiscal Calendars</a>
+  <a href="#s12">12 &nbsp; Week Numbering</a>
+  <a href="#s13">13 &nbsp; Page Layout &amp; Decoration</a>
+  <a href="#s14">14 &nbsp; Theming &amp; Color</a>
+  <a href="#s15">15 &nbsp; Text &amp; Font Rendering</a>
+  <a href="#s16">16 &nbsp; Inspection &amp; Preview Sheets</a>
+  <a href="#s17">17 &nbsp; Diagnostics &amp; Error Handling</a>
+  <a href="#s18">18 &nbsp; SVG Output Capabilities</a>
+  <a href="#sA">A &nbsp; Assumptions &amp; Ambiguities</a>
+</nav>
+
+<!-- ============================ 1 ============================ -->
+<h2 class="section" id="s1"><span class="num">1</span>Product Scope &amp; Outputs</h2>
+<p class="section-intro">The system generates highly customizable calendars, timelines, and project plans from event data held in a SQLite database, plus a family of utility outputs for inspecting available resources.</p>
+
+<div class="req"><span class="id">FR-GN-01</span><div class="body">The system <span class="shall">shall</span> generate calendar and schedule visualizations from event data stored in a SQLite database.</div></div>
+<div class="req"><span class="id">FR-GN-02</span><div class="body">The system <span class="shall">shall</span> produce output as scalable vector graphics (SVG) for graphical views, plain text for the text-mini view, Excel workbooks (<code>.xlsx</code>) for spreadsheet views, and CSV for data export.</div></div>
+<div class="req"><span class="id">FR-GN-03</span><div class="body">The system <span class="shall">shall</span> offer the following primary visualization commands: <code>weekly</code>, <code>mini</code>, <code>mini-icon</code>, <code>candybar</code>, <code>text-mini</code>, <code>timeline</code>, <code>pit</code>, <code>blockplan</code>, and <code>compactplan</code>.</div></div>
+<div class="req"><span class="id">FR-GN-04</span><div class="body">The system <span class="shall">shall</span> offer the spreadsheet commands <code>excelheader</code> and <code>excelblockplan</code>, and the data-export command <code>exportdata</code>.</div></div>
+<div class="req"><span class="id">FR-GN-05</span><div class="body">The system <span class="shall">shall</span> offer resource-inspection commands (<code>themes</code>, <code>fonts</code>, <code>papersizes</code>, <code>patterns</code>, <code>icons</code>, <code>colors</code>, <code>palettes</code>) and visual preview-sheet commands (<code>fontsheet</code>, <code>iconsheet</code>, <code>patternsheet</code>, <code>colorsheet</code>, <code>palettesheet</code>).</div></div>
+<div class="req"><span class="id">FR-GN-06</span><div class="body">The system <span class="shall">shall</span> write all generated artifacts into a local <code>output/</code> directory, creating it if absent.<span class="note">Any directory component supplied by the user in an output filename is discarded as a path-traversal safeguard; only the base filename is honored.</span></div></div>
+<div class="req"><span class="id">FR-GN-07</span><div class="body">When no output filename is supplied, the system <span class="shall">shall</span> derive a default name from the command and a timestamp (e.g. <code>weekly202606221040.svg</code>, <code>text-mini…&#8203;.txt</code>).</div></div>
+<div class="req"><span class="id">FR-GN-08</span><div class="body">The system <span class="shall">shall</span> be operable without a graphical environment as a self-contained command-line program, producing files on disk and progress/diagnostic text on the console.</div></div>
+<div class="req"><span class="id">FR-GN-09</span><div class="body">A single database <span class="shall">shall</span> be able to drive every output type, so the same event data can be presented as a grid calendar, mini calendar, timeline, plan, spreadsheet, or CSV without re-entry.</div></div>
+
+<!-- ============================ 2 ============================ -->
+<h2 class="section" id="s2"><span class="num">2</span>Command-Line Invocation</h2>
+<p class="section-intro">All capability is reached through a single subcommand-based command-line interface.</p>
+
+<div class="req"><span class="id">FR-CLI-01</span><div class="body">The system <span class="shall">shall</span> require a subcommand and <span class="shall">shall</span> reject invocation with no subcommand.</div></div>
+<div class="req"><span class="id">FR-CLI-02</span><div class="body">Each visualization/export command <span class="shall">shall</span> accept an optional start date and end date as positional arguments in <code>YYYYMMDD</code> format.</div></div>
+<div class="req"><span class="id">FR-CLI-03</span><div class="body">The system <span class="shall">shall</span> support reading arguments from one or more argument files referenced as <code>@filename</code>, including nested references up to a fixed depth limit.</div></div>
+<div class="req"><span class="id">FR-CLI-04</span><div class="body">When expanding argument files, the system <span class="shall">shall</span> drop blank lines and comments (full-line and trailing <code>"#&nbsp;"</code> comments) while preserving inline tokens such as hex colors (<code>#FF0000</code>).</div></div>
+<div class="req"><span class="id">FR-CLI-05</span><div class="body">The system <span class="shall">shall</span> provide a <code>help &lt;subcommand&gt;</code> command that prints argument help plus runtime-resolved valid values (weekend styles, paper sizes, themes, fiscal types, icons, fonts, colors, template variables, etc.) relevant to that subcommand.</div></div>
+<div class="req"><span class="id">FR-CLI-06</span><div class="body">The system <span class="shall">shall</span> accept a database path via <code>--database</code> (default <code>calendar.db</code>) on every data-driven command.</div></div>
+<div class="req"><span class="id">FR-CLI-07</span><div class="body">The system <span class="shall">shall</span> validate that the selected database path exists and is a regular file before use, emitting a clear error otherwise.</div></div>
+<div class="req"><span class="id">FR-CLI-08</span><div class="body">The system <span class="shall">shall</span> group each command's options into labeled help sections (e.g. Database, Output, Layout, Header/Footer, Watermark, Content Filtering, Week Number, Fiscal, Logging) so the option surface is discoverable.</div></div>
+<div class="req"><span class="id">FR-CLI-09</span><div class="body">The system <span class="shall">shall</span> share option definitions across applicable commands so semantically identical options behave identically across views.</div></div>
+<div class="req"><span class="id">FR-CLI-10</span><div class="body">The system <span class="shall">shall</span> reject mutually inconsistent option combinations with actionable messages (e.g. icon-sheet pagination sub-options used without enabling pagination).</div></div>
+
+<!-- ============================ 3 ============================ -->
+<h2 class="section" id="s3"><span class="num">3</span>Date Range Determination</h2>
+
+<div class="req"><span class="id">FR-DT-01</span><div class="body">The system <span class="shall">shall</span> validate that supplied start/end dates are well-formed <code>YYYYMMDD</code> values and report a friendly error when they are not.</div></div>
+<div class="req"><span class="id">FR-DT-02</span><div class="body">When the end date precedes the start date, the system <span class="shall">shall</span> transparently swap them.</div></div>
+<div class="req"><span class="id">FR-DT-03</span><div class="body">The system <span class="shall">shall</span> adjust the requested start and end dates outward to whole-week boundaries according to the selected weekend style — work-week styles snap to Monday/Friday, Sunday-start styles snap to Sunday/Saturday, and Monday-start styles snap to Monday/Sunday.</div></div>
+<div class="req"><span class="id">FR-DT-04</span><div class="body">The system <span class="shall">shall</span> support five weekend styles selectable per view: <code>0</code> work-week only, <code>1</code> full week / Sunday start, <code>2</code> half weekends / Sunday start, <code>3</code> full week / Monday start, <code>4</code> half weekends / Monday start.</div></div>
+<div class="req"><span class="id">FR-DT-04b</span><div class="body">The weekend style <span class="shall">shall</span> govern the day-column count and weekday ordering of the calendar grids in addition to the date-range snapping.</div></div>
+<div class="req"><span class="id">FR-DT-05</span><div class="body">The system <span class="shall">shall</span> compute the calendar duration and number of weeks spanned by the adjusted range for use by layout engines.</div></div>
+<div class="req"><span class="id">FR-DT-06</span><div class="body">The system <span class="shall">shall</span> allow the set of non-working weekdays to be specified explicitly via <code>--weekend-days</code> (comma-separated ISO weekday numbers 0–6), validating range and uniqueness.</div></div>
+<div class="req"><span class="id">FR-DT-07</span><div class="body">The system <span class="shall">shall</span> retain the original user-supplied dates separately from the week-adjusted dates so both are available to metadata and template expansion.</div></div>
+
+<!-- ============================ 4 ============================ -->
+<h2 class="section" id="s4"><span class="num">4</span>Data Sources &amp; Event Model</h2>
+<p class="section-intro">Calendar content is drawn from several tables in the SQLite database plus a live government-holiday data source.</p>
+
+<div class="req"><span class="id">FR-DM-01</span><div class="body">The system <span class="shall">shall</span> retrieve all events whose date span overlaps the adjusted calendar range, including multi-day events that begin before or end after the range.</div></div>
+<div class="req"><span class="id">FR-DM-02</span><div class="body">The system <span class="shall">shall</span> recognize the following event attributes: task name, status, priority, WBS code, rollup flag, milestone flag, percent complete, effort, duration, start/end dates, early/late date bounds, predecessors, resource names, resource group, notes, icon, color, and tags.</div></div>
+<div class="req"><span class="id">FR-DM-03</span><div class="body">The system <span class="shall">shall</span> classify an event as a single-day <em>event</em> when its start equals its end, and as a multi-day <em>duration</em> otherwise.</div></div>
+<div class="req"><span class="id">FR-DM-04</span><div class="body">The system <span class="shall">shall</span> read company special days (with non-working-day flag, day color, pattern, pattern color, icon, and tags) and apply them as day decorations, degrading gracefully when optional columns are absent.</div></div>
+<div class="req"><span class="id">FR-DM-05</span><div class="body">The system <span class="shall">shall</span> load named icons (SVG markup with alternative-name aliases), named colors (RGB → hex), color palettes (ordered color lists), day-box patterns (tileable SVG), and paper sizes (with portrait/landscape canonicalization) from the database.</div></div>
+<div class="req"><span class="id">FR-DM-06</span><div class="body">The system <span class="shall">shall</span> recognize a defined set of event statuses (<code>active</code>, <code>draft</code>, <code>cancelled</code>, <code>archived</code>, <code>on-hold</code>) and treat unknown statuses as if active.</div></div>
+<div class="req"><span class="id">FR-DM-07</span><div class="body">Event retrieval <span class="shall">shall</span> include any event whose span overlaps the range, i.e. events starting within the range and durations that begin before and/or end after it, so partially-visible durations are available for clipping.</div></div>
+<div class="req"><span class="id">FR-DM-08</span><div class="body">The system <span class="shall">shall</span> normalize event records into a consistent internal model (deriving each item's effective start/end, duration-vs-event classification, and milestone/rollup booleans) so all views consume a uniform event shape independent of source column naming.</div></div>
+<div class="req"><span class="id">FR-DM-09</span><div class="body">The system <span class="shall">shall</span> index events onto every day they span so day-oriented views can look up events by day key, while continuous-axis views consume the events by their start/end dates.</div></div>
+<div class="req"><span class="id">FR-DM-10</span><div class="body">The system <span class="shall">shall</span> resolve icon references by name or alias to SVG markup, including backward-compatible resolution of numeric icon identifiers.</div></div>
+
+<!-- ============================ 5 ============================ -->
+<h2 class="section" id="s5"><span class="num">5</span>Content Filtering</h2>
+<p class="section-intro">A single, authoritative filtering policy governs which events appear, applied identically across every visualizer and the data exporter.</p>
+
+<div class="req"><span class="id">FR-FL-01</span><div class="body">The system <span class="shall">shall</span> exclude holiday rows from the event stream (they are rendered as day decorations, never as event entries).</div></div>
+<div class="req"><span class="id">FR-FL-02</span><div class="body">The system <span class="shall">shall</span> filter events by status, defaulting to <code>active</code> only, and <span class="shall">shall</span> accept <code>--status</code> with a comma-separated list or <code>all</code> to disable status filtering; unknown status values are rejected.</div></div>
+<div class="req"><span class="id">FR-FL-03</span><div class="body">The system <span class="shall">shall</span> optionally exclude single-day events (<code>--noevents</code>) and/or multi-day durations (<code>--nodurations</code>).</div></div>
+<div class="req"><span class="id">FR-FL-04</span><div class="body">The system <span class="shall">shall</span> optionally exclude fully complete items (<code>--ignorecomplete</code>, percent complete = 100%).</div></div>
+<div class="req"><span class="id">FR-FL-05</span><div class="body">The system <span class="shall">shall</span> optionally restrict output to milestones only (<code>--milestones</code>) or to rollup entries only (<code>--rollups</code>).</div></div>
+<div class="req"><span class="id">FR-FL-06</span><div class="body">The system <span class="shall">shall</span> filter events by Work Breakdown Structure code via <code>--WBS</code>, supporting comma-separated tokens, <code>!</code> exclusion, dot-separated segments, <code>*</code> single-segment wildcard, <code>**</code> multi-segment wildcard, and implicit prefix matching.</div></div>
+<div class="req"><span class="id">FR-FL-07</span><div class="body">The system <span class="shall">shall</span> provide an <code>--empty</code> option that produces a structurally complete output containing no events.</div></div>
+<div class="req"><span class="id">FR-FL-08</span><div class="body">The system <span class="shall">shall</span> optionally append event notes to displayed event names (<code>--includenotes</code>) on views that support it.</div></div>
+<div class="req"><span class="id">FR-FL-09</span><div class="body">The filtering policy <span class="shall">shall</span> be applied identically by every visualizer and by the data exporter, so a given range and option set yields the same item set across all outputs.</div></div>
+<div class="req"><span class="id">FR-FL-10</span><div class="body">The filters <span class="shall">shall</span> compose conjunctively (holiday exclusion, then status, completion, milestone/rollup, WBS, then event/duration type), and the compiled WBS filter <span class="shall">shall</span> be cached per filter expression for efficiency.</div></div>
+
+<!-- ============================ 6 ============================ -->
+<h2 class="section" id="s6"><span class="num">6</span>Holidays &amp; Non-Working Days</h2>
+
+<div class="req"><span class="id">FR-HOL-01</span><div class="body">The system <span class="shall">shall</span> obtain government holidays from a live holiday data package for the calendar's year span, rather than requiring them to be stored in the database.</div></div>
+<div class="req"><span class="id">FR-HOL-02</span><div class="body">The system <span class="shall">shall</span> accept one or more ISO 3166-1 alpha-2 country codes via <code>--country</code> (e.g. <code>US</code> or <code>US,CA,GB</code>), defaulting to US and CA when omitted.</div></div>
+<div class="req"><span class="id">FR-HOL-03</span><div class="body">The system <span class="shall">shall</span> treat public and government holidays as non-working days (shaded), and treat optional / half-day / unofficial holidays as informational titles without shading.</div></div>
+<div class="req"><span class="id">FR-HOL-04</span><div class="body">The system <span class="shall">shall</span> deduplicate holidays by date within a country, giving public-category names precedence over government-category names on shared dates.</div></div>
+<div class="req"><span class="id">FR-HOL-05</span><div class="body">The system <span class="shall">shall</span> skip unsupported countries with a warning rather than failing the run.</div></div>
+<div class="req"><span class="id">FR-HOL-06</span><div class="body">The system <span class="shall">shall</span> determine, per date, whether it is a non-working day from either government holidays or company special days.</div></div>
+<div class="req"><span class="id">FR-HOL-07</span><div class="body">The system <span class="shall">shall</span> tag each loaded holiday with its country and a country-derived icon, and <span class="shall">shall</span> allow holiday lookups to be filtered to one or more countries.</div></div>
+<div class="req"><span class="id">FR-HOL-08</span><div class="body">The system <span class="shall">shall</span> resolve a display title and icon for a given date from government holidays first and then company special days, so day-decoration consumers have a single resolution path.</div></div>
+<div class="req"><span class="id">FR-HOL-09</span><div class="body">Company special days <span class="shall">shall</span> contribute their own non-working-day flag, fill color, pattern, pattern color, icon, and tags to day decoration independently of government holidays.</div></div>
+
+<!-- ============================ 7 ============================ -->
+<h2 class="section" id="s7"><span class="num">7</span>Calendar Visualizers</h2>
+<p class="section-intro">The calendar views (<code>weekly</code>, <code>mini</code>, <code>mini-icon</code>, <code>candybar</code>, <code>text-mini</code>) render the same filtered event, holiday, and special-day data through distinct layouts. They share a common day-classification and styling model, then differ in how each day and its events are drawn.</p>
+
+<div class="subhead">7.1 &nbsp; Shared day-cell styling model<span class="tag">ALL CALENDAR VIEWS</span></div>
+<div class="req"><span class="id">FR-VW-01</span><div class="body">The calendar views <span class="shall">shall</span> classify each visible day into a set of classes — at least <em>workday</em>, <em>weekend</em>, <em>non-working day</em>, <em>federal/government holiday</em>, and <em>company holiday</em> — for use in conditional styling.</div></div>
+<div class="req"><span class="id">FR-VW-02</span><div class="body">The calendar views <span class="shall">shall</span> resolve each day's visual treatment by layering, in order, fiscal-period styling, government holidays, company special days, on-day events, and theme style rules, with later layers overriding earlier ones on conflicting properties.</div></div>
+<div class="req"><span class="id">FR-VW-03</span><div class="body">The system <span class="shall">shall</span> support theme <em>style rules</em> that conditionally restyle days and/or events. Day-level conditions <span class="shall">shall</span> include <code>federal_holiday</code>, <code>company_holiday</code>, <code>nonworkday</code>, <code>workday</code>, <code>weekend</code>, and a specific <code>date</code> or date range.</div></div>
+<div class="req"><span class="id">FR-VW-04</span><div class="body">Event-level style-rule conditions <span class="shall">shall</span> include task name, notes, resource group, resource names, WBS, priority (exact / min / max), percent complete (min / max range), milestone, rollup, event type (event vs. duration), color, and icon.</div></div>
+<div class="req"><span class="id">FR-VW-05</span><div class="body">A matched style rule <span class="shall">shall</span> be able to override fill color and opacity, stroke color/width/opacity/dash, decorative pattern (name, color, opacity), icon and icon color, text alignment, and per-text-element font/size/color/opacity.</div></div>
+<div class="req"><span class="id">FR-VW-06</span><div class="body">When non-active statuses are surfaced, the calendar views <span class="shall">shall</span> visually dim events by status (e.g. draft, on-hold, cancelled, archived progressively more faded) without altering layout, so status is distinguishable at a glance.</div></div>
+<div class="req"><span class="id">FR-VW-07</span><div class="body">Each visualizer <span class="shall">shall</span> validate the configuration it receives and emit warnings (without aborting) for options that do not apply to it.</div></div>
+
+<div class="subhead">7.2 &nbsp; Weekly grid view<span class="tag">weekly</span></div>
+<div class="req"><span class="id">FR-WK-01</span><div class="body">The <code>weekly</code> view <span class="shall">shall</span> render a continuous grid of day boxes spanning the adjusted date range, one row per week, with column count and weekday order determined by the weekend style.</div></div>
+<div class="req"><span class="id">FR-WK-02</span><div class="body">Each day box <span class="shall">shall</span> display a right-aligned day number, an optional month indicator/name, a background fill (by month, fiscal period, holiday, or rule), and optional pattern/hash decoration.</div></div>
+<div class="req"><span class="id">FR-WK-03</span><div class="body">Each day box <span class="shall">shall</span> display holiday and company-special-day titles and icons, and shade non-working days using the configured holiday colors and opacities.</div></div>
+<div class="req"><span class="id">FR-WK-04</span><div class="body">The weekly view <span class="shall">shall</span> place single-day events as text within their day box, supporting an optional appended notes line and an optional event icon.</div></div>
+<div class="req"><span class="id">FR-WK-05</span><div class="body">The weekly view <span class="shall">shall</span> render multi-day durations as horizontal bars spanning the covered days, breaking the bar across week-row boundaries and continuing it on each subsequent row.</div></div>
+<div class="req"><span class="id">FR-WK-06</span><div class="body">When a duration extends beyond the visible range, the weekly view <span class="shall">shall</span> indicate continuation with left/right arrow icons at the clipped edge.</div></div>
+<div class="req"><span class="id">FR-WK-07</span><div class="body">For durations of sufficient length, the weekly view <span class="shall">shall</span> render notes inline with the name; for shorter durations with notes enabled it <span class="shall">shall</span> use a double-height bar with name and notes on separate rows.</div></div>
+<div class="req"><span class="id">FR-WK-08</span><div class="body">The weekly view <span class="shall">shall</span> order event/duration placement within a day by a configurable precedence among milestones, events, and durations, with a secondary sort by priority or alphabetically.</div></div>
+<div class="req"><span class="id">FR-WK-09</span><div class="body">When a day cannot fit all of its items, the weekly view <span class="shall">shall</span> mark the day with an overflow indicator and, when <code>--overflow</code> is set, emit a separate overflow page listing the items that did not fit.</div></div>
+<div class="req"><span class="id">FR-WK-10</span><div class="body">The weekly view <span class="shall">shall</span> optionally render a week-number label per week row and fiscal period labels on fiscal-period-boundary days.</div></div>
+<div class="req"><span class="id">FR-WK-11</span><div class="body">The weekly view <span class="shall">shall</span> support text shrink-to-fit so event names that exceed the available width are reduced or truncated rather than overflowing the box.</div></div>
+
+<div class="subhead">7.3 &nbsp; Mini and mini-icon views<span class="tag">mini · mini-icon</span></div>
+<div class="req"><span class="id">FR-MN-01</span><div class="body">The <code>mini</code> view <span class="shall">shall</span> render one compact month grid per calendar month in range, arranged into a configurable number of columns (months per row) and rows (or auto-derived from the range).</div></div>
+<div class="req"><span class="id">FR-MN-02</span><div class="body">Each mini month <span class="shall">shall</span> render a month title (with a configurable format string), a weekday header row, and a 7-column day grid honoring the weekend style's week-start.</div></div>
+<div class="req"><span class="id">FR-MN-03</span><div class="body">The mini view <span class="shall">shall</span> optionally show or hide leading/trailing days from adjacent months, rendering adjacent-month days dimmed.</div></div>
+<div class="req"><span class="id">FR-MN-04</span><div class="body">The mini view <span class="shall">shall</span> optionally draw grid lines between day cells and an optional week-number column.</div></div>
+<div class="req"><span class="id">FR-MN-05</span><div class="body">The mini view <span class="shall">shall</span> convey day-level information through cell treatments including: background shade, bold/outlined/strikethrough day numbers, a box or circle around the number, an icon replacing or appended to the number, and pattern/hash decoration.</div></div>
+<div class="req"><span class="id">FR-MN-06</span><div class="body">The mini view <span class="shall">shall</span> circle milestone days, color day numbers by resource group, embolden high-priority days, and display event/holiday icons drawn from the day's events and holidays.</div></div>
+<div class="req"><span class="id">FR-MN-07</span><div class="body">The mini view <span class="shall">shall</span> render multi-day durations as color bars beneath the day cells they span, with an optional label.</div></div>
+<div class="req"><span class="id">FR-MN-08</span><div class="body">The mini view <span class="shall">shall</span> optionally emit a companion event-details SVG (<code>--mini-details</code>) listing the events behind the mini calendar.</div></div>
+<div class="req"><span class="id">FR-MN-09</span><div class="body">The <code>mini-icon</code> view <span class="shall">shall</span> render the mini calendar with day numbers placed on a selectable icon set (squares, dark squares, circles, dark circles, squircles, dark squircles).</div></div>
+<div class="req"><span class="id">FR-MN-10</span><div class="body">Mini-family views <span class="shall">shall</span> optionally shade fiscal-period day backgrounds and place fiscal period labels on period-start days when a fiscal calendar is enabled.</div></div>
+
+<div class="subhead">7.4 &nbsp; Candybar year-strip view<span class="tag">candybar</span></div>
+<div class="req"><span class="id">FR-CB-01</span><div class="body">The <code>candybar</code> view <span class="shall">shall</span> render a vertical strip with one row per ISO week and one cell per weekday, reusing the mini view's day-cell styling.</div></div>
+<div class="req"><span class="id">FR-CB-02</span><div class="body">The candybar view <span class="shall">shall</span> render a merged month-name box alongside the weeks of each month, with configurable side (left/right) and configurable label rotation (e.g. vertical reading-up).</div></div>
+<div class="req"><span class="id">FR-CB-03</span><div class="body">The candybar view <span class="shall">shall</span> support fixed or auto-fit row height and a fixed or square day-cell width.</div></div>
+<div class="req"><span class="id">FR-CB-04</span><div class="body">The candybar view <span class="shall">shall</span> optionally suppress weekend columns, optionally shade weekend cells with a configurable fill, and optionally band day cells by month with alternating tints.</div></div>
+<div class="req"><span class="id">FR-CB-05</span><div class="body">The candybar view <span class="shall">shall</span> optionally display a week-number column and a weekday header row, and <span class="shall">shall</span> split the strip into side-by-side sections after a configurable number of week rows.</div></div>
+<div class="req"><span class="id">FR-CB-06</span><div class="body">The candybar view <span class="shall">shall</span> shrink output to its content bounding box by default to avoid large blank margins around the narrow strip.</div></div>
+
+<div class="subhead">7.5 &nbsp; Text-mini view<span class="tag">text-mini</span></div>
+<div class="req"><span class="id">FR-TM-01</span><div class="body">The <code>text-mini</code> view <span class="shall">shall</span> render a plain-text (non-SVG) mini calendar of month grids honoring weekend style, week numbering, and mini column/row layout.</div></div>
+<div class="req"><span class="id">FR-TM-02</span><div class="body">The text-mini view <span class="shall">shall</span> mark days bearing events using single-character symbols drawn from configurable symbol sets distinguished by item kind: milestone, single-day event, duration, holiday, and non-working day.</div></div>
+<div class="req"><span class="id">FR-TM-03</span><div class="body">When several markings fall on one day, the text-mini view <span class="shall">shall</span> resolve the displayed symbol by a fixed precedence among the item kinds.</div></div>
+<div class="req"><span class="id">FR-TM-04</span><div class="body">The text-mini view <span class="shall">shall</span> render durations by marking their start and end days (and optionally intervening days) with the duration's symbol.</div></div>
+<div class="req"><span class="id">FR-TM-05</span><div class="body">The text-mini view <span class="shall">shall</span> produce a legend/detail listing mapping each used symbol to its date(s) and task name.</div></div>
+<div class="req"><span class="id">FR-TM-06</span><div class="body">The text-mini view <span class="shall">shall</span> mark fiscal-period-start days with the period's short name (e.g. <code>P1</code>) when a fiscal calendar is enabled.</div></div>
+
+<table class="caps">
+  <thead><tr><th>Command</th><th>Primary capability</th><th>Day treatment</th><th>Event treatment</th><th>Notable options</th></tr></thead>
+  <tbody>
+    <tr><td>weekly</td><td>Full grid, one row/week</td><td>Day box: number, month, holiday title/icon, shade, pattern</td><td>Text events + multi-day duration bars, overflow page</td><td>overflow, shade, monthnames, week/fiscal labels, patterns, includenotes</td></tr>
+    <tr><td>mini</td><td>Compact multi-month grid</td><td>Shade, box/circle, bold/outline/strike, icon, hash</td><td>Milestone circles, resource-group color, duration color-bars</td><td>mini-columns/rows, grid-lines, no-adjacent, mini-details, shade, title-format</td></tr>
+    <tr><td>mini-icon</td><td>Mini grid, icon day-numbers</td><td>As mini, numbers on icon shapes</td><td>As mini</td><td>mini-icon-set + all mini options</td></tr>
+    <tr><td>candybar</td><td>Vertical year strip, one row/week</td><td>Mini cell styling + month banding / weekend tint</td><td>Mini-style day markings</td><td>row-height, cell-width, month-side/rotation, weekend-fill/suppress, month-shading, max-rows-per-page</td></tr>
+    <tr><td>text-mini</td><td>Plain-text month grids</td><td>Single-char day symbols</td><td>Per-kind symbols + detail legend</td><td>mini-columns/rows, weekends, week numbers</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 8 ============================ -->
+<h2 class="section" id="s8"><span class="num">8</span>Timeline &amp; Plan Visualizers</h2>
+<p class="section-intro">These views render events and durations against a continuous time axis or a swimlane grid rather than a day-cell calendar. They share a <em>timeband</em> segmentation engine and the same event style-rule model as the calendar views, while differing in axis geometry and item layout.</p>
+
+<div class="subhead">8.1 &nbsp; Shared timeband &amp; axis model<span class="tag">timeline · pit · blockplan · compactplan</span></div>
+<div class="req"><span class="id">FR-TB-01</span><div class="body">The system <span class="shall">shall</span> segment the date range into labeled time bands by a selectable unit: <code>date</code>, <code>week</code>, <code>month</code>, <code>year</code>, fixed <code>interval</code> (N days), <code>fiscal_quarter</code>, <code>fiscal_period</code>, and per-day <code>icon</code> bands.</div></div>
+<div class="req"><span class="id">FR-TB-02</span><div class="body">Each time band <span class="shall">shall</span> support a configurable label format, and week/interval bands <span class="shall">shall</span> support a configurable week-start and interval anchor/index so band sequences align to a chosen origin.</div></div>
+<div class="req"><span class="id">FR-TB-03</span><div class="body">Timeline and plan views <span class="shall">shall</span> support stacking multiple time-band rows above and/or below the axis (e.g. a fiscal-quarter row over a month row over a week row).</div></div>
+<div class="req"><span class="id">FR-TB-04</span><div class="body">These views <span class="shall">shall</span> position items by the user-requested (unadjusted) date range so axis edges match the requested dates exactly, falling back to the week-adjusted range only when no user range is captured.</div></div>
+<div class="req"><span class="id">FR-TB-05</span><div class="body">These views <span class="shall">shall</span> evaluate event-level theme style rules (per §7.1) to override item color, stroke, icon, and label styling.</div></div>
+<div class="req"><span class="id">FR-TB-06</span><div class="body">These views <span class="shall">shall</span> honor the common content filters (events, durations, complete, milestones, rollups, WBS, status, notes).</div></div>
+
+<div class="subhead">8.2 &nbsp; Timeline view<span class="tag">timeline</span></div>
+<div class="req"><span class="id">FR-TLN-01</span><div class="body">The <code>timeline</code> view <span class="shall">shall</span> render a continuous dated axis, horizontal or vertical, with single-day events drawn as leader-connected callout labels and multi-day durations drawn as bars.</div></div>
+<div class="req"><span class="id">FR-TLN-02</span><div class="body">The timeline view <span class="shall">shall</span> lay out callout labels to avoid collisions and <span class="shall">shall</span> place durations into stacked lanes so overlapping spans do not overprint.</div></div>
+<div class="req"><span class="id">FR-TLN-03</span><div class="body">The timeline view <span class="shall">shall</span> place labels on a selectable side of the axis (primary / secondary / both, alternating chronologically).</div></div>
+<div class="req"><span class="id">FR-TLN-04</span><div class="body">The timeline view <span class="shall">shall</span> draw a today marker with configurable line length and direction (above / below / both), and configurable label and duration-bar fill opacity.</div></div>
+<div class="req"><span class="id">FR-TLN-05</span><div class="body">The timeline view <span class="shall">shall</span> draw axis ticks and tick labels derived from a time band, and <span class="shall">shall</span> render holiday icons along the axis.</div></div>
+<div class="req"><span class="id">FR-TLN-06</span><div class="body">The timeline view <span class="shall">shall</span> optionally render fiscal period and/or fiscal quarter band rows above the axis when a fiscal calendar is enabled.</div></div>
+<div class="req"><span class="id">FR-TLN-07</span><div class="body">The timeline view <span class="shall">shall</span> draw continuation indicators for durations that extend beyond the visible axis range.</div></div>
+
+<div class="subhead">8.3 &nbsp; Points-in-Time (PIT) view<span class="tag">pit</span></div>
+<div class="req"><span class="id">FR-PIT-01</span><div class="body">The <code>pit</code> view <span class="shall">shall</span> render single-day events and milestones along a horizontal or vertical axis (selected by <code>--direction</code>, independent of page orientation) with curved-leader-connected label boxes laid out to avoid collisions.</div></div>
+<div class="req"><span class="id">FR-PIT-02</span><div class="body">The pit view <span class="shall">shall</span> draw a built-in circle axis marker for events and a built-in diamond axis marker for milestones, with configurable marker size.</div></div>
+<div class="req"><span class="id">FR-PIT-03</span><div class="body">The pit view <span class="shall">shall</span> support axis ticks with selectable granularity (month, week, fiscal quarter, fiscal period, fixed interval, date, year), configurable tick interval, tick label format, and tick length, and <span class="shall">shall</span> allow suppressing ticks and/or tick labels.</div></div>
+<div class="req"><span class="id">FR-PIT-04</span><div class="body">The pit view <span class="shall">shall</span> support label-side placement (primary / secondary / both) and configurable date placement: inline within the label box, opposite the axis at the marker, or none.</div></div>
+<div class="req"><span class="id">FR-PIT-05</span><div class="body">The pit view <span class="shall">shall</span> support a today line with on/off control, an override "today" date for forward-dated presentations, and a configurable (or suppressed) today label.</div></div>
+<div class="req"><span class="id">FR-PIT-06</span><div class="body">The pit view <span class="shall">shall</span> support per-role label-box icons (a default event icon and a default milestone icon by database icon name) with configurable label-icon size and gap, distinct from the fixed axis marker.</div></div>
+<div class="req"><span class="id">FR-PIT-07</span><div class="body">The pit view <span class="shall">shall</span> support detailed leader geometry control: dash pattern, label anchor (start / center / end), leader length (row spacing), and an end stub segment, and <span class="shall">shall</span> support SVG marker-start/marker-end arrowheads on leaders and the axis.</div></div>
+
+<div class="subhead">8.4 &nbsp; Block plan view<span class="tag">blockplan</span></div>
+<div class="req"><span class="id">FR-BP-01</span><div class="body">The <code>blockplan</code> view <span class="shall">shall</span> render a swimlane grid: a left label column plus a time-banded plotting area, with events and durations placed in the lane they match.</div></div>
+<div class="req"><span class="id">FR-BP-02</span><div class="body">Swimlanes <span class="shall">shall</span> be fully theme-configurable, matching items by resource group, group, resource names (substring), task/notes text (substring), WBS prefix, milestone/rollup flags, event type, and priority (exact / min / max); an unconfigured plan <span class="shall">shall</span> default to a single "All Items" lane.</div></div>
+<div class="req"><span class="id">FR-BP-03</span><div class="body">Each swimlane <span class="shall">shall</span> support per-lane styling — heading fill, label color/alignment, content-area tint, and an upper/lower split ratio governing where events vs. durations are placed within the lane.</div></div>
+<div class="req"><span class="id">FR-BP-04</span><div class="body">The blockplan view <span class="shall">shall</span> render stacked time-band rows above and/or below the lane region, including NRF-aware fiscal-quarter bands when a fiscal calendar is enabled.</div></div>
+<div class="req"><span class="id">FR-BP-05</span><div class="body">The blockplan view <span class="shall">shall</span> render durations as labeled bars and events/milestones as markers, with optional icons and inline/appended notes, and <span class="shall">shall</span> support configurable vertical reference lines.</div></div>
+<div class="req"><span class="id">FR-BP-06</span><div class="body">The blockplan view <span class="shall">shall</span> compute the visible day set from the weekend style so non-working columns are handled consistently with the calendar views.</div></div>
+
+<div class="subhead">8.5 &nbsp; Compact plan view<span class="tag">compactplan</span></div>
+<div class="req"><span class="id">FR-CP-01</span><div class="body">The <code>compactplan</code> view <span class="shall">shall</span> render a compressed activities timeline with duration lines packed into rows above and below a central axis, automatically assigning rows so lines do not visually overlap.</div></div>
+<div class="req"><span class="id">FR-CP-02</span><div class="body">The compactplan view <span class="shall">shall</span> render milestones as flag markers and <span class="shall">shall</span> render time-band rows (including NRF-aware fiscal quarter / fiscal period units).</div></div>
+<div class="req"><span class="id">FR-CP-03</span><div class="body">The compactplan view <span class="shall">shall</span> render explanatory legends — a milestone list, a holiday list, a continuation legend, and an axis legend — to keep the compressed plot readable.</div></div>
+<div class="req"><span class="id">FR-CP-04</span><div class="body">The compactplan view <span class="shall">shall</span> indicate durations continuing beyond the visible range and <span class="shall">shall</span> shrink output to its content bounding box by default.</div></div>
+
+<table class="caps">
+  <thead><tr><th>Command</th><th>Axis / structure</th><th>Item rendering</th><th>Distinctive capability</th></tr></thead>
+  <tbody>
+    <tr><td>timeline</td><td>Continuous dated axis, H or V</td><td>Callout labels (events) + duration lane bars</td><td>Collision-avoided callouts, today marker, fiscal/holiday bands</td></tr>
+    <tr><td>pit</td><td>Continuous axis, H or V</td><td>Circle/diamond markers + bezier-leader label boxes</td><td>Single-day events/milestones, rich tick &amp; leader control</td></tr>
+    <tr><td>blockplan</td><td>Swimlane grid + label column</td><td>Lane bars + event/milestone markers</td><td>Theme-configurable lane matching &amp; per-lane styling</td></tr>
+    <tr><td>compactplan</td><td>Central axis, packed rows</td><td>Packed duration lines + milestone flags</td><td>Auto row packing + legends, shrink-to-content default</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ 9 ============================ -->
+<h2 class="section" id="s9"><span class="num">9</span>Spreadsheet Outputs</h2>
+<p class="section-intro">Two commands emit native <code>.xlsx</code> workbooks (via openpyxl) that reproduce the block-plan structure in spreadsheet form, sharing a common column layout and timeband header.</p>
+
+<div class="req"><span class="id">FR-XL-01</span><div class="body">The <code>excelheader</code> command <span class="shall">shall</span> generate an Excel workbook containing block-plan-style timeband header rows for the requested date range, honoring weekend style, weekend days, country holidays, and an optional theme.</div></div>
+<div class="req"><span class="id">FR-XL-02</span><div class="body">The workbook <span class="shall">shall</span> use a fixed leftmost label-column block — one column per <code>events</code>-table field (id, status, priority, wbs, rollup, milestone, percent_complete, name, effort, duration, start/end dates, early/late date bounds, predecessors, resource names/group, notes, icon, color, tags) — followed by a reserved continuation-icon column and then one column per visible calendar day.</div></div>
+<div class="req"><span class="id">FR-XL-03</span><div class="body">The workbook <span class="shall">shall</span> render the requested time bands as header rows (heading label in the label block, segment values across the day columns) followed by a column-header row, and <span class="shall">shall</span> set freeze panes so the label columns and band rows remain visible while scrolling (excelheader only).</div></div>
+<div class="req"><span class="id">FR-XL-04</span><div class="body">The workbook <span class="shall">shall</span> shade day columns for holidays and non-working days and <span class="shall">shall</span> apply theme-derived colors to band rows and cells.</div></div>
+<div class="req"><span class="id">FR-XL-05</span><div class="body">The <code>excelblockplan</code> command <span class="shall">shall</span> additionally write one data row per event/duration in range, populating the label columns from event fields, marking the spanned day columns, applying style-rule-resolved colors/icons, and drawing continuation glyphs when a duration extends beyond the visible range.</div></div>
+<div class="req"><span class="id">FR-XL-06</span><div class="body">The <code>excelblockplan</code> command <span class="shall">shall</span> honor the full block-plan content-filter set (events, durations, complete, milestones, rollups, notes, WBS, status, empty).</div></div>
+<div class="req"><span class="id">FR-XL-07</span><div class="body">Spreadsheet commands <span class="shall">shall</span> default their output filenames (<code>excelheader.xlsx</code>, <code>ExcelBlockplan.xlsx</code>) when none is supplied.</div></div>
+
+<!-- ============================ 10 ============================ -->
+<h2 class="section" id="s10"><span class="num">10</span>Data Export</h2>
+<p class="section-intro">A round-trip path lets the filtered event set be written back out as importer-compatible CSV.</p>
+
+<div class="req"><span class="id">FR-EX-01</span><div class="body">The <code>exportdata</code> command <span class="shall">shall</span> export the filtered set of events/durations overlapping the range to a CSV file.</div></div>
+<div class="req"><span class="id">FR-EX-02</span><div class="body">The exported CSV <span class="shall">shall</span> use a fixed header whose column names match the event importer's primary aliases (task_name, status, start/finish dates, early/late date bounds, priority, wbs, rollup, milestone, percent_complete, effort, duration, predecessors, resource names/group, notes, icon, color, tags) so the file can be re-imported without relying on fallback aliases.</div></div>
+<div class="req"><span class="id">FR-EX-03</span><div class="body">The exporter <span class="shall">shall</span> apply the single authoritative content-filtering policy used by the visualizers (events, durations, complete, milestones, rollups, WBS, status, country/holiday exclusion).</div></div>
+<div class="req"><span class="id">FR-EX-04</span><div class="body">The exporter <span class="shall">shall</span> convert compact <code>YYYYMMDD</code> dates to ISO <code>YYYY-MM-DD</code> form, leaving non-date fields unchanged.</div></div>
+<div class="req"><span class="id">FR-EX-05</span><div class="body">The exporter <span class="shall">shall</span> default its output filename to <code>exportdata_&lt;startdate&gt;.csv</code> and <span class="shall">shall</span> report the number of records written.</div></div>
+
+<!-- ============================ 11 ============================ -->
+<h2 class="section" id="s11"><span class="num">11</span>Fiscal Calendars</h2>
+<p class="section-intro">An optional fiscal-calendar engine overlays retail/period-based fiscal structure on the Gregorian range, feeding labels, colors, and bands across the views.</p>
+
+<div class="req"><span class="id">FR-FC-01</span><div class="body">The system <span class="shall">shall</span> support an optional fiscal-calendar overlay selectable via <code>--fiscal</code> with types NRF 4-5-4, NRF 4-4-5, NRF 5-4-4, and 13-period.</div></div>
+<div class="req"><span class="id">FR-FC-02</span><div class="body">The fiscal engine <span class="shall">shall</span> anchor the NRF fiscal year to the Sunday closest to February 1 and <span class="shall">shall</span> correctly handle 53-week fiscal years by extending the appropriate period.</div></div>
+<div class="req"><span class="id">FR-FC-03</span><div class="body">For any Gregorian date, the engine <span class="shall">shall</span> derive fiscal year, fiscal quarter (1–4), fiscal period (1–12 or 1–13), human and short period names (e.g. "Period 1" / "P1"), and period-start / quarter-start flags.</div></div>
+<div class="req"><span class="id">FR-FC-04</span><div class="body">The system <span class="shall">shall</span> build a per-day fiscal lookup for the calendar range when a fiscal calendar is enabled, for use by all consuming views.</div></div>
+<div class="req"><span class="id">FR-FC-05</span><div class="body">The system <span class="shall">shall</span> allow the displayed fiscal-year number to be offset relative to the period start year via <code>--fiscal-year-offset</code> (e.g. +1 for a US-federal-style October start), defaulting to an automatic value per type.</div></div>
+<div class="req"><span class="id">FR-FC-06</span><div class="body">Weekly and mini-family views <span class="shall">shall</span> render fiscal period labels on period-start days and, when <code>--fiscal-colors</code> is set, shade day backgrounds by fiscal period instead of Gregorian month.</div></div>
+<div class="req"><span class="id">FR-FC-07</span><div class="body">The text-mini view <span class="shall">shall</span> mark period-start days with the period short name, and the timeline view <span class="shall">shall</span> optionally render fiscal period and/or quarter band rows (<code>--fiscal-show-periods</code>, <code>--fiscal-show-quarters</code>).</div></div>
+<div class="req"><span class="id">FR-FC-08</span><div class="body">Block-plan and compact-plan views <span class="shall">shall</span> use NRF-aware fiscal-quarter (and fiscal-period) boundaries for their time bands when a fiscal calendar is enabled.</div></div>
+
+<!-- ============================ 12 ============================ -->
+<h2 class="section" id="s12"><span class="num">12</span>Week Numbering</h2>
+
+<div class="req"><span class="id">FR-WN-01</span><div class="body">Weekly, mini, mini-icon, and text-mini views <span class="shall">shall</span> optionally display week numbers (<code>--weeknumbers</code>); the candybar view shows a week-number column by default that may be hidden.</div></div>
+<div class="req"><span class="id">FR-WN-02</span><div class="body">The system <span class="shall">shall</span> support ISO 8601 week numbering and a custom anchor-based mode selectable via <code>--week-number-mode</code>.</div></div>
+<div class="req"><span class="id">FR-WN-03</span><div class="body">In custom mode the system <span class="shall">shall</span> number weeks as the count of whole weeks since the anchor (week 1 begins on the anchor date), and <span class="shall">shall</span> report week 0 for dates preceding the anchor.</div></div>
+<div class="req"><span class="id">FR-WN-04</span><div class="body">The system <span class="shall">shall</span> accept a custom week-1 anchor date via <code>--week1-start</code> (<code>YYYYMMDD</code>), which implies week-number display and custom mode for both full and mini calendars.</div></div>
+
+<!-- ============================ 13 ============================ -->
+<h2 class="section" id="s13"><span class="num">13</span>Page Layout &amp; Decoration</h2>
+<p class="section-intro">SVG views share a common page model — paper size, margins, header/footer, watermark, and content-bounding behavior — implemented by a base SVG renderer.</p>
+
+<div class="req"><span class="id">FR-PG-01</span><div class="body">SVG views <span class="shall">shall</span> support a named paper size (<code>--papersize</code>, case-insensitive) sourced from the database, and page orientation (<code>--orientation</code> portrait/landscape), reporting an error with the available sizes when an unknown size is requested.</div></div>
+<div class="req"><span class="id">FR-PG-02</span><div class="body">Paper sizes <span class="shall">shall</span> be stored in portrait-canonical form and swapped to the requested orientation, with a database flag indicating sizes that are natively landscape.</div></div>
+<div class="req"><span class="id">FR-PG-03</span><div class="body">SVG views <span class="shall">shall</span> optionally add page margins (<code>--margin</code>), a page header (<code>--header</code>), and a page footer (<code>--footer</code>), with header/footer heights derived as a configured fraction of page height.</div></div>
+<div class="req"><span class="id">FR-PG-04</span><div class="body">The header and footer <span class="shall">shall</span> each provide independent left, center, and right text fields laid out as three equal columns within the usable width.</div></div>
+<div class="req"><span class="id">FR-PG-05</span><div class="body">Header/footer/watermark/image text fields <span class="shall">shall</span> support template variables expanded at render time after the date range is resolved: <code>[now]</code>, <code>[date]</code>, <code>[startdate]</code>, <code>[enddate]</code>, and <code>[events]</code>; unrecognized tokens are left intact.</div></div>
+<div class="req"><span class="id">FR-PG-06</span><div class="body">SVG views <span class="shall">shall</span> support a text watermark with configurable font, color, opacity, rotation angle, and a resize mode of <em>fit</em> (preserve proportions, scale to width) or <em>stretch</em> (scale independently to fill the area), and an image watermark (raster or SVG) with configurable size and rotation; both <span class="shall">shall</span> render beneath the page content and respect the shrunk content area when shrink-to-content is active.</div></div>
+<div class="req"><span class="id">FR-PG-07</span><div class="body">SVG views <span class="shall">shall</span> optionally shade the current date (<code>--shade</code>) and optionally display month names (<code>--monthnames</code>).</div></div>
+<div class="req"><span class="id">FR-PG-08</span><div class="body">SVG views <span class="shall">shall</span> optionally shrink the SVG width/height/viewBox to the rendered content bounding box (<code>--shrink</code>); compactplan and candybar do so by default.</div></div>
+<div class="req"><span class="id">FR-PG-09</span><div class="body">The system <span class="shall">shall</span> emit CSS classes (e.g. <code>ec-*</code>) on rendered elements so output can be restyled or post-processed, and <span class="shall">shall</span> minify embedded icon/pattern SVG markup (stripping DOCTYPE/comments, collapsing whitespace) to control file size.</div></div>
+<div class="req"><span class="id">FR-PG-10</span><div class="body">The weekly, mini, and candybar views <span class="shall">shall</span> support per-day decoration with hash styles and named tileable SVG patterns, colorized to a rule color and injected once as deduplicated reusable <code>&lt;pattern&gt;</code> definitions referenced across cells.</div></div>
+
+<!-- ============================ 14 ============================ -->
+<h2 class="section" id="s14"><span class="num">14</span>Theming &amp; Color</h2>
+<p class="section-intro">Appearance is driven by YAML themes parsed into a unified theme model, plus a database-backed color and palette system that themes can reference symbolically.</p>
+
+<div class="req"><span class="id">FR-TH-01</span><div class="body">SVG and spreadsheet views <span class="shall">shall</span> accept a theme by built-in name (resolved from the bundled themes directory) or by path to a <code>.yaml</code> file (<code>--theme</code>).</div></div>
+<div class="req"><span class="id">FR-TH-02</span><div class="body">The system <span class="shall">shall</span> validate theme section names and <span class="shall">shall</span> warn about (rather than fail on) unknown sections.</div></div>
+<div class="req"><span class="id">FR-TH-03</span><div class="body">A theme <span class="shall">shall</span> be able to configure general settings, colors, fonts and font sizes, header/footer/watermark, fiscal settings, text/element styles, conditional style rules, per-visualizer settings (weekly, mini, mini-details, timeline, blockplan, compactplan), day-box/day-cell decoration, time-band definitions, and block-plan swimlane definitions.</div></div>
+<div class="req"><span class="id">FR-TH-04</span><div class="body">The system <span class="shall">shall</span> apply the theme in two passes around automatic font scaling so theme size rules can influence scaling, while explicit theme font sizes take final precedence.</div></div>
+<div class="req"><span class="id">FR-TH-05</span><div class="body">Explicit command-line flags that disable a theme-enabled feature <span class="shall">shall</span> be re-asserted after theme application so the command line takes precedence over the theme.</div></div>
+<div class="req"><span class="id">FR-TH-06</span><div class="body">Themes <span class="shall">shall</span> be able to reference database palettes as bulk palettes — month (12), fiscal period (13), group, timeline, block-plan, and compact-plan — resolved into per-element color sets at render time.</div></div>
+<div class="req"><span class="id">FR-TH-07</span><div class="body">Themes <span class="shall">shall</span> be able to reference individual colors via <code>palette:NAME:INDEX</code>; an integer index <span class="shall">shall</span> cycle modulo palette length and a float index in 0–1 <span class="shall">shall</span> select a proportional position, with unresolved references degrading with a warning rather than failing.</div></div>
+<div class="req"><span class="id">FR-TH-08</span><div class="body">The system <span class="shall">shall</span> resolve human-friendly database color names (case-insensitive) to hex values so themes may use names that are not valid CSS/SVG colors.</div></div>
+<div class="req"><span class="id">FR-TH-09</span><div class="body">Palette name lookups <span class="shall">shall</span> be case-insensitive, and a palette <span class="shall">shall</span> be sampleable to an arbitrary count by cycling when shorter than requested.</div></div>
+
+<!-- ============================ 15 ============================ -->
+<h2 class="section" id="s15"><span class="num">15</span>Text &amp; Font Rendering</h2>
+<p class="section-intro">Because there is no viewer-side font fallback, all text is converted to vector outlines, with text measurement driving both layout and glyph placement.</p>
+
+<div class="req"><span class="id">FR-FN-01</span><div class="body">The system <span class="shall">shall</span> render all text as vector glyph-outline <code>&lt;path&gt;</code> elements rather than embedding or referencing fonts, so output renders identically regardless of fonts installed on the viewer.</div></div>
+<div class="req"><span class="id">FR-FN-02</span><div class="body">The system <span class="shall">shall</span> position glyphs using actual font metrics with kerning-aware per-character advances, mapping font units to points with the correct vertical flip for SVG.</div></div>
+<div class="req"><span class="id">FR-FN-03</span><div class="body">The system <span class="shall">shall</span> measure text width from real font metrics and <span class="shall">shall</span> provide a shrink-to-fit capability so over-wide text is reduced or truncated to its container.</div></div>
+<div class="req"><span class="id">FR-FN-04</span><div class="body">The system <span class="shall">shall</span> cache extracted glyphs and font objects to keep repeated text rendering efficient.</div></div>
+<div class="req"><span class="id">FR-FN-05</span><div class="body">The system <span class="shall">shall</span> automatically scale font sizes to fit the selected paper/page dimensions, with theme-specified sizes able to override the scaled values.</div></div>
+<div class="req"><span class="id">FR-FN-06</span><div class="body">The system <span class="shall">shall</span> resolve font references through a font registry mapping names to font files, and <span class="shall">shall</span> report an error for unknown font names.</div></div>
+
+<!-- ============================ 16 ============================ -->
+<h2 class="section" id="s16"><span class="num">16</span>Inspection &amp; Preview Sheets</h2>
+<p class="section-intro">Utility commands let users discover the named resources available for use in themes, events, and options — both as text listings and as standalone visual preview sheets that do not require rendering a calendar.</p>
+
+<div class="subhead">16.1 &nbsp; Text listings<span class="tag">listing commands</span></div>
+<div class="req"><span class="id">FR-IN-01</span><div class="body">The system <span class="shall">shall</span> list available themes, registered fonts (with file paths), paper sizes (grouped by category, with point dimensions), day-box patterns (with tile sizes), icons, colors (with RGB), and palettes (with color counts).</div></div>
+
+<div class="subhead">16.2 &nbsp; Visual preview sheets<span class="tag">sheet generators</span></div>
+<div class="req"><span class="id">FR-IN-02</span><div class="body">The system <span class="shall">shall</span> generate an SVG <code>fontsheet</code> previewing every registered font as rendered glyph outlines, with an optional name filter, configurable glyph color, and a full-glyph-set mode that lays out every mapped codepoint.</div></div>
+<div class="req"><span class="id">FR-IN-03</span><div class="body">The system <span class="shall">shall</span> generate an SVG <code>iconsheet</code> previewing database icons, supporting a name filter, configurable color, and an optional paginated mode with configurable columns, rows, and cell size.</div></div>
+<div class="req"><span class="id">FR-IN-04</span><div class="body">The <code>iconsheet</code> generator <span class="shall">shall</span> correctly colorize both <code>currentColor</code>-based (stroked) and fill-based icon styles and preserve each icon's native viewBox.</div></div>
+<div class="req"><span class="id">FR-IN-05</span><div class="body">The system <span class="shall">shall</span> generate an SVG <code>patternsheet</code> previewing day-box patterns tiled in swatches, with a name filter and configurable fill color, scaling oversized tiles to fit.</div></div>
+<div class="req"><span class="id">FR-IN-06</span><div class="body">The system <span class="shall">shall</span> generate an SVG <code>colorsheet</code> of named color swatches sorted by perceptual hue (HSV), with contrast-aware in-swatch hex labels and a name filter.</div></div>
+<div class="req"><span class="id">FR-IN-07</span><div class="body">The system <span class="shall">shall</span> generate an SVG <code>palettesheet</code> previewing a single named palette, or, when no name is given, every palette in one sheet, with swatches sorted by perceptual hue.</div></div>
+<div class="req"><span class="id">FR-IN-08</span><div class="body">Preview/listing filters that match nothing <span class="shall">shall</span> produce a clear error directing the user to the corresponding listing command.</div></div>
+
+<!-- ============================ 17 ============================ -->
+<h2 class="section" id="s17"><span class="num">17</span>Diagnostics &amp; Error Handling</h2>
+<p class="section-intro">The CLI provides graduated logging, embedded provenance metadata, and a defined error/exit-code contract.</p>
+
+<div class="req"><span class="id">FR-DG-01</span><div class="body">The system <span class="shall">shall</span> provide graduated logging verbosity (<code>-v</code> info, <code>-vv</code> info with module names, <code>-vvv</code> debug) and a quiet mode (<code>--quiet</code>) that limits output to errors.</div></div>
+<div class="req"><span class="id">FR-DG-02</span><div class="body">The system <span class="shall">shall</span> embed provenance metadata in generated SVG output, including creation date, the invoking command line, and document descriptors (title, author, subject, keywords).</div></div>
+<div class="req"><span class="id">FR-DG-03</span><div class="body">The system <span class="shall">shall</span> optionally embed the source event data as CSV inside SVG metadata via <code>--embed-data</code>.</div></div>
+<div class="req"><span class="id">FR-DG-04</span><div class="body">The system <span class="shall">shall</span> validate inputs early — date format, paper size, database existence — and emit user-friendly messages rather than leaking tracebacks from deep in the pipeline.</div></div>
+<div class="req"><span class="id">FR-DG-05</span><div class="body">The system <span class="shall">shall</span> return distinct process exit codes: <code>0</code> success, <code>1</code> invalid date/range, <code>2</code> database or configuration error, <code>3</code> unexpected error (with full traceback logged).</div></div>
+<div class="req"><span class="id">FR-DG-06</span><div class="body">The system <span class="shall">shall</span> warn when an option is supplied that the selected visualizer does not support (including overflow and SVG-only layout options), and continue rather than abort.</div></div>
+<div class="req"><span class="id">FR-DG-07</span><div class="body">On successful generation, the system <span class="shall">shall</span> report the output path(s) and summary statistics (event count and overflow count where applicable).</div></div>
+
+<!-- ============================ 18 ============================ -->
+<h2 class="section" id="s18"><span class="num">18</span>SVG Output Capabilities</h2>
+<p class="section-intro">This section enumerates the SVG-level features the graphical views can <em>specify</em> (per-element styling) and <em>include</em> (structural and embedded content). All graphical output is produced through a shared drawing layer, so these capabilities are uniform across the SVG views.</p>
+
+<div class="subhead">18.1 &nbsp; Drawing primitives &amp; per-element styling<span class="tag">SPECIFIABLE</span></div>
+<div class="req"><span class="id">FR-SVG-01</span><div class="body">The system <span class="shall">shall</span> emit a defined set of drawing primitives: rectangles, lines, line groups, text, embedded raster images, and nested SVG fragments.</div></div>
+<div class="req"><span class="id">FR-SVG-02</span><div class="body">Rectangles <span class="shall">shall</span> support fill color, stroke color, independent fill and stroke opacity, stroke width, corner radius (rounded rectangles), and a stroke dash pattern.</div></div>
+<div class="req"><span class="id">FR-SVG-03</span><div class="body">Lines and line groups <span class="shall">shall</span> support stroke color, stroke width, stroke opacity, and a stroke dash pattern.</div></div>
+<div class="req"><span class="id">FR-SVG-04</span><div class="body">Text <span class="shall">shall</span> support color, opacity, horizontal anchor (start / middle / end), an optional maximum-width cap that horizontally compresses the text to fit, and an arbitrary SVG transform.</div></div>
+<div class="req"><span class="id">FR-SVG-05</span><div class="body">The system <span class="shall">shall</span> treat the color tokens <code>none</code>, <code>transparent</code>, and empty as "no paint", omitting fully invisible elements from the output.</div></div>
+<div class="req"><span class="id">FR-SVG-06</span><div class="body">The system <span class="shall">shall</span> round emitted coordinates to a fixed precision to keep file size and markup noise down.</div></div>
+<div class="req"><span class="id">FR-SVG-07</span><div class="body">The system <span class="shall">shall</span> apply per-element styling through CSS classes while keeping per-call colors authoritative (emitting them as inline style so they win over class rules).</div></div>
+
+<div class="subhead">18.2 &nbsp; Structural &amp; embedded content<span class="tag">INCLUDABLE</span></div>
+<div class="req"><span class="id">FR-SVG-08</span><div class="body">The system <span class="shall">shall</span> include an SVG <code>&lt;title&gt;</code> (subject + date range) and a <code>&lt;desc&gt;</code> provenance block (creation timestamp, author, date range, paper size/orientation, page dimensions, and invoking command line).</div></div>
+<div class="req"><span class="id">FR-SVG-09</span><div class="body">The system <span class="shall">shall</span> optionally include the source event data as a <code>&lt;metadata&gt;</code> element containing deflate-compressed, base64-encoded CSV under a dedicated XML namespace, with a row count attribute (<code>--embed-data</code>).</div></div>
+<div class="req"><span class="id">FR-SVG-10</span><div class="body">The system <span class="shall">shall</span> inject a <code>&lt;style&gt;</code> block from the active theme so the output is restylable via CSS, and <span class="shall">shall</span> tag rendered elements with semantic <code>ec-*</code> classes (see §18.3).</div></div>
+<div class="req"><span class="id">FR-SVG-11</span><div class="body">The system <span class="shall">shall</span> include reusable <code>&lt;defs&gt;</code> content — tileable <code>&lt;pattern&gt;</code> definitions for day decoration and <code>&lt;marker&gt;</code> arrowhead definitions for axis/leader lines — deduplicated by identity so each distinct definition appears once and is referenced by id.</div></div>
+<div class="req"><span class="id">FR-SVG-12</span><div class="body">The system <span class="shall">shall</span> embed database icons as nested SVG, preserving each icon's native <code>viewBox</code> and colorizing both <code>currentColor</code>-based (stroked) and fill-based icon styles to a requested color.</div></div>
+<div class="req"><span class="id">FR-SVG-13</span><div class="body">The system <span class="shall">shall</span> embed an external SVG watermark as a nested, aspect-ratio-preserving SVG element, and embed raster watermark images inline (base64) so output is self-contained.</div></div>
+<div class="req"><span class="id">FR-SVG-14</span><div class="body">The system <span class="shall">shall</span> minify embedded icon/pattern/SVG fragments — stripping comments, DOCTYPE, and XML preamble, and collapsing inter-tag whitespace — without altering significant content.</div></div>
+<div class="req"><span class="id">FR-SVG-15</span><div class="body">The system <span class="shall">shall</span> support arrowhead markers on the PIT axis and leader lines via <code>marker-start</code> / <code>marker-end</code>, sized in user units and auto-oriented to the line direction.</div></div>
+<div class="req"><span class="id">FR-SVG-16</span><div class="body">When shrink-to-content is active, the system <span class="shall">shall</span> set the SVG <code>width</code>, <code>height</code>, and <code>viewBox</code> to the exact content bounding box so the artwork carries no surplus page whitespace.</div></div>
+<div class="req"><span class="id">FR-SVG-17</span><div class="body">The system <span class="shall">shall</span> render glyphs as outline <code>&lt;path&gt;</code> elements (no font dependency) so every produced SVG is fully self-contained and portable (see §15).</div></div>
+
+<div class="subhead">18.3 &nbsp; Stylable element classes<span class="tag">CSS HOOKS</span></div>
+<p class="section-intro" style="margin-top:2px">Rendered elements carry stable <code>ec-*</code> classes, and the theme exposes matching text, box, line, and icon style accessors, so any element category can be restyled centrally (in-theme) or post-hoc (external CSS). The emitted classes include:</p>
+<table class="caps">
+  <thead><tr><th>Category</th><th>Element classes</th></tr></thead>
+  <tbody>
+    <tr><td>Day cells &amp; grid</td><td><code>ec-cell</code>, <code>ec-day-box</code>, <code>ec-day-number</code>, <code>ec-grid-line</code>, <code>ec-hash-line</code>, <code>ec-pattern-fill</code>, <code>ec-weekend</code>, <code>ec-month-band</code></td></tr>
+    <tr><td>Events &amp; durations</td><td><code>ec-event-name</code>, <code>ec-event-notes</code>, <code>ec-event-date</code>, <code>ec-event-icon</code>, <code>ec-duration-bar</code>, <code>ec-duration-date</code>, <code>ec-duration-icon</code>, <code>ec-milestone-marker</code>, <code>ec-continuation-icon</code>, <code>ec-overflow-icon</code></td></tr>
+    <tr><td>Holidays &amp; markings</td><td><code>ec-holiday-title</code>, <code>ec-holiday-icon</code>, <code>ec-nwd-icon</code>, <code>ec-strikethrough</code>, <code>ec-fiscal-label</code>, <code>ec-week-number</code></td></tr>
+    <tr><td>Axis, bands &amp; today</td><td><code>ec-axis-line</code>, <code>ec-axis-tick</code>, <code>ec-band-cell</code>, <code>ec-callout-box</code>, <code>ec-connector</code>, <code>ec-today-line</code>, <code>ec-today-label</code>, <code>ec-vline</code>, <code>ec-vline-fill</code></td></tr>
+    <tr><td>Lanes, headings &amp; legends</td><td><code>ec-heading</code>, <code>ec-heading-cell</code>, <code>ec-label</code>, <code>ec-month-box</code>, <code>ec-month-box-label</code>, <code>ec-month-title</code>, <code>ec-legend-text</code>, <code>ec-legend-icon</code>, <code>ec-legend-notes</code>, <code>ec-legend-swatch</code>, <code>ec-separator</code></td></tr>
+    <tr><td>Page furniture</td><td><code>ec-background</code>, <code>ec-watermark</code></td></tr>
+  </tbody>
+</table>
+<div class="req"><span class="id">FR-SVG-18</span><div class="body">The theme system <span class="shall">shall</span> expose text, box, line, and icon style accessors keyed by element class, so font, color, opacity, stroke, dash, fill, and icon properties can be set per element category and resolved consistently by every renderer.</div></div>
+
+<!-- ============================ Appendix ============================ -->
+<h2 class="section" id="sA"><span class="num">A</span>Appendix — Assumptions &amp; Ambiguities</h2>
+<p class="section-intro">The body of this specification documents behavior <em>as implemented</em>. This appendix flags places where the implemented behavior rests on an unstated assumption, embeds a defaulting decision that may surprise users, or is ambiguous as to designer intent. Each item is worth confirming before the requirements are treated as authoritative. Items are advisory and do not use "shall".</p>
+
+<div class="legend">
+  <b>How to read this:</b> <b>A-#</b> items are <b>assumptions</b> baked into the behavior (defaults, magic values, external dependencies).
+  <b>Q-#</b> items are <b>ambiguities</b> where intended vs. implemented behavior is genuinely unclear and a product decision is needed.
+</div>
+
+<div class="subhead">Defaults that silently change results<span class="tag">ASSUMPTIONS</span></div>
+<table class="appx">
+  <thead><tr><th>ID</th><th>Topic</th><th>Observation</th><th>Risk / open question</th></tr></thead>
+  <tbody>
+    <tr><td>A-01</td><td>Status filter</td><td>When <code>--status</code> is omitted, only <code>active</code> events are shown; <code>draft</code>, <code>cancelled</code>, <code>archived</code>, and <code>on-hold</code> are silently dropped.</td><td class="q">Is "active only" the intended default for every command, including <code>exportdata</code>? Users may not realize data is being hidden.</td></tr>
+    <tr><td>A-02</td><td>Country holidays</td><td>When <code>--country</code> is omitted, US and CA holidays are loaded by default.</td><td class="q">A US/CA default is surprising for non-North-American users and embeds a locale assumption. Should the default be empty, or configurable per-theme?</td></tr>
+    <tr><td>A-03</td><td>Weekend style</td><td>Default weekend style is <code>0</code> (work-week only). Events/durations falling on Sat/Sun can be excluded from view and the range is shrunk to Mon–Fri.</td><td class="q">Is a work-week-only default expected for a general calendar tool? Weekend events may silently disappear.</td></tr>
+    <tr><td>A-04</td><td>Empty calendar</td><td><code>--empty</code> not only disables events/durations but also forces <code>ignorecomplete=True</code> and <code>milestones=False</code>.</td><td class="q">These coupled side effects are undocumented at the option level; confirm they are intended rather than incidental.</td></tr>
+    <tr><td>A-05</td><td>Default paper size</td><td>SVG views default to paper size <code>Widescreen</code> and <code>landscape</code> orientation.</td><td class="q">Confirm "Widescreen/landscape" is the intended house default vs. a print size such as Letter/A4.</td></tr>
+  </tbody>
+</table>
+
+<div class="subhead">Magic values &amp; data-coupling assumptions<span class="tag">ASSUMPTIONS</span></div>
+<table class="appx">
+  <thead><tr><th>ID</th><th>Topic</th><th>Observation</th><th>Risk / open question</th></tr></thead>
+  <tbody>
+    <tr><td>A-06</td><td>Holiday detection</td><td>Events are recognized as holidays (and excluded from the event stream) by an exact match of the <code>Notes</code> field against the literals <code>'HOLIDAY'</code>, <code>'USFederal'</code>, <code>'CanFED'</code>.</td><td class="q">A genuine event whose notes equal one of these strings would be silently dropped. Is overloading <code>Notes</code> the intended holiday marker?</td></tr>
+    <tr><td>A-07</td><td>Percent-complete scale</td><td><code>--ignorecomplete</code> excludes items where <code>Percent_Complete == 1</code>. The event model defaults this field to <code>0.0</code>.</td><td class="q">This assumes completion is stored as a 0–1 fraction (1 = 100%). Data stored as 0–100 (where 100 = complete) would never be filtered. Confirm the canonical scale.</td></tr>
+    <tr><td>A-08</td><td>External holiday data</td><td>Government holidays come from a live third-party <code>holidays</code> package, keyed by the calendar's year span.</td><td class="q">Output is not reproducible across package versions or over time; the same command may yield different holidays later. Is version-pinning or caching required for archival output?</td></tr>
+    <tr><td>A-09</td><td>Schema coupling</td><td>Capability depends on specific table/column names (e.g. <code>events</code>, <code>specialdays</code>, <code>papersizes</code>, <code>icon</code>, <code>colors</code>, <code>palettes</code>, <code>patterns</code>). Some columns (e.g. <code>tags</code>) are probed with fallbacks.</td><td class="q">The required vs. optional schema surface is implicit. A documented schema contract would clarify which databases are compatible.</td></tr>
+    <tr><td>A-10</td><td>Unknown statuses</td><td>An event with a status outside the allowed set is accepted and rendered as if <code>active</code>, but is excluded by the default status filter (which only matches <code>active</code>).</td><td class="q">"Render as active" and "filter excludes non-active" are inconsistent for unknown values — an unknown-status event is treated as active for display yet hidden by default. Confirm intended handling.</td></tr>
+  </tbody>
+</table>
+
+<div class="subhead">Ambiguous or surprising behaviors<span class="tag">AMBIGUITIES</span></div>
+<table class="appx">
+  <thead><tr><th>ID</th><th>Topic</th><th>Observation</th><th>Risk / open question</th></tr></thead>
+  <tbody>
+    <tr><td>Q-01</td><td>Silent path rewrite</td><td>Directory components in <code>--outputfile</code> are silently discarded and the file is forced under <code>output/</code>.</td><td class="q">A user passing <code>reports/q3.svg</code> gets <code>output/q3.svg</code> with no warning. Should this warn, or honor a relative subdirectory under <code>output/</code>?</td></tr>
+    <tr><td>Q-02</td><td>Silent date swap</td><td>Reversed start/end dates are silently swapped (debug-level log only).</td><td class="q">A transposition is often a user error; silent correction can mask mistakes. Should it warn?</td></tr>
+    <tr><td>Q-03</td><td>WBS implicit prefix</td><td>A WBS token without <code>**</code> is treated as a prefix match (an implicit <code>**</code> is appended).</td><td class="q">Users may expect exact-segment matching. The implicit-prefix rule is powerful but non-obvious.</td></tr>
+    <tr><td>Q-04</td><td>Palette index typing</td><td>A palette index is interpreted as a float proportional position if it contains <code>.</code>, otherwise as an integer that cycles modulo length. So <code>1</code> and <code>1.0</code> select different colors.</td><td class="q">The int-vs-float distinction hinging on a decimal point is subtle and easy to trip over.</td></tr>
+    <tr><td>Q-05</td><td>PIT axis vs. page</td><td>For the <code>pit</code> view, <code>--direction</code> controls the axis (horizontal/vertical) while <code>--orientation</code> still controls page orientation (portrait/landscape).</td><td class="q">Two near-synonym options with different meanings invite confusion; confirm naming is intentional.</td></tr>
+    <tr><td>Q-06</td><td>Two-pass theming</td><td>The theme is applied twice (before and after auto font-scaling), requiring explicit re-assertion of CLI "disable" flags afterward to prevent the theme from silently re-enabling features.</td><td class="q">The set of flags needing re-assertion is maintained by hand; new negation flags could be missed. Is this precedence model the intended contract?</td></tr>
+    <tr><td>Q-07</td><td>Option-ignored warnings</td><td>Options not supported by the chosen visualizer are accepted, warned about, and ignored rather than rejected.</td><td class="q">Lenient acceptance aids scripting but can hide typos/mistaken expectations. Confirm warn-and-continue is preferred over hard error.</td></tr>
+    <tr><td>Q-08</td><td>Fiscal-year offset default</td><td>The displayed fiscal-year offset defaults to "auto (0 for NRF)".</td><td class="q">The auto rule for non-NRF/13-period types is not fully specified at the option level; confirm the derived fiscal-year number for each type.</td></tr>
+    <tr><td>Q-09</td><td>Week-count formula</td><td>The number-of-weeks computation uses the same expression in both the work-week and full-week branches.</td><td class="q">The branch appears vestigial. Confirm whether work-week ranges are intended to count weeks differently (the code currently does not).</td></tr>
+    <tr><td>Q-10</td><td>Multi-country dedup</td><td>Across countries, holidays are kept per-country; within a country, public-category names win over government-category names on shared dates.</td><td class="q">When several countries share a date, multiple holiday entries can coexist. Confirm the intended display when, e.g., US and CA both mark the same day.</td></tr>
+    <tr><td>Q-11</td><td>Axis date basis</td><td>Timeline/plan views position items against the <em>user-requested</em> (unadjusted) date range, whereas the calendar views render the week-<em>adjusted</em> range.</td><td class="q">The same start/end dates produce a different visible span across view families. Confirm this dual basis is intended, since it affects side-by-side comparisons.</td></tr>
+    <tr><td>Q-12</td><td>Vertical-axis timebands</td><td>Top/bottom time-band rows are only honored on a horizontal axis; on a vertical timeline the band config still parses but silently no-ops.</td><td class="q">A theme configuring bands on a vertical timeline gets no bands and no warning. Confirm whether this should warn or be documented as horizontal-only.</td></tr>
+    <tr><td>Q-13</td><td>Excel freeze panes</td><td><code>excelheader</code> sets freeze panes to keep labels/bands visible; <code>excelblockplan</code> deliberately omits them (a workaround for corrupted freeze XML on record rows).</td><td class="q">The two spreadsheet outputs differ in scroll behavior. Confirm the asymmetry is acceptable or should be resolved.</td></tr>
+  </tbody>
+</table>
+
+<footer class="doc">
+  Generated from source review of <code>ecalendar.py</code> and supporting modules
+  (<code>shared/date_utils.py</code>, <code>shared/data_models.py</code>, <code>shared/db_access.py</code>,
+  <code>shared/wbs_filter.py</code>, <code>visualizers/*</code>, <code>config/*</code>).
+  Requirements describe observable capability and are intentionally implementation-agnostic.
+</footer>
+
+</div>
+</body>
+</html>
