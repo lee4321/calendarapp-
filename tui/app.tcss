@@ -1,0 +1,123 @@
+/* EventCalendar Textual UI styles */
+
+Screen {
+    background: $surface;
+}
+
+#home-title, #builder-title, #hub-title, #wizard-title, #result-title {
+    text-style: bold;
+    color: $accent;
+    padding: 1 2 0 2;
+}
+
+.col-head {
+    text-style: bold;
+    color: $text-muted;
+    padding: 1 1 0 1;
+}
+
+#home-columns {
+    height: 1fr;
+    padding: 1 2;
+}
+
+.home-col {
+    width: 1fr;
+    height: 1fr;
+    margin: 0 1;
+    border: round $panel;
+    padding: 0 1;
+}
+
+.hub-name {
+    text-style: bold;
+}
+
+.hub-sub {
+    color: $text-muted;
+}
+
+/* ---- builder / forms ---- */
+
+#builder-tabs {
+    height: 1fr;
+}
+
+.argfield {
+    height: auto;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.arglabel {
+    text-style: bold;
+    color: $text;
+}
+
+.arghelp {
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 2;
+}
+
+.narrow {
+    width: 24;
+}
+
+Input, Select {
+    width: 1fr;
+}
+
+.daterow {
+    height: auto;
+}
+
+.presets {
+    height: auto;
+    padding: 1 0;
+}
+
+.preset {
+    margin-right: 1;
+    min-width: 14;
+}
+
+#builder-cmd, #result-cmd {
+    color: $success;
+    background: $panel;
+    padding: 1 2;
+    height: auto;
+}
+
+#builder-actions, #wizard-actions, #result-actions {
+    height: auto;
+    padding: 1 2;
+    align-horizontal: left;
+}
+
+#builder-actions Button, #wizard-actions Button, #result-actions Button {
+    margin-right: 2;
+}
+
+/* ---- result / runner ---- */
+
+#result-body {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#result-status {
+    padding: 0 2;
+    text-style: bold;
+}
+
+#result-log {
+    height: 1fr;
+    border: round $panel;
+    margin: 1 2;
+    background: $surface-darken-1;
+}
+
+#wizard-fields {
+    height: 1fr;
+}
