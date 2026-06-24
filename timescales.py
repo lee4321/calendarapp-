@@ -231,4 +231,8 @@ if __name__ == "__main__":
     result = generate_timescales(date(2024, 1, 1), date(2024, 3, 31), cfg)
     for row in result.rows:
         print(row.name)
-        print("  ", [f"{s.label}[{s.start_idx}:{s.end_idx}]" for s in row.spans[:6]], "...")
+        print(
+            "  ",
+            [f"{s.label}[{s.start_idx}:{s.end_idx}]" for s in row.spans[:6]],
+            "...",
+        )

@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.18.0"
+__version__ = "26.06.24.0"
 
 import argparse
 import logging
@@ -282,8 +282,12 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     weekly = sub.add_parser("weekly", help="Generate a SVG containing weekly calendar")
     mini = sub.add_parser("mini", help="Generate a SVG mini calendar")
-    mini_icon = sub.add_parser("mini-icon", help="Generate a mini calendar with icons for day numbers")
-    candybar = sub.add_parser("candybar", help="Generate a SVG vertical year-strip (one row per ISO week)")
+    mini_icon = sub.add_parser(
+        "mini-icon", help="Generate a mini calendar with icons for day numbers"
+    )
+    candybar = sub.add_parser(
+        "candybar", help="Generate a SVG vertical year-strip (one row per ISO week)"
+    )
     text_mini = sub.add_parser("text-mini", help="Generate a text only mini calendar")
     timeline = sub.add_parser("timeline", help="Generate a SVG timeline")
     pit = sub.add_parser(
@@ -314,7 +318,9 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     palettes = sub.add_parser(
         "palettes", help="List available color palettes from database"
     )
-    palettesheet = sub.add_parser("palettesheet", help="Generate a SVG preview of a named palette")
+    palettesheet = sub.add_parser(
+        "palettesheet", help="Generate a SVG preview of a named palette"
+    )
     iconsheet = sub.add_parser(
         "iconsheet", help="Generate a SVG grid preview of icons from database"
     )
@@ -376,7 +382,20 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # If a flag belongs to every view, add it in these loops rather than
     # copy-pasting per-subcommand definitions.
     # Positional arguments for calendar views
-    for view_parser in (weekly, mini, mini_icon, candybar, text_mini, timeline, pit, blockplan, compactplan, excelheader, excelblockplan, exportdata):
+    for view_parser in (
+        weekly,
+        mini,
+        mini_icon,
+        candybar,
+        text_mini,
+        timeline,
+        pit,
+        blockplan,
+        compactplan,
+        excelheader,
+        excelblockplan,
+        exportdata,
+    ):
         view_parser.add_argument(
             "begin",
             type=str,
@@ -842,7 +861,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         )
 
     # SVG-producing views (text-mini is excluded — it produces plain text, not SVG)
-    _svg_views = (weekly, mini, mini_icon, candybar, timeline, pit, blockplan, compactplan)
+    _svg_views = (
+        weekly,
+        mini,
+        mini_icon,
+        candybar,
+        timeline,
+        pit,
+        blockplan,
+        compactplan,
+    )
 
     # Output options (SVG views: all options; text-mini: outputfile only)
     for view_parser in _svg_views:
@@ -990,7 +1018,11 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Rotate text watermark by degrees (clockwise coordinates)",
         )
         watermark_group.add_argument(
-            "--watermark-image", "-wi", type=str, default="", help="Watermark image file"
+            "--watermark-image",
+            "-wi",
+            type=str,
+            default="",
+            help="Watermark image file",
         )
 
         # Content filtering (SVG views include --shade and --overflow)
@@ -1251,7 +1283,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="SET",
-        choices=["squares", "darksquare", "darkcircles", "circles", "squircles", "darksquircles"],
+        choices=[
+            "squares",
+            "darksquare",
+            "darkcircles",
+            "circles",
+            "squircles",
+            "darksquircles",
+        ],
         help=(
             "Icon set to use for day numbers "
             "(choices: squares, darksquare, darkcircles, circles, squircles, darksquircles; "
@@ -1417,8 +1456,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         choices=[
-            "month", "week", "fiscal_quarter", "fiscal_period",
-            "interval", "date", "year",
+            "month",
+            "week",
+            "fiscal_quarter",
+            "fiscal_period",
+            "interval",
+            "date",
+            "year",
         ],
         help="Axis tick granularity (timeband unit). Default: month.",
     )
@@ -1598,7 +1642,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     )
 
     # Fiscal calendar options — all calendar views
-    _fiscal_views = (weekly, mini, mini_icon, candybar, text_mini, timeline, pit, blockplan, compactplan)
+    _fiscal_views = (
+        weekly,
+        mini,
+        mini_icon,
+        candybar,
+        text_mini,
+        timeline,
+        pit,
+        blockplan,
+        compactplan,
+    )
     for _vp in _fiscal_views:
         _fg = _vp.add_argument_group("Fiscal Calendar Options")
         _fg.add_argument(
@@ -1630,7 +1684,9 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     # --fiscal-colors: day-box period fill (weekly and mini)
     for _vp in (weekly, mini, mini_icon, candybar):
-        _vp._option_string_actions.get("--fiscal") and None  # guard: group already added above
+        _vp._option_string_actions.get(
+            "--fiscal"
+        ) and None  # guard: group already added above
         _fiscal_color_group = next(
             g for g in _vp._action_groups if g.title == "Fiscal Calendar Options"
         )
@@ -1965,7 +2021,6 @@ def _apply_args_to_config(
         config.timeline_show_fiscal_quarters = True
 
 
-
 def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
     """
     Map CLI header/footer/watermark text arguments into CalendarConfig.
@@ -2178,9 +2233,26 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         return
 
     # Sections that apply to specific subcommands
-    calendar_subcommands = {"weekly", "mini", "mini-icon", "candybar", "text-mini", "timeline", "blockplan", "compactplan"}
+    calendar_subcommands = {
+        "weekly",
+        "mini",
+        "mini-icon",
+        "candybar",
+        "text-mini",
+        "timeline",
+        "blockplan",
+        "compactplan",
+    }
     # SVG-producing views only (text-mini produces plain text, not SVG)
-    svg_calendar_subcommands = {"weekly", "mini", "mini-icon", "candybar", "timeline", "blockplan", "compactplan"}
+    svg_calendar_subcommands = {
+        "weekly",
+        "mini",
+        "mini-icon",
+        "candybar",
+        "timeline",
+        "blockplan",
+        "compactplan",
+    }
     weekly_only = {"weekly"}
     mini_subcommands = {"mini", "mini-icon", "text-mini"}
     timeline_only = {"timeline"}
@@ -2241,13 +2313,23 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  nrf-544    NRF 5-4-4 retail calendar")
         print("  13-period  13 equal 4-week periods")
         print("\nFiscal features by visualizer:")
-        print("  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds")
-        print("  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds")
-        print("  text-mini   Period short name (e.g. P1) as day symbol on period-start days")
+        print(
+            "  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds"
+        )
+        print(
+            "  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds"
+        )
+        print(
+            "  text-mini   Period short name (e.g. P1) as day symbol on period-start days"
+        )
         print("  timeline    --fiscal-show-periods: period band row above axis")
         print("              --fiscal-show-quarters: quarter band row above axis")
-        print("  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set")
-        print("  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available")
+        print(
+            "  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set"
+        )
+        print(
+            "  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available"
+        )
 
     # --- Week number modes (weekly, mini, mini-icon, text-mini) ---
     if subcommand in week_number_views:
@@ -2436,7 +2518,9 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
     if config.theme_month_palette:
         colors = db.sample_palette_n(config.theme_month_palette, 12)
         if colors:
-            config.theme_month_colors = {f"{i + 1:02d}": c for i, c in enumerate(colors)}
+            config.theme_month_colors = {
+                f"{i + 1:02d}": c for i, c in enumerate(colors)
+            }
         else:
             logger.warning(f"Palette not found: {config.theme_month_palette!r}")
 
@@ -2520,7 +2604,6 @@ _EXPORTDATA_COLUMNS: list[str] = [
     "color",
     "tags",
 ]
-
 
 
 def _fmt_date(d: str | None) -> str:
@@ -2731,9 +2814,7 @@ def _generate_all_palettes_svg(
     palettes = {n: sorted(c, key=_hex_hsv_sort_key) for n, c in palettes.items()}
     names = sorted(palettes.keys())
 
-    max_cols_used = min(
-        MAX_COLS, max((len(palettes[n]) for n in names), default=1)
-    )
+    max_cols_used = min(MAX_COLS, max((len(palettes[n]) for n in names), default=1))
     svg_w = MARGIN * 2 + max_cols_used * CELL_W - GAP_X
 
     sections: list[tuple[str, list[str], int, int]] = []
@@ -3022,7 +3103,9 @@ def _generate_fontsheet_svg(
     # ------------------------------------------------------------------ #
     if fullset:
         # Pass 1 — render and measure
-        pre: list[tuple[str, str, list[str], float]] = []  # (name, path, elems, content_h)
+        pre: list[
+            tuple[str, str, list[str], float]
+        ] = []  # (name, path, elems, content_h)
         for font_name, font_path in fonts_sorted:
             try:
                 path_elems, content_h = _render_font_fullset(
@@ -3239,9 +3322,7 @@ def _generate_iconsheet_svg(
     )
 
     def _xml_escape(text: str) -> str:
-        return (
-            text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        )
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def _render_page(
         page_icons: list[dict], header: str, ncols: int, show_count: bool = True
@@ -3266,7 +3347,7 @@ def _generate_iconsheet_svg(
             f'  <text x="{MARGIN}" y="{MARGIN + 36}"'
             f' font-family="Helvetica, Arial, sans-serif"'
             f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
-            f'{_xml_escape(header)}{count_tspan}</text>',
+            f"{_xml_escape(header)}{count_tspan}</text>",
         ]
 
         for i, row in enumerate(page_icons):
@@ -3344,9 +3425,7 @@ def _generate_iconsheet_svg(
     # Single-sheet mode (default): one SVG holding every icon.
     if not paginate:
         ncols = min(n, _DEFAULT_COLS) if n else 1
-        output_path.write_text(
-            _render_page(icons, title, ncols), encoding="utf-8"
-        )
+        output_path.write_text(_render_page(icons, title, ncols), encoding="utf-8")
         return [output_path]
 
     # Paginated mode: split icons across columns × rows pages.
@@ -3458,7 +3537,11 @@ def _generate_patternsheet_svg(
             # the swatch.  Wrap the tile content in a <g transform="scale(s)">
             # and shrink the pattern's reported tile size by the same factor
             # so the pattern still tiles correctly across the swatch.
-            scale = min(1.0, SWATCH_SIZE / max(tile_w, tile_h)) if max(tile_w, tile_h) > 0 else 1.0
+            scale = (
+                min(1.0, SWATCH_SIZE / max(tile_w, tile_h))
+                if max(tile_w, tile_h) > 0
+                else 1.0
+            )
             if scale < 1.0:
                 inner = f'<g transform="scale({scale})">{inner}</g>'
                 tile_w *= scale
@@ -3616,7 +3699,14 @@ def run(argv: list[str] | None = None) -> int:
     # the subcommand so each visualizer produces a recognizable file
     # (e.g. weekly202605251040.svg, blockplan202605251040.svg).
     _svg_visualizer_commands = {
-        "weekly", "mini", "mini-icon", "candybar", "timeline", "pit", "blockplan", "compactplan",
+        "weekly",
+        "mini",
+        "mini-icon",
+        "candybar",
+        "timeline",
+        "pit",
+        "blockplan",
+        "compactplan",
     }
     if (
         getattr(args, "outputfile", None) == default_output
@@ -3665,9 +3755,19 @@ def run(argv: list[str] | None = None) -> int:
         if not registry:
             print(f"Error: no fonts match filter '{args.filter}'.", file=sys.stderr)
             return 1
-        out_path = Path(args.outputfile) if args.outputfile else Path("output") / "fontsheet.svg"
+        out_path = (
+            Path(args.outputfile)
+            if args.outputfile
+            else Path("output") / "fontsheet.svg"
+        )
         sheet_title = "Fonts" if not args.filter else f"Fonts: {args.filter}"
-        _generate_fontsheet_svg(registry, out_path, color=args.color, title=sheet_title, fullset=args.fullset)
+        _generate_fontsheet_svg(
+            registry,
+            out_path,
+            color=args.color,
+            title=sheet_title,
+            fullset=args.fullset,
+        )
         if not args.quiet:
             print(out_path)
         return 0
@@ -3737,9 +3837,7 @@ def run(argv: list[str] | None = None) -> int:
             return 1
         # --columns/--rows/--sized only make sense when paginating.
         if not args.paginate and (
-            args.columns is not None
-            or args.rows is not None
-            or args.sized is not None
+            args.columns is not None or args.rows is not None or args.sized is not None
         ):
             print(
                 "Error: --columns/--rows/--sized require --paginate.",
@@ -3777,9 +3875,7 @@ def run(argv: list[str] | None = None) -> int:
             flt = args.filter.lower()
             items = [(name, svg) for name, svg in items if flt in name.lower()]
         if not items:
-            print(
-                f"Error: no patterns match filter '{args.filter}'.", file=sys.stderr
-            )
+            print(f"Error: no patterns match filter '{args.filter}'.", file=sys.stderr)
             print(
                 "Use 'ecalendar.py patterns' to list available pattern names.",
                 file=sys.stderr,
@@ -3790,9 +3886,7 @@ def run(argv: list[str] | None = None) -> int:
         else:
             out_path = Path("output") / "patternsheet.svg"
         sheet_title = "Patterns" if not args.filter else f"Patterns: {args.filter}"
-        _generate_patternsheet_svg(
-            items, out_path, color=args.color, title=sheet_title
-        )
+        _generate_patternsheet_svg(items, out_path, color=args.color, title=sheet_title)
         if not args.quiet:
             print(out_path)
         return 0
@@ -3820,17 +3914,19 @@ def run(argv: list[str] | None = None) -> int:
                 row for row in all_colors if flt in str(row.get("EN") or "").lower()
             ]
         import colorsys
+
         def _hsv_sort_key(r: dict) -> tuple:
             # Sort coloursheet swatches by perceptual hue (0–1 around the
             # colour wheel), then saturation, then value.  This groups
             # achromatic colours (blacks/greys/whites with H=0, S=0) first,
             # followed by reds, oranges, yellows, greens, blues, purples.
             # colorsys is imported lazily here so it only loads for colorsheet.
-            red   = int(r.get("red")   or 0) / 255.0
+            red = int(r.get("red") or 0) / 255.0
             green = int(r.get("green") or 0) / 255.0
-            blue  = int(r.get("blue")  or 0) / 255.0
+            blue = int(r.get("blue") or 0) / 255.0
             h, s, v = colorsys.rgb_to_hsv(red, green, blue)
             return (h, s, v)
+
         filtered = sorted(filtered, key=_hsv_sort_key)
         if not filtered:
             print(f"Error: no colors match filter '{args.filter}'.", file=sys.stderr)
@@ -3869,7 +3965,8 @@ def run(argv: list[str] | None = None) -> int:
                 print("Error: no palettes found in database.", file=sys.stderr)
                 return 1
             out_path = (
-                Path(args.outputfile) if args.outputfile
+                Path(args.outputfile)
+                if args.outputfile
                 else Path("output") / "palettesheet.svg"
             )
             _generate_all_palettes_svg(all_palettes, out_path)
@@ -3934,7 +4031,9 @@ def run(argv: list[str] | None = None) -> int:
             _eh_te.apply(_eh_config)
             _resolve_palette_overrides(_eh_config, _eh_db)
         out_path = (
-            Path(args.outputfile) if args.outputfile else Path("output") / "excelheader.xlsx"
+            Path(args.outputfile)
+            if args.outputfile
+            else Path("output") / "excelheader.xlsx"
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         generate_excel_header(_eh_config, _eh_db, out_path)
@@ -4133,21 +4232,33 @@ def run(argv: list[str] | None = None) -> int:
 
         # Warn about SVG layout options not applicable to text-only output
         _svg_layout_checks = [
-            ("margin",                   getattr(args, "margin", False),                              "--margin"),
-            ("header",                   getattr(args, "header", False),                              "--header"),
-            ("footer",                   getattr(args, "footer", False),                              "--footer"),
-            ("headerleft",               bool(getattr(args, "headerleft", "")),                       "--headerleft"),
-            ("headercenter",             bool(getattr(args, "headercenter", "")),                     "--headercenter"),
-            ("headerright",              bool(getattr(args, "headerright", "")),                      "--headerright"),
-            ("footerleft",               bool(getattr(args, "footerleft", "")),                       "--footerleft"),
-            ("footercenter",             bool(getattr(args, "footercenter", "")),                     "--footercenter"),
-            ("footerright",              bool(getattr(args, "footerright", "")),                      "--footerright"),
-            ("watermark_text",           bool(getattr(args, "watermark_text", "")),                    "--watermark-text"),
-            ("watermark_rotation_angle", getattr(args, "watermark_rotation_angle", None) is not None, "--watermark-rotation-angle"),
-            ("watermark_image",          bool(getattr(args, "watermark_image", "")),                   "--watermark-image"),
-            ("shrink",                   getattr(args, "shrink", False),                              "--shrink"),
-            ("shade",                    getattr(args, "shade", False),                               "--shade"),
-            ("monthnames",               getattr(args, "monthnames", False),                          "--monthnames"),
+            ("margin", getattr(args, "margin", False), "--margin"),
+            ("header", getattr(args, "header", False), "--header"),
+            ("footer", getattr(args, "footer", False), "--footer"),
+            ("headerleft", bool(getattr(args, "headerleft", "")), "--headerleft"),
+            ("headercenter", bool(getattr(args, "headercenter", "")), "--headercenter"),
+            ("headerright", bool(getattr(args, "headerright", "")), "--headerright"),
+            ("footerleft", bool(getattr(args, "footerleft", "")), "--footerleft"),
+            ("footercenter", bool(getattr(args, "footercenter", "")), "--footercenter"),
+            ("footerright", bool(getattr(args, "footerright", "")), "--footerright"),
+            (
+                "watermark_text",
+                bool(getattr(args, "watermark_text", "")),
+                "--watermark-text",
+            ),
+            (
+                "watermark_rotation_angle",
+                getattr(args, "watermark_rotation_angle", None) is not None,
+                "--watermark-rotation-angle",
+            ),
+            (
+                "watermark_image",
+                bool(getattr(args, "watermark_image", "")),
+                "--watermark-image",
+            ),
+            ("shrink", getattr(args, "shrink", False), "--shrink"),
+            ("shade", getattr(args, "shade", False), "--shade"),
+            ("monthnames", getattr(args, "monthnames", False), "--monthnames"),
         ]
         for opt_name, was_set, flag in _svg_layout_checks:
             if was_set and opt_name not in visualizer.supported_options:
