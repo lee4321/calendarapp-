@@ -2,6 +2,54 @@
 
 This guide is generated from the current codebase (`ecalendar.py`, `config/theme_engine.py`, `config/config.py`) and reflects the exact implemented CLI/theme surface.
 
+## Textual UI (interactive terminal app)
+
+Prefer a guided interface over typing flags? Launch the Textual UI:
+
+```sh
+uv run python -m tui                 # uses calendar.db in the project root
+uv run python -m tui -db other.db    # point at a different database
+```
+
+The UI is a thin front end over the same CLI documented below — it introspects
+`ecalendar.py`'s argument parser, builds the exact `uv run ecalendar.py …`
+command, and runs it for you. Nothing in the rendering pipeline is bypassed or
+reimplemented, so any flag in this guide is available in the UI, and a live
+command bar always shows the command being assembled (copyable, so you can
+graduate to the shell at any time).
+
+**Home** has three columns:
+
+- **Calendar views** — `weekly`, `mini`, `mini-icon`, `candybar`, `text-mini`,
+  `timeline`, `pit`, `blockplan`, `compactplan`, `excelheader`, `excelblockplan`,
+  `exportdata`.
+- **Reference sheets / listings** — the `*sheet` previews plus `themes`,
+  `papersizes`, `patterns`, `icons`, `colors`, `palettes`, `fonts`.
+- **Data** — the **Import Hub** (see below).
+
+**Builder** (open a view with **Enter**): a tabbed form whose tabs mirror the
+CLI argument groups — Output, Layout, Header/Footer, Watermark, **Content
+Filtering**, Fiscal, Week Number, Logging. Each field is generated from the
+parser, so its help text is the same as `--help`. Pickers for `--theme`,
+`--papersize`, fonts, icons, colors, and patterns are populated from the same
+database/registry the engine uses, so the choices never drift. The **Dates** tab
+has `begin`/`end` inputs with quick presets (this year / quarter / month, next 90
+days). Press **Ctrl+R** to run; output streams live and the rendered file path is
+printed at the end.
+
+**Import Hub** (press **i**, or pick the Data column): one wizard per data type —
+**Events**, **Special days**, **Holidays**, and **Content** (icons / patterns /
+colors). Events, special days, and holidays share one wizard since they share a
+grammar; the Events wizard exposes the full `import_events.py` surface, including
+generator mode (`--generate` with `--start-date` / `--end-date` / repeatable
+`--param KEY=VALUE`). Every importer defaults to a **dry run** so you can validate
+before writing: **Ctrl+D** dry-runs, **Ctrl+R** imports.
+
+Global keys: **Esc** goes back, **q** / **Ctrl+Q** quits, **d** toggles
+dark/light. The UI adds the `tui/` package and the `textual` dependency; it makes
+no changes to `ecalendar.py` or the importers. See [tui/README.md](tui/README.md)
+for the module-level architecture.
+
 ## Commands
 
 | Command | What it does |
