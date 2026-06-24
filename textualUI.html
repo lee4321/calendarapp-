@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventCalendar — Textual TUI Design</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2430; --ink:#e6edf3;
+    --muted:#9da7b3; --line:#30363d; --accent:#58a6ff; --accent2:#3fb950;
+    --warn:#d29922; --pink:#f778ba; --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:980px;margin:0 auto;padding:48px 24px 96px;}
+  header.hero{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:36px;}
+  .eyebrow{font:600 12px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--accent);}
+  h1{font-size:34px;margin:14px 0 8px;letter-spacing:-.02em;}
+  h2{font-size:22px;margin:48px 0 12px;padding-top:8px;letter-spacing:-.01em;}
+  h2 .num{color:var(--accent);font:600 15px/1 var(--mono);margin-right:10px;}
+  h3{font-size:16px;margin:28px 0 8px;color:var(--ink);}
+  p{color:var(--ink);} .lede{color:var(--muted);font-size:17px;max-width:70ch;}
+  .muted{color:var(--muted);}
+  code{font-family:var(--mono);font-size:.88em;background:var(--panel2);
+    padding:.12em .4em;border-radius:5px;color:#cdd9e5;}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:var(--panel);color:var(--accent);font-weight:600;}
+  td code{background:var(--bg);}
+  .ascii{background:#0a0e14;border:1px solid var(--line);border-radius:10px;
+    padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;
+    line-height:1.5;color:#b9c6d3;white-space:pre;margin:16px 0;}
+  .ascii .c{color:var(--accent)} .ascii .g{color:var(--accent2)}
+  .ascii .w{color:var(--warn)} .ascii .p{color:var(--pink)} .ascii .m{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .card h4{margin:0 0 6px;font-size:14px;color:var(--accent);}
+  .card p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5;}
+  ul,ol{padding-left:22px;} li{margin:6px 0;}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);background:var(--panel2);
+    border:1px solid var(--line);border-radius:20px;padding:5px 11px;margin:3px 4px 3px 0;color:#cdd9e5;}
+  .tag.v{color:var(--accent2);border-color:#264d33}
+  .tag.s{color:var(--pink);border-color:#52213a}
+  .tag.r{color:var(--warn);border-color:#4a3b16}
+  .filetree{background:#0a0e14;border:1px solid var(--line);border-radius:10px;
+    padding:18px 20px;font-family:var(--mono);font-size:13px;line-height:1.65;color:#b9c6d3;white-space:pre;overflow-x:auto;}
+  .filetree .d{color:var(--accent)} .filetree .x{color:var(--muted)}
+  .rationale li{margin:10px 0;}
+  .rationale b{color:var(--ink)}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0;}
+  .keyidea{background:linear-gradient(180deg,#13233b,#10192b);border:1px solid #1d3a5f;
+    border-left:3px solid var(--accent);border-radius:10px;padding:16px 20px;margin:20px 0;}
+  .keyidea b{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Design Specification</div>
+  <h1>A Textual TUI for EventCalendar</h1>
+  <p class="lede">A terminal UI (built on <a href="https://textual.textualize.io" style="color:var(--accent)">textual</a>)
+  that drives every visualization, all data filtering, full command-line parameter selection,
+  and event-data import — as a thin, introspection-driven front end over the existing
+  <code>ecalendar.py</code> argparse layer.</p>
+</header>
+
+<h2><span class="num">01</span>What the UI must cover</h2>
+<p>Grounded in the real CLI surface from <code>ecalendar.py</code> and <code>importers/import_events.py</code>.
+The tool is a subcommand CLI with three classes of command:</p>
+
+<table>
+  <tr><th style="width:22%">Class</th><th>Subcommands</th><th style="width:30%">Notes</th></tr>
+  <tr>
+    <td><b>Calendar views</b><br><span class="muted">date-ranged, full option set</span></td>
+    <td><code>weekly</code> <code>mini</code> <code>mini_icon</code> <code>candybar</code> <code>text-mini</code>
+        <code>timeline</code> <code>pit</code> <code>blockplan</code> <code>compactplan</code>
+        <code>excelheader</code> <code>excelblockplan</code> <code>exportdata</code></td>
+    <td>Share <code>begin</code>/<code>end</code> + Database / Output / Layout / Header-Footer /
+        Watermark / <b>Content-Filtering</b> / Fiscal / Logging groups</td>
+  </tr>
+  <tr>
+    <td><b>Reference sheets / listings</b></td>
+    <td><code>themes</code> <code>papersizes</code> <code>patterns</code> <code>icons</code>
+        <code>colors</code> <code>palettes</code> <code>palettesheet</code> <code>iconsheet</code>
+        <code>patternsheet</code> <code>colorsheet</code> <code>fonts</code> <code>fontsheet</code></td>
+    <td>DB-driven enumerations — also the <i>source of truth</i> for pickers</td>
+  </tr>
+  <tr>
+    <td><b>Import</b></td>
+    <td><code>import_events.py</code> <span class="muted">(separate entry)</span></td>
+    <td>file/dir import, <code>--generate</code> scripts, <code>--replace</code>,
+        <code>--dry-run</code>, history <code>--list</code>/<code>--remove</code></td>
+  </tr>
+</table>
+
+<div class="keyidea">
+  <b>The design hinges on one fact:</b> the listing subcommands
+  (<code>themes</code>, <code>papersizes</code>, <code>fonts</code>, <code>icons</code>,
+  <code>colors</code>, <code>palettes</code>, <code>patterns</code>) are exactly the value-spaces
+  for the pickers. The TUI calls them to populate dropdowns instead of hardcoding —
+  so the UI never drifts from the DB/registry.
+</div>
+
+<h2><span class="num">02</span>Architecture</h2>
+<p>A single Textual <code>App</code> that is a <b>GUI front end over the existing argparse layer</b> —
+it never reimplements rendering logic; it <i>builds an argv and shells out</i> (or imports
+<code>ecalendar.main()</code> in-process). This keeps the TUI thin and immune to calendar-engine changes.</p>
+
+<div class="filetree">tui/
+  <span class="d">app.py</span>            <span class="x"># CalendarTUI(App) — screen stack, global bindings, DB path</span>
+  <span class="d">spec.py</span>           <span class="x"># ARG SPEC: introspected from the argparse parser (single source of truth)</span>
+  <span class="d">registry.py</span>       <span class="x"># queries listing subcommands -> picker option lists (cached)</span>
+  <span class="d">runner.py</span>         <span class="x"># builds argv, runs ecalendar/import in worker, streams stdout/log</span>
+  <span class="d">screens/</span>
+    <span class="d">home.py</span>        <span class="x"># command launcher (the 12 views + import + sheets)</span>
+    <span class="d">builder.py</span>     <span class="x"># the big parameter form (tabbed by arg-group)</span>
+    <span class="d">filters.py</span>     <span class="x"># Content-Filtering panel (shared widget, embedded in builder)</span>
+    <span class="d">import_hub.py</span>  <span class="x"># Import Hub: events / special days / holidays / content</span>
+    <span class="d">import_wizard.py</span><span class="x"># shared file+dry-run+history wizard, parameterised per importer</span>
+  <span class="d">importers_spec.py</span> <span class="x"># adapters: argv builders for import_events/specialdays/holidays/…</span>
+    <span class="d">preview.py</span>     <span class="x"># render result: SVG->terminal image / text output / log tail</span>
+    <span class="d">pickers.py</span>     <span class="x"># modal selection lists (theme/paper/font/icon/color/palette)</span>
+  <span class="d">widgets/</span>
+    <span class="d">daterange.py</span>   <span class="x"># begin/end with validation + presets (this quarter, FY, etc.)</span>
+    <span class="d">argfield.py</span>    <span class="x"># one widget per arg, driven by spec (bool->Switch, choices->Select…)</span></div>
+
+<div class="keyidea">
+  <b>Key idea — <code>spec.py</code> is generated, not written.</b> Walk the existing
+  <code>build_parser()</code> <code>_action_groups</code>/<code>_actions</code> once at startup.
+  Each <code>Action</code> already carries <code>dest</code>, <code>option_strings</code>,
+  <code>type</code>, <code>choices</code>, <code>default</code>, <code>help</code>, and <code>nargs</code>.
+  That metadata deterministically maps to a widget.
+</div>
+
+<table>
+  <tr><th>argparse signature</th><th>Textual widget</th></tr>
+  <tr><td><code>action="store_true"</code></td><td><code>Switch</code></td></tr>
+  <tr><td><code>choices=[...]</code></td><td><code>Select</code></td></tr>
+  <tr><td><code>type=int</code> / <code>float</code></td><td><code>Input(type="integer"/"number")</code> with validators</td></tr>
+  <tr><td>listing-backed (<code>--theme</code>, <code>--papersize</code>, <code>--country</code>, font/icon/color/palette)</td>
+      <td><code>Select</code> from <code>registry.py</code>, or a modal picker for big lists (icons/colors)</td></tr>
+  <tr><td>free <code>type=str</code></td><td><code>Input</code></td></tr>
+  <tr><td><code>begin</code>/<code>end</code> positionals</td><td>custom <code>DateRange</code> widget</td></tr>
+  <tr><td><code>action="append"</code> (<code>--param</code>)</td><td>repeatable key/value rows</td></tr>
+</table>
+<p>Because it's introspected, <b>new CLI flags appear in the UI automatically</b> — no maintenance.
+The help string becomes the field's tooltip/description.</p>
+
+<h2><span class="num">03</span>Screen flow</h2>
+
+<div class="ascii"><span class="c">┌─ Home / Launcher ─────────────────────────────────────────────┐</span>
+│  CALENDAR VIEWS          REFERENCE SHEETS        DATA          │
+│  ▸ weekly                ▸ themes / palettes      ▸ Import…    │
+│  ▸ mini / mini_icon      ▸ icons / colors         ▸ Export     │
+│  ▸ candybar / timeline   ▸ fonts / patterns       ▸ History    │
+│  ▸ blockplan / pit  …    ▸ *sheet renders         ▸ Import Hub │
+│                                                  <span class="m">events·days·</span>  │
+│                                                  <span class="m">holidays·…</span>   │
+│  <span class="m">[Enter] configure   [i] import   [r] re-run last   [q] quit</span>  │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span>
+        │ select a view
+        ▼
+<span class="c">┌─ Builder: weekly ─────────────────────────────────────────────┐</span>
+│ Tabs:  <span class="g">Dates</span> │ Output │ Layout │ Text │ Watermark │ <span class="p">Filters</span> │  │
+│        Fiscal │ Logging                          <span class="m">(arg-groups)</span> │
+│                                                               │
+│  ┌ Dates ──────────────────────────────────────────────────┐ │
+│  │ Begin [2026 01 01]  End [2026 12 31]                     │ │
+│  │ Presets: (This year)(This quarter)(FY2026)(Next 90 days) │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  <span class="g">Live command:</span>                                                │
+│   uv run ecalendar.py weekly 20260101 20260331 \              │
+│        --theme corporate --weekends 1 --status active         │
+│                                                               │
+│  <span class="m">[Ctrl+R] Run   [Ctrl+P] Dry preview   [Esc] back</span>             │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span>
+        │ Ctrl+R
+        ▼
+<span class="c">┌─ Result ──────────────────────────────────────────────────────┐</span>
+│  <span class="g">◐ rendering…</span>  →  output/weekly20260623.svg                   │
+│  [SVG preview pane]            [stdout / log tail]             │
+│  <span class="m">[o] open file  [c] copy command  [e] edit args  [s] save preset</span>│
+<span class="c">└───────────────────────────────────────────────────────────────┘</span></div>
+
+<h3>The Filters tab is the "data filtering" surface</h3>
+<p>It's the highest-value part — a shared widget reused by every view, the importer's dry-run, and export:</p>
+
+<div class="ascii"><span class="p">┌─ Filters (Content) ───────────────────────────────────────────┐</span>
+│ Events     [✓] single-day   [✓] durations   [ ] only milestones│
+│            [ ] only rollups  [ ] ignore 100% complete          │
+│ Status     [<span class="g">active ✓</span>][draft][on-hold][cancelled][archived][all]│
+│ WBS        [ 1.2.*, !1.2.9, 3.**                             ] │
+│ Notes      [ ] include notes in titles                         │
+│ Holidays   Country [<span class="c">US,CA ▾</span>]   Weekend-days [<span class="c">Sat,Sun ▾</span>]        │
+│ Date scope [✓] empty(blank)  [✓] shade today  [ ] overflow page│
+<span class="p">└───────────────────────────────────────────────────────────────┘</span></div>
+<p class="muted">WBS gets live validation against the grammar (<code>*</code>, <code>**</code>, <code>!</code>,
+dot-segments); <code>--status</code> is a multi-select chip row mapping to the comma list;
+<code>--country</code> and <code>--weekend-days</code> are multi-selects backed by the same parsing the CLI does.</p>
+
+<h2><span class="num">04</span>Data import hub</h2>
+<p>Importing is a separate entry-point family, not part of <code>ecalendar.py</code>. The TUI gives it its own
+top-level <b>Import Hub</b> with one wizard per data type. Three of the importers
+(<code>import_events.py</code>, <code>import_specialdays.py</code>, <code>import_holidays.py</code>)
+share nearly the same grammar — file/dir input, <code>--dry-run</code>, <code>--replace</code>,
+<code>--skip-errors</code>, history <code>--list</code>, removal, and <code>--log-file</code>/<code>--log-level</code> —
+so they are driven by <b>one shared wizard component</b> parameterised per importer.</p>
+
+<div class="ascii"><span class="c">┌─ Import Hub ──────────────────────────────────────────────────┐</span>
+│  Pick a data type to import:                                   │
+│   ▸ <span class="g">Events</span>         project tasks / durations / milestones      │
+│   ▸ <span class="p">Special days</span>   company nonworkdays, observances, custom days │
+│   ▸ Holidays       government holidays (CSV, by country)        │
+│   ▸ <span class="m">Content ·</span>     icons · patterns · colors (reference data)     │
+│                                                               │
+│  <span class="m">[Enter] open wizard   [h] history   [Esc] home</span>               │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span></div>
+
+<h3>4.1 — Events (full <code>import_events.py</code> functionality)</h3>
+<p>Every flag of <code>import_events.py</code> is surfaced — nothing is dropped:</p>
+
+<div class="ascii"><span class="c">┌─ Import · Events ─────────────────────────────────────────────┐</span>
+│ Source   (•) File/Folder  [ importers/sample_data.csv   ][📁] │
+│          ( ) Generator    [ my_generator.py             ][📁] │
+│            └ <span class="m">--start-date</span> [2026-01-01]  <span class="m">--end-date</span> [2026-12-31]│
+│            └ <span class="m">--param</span>  Priority=1            ✎  ＋             │
+│                       Icon=rocket             ✎  ✕             │
+│ Target   <span class="m">--database</span> [ calendar.db ][📁]   <span class="m">--user-id</span> [1]       │
+│ Mode     [ ] <span class="m">--replace</span>   [✓] <span class="m">--dry-run</span>   [ ] <span class="m">--skip-errors</span>      │
+│ Logging  <span class="m">--verbose</span> [▢▢▣]   <span class="m">--log-level</span> [info ▾]                 │
+│          <span class="m">--log-file</span> [ import_events.log ]                       │
+│ <span class="m">───────────────────────────────────────────────────────────────</span> │
+│ <span class="g">Dry-run validation:</span>   42 rows OK · <span class="w">3 warnings</span> · 0 errors       │
+│   <span class="w">row 17: End &lt; Start  ⚠   row 22: unknown Icon 'foo'  ⚠</span>       │
+│ <span class="m">───────────────────────────────────────────────────────────────</span> │
+│ <span class="m">[Import]  [Re-run dry]  [View history]  [Copy command]  [Esc]</span>   │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span></div>
+
+<table>
+  <tr><th style="width:32%">import_events.py flag</th><th>UI surface</th></tr>
+  <tr><td><code>files</code> (nargs=*)</td><td>File/folder picker (multi-select); accepts XLSX/CSV files or directories</td></tr>
+  <tr><td><code>--generate / -g</code> + <code>--start-date</code> / <code>--end-date</code> / <code>--param</code></td>
+      <td>Generator mode: script picker, date inputs, and repeatable <code>KEY=VALUE</code> rows (the <code>append</code> action)</td></tr>
+  <tr><td><code>--database / -db</code>, <code>--user-id / -u</code></td><td>Target DB picker + user-id stepper</td></tr>
+  <tr><td><code>--replace / -r</code>, <code>--dry-run / -n</code>, <code>--skip-errors</code></td><td>Mode switches; dry-run defaults on</td></tr>
+  <tr><td><code>--verbose / -v</code>, <code>--log-level</code>, <code>--log-file</code></td><td>Verbosity stepper + level Select + log-path input</td></tr>
+  <tr><td><code>--list / -l</code></td><td>History table (see §4.4)</td></tr>
+  <tr><td><code>--remove / -rm</code> + <code>--force / -f</code></td><td>Row-select removal with range syntax; <code>--force</code> skips the confirm modal</td></tr>
+</table>
+<p class="muted">Generator-only fields (<code>--start-date</code>/<code>--end-date</code>/<code>--param</code>) are disabled
+unless Generator source is chosen — mirroring the CLI's own <code>parser.error</code> guard so the UI can't build an invalid argv.</p>
+
+<h3>4.2 — Special days (<code>import_specialdays.py</code>)</h3>
+<p>Same shared wizard, plus the two fields unique to special-day imports — <code>--country</code> and
+<code>--language</code> — and a column-aware dry-run that knows the special-day schema:</p>
+
+<div class="ascii"><span class="c">┌─ Import · Special days ───────────────────────────────────────┐</span>
+│ Source   [ SpecialDays/company.xlsx                    ][📁]  │
+│ Target   <span class="m">--database</span> [ calendar.db ]   <span class="m">--user-id</span> [1]            │
+│ Tagging  <span class="m">--country</span> [US ▾]   <span class="m">--language</span> [en ▾]                  │
+│ Mode     [ ] <span class="m">--replace</span>   [✓] <span class="m">--dry-run</span>   [ ] <span class="m">--skip-errors</span>      │
+│ <span class="m">───────────────────────────────────────────────────────────────</span> │
+│ <span class="g">Detected columns:</span> name ✓  start_date ✓  nonworkday ✓  icon ✓    │
+│   <span class="m">daycolor · pattern · patterncolor · tags · fullday · notes</span>    │
+│ <span class="g">Dry-run:</span> 11 rows OK · 0 errors                              │
+│ <span class="m">[Import]  [View history]  [Remove…]  [Esc]</span>                     │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span></div>
+<p class="muted">The dry-run panel renders the accepted special-day columns
+(<code>name</code>, <code>start_date</code>/<code>end_date</code>, <code>company</code>, <code>nonworkday</code>,
+<code>fullday</code>, <code>starthour</code>/<code>endhour</code>, <code>icon</code>, <code>daycolor</code>,
+<code>pattern</code>/<code>patterncolor</code>, <code>tags</code>, <code>visible</code>, <code>notes</code>) and
+flags which were matched from the file's headers — so column-aliasing problems are caught before import.
+These are the company nonworkdays/observances that the Filters panel (§3) and holiday-color logic consume downstream.</p>
+
+<h3>4.3 — Holidays &amp; reference content</h3>
+<p>The hub also reaches the rest of the importer family so the whole DB can be populated from one place:</p>
+<div class="grid">
+  <div class="card"><h4>Holidays · import_holidays.py</h4><p>CSV-by-country government holidays. Shared wizard with
+    <code>--country</code>/<code>--language</code>; note this importer uses <code>--clear</code> (wipe all)
+    rather than <code>--remove</code>, so its history panel shows a Clear-all action instead of row removal.</p></div>
+  <div class="card"><h4>Icons · import_icons.py</h4><p>Folder of <code>.svg</code> → <code>icon</code> table.
+    Folder picker + replace toggle; feeds the icon pickers in §2.</p></div>
+  <div class="card"><h4>Patterns · import_patterns.py</h4><p>Folder of <code>.svg</code> → <code>patterns</code> table
+    (day-box decoration). Folder picker + replace toggle.</p></div>
+  <div class="card"><h4>Colors · import_rcairo_colors.py</h4><p><code>Rcairocolors.csv</code> → <code>colors</code> table
+    via <code>--db</code>/<code>--csv</code>. Two path inputs and a run button.</p></div>
+</div>
+
+<h3>4.4 — Import history (shared)</h3>
+<p>Events and special days both maintain an <code>import_history</code>; the wizard exposes it as a live table
+backed by each importer's <code>--list</code>, with row-select driving <code>--remove</code>:</p>
+
+<div class="ascii"><span class="c">┌─ Import history ──────────────────────────────────────────────┐</span>
+│  ID  File              When         Rows  Type      <span class="m">[ ]select</span>    │
+│  12  PI7.xlsx          06-20 14:02  118   events                 │
+│  11  company.xlsx      06-19 09:31   11   specialdays            │
+│  10  PI6.csv           06-12 16:40   97   events                 │
+│ <span class="m">───────────────────────────────────────────────────────────────</span> │
+│ Remove [ 10-12 ]  (single · 1-5 · 1,3,5 · 5- · all)  [ ] <span class="m">--force</span>│
+│ <span class="m">[Remove selected]   [Refresh]   [Esc]</span>                          │
+<span class="c">└───────────────────────────────────────────────────────────────┘</span></div>
+<p class="muted"><code>--dry-run</code> runs automatically on file selection and gates the real Import button —
+turning a blind CLI flag into a guardrail. The <code>--remove</code> field accepts the full range grammar
+(<code>3</code>, <code>1-5</code>, <code>1,3,5</code>, <code>5-</code>, <code>all</code>); <code>--force</code>
+skips the confirmation modal.</p>
+
+<h2><span class="num">05</span>Execution model</h2>
+<div class="grid">
+  <div class="card"><h4>Worker, not blocking</h4><p><code>runner.py</code> runs the build in a Textual
+    <code>@work(thread=True)</code> worker, streaming stdout/log into a <code>RichLog</code>.
+    The UI stays responsive; <code>--verbose</code> maps to a verbosity slider.</p></div>
+  <div class="card"><h4>Two run modes</h4><p>In-process (<code>ecalendar.run(argv)</code>) for speed, or
+    <code>subprocess</code> for isolation. The subprocess path uses <code>uv run</code> — this project
+    runs Python via uv, never raw <code>python</code>.</p></div>
+  <div class="card"><h4>Live command bar</h4><p>Always shows the exact argv being assembled — the TUI is a
+    teaching tool for the CLI, and "copy command" lets power users graduate to the shell.</p></div>
+  <div class="card"><h4>Presets</h4><p>Any builder state serializes to a named JSON preset
+    (a dict of <code>dest→value</code>); "re-run last" and saved presets live on Home.</p></div>
+  <div class="card"><h4>Preview</h4><p>SVG output rendered inline via a terminal image protocol
+    (Kitty/iTerm/Sixel) with text fallback; <code>text-mini</code>/<code>exportdata</code>/listing
+    commands show their text straight in a <code>RichLog</code>.</p></div>
+  <div class="card"><h4>Pickers from the DB</h4><p>Theme/paper/font/icon/color/palette modals are populated
+    by calling the listing subcommands, so values match what the engine can actually render.</p></div>
+</div>
+
+<h2><span class="num">06</span>Why this shape</h2>
+<ol class="rationale">
+  <li><b>Introspection over duplication</b> — the form is generated from the parser, so 100+ flags and any
+      future ones are covered for free, and help text is reused as documentation.</li>
+  <li><b>Listing subcommands as pickers</b> — the UI's value-spaces come from the same DB/registry the engine
+      uses, so themes/fonts/icons/colors never go stale.</li>
+  <li><b>Shared Filters widget</b> — "all data filtering" is one component reused across views, import dry-run,
+      and export, instead of rebuilt per screen.</li>
+  <li><b>Thin front end</b> — it builds argv and shells/calls into existing code; zero calendar logic is
+      reimplemented, so the engine stays the single source of truth.</li>
+  <li><b>One wizard for a family of importers</b> — events, special days, and holidays share a grammar, so they
+      share a component; per-importer differences (<code>--country</code>/<code>--language</code>,
+      <code>--clear</code> vs <code>--remove</code>, generator mode) are just adapter config, and dry-run gates
+      every real write.</li>
+</ol>
+
+<footer>
+  EventCalendar v9 · Textual TUI design specification · generated 2026-06-23 ·
+  non-invasive: new <code>tui/</code> package, no changes to <code>ecalendar.py</code>.
+</footer>
+
+</div>
+</body>
+</html>
