@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.24.0"
+__version__ = "26.06.25.0"
 
 import argparse
 import logging
@@ -2705,7 +2705,63 @@ def _hex_hsv_sort_key(color: str) -> tuple:
     return colorsys.rgb_to_hsv(red, green, blue)
 
 
-def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> None:
+def _parse_hex_rgb(color: str) -> tuple[int, int, int]:
+    """Parse a hex colour string into ``(red, green, blue)`` 0–255 ints.
+
+    Accepts 3- or 6-digit hex with or without a leading ``#``.  Returns
+    ``(0, 0, 0)`` on malformed input rather than raising.
+    """
+    hx = color.lstrip("#")
+    if len(hx) == 3:
+        hx = "".join(c * 2 for c in hx)
+    try:
+        return int(hx[0:2], 16), int(hx[2:4], 16), int(hx[4:6], 16)
+    except (ValueError, IndexError):
+        return (0, 0, 0)
+
+
+def _swatch_value_labels(cx: float, cy: float, red: int, green: int, blue: int) -> list[str]:
+    """SVG ``<text>`` lines for the hex value and RGB triplet inside a swatch.
+
+    Hex sits on top, the zero-padded ``XXX,XXX,XXX`` RGB triplet just below.
+    Text colour flips to white on dark backgrounds (luminance < 128) so the
+    labels stay legible.  Shared by the colorsheet and palettesheet outputs.
+
+    Args:
+        cx, cy: Centre point of the swatch box.
+        red, green, blue: Channel values (0–255).
+    """
+    hex_color = f"#{red:02X}{green:02X}{blue:02X}"
+    luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+    text_color = "white" if luminance < 128 else "#222"
+    return [
+        f'  <text x="{cx}" y="{cy - 2}"'
+        f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
+        f' fill="{text_color}" text-anchor="middle">{hex_color}</text>',
+        f'  <text x="{cx}" y="{cy + 12}"'
+        f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
+        f' fill="{text_color}" text-anchor="middle">{red:03d},{green:03d},{blue:03d}</text>',
+    ]
+
+
+def _swatch_name_label(cx: float, baseline_y: float, name: str) -> str:
+    """SVG ``<text>`` line for the lowercase colour name below a swatch.
+
+    Shared by the colorsheet and palettesheet outputs.
+    """
+    return (
+        f'  <text x="{cx}" y="{baseline_y}"'
+        f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
+        f' fill="#555" text-anchor="middle">{name.lower()}</text>'
+    )
+
+
+def _generate_palette_svg(
+    name: str,
+    colors: list[str],
+    output_path: Path,
+    name_lookup: dict[str, str] | None = None,
+) -> None:
     """
     Write a standalone SVG file showing a colour palette as a grid of swatches.
 
@@ -2766,15 +2822,18 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
         y = MARGIN + TITLE_H + row * CELL_H
 
         hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
+        red, green, blue = _parse_hex_rgb(color)
+        cx = x + BOX_W // 2
         lines.append(
             f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
             f' fill="{color}" stroke="#bbbbbb" stroke-width="0.5"/>'
         )
-        lines.append(
-            f'  <text x="{x + BOX_W // 2}" y="{y + BOX_H + 18}"'
-            f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-            f' fill="#555" text-anchor="middle">{hx}</text>'
-        )
+        # Hex + RGB inside the swatch (same as the colorsheet)
+        lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
+        # Colour name below the swatch (same as the colorsheet); fall back to
+        # the hex value when the colour has no name in the database.
+        col_name = (name_lookup or {}).get(hx) or hx
+        lines.append(_swatch_name_label(cx, y + BOX_H + 18, col_name))
 
     lines.append("</svg>")
 
@@ -2783,7 +2842,9 @@ def _generate_palette_svg(name: str, colors: list[str], output_path: Path) -> No
 
 
 def _generate_all_palettes_svg(
-    palettes: dict[str, list[str]], output_path: Path
+    palettes: dict[str, list[str]],
+    output_path: Path,
+    name_lookup: dict[str, str] | None = None,
 ) -> None:
     """
     Write a single SVG containing every palette as a labeled section of swatches.
@@ -2852,15 +2913,18 @@ def _generate_all_palettes_svg(
             x = MARGIN + col * CELL_W
             y = grid_y + row * CELL_H
             hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
+            red, green, blue = _parse_hex_rgb(color)
+            cx = x + BOX_W // 2
             lines.append(
                 f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
                 f' fill="{color}" stroke="#bbbbbb" stroke-width="0.5"/>'
             )
-            lines.append(
-                f'  <text x="{x + BOX_W // 2}" y="{y + BOX_H + 18}"'
-                f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-                f' fill="#555" text-anchor="middle">{hx}</text>'
-            )
+            # Hex + RGB inside the swatch (same as the colorsheet)
+            lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
+            # Colour name below the swatch (same as the colorsheet); fall back
+            # to the hex value when the colour has no name in the database.
+            col_name = (name_lookup or {}).get(hx) or hx
+            lines.append(_swatch_name_label(cx, y + BOX_H + 18, col_name))
 
     lines.append("</svg>")
 
@@ -2932,27 +2996,16 @@ def _generate_colorsheet_svg(
         green = int(row.get("green") or 0)
         blue = int(row.get("blue") or 0)
         hex_color = f"#{red:02x}{green:02x}{blue:02x}"
-
-        # Determine label color: white text on dark backgrounds
-        luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-        text_on_swatch = "white" if luminance < 128 else "#222"
+        cx = x + BOX_W // 2
 
         lines.append(
             f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
             f' fill="{hex_color}" stroke="#bbbbbb" stroke-width="0.5"/>'
         )
-        # Hex label centered inside the swatch
-        lines.append(
-            f'  <text x="{x + BOX_W // 2}" y="{y + BOX_H // 2 + 5}"'
-            f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-            f' fill="{text_on_swatch}" text-anchor="middle">{hex_color.upper()}</text>'
-        )
-        # Color name below the swatch
-        lines.append(
-            f'  <text x="{x + BOX_W // 2}" y="{y + BOX_H + 18}"'
-            f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-            f' fill="#555" text-anchor="middle">{name}</text>'
-        )
+        # Hex value + RGB triplet centered inside the swatch
+        lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
+        # Color name below the swatch (forced lowercase)
+        lines.append(_swatch_name_label(cx, y + BOX_H + 18, name))
 
     lines.append("</svg>")
 
@@ -3959,6 +4012,8 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "palettesheet":
         db = _open_calendar_db(args.database)
+        # Map uppercase hex → colour name so swatches can be labelled like the colorsheet
+        name_lookup = {c["hex"].upper(): c["EN"] for c in db.get_all_colors()}
         if args.palette_name is None:
             all_palettes = db.get_all_palettes()
             if not all_palettes:
@@ -3969,7 +4024,7 @@ def run(argv: list[str] | None = None) -> int:
                 if args.outputfile
                 else Path("output") / "palettesheet.svg"
             )
-            _generate_all_palettes_svg(all_palettes, out_path)
+            _generate_all_palettes_svg(all_palettes, out_path, name_lookup)
             if not args.quiet:
                 print(out_path)
             return 0
@@ -3989,7 +4044,7 @@ def run(argv: list[str] | None = None) -> int:
         else:
             safe_name = args.palette_name.replace("/", "_").replace("\\", "_")
             out_path = Path("output") / f"{safe_name}.svg"
-        _generate_palette_svg(args.palette_name, colors, out_path)
+        _generate_palette_svg(args.palette_name, colors, out_path, name_lookup)
         if not args.quiet:
             print(out_path)
         return 0
