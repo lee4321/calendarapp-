@@ -112,14 +112,14 @@ export component MainWindow inherits Window {
     callback generate();
 
     HorizontalBox {
-        padding: 12px;
-        spacing: 12px;
+        padding: 0px;
+        spacing: 0px;
 
-        // ===================== Left: option form =====================
+        // ===================== Left: option form (the "menu") =====================
         Rectangle {
             width: 410px;
             background: #2b2b2b10;
-            border-radius: 6px;
+            border-radius: 0px;
 
             VerticalBox {
                 padding: 0px;
@@ -400,28 +400,40 @@ export component MainWindow inherits Window {
             }
         }
 
-        // ===================== Right: SVG preview =====================
-        VerticalBox {
-            spacing: 8px;
+        // ===== Right: SVG preview — fills the entire area right of the menu =====
+        Rectangle {
+            horizontal-stretch: 1;
+            background: white;
+            border-width: 1px;
+            border-color: #00000022;
 
-            Rectangle {
-                background: white;
-                border-radius: 6px;
-                border-width: 1px;
-                border-color: #00000022;
-
-                Image {
-                    source: root.preview_image;
-                    image-fit: contain;
-                    width: parent.width - 16px;
-                    height: parent.height - 16px;
-                }
+            Image {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                source: root.preview_image;
+                image-fit: contain;
             }
 
-            Text {
-                text: root.status_text;
-                wrap: word-wrap;
-                color: #444;
+            // Status read-out overlaid on the bottom edge so the preview image
+            // itself occupies the full region.
+            Rectangle {
+                x: 0;
+                y: parent.height - self.height;
+                width: parent.width;
+                height: 26px;
+                background: #f4f4f4ee;
+
+                Text {
+                    x: 10px;
+                    width: parent.width - 20px;
+                    height: parent.height;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    text: root.status_text;
+                    color: #333;
+                }
             }
         }
     }
