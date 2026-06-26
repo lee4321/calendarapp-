@@ -1,0 +1,184 @@
+// Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC
+//
+// Slint UI proof-of-concept for the ecalendar `pit` (Points-in-Time) visualizer.
+// All form state below is exposed as `in-out` properties and read back by the
+// Python driver (slint_ui/app.py) to assemble the ecalendar CLI argv. The
+// `preview_image`, `status_text` and `generating` properties are driven *from*
+// Python after each generation run.
+
+import {
+    Button, LineEdit, ComboBox, CheckBox, ScrollView,
+    VerticalBox, HorizontalBox, GroupBox
+} from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "ecalendar — PIT preview (Slint POC)";
+    preferred-width: 1180px;
+    preferred-height: 760px;
+    min-width: 920px;
+    min-height: 600px;
+
+    // ---- form state: two-way bound to widgets, read by Python ----
+    in-out property <string> begin_date: "20260101";
+    in-out property <string> end_date: "20260630";
+    in-out property <string> database: "calendar.db";
+    in-out property <string> theme: "(none)";
+    in-out property <string> papersize: "Widescreen";
+    in-out property <string> orientation: "landscape";
+    in-out property <string> direction: "horizontal";
+    in-out property <string> label_side: "both";
+    in-out property <string> tick_unit: "month";
+    in-out property <string> date_placement: "inline";
+    in-out property <string> today_label: "today";
+    in-out property <bool> today_line: true;
+    in-out property <bool> milestones_only: false;
+    in-out property <bool> no_events: false;
+    in-out property <bool> no_durations: false;
+    in-out property <bool> include_notes: false;
+    in-out property <bool> show_header: false;
+    in-out property <bool> show_footer: false;
+
+    // ---- driven from Python ----
+    in property <image> preview_image;
+    in property <string> status_text: "Ready. Set options and click Generate.";
+    in property <bool> generating: false;
+
+    // ---- fired when the user clicks Generate ----
+    callback generate();
+
+    HorizontalBox {
+        padding: 12px;
+        spacing: 12px;
+
+        // ===================== Left: option form =====================
+        Rectangle {
+            width: 360px;
+            background: #2b2b2b10;
+            border-radius: 6px;
+
+            ScrollView {
+                VerticalBox {
+                    padding: 14px;
+                    spacing: 10px;
+                    alignment: start;
+
+                    Text {
+                        text: "Points-in-Time timeline";
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+
+                    GroupBox {
+                        title: "Data";
+                        VerticalBox {
+                            spacing: 6px;
+                            Text { text: "Start date (YYYYMMDD)"; }
+                            LineEdit { text <=> root.begin_date; }
+                            Text { text: "End date (YYYYMMDD)"; }
+                            LineEdit { text <=> root.end_date; }
+                            Text { text: "Database"; }
+                            LineEdit { text <=> root.database; }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Page";
+                        VerticalBox {
+                            spacing: 6px;
+                            Text { text: "Theme"; }
+                            ComboBox {
+                                model: ["(none)", "default", "corporate", "dark", "vibrant", "Julia", "leemini", "accent"];
+                                current-value <=> root.theme;
+                            }
+                            Text { text: "Paper size"; }
+                            ComboBox {
+                                model: ["Widescreen", "Letter", "Legal", "Tabloid", "A4", "A3"];
+                                current-value <=> root.papersize;
+                            }
+                            Text { text: "Orientation"; }
+                            ComboBox {
+                                model: ["landscape", "portrait"];
+                                current-value <=> root.orientation;
+                            }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "PIT options";
+                        VerticalBox {
+                            spacing: 6px;
+                            Text { text: "Axis direction"; }
+                            ComboBox {
+                                model: ["horizontal", "vertical"];
+                                current-value <=> root.direction;
+                            }
+                            Text { text: "Label side"; }
+                            ComboBox {
+                                model: ["both", "primary", "secondary"];
+                                current-value <=> root.label_side;
+                            }
+                            Text { text: "Tick unit"; }
+                            ComboBox {
+                                model: ["month", "week", "fiscal_quarter", "fiscal_period", "interval", "date", "year"];
+                                current-value <=> root.tick_unit;
+                            }
+                            Text { text: "Date placement"; }
+                            ComboBox {
+                                model: ["inline", "axis", "none"];
+                                current-value <=> root.date_placement;
+                            }
+                            CheckBox { text: "Today line"; checked <=> root.today_line; }
+                            Text { text: "Today label"; }
+                            LineEdit { text <=> root.today_label; }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Content filters";
+                        VerticalBox {
+                            spacing: 4px;
+                            CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
+                            CheckBox { text: "Exclude single-day events"; checked <=> root.no_events; }
+                            CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
+                            CheckBox { text: "Include notes"; checked <=> root.include_notes; }
+                            CheckBox { text: "Page header"; checked <=> root.show_header; }
+                            CheckBox { text: "Page footer"; checked <=> root.show_footer; }
+                        }
+                    }
+
+                    Button {
+                        text: root.generating ? "Generating…" : "Generate preview";
+                        primary: true;
+                        enabled: !root.generating;
+                        clicked => { root.generate(); }
+                    }
+                }
+            }
+        }
+
+        // ===================== Right: SVG preview =====================
+        VerticalBox {
+            spacing: 8px;
+
+            Rectangle {
+                background: white;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: #00000022;
+
+                Image {
+                    source: root.preview_image;
+                    image-fit: contain;
+                    width: parent.width - 16px;
+                    height: parent.height - 16px;
+                }
+            }
+
+            Text {
+                text: root.status_text;
+                wrap: word-wrap;
+                color: #444;
+            }
+        }
+    }
+}

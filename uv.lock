@@ -31,6 +31,7 @@ dependencies = [
     { name = "pillow" },
     { name = "python-dateutil" },
     { name = "pyyaml" },
+    { name = "slint" },
     { name = "textual" },
 ]
 
@@ -52,6 +53,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "slint", specifier = ">=1.17.0b2" },
     { name = "textual", specifier = ">=8.2.7" },
 ]
 
@@ -445,6 +447,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "slint"
+version = "1.17.0b2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/00/8abc4bede5870fbbea72e54d42153c66d7d394f661b621fcabf2c741bbda/slint-1.17.0b2.tar.gz", hash = "sha256:3aeeff66e850ee0082d0364b79aad8ba28b05881273e00599e6c7356d8130c62", size = 2623781, upload-time = "2026-06-24T14:47:52.452Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/72/673ccb4f62006aa962c1431d38bce19fefdb213fac2ee8b08e435c515ac7/slint-1.17.0b2-cp311-abi3-ios_13_0_arm64_iphoneos.whl", hash = "sha256:fb6040d4fc23e3cc83f792b6e7de1a0bffd60a9226038011528f98cbde0dc07e", size = 13292060, upload-time = "2026-06-24T14:47:18.271Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/a6/84f4fdafac53699a92cd67386e6e3e76d23b3eea6bcf841f2cd1f9ae8a93/slint-1.17.0b2-cp311-abi3-ios_13_0_arm64_iphonesimulator.whl", hash = "sha256:00570a02d4a5de8789c9935ac971ed90accfd7248fd13802482e41b0889b98d2", size = 13535747, upload-time = "2026-06-24T14:47:21.131Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/89/b701027e323730334177c3f64f11730553f2fc84b1cd02445be54871d5b5/slint-1.17.0b2-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:91b37edff1a807d52a92e1499e1d3aab1f2bae9d1f5b0c9c3bec2af6b5044a38", size = 10730437, upload-time = "2026-06-24T14:47:23.487Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/24/ede1a95e3108b5737189fa63617e7ddcd7073e671d01f7bf5b5bc7327982/slint-1.17.0b2-cp311-abi3-manylinux_2_31_aarch64.whl", hash = "sha256:3f896e70059e9aa7c331292757686388a62d4ad442c3b135b8ef556001a5f647", size = 15531877, upload-time = "2026-06-24T14:47:26.274Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/da/c1897a9dcff031496828bbad99ae004d163abaad6cfd76cbcab1f0f8fe0f/slint-1.17.0b2-cp311-abi3-manylinux_2_31_armv7l.whl", hash = "sha256:c98d7bbabb6d033ab6e426b0c37888f23d4e02681fe2e79200f58186bedc7e27", size = 15314314, upload-time = "2026-06-24T14:47:29.168Z" },
+    { url = "https://files.pythonhosted.org/packages/44/b3/4393a4e276e9f13ba2ab5fd86059faaad3b0f01307fb2e8c43c7bc76f499/slint-1.17.0b2-cp311-abi3-manylinux_2_35_x86_64.whl", hash = "sha256:7db932d1b364e289f49432a6cd0936d014b461f87a386a35e249011eae1d72c2", size = 16144884, upload-time = "2026-06-24T14:47:31.887Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/8f/77ec4dcee8c1b27f24824599b6b7c43469bbc9898f5f18e61fc75c77b6f0/slint-1.17.0b2-cp311-abi3-win_amd64.whl", hash = "sha256:c943b5f8bc8f0d777c3116181fb5bc49336a0b5790bb06401a9858a3243ecec6", size = 11930548, upload-time = "2026-06-24T14:47:35.002Z" },
 ]
 
 [[package]]
