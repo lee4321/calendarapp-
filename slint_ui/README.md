@@ -21,14 +21,39 @@ in the right-hand pane.
 
 ## What it covers
 
-- Date range, database path, theme, paper size, orientation
-- PIT options: axis direction, label side, tick unit, date placement, today
-  line + label
-- Content filters: milestones-only, exclude events/durations, include notes,
-  header/footer
+The **full `pit` parameter set** (everything in `ecalendar.py pit --help`),
+grouped in the form:
 
-This is a deliberate subset of the ~40 `pit` flags — enough to prove the
-pattern. The form maps 1:1 to CLI flags in `app.py::_build_argv`.
+- **Data** — start/end dates, database, country, status, WBS filter
+- **Page & output** — theme, paper size, orientation, weekend style, weekend
+  days, margins, month names, shrink-to-bbox, embed data
+- **Header / footer** — toggles plus all six text slots
+- **Watermark** — text, rotation, image
+- **Content filters** — empty, shade, no-events, no-durations,
+  ignore-complete, milestones-only, rollups-only, include-notes, overflow
+- **PIT axis & ticks** — direction, label side, tick unit/interval/format/
+  length, hide ticks, hide tick labels, date placement
+- **PIT today line** — tri-state on/off, today-date override, today label
+- **PIT markers & icons** — event/milestone icon, marker size, label icon
+  size/gap
+- **PIT leaders** — dash array, label anchor, length, stub
+- **Fiscal** — overlay type, fiscal-year offset
+- **Logging** — verbosity level, quiet
+
+The form maps 1:1 to CLI flags in `app.py::_build_argv`.
+
+### Conventions for "leave at the app default"
+
+- ComboBoxes whose flag defaults to `None` carry a leading `(default)` /
+  `(none)` entry — selecting it omits the flag entirely.
+- Text/number fields omit their flag when left blank (placeholder text shows
+  the effective default).
+- The today line is a 3-way ComboBox — `(default)` omits it, `on`/`off` emit
+  `--today-line` / `--no-today-line`.
+
+> Note: `--monthnames` is accepted by the `pit` parser (it is a shared layout
+> flag) but the PIT visualizer ignores it with a stderr warning. It is included
+> here for parity with `pit --help`.
 
 ## How it works
 

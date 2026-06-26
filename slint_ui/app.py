@@ -122,40 +122,107 @@ class PitPreviewApp:
             w.end_date.strip(),
             "--outputfile",
             OUTPUT_FILENAME,
-            "--database",
-            (w.database.strip() or "calendar.db"),
-            "--papersize",
-            w.papersize,
-            "--orientation",
-            w.orientation,
-            "--direction",
-            w.direction,
-            "--label-side",
-            w.label_side,
-            "--tick-unit",
-            w.tick_unit,
-            "--date-placement",
-            w.date_placement,
         ]
 
-        if w.theme and w.theme != "(none)":
-            argv += ["--theme", w.theme]
-        if not w.today_line:
-            argv += ["--no-today-line"]
-        if w.today_label.strip():
-            argv += ["--today-label", w.today_label.strip()]
-        if w.milestones_only:
-            argv += ["--milestones"]
-        if w.no_events:
-            argv += ["--noevents"]
-        if w.no_durations:
-            argv += ["--nodurations"]
-        if w.include_notes:
-            argv += ["--includenotes"]
-        if w.show_header:
-            argv += ["--header"]
-        if w.show_footer:
-            argv += ["--footer"]
+        def opt(flag: str, value: str) -> None:
+            """Append ``flag value`` when the text value is non-blank."""
+            v = value.strip()
+            if v:
+                argv.extend([flag, v])
+
+        def choice(flag: str, value: str, sentinel: str) -> None:
+            """Append a ComboBox choice unless it is the 'leave at default' sentinel."""
+            if value and value != sentinel:
+                argv.extend([flag, value])
+
+        def flag_if(flag: str, value: bool) -> None:
+            """Append a bare store_true/store_false flag when checked."""
+            if value:
+                argv.append(flag)
+
+        # --- Database ---
+        argv.extend(["--database", (w.database.strip() or "calendar.db")])
+
+        # --- Output / page ---
+        choice("--theme", w.theme, "(none)")
+        argv.extend(["--papersize", w.papersize])
+        argv.extend(["--orientation", w.orientation])
+        argv.extend(["--weekends", str(w.weekends_index)])
+        opt("--weekend-days", w.weekend_days)
+        flag_if("--margin", w.margin)
+        flag_if("--monthnames", w.monthnames)
+        flag_if("--shrink", w.shrink)
+        flag_if("--embed-data", w.embed_data)
+
+        # --- Header / footer ---
+        flag_if("--header", w.show_header)
+        flag_if("--footer", w.show_footer)
+        opt("--headerleft", w.header_left)
+        opt("--headercenter", w.header_center)
+        opt("--headerright", w.header_right)
+        opt("--footerleft", w.footer_left)
+        opt("--footercenter", w.footer_center)
+        opt("--footerright", w.footer_right)
+
+        # --- Watermark ---
+        opt("--watermark-text", w.watermark_text)
+        opt("--watermark-rotation-angle", w.watermark_rotation)
+        opt("--watermark-image", w.watermark_image)
+
+        # --- Content filters ---
+        flag_if("--empty", w.empty)
+        flag_if("--shade", w.shade)
+        flag_if("--noevents", w.no_events)
+        flag_if("--nodurations", w.no_durations)
+        flag_if("--ignorecomplete", w.ignore_complete)
+        flag_if("--milestones", w.milestones_only)
+        flag_if("--rollups", w.rollups_only)
+        flag_if("--includenotes", w.include_notes)
+        flag_if("--overflow", w.overflow)
+        opt("--WBS", w.wbs)
+        opt("--status", w.status)
+        opt("--country", w.country)
+
+        # --- PIT: axis & ticks ---
+        choice("--direction", w.direction, "(default)")
+        choice("--label-side", w.label_side, "(default)")
+        choice("--tick-unit", w.tick_unit, "(default)")
+        opt("--tick-interval", w.tick_interval)
+        opt("--tick-label-format", w.tick_label_format)
+        opt("--tick-length", w.tick_length)
+        flag_if("--no-ticks", w.hide_ticks)
+        flag_if("--no-tick-labels", w.hide_tick_labels)
+        choice("--date-placement", w.date_placement, "(default)")
+
+        # --- PIT: today line (tri-state: (default) / on / off) ---
+        if w.today_line == "on":
+            argv.append("--today-line")
+        elif w.today_line == "off":
+            argv.append("--no-today-line")
+        opt("--today-date", w.today_date)
+        opt("--today-label", w.today_label)
+
+        # --- PIT: markers & icons ---
+        opt("--event-icon", w.event_icon)
+        opt("--milestone-icon", w.milestone_icon)
+        opt("--marker-size", w.marker_size)
+        opt("--label-icon-size", w.label_icon_size)
+        opt("--label-icon-gap", w.label_icon_gap)
+
+        # --- PIT: leaders ---
+        opt("--leader-dash", w.leader_dash)
+        choice("--leader-label-anchor", w.leader_label_anchor, "(default)")
+        opt("--leader-length", w.leader_length)
+        opt("--leader-stub", w.leader_stub)
+
+        # --- Fiscal ---
+        choice("--fiscal", w.fiscal, "(none)")
+        opt("--fiscal-year-offset", w.fiscal_year_offset)
+
+        # --- Logging ---
+        if w.verbose_index > 0:
+            argv.append("-" + "v" * w.verbose_index)
+        flag_if("--quiet", w.quiet)
 
         return argv
 
