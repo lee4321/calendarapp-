@@ -151,10 +151,8 @@ class PitPreviewApp:
         argv.extend(["--weekends", str(w.weekends_index)])
         opt("--weekend-days", w.weekend_days)
         flag_if("--margin", w.margin)
-        flag_if("--monthnames", w.monthnames)
         flag_if("--shrink", w.shrink)
         flag_if("--embed-data", w.embed_data)
-        flag_if("--overflow", w.overflow)  # an output page, not a content filter
 
         # --- Header / footer ---
         flag_if("--header", w.show_header)

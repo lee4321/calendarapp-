@@ -14,7 +14,7 @@
 
 import {
     Button, LineEdit, ComboBox, CheckBox, ScrollView,
-    VerticalBox, HorizontalBox, GroupBox
+    VerticalBox, HorizontalBox, GroupBox, DatePickerPopup
 } from "std-widgets.slint";
 
 export component MainWindow inherits Window {
@@ -39,7 +39,6 @@ export component MainWindow inherits Window {
     in-out property <int> weekends_index: 0;
     in-out property <string> weekend_days: "";
     in-out property <bool> margin: false;
-    in-out property <bool> monthnames: false;
     in-out property <bool> shrink: false;
     in-out property <bool> embed_data: false;
 
@@ -67,7 +66,6 @@ export component MainWindow inherits Window {
     in-out property <bool> milestones_only: false;
     in-out property <bool> rollups_only: false;
     in-out property <bool> include_notes: false;
-    in-out property <bool> overflow: false;
 
     // ===== PIT: axis & ticks =====
     in-out property <string> direction: "(default)";
@@ -145,9 +143,39 @@ export component MainWindow inherits Window {
                             VerticalBox {
                                 spacing: 6px;
                                 Text { text: "Start date (YYYYMMDD)"; }
-                                LineEdit { text <=> root.begin_date; }
+                                HorizontalBox {
+                                    padding: 0px;
+                                    spacing: 6px;
+                                    LineEdit { text <=> root.begin_date; horizontal-stretch: 1; }
+                                    Button {
+                                        text: "Pick…";
+                                        clicked => { begin_picker.show(); }
+                                    }
+                                    begin_picker := DatePickerPopup {
+                                        title: "Select start date";
+                                        accepted(date) => {
+                                            root.begin_date = "\{date.year}\{date.month < 10 ? "0" : ""}\{date.month}\{date.day < 10 ? "0" : ""}\{date.day}";
+                                            begin_picker.close();
+                                        }
+                                    }
+                                }
                                 Text { text: "End date (YYYYMMDD)"; }
-                                LineEdit { text <=> root.end_date; }
+                                HorizontalBox {
+                                    padding: 0px;
+                                    spacing: 6px;
+                                    LineEdit { text <=> root.end_date; horizontal-stretch: 1; }
+                                    Button {
+                                        text: "Pick…";
+                                        clicked => { end_picker.show(); }
+                                    }
+                                    end_picker := DatePickerPopup {
+                                        title: "Select end date";
+                                        accepted(date) => {
+                                            root.end_date = "\{date.year}\{date.month < 10 ? "0" : ""}\{date.month}\{date.day < 10 ? "0" : ""}\{date.day}";
+                                            end_picker.close();
+                                        }
+                                    }
+                                }
                                 Text { text: "Database"; }
                                 LineEdit { text <=> root.database; }
                                 Text { text: "Country code(s)  —  blank = US,CA"; }
@@ -188,10 +216,8 @@ export component MainWindow inherits Window {
                                 Text { text: "Weekend days (0=Mon..6=Sun)"; }
                                 LineEdit { text <=> root.weekend_days; placeholder-text: "e.g. 5,6"; }
                                 CheckBox { text: "Page margins"; checked <=> root.margin; }
-                                CheckBox { text: "Month names"; checked <=> root.monthnames; }
                                 CheckBox { text: "Shrink to content bbox"; checked <=> root.shrink; }
                                 CheckBox { text: "Embed source data (CSV)"; checked <=> root.embed_data; }
-                                CheckBox { text: "Overflow page"; checked <=> root.overflow; }
                             }
                         }
 

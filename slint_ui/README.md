@@ -24,9 +24,10 @@ in the right-hand pane.
 The **full `pit` parameter set** (everything in `ecalendar.py pit --help`),
 grouped in the form:
 
-- **Data** — start/end dates, database, country
+- **Data** — start/end dates (type `YYYYMMDD` or pick from a calendar
+  `DatePickerPopup`), database, country
 - **Page & output** — theme, paper size, orientation, weekend style, weekend
-  days, margins, month names, shrink-to-bbox, embed data, overflow page
+  days, margins, shrink-to-bbox, embed data
 - **Header / footer** — toggles plus all six text slots
 - **Watermark** — text, rotation, image
 - **Content filters** — empty, shade, no-events, no-durations,
@@ -51,10 +52,11 @@ The form maps 1:1 to CLI flags in `app.py::_build_argv`.
   the effective default).
 - The today line is a 3-way ComboBox — `(default)` omits it, `on`/`off` emit
   `--today-line` / `--no-today-line`.
+- Dates accept manual `YYYYMMDD` entry or a calendar **Pick…** button that
+  opens a `DatePickerPopup`; the picked date is formatted back into the field.
 
-> Note: a few shared flags — `--monthnames` and `--overflow` — are accepted by
-> the `pit` parser but ignored by the PIT visualizer (it warns on stderr). They
-> are included here for parity with `pit --help`.
+> Note: `--monthnames` and `--overflow` are accepted by the `pit` parser but
+> ignored by the PIT visualizer, so they are intentionally **not** exposed here.
 
 ## How it works
 
