@@ -14,7 +14,7 @@
 
 import {
     Button, LineEdit, ComboBox, CheckBox, ScrollView,
-    VerticalBox, HorizontalBox, GroupBox, DatePickerPopup
+    VerticalBox, HorizontalBox, GroupBox
 } from "std-widgets.slint";
 
 export component MainWindow inherits Window {
@@ -143,39 +143,9 @@ export component MainWindow inherits Window {
                             VerticalBox {
                                 spacing: 6px;
                                 Text { text: "Start date (YYYYMMDD)"; }
-                                HorizontalBox {
-                                    padding: 0px;
-                                    spacing: 6px;
-                                    LineEdit { text <=> root.begin_date; horizontal-stretch: 1; }
-                                    Button {
-                                        text: "Pick…";
-                                        clicked => { begin_picker.show(); }
-                                    }
-                                    begin_picker := DatePickerPopup {
-                                        title: "Select start date";
-                                        accepted(date) => {
-                                            root.begin_date = "\{date.year}\{date.month < 10 ? "0" : ""}\{date.month}\{date.day < 10 ? "0" : ""}\{date.day}";
-                                            begin_picker.close();
-                                        }
-                                    }
-                                }
+                                LineEdit { text <=> root.begin_date; }
                                 Text { text: "End date (YYYYMMDD)"; }
-                                HorizontalBox {
-                                    padding: 0px;
-                                    spacing: 6px;
-                                    LineEdit { text <=> root.end_date; horizontal-stretch: 1; }
-                                    Button {
-                                        text: "Pick…";
-                                        clicked => { end_picker.show(); }
-                                    }
-                                    end_picker := DatePickerPopup {
-                                        title: "Select end date";
-                                        accepted(date) => {
-                                            root.end_date = "\{date.year}\{date.month < 10 ? "0" : ""}\{date.month}\{date.day < 10 ? "0" : ""}\{date.day}";
-                                            end_picker.close();
-                                        }
-                                    }
-                                }
+                                LineEdit { text <=> root.end_date; }
                                 Text { text: "Database"; }
                                 LineEdit { text <=> root.database; }
                                 Text { text: "Country code(s)  —  blank = US,CA"; }
