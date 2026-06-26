@@ -140,8 +140,9 @@ class PitPreviewApp:
             if value:
                 argv.append(flag)
 
-        # --- Database ---
+        # --- Data ---
         argv.extend(["--database", (w.database.strip() or "calendar.db")])
+        opt("--country", w.country)
 
         # --- Output / page ---
         choice("--theme", w.theme, "(none)")
@@ -153,6 +154,7 @@ class PitPreviewApp:
         flag_if("--monthnames", w.monthnames)
         flag_if("--shrink", w.shrink)
         flag_if("--embed-data", w.embed_data)
+        flag_if("--overflow", w.overflow)  # an output page, not a content filter
 
         # --- Header / footer ---
         flag_if("--header", w.show_header)
@@ -178,10 +180,8 @@ class PitPreviewApp:
         flag_if("--milestones", w.milestones_only)
         flag_if("--rollups", w.rollups_only)
         flag_if("--includenotes", w.include_notes)
-        flag_if("--overflow", w.overflow)
         opt("--WBS", w.wbs)
         opt("--status", w.status)
-        opt("--country", w.country)
 
         # --- PIT: axis & ticks ---
         choice("--direction", w.direction, "(default)")

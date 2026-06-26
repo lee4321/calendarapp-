@@ -24,13 +24,14 @@ in the right-hand pane.
 The **full `pit` parameter set** (everything in `ecalendar.py pit --help`),
 grouped in the form:
 
-- **Data** — start/end dates, database, country, status, WBS filter
+- **Data** — start/end dates, database, country
 - **Page & output** — theme, paper size, orientation, weekend style, weekend
-  days, margins, month names, shrink-to-bbox, embed data
+  days, margins, month names, shrink-to-bbox, embed data, overflow page
 - **Header / footer** — toggles plus all six text slots
 - **Watermark** — text, rotation, image
 - **Content filters** — empty, shade, no-events, no-durations,
-  ignore-complete, milestones-only, rollups-only, include-notes, overflow
+  ignore-complete, milestones-only, rollups-only, include-notes, status,
+  WBS
 - **PIT axis & ticks** — direction, label side, tick unit/interval/format/
   length, hide ticks, hide tick labels, date placement
 - **PIT today line** — tri-state on/off, today-date override, today label
@@ -51,9 +52,9 @@ The form maps 1:1 to CLI flags in `app.py::_build_argv`.
 - The today line is a 3-way ComboBox — `(default)` omits it, `on`/`off` emit
   `--today-line` / `--no-today-line`.
 
-> Note: `--monthnames` is accepted by the `pit` parser (it is a shared layout
-> flag) but the PIT visualizer ignores it with a stderr warning. It is included
-> here for parity with `pit --help`.
+> Note: a few shared flags — `--monthnames` and `--overflow` — are accepted by
+> the `pit` parser but ignored by the PIT visualizer (it warns on stderr). They
+> are included here for parity with `pit --help`.
 
 ## How it works
 

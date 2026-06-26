@@ -152,10 +152,6 @@ export component MainWindow inherits Window {
                                 LineEdit { text <=> root.database; }
                                 Text { text: "Country code(s)  —  blank = US,CA"; }
                                 LineEdit { text <=> root.country; placeholder-text: "e.g. US,CA,GB"; }
-                                Text { text: "Status filter  —  blank = active"; }
-                                LineEdit { text <=> root.status; placeholder-text: "active,draft,… or all"; }
-                                Text { text: "WBS filter"; }
-                                LineEdit { text <=> root.wbs; placeholder-text: "e.g. 1.2,!1.2.3"; }
                             }
                         }
 
@@ -195,6 +191,7 @@ export component MainWindow inherits Window {
                                 CheckBox { text: "Month names"; checked <=> root.monthnames; }
                                 CheckBox { text: "Shrink to content bbox"; checked <=> root.shrink; }
                                 CheckBox { text: "Embed source data (CSV)"; checked <=> root.embed_data; }
+                                CheckBox { text: "Overflow page"; checked <=> root.overflow; }
                             }
                         }
 
@@ -229,7 +226,7 @@ export component MainWindow inherits Window {
                         GroupBox {
                             title: "Content filters";
                             VerticalBox {
-                                spacing: 4px;
+                                spacing: 6px;
                                 CheckBox { text: "Empty (no events)"; checked <=> root.empty; }
                                 CheckBox { text: "Shade today"; checked <=> root.shade; }
                                 CheckBox { text: "Exclude single-day events"; checked <=> root.no_events; }
@@ -238,7 +235,10 @@ export component MainWindow inherits Window {
                                 CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
                                 CheckBox { text: "Rollups only"; checked <=> root.rollups_only; }
                                 CheckBox { text: "Include notes"; checked <=> root.include_notes; }
-                                CheckBox { text: "Overflow page"; checked <=> root.overflow; }
+                                Text { text: "Status filter  —  blank = active"; }
+                                LineEdit { text <=> root.status; placeholder-text: "active,draft,… or all"; }
+                                Text { text: "WBS filter"; }
+                                LineEdit { text <=> root.wbs; placeholder-text: "e.g. 1.2,!1.2.3"; }
                             }
                         }
 
