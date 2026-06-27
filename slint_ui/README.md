@@ -7,6 +7,11 @@ resulting SVG natively (Slint renders SVG via resvg).
 
 > Status: throwaway spike to validate feasibility. Not wired into the main app.
 
+> **Companion POC:** [README_import.md](README_import.md) covers a second spike
+> over `importers/import_events.py` (`import_app.py` + `import_window.slint`) —
+> the same architecture applied to a side-effecting CLI, with a text console in
+> place of the SVG preview.
+
 ## Run
 
 From the project root:

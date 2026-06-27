@@ -1,0 +1,291 @@
+// Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC
+//
+// Slint UI proof-of-concept for the `importers/import_events.py` CLI.
+//
+// Unlike the `pit` POC (which previews an SVG), import_events.py is a
+// *side-effecting* tool that writes to calendar.db and emits plain-text logs.
+// So the right pane is a read-only console showing combined stdout/stderr, and
+// the form is organised around the tool's four mutually-exclusive MODES:
+//
+//   0  Import files          import_events.py <paths> [--replace] [--dry-run] …
+//   1  Generate from script  import_events.py --generate <script.py> [--param …]
+//   2  List history          import_events.py --list            (read-only)
+//   3  Remove imports        import_events.py --remove <pattern> --force
+//
+// All form state is `in-out` (read back by slint_ui/import_app.py to build the
+// argv). `console_text` / `status_text` / `running` are driven *from* Python.
+//
+// Conventions for "leave at app default":
+//   - Text/number LineEdits omit their flag when left blank.
+//   - Checkboxes map to bare store_true flags.
+//   - For safety, "Dry run" defaults ON for the two writing modes (import,
+//     generate) — the POC validates by default and only writes when un-checked.
+
+import {
+    Button, LineEdit, TextEdit, ComboBox, CheckBox, ScrollView,
+    VerticalBox, HorizontalBox, GroupBox
+} from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "import_events — DB importer (Slint POC)";
+    preferred-width: 1280px;
+    preferred-height: 820px;
+    min-width: 960px;
+    min-height: 600px;
+
+    // ===== Mode =====
+    in-out property <int> mode_index: 2;   // default to the read-only "List" mode
+
+    // ===== Common options =====
+    in-out property <string> database: "calendar.db";
+    in-out property <string> user_id: "1";
+    in-out property <string> log_level: "info";
+    in-out property <bool> verbose: false;
+
+    // ===== Import-files mode =====
+    in-out property <string> files_path: "";
+    in-out property <bool> replace: false;
+    in-out property <bool> dry_run: true;     // safe default for a POC
+    in-out property <bool> skip_errors: false;
+
+    // ===== Generate mode =====
+    in-out property <string> generate_script: "";
+    in-out property <string> start_date: "";
+    in-out property <string> end_date: "";
+    in-out property <string> params_text: "";
+
+    // ===== Remove mode =====
+    in-out property <string> remove_pattern: "";
+    in-out property <bool> remove_confirmed: false;
+
+    // ===== Driven from Python =====
+    in property <string> console_text: "";
+    in property <string> status_text: "Ready. Pick a mode and click Run.";
+    in property <bool> running: false;
+
+    // True when the current mode has everything it needs to run.
+    property <bool> can_run:
+        !root.running
+        && (root.mode_index != 3 || root.remove_confirmed);
+
+    // NB: do not name this callback `run` — a Slint component instance already
+    // exposes a built-in `.run()` (show window + spin event loop), and binding a
+    // same-named callback from Python shadows it, so the window never opens.
+    callback run_import();
+    callback clear_console();
+
+    HorizontalBox {
+        padding: 0px;
+        spacing: 0px;
+
+        // ===================== Left: option form (the "menu") =====================
+        Rectangle {
+            width: 420px;
+            background: #2b2b2b10;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                ScrollView {
+                    vertical-stretch: 1;
+                    VerticalBox {
+                        padding: 14px;
+                        spacing: 10px;
+                        alignment: start;
+
+                        Text {
+                            text: "import_events.py — XLSX/CSV → calendar.db";
+                            font-size: 17px;
+                            font-weight: 700;
+                        }
+
+                        GroupBox {
+                            title: "Mode";
+                            VerticalBox {
+                                spacing: 6px;
+                                ComboBox {
+                                    model: [
+                                        "Import files",
+                                        "Generate from script",
+                                        "List history (read-only)",
+                                        "Remove imports",
+                                    ];
+                                    current-index <=> root.mode_index;
+                                }
+                            }
+                        }
+
+                        GroupBox {
+                            title: "Common";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Database"; }
+                                LineEdit { text <=> root.database; }
+                                Text { text: "User ID"; }
+                                LineEdit { text <=> root.user_id; placeholder-text: "default 1"; }
+                                Text { text: "Log level"; }
+                                ComboBox {
+                                    model: ["debug", "info", "warning", "error"];
+                                    current-value <=> root.log_level;
+                                }
+                                CheckBox { text: "Verbose (= log level debug)"; checked <=> root.verbose; }
+                            }
+                        }
+
+                        // ---------------- Mode 0: Import files ----------------
+                        if root.mode_index == 0 : GroupBox {
+                            title: "Import files";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "File(s) or directory"; }
+                                LineEdit {
+                                    text <=> root.files_path;
+                                    placeholder-text: "importers/sample_data.csv  or  Events/";
+                                }
+                                Text {
+                                    text: "Space-separated paths; a directory imports every\nsupported file (.xlsx .xls .csv .txt) inside it.";
+                                    font-size: 11px;
+                                    color: #777;
+                                    wrap: word-wrap;
+                                }
+                                CheckBox { text: "Dry run (validate only — no DB writes)"; checked <=> root.dry_run; }
+                                CheckBox { text: "Replace prior import of same file (by hash)"; checked <=> root.replace; }
+                                CheckBox { text: "Skip row errors (keep importing)"; checked <=> root.skip_errors; }
+                            }
+                        }
+
+                        // ---------------- Mode 1: Generate ----------------
+                        if root.mode_index == 1 : GroupBox {
+                            title: "Generate from script";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Generator script (.py with generate_events())"; }
+                                LineEdit {
+                                    text <=> root.generate_script;
+                                    placeholder-text: "importers/generators/sample_generator.py";
+                                }
+                                Text { text: "Start date (any parseable format)"; }
+                                LineEdit { text <=> root.start_date; placeholder-text: "e.g. 2026-01-01  (optional)"; }
+                                Text { text: "End date"; }
+                                LineEdit { text <=> root.end_date; placeholder-text: "e.g. 2026-12-31  (optional)"; }
+                                Text { text: "Parameters — one KEY=VALUE per line"; }
+                                Rectangle {
+                                    height: 84px;
+                                    border-width: 1px;
+                                    border-color: #00000022;
+                                    border-radius: 4px;
+                                    TextEdit {
+                                        wrap: no-wrap;
+                                        text <=> root.params_text;
+                                    }
+                                }
+                                Text {
+                                    text: "e.g.  Priority=1  /  Icon=rocket  (passed as --param)";
+                                    font-size: 11px;
+                                    color: #777;
+                                }
+                                CheckBox { text: "Dry run (run generator, don't write)"; checked <=> root.dry_run; }
+                                CheckBox { text: "Replace prior import of same script"; checked <=> root.replace; }
+                                CheckBox { text: "Skip row errors (keep importing)"; checked <=> root.skip_errors; }
+                            }
+                        }
+
+                        // ---------------- Mode 2: List ----------------
+                        if root.mode_index == 2 : GroupBox {
+                            title: "List history";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text {
+                                    text: "Read-only. Lists every row of import_history with\nits event count. Click Run to refresh the console.";
+                                    wrap: word-wrap;
+                                    color: #555;
+                                }
+                            }
+                        }
+
+                        // ---------------- Mode 3: Remove ----------------
+                        if root.mode_index == 3 : GroupBox {
+                            title: "Remove imports";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Import ID pattern"; }
+                                LineEdit {
+                                    text <=> root.remove_pattern;
+                                    placeholder-text: "3   1-5   1,3,5   5-   -3   all";
+                                }
+                                Text {
+                                    text: "Deletes the import_history rows AND all their events.\nThe GUI passes --force (no terminal prompt is possible),\nso the confirmation below stands in for it.";
+                                    font-size: 11px;
+                                    color: #a33;
+                                    wrap: word-wrap;
+                                }
+                                CheckBox {
+                                    text: "I understand this permanently deletes events";
+                                    checked <=> root.remove_confirmed;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Sticky action bar (outside the scroll area)
+                Rectangle {
+                    height: 56px;
+                    background: #2b2b2b18;
+                    HorizontalBox {
+                        padding: 10px;
+                        spacing: 8px;
+                        Button {
+                            text: root.running ? "Running…" : "Run";
+                            primary: true;
+                            enabled: root.can_run;
+                            clicked => { root.run_import(); }
+                        }
+                        Button {
+                            text: "Clear output";
+                            enabled: !root.running;
+                            clicked => { root.clear_console(); }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===================== Right: text console =====================
+        Rectangle {
+            horizontal-stretch: 1;
+            background: white;
+            border-width: 1px;
+            border-color: #00000022;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                TextEdit {
+                    vertical-stretch: 1;
+                    read-only: true;
+                    wrap: no-wrap;
+                    font-family: "Menlo";
+                    font-size: 12px;
+                    text: root.console_text;
+                }
+
+                Rectangle {
+                    height: 26px;
+                    background: #f4f4f4;
+                    Text {
+                        x: 10px;
+                        width: parent.width - 20px;
+                        height: parent.height;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        text: root.status_text;
+                        color: #333;
+                    }
+                }
+            }
+        }
+    }
+}
