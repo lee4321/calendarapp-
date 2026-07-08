@@ -1,0 +1,676 @@
+// Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC
+//
+// Unified Slint UI front-end for ecalendar.py. A single window drives every
+// render/export subcommand (9 SVG visualizers, 5 SVG "sheets", 3 exporters).
+//
+// One superset of `in-out` form properties is declared once and shared across
+// subcommands (~90% of options are common). Which groups/fields are shown is
+// driven from Python via the `show_*` / `cf_*` / `sheet_*` `in` properties,
+// recomputed each time the visualizer picker changes (callback `command-changed`).
+// The Python driver (slint_ui/ecalendar_app.py) reads the form back to assemble
+// the CLI argv; `preview_image` / `console_text` / `status_text` / `generating`
+// / `preview_mode` are driven *from* Python after each run.
+//
+// Conventions for "leave at app default":
+//   - ComboBoxes whose CLI flag defaults to None carry a leading "(default)" /
+//     "(none)" entry; selecting it omits the flag.
+//   - Text/number LineEdits omit their flag when left blank.
+//   - Tri-state today-line (pit) is a 3-way ComboBox: (default) / on / off.
+
+import {
+    Button, LineEdit, TextEdit, ComboBox, CheckBox, ScrollView,
+    VerticalBox, HorizontalBox, GroupBox
+} from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "ecalendar — unified preview (Slint)";
+    preferred-width: 1360px;
+    preferred-height: 900px;
+    min-width: 1000px;
+    min-height: 640px;
+
+    // ===== Visualizer selection (index must match COMMANDS order in Python) =====
+    in-out property <int> command_index: 0;
+    in property <string> command_hint: "";
+
+    // ===== Data =====
+    in-out property <string> begin_date: "20260105";
+    in-out property <string> end_date: "20260630";
+    in-out property <string> database: "calendar.db";
+    in-out property <string> country: "";
+
+    // ===== Output / Page =====
+    in-out property <string> theme: "(none)";
+    in-out property <string> papersize: "Widescreen";
+    in-out property <string> orientation: "landscape";
+    in-out property <int> weekends_index: 0;
+    in-out property <string> weekend_days: "";
+    in-out property <bool> margin: false;
+    in-out property <bool> shrink: false;
+    in-out property <bool> embed_data: false;
+    in-out property <bool> monthnames: false;
+
+    // ===== Header / Footer =====
+    in-out property <bool> show_header: false;
+    in-out property <bool> show_footer: false;
+    in-out property <string> header_left: "";
+    in-out property <string> header_center: "";
+    in-out property <string> header_right: "";
+    in-out property <string> footer_left: "";
+    in-out property <string> footer_center: "";
+    in-out property <string> footer_right: "";
+
+    // ===== Watermark =====
+    in-out property <string> watermark_text: "";
+    in-out property <string> watermark_rotation: "";
+    in-out property <string> watermark_image: "";
+
+    // ===== Content filters =====
+    in-out property <bool> empty: false;
+    in-out property <bool> shade: false;
+    in-out property <bool> no_events: false;
+    in-out property <bool> no_durations: false;
+    in-out property <bool> ignore_complete: false;
+    in-out property <bool> milestones_only: false;
+    in-out property <bool> rollups_only: false;
+    in-out property <bool> include_notes: false;
+    in-out property <bool> overflow: false;
+    in-out property <string> status: "";
+    in-out property <string> wbs: "";
+
+    // ===== Week numbers =====
+    in-out property <bool> weeknumbers: false;
+    in-out property <string> week_number_mode: "(default)";
+    in-out property <string> week1_start: "";
+
+    // ===== Mini =====
+    in-out property <string> mini_columns: "";
+    in-out property <string> mini_rows: "";
+    in-out property <string> mini_title_format: "";
+    in-out property <bool> mini_no_adjacent: false;
+    in-out property <bool> mini_grid_lines: false;
+    in-out property <bool> mini_details: false;
+    in-out property <string> mini_icon_set: "(default)";
+
+    // ===== Candybar =====
+    in-out property <string> candybar_row_height: "";
+    in-out property <string> candybar_cell_width: "";
+    in-out property <string> candybar_max_rows: "";
+    in-out property <bool> candybar_suppress_weekends: false;
+    in-out property <bool> candybar_no_week_numbers: false;
+    in-out property <string> candybar_month_side: "(default)";
+    in-out property <string> candybar_month_rotation: "";
+    in-out property <string> candybar_weekend_fill: "";
+    in-out property <bool> candybar_month_shading: false;
+
+    // ===== Timeline =====
+    in-out property <string> today_line_length: "";
+    in-out property <string> today_line_direction: "(default)";
+    in-out property <string> label_fill_opacity: "";
+    in-out property <string> duration_fill_opacity: "";
+
+    // ===== PIT: axis & ticks =====
+    in-out property <string> direction: "(default)";
+    in-out property <string> label_side: "(default)";
+    in-out property <string> tick_unit: "(default)";
+    in-out property <string> tick_interval: "";
+    in-out property <string> tick_label_format: "";
+    in-out property <string> tick_length: "";
+    in-out property <bool> hide_ticks: false;
+    in-out property <bool> hide_tick_labels: false;
+    in-out property <string> date_placement: "(default)";
+
+    // ===== PIT: today line =====
+    in-out property <string> today_line: "(default)";
+    in-out property <string> today_date: "";
+    in-out property <string> today_label: "";
+
+    // ===== PIT: markers & icons =====
+    in-out property <string> event_icon: "";
+    in-out property <string> milestone_icon: "";
+    in-out property <string> marker_size: "";
+    in-out property <string> label_icon_size: "";
+    in-out property <string> label_icon_gap: "";
+
+    // ===== PIT: leaders =====
+    in-out property <string> leader_dash: "";
+    in-out property <string> leader_label_anchor: "(default)";
+    in-out property <string> leader_length: "";
+    in-out property <string> leader_stub: "";
+
+    // ===== Fiscal =====
+    in-out property <string> fiscal: "(none)";
+    in-out property <string> fiscal_year_offset: "";
+    in-out property <bool> fiscal_colors: false;
+    in-out property <bool> fiscal_show_periods: false;
+    in-out property <bool> fiscal_show_quarters: false;
+
+    // ===== Sheets =====
+    in-out property <string> palette_name: "";
+    in-out property <string> sheet_filter: "";
+    in-out property <string> sheet_color: "";
+    in-out property <bool> sheet_paginate: false;
+    in-out property <string> sheet_columns: "";
+    in-out property <string> sheet_rows: "";
+    in-out property <string> sheet_sized: "";
+    in-out property <bool> sheet_fullset: false;
+
+    // ===== Logging =====
+    in-out property <int> verbose_index: 0;
+    in-out property <bool> quiet: false;
+
+    // ===== Visibility (driven from Python per selected subcommand) =====
+    in property <bool> show_dates: true;
+    in property <bool> show_database: true;
+    in property <bool> show_theme: true;
+    in property <bool> show_page: true;          // papersize/orientation/shrink/embed
+    in property <bool> show_weekends: true;       // weekends + weekend-days
+    in property <bool> show_layout_page: true;    // margin/header/footer/monthnames
+    in property <bool> show_headerfooter: true;
+    in property <bool> show_watermark: true;
+    in property <bool> show_country: true;
+    in property <bool> show_content: true;
+    in property <bool> cf_empty: true;
+    in property <bool> cf_shade: true;
+    in property <bool> cf_overflow: true;
+    in property <bool> cf_includenotes: true;
+    in property <bool> show_weeknum: false;
+    in property <bool> show_mini: false;
+    in property <bool> show_mini_extra: false;    // grid-lines/details
+    in property <bool> show_miniicon: false;
+    in property <bool> show_candybar: false;
+    in property <bool> show_timeline: false;
+    in property <bool> show_pit: false;
+    in property <bool> show_fiscal: false;
+    in property <bool> show_fiscalcolors: false;
+    in property <bool> show_fiscalbands: false;
+    in property <bool> show_sheet: false;
+    in property <bool> sheet_has_name: false;
+    in property <bool> sheet_has_filter: false;
+    in property <bool> sheet_has_color: false;
+    in property <bool> sheet_has_paginate: false;
+    in property <bool> sheet_has_fullset: false;
+    in property <bool> show_logging: true;
+
+    // ===== Driven from Python =====
+    in property <image> preview_image;
+    in property <string> console_text: "";
+    in property <string> status_text: "Ready. Pick a visualizer and click Generate.";
+    in property <bool> generating: false;
+    in property <string> preview_mode: "image";   // "image" | "text" | "status"
+
+    callback generate();
+    callback command-changed(int);
+
+    HorizontalBox {
+        padding: 0px;
+        spacing: 0px;
+
+        // ===================== Left: option form (the "menu") =====================
+        Rectangle {
+            width: 430px;
+            background: #2b2b2b10;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                // Visualizer picker (sticky above the scroll area)
+                Rectangle {
+                    height: 78px;
+                    background: #2b2b2b18;
+                    VerticalBox {
+                        padding: 12px;
+                        spacing: 4px;
+                        Text { text: "Visualizer"; font-size: 12px; font-weight: 700; }
+                        ComboBox {
+                            model: [
+                                "weekly — SVG weekly calendar",
+                                "mini — SVG mini calendar",
+                                "mini-icon — mini calendar w/ icon days",
+                                "candybar — vertical year strip",
+                                "text-mini — text mini calendar",
+                                "timeline — SVG timeline",
+                                "pit — points-in-time timeline",
+                                "blockplan — SVG blockplan",
+                                "compactplan — compressed timeline",
+                                "palettesheet — palette preview (SVG)",
+                                "iconsheet — icon grid (SVG)",
+                                "patternsheet — pattern grid (SVG)",
+                                "colorsheet — color grid (SVG)",
+                                "fontsheet — font sample sheet (SVG)",
+                                "excelheader — Excel timeband header",
+                                "excelblockplan — Excel blockplan",
+                                "exportdata — filtered CSV export",
+                            ];
+                            current-index <=> root.command_index;
+                            selected => { root.command-changed(self.current-index); }
+                        }
+                    }
+                }
+
+                ScrollView {
+                    vertical-stretch: 1;
+                    VerticalBox {
+                        padding: 14px;
+                        spacing: 10px;
+                        alignment: start;
+
+                        if root.command_hint != "" : Text {
+                            text: root.command_hint;
+                            font-size: 11px;
+                            color: #666;
+                            wrap: word-wrap;
+                        }
+
+                        // ---------------- Data ----------------
+                        if root.show_dates || root.show_database : GroupBox {
+                            title: "Data";
+                            VerticalBox {
+                                spacing: 6px;
+                                if root.show_dates : Text { text: "Start date (YYYYMMDD)"; }
+                                if root.show_dates : LineEdit { text <=> root.begin_date; }
+                                if root.show_dates : Text { text: "End date (YYYYMMDD)"; }
+                                if root.show_dates : LineEdit { text <=> root.end_date; }
+                                if root.show_database : Text { text: "Database"; }
+                                if root.show_database : LineEdit { text <=> root.database; }
+                                if root.show_country : Text { text: "Country code(s)  —  blank = US,CA"; }
+                                if root.show_country : LineEdit { text <=> root.country; placeholder-text: "e.g. US,CA,GB"; }
+                            }
+                        }
+
+                        // ---------------- Sheet options ----------------
+                        if root.show_sheet : GroupBox {
+                            title: "Sheet options";
+                            VerticalBox {
+                                spacing: 6px;
+                                if root.sheet_has_name : Text { text: "Palette name  —  blank = all palettes"; }
+                                if root.sheet_has_name : LineEdit { text <=> root.palette_name; placeholder-text: "e.g. Blues"; }
+                                if root.sheet_has_filter : Text { text: "Name filter (substring)"; }
+                                if root.sheet_has_filter : LineEdit { text <=> root.sheet_filter; placeholder-text: "case-insensitive"; }
+                                if root.sheet_has_color : Text { text: "Color"; }
+                                if root.sheet_has_color : LineEdit { text <=> root.sheet_color; placeholder-text: "blank = default"; }
+                                if root.sheet_has_paginate : CheckBox { text: "Paginate into printable pages"; checked <=> root.sheet_paginate; }
+                                if root.sheet_has_paginate : Text { text: "Columns / Rows / Cell size (need paginate)"; }
+                                if root.sheet_has_paginate : LineEdit { text <=> root.sheet_columns; placeholder-text: "columns (blank = 8)"; }
+                                if root.sheet_has_paginate : LineEdit { text <=> root.sheet_rows; placeholder-text: "rows (blank = 10)"; }
+                                if root.sheet_has_paginate : LineEdit { text <=> root.sheet_sized; placeholder-text: "cell size pts (blank = 24)"; }
+                                if root.sheet_has_fullset : CheckBox { text: "Full glyph set (not sample rows)"; checked <=> root.sheet_fullset; }
+                            }
+                        }
+
+                        // ---------------- Page & output ----------------
+                        if root.show_theme || root.show_page : GroupBox {
+                            title: "Page & output";
+                            VerticalBox {
+                                spacing: 6px;
+                                if root.show_theme : Text { text: "Theme"; }
+                                if root.show_theme : ComboBox {
+                                    model: ["(none)", "default", "basic", "corporate", "dark", "accent", "Julia", "SAMPLE"];
+                                    current-value <=> root.theme;
+                                }
+                                if root.show_page : Text { text: "Paper size"; }
+                                if root.show_page : ComboBox {
+                                    model: ["Widescreen", "Letter", "Legal", "Tabloid", "A4", "A3", "A2", "A1", "A0"];
+                                    current-value <=> root.papersize;
+                                }
+                                if root.show_page : Text { text: "Orientation"; }
+                                if root.show_page : ComboBox {
+                                    model: ["landscape", "portrait"];
+                                    current-value <=> root.orientation;
+                                }
+                                if root.show_page : CheckBox { text: "Shrink to content bbox"; checked <=> root.shrink; }
+                                if root.show_page : CheckBox { text: "Embed source data (CSV)"; checked <=> root.embed_data; }
+                            }
+                        }
+
+                        // ---------------- Layout ----------------
+                        if root.show_weekends || root.show_layout_page : GroupBox {
+                            title: "Layout";
+                            VerticalBox {
+                                spacing: 6px;
+                                if root.show_weekends : Text { text: "Weekend style"; }
+                                if root.show_weekends : ComboBox {
+                                    model: [
+                                        "0 — work week only",
+                                        "1 — full week (Sun start)",
+                                        "2 — half weekends (Sun)",
+                                        "3 — full week (Mon start)",
+                                        "4 — half weekends (Mon)"
+                                    ];
+                                    current-index <=> root.weekends_index;
+                                }
+                                if root.show_weekends : Text { text: "Weekend days (0=Mon..6=Sun)"; }
+                                if root.show_weekends : LineEdit { text <=> root.weekend_days; placeholder-text: "e.g. 5,6"; }
+                                if root.show_layout_page : CheckBox { text: "Page margins"; checked <=> root.margin; }
+                                if root.show_layout_page : CheckBox { text: "Show month names"; checked <=> root.monthnames; }
+                            }
+                        }
+
+                        // ---------------- Header / footer ----------------
+                        if root.show_headerfooter : GroupBox {
+                            title: "Header / footer";
+                            VerticalBox {
+                                spacing: 6px;
+                                CheckBox { text: "Show header"; checked <=> root.show_header; }
+                                LineEdit { text <=> root.header_left; placeholder-text: "header left"; }
+                                LineEdit { text <=> root.header_center; placeholder-text: "header center"; }
+                                LineEdit { text <=> root.header_right; placeholder-text: "header right"; }
+                                CheckBox { text: "Show footer"; checked <=> root.show_footer; }
+                                LineEdit { text <=> root.footer_left; placeholder-text: "footer left"; }
+                                LineEdit { text <=> root.footer_center; placeholder-text: "footer center"; }
+                                LineEdit { text <=> root.footer_right; placeholder-text: "footer right"; }
+                            }
+                        }
+
+                        // ---------------- Watermark ----------------
+                        if root.show_watermark : GroupBox {
+                            title: "Watermark";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Text"; }
+                                LineEdit { text <=> root.watermark_text; }
+                                Text { text: "Rotation (degrees)"; }
+                                LineEdit { text <=> root.watermark_rotation; placeholder-text: "blank = none"; }
+                                Text { text: "Image path"; }
+                                LineEdit { text <=> root.watermark_image; }
+                            }
+                        }
+
+                        // ---------------- Content filters ----------------
+                        if root.show_content : GroupBox {
+                            title: "Content filters";
+                            VerticalBox {
+                                spacing: 6px;
+                                if root.cf_empty : CheckBox { text: "Empty (no events)"; checked <=> root.empty; }
+                                if root.cf_shade : CheckBox { text: "Shade today"; checked <=> root.shade; }
+                                CheckBox { text: "Exclude single-day events"; checked <=> root.no_events; }
+                                CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
+                                CheckBox { text: "Ignore 100% complete"; checked <=> root.ignore_complete; }
+                                CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
+                                CheckBox { text: "Rollups only"; checked <=> root.rollups_only; }
+                                if root.cf_includenotes : CheckBox { text: "Include notes"; checked <=> root.include_notes; }
+                                if root.cf_overflow : CheckBox { text: "Overflow page"; checked <=> root.overflow; }
+                                Text { text: "Status filter  —  blank = active"; }
+                                LineEdit { text <=> root.status; placeholder-text: "active,draft,… or all"; }
+                                Text { text: "WBS filter"; }
+                                LineEdit { text <=> root.wbs; placeholder-text: "e.g. 1.2,!1.2.3"; }
+                            }
+                        }
+
+                        // ---------------- Week numbers ----------------
+                        if root.show_weeknum : GroupBox {
+                            title: "Week numbers";
+                            VerticalBox {
+                                spacing: 6px;
+                                CheckBox { text: "Show week numbers"; checked <=> root.weeknumbers; }
+                                Text { text: "Week number mode"; }
+                                ComboBox {
+                                    model: ["(default)", "iso", "custom"];
+                                    current-value <=> root.week_number_mode;
+                                }
+                                Text { text: "Week 1 anchor (YYYYMMDD)"; }
+                                LineEdit { text <=> root.week1_start; placeholder-text: "implies custom mode"; }
+                            }
+                        }
+
+                        // ---------------- Mini ----------------
+                        if root.show_mini : GroupBox {
+                            title: "Mini calendar";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Columns (months per row)"; }
+                                LineEdit { text <=> root.mini_columns; placeholder-text: "blank = 3"; }
+                                Text { text: "Rows (0 = auto)"; }
+                                LineEdit { text <=> root.mini_rows; placeholder-text: "blank = auto"; }
+                                Text { text: "Title format"; }
+                                LineEdit { text <=> root.mini_title_format; placeholder-text: "blank = MMM YY"; }
+                                CheckBox { text: "Hide adjacent-month days"; checked <=> root.mini_no_adjacent; }
+                                if root.show_mini_extra : CheckBox { text: "Draw grid lines"; checked <=> root.mini_grid_lines; }
+                                if root.show_mini_extra : CheckBox { text: "Also emit details SVG"; checked <=> root.mini_details; }
+                                if root.show_miniicon : Text { text: "Icon set (day numbers)"; }
+                                if root.show_miniicon : ComboBox {
+                                    model: ["(default)", "squares", "darksquare", "darkcircles", "circles", "squircles", "darksquircles"];
+                                    current-value <=> root.mini_icon_set;
+                                }
+                            }
+                        }
+
+                        // ---------------- Candybar ----------------
+                        if root.show_candybar : GroupBox {
+                            title: "Candybar";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Row height (pts, 0 = auto)"; }
+                                LineEdit { text <=> root.candybar_row_height; placeholder-text: "blank = auto"; }
+                                Text { text: "Cell width (pts, 0 = square)"; }
+                                LineEdit { text <=> root.candybar_cell_width; placeholder-text: "blank = square"; }
+                                Text { text: "Max rows per page (0 = single)"; }
+                                LineEdit { text <=> root.candybar_max_rows; placeholder-text: "blank = single strip"; }
+                                CheckBox { text: "Suppress weekends"; checked <=> root.candybar_suppress_weekends; }
+                                CheckBox { text: "Hide week-number column"; checked <=> root.candybar_no_week_numbers; }
+                                Text { text: "Month-name side"; }
+                                ComboBox {
+                                    model: ["(default)", "left", "right"];
+                                    current-value <=> root.candybar_month_side;
+                                }
+                                Text { text: "Month label rotation (deg)"; }
+                                LineEdit { text <=> root.candybar_month_rotation; placeholder-text: "e.g. -90"; }
+                                Text { text: "Weekend cell fill color"; }
+                                LineEdit { text <=> root.candybar_weekend_fill; placeholder-text: "blank = none"; }
+                                CheckBox { text: "Per-month shading bands"; checked <=> root.candybar_month_shading; }
+                            }
+                        }
+
+                        // ---------------- Timeline ----------------
+                        if root.show_timeline : GroupBox {
+                            title: "Timeline";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Today line length (pts, 0 = full)"; }
+                                LineEdit { text <=> root.today_line_length; placeholder-text: "blank = full"; }
+                                Text { text: "Today line direction"; }
+                                ComboBox {
+                                    model: ["(default)", "above", "below", "both"];
+                                    current-value <=> root.today_line_direction;
+                                }
+                                Text { text: "Label fill opacity (0.0–1.0)"; }
+                                LineEdit { text <=> root.label_fill_opacity; placeholder-text: "blank = 0.25"; }
+                                Text { text: "Duration fill opacity (0.0–1.0)"; }
+                                LineEdit { text <=> root.duration_fill_opacity; placeholder-text: "blank = 0.25"; }
+                            }
+                        }
+
+                        // ---------------- PIT ----------------
+                        if root.show_pit : GroupBox {
+                            title: "PIT — axis & ticks";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Axis direction"; }
+                                ComboBox {
+                                    model: ["(default)", "horizontal", "vertical"];
+                                    current-value <=> root.direction;
+                                }
+                                Text { text: "Label side"; }
+                                ComboBox {
+                                    model: ["(default)", "both", "primary", "secondary"];
+                                    current-value <=> root.label_side;
+                                }
+                                Text { text: "Tick unit"; }
+                                ComboBox {
+                                    model: ["(default)", "month", "week", "fiscal_quarter", "fiscal_period", "interval", "date", "year"];
+                                    current-value <=> root.tick_unit;
+                                }
+                                Text { text: "Tick interval (days, for unit=interval)"; }
+                                LineEdit { text <=> root.tick_interval; placeholder-text: "blank = 1"; }
+                                Text { text: "Tick label format (Arrow)"; }
+                                LineEdit { text <=> root.tick_label_format; placeholder-text: "e.g. MMM D"; }
+                                Text { text: "Tick length (points)"; }
+                                LineEdit { text <=> root.tick_length; placeholder-text: "blank = 5.0"; }
+                                CheckBox { text: "Hide tick marks (--no-ticks)"; checked <=> root.hide_ticks; }
+                                CheckBox { text: "Hide tick labels (--no-tick-labels)"; checked <=> root.hide_tick_labels; }
+                                Text { text: "Date placement"; }
+                                ComboBox {
+                                    model: ["(default)", "inline", "axis", "none"];
+                                    current-value <=> root.date_placement;
+                                }
+                            }
+                        }
+                        if root.show_pit : GroupBox {
+                            title: "PIT — today line";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Today line"; }
+                                ComboBox {
+                                    model: ["(default)", "on", "off"];
+                                    current-value <=> root.today_line;
+                                }
+                                Text { text: "Today date override (YYYYMMDD)"; }
+                                LineEdit { text <=> root.today_date; }
+                                Text { text: "Today label  —  blank = \"today\""; }
+                                LineEdit { text <=> root.today_label; }
+                            }
+                        }
+                        if root.show_pit : GroupBox {
+                            title: "PIT — markers & icons";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Event icon (DB name)"; }
+                                LineEdit { text <=> root.event_icon; }
+                                Text { text: "Milestone icon (DB name)"; }
+                                LineEdit { text <=> root.milestone_icon; }
+                                Text { text: "Marker size (points)"; }
+                                LineEdit { text <=> root.marker_size; placeholder-text: "blank = 7.0"; }
+                                Text { text: "Label icon size (points)"; }
+                                LineEdit { text <=> root.label_icon_size; }
+                                Text { text: "Label icon gap (points)"; }
+                                LineEdit { text <=> root.label_icon_gap; placeholder-text: "blank = 4.0"; }
+                            }
+                        }
+                        if root.show_pit : GroupBox {
+                            title: "PIT — leaders";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Leader dash array"; }
+                                LineEdit { text <=> root.leader_dash; placeholder-text: "e.g. 4,2"; }
+                                Text { text: "Leader label anchor"; }
+                                ComboBox {
+                                    model: ["(default)", "center", "start", "end"];
+                                    current-value <=> root.leader_label_anchor;
+                                }
+                                Text { text: "Leader length (points)"; }
+                                LineEdit { text <=> root.leader_length; placeholder-text: "blank = 8.0"; }
+                                Text { text: "Leader stub (points)"; }
+                                LineEdit { text <=> root.leader_stub; placeholder-text: "blank = 6.0"; }
+                            }
+                        }
+
+                        // ---------------- Fiscal ----------------
+                        if root.show_fiscal : GroupBox {
+                            title: "Fiscal";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Fiscal overlay"; }
+                                ComboBox {
+                                    model: ["(none)", "nrf-454", "nrf-445", "nrf-544", "13-period"];
+                                    current-value <=> root.fiscal;
+                                }
+                                Text { text: "Fiscal year offset"; }
+                                LineEdit { text <=> root.fiscal_year_offset; placeholder-text: "e.g. 1 or -1"; }
+                                if root.show_fiscalcolors : CheckBox { text: "Use fiscal period colors"; checked <=> root.fiscal_colors; }
+                                if root.show_fiscalbands : CheckBox { text: "Show fiscal period band"; checked <=> root.fiscal_show_periods; }
+                                if root.show_fiscalbands : CheckBox { text: "Show fiscal quarter band"; checked <=> root.fiscal_show_quarters; }
+                            }
+                        }
+
+                        // ---------------- Logging ----------------
+                        if root.show_logging : GroupBox {
+                            title: "Logging";
+                            VerticalBox {
+                                spacing: 6px;
+                                Text { text: "Verbosity"; }
+                                ComboBox {
+                                    model: ["0 — warnings", "1 — info (-v)", "2 — info+ (-vv)", "3 — debug (-vvv)"];
+                                    current-index <=> root.verbose_index;
+                                }
+                                CheckBox { text: "Quiet (errors only)"; checked <=> root.quiet; }
+                            }
+                        }
+                    }
+                }
+
+                // Sticky action bar (outside the scroll area)
+                Rectangle {
+                    height: 56px;
+                    background: #2b2b2b18;
+                    HorizontalBox {
+                        padding: 10px;
+                        Button {
+                            text: root.generating ? "Generating…" : "Generate preview";
+                            primary: true;
+                            enabled: !root.generating;
+                            clicked => { root.generate(); }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===================== Right: preview (image / text / status) =====================
+        Rectangle {
+            horizontal-stretch: 1;
+            background: white;
+            border-width: 1px;
+            border-color: #00000022;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+
+                Rectangle {
+                    vertical-stretch: 1;
+                    clip: true;
+
+                    if root.preview_mode == "image" : Image {
+                        width: parent.width;
+                        height: parent.height;
+                        source: root.preview_image;
+                        image-fit: contain;
+                    }
+                    if root.preview_mode == "text" : TextEdit {
+                        width: parent.width;
+                        height: parent.height;
+                        read-only: true;
+                        wrap: no-wrap;
+                        font-family: "Menlo";
+                        font-size: 12px;
+                        text: root.console_text;
+                    }
+                    if root.preview_mode == "status" : Text {
+                        width: parent.width - 40px;
+                        height: parent.height;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        wrap: word-wrap;
+                        color: #555;
+                        text: root.console_text;
+                    }
+                }
+
+                Rectangle {
+                    height: 26px;
+                    background: #f4f4f4;
+                    Text {
+                        x: 10px;
+                        width: parent.width - 20px;
+                        height: parent.height;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        text: root.status_text;
+                        color: #333;
+                    }
+                }
+            }
+        }
+    }
+}
