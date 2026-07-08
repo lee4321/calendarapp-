@@ -1,7 +1,8 @@
 # Changelog
 
-Full git history (168 commits, oldest first reads bottom-up):
+Full git history (oldest first reads bottom-up):
 
+- 2026-07-08 consolidation: Phases 0-7 of CONSOLIDATION_PLAN.md — refcorpus rendering guard; deleted dead code (superseded theme migrator, orphan timescales.py, broken import_holidays.py); shared homes for labella layout, SVG patterns, token cache, small helpers; importer framework in importers/common.py; ecalendar.py split into cli/ modules (4,352 -> ~800 lines); 31 dead config fields + no-op --duration-fill-opacity flag removed; timeline duration-bar opacity re-wired via line:duration_bar token; commenting pass (CONTRIBUTING.md, blockplan/timeline/mini docstrings); Mermaid architecture docs in docs/architecture/; USER_GUIDE refresh with executable-example checker (tools/check_user_guide.py)
 - 2026-06-15 candybar: new vertical year-strip visualizer (one row per ISO week, week-number column, day cells, merged month boxes with rotatable labels; reuses the mini/mini-icon decoration + icon rule engine; supports weekend suppression and multi-strip pagination)
 - 2026-05-25 56b91618 excelheader: skip timeband segments outside the visible day range
 - 2026-05-25 91860a74 ecalendar: validate --begin/--end dates up front with friendly error

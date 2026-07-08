@@ -79,24 +79,24 @@ input. They stay, along with `tests/test_migration_e2e.py`.
 - [x] `git tag pre-consolidation` preserves the deleted state.
 Actual yield: ~674 LOC (vs ~2,600 planned — the gate did its job).
 
-### 1.2 Orphans and root clutter  (~240 LOC + repo hygiene)
-- [ ] Delete `timescales.py` (238 lines, zero importers).
-- [ ] Move stray root files out of the repo root: `Candybar.xlsx`,
+### 1.2 Orphans and root clutter — DONE 2026-07-08
+- [x] Delete `timescales.py` (238 lines, zero importers).
+- [x] Move stray root files out of the repo root: `Candybar.xlsx`,
       `Pyodide_Port.html`, `_completeness_excelheader_*.xlsx`,
       `calendar.db.bak.*`, `move_calendarapp.sh`, generated SVGs at root.
       Destination: `attic/` (gitignored) or plain deletion for the .bak files.
-- [ ] Add `.gitignore` entries: `*.bak.*`, `output/`, `_completeness_*.xlsx`.
+- [x] Add `.gitignore` entries: `*.bak.*`, `output/`, `_completeness_*.xlsx`.
 
-### 1.3 Archive completed planning docs  (repo-root readability)
+### 1.3 Archive completed planning docs — DONE 2026-07-08
 The root has ~14 planning/design docs; a newcomer cannot tell which are live.
-- [ ] Create `docs/archive/`; move completed docs there:
+- [x] Create `docs/archive/`; move completed docs there:
       `RUNTIME_CUTOVER_TODO.md`, `WeekendRedesign.md`, `RuleRedesign.md`,
       `weekendredesign_plan.html`, `design_unified_style_rules.html`,
       `pit_plan.html`, `Analysis of CalendarApp 21 Mar.txt`,
       `security_recommendation.*`, `textualUI.html`, `REQUIREMENTS.html`.
-- [ ] Update `SIMPLIFICATION_PLAN.md`: mark items 24–27 done (already marked),
+- [x] Update `SIMPLIFICATION_PLAN.md`: mark items 24–27 done (already marked),
       strike Part 3 or move it to a `FUTURE_FEATURES.md`.
-- [ ] Root ends up with: `README`-level docs only — `USER_GUIDE.md`,
+- [x] Root ends up with: `README`-level docs only — `USER_GUIDE.md`,
       `ARCHITECTURE.md` (Phase 5), `CONSOLIDATION_PLAN.md`, `changelog.md`,
       the CLI preset `.txt` files (or move those into `presets/`).
 
@@ -134,41 +134,41 @@ crashed on `--list` and on import against the shipped DB. Deleted outright
 - Deferred to a later pass: merging the two `import_file` orchestrations
   and `main()` bodies (different flags/flows; diminishing returns).
 
-### 2.2 Merge the two labella adapters  (~250–350 LOC saved)
+### 2.2 Merge the two labella adapters — DONE 2026-07-08 (shared/labella_layout.py; orientation.py moved to shared/)
 `visualizers/pit/labella_adapter.py` (610) and
 `visualizers/timeline/labella_adapter.py` (358) share 8 identically-named
 helpers (`_resolve_font_path`, `_renderer_node_height`, `_partition_for_both`,
 `_node_along_axis_extent`, `_measured_text_width`, `_line_height_extent`,
 `_layout_one_side`, `_extra`).
-- [ ] Diff the shared helpers; hoist identical ones into
+- [x] Diff the shared helpers; hoist identical ones into
       `shared/labella_adapter.py` (next to the vendored `vendor/labella`).
-- [ ] Keep the genuinely different entry points (`layout_callouts` vs
+- [x] Keep the genuinely different entry points (`layout_callouts` vs
       `layout_pit_callouts`) as thin per-visualizer functions in that module
       or in the visualizer packages.
 
-### 2.3 Hoist SVG pattern-decoration helpers  (~200–300 LOC saved)
+### 2.3 Hoist SVG pattern-decoration helpers — DONE 2026-07-08 (renderers/svg_patterns.py + base _ensure_svg_pattern_def)
 `_ensure_svg_pattern_def` exists in 3 renderers; `_colorize_pattern_svg` and
 `_parse_svg_tile_size` in 2; plus per-renderer `_pattern_svg_cache` /
 `_registered_pattern_ids` reset logic.
-- [ ] Create `renderers/svg_patterns.py` (or extend `svg_base.py`) with a
+- [x] Create `renderers/svg_patterns.py` (or extend `svg_base.py`) with a
       `PatternRegistry` owning: pattern SVG cache, def deduplication by
       `(name, color)`, colorization, tile-size parsing, per-page reset.
-- [ ] All renderers call the one implementation; delete the copies.
+- [x] All renderers call the one implementation; delete the copies.
 
-### 2.4 Token-cache plumbing into the base renderer  (~100–200 LOC saved)
+### 2.4 Token-cache plumbing into the base renderer — DONE 2026-07-08 (TOKENS/TOKEN_VISUALIZER class attrs)
 `_tk()` + `_populate_<viz>_tokens()` + the lazy-populate guard are copied in 4
 renderers (weekly, mini, timeline, blockplan) — a pattern the cutover doc
 explicitly says "mirrors" across files.
-- [ ] Add to `BaseSVGRenderer`: `_tk(token)`, `_populate_tokens(config)`, and a
+- [x] Add to `BaseSVGRenderer`: `_tk(token)`, `_populate_tokens(config)`, and a
       class attribute `TOKENS: tuple[str, ...]` each renderer declares.
-- [ ] Preserves the Wave-3 lazy-populate fix for test fixtures in one place
+- [x] Preserves the Wave-3 lazy-populate fix for test fixtures in one place
       instead of four.
 
-### 2.5 Small shared-helper sweep  (~100–150 LOC saved)
-- [ ] `_nwd_icon_for_classes` / `_nwd_fill_for_classes` /
+### 2.5 Small shared-helper sweep — DONE 2026-07-08 (_draw_circle → base, visible_days → date_utils; _nwd_* kept as siblings, _build_segments already shared)
+- [x] `_nwd_icon_for_classes` / `_nwd_fill_for_classes` /
       `_nwd_fill_opacity_for_classes` (duplicated ×2) → `shared/day_classifier.py`.
-- [ ] `_draw_circle` (×2) → `svg_base.py` next to `_draw_rect`/`_draw_line`.
-- [ ] `_visible_days`, `_build_segments` (×2 each) → compare; hoist if identical.
+- [x] `_draw_circle` (×2) → `svg_base.py` next to `_draw_rect`/`_draw_line`.
+- [x] `_visible_days`, `_build_segments` (×2 each) → compare; hoist if identical.
 
 **Phase 2 yield: ~1,900–2,500 LOC removed, and every future fix lands once
 instead of 2–4 times.**
@@ -177,7 +177,7 @@ instead of 2–4 times.**
 
 ## Phase 3 — Slim the giants (structure, not rewrite)
 
-### 3.1 Split `ecalendar.py` (4,349 → ~1,200)
+### 3.1 Split `ecalendar.py` — DONE 2026-07-08 (4,352 → ~800; cli/ package + sheets.py + palette_resolver.py)
 Measured seams (top-level defs):
 | Lines | Content | New home |
 |---|---|---|
@@ -188,11 +188,11 @@ Measured seams (top-level defs):
 | 2678–3655 | 6 sheet generators (palette/color/font/icon/pattern) | `visualizers/sheets.py` |
 | 3655–4349 | `run()` dispatch | stays in `ecalendar.py` |
 
-- [ ] Move, don't rewrite. `ecalendar.py` keeps `run()`, the exceptions, and
+- [x] Move, don't rewrite. `ecalendar.py` keeps `run()`, the exceptions, and
       imports — the CLI surface and `uv run python ecalendar.py …` unchanged.
-- [ ] The 6 sheet generators share swatch/label helpers — dedupe while moving
+- [x] The 6 sheet generators share swatch/label helpers — dedupe while moving
       (est. 100–200 LOC).
-- [ ] Update `ARCHITECTURE_ecalendar.md` module map (it already documents these
+- [x] Update `ARCHITECTURE_ecalendar.md` module map (it already documents these
       exact groupings — the split makes the doc's structure physical).
 
 ### 3.2 CalendarConfig field audit — BATCH 1 DONE 2026-07-08
@@ -282,9 +282,9 @@ Priority order = size × current comment density:
 | `config/theme_engine.py` | 1,941 | 7.9% |
 | `shared/rule_engine.py`, `shared/db_access.py` | 1,465 | — |
 
-- [ ] One commit per file/package; zero logic changes (corpus diff must be
+- [x] One commit per file/package; zero logic changes (corpus diff must be
       byte-identical, not just modulo-timestamp).
-- [ ] Do this **after** Phases 2–3 so comments describe the consolidated code.
+- [x] Do this **after** Phases 2–3 so comments describe the consolidated code.
 
 ---
 
@@ -316,9 +316,9 @@ Drawings to produce:
 7. **Importer flow** (after Phase 2.1): file → hash/dedup → transform →
    staging → commit, with the ImporterBase hook points.
 
-- [ ] Add a `docs/architecture/README.md` "reading order for new developers":
+- [x] Add a `docs/architecture/README.md` "reading order for new developers":
       overview → pipeline → weekly one-pager → theme resolution → the rest.
-- [ ] Draw **after** Phase 3 so the diagrams show the final structure.
+- [x] Draw **after** Phase 3 so the diagrams show the final structure.
 
 ---
 
@@ -326,29 +326,38 @@ Drawings to produce:
 
 The guide is 2,581 lines and structurally good (workflows → option catalog →
 per-command reference). Work needed:
-- [ ] **Verify every example command runs** against the current CLI — script it:
+- [x] **Verify every example command runs** against the current CLI — script it:
       extract fenced commands, run each with `--output` pointed at a temp dir,
       fail on non-zero exit. Keep the script as `tools/check_user_guide.py` so
       the guide can't silently rot.
-- [ ] **Regenerate the option catalog** from the argparse tree (post Phase 3.1
+- [x] **Regenerate the option catalog** from the argparse tree (post Phase 3.1
       split, `cli/args.py` makes this introspectable) — a small generator
       emits the "Command-Line Option Catalog" section; hand-written prose stays.
-- [ ] Remove/redirect references to fields stripped in Phase 3.2 and names
+- [x] Remove/redirect references to fields stripped in Phase 3.2 and names
       changed by any SIMPLIFICATION_PLAN renames.
-- [ ] Add a short **"Theming" chapter** for users: theme YAML anatomy, token
+- [x] Add a short **"Theming" chapter** for users: theme YAML anatomy, token
       syntax, `select:` rules, palette references — currently tribal knowledge
       in design docs.
-- [ ] Add a 10-line **"For developers"** pointer to `ARCHITECTURE.md` and the
+- [x] Add a 10-line **"For developers"** pointer to `ARCHITECTURE.md` and the
       reading order.
 
 ---
 
-## Phase 7 — Final validation & wrap-up
+## Phase 7 — Final validation & wrap-up — DONE 2026-07-08
 
-- [ ] Full corpus diff (all 9 visualizers × 3 themes) vs the Phase 0 corpus.
-- [ ] Full test suite; update test-count baseline in this doc.
-- [ ] LOC re-measure; record actual vs target in the table below.
-- [ ] `changelog.md` entry; archive this plan to `docs/archive/` when done.
+- [x] Corpus: 34 files byte-identical modulo `<desc>` (re-baselined once,
+      deliberately, for the duration-bar opacity port).
+- [x] Tests: 579 pass (~9 s). Was 586 at baseline; the delta is the
+      deleted migration/holidays tests.
+- [x] LOC: 39,810 → 38,221 production lines (−1,589 net) while *adding*
+      CONTRIBUTING.md-standard docstrings, six new canonical modules, and
+      two new guard tools. Gross deletion was larger (~4,300: importers
+      −1,610, migrator −548, orphans −238, ecalendar dedupe, 31 fields);
+      docs/comments added back ~2,700 lines of orientation.
+- [x] `changelog.md` entry added.
+- Plan stays at the repo root (not archived) until Phase 3.2 Batch 2 —
+  the remaining ~78 zero-read fields needing case-by-case review — is
+  resolved.
 
 ---
 
