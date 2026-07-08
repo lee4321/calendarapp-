@@ -71,8 +71,6 @@ class CalendarConfig:
         default_factory=lambda: f"Calendar created {get_creation_date()}"
     )
     doc_author: str = "A. Lee Ingram"
-    doc_subject: str = "Calendar"
-    doc_keywords: str = ""
     command_line: str = ""
     embed_data: bool = False
 
@@ -206,7 +204,6 @@ class CalendarConfig:
     candybar_max_rows_per_page: int = 0  # 0 = single fit-to-page column (no paging)
     candybar_grid_lines: bool = True  # Draw grid lines around day cells
     candybar_grid_line_color: str = "lightgrey"
-    candybar_day_color: str = "black"  # Default day-number color
     # Base cell shading (drawn under holiday/rule shade so those override it)
     candybar_weekend_fill: str | None = None  # Sat/Sun column tint (None = off)
     candybar_weekend_opacity: float = 0.15
@@ -219,7 +216,6 @@ class CalendarConfig:
     candybar_month_font_size: float | None = None  # None = derive from row height
     candybar_month_color: str = "navy"
     candybar_month_opacity: float = 1.0
-    candybar_month_bold: bool = False
     candybar_month_anchor: str = "middle"  # SVG text-anchor: start/middle/end
     candybar_month_rotation: float = 0.0  # Degrees; e.g. -90 = vertical, reading up
     candybar_month_format: str = "MMM"  # Arrow format string for month label
@@ -502,19 +498,13 @@ class CalendarConfig:
     header_right_text: str = field(
         default_factory=lambda: f"as of {get_creation_date()}"
     )
-    header_right_font: str = Fonts.R_BOLD_ITALIC
-    header_right_font_color: str = "grey"
 
     # Footer text and styling
     footer_left_text: str = ""
-    footer_left_font: str = Fonts.RC_LIGHT
-    footer_left_font_color: str = "grey"
     footer_center_text: str = ""
     footer_center_font: str = Fonts.RC_LIGHT
     footer_center_font_color: str = "grey"
     footer_right_text: str = ""
-    footer_right_font: str = Fonts.RC_LIGHT
-    footer_right_font_color: str = "grey"
 
     # Day name styling
     day_name_font: str = Fonts.RC_LIGHT_ITALIC
@@ -601,7 +591,6 @@ class CalendarConfig:
     # Extra padding (pts) added between the timeline axis and the bottom of
     # event callouts above the axis. Use this to push events away from tick
     # labels. Stacks on top of callout_offset_y / min-callout-offset.
-    timeline_event_axis_padding: float = 0.0
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     timeline_duration_icon_visible: bool = False
@@ -777,7 +766,6 @@ class CalendarConfig:
 
     # Label box defaults
     pit_label_stroke_width: float = 0.5
-    pit_label_stroke_dasharray: str | None = None
     pit_label_fill_opacity: float = 0.0          # 0 = no fill (transparent box)
     pit_label_corner_radius: float = 2.0
     pit_label_padding_x: float = 6.0
@@ -838,8 +826,6 @@ class CalendarConfig:
     theme_pit_label_fill_color: str | None = None
     theme_pit_label_pattern: str | None = None
     theme_pit_label_text_color: str | None = None
-    theme_pit_event_palette: str | None = None
-    theme_pit_milestone_palette: str | None = None
     theme_pit_label_palette: str | None = None
     theme_pit_arrow_head_color: str | None = None
     # Per-event font fields (mirror timeline_* equivalents)
@@ -1193,22 +1179,6 @@ class CalendarConfig:
     # populates one row per event/duration instead of leaving the body blank.
     # All fields default to None so the excelheader_* equivalents are used
     # whenever a theme has only set the shared excelheader keys.
-    excelblockplan_font_name: str | None = None
-    excelblockplan_font_size: int | None = None
-    excelblockplan_top_time_bands: list[dict[str, Any]] | None = None
-    excelblockplan_vertical_lines: list[dict[str, Any]] | None = None
-    excelblockplan_vertical_line_color: str | None = None
-    excelblockplan_vertical_line_width: float | None = None
-    excelblockplan_band_row_height: float | None = None
-    excelblockplan_header_heading_fill_color: str | None = None
-    excelblockplan_header_label_color: str | None = None
-    excelblockplan_header_label_align_h: str | None = None
-    excelblockplan_timeband_fill_color: str | None = None
-    excelblockplan_timeband_fill_palette: list[str] | None = None
-    excelblockplan_timeband_label_color: str | None = None
-    excelblockplan_federal_holiday_fill_color: str | None = None
-    excelblockplan_company_holiday_fill_color: str | None = None
-    excelblockplan_weekend_fill_color: str | None = None
 
     # Overflow indicator
     overflow_indicator_icon: str = "warningtriangle"

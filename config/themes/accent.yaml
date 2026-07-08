@@ -301,8 +301,6 @@ pit:
   default_milestone_icon: null
   dot_color: "palette:PuBuGn:4"
   milestone_color: "palette:Accent:1"
-  event_palette: PuBuGn
-  milestone_palette: Accent
   leader:
     color: "#888888"
     width: 0.75

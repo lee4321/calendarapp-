@@ -293,8 +293,6 @@ pit:
   default_milestone_icon: null
   dot_color: "#2c7bb6"
   milestone_color: midnightblue
-  event_palette: Blues
-  milestone_palette: Blues
   leader:
     color: steelblue
     width: 0.75

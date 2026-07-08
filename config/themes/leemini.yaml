@@ -307,8 +307,6 @@ pit:
   default_milestone_icon: null
   dot_color: "#b3cde3"
   milestone_color: lightsteelblue
-  event_palette: Pastel1
-  milestone_palette: Set3
   leader:
     color: lightgrey
     width: 0.75

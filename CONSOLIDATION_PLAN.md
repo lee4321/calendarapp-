@@ -195,27 +195,44 @@ Measured seams (top-level defs):
 - [ ] Update `ARCHITECTURE_ecalendar.md` module map (it already documents these
       exact groupings — the split makes the doc's structure physical).
 
-### 3.2 CalendarConfig field audit (config.py 2,596)
-The cutover's declared end state: *"CalendarConfig has only non-styling fields —
-geometry, format strings, palette references, fiscal semantics, the loaded
-UnifiedTheme, runtime fields."* 573 fields remain; Wave 1 already stripped 89.
-- [ ] Grep-audit each remaining `theme_*` field (52) and legacy styling field
-      for zero renderer reads; strip in batches of ~20 with corpus diff between
-      batches.
-- [ ] Group surviving fields under section banner comments (paper/geometry,
-      date-range, content filters, fiscal, per-visualizer geometry, runtime).
-- [ ] Fold in `SIMPLIFICATION_PLAN.md` Part 1 renames (alias mechanism per that
-      doc) *after* stripping — fewer fields to rename.
-- Est. 300–500 LOC out of config.py + theme_engine.py mapping entries that
-  pointed at stripped fields.
+### 3.2 CalendarConfig field audit — BATCH 1 DONE 2026-07-08
+Audit script (AST field extraction + whole-tree reference count, with the
+`svg_base` dynamic `{prefix}_text`/`{prefix}_font_size` names protected)
+found **109 of 566 fields with zero production reads**.
 
-### 3.3 theme_engine.py dead-map audit (1,941)
-- [ ] With the decompiler bridge gone, walk `THEME_TO_CONFIG_MAP` for entries
-      whose target field no longer exists or is never read; delete.
-- [ ] Check `config/required_keys.py` (385) and `config/element_catalog*`
-      still earn their keep post-cutover; fold trivial remnants into
-      theme_engine.
-- Est. 200–400 LOC.
+- [x] **Batch 1 stripped (30 fields)** — zero reads *and* zero CLI/test refs:
+      all 16 `excelblockplan_*` theme fields (the exporter never read them),
+      `header_right_font(_color)`, `footer_left/right_font(_color)` (header/
+      footer styling flows from the `heading`/`caption` element-catalog
+      tokens, not these fields), `doc_subject`/`doc_keywords` (`<desc>` uses
+      only title/author), `candybar_day_color`, `candybar_month_bold`,
+      `pit_label_stroke_dasharray`, `theme_pit_event_palette`,
+      `theme_pit_milestone_palette`, `timeline_event_axis_padding`.
+      Matching THEME_TO_CONFIG_MAP entries and the `_BAND_PLACEMENTS`
+      excelblockplan tuple removed.
+- [x] **Finding:** all 7 theme YAMLs set `pit.event_palette` /
+      `pit.milestone_palette` — those keys were never wired to any renderer
+      (silent no-ops). Keys removed from the YAMLs; if per-event/milestone
+      pit palettes are wanted, that's a feature to build, not a config key.
+- [ ] **Batch 2 (~79 remaining candidates)** need case-by-case review:
+      `margin_*`/`include_margin` are FALSE positives (read inside
+      `config.resolve_page_margins()`); heuristic size fields are alive via
+      `_HEURISTIC_TOKEN_FIELDS`; a few are CLI-written (removing changes CLI
+      surface, e.g. `timeline_duration_bar_fill_opacity`); several are
+      referenced only by tests. Audit script:
+      scratchpad `audit_config_fields.py` (rerunnable).
+- [ ] Group surviving fields under section banner comments — fold into the
+      Phase 4 commenting pass.
+- [ ] Fold in `SIMPLIFICATION_PLAN.md` Part 1 renames *after* Batch 2.
+
+### 3.3 theme_engine.py dead-map audit — DONE 2026-07-08 (clean bill)
+- [x] Audited all 358 distinct map targets and every direct `config.<f> =`
+      write in theme_engine against the live CalendarConfig fields: **zero
+      stale entries** (beyond those removed with Batch 1). Prior cleanup
+      waves were thorough.
+- [x] `config/required_keys.py` is live — powers `tools/validate_theme.py`
+      missing-key errors and migrate_theme. Keeps its keep.
+- Net: verification pass; the estimated 200–400 LOC did not exist.
 
 ### 3.4 Big renderers — extract only at natural seams
 timeline/renderer.py (2,724) and blockplan/renderer.py (2,268) are large but

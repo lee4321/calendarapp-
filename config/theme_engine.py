@@ -33,15 +33,9 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("header.left", "font_color"): "header_left_font_color",
     ("header.center", "font_family"): "header_center_font",
     ("header.center", "font_color"): "header_center_font_color",
-    ("header.right", "font_family"): "header_right_font",
-    ("header.right", "font_color"): "header_right_font_color",
     # Footer
-    ("footer.left", "font_family"): "footer_left_font",
-    ("footer.left", "font_color"): "footer_left_font_color",
     ("footer.center", "font_family"): "footer_center_font",
     ("footer.center", "font_color"): "footer_center_font_color",
-    ("footer.right", "font_family"): "footer_right_font",
-    ("footer.right", "font_color"): "footer_right_font_color",
     # Day names (weekly)
     ("weekly.day_names", "font_family"): "day_name_font",
     ("weekly.day_names", "font_color"): "day_name_font_color",
@@ -102,7 +96,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "marker_radius"): "timeline_marker_radius",
     ("timeline", "icon_size"): "timeline_icon_size",
     ("timeline", "callout_offset_y"): "timeline_callout_offset_y",
-    ("timeline", "event_axis_padding"): "timeline_event_axis_padding",
     ("timeline", "duration_offset_y"): "timeline_duration_offset_y",
     ("timeline", "duration_lane_gap_y"): "timeline_duration_lane_gap_y",
     ("timeline", "duration_icon_visible"): "timeline_duration_icon_visible",
@@ -392,7 +385,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("candybar", "max_rows_per_page"): "candybar_max_rows_per_page",
     ("candybar", "grid_lines"): "candybar_grid_lines",
     ("candybar", "grid_line_color"): "candybar_grid_line_color",
-    ("candybar", "day_color"): "candybar_day_color",
     ("candybar", "weekend_fill"): "candybar_weekend_fill",
     ("candybar", "weekend_opacity"): "candybar_weekend_opacity",
     ("candybar", "month_shading"): "candybar_month_shading",
@@ -404,7 +396,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("candybar.month", "size"): "candybar_month_font_size",
     ("candybar.month", "color"): "candybar_month_color",
     ("candybar.month", "opacity"): "candybar_month_opacity",
-    ("candybar.month", "bold"): "candybar_month_bold",
     ("candybar.month", "anchor"): "candybar_month_anchor",
     ("candybar.month", "rotation"): "candybar_month_rotation",
     ("candybar.month_box", "fill"): "candybar_month_box_fill",
@@ -431,22 +422,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
     # ExcelBlockplan — mirrors excelheader keys; None values fall back to the
     # excelheader_* equivalents at render time.
-    ("excelblockplan", "font_name"): "excelblockplan_font_name",
-    ("excelblockplan", "font_size"): "excelblockplan_font_size",
-    ("excelblockplan", "top_time_bands"): "excelblockplan_top_time_bands",
-    ("excelblockplan", "vertical_lines"): "excelblockplan_vertical_lines",
-    ("excelblockplan", "vertical_line_color"): "excelblockplan_vertical_line_color",
-    ("excelblockplan", "vertical_line_width"): "excelblockplan_vertical_line_width",
-    ("excelblockplan", "band_row_height"): "excelblockplan_band_row_height",
-    ("excelblockplan", "header_heading_fill_color"): "excelblockplan_header_heading_fill_color",
-    ("excelblockplan", "header_label_color"): "excelblockplan_header_label_color",
-    ("excelblockplan", "header_label_align_h"): "excelblockplan_header_label_align_h",
-    ("excelblockplan", "timeband_fill_color"): "excelblockplan_timeband_fill_color",
-    ("excelblockplan", "timeband_fill_palette"): "excelblockplan_timeband_fill_palette",
-    ("excelblockplan", "timeband_label_color"): "excelblockplan_timeband_label_color",
-    ("excelblockplan", "federal_holiday_fill_color"): "excelblockplan_federal_holiday_fill_color",
-    ("excelblockplan", "company_holiday_fill_color"): "excelblockplan_company_holiday_fill_color",
-    ("excelblockplan", "weekend_fill_color"): "excelblockplan_weekend_fill_color",
     # Stripped in Phase 2 (no consumers): vertical_line_dasharray /
     # vertical_line_opacity / vertical_line_fill_color /
     # vertical_line_fill_opacity (XLSX borders are color+style only),
@@ -471,8 +446,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("pit", "default_milestone_icon"): "pit_default_milestone_icon",
     ("pit", "dot_color"): "theme_pit_dot_color",
     ("pit", "milestone_color"): "theme_pit_milestone_color",
-    ("pit", "event_palette"): "theme_pit_event_palette",
-    ("pit", "milestone_palette"): "theme_pit_milestone_palette",
     ("pit", "label_palette"): "theme_pit_label_palette",
     # Callout label text fonts. Without these the PIT renderer falls back to
     # the timeline name_text/notes_text fonts (then hardcoded Roboto-*).
@@ -1135,7 +1108,6 @@ class ThemeEngine:
         ("blockplan",    "top_bands",     "blockplan_top_time_bands"),
         ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
         ("excelheader",  "top_bands",     "excelheader_top_time_bands"),
-        ("excelblockplan", "top_bands",   "excelblockplan_top_time_bands"),
         ("timeline",     "top_bands",     "timeline_top_time_bands"),
         ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
     )
@@ -1314,8 +1286,6 @@ class ThemeEngine:
                 v = _flt(lbl["stroke_width"])
                 if v is not None:
                     config.pit_label_stroke_width = v
-            if "stroke_dasharray" in lbl:
-                config.pit_label_stroke_dasharray = _str(lbl["stroke_dasharray"])
             if "fill_color" in lbl:
                 config.theme_pit_label_fill_color = _str(lbl["fill_color"])
             if "fill_opacity" in lbl:

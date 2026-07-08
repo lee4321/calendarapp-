@@ -282,8 +282,6 @@ pit:
   default_milestone_icon: null
   dot_color: lightskyblue
   milestone_color: lightgrey
-  event_palette: Dark2
-  milestone_palette: Greys
   leader:
     color: "#999999"
     width: 0.75

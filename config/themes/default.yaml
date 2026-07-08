@@ -308,8 +308,6 @@ pit:
   default_milestone_icon: null
   dot_color: deepskyblue
   milestone_color: gold
-  event_palette: Pastel1
-  milestone_palette: Set1
   leader:
     color: grey
     width: 0.75

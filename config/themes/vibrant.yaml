@@ -321,8 +321,6 @@ pit:
   default_milestone_icon: null
   dot_color: dodgerblue
   milestone_color: tomato
-  event_palette: colorblind2
-  milestone_palette: blues
   leader:
     color: "#555555"
     width: 0.75
