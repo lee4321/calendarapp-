@@ -46,10 +46,10 @@ colors:
   hash_lines: white
   federal_holiday:
     color: crimson
-    alpha: 0.3
+    opacity: 0.3
   company_holiday:
     color: limegreen
-    alpha: 0.3
+    opacity: 0.3
   resource_groups:
     a: deeppink
     b: dodgerblue

@@ -109,7 +109,7 @@ def _cfg(out_path: Path):
     # The default config.rollups is True ("show only rollups") which would
     # filter out every test event. Tests want the full set.
     c.rollups = False
-    c.excelheader_font_name = "Calibri"
+    c.excelheader_font = "Calibri"
     c.excelheader_font_size = 9
     c.excelheader_top_time_bands = [{"label": "Month", "unit": "month"}]
     return c

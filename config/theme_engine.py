@@ -54,7 +54,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "fill_opacity"): "day_box_fill_opacity",
     ("weekly.day_box", "number_font"): "day_box_number_font",
     ("weekly.day_box", "number_color"): "day_box_number_color",
-    ("weekly.day_box", "font_color"): "day_box_font_color",
+    ("weekly.day_box", "font_color"): "day_box_color",
     # Base / global
     ("base", "default_missing_icon"): "default_missing_icon",
     # Events (icon/placement only — text fields moved to weekly.name_text/notes_text)
@@ -402,7 +402,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("candybar.month_box", "opacity"): "candybar_month_box_opacity",
     ("timeline", "connector_stroke_dasharray"): "timeline_connector_stroke_dasharray",
     # ExcelHeader
-    ("excelheader", "font_name"): "excelheader_font_name",
+    ("excelheader", "font_name"): "excelheader_font",
     ("excelheader", "font_size"): "excelheader_font_size",
     ("excelheader", "top_time_bands"): "excelheader_top_time_bands",
     ("excelheader", "vertical_lines"): "excelheader_vertical_lines",
@@ -1436,15 +1436,21 @@ class ThemeEngine:
         if isinstance(fed, dict):
             if "color" in fed:
                 config.theme_federal_holiday_color = fed["color"]
-            if "alpha" in fed:
-                config.theme_federal_holiday_alpha = fed["alpha"]
+            # "opacity" is the current key; "alpha" accepted as a
+            # deprecated alias (SIMPLIFICATION_PLAN 1.3).
+            if "opacity" in fed:
+                config.theme_federal_holiday_opacity = fed["opacity"]
+            elif "alpha" in fed:
+                config.theme_federal_holiday_opacity = fed["alpha"]
 
         comp = colors.get("company_holiday", {})
         if isinstance(comp, dict):
             if "color" in comp:
                 config.theme_company_holiday_color = comp["color"]
-            if "alpha" in comp:
-                config.theme_company_holiday_alpha = comp["alpha"]
+            if "opacity" in comp:
+                config.theme_company_holiday_opacity = comp["opacity"]
+            elif "alpha" in comp:
+                config.theme_company_holiday_opacity = comp["alpha"]
 
         # DB palette name references (resolved at render time)
         for yaml_key, config_field in (
@@ -1635,7 +1641,7 @@ class ThemeEngine:
             style = rule.style or {}
             # Only carry through `size` when the theme actually declared it;
             # leaving it as None lets renderers fall back to their own size
-            # (e.g. event_icon_font_size) instead of an arbitrary 10pt.
+            # (e.g. event_icon_size) instead of an arbitrary 10pt.
             size: float | None = None
             if "size" in style:
                 try:

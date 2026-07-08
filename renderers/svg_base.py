@@ -1416,7 +1416,7 @@ class BaseSVGRenderer(ABC):
         _ctx = {"papersize": config.papersize}
         _tk_dn = self._resolve_token(config, "text:day_number", _ctx)
         _tk_en = self._resolve_token(config, "text:event_name", _ctx)
-        text_color = _tk_dn.get("color") or config.day_box_font_color
+        text_color = _tk_dn.get("color") or config.day_box_color
 
         # Title
         _hdr_ts = config.get_text_style("ec-header-text")

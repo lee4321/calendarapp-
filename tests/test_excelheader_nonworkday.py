@@ -45,7 +45,7 @@ def _cfg(out_path: Path):
     c.weekend_style = 1        # show all 7 weekdays
     c.weekend_days = [5, 6]    # Sat, Sun
     c.country = None
-    c.excelheader_font_name = "Calibri"
+    c.excelheader_font = "Calibri"
     c.excelheader_font_size = 9
     return c
 

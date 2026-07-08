@@ -38,10 +38,10 @@ colors:
   hash_lines: grey
   federal_holiday:
     color: indianred
-    alpha: 0.3
+    opacity: 0.3
   company_holiday:
     color: darkseagreen
-    alpha: 0.3
+    opacity: 0.3
   resource_groups:
     a: whitesmoke
     b: lightskyblue

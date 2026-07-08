@@ -79,7 +79,7 @@ def _base_config(out_path: Path):
     config.adjustedend = "20260123"
     config.weekend_style = 0  # weekdays only
     config.country = None
-    config.excelheader_font_name = "Calibri"
+    config.excelheader_font = "Calibri"
     config.excelheader_font_size = 9
     return config
 

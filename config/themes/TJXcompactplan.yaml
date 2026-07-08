@@ -42,10 +42,10 @@ colors:
     c: red
     d: grey
   company_holiday:
-    alpha: 0.25
+    opacity: 0.25
     color: gold
   federal_holiday:
-    alpha: 0.1
+    opacity: 0.1
     color: tomato
 compact_plan:
   palette:

@@ -44,10 +44,10 @@ colors:
   hash_lines: black
   federal_holiday:
     color: red
-    alpha: 0.25
+    opacity: 0.25
   company_holiday:
     color: green
-    alpha: 0.25
+    opacity: 0.25
   resource_groups:
     a: black
     b: yellow

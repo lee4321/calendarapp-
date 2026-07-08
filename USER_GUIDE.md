@@ -1070,9 +1070,9 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `margin_left` | `layout.margin.left` | `float | None` | `None` | Left margin; supports points or units like in/mm |
 | `margin_right` | `layout.margin.right` | `float | None` | `None` | Right margin; supports points or units like in/mm |
 | `margin_top` | `layout.margin.top` | `float | None` | `None` | Top margin; supports points or units like in/mm |
-| `theme_company_holiday_alpha` | `colors.company_holiday.alpha` | `float | None` | `None` | Company holiday alpha override |
+| `theme_company_holiday_opacity` | `colors.company_holiday.opacity` | `float | None` | `None` | Company holiday opacity override (`alpha` accepted as deprecated alias) |
 | `theme_company_holiday_color` | `colors.company_holiday.color` | `str | None` | `None` | Company holiday color override |
-| `theme_federal_holiday_alpha` | `colors.federal_holiday.alpha` | `float | None` | `None` | Federal holiday alpha override |
+| `theme_federal_holiday_opacity` | `colors.federal_holiday.opacity` | `float | None` | `None` | Federal holiday opacity override (`alpha` accepted as deprecated alias) |
 | `theme_federal_holiday_color` | `colors.federal_holiday.color` | `str | None` | `None` | Federal holiday color override |
 | `theme_fiscal_palette` | `colors.fiscal_palette` | `str | None` | `None` | DB palette name for fiscal period colors |
 | `theme_fiscal_period_colors` | `colors.fiscal_periods` | `dict[str, str] | None` | `None` | Fiscal period to color map |
@@ -1106,7 +1106,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 |---|---|---|---|---|
 | `day_box_fill_color` | `weekly.day_box.fill_color` | `str` | `'grey'` | fill color |
 | `day_box_fill_opacity` | `weekly.day_box.fill_opacity` | `float` | `0.25` | fill opacity |
-| `day_box_font_color` | `weekly.day_box.font_color` | `str` | `'navy'` | font color |
+| `day_box_color` | `weekly.day_box.font_color` | `str` | `'navy'` | font color |
 | `day_box_icon_color` | `weekly.day_box.icon_color` | `str` | `'red'` | icon color |
 | `day_box_number_color` | `weekly.day_box.number_color` | `str` | `'white'` | number color |
 | `day_box_number_font` | `weekly.day_box.number_font` | `str` | `Fonts.R_BLACK` | number font |
@@ -1364,7 +1364,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
 | `excelheader_band_row_height` | `excelheader.band_row_height` | `float` | `18.0` | default timeband row height in points |
-| `excelheader_font_name` | `excelheader.font_name` | `str` | `'Calibri'` | system-installed Excel font for all cells |
+| `excelheader_font` | `excelheader.font_name` | `str` | `'Calibri'` | system-installed Excel font for all cells |
 | `excelheader_font_size` | `excelheader.font_size` | `int` | `9` | default font size in points |
 | `excelheader_header_heading_fill_color` | `excelheader.header_heading_fill_color` | `str` | `'none'` | heading cell (A:E) background color |
 | `excelheader_header_label_align_h` | `excelheader.header_label_align_h` | `str` | `'left'` | heading cell alignment: left \| center \| right |
@@ -1579,7 +1579,7 @@ Halo example for the weekly overflow icon — paint a small ring behind the indi
 |---|---|
 | `icon` | Glyph name (`diamond`, `flag`, `overflow`, …) |
 | `color` | Icon color |
-| `size` | Icon size in points. **Optional** — when omitted, each visualizer falls back to its own default: weekly event/duration icons use `event_icon_font_size` (which tracks the event-name text size); compactplan duration icons use `compact_plan.duration_icon_height`; continuation icons (compactplan / blockplan / timeline) use the global `continuation.icon_height`. Declaring `size:` on the bound `icon:` token overrides those defaults. |
+| `size` | Icon size in points. **Optional** — when omitted, each visualizer falls back to its own default: weekly event/duration icons use `event_icon_size` (which tracks the event-name text size); compactplan duration icons use `compact_plan.duration_icon_height`; continuation icons (compactplan / blockplan / timeline) use the global `continuation.icon_height`. Declaring `size:` on the bound `icon:` token overrides those defaults. |
 
 #### `element_overrides:` — Per-Theme Element Tweaks
 

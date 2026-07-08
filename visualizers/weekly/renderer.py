@@ -616,11 +616,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         if shadespecialday == "government":
             fill_color = config.theme_federal_holiday_color or FederalHolidayColor
-            fill_alpha = config.theme_federal_holiday_alpha
+            fill_alpha = config.theme_federal_holiday_opacity
             fill_opacity = fill_alpha if fill_alpha is not None else FederalHolidayAlpha
         elif shadespecialday:
             fill_color = config.theme_company_holiday_color or CompanyHolidayColor
-            fill_alpha = config.theme_company_holiday_alpha
+            fill_alpha = config.theme_company_holiday_opacity
             fill_opacity = fill_alpha if fill_alpha is not None else CompanyHolidayAlpha
         elif config.fiscal_use_period_colors and config.fiscal_lookup:
             fiscal_info = config.fiscal_lookup.get(oneday_str)
@@ -1215,7 +1215,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             )
 
             ev_icon_size = (
-                _is_ei.size if _is_ei.size is not None else config.event_icon_font_size
+                _is_ei.size if _is_ei.size is not None else config.event_icon_size
             )
             self._draw_icon_svg(
                 icon_to_draw,
@@ -1538,7 +1538,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # Theme-declared `icon:duration` size wins; fall back to the global
         # event/duration size when the theme is silent.
         icon_size = (
-            _is_di.size if _is_di.size is not None else config.event_icon_font_size
+            _is_di.size if _is_di.size is not None else config.event_icon_size
         )
         icon_gap = icon_size * 0.4
 

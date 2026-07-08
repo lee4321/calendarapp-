@@ -55,10 +55,10 @@ colors:
   hash_lines: palette:Accent:7
   federal_holiday:
     color: palette:Accent:5
-    alpha: 0.25
+    opacity: 0.25
   company_holiday:
     color: palette:Accent:0
-    alpha: 0.25
+    opacity: 0.25
   resource_groups:
     a: palette:Accent:4
     b: palette:Accent:0

@@ -481,7 +481,7 @@ class CalendarConfig:
     footer_right_font_size: float | None = None
     day_box_number_font_size: float | None = None
     day_box_icon_font_size: float | None = None
-    event_icon_font_size: float | None = None
+    event_icon_size: float | None = None
 
     # Week number styling
     week_number_font: str = Fonts.RC_BOLD
@@ -519,7 +519,7 @@ class CalendarConfig:
     day_box_fill_opacity: float = 0.25
     day_box_number_font: str = "CascadiaCode"
     day_box_number_color: str = "white"
-    day_box_font_color: str = "navy"
+    day_box_color: str = "navy"
 
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
@@ -1097,7 +1097,7 @@ class CalendarConfig:
 
     # ── ExcelHeader ───────────────────────────────────────────────────────────
     # Settings for the excelheader subcommand (Excel workbook output).
-    excelheader_font_name: str = "Calibri"  # System-installed Excel font for all cells
+    excelheader_font: str = "Calibri"  # System-installed Excel font for all cells
     excelheader_font_size: int = 9  # Font size in points
     excelheader_top_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
@@ -1219,9 +1219,9 @@ class CalendarConfig:
     item_placement_order: list[str] = field(default_factory=lambda: ["priority"])
     theme_resource_group_colors: dict[str, str] | None = None
     theme_federal_holiday_color: str | None = None
-    theme_federal_holiday_alpha: float | None = None
+    theme_federal_holiday_opacity: float | None = None
     theme_company_holiday_color: str | None = None
-    theme_company_holiday_alpha: float | None = None
+    theme_company_holiday_opacity: float | None = None
 
     # DB palette names — resolved at render time from calendar.db palettes table
     theme_month_palette: str | None = None
@@ -1432,7 +1432,7 @@ class CalendarConfig:
             "ec-event-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
             "ec-event-date": lambda: TextStyle(font=self.timeline_date_font, color=self.timeline_date_color),
             "ec-duration-date": lambda: TextStyle(font=self.timeline_duration_date_font or self.timeline_date_font, color=self.timeline_duration_date_color or self.timeline_date_color),
-            "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_font_color),
+            "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_color),
             "ec-today-label": lambda: TextStyle(color=self.timeline_today_label_color),
             "ec-header-text": lambda: TextStyle(font=self.header_center_font, color=self.header_center_font_color),
             "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
@@ -2456,7 +2456,7 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         visualizer="weekly",
     )
     config.weekly_text_font_size = config.weekly_name_text_font_size
-    config.event_icon_font_size = config.weekly_name_text_font_size
+    config.event_icon_size = config.weekly_name_text_font_size
 
     # Mini calendar font sizes
     config.mini_cell_font_size = _size(

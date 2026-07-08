@@ -43,10 +43,10 @@ colors:
   group_palette: coraltealblue
   hash_lines: black
   federal_holiday:
-    alpha: 0.1
+    opacity: 0.1
     color: tomato
   company_holiday:
-    alpha: 0.25
+    opacity: 0.25
     color: gold
   resource_groups:
     a: black

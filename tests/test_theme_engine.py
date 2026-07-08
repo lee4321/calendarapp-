@@ -498,9 +498,9 @@ class TestThemeEngineColorMaps:
     def test_holiday_colors_applied(self):
         config = self._load_builtin("dark")
         assert config.theme_federal_holiday_color == "indianred"
-        assert config.theme_federal_holiday_alpha == 0.3
+        assert config.theme_federal_holiday_opacity == 0.3
         assert config.theme_company_holiday_color == "darkseagreen"
-        assert config.theme_company_holiday_alpha == 0.3
+        assert config.theme_company_holiday_opacity == 0.3
 
     def test_group_palette_applied(self):
         config = self._load_builtin("vibrant")
@@ -908,7 +908,7 @@ class TestStrokeDasharray:
         from config.config import _inject_heuristic_size_tokens
         config = create_calendar_config()
         config.weekly_name_text_font_size = 9.0
-        config.event_icon_font_size = 9.0
+        config.event_icon_size = 9.0
         config.day_box_number_font_size = 13.0
         config.day_box_icon_font_size = 13.0
         for k, v in overrides.items():

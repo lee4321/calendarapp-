@@ -51,10 +51,10 @@ colors:
   hash_lines: lightsteelblue
   federal_holiday:
     color: royalblue
-    alpha: 0.2
+    opacity: 0.2
   company_holiday:
     color: mediumseagreen
-    alpha: 0.2
+    opacity: 0.2
   resource_groups:
     a: midnightblue
     b: steelblue

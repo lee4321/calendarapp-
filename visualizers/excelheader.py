@@ -428,7 +428,7 @@ def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
         return default
 
     font_name = str(
-        _cfg(f"{subcommand}_font_name", "excelheader_font_name", default="Calibri")
+        _cfg(f"{subcommand}_font_name", "excelheader_font", default="Calibri")
     )
     font_size = int(
         _cfg(f"{subcommand}_font_size", "excelheader_font_size", default=9)

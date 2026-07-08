@@ -43,9 +43,9 @@ colors:
   fiscal_palette: Blues
   group_palette: Set2
   federal_holiday:
-    alpha: 0.25
+    opacity: 0.25
   company_holiday:
-    alpha: 0.25
+    opacity: 0.25
   resource_groups:
     engineering: steelblue
     design: mediumpurple

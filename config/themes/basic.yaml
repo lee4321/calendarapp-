@@ -23,9 +23,9 @@ colors:
   fiscal_palette: Greys
   group_palette: Greys
   federal_holiday:
-    alpha: 0.25
+    opacity: 0.25
   company_holiday:
-    alpha: 0.25
+    opacity: 0.25
 weekly:
   week_numbers:
     label_format: W{num:02d}
