@@ -1,5 +1,11 @@
 # EventCalendar User Guide
 
+> **For developers:** architecture docs live in
+> [ARCHITECTURE.md](ARCHITECTURE.md) (reading order, diagrams) and
+> [CONTRIBUTING.md](CONTRIBUTING.md) (working practices, vocabulary).
+> The examples in this guide are executable — verify them with
+> `uv run python tools/check_user_guide.py`.
+
 This guide is generated from the current codebase (`ecalendar.py`, `config/theme_engine.py`, `config/config.py`) and reflects the exact implemented CLI/theme surface.
 
 ## Textual UI (interactive terminal app)
@@ -128,7 +134,7 @@ PYTHONPATH=. uv run python ecalendar.py fonts
 
 # Generate sample-sheet previews
 PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 -of set2.svg
-PYTHONPATH=. uv run python ecalendar.py patternsheet -f wave -of waves.svg
+PYTHONPATH=. uv run python ecalendar.py patternsheet -f wiggle -of wiggle.svg
 PYTHONPATH=. uv run python ecalendar.py iconsheet -f arrow -of arrows.svg
 PYTHONPATH=. uv run python ecalendar.py colorsheet -of colors.svg
 PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
@@ -158,7 +164,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--headerright`, `-hr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right header text |  |
 | `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
 | `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
-| `--imagemark`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
+| `--watermark-image`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
 | `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
@@ -190,7 +196,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
 | `--verbose`, `-v` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | `blockplan`: default `0` |
 | `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise in SVG coordinates) |  |
-| `--watermark`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
+| `--watermark-text`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
 | `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
 | `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated ISO weekday list (`0=Mon..6=Sun`) marking non-working days for holiday/weekend classification. Overrides the implicit Sat/Sun pair selected by `--weekends`. |  |
@@ -1048,11 +1054,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `footer_center_font` | `footer.center.font_family` | `str` | `Fonts.RC_LIGHT` | font family |
 | `footer_center_font_color` | `footer.center.font_color` | `str` | `'grey'` | font color |
 | `footer_center_font_size` | `footer.center.size_rule` | `float | None` | `None` | Per-papersize footer-center font size rule |
-| `footer_left_font` | `footer.left.font_family` | `str` | `Fonts.RC_LIGHT` | font family |
-| `footer_left_font_color` | `footer.left.font_color` | `str` | `'grey'` | font color |
 | `footer_left_font_size` | `footer.left.size_rule` | `float | None` | `None` | Per-papersize footer-left font size rule |
-| `footer_right_font` | `footer.right.font_family` | `str` | `Fonts.RC_LIGHT` | font family |
-| `footer_right_font_color` | `footer.right.font_color` | `str` | `'grey'` | font color |
 | `footer_right_font_size` | `footer.right.size_rule` | `float | None` | `None` | Per-papersize footer-right font size rule |
 | `group_colors` | `colors.group_colors` | `list` | `field(default_factory=lambda: ['bisque', 'skyblue', 'lawngreen', 'cyan', 'pur...` | List of group colors |
 | `header_center_font` | `header.center.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
@@ -1061,10 +1063,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `header_left_font` | `header.left.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
 | `header_left_font_color` | `header.left.font_color` | `str` | `'grey'` | font color |
 | `header_left_font_size` | `header.left.size_rule` | `float | None` | `None` | Per-papersize header-left font size rule |
-| `header_right_font` | `header.right.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
-| `header_right_font_color` | `header.right.font_color` | `str` | `'grey'` | font color |
 | `header_right_font_size` | `header.right.size_rule` | `float | None` | `None` | Per-papersize header-right font size rule |
-| `imagemark_rotation_angle` | `watermark.imagemark_rotation_angle` | `float` | `0.0` | imagemark rotation angle |
+| `watermark_image_rotation_angle` | `watermark.image_rotation_angle` | `float` | `0.0` | watermark image rotation angle |
 | `item_placement_order` | `events.item_placement_order` | `list[str]` | `field(default_factory=lambda: ['priority'])` | item placement order |
 | `margin_bottom` | `layout.margin.bottom` | `float | None` | `None` | Bottom margin; supports points or units like in/mm |
 | `margin_left` | `layout.margin.left` | `float | None` | `None` | Left margin; supports points or units like in/mm |
@@ -1092,13 +1092,13 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_resource_group_colors` | `colors.resource_groups` | `dict[str, str] | None` | `None` | Resource-group to color map |
 | `theme_special_day_type_colors` | `colors.special_day_types` | `dict[str, str] | None` | `None` | Special-day-type to color map |
 | `theme_special_day_color` | `colors.special_day` | `str | None` | `None` | Special day accent color |
-| `watermark` | `watermark.text` | `str` | `''` | text |
-| `watermark_alpha` | `watermark.alpha` | `float` | `0.3` | alpha |
+| `watermark_text` | `watermark.text` | `str` | `''` | text |
+| `watermark_opacity` | `watermark.opacity` | `float` | `0.3` | opacity |
 | `watermark_color` | `watermark.color` | `str` | `'white'` | color |
 | `watermark_font` | `watermark.font_family` | `str` | `Fonts.R_BLACK` | font family |
 | `watermark_resize_mode` | `watermark.resize_mode` | `str` | `'fit'` | "fit" (default) or "stretch" |
 | `watermark_rotation_angle` | `watermark.rotation_angle` | `float` | `0.0` | rotation angle |
-| `watermark_size` | `watermark.font_size` | `int | None` | `None` | font size |
+| `watermark_font_size` | `watermark.font_size` | `int | None` | `None` | font size |
 
 #### `weekly`
 
@@ -1384,28 +1384,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 #### `excelblockplan`
 
-All `excelblockplan_*` config fields default to `None` and fall back to the
-corresponding `excelheader_*` field when unset. Setting any value here lets a
-theme style the data-sheet variant independently of the planner template.
+The dedicated `excelblockplan_*` theme fields were removed in 2026-07 —
+the exporter never read them. Styling for the data-sheet variant follows
+the `excelheader` settings (fonts, band placement, holiday colors), which
+both Excel exports share.
 
-| Config field | Theme key | Type | Default | Explanation |
-|---|---|---|---|---|
-| `excelblockplan_band_row_height` | `excelblockplan.band_row_height` | `float \| None` | `None` (→ `excelheader_band_row_height`) | per-band default row height in points |
-| `excelblockplan_font_name` | `excelblockplan.font_name` | `str \| None` | `None` (→ `excelheader_font_name`) | Excel font for all cells |
-| `excelblockplan_font_size` | `excelblockplan.font_size` | `int \| None` | `None` (→ `excelheader_font_size`) | font size in points |
-| `excelblockplan_header_heading_fill_color` | `excelblockplan.header_heading_fill_color` | `str \| None` | `None` | heading cell A:W background color |
-| `excelblockplan_header_label_align_h` | `excelblockplan.header_label_align_h` | `str \| None` | `None` (→ excelheader, default `right`) | heading text alignment in A:W merged cell |
-| `excelblockplan_header_label_color` | `excelblockplan.header_label_color` | `str \| None` | `None` | heading label color |
-| `excelblockplan_timeband_fill_color` | `excelblockplan.timeband_fill_color` | `str \| None` | `None` | default segment fill color |
-| `excelblockplan_timeband_fill_palette` | `excelblockplan.timeband_fill_palette` | `list[str] \| None` | `None` | palette names cycling across segments |
-| `excelblockplan_timeband_label_color` | `excelblockplan.timeband_label_color` | `str \| None` | `None` | default segment label color |
-| `excelblockplan_top_time_bands` | `excelblockplan.top_time_bands` | `list[dict] \| None` | `None` (→ excelheader default) | timeband rows; same schema as `blockplan.top_time_bands` |
-| `excelblockplan_vertical_line_color` | `excelblockplan.vertical_line_color` | `str \| None` | `None` | default right-border color for vertical lines |
-| `excelblockplan_vertical_line_width` | `excelblockplan.vertical_line_width` | `float \| None` | `None` | default right-border width |
-| `excelblockplan_vertical_lines` | `excelblockplan.vertical_lines` | `list[dict] \| None` | `None` | vertical lines rendered as right-cell borders |
-| `excelblockplan_federal_holiday_fill_color` | `excelblockplan.federal_holiday_fill_color` | `str \| None` | `None` | overlay color for federal holiday cells |
-| `excelblockplan_company_holiday_fill_color` | `excelblockplan.company_holiday_fill_color` | `str \| None` | `None` | overlay color for company holiday cells |
-| `excelblockplan_weekend_fill_color` | `excelblockplan.weekend_fill_color` | `str \| None` | `None` | overlay color for weekend cells |
 
 
 ## Complex Structures Reference
@@ -2101,8 +2084,8 @@ pit:
   default_milestone_icon: null  # DB icon name or null (no icon)
   dot_color: steelblue
   milestone_color: gold
-  event_palette: Pastel1      # round-robin palette for event markers
-  milestone_palette: Set1
+  # (label_palette on the label block cycles label-box fills; there is
+  #  no per-event/milestone marker palette.)
 
   leader:
     color: grey

@@ -1,0 +1,23 @@
+task_name,status,start_date,finish_date,earliest_start_date,latest_start_date,earliest_end_date,latest_end_date,priority,wbs,rollup,milestone,percent_complete,effort,duration,predecessors,resource_names,resource_group,notes,icon,color,tags
+Code Freeze,active,2026-06-05,2026-06-05,,,,,0,NP.3.S4,0,1,0.0,,,,,Product,Only release-critical changes accepted,clock,gold,Sprint4
+Go-Live Event,active,2026-07-27,2026-07-27,,,,,0,NP.8,0,1,0.0,,,,,Product,Public launch announcement,rocket,crimson,Launch
+Go/No-Go Decision,active,2026-07-17,2026-07-17,,,,,0,NP.5,0,1,0.0,,,,,Product,Steering committee approves launch,target,slategray,Operate
+Operations Readiness Review,active,2026-07-10,2026-07-10,,,,,0,NP.5,0,1,0.0,,,,,Ops,Ops team certifies platform readiness,check,slategray,Operate
+Production Rollout 100%,active,2026-07-24,2026-07-24,,,,,0,NP.8.5,0,1,0.0,,,,,Ops,Full traffic on new platform,target,crimson,Launch
+Project Closeout,active,2026-07-31,2026-07-31,,,,,0,NP,0,1,0.0,,,,,Product,Retrospective and benefits handoff,trophy,crimson,Launch
+Project Kickoff,active,2026-02-02,2026-02-02,,,,,0,NP.1,0,1,0.0,,,,,Product,All-hands kickoff and charter walkthrough,calendar,skyblue,Discovery
+QA Sign-off,active,2026-06-19,2026-06-19,,,,,0,NP.4,0,1,0.0,,,,,QA,All quality gates met,check,orange,Verify
+Requirements Sign-off,active,2026-02-27,2026-02-27,,,,,0,NP.1,0,1,0.0,,,,,Product,Steering committee approves requirements baseline,check,skyblue,Discovery
+Training Sign-off,active,2026-07-17,2026-07-17,,,,,0,NP.6,0,1,0.0,,,,,Training,Org confirms readiness to adopt,check,plum,Adopt
+UAT Sign-off,active,2026-06-26,2026-06-26,,,,,0,NP.7,0,1,0.0,,,,,Stakeholders,Business stakeholders accept the release,thumbsup,mediumpurple,UAT
+Architecture Review Board,active,2026-03-13,2026-03-13,,,,,1,NP.2,0,1,0.0,,,,,Backend,Cross-team review and approval,star,steelblue,Design
+Canary Deployment 5%,active,2026-07-20,2026-07-20,,,,,1,NP.8.3,0,1,0.0,,,,,Ops,Limited rollout to opt-in cohort,target,crimson,Launch
+Production Rollout 25%,active,2026-07-22,2026-07-22,,,,,1,NP.8.4,0,1,0.0,,,,,Ops,Expand traffic share after canary,target,crimson,Launch
+Sprint 1 Planning,active,2026-03-16,2026-03-16,,,,,1,NP.3.S1,0,1,0.0,,,,,Product,Backlog refinement for auth and API foundation,calendar,seagreen,Sprint1
+Sprint 1 Review,active,2026-04-03,2026-04-03,,,,,1,NP.3.S1,0,1,0.0,,,,,Product,Sprint outcomes accepted,flag,seagreen,Sprint1
+Sprint 2 Planning,active,2026-04-06,2026-04-06,,,,,1,NP.3.S2,0,1,0.0,,,,,Product,Plan core features sprint,calendar,mediumseagreen,Sprint2
+Sprint 2 Review,active,2026-04-24,2026-04-24,,,,,1,NP.3.S2,0,1,0.0,,,,,Product,Sprint outcomes accepted,flag,mediumseagreen,Sprint2
+Sprint 3 Planning,active,2026-04-27,2026-04-27,,,,,1,NP.3.S3,0,1,0.0,,,,,Product,Plan integration sprint,calendar,coral,Sprint3
+Sprint 3 Review,active,2026-05-15,2026-05-15,,,,,1,NP.3.S3,0,1,0.0,,,,,Product,Sprint outcomes accepted,flag,coral,Sprint3
+Sprint 4 Planning,active,2026-05-18,2026-05-18,,,,,1,NP.3.S4,0,1,0.0,,,,,Product,Plan hardening sprint,calendar,gold,Sprint4
+Sprint 4 Review,active,2026-06-05,2026-06-05,,,,,1,NP.3.S4,0,1,0.0,,,,,Product,Sprint outcomes accepted,flag,gold,Sprint4
