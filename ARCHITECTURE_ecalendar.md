@@ -1,9 +1,24 @@
-# Architecture: `ecalendar.py`
+# Architecture: the CLI layer (`ecalendar.py` + `cli/`)
 
-`ecalendar.py` is the single CLI entry point for the EventCalendar SVG generator.
-It owns argument parsing, configuration assembly, database wiring, and dispatch to
-every subcommand — both the read-only inspection commands (themes, fonts, colors, …)
-and the SVG/Excel visualizer commands (weekly, mini, blockplan, excelheader, …).
+> **2026-07 module split.** This document predates the split of
+> `ecalendar.py` into layered modules; its structure/call-graph content is
+> still accurate, but the groupings it describes are now physical files:
+>
+> | Section below | Now lives in |
+> |---|---|
+> | Exceptions | `cli/errors.py` |
+> | CLI argument layer (atfiles, parser, help) | `cli/args.py` |
+> | Configuration assembly + validation | `cli/config_assembly.py` |
+> | Palette resolution | `config/palette_resolver.py` |
+> | Export CSV helpers | `cli/exportdata.py` |
+> | SVG preview generators (sheets) | `visualizers/sheets.py` |
+> | `run()` | `ecalendar.py` (all that remains, plus re-exports) |
+
+`ecalendar.py run()` is the single CLI entry point for the EventCalendar SVG
+generator. The CLI layer owns argument parsing, configuration assembly,
+database wiring, and dispatch to every subcommand — both the read-only
+inspection commands (themes, fonts, colors, …) and the SVG/Excel visualizer
+commands (weekly, mini, blockplan, excelheader, …).
 
 ---
 
