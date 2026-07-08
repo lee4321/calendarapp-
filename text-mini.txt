@@ -15,6 +15,9 @@
 # --milestones                 # Show only milestones
 # --rollups                    # Show only rollup entries
 # --includenotes               # Show notes with event names
+# --WBS=                       # Filter to a WBS subtree (expression syntax, e.g. NP.1)
+# --status=active              # Statuses to include: active,draft,on-hold,cancelled,archived or 'all'
+# --weekend-days=5,6           # ISO weekdays (0=Mon..6=Sun) classified as non-working
 # --WBS=                       # WBS filter (e.g. PROJ.*,!PROJ.abandoned)
 # --country=                   # ISO country code(s) for holidays (e.g. US,CA,GB)
 

@@ -1,5 +1,36 @@
 # CalendarApp Codebase Simplification Plan
 
+> ## Execution status — 2026-07-08
+>
+> Executed after (and reconciled against) `CONSOLIDATION_PLAN.md`, which
+> removed many of the fields this plan proposed to rename.
+>
+> - **Part 1 (naming):** DONE. 14 of Appendix B's fields no longer exist
+>   (theme cutover strips); the watermark family (1.4 + watermark_alpha)
+>   was renamed earlier. The five live renames executed:
+>   `day_box_font_color→day_box_color`, `excelheader_font_name→excelheader_font`,
+>   `theme_federal/company_holiday_alpha→…_opacity`,
+>   `event_icon_font_size→event_icon_size`. Theme YAML keys unchanged
+>   except `colors.*.alpha→opacity` (engine accepts `alpha` as a
+>   deprecated alias; all theme YAMLs updated). 1.6 was already done;
+>   1.8's table renamed fields to themselves (no-op).
+> - **Part 2 (completeness):** DONE where still real. 2.4's "missing"
+>   mappings all either already exist (mini show_adjacent /
+>   circle_milestones / current_day_color), are served by `size_rule`
+>   keys (header/footer sizes), or are superseded by unified-theme
+>   tokens (event/duration/fiscal/day sizes — the token is the designed
+>   path; adding legacy maps would regress). 2.1: SAMPLE.yaml gained the
+>   three live mini keys. 2.3: all four presets (weekly/mini/timeline/
+>   text-mini) verified against argparse — the only genuinely missing
+>   flags were `--WBS`, `--status`, `--weekend-days`, now documented in
+>   each. 2.2: themes inherit defaults; no per-theme gaps identified.
+> - **Part 3 (text decoration):** remains DEFERRED (see note below) —
+>   express as unified tokens if picked up.
+> - **Parts 4–5 (ordering/cleanup):** subsumed by the above; the
+>   deprecated `alpha:` alias is the only one-release-cycle alias in
+>   play.
+
+
 ## Overview
 
 This plan addresses three areas of improvement:
