@@ -45,7 +45,7 @@ class CandybarRenderer(MiniCalendarRenderer):
         events: list,
         db: "CalendarDB",
     ) -> tuple[int, list]:
-        self._populate_mini_tokens(config)
+        self._populate_tokens(config)
         resolver = DayStyleResolver(config, db)
         self._load_icon_svg_cache(db)
         self._pattern_svg_cache = db.get_all_patterns()

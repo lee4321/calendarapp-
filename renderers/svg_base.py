@@ -50,6 +50,12 @@ class BaseSVGRenderer(ABC):
     watermarks, and header/footer rendering.
     """
 
+    # Unified-theme tokens this renderer pre-resolves once per render (see
+    # _populate_tokens). Subclasses that read tokens declare both of these;
+    # the defaults make _tk() return {} everywhere for renderers that don't.
+    TOKEN_VISUALIZER: str | None = None
+    TOKENS: tuple[str, ...] = ()
+
     def __init__(self):
         """Initialize the renderer."""
         self._drawing: drawsvg.Drawing | None = None
@@ -62,6 +68,36 @@ class BaseSVGRenderer(ABC):
         # registered-id set at the start of each page render.
         self._pattern_svg_cache: dict[str, str] = {}
         self._registered_pattern_ids: set[str] = set()
+        # Per-render unified-theme token cache, populated at the top of
+        # _render_content.  Maps "<kind>:<name>" → merged style dict.
+        self._tokens: dict[str, dict] = {}
+
+    # =========================================================================
+    # Unified-theme token cache
+    # =========================================================================
+
+    def _populate_tokens(self, config: "CalendarConfig") -> None:
+        """Pre-resolve every token in ``self.TOKENS`` for this render.
+
+        Draw code then reads via :py:meth:`_tk` — dict lookups, not rule
+        walks per cell.  Call at the top of ``_render_content``.
+        """
+        ctx = {"visualizer": self.TOKEN_VISUALIZER, "papersize": config.papersize}
+        self._tokens = {
+            name: self._resolve_token(config, name, ctx) for name in self.TOKENS
+        }
+
+    def _tk(self, token: str) -> dict:
+        """Return the cached token dict (``{}`` if unknown / unresolved)."""
+        return self._tokens.get(token, {})
+
+    def _ensure_tokens(self, config: "CalendarConfig") -> None:
+        """Lazy-populate the per-render token cache when entering a draw
+        method that bypasses ``_render_content`` (e.g. test fixtures that
+        call draw methods directly).  No-op when already populated.
+        """
+        if not self._tokens:
+            self._populate_tokens(config)
 
     # =========================================================================
     # SVG pattern decoration

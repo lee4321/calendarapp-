@@ -22,7 +22,6 @@ from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
 from shared.rule_engine import StyleEngine
-from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -54,52 +53,23 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     week numbers, and duration color bars.
     """
 
+    # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
+    # Candybar inherits these (it reuses the mini decoration engine).
+    TOKEN_VISUALIZER = "mini"
+    TOKENS = (
+        "text:day_number", "text:month_title", "text:week_number",
+        "text:label", "text:fiscal_label", "text:event_name",
+        "text:event_notes", "text:event_date", "text:heading",
+        "text:holiday_title",
+        "box:day", "box:cell",
+        "line:grid", "line:hash", "line:strikethrough", "line:separator",
+        "line:duration_bar",
+        "icon:milestone", "icon:event",
+    )
+
     def __init__(self):
         super().__init__()
         self._week_numbers: dict[str, int] = {}
-        self._pattern_svg_cache: dict[str, str] = {}
-        self._registered_pattern_ids: set[str] = set()
-        # Per-render unified-theme token cache, populated at the top of
-        # _render_content.  Maps "<kind>:<name>" → merged style dict.  Cells
-        # consult this rather than calling self._resolve_token() per draw.
-        self._mini_tokens: dict[str, dict] = {}
-
-    # ---------------------------------------------------------------------
-    # Unified-theme token plumbing
-    # ---------------------------------------------------------------------
-
-    def _populate_mini_tokens(self, config: CalendarConfig) -> None:
-        """Pre-resolve every token the mini renderer queries each render.
-
-        Each draw call then reads via :py:meth:`_tk` instead of repeatedly
-        walking the rule list per cell.
-        """
-        ctx = {"visualizer": "mini", "papersize": config.papersize}
-        names = (
-            "text:day_number", "text:month_title", "text:week_number",
-            "text:label", "text:fiscal_label", "text:event_name",
-            "text:event_notes", "text:event_date", "text:heading",
-            "text:holiday_title",
-            "box:day", "box:cell",
-            "line:grid", "line:hash", "line:strikethrough", "line:separator",
-            "line:duration_bar",
-            "icon:milestone", "icon:event",
-        )
-        self._mini_tokens = {
-            name: self._resolve_token(config, name, ctx) for name in names
-        }
-
-    def _tk(self, token: str) -> dict:
-        """Return the cached token dict (``{}`` if unknown / unresolved)."""
-        return self._mini_tokens.get(token, {})
-
-    def _ensure_mini_tokens(self, config: CalendarConfig) -> None:
-        """Lazy-populate the per-render token cache when entering a draw
-        method that bypasses ``_render_content`` (e.g. test fixtures).
-        No-op when the cache is already populated.
-        """
-        if not self._mini_tokens:
-            self._populate_mini_tokens(config)
 
     def set_week_numbers(self, week_numbers: dict[str, int]) -> None:
         """
@@ -129,7 +99,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         Returns:
             Tuple of (overflow_count, overflow_entries) — always (0, []).
         """
-        self._populate_mini_tokens(config)
+        self._populate_tokens(config)
         resolver = DayStyleResolver(config, db)
         self._load_icon_svg_cache(db)
         self._pattern_svg_cache = db.get_all_patterns()
@@ -363,7 +333,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         wn_value: int,
     ) -> None:
         """Draw a week number in the W# column cell."""
-        self._ensure_mini_tokens(config)
+        self._ensure_tokens(config)
         _ts = config.get_text_style("ec-week-number")
         tk = self._tk("text:week_number")
         font_size = tk.get("size")
@@ -406,7 +376,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         :meth:`_draw_day_cell_background` and :meth:`_draw_day_cell_foreground`
         directly — see :meth:`_render_content` for the layered ordering.
         """
-        self._ensure_mini_tokens(config)
+        self._ensure_tokens(config)
         self._draw_day_cell_background(config, x, y, w, h, style)
         self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
 
@@ -943,7 +913,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         events: list,
         db: "CalendarDB | None" = None,
     ) -> None:
-        self._ensure_mini_tokens(config)
+        self._ensure_tokens(config)
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None

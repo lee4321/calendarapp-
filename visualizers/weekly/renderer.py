@@ -105,46 +105,15 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
     and multi-day durations spanning across boxes.
     """
 
-    def __init__(self):
-        """Initialize the renderer with pattern caching state."""
-        super().__init__()
-        self._pattern_svg_cache: dict[str, str] = {}
-        self._registered_pattern_ids: set[str] = set()
-        # Per-render unified-theme token cache, populated at the top of
-        # _render_content.  Maps "<kind>:<name>" → merged style dict.
-        self._weekly_tokens: dict[str, dict] = {}
-
-    def _populate_weekly_tokens(self, config: CalendarConfig) -> None:
-        """Pre-resolve every token the weekly renderer reads each render.
-
-        Per-cell draw code reads via :py:meth:`_tk` instead of walking the
-        rule list per cell.  Mirrors the pattern established by the mini
-        migration (commit 8f0ce7b5).
-        """
-        ctx = {"visualizer": "weekly", "papersize": config.papersize}
-        names = (
-            "text:day_number", "text:event_name", "text:event_notes",
-            "text:fiscal_label", "text:week_number", "text:holiday_title",
-            "box:cell",
-            "line:hash",
-            "icon:event", "icon:overflow",
-        )
-        self._weekly_tokens = {
-            name: self._resolve_token(config, name, ctx) for name in names
-        }
-
-    def _tk(self, token: str) -> dict:
-        """Return the cached token dict (``{}`` if unknown / unresolved)."""
-        return self._weekly_tokens.get(token, {})
-
-    def _ensure_weekly_tokens(self, config: CalendarConfig) -> None:
-        """Lazy-populate the per-render token cache when entering a draw
-        method that bypasses ``_render_content`` (e.g. test fixtures
-        that call ``_draw_day_box`` directly).  No-op when the cache is
-        already populated.
-        """
-        if not self._weekly_tokens:
-            self._populate_weekly_tokens(config)
+    # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
+    TOKEN_VISUALIZER = "weekly"
+    TOKENS = (
+        "text:day_number", "text:event_name", "text:event_notes",
+        "text:fiscal_label", "text:week_number", "text:holiday_title",
+        "box:cell",
+        "line:hash",
+        "icon:event", "icon:overflow",
+    )
 
     def _build_day_boxes(
         self,
@@ -376,7 +345,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         self._pattern_svg_cache = db.get_all_patterns()
         self._registered_pattern_ids = set()
         self._load_icon_svg_cache(db)
-        self._populate_weekly_tokens(config)
+        self._populate_tokens(config)
 
         # Reset per-page overflow tracker. _process_overflow appends to this
         # set; _draw_day_top_row_extras consults it to lay out the day-number
@@ -894,7 +863,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         All elements are vertically centered with the day number using
         baseline shifts of ``0.3 * (day_num_size - element_size)``.
         """
-        self._ensure_weekly_tokens(config)
+        self._ensure_tokens(config)
         dbc = self._day_box_coords(config, X, Y, W, H)
         oneday_str = daykey
         x1, y1 = dbc["Number"]
@@ -1035,7 +1004,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             shadespecialday: Whether to shade as special day
             style_result: Accumulated style overrides from matched style_rules
         """
-        self._ensure_weekly_tokens(config)
+        self._ensure_tokens(config)
         dbc = self._day_box_coords(config, X, Y, W, H)
         oneday_str = oneday.format("YYYYMMDD")
         month = oneday.format("MM")

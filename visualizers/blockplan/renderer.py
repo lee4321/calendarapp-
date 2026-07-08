@@ -154,35 +154,16 @@ if TYPE_CHECKING:
 class BlockPlanRenderer(BaseSVGRenderer):
     """Renderer for the blockplan spreadsheet-like visualization."""
 
-    def __init__(self):
-        super().__init__()
-        # Per-render unified-theme token cache, populated at the top of
-        # _render_content.  Maps "<kind>:<name>" → merged style dict.
-        self._blockplan_tokens: dict[str, dict] = {}
-
-    def _populate_blockplan_tokens(self, config: "CalendarConfig") -> None:
-        """Pre-resolve every token the blockplan renderer reads each render.
-
-        Cells / bars / events read via :py:meth:`_tk` instead of walking the
-        rule list per draw.  Mirrors mini (commit 8f0ce7b5) and weekly
-        (commit c98d75fb) shape.
-        """
-        ctx = {"visualizer": "blockplan", "papersize": config.papersize}
-        names = (
-            "text:event_name", "text:event_notes", "text:event_date",
-            "text:duration_date", "text:band_label", "text:swimlane_label",
-            "text:label", "text:heading",
-            "box:band", "box:duration", "box:event", "box:milestone",
-            "line:grid",
-            "icon:event", "icon:milestone",
-        )
-        self._blockplan_tokens = {
-            name: self._resolve_token(config, name, ctx) for name in names
-        }
-
-    def _tk(self, token: str) -> dict:
-        """Return the cached token dict (``{}`` if unknown / unresolved)."""
-        return self._blockplan_tokens.get(token, {})
+    # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
+    TOKEN_VISUALIZER = "blockplan"
+    TOKENS = (
+        "text:event_name", "text:event_notes", "text:event_date",
+        "text:duration_date", "text:band_label", "text:swimlane_label",
+        "text:label", "text:heading",
+        "box:band", "box:duration", "box:event", "box:milestone",
+        "line:grid",
+        "icon:event", "icon:milestone",
+    )
 
     def _render_content(
         self,
@@ -206,7 +187,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if not visible_days:
             return 0, []
 
-        self._populate_blockplan_tokens(config)
+        self._populate_tokens(config)
         self._style_engine = StyleEngine(_blockplan_style_rules(config))
 
         top_bands = list(getattr(config, "blockplan_top_time_bands", []) or [])

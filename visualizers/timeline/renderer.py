@@ -121,32 +121,14 @@ class TimelineRenderer(BaseSVGRenderer):
 
     _CALL_OUT_DATE_ROWS = 3
 
-    def __init__(self):
-        super().__init__()
-        # Per-render unified-theme token cache, populated at the top of
-        # _render_content.  Maps "<kind>:<name>" → merged style dict.
-        self._timeline_tokens: dict[str, dict] = {}
-
-    def _populate_timeline_tokens(self, config: "CalendarConfig") -> None:
-        """Pre-resolve every token the timeline renderer reads each render.
-
-        Mirrors the pattern from mini (commit 8f0ce7b5), weekly
-        (commit c98d75fb), and blockplan (commit dadb3fb4).
-        """
-        ctx = {"visualizer": "timeline", "papersize": config.papersize}
-        names = (
-            "text:event_name", "text:event_notes", "text:event_date",
-            "text:duration_date", "text:label", "text:today_label",
-            "line:axis", "line:today", "line:tick",
-            "icon:event", "icon:milestone",
-        )
-        self._timeline_tokens = {
-            name: self._resolve_token(config, name, ctx) for name in names
-        }
-
-    def _tk(self, token: str) -> dict:
-        """Return the cached token dict (``{}`` if unknown / unresolved)."""
-        return self._timeline_tokens.get(token, {})
+    # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
+    TOKEN_VISUALIZER = "timeline"
+    TOKENS = (
+        "text:event_name", "text:event_notes", "text:event_date",
+        "text:duration_date", "text:label", "text:today_label",
+        "line:axis", "line:today", "line:tick",
+        "icon:event", "icon:milestone",
+    )
 
     # NOTE: ``_callout_metrics`` is defined near the bottom of the file.
     # An earlier duplicate definition existed at this point pre-migration
@@ -255,7 +237,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         event_objs = [Event.from_dict(e) for e in events]
         self._load_icon_svg_cache(db)
-        self._populate_timeline_tokens(config)
+        self._populate_tokens(config)
         point_events, duration_events = self._split_events(config, event_objs)
         style_engine = StyleEngine(_timeline_style_rules(config))
 
