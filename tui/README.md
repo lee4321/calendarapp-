@@ -18,7 +18,7 @@ Then:
 - **Enter** a view → the **Builder**: tabs mirror the argparse argument groups
   (Output, Layout, Content Filtering, Fiscal, …). The live command bar shows the
   exact `uv run ecalendar.py …` that will run; **Ctrl+R** runs it and streams output.
-- **i** (or the DATA column) → the **Import Hub**: events, special days, holidays,
+- **i** (or the DATA column) → the **Import Hub**: events, special days,
   and content importers, driven by one shared wizard. **Ctrl+D** dry-runs, **Ctrl+R** imports.
 
 ## How it works
@@ -28,7 +28,7 @@ Then:
 | `spec.py` | Introspects `ecalendar._create_argument_parser()` into `CommandSpec`/`ArgSpec`. **Single source of truth** — new CLI flags appear in the UI automatically. |
 | `registry.py` | Populates pickers (`--theme`, `--papersize`, fonts, icons, colors, …) from the same DB/registry the engine uses, so dropdowns never drift. |
 | `runner.py` | Builds the argv from collected form values and runs it (`uv run ecalendar.py …`). |
-| `importers_spec.py` | Adapters for `import_events.py` (full functionality incl. generator mode), `import_specialdays.py`, `import_holidays.py`, and content importers. |
+| `importers_spec.py` | Adapters for `import_events.py` (full functionality incl. generator mode), `import_specialdays.py`, and content importers. |
 | `widgets/argfield.py` | Maps one `ArgSpec` → the right Textual control (Switch / Select / Input / picker). |
 | `widgets/daterange.py` | `begin`/`end` inputs with presets (this year/quarter/month, next 90 days). |
 | `screens/` | `home`, `builder`, `import_hub` (+ shared wizard), `result` (worker-threaded runner). |

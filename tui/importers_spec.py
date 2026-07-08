@@ -1,6 +1,6 @@
 """Adapters describing each importer entry-point for the shared import wizard.
 
-Events / special days / holidays share a grammar (file/dir, dry-run, replace,
+Events and special days share a grammar (file/dir, dry-run, replace,
 skip-errors, list/remove, logging) so they share a wizard, differing only by the
 fields declared here.  Content importers (icons/patterns/colors) are simpler.
 """
@@ -112,18 +112,6 @@ def specialdays_spec() -> ImporterSpec:
     )
 
 
-def holidays_spec() -> ImporterSpec:
-    return ImporterSpec(
-        key="holidays",
-        title="Holidays",
-        script="importers/import_holidays.py",
-        summary="Government holidays from CSV, tagged by country",
-        fields=_shared_fields(country_lang=True, generate=False),
-        supports_history=True,
-        remove_flag="--clear",  # holidays uses --clear (wipe all), not --remove
-    )
-
-
 def content_specs() -> list[ImporterSpec]:
     return [
         ImporterSpec(
@@ -149,7 +137,7 @@ def content_specs() -> list[ImporterSpec]:
 
 
 def all_importers() -> dict[str, ImporterSpec]:
-    specs = [events_spec(), specialdays_spec(), holidays_spec(), *content_specs()]
+    specs = [events_spec(), specialdays_spec(), *content_specs()]
     return {s.key: s for s in specs}
 
 

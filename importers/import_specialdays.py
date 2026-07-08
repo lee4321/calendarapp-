@@ -27,22 +27,27 @@ import argparse
 import sys
 import os
 import sqlite3
-import hashlib
 import shlex
-from datetime import datetime
-from dataclasses import dataclass, field
-from typing import List, Optional
-from contextlib import contextmanager
 
 # Ensure project root is on sys.path when run as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas
-from dateutil.parser import parse as dateutil_parse
-import arrow
 
-from shared.db_access import CalendarDB
-from importers.common import setup_logging as _setup_logging_common
+from importers.common import (
+    ImportDatabase as _ImportDatabaseBase,
+    ImportResult,
+    compute_file_hash,
+    convert_date,
+    determine_file_type,
+    find_files,
+    list_import_history,
+    parse_import_pattern,
+    process_dates,
+    read_file,
+    remove_import,
+    setup_logging as _setup_logging_common,
+)
 
 
 # ============================================================================
@@ -69,51 +74,6 @@ def log(message, level="info"):
         "error": logger.error,
     }
     level_map.get(level, logger.info)(message)
-
-
-# ============================================================================
-# Import-ID Pattern Parsing (mirrors import_events.py)
-# ============================================================================
-
-
-def parse_import_pattern(pattern, max_id):
-    """Parse import ID pattern (single, list, range, open range, "all")."""
-    pattern = pattern.strip().lower()
-
-    if pattern == "all":
-        return list(range(1, max_id + 1))
-
-    if "," in pattern:
-        try:
-            ids = [int(x.strip()) for x in pattern.split(",")]
-            return sorted(set(ids))
-        except ValueError:
-            raise ValueError(f"Invalid ID list: {pattern}")
-
-    if "-" in pattern:
-        parts = pattern.split("-", 1)
-        if parts[1] == "":
-            try:
-                return list(range(int(parts[0]), max_id + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range start: {pattern}")
-        if parts[0] == "":
-            try:
-                return list(range(1, int(parts[1]) + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range end: {pattern}")
-        try:
-            start, end = int(parts[0]), int(parts[1])
-            if start > end:
-                start, end = end, start
-            return list(range(start, end + 1))
-        except ValueError:
-            raise ValueError(f"Invalid range: {pattern}")
-
-    try:
-        return [int(pattern)]
-    except ValueError:
-        raise ValueError(f"Invalid import ID pattern: {pattern}")
 
 
 # ============================================================================
@@ -221,56 +181,8 @@ def normalize_row(row: dict) -> dict:
 
 
 # ============================================================================
-# Data Classes
+# Value Parsing
 # ============================================================================
-
-
-@dataclass
-class ImportResult:
-    """Result of importing a file."""
-
-    filename: str
-    total_rows: int = 0
-    imported_rows: int = 0
-    failed_rows: int = 0
-    errors: List[str] = field(default_factory=list)
-    import_id: Optional[int] = None
-
-
-# ============================================================================
-# Date Conversion
-# ============================================================================
-
-
-def convert_date(date_value, target_format="YYYYMMDD"):
-    """Convert date from various formats to YYYYMMDD."""
-    if pandas.isnull(date_value) or not str(date_value).strip():
-        return None
-
-    date_str = str(date_value).strip()
-    try:
-        parsed_date = dateutil_parse(date_str)
-        if parsed_date.year < 1950:
-            return None
-        return arrow.Arrow.fromdatetime(parsed_date).format(target_format)
-    except (ValueError, TypeError):
-        return None
-
-
-def process_dates(start_raw, end_raw):
-    """Convert start and end dates, filling missing side from the other."""
-    start_date = convert_date(start_raw)
-    end_date = convert_date(end_raw)
-
-    if start_date is None and end_date is None:
-        return None, None, False
-    if start_date is None:
-        return end_date, end_date, True
-    if end_date is None:
-        return start_date, start_date, True
-    if start_date > end_date:
-        start_date, end_date = end_date, start_date
-    return start_date, end_date, True
 
 
 def parse_bool(value, default=0):
@@ -297,197 +209,22 @@ def parse_bool(value, default=0):
 # ============================================================================
 
 
-class SpecialDaysDatabase:
-    """Database manager for special-day imports."""
+class SpecialDaysDatabase(_ImportDatabaseBase):
+    """Special-days importer database (rows land in the ``specialdays`` table).
 
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self._db = CalendarDB(db_path)
-        self._migrate_schema()
+    All bookkeeping (import_history, id sequence, dedup, removal) comes
+    from importers.common.ImportDatabase.
+    """
 
-    def _migrate_schema(self):
-        """Add any missing columns/tables to existing databases."""
-        with self._db.get_connection() as conn:
-            # Ensure import_history.command exists (events importer also does this)
-            try:
-                conn.execute("ALTER TABLE import_history ADD COLUMN command TEXT")
-            except sqlite3.OperationalError:
-                pass
+    ROW_TABLE = "specialdays"
+    UNIT_LABEL = "special days"
 
-            # Tag specialdays rows with the import they came from
-            try:
-                conn.execute("ALTER TABLE specialdays ADD COLUMN import_id INTEGER")
-            except sqlite3.OperationalError:
-                pass
-
-            # Shared import-id sequence
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS import_sequence (next_id INTEGER NOT NULL)"
-            )
-            cursor = conn.execute("SELECT COUNT(*) FROM import_sequence")
-            if cursor.fetchone()[0] == 0:
-                cursor = conn.execute(
-                    "SELECT COALESCE(MAX(id), 0) + 1 FROM import_history"
-                )
-                next_id = cursor.fetchone()[0]
-                conn.execute(
-                    "INSERT INTO import_sequence (next_id) VALUES (?)", (next_id,)
-                )
-            conn.commit()
-
-    @contextmanager
-    def transaction(self):
-        with self._db.get_connection() as conn:
-            cursor = conn.cursor()
-            try:
-                yield cursor
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-
-    def get_next_import_id(self, cursor):
-        cursor.execute("SELECT next_id FROM import_sequence")
-        next_id = cursor.fetchone()[0]
-        cursor.execute("UPDATE import_sequence SET next_id = ?", (next_id + 1,))
-        return next_id
-
-    def create_import_record(self, cursor, user_id, filename, file_hash, command=None):
-        import_id = self.get_next_import_id(cursor)
-        cursor.execute(
-            """
-            INSERT INTO import_history (id, userid, filename, date, filehash, command)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                import_id,
-                str(user_id),
-                os.path.basename(filename),
-                datetime.now().isoformat(),
-                file_hash,
-                command,
-            ),
-        )
-        return import_id
-
-    def check_duplicate(self, cursor, file_hash):
-        cursor.execute(
-            "SELECT id, filename FROM import_history WHERE filehash = ?", (file_hash,)
-        )
-        return cursor.fetchone()
-
-    def delete_by_import_id(self, cursor, import_id):
-        cursor.execute(
-            "DELETE FROM specialdays WHERE import_id = ?", (import_id,)
-        )
-        return cursor.rowcount
-
-    def delete_import_record(self, cursor, import_id):
-        cursor.execute("DELETE FROM import_history WHERE id = ?", (import_id,))
-
-    def get_max_import_id(self, cursor):
-        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM import_history")
-        return cursor.fetchone()[0]
-
-    def get_next_specialday_id(self, cursor):
-        """Get next available specialdays id (TEXT column holding integer strings)."""
-        cursor.execute(
-            "SELECT COALESCE(MAX(CAST(id AS INTEGER)), 0) + 1 "
-            "FROM specialdays WHERE id IS NOT NULL AND id != ''"
-        )
-        return cursor.fetchone()[0]
-
-    def insert_specialday(self, cursor, sd_data):
-        columns = ", ".join(sd_data.keys())
-        placeholders = ", ".join(["?" for _ in sd_data])
-        sql = f"INSERT INTO specialdays ({columns}) VALUES ({placeholders})"
-        cursor.execute(sql, list(sd_data.values()))
-        return cursor.lastrowid
-
-    def list_imports(self, cursor):
-        """Get import history records with special-day counts (this importer's rows only)."""
-        cursor.execute("""
-            SELECT
-                ih.id,
-                ih.userid,
-                ih.filename,
-                ih.date,
-                ih.filehash,
-                COUNT(s.id) as sd_count,
-                ih.command
-            FROM import_history ih
-            LEFT JOIN specialdays s ON s.import_id = ih.id
-            GROUP BY ih.id
-            ORDER BY ih.id
-        """)
-        return cursor.fetchall()
-
-    def get_import_by_id(self, cursor, import_id):
-        cursor.execute(
-            """
-            SELECT
-                ih.id,
-                ih.userid,
-                ih.filename,
-                ih.date,
-                ih.filehash,
-                COUNT(s.id) as sd_count,
-                ih.command
-            FROM import_history ih
-            LEFT JOIN specialdays s ON s.import_id = ih.id
-            WHERE ih.id = ?
-            GROUP BY ih.id
-            """,
-            (import_id,),
-        )
-        return cursor.fetchone()
-
-
-# ============================================================================
-# File Operations
-# ============================================================================
-
-
-def compute_file_hash(filepath):
-    sha256 = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            sha256.update(chunk)
-    return sha256.hexdigest()
-
-
-def determine_file_type(filename):
-    ext = os.path.splitext(filename)[1].lower()
-    if ext in {".xlsx", ".xls"}:
-        return "excel"
-    if ext in {".csv", ".txt"}:
-        return "csv"
-    return None
-
-
-def read_file(filepath):
-    file_type = determine_file_type(filepath)
-    if file_type == "excel":
-        df = pandas.read_excel(filepath)
-    elif file_type == "csv":
-        df = pandas.read_csv(filepath)
-    else:
-        raise ValueError(f"Unsupported file type: {filepath}")
-    df.columns = df.columns.str.strip()
-    return df
-
-
-def find_files(path):
-    if os.path.isfile(path):
-        return [path] if determine_file_type(path) else []
-    if os.path.isdir(path):
-        files = []
-        for f in os.listdir(path):
-            full_path = os.path.join(path, f)
-            if os.path.isfile(full_path) and determine_file_type(full_path):
-                files.append(full_path)
-        return sorted(files)
-    return []
+    def extra_migrations(self, conn) -> None:
+        # Tag specialdays rows with the import they came from
+        try:
+            conn.execute("ALTER TABLE specialdays ADD COLUMN import_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
 
 
 # ============================================================================
@@ -560,82 +297,6 @@ def transform_row(row, user_id, import_id, sd_id, default_country, default_langu
 # ============================================================================
 
 
-def list_import_history(db):
-    with db.transaction() as cursor:
-        imports = db.list_imports(cursor)
-
-        if not imports:
-            log("No imports found.")
-            return
-
-        log("\nImport History:")
-        log(
-            f"  {'ID':>4}  {'Filename':<20}  {'Date':<19}  {'Days':>5}  {'Hash':<10}  {'Command'}"
-        )
-        log(
-            f"  {'--':>4}  {'-' * 20}  {'-' * 19}  {'-' * 5}  {'-' * 10}  {'-' * 50}"
-        )
-
-        total = 0
-        for row in imports:
-            import_id, userid, filename, date, filehash, sd_count, command = row
-            display_name = (
-                filename[:20] if filename and len(filename) <= 20
-                else (filename[:17] + "..." if filename else "")
-            )
-            display_date = date[:19] if date else ""
-            short_hash = filehash[:8] if filehash else ""
-            display_command = ""
-            if command:
-                display_command = (
-                    command if len(command) <= 50 else command[:47] + "..."
-                )
-
-            log(
-                f"  {import_id:>4}  {display_name:<20}  {display_date:<19}  {sd_count:>5}  {short_hash:<10}  {display_command}"
-            )
-            total += sd_count
-
-        log(f"\nTotal: {len(imports)} imports, {total} special days")
-
-
-def remove_import(db, import_id, force=False, verbose=False):
-    """Remove an import and all its associated special days."""
-    with db.transaction() as cursor:
-        import_record = db.get_import_by_id(cursor, import_id)
-
-    if not import_record:
-        log(f"Error: Import ID {import_id} not found.", "error")
-        return False
-
-    _, userid, filename, date, _, sd_count, _ = import_record
-
-    if not force:
-        display_date = date[:19] if date else ""
-        log(
-            f"Import ID {import_id}: {filename} ({sd_count} special days, imported {display_date})"
-        )
-        response = input(
-            "Are you sure you want to delete this import and all its special days? [y/N]: "
-        )
-        if response.lower() != "y":
-            log("Cancelled.")
-            return False
-
-    with db.transaction() as cursor:
-        if verbose:
-            log(f"Removing import ID {import_id} ({filename})...")
-        deleted = db.delete_by_import_id(cursor, import_id)
-        if verbose:
-            log(f"  Deleted {deleted} special days")
-        db.delete_import_record(cursor, import_id)
-        if verbose:
-            log(f"  Deleted import history record")
-
-    log(f"Removed import {import_id}: {filename} ({deleted} special days deleted)")
-    return True
-
-
 # ============================================================================
 # Import Logic
 # ============================================================================
@@ -695,7 +356,7 @@ def import_file(
         if verbose:
             log(f"  Created import record (id={import_id})")
 
-        next_sd_id = db.get_next_specialday_id(cursor)
+        next_sd_id = db.get_next_row_id(cursor)
 
         for idx, row in df.iterrows():
             sd, error = transform_row(
@@ -716,7 +377,7 @@ def import_file(
                 continue
 
             try:
-                db.insert_specialday(cursor, sd)
+                db.insert_row(cursor, sd)
                 result.imported_rows += 1
                 next_sd_id += 1
             except sqlite3.Error as e:
@@ -836,7 +497,7 @@ def main():
     db = SpecialDaysDatabase(args.database)
 
     if args.list:
-        list_import_history(db)
+        list_import_history(db, log)
         log("=== import_specialdays.py completed ===")
         sys.exit(0)
 
@@ -893,7 +554,7 @@ def main():
         success_count = 0
         fail_count = 0
         for import_id in existing_ids:
-            if remove_import(db, import_id, force=True, verbose=args.verbose):
+            if remove_import(db, import_id, log, force=True, verbose=args.verbose):
                 success_count += 1
             else:
                 fail_count += 1

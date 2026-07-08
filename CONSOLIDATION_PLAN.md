@@ -109,25 +109,30 @@ The root has ~14 planning/design docs; a newcomer cannot tell which are live.
 Measured duplication (same-name, same-purpose functions in multiple files —
 see Appendix A for the raw counts).
 
-### 2.1 Importer framework  (~1,200–1,500 LOC saved — biggest single win)
-`importers/import_events.py` (1,513), `import_specialdays.py` (992),
-`import_holidays.py` (892) are triplets: **25+ functions duplicated three ways**
-(`transaction`, `read_file`, `import_file`, `compute_file_hash`,
-`check_duplicate`, `create/delete_import_record`, `get_next_import_id`,
-`_migrate_schema`, `setup_logging`, `find_files`, `determine_file_type`,
-`convert_date`, `list_imports`, import-history CRUD, …).
+### 2.1 Importer framework  — DONE 2026-07-08 (~1,675 LOC removed)
+**Discovery during execution:** `import_holidays.py` (892) was dead code —
+it inserts into a `government` table that no longer exists in calendar.db
+and that nothing reads: `CalendarDB.load_python_holidays()` now sources
+government holidays in-memory from the `holidays` package. The importer
+crashed on `--list` and on import against the shipped DB. Deleted outright
+(with its TUI spec entry) rather than refactored; recoverable from the
+`pre-consolidation` tag if an external workflow still needs it.
 
-- [ ] Create `importers/common.py` with an `ImporterBase` class owning:
-      file discovery, hashing, dedup check, import-history CRUD, schema
-      migration, transactions, logging, date conversion, the CLI skeleton.
-- [ ] Each importer becomes a subclass supplying only: target table,
-      column mapping, `transform_row()` / `normalize_row()`, validation rules.
-      Expected size: 150–300 lines each.
-- [ ] Keep the three CLI entry points (`uv run python importers/import_events.py …`)
-      as thin wrappers so `tui/importers_spec.py` and user muscle memory survive.
-- [ ] Port incrementally: extract base from `import_events.py` first (it is the
-      superset), then fold in the other two, running each importer against a
-      sample file and diffing the resulting DB rows.
+- [x] `importers/common.py` expanded with: `parse_import_pattern`,
+      `compute_file_hash`, `determine_file_type`, `read_file`, `find_files`,
+      `convert_date`, `process_dates`, `ImportResult`, and a table-
+      parameterized `ImportDatabase` base (`ROW_TABLE`/`UNIT_LABEL` +
+      `extra_migrations()` hook) plus shared `list_import_history` /
+      `remove_import` CLI actions.
+- [x] `import_events.py` 1,513 → 1,069; `import_specialdays.py` 992 → 653.
+      Each keeps only: column mapping, `transform_row`, `import_file`
+      orchestration, CLI `main` (and events' generator-script support).
+- [x] CLI entry points unchanged; `tui/importers_spec.py` still works.
+- [x] Verified: imports of sample CSVs into scratch DB copies produce
+      byte-identical rows and import_history before vs after; only the
+      `--list` header was deliberately unified ("Events"/"Days" → "Rows").
+- Deferred to a later pass: merging the two `import_file` orchestrations
+  and `main()` bodies (different flags/flows; diminishing returns).
 
 ### 2.2 Merge the two labella adapters  (~250–350 LOC saved)
 `visualizers/pit/labella_adapter.py` (610) and

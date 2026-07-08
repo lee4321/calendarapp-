@@ -23,14 +23,10 @@ Examples:
 import argparse
 import sys
 import os
-import sqlite3
-import hashlib
 import logging
 import shlex
-from datetime import datetime
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
-from contextlib import contextmanager
+import sqlite3
+from typing import Dict, Any
 import importlib.util
 import inspect
 
@@ -38,11 +34,21 @@ import inspect
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas
-from dateutil.parser import parse as dateutil_parse
-import arrow
 
-from shared.db_access import CalendarDB
-from importers.common import setup_logging as _setup_logging_common
+from importers.common import (
+    ImportDatabase as _ImportDatabaseBase,
+    ImportResult,
+    compute_file_hash,
+    convert_date,
+    determine_file_type,
+    find_files,
+    list_import_history,
+    parse_import_pattern,
+    process_dates,
+    read_file,
+    remove_import,
+    setup_logging as _setup_logging_common,
+)
 
 
 # ============================================================================
@@ -70,76 +76,6 @@ def log(message, level="info"):
         "error": logger.error,
     }
     level_map.get(level, logger.info)(message)
-
-
-# ============================================================================
-# Pattern Parsing
-# ============================================================================
-
-
-def parse_import_pattern(pattern, max_id):
-    """
-    Parse import ID pattern and return list of IDs to remove.
-
-    Args:
-        pattern: String pattern (e.g., "3", "1-5", "1,3,5", "all", "5-", "-3")
-        max_id: Maximum import ID in database
-
-    Returns:
-        list: List of import IDs to remove
-
-    Raises:
-        ValueError: If pattern is invalid
-    """
-    pattern = pattern.strip().lower()
-
-    # Handle "all"
-    if pattern == "all":
-        return list(range(1, max_id + 1))
-
-    # Handle comma-separated list: "1,3,5"
-    if "," in pattern:
-        try:
-            ids = [int(x.strip()) for x in pattern.split(",")]
-            return sorted(set(ids))  # Remove duplicates, sort
-        except ValueError:
-            raise ValueError(f"Invalid ID list: {pattern}")
-
-    # Handle range: "1-5", "5-", "-3"
-    if "-" in pattern:
-        parts = pattern.split("-", 1)
-
-        # Open-ended range: "5-" (from 5 to max)
-        if parts[1] == "":
-            try:
-                start = int(parts[0])
-                return list(range(start, max_id + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range start: {pattern}")
-
-        # Open-start range: "-3" (from 1 to 3)
-        if parts[0] == "":
-            try:
-                end = int(parts[1])
-                return list(range(1, end + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range end: {pattern}")
-
-        # Full range: "1-5"
-        try:
-            start = int(parts[0])
-            end = int(parts[1])
-            if start > end:
-                start, end = end, start  # Swap if reversed
-            return list(range(start, end + 1))
-        except ValueError:
-            raise ValueError(f"Invalid range: {pattern}")
-
-    # Handle single ID: "3"
-    try:
-        return [int(pattern)]
-    except ValueError:
-        raise ValueError(f"Invalid import ID pattern: {pattern}")
 
 
 # ============================================================================
@@ -268,311 +204,19 @@ def normalize_row(row: dict) -> dict:
 
 
 # ============================================================================
-# Data Classes
-# ============================================================================
-
-
-@dataclass
-class ImportResult:
-    """Result of importing a file."""
-
-    filename: str
-    total_rows: int = 0
-    imported_rows: int = 0
-    failed_rows: int = 0
-    errors: List[str] = field(default_factory=list)
-    import_id: Optional[int] = None
-
-
-# ============================================================================
-# Date Conversion Functions
-# ============================================================================
-
-
-def convert_date(date_value, target_format="YYYYMMDD"):
-    """
-    Convert date from various formats to YYYYMMDD.
-
-    Handles:
-    - M/D/YYYY (e.g., "7/5/2019")
-    - M/D/YY (e.g., "9/4/19")
-    - Empty/NaN values
-
-    Args:
-        date_value: Input date string or pandas NaT/NaN
-        target_format: Arrow format string (default: YYYYMMDD)
-
-    Returns:
-        str: Formatted date string or None if invalid
-    """
-    if pandas.isnull(date_value) or not str(date_value).strip():
-        return None
-
-    date_str = str(date_value).strip()
-
-    try:
-        parsed_date = dateutil_parse(date_str)
-
-        # Check for invalid dates (year 1900 indicates parsing failure)
-        if parsed_date.year < 1950:
-            return None
-
-        arrow_date = arrow.Arrow.fromdatetime(parsed_date)
-        return arrow_date.format(target_format)
-
-    except (ValueError, TypeError):
-        return None
-
-
-def process_dates(start_date_raw, finish_date_raw):
-    """
-    Convert start and finish dates, handling edge cases.
-
-    - If start invalid and end valid: start = end
-    - If start > end: swap them
-
-    Returns:
-        tuple: (start_date_str, end_date_str, is_valid)
-    """
-    start_date = convert_date(start_date_raw)
-    end_date = convert_date(finish_date_raw)
-
-    # Both invalid
-    if start_date is None and end_date is None:
-        return None, None, False
-
-    # Start invalid, end valid: use end for both
-    if start_date is None and end_date is not None:
-        return end_date, end_date, True
-
-    # End invalid, start valid: use start for both
-    if start_date is not None and end_date is None:
-        return start_date, start_date, True
-
-    # Both valid: ensure start <= end
-    if start_date > end_date:
-        start_date, end_date = end_date, start_date
-
-    return start_date, end_date, True
-
-
-# ============================================================================
 # Database Operations
 # ============================================================================
 
 
-class ImportDatabase:
-    """Database manager for event imports."""
+class ImportDatabase(_ImportDatabaseBase):
+    """Events importer database (rows land in the ``events`` table).
 
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self._db = CalendarDB(db_path)
-        self._migrate_schema()
+    All bookkeeping (import_history, id sequence, dedup, removal) comes
+    from importers.common.ImportDatabase.
+    """
 
-    def _migrate_schema(self):
-        """Add any missing columns/tables to existing databases."""
-        with self._db.get_connection() as conn:
-            try:
-                conn.execute("ALTER TABLE import_history ADD COLUMN command TEXT")
-                conn.commit()
-            except sqlite3.OperationalError:
-                pass  # Column already exists
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS import_sequence (next_id INTEGER NOT NULL)"
-            )
-            cursor = conn.execute("SELECT COUNT(*) FROM import_sequence")
-            if cursor.fetchone()[0] == 0:
-                cursor = conn.execute(
-                    "SELECT COALESCE(MAX(id), 0) + 1 FROM import_history"
-                )
-                next_id = cursor.fetchone()[0]
-                conn.execute(
-                    "INSERT INTO import_sequence (next_id) VALUES (?)", (next_id,)
-                )
-            conn.commit()
-
-    @contextmanager
-    def transaction(self):
-        """Context manager for transactional operations."""
-        with self._db.get_connection() as conn:
-            cursor = conn.cursor()
-            try:
-                yield cursor
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-
-    def get_next_import_id(self, cursor):
-        """Get next available import history ID (never reuses IDs)."""
-        cursor.execute("SELECT next_id FROM import_sequence")
-        next_id = cursor.fetchone()[0]
-        cursor.execute("UPDATE import_sequence SET next_id = ?", (next_id + 1,))
-        return next_id
-
-    def create_import_record(self, cursor, user_id, filename, file_hash, command=None):
-        """Create import_history record and return import_id."""
-        import_id = self.get_next_import_id(cursor)
-        cursor.execute(
-            """
-            INSERT INTO import_history (id, userid, filename, date, filehash, command)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """,
-            (
-                import_id,
-                str(user_id),
-                os.path.basename(filename),
-                datetime.now().isoformat(),
-                file_hash,
-                command,
-            ),
-        )
-        return import_id
-
-    def check_duplicate(self, cursor, file_hash):
-        """Check if file has been imported before (by hash)."""
-        cursor.execute(
-            """
-            SELECT id, filename FROM import_history
-            WHERE filehash = ?
-        """,
-            (file_hash,),
-        )
-        return cursor.fetchone()
-
-    def delete_by_import_id(self, cursor, import_id):
-        """Delete events from a previous import (for --replace)."""
-        cursor.execute(
-            """
-            DELETE FROM events WHERE import_id = ?
-        """,
-            (import_id,),
-        )
-        return cursor.rowcount
-
-    def delete_import_record(self, cursor, import_id):
-        """Delete import_history record."""
-        cursor.execute(
-            """
-            DELETE FROM import_history WHERE id = ?
-        """,
-            (import_id,),
-        )
-
-    def get_max_import_id(self, cursor):
-        """Get the maximum import ID."""
-        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM import_history")
-        return cursor.fetchone()[0]
-
-    def get_next_event_id(self, cursor):
-        """Get next available event ID."""
-        cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM events")
-        return cursor.fetchone()[0]
-
-    def insert_event(self, cursor, event_data):
-        """Insert single event record."""
-        columns = ", ".join(event_data.keys())
-        placeholders = ", ".join(["?" for _ in event_data])
-
-        sql = f"INSERT INTO events ({columns}) VALUES ({placeholders})"
-        cursor.execute(sql, list(event_data.values()))
-        return cursor.lastrowid
-
-    def list_imports(self, cursor):
-        """Get all import history records with event counts."""
-        cursor.execute("""
-            SELECT
-                ih.id,
-                ih.userid,
-                ih.filename,
-                ih.date,
-                ih.filehash,
-                COUNT(e.id) as event_count,
-                ih.command
-            FROM import_history ih
-            LEFT JOIN events e ON e.import_id = ih.id
-            GROUP BY ih.id
-            ORDER BY ih.id
-        """)
-        return cursor.fetchall()
-
-    def get_import_by_id(self, cursor, import_id):
-        """Get single import record with event count."""
-        cursor.execute(
-            """
-            SELECT
-                ih.id,
-                ih.userid,
-                ih.filename,
-                ih.date,
-                ih.filehash,
-                COUNT(e.id) as event_count,
-                ih.command
-            FROM import_history ih
-            LEFT JOIN events e ON e.import_id = ih.id
-            WHERE ih.id = ?
-            GROUP BY ih.id
-        """,
-            (import_id,),
-        )
-        return cursor.fetchone()
-
-
-# ============================================================================
-# File Operations
-# ============================================================================
-
-
-def compute_file_hash(filepath):
-    """Compute SHA256 hash of entire file contents."""
-    sha256 = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            sha256.update(chunk)
-    return sha256.hexdigest()
-
-
-def determine_file_type(filename):
-    """Determine file type from extension."""
-    ext = os.path.splitext(filename)[1].lower()
-    if ext in {".xlsx", ".xls"}:
-        return "excel"
-    elif ext in {".csv", ".txt"}:
-        return "csv"
-    return None
-
-
-def read_file(filepath):
-    """Read file into DataFrame."""
-    file_type = determine_file_type(filepath)
-    if file_type == "excel":
-        df = pandas.read_excel(filepath)
-    elif file_type == "csv":
-        df = pandas.read_csv(filepath)
-    else:
-        raise ValueError(f"Unsupported file type: {filepath}")
-
-    # Strip whitespace from column names (some XLSX files have trailing spaces)
-    df.columns = df.columns.str.strip()
-    return df
-
-
-def find_files(path):
-    """Find all importable files in path (file or directory)."""
-    if os.path.isfile(path):
-        if determine_file_type(path):
-            return [path]
-        return []
-
-    if os.path.isdir(path):
-        files = []
-        for f in os.listdir(path):
-            full_path = os.path.join(path, f)
-            if os.path.isfile(full_path) and determine_file_type(full_path):
-                files.append(full_path)
-        return sorted(files)
-
-    return []
+    ROW_TABLE = "events"
+    UNIT_LABEL = "events"
 
 
 # ============================================================================
@@ -785,7 +429,7 @@ def import_generated_events(
             log(f"  Created import record (id={import_id})")
 
         # Get starting event ID
-        next_event_id = db.get_next_event_id(cursor)
+        next_event_id = db.get_next_row_id(cursor)
 
         # Process each row through the same transform_row pipeline
         for idx, row in df.iterrows():
@@ -802,7 +446,7 @@ def import_generated_events(
                 continue
 
             try:
-                db.insert_event(cursor, event)
+                db.insert_row(cursor, event)
                 result.imported_rows += 1
                 next_event_id += 1
             except sqlite3.Error as e:
@@ -915,94 +559,6 @@ def transform_row(row, user_id, import_id, event_id):
 # ============================================================================
 
 
-def list_import_history(db):
-    """List all imports from import_history table."""
-    with db.transaction() as cursor:
-        imports = db.list_imports(cursor)
-
-        if not imports:
-            log("No imports found.")
-            return
-
-        # Print header
-        log("\nImport History:")
-        log(
-            f"  {'ID':>4}  {'Filename':<20}  {'Date':<19}  {'Events':>6}  {'Hash (first 8)':<14}  {'Command'}"
-        )
-        log(
-            f"  {'--':>4}  {'-' * 20}  {'-' * 19}  {'------':>6}  {'-' * 14}  {'-' * 50}"
-        )
-
-        total_events = 0
-        for row in imports:
-            import_id, userid, filename, date, filehash, event_count, command = row
-            # Truncate filename if too long
-            display_name = (
-                filename[:20] if len(filename) <= 20 else filename[:17] + "..."
-            )
-            # Format date (remove microseconds)
-            display_date = date[:19] if date else ""
-            # Show first 8 chars of hash
-            short_hash = filehash[:8] if filehash else ""
-            # Truncate command if too long
-            display_command = ""
-            if command:
-                display_command = (
-                    command if len(command) <= 50 else command[:47] + "..."
-                )
-
-            log(
-                f"  {import_id:>4}  {display_name:<20}  {display_date:<19}  {event_count:>6}  {short_hash:<14}  {display_command}"
-            )
-            total_events += event_count
-
-        log(f"\nTotal: {len(imports)} imports, {total_events} events")
-
-
-def remove_import(db, import_id, force=False, verbose=False):
-    """Remove an import and all its associated events."""
-    # First, get import details (outside transaction for user confirmation)
-    with db.transaction() as cursor:
-        import_record = db.get_import_by_id(cursor, import_id)
-
-    if not import_record:
-        log(f"Error: Import ID {import_id} not found.", "error")
-        return False
-
-    _, userid, filename, date, _, event_count, _ = import_record
-
-    # Confirm unless --force
-    if not force:
-        display_date = date[:19] if date else ""
-        log(
-            f"Import ID {import_id}: {filename} ({event_count} events, imported {display_date})"
-        )
-        response = input(
-            "Are you sure you want to delete this import and all its events? [y/N]: "
-        )
-        if response.lower() != "y":
-            log("Cancelled.")
-            return False
-
-    # Perform deletion in transaction
-    with db.transaction() as cursor:
-        if verbose:
-            log(f"Removing import ID {import_id} ({filename})...")
-
-        # Delete events
-        deleted_events = db.delete_by_import_id(cursor, import_id)
-        if verbose:
-            log(f"  Deleted {deleted_events} events")
-
-        # Delete import record
-        db.delete_import_record(cursor, import_id)
-        if verbose:
-            log(f"  Deleted import history record")
-
-    log(f"Removed import {import_id}: {filename} ({deleted_events} events deleted)")
-    return True
-
-
 # ============================================================================
 # Import Logic
 # ============================================================================
@@ -1073,7 +629,7 @@ def import_file(
             log(f"  Created import record (id={import_id})")
 
         # Get starting event ID
-        next_event_id = db.get_next_event_id(cursor)
+        next_event_id = db.get_next_row_id(cursor)
 
         # Process each row
         for idx, row in df.iterrows():
@@ -1090,7 +646,7 @@ def import_file(
                 continue
 
             try:
-                db.insert_event(cursor, event)
+                db.insert_row(cursor, event)
                 result.imported_rows += 1
                 next_event_id += 1
             except sqlite3.Error as e:
@@ -1273,7 +829,7 @@ def main():
 
     # Handle --list
     if args.list:
-        list_import_history(db)
+        list_import_history(db, log)
         log("=== import_events.py completed ===")
         sys.exit(0)
 
@@ -1339,7 +895,7 @@ def main():
         fail_count = 0
         for import_id in existing_ids:
             # Use force=True since we already confirmed
-            if remove_import(db, import_id, force=True, verbose=args.verbose):
+            if remove_import(db, import_id, log, force=True, verbose=args.verbose):
                 success_count += 1
             else:
                 fail_count += 1
