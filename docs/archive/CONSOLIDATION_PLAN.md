@@ -221,14 +221,21 @@ found **109 of 566 fields with zero production reads**.
       token's opacity). `--label-fill-opacity` is LIVE via the
       ec-callout-box style factory and stays. No argparse dest is parsed-
       but-unapplied (verified via AST + string-consumer scan).
-- [ ] **Batch 2 (~78 remaining candidates)** need case-by-case review:
-      `margin_*`/`include_margin` are FALSE positives (read inside
-      `config.resolve_page_margins()`); `timeline_label_fill_opacity`-style
-      fields are alive via `get_box_style`/`get_line_style` factories in
-      config.py — any candidate with cfg-hits > 0 must be checked against
-      those factories; heuristic size fields are alive via
-      `_HEURISTIC_TOKEN_FIELDS`; several are referenced only by tests.
-      Audit script: scratchpad `audit_config_fields.py` (rerunnable).
+- [x] **Batch 2 — DONE 2026-07-08.** Classified all 78 candidates by the
+      enclosing context of their config.py references. ~45 are the
+      no-theme fallback lattice (`_fallback_*_style` factories), margins
+      live via `resolve_page_margins()`, the size fields with a
+      `_HEURISTIC_TOKEN_FIELDS` entry are the heuristic-token conveyors,
+      and `desired_font_size` is a setfontsizes *input* — all kept, all
+      verified alive. **8 fields were write-only dead and stripped**
+      (with their setfontsizes writes, map entries, YAML keys, guide
+      rows, and test lines): `timeline_callout_offset_y` (13 themes set
+      `timeline.callout_offset_y` with real values — never read; it was
+      even listed as a *required* key in required_keys.py),
+      `color_key_font_size`, `day_box_icon_font_size`,
+      `mini_details_header_font_size`, `mini_details_text_font_size`,
+      `weekly_text_font_size`, `month_percent`, `week_number_percent`.
+      CalendarConfig: 566 → 528 fields across both batches.
 - [ ] Group surviving fields under section banner comments — fold into the
       Phase 4 commenting pass.
 - [ ] Fold in `SIMPLIFICATION_PLAN.md` Part 1 renames *after* Batch 2.
@@ -355,9 +362,7 @@ per-command reference). Work needed:
       −1,610, migrator −548, orphans −238, ecalendar dedupe, 31 fields);
       docs/comments added back ~2,700 lines of orientation.
 - [x] `changelog.md` entry added.
-- Plan stays at the repo root (not archived) until Phase 3.2 Batch 2 —
-  the remaining ~78 zero-read fields needing case-by-case review — is
-  resolved.
+- [x] Batch 2 resolved 2026-07-08 — plan archived to docs/archive/.
 
 ---
 

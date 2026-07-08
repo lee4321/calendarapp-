@@ -1148,7 +1148,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_details_column_widths` | `mini_details.column_widths` | `list[float]` | `field(default_factory=lambda: [0.16, 0.52, 0.1, 0.1, 0.12])` | column widths |
 | `mini_details_header_color` | `mini_details.header_color` | `str` | `'grey'` | header color |
 | `mini_details_header_font` | `mini_details.header_font` | `str` | `Fonts.RC_BOLD` | header font |
-| `mini_details_header_font_size` | `mini_details.header_font_size` | `float | None` | `None` | header font size |
 | `mini_details_headers` | `mini_details.headers` | `list[str]` | `field(default_factory=lambda: ['Start Date', 'Name / Description', 'Milestone...` | headers |
 | `mini_details_notes_color` | `mini_details.notes_color` | `str` | `'darkgrey'` | notes color |
 | `mini_details_notes_font` | `mini_details.notes_font` | `str` | `Fonts.RC_LIGHT_ITALIC` | notes font |
@@ -1228,7 +1227,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_axis_width` | `timeline.axis_width` | `float` | `2.0` | axis width |
 | `timeline_background_color` | `timeline.background_color` | `str` | `'none'` | background color |
 | `timeline_bottom_colors` | `timeline.bottom_colors` | `list[str]` | `field(default_factory=lambda: ['midnightblue', 'springgreen', 'deepskyblue', ...` | bottom colors |
-| `timeline_callout_offset_y` | `timeline.callout_offset_y` | `float` | `96.0` | callout offset y |
 | `timeline_connector_stroke_dasharray` | `timeline.connector_stroke_dasharray` | `str | None` | `None` | connector stroke dasharray |
 | `timeline_date_color` | `timeline.date.font_color` | `str` | `'deepskyblue'` | font color |
 | `timeline_date_font` | `timeline.date.font_family` | `str` | `Fonts.R_BOLD` | font family |

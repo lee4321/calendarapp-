@@ -73,7 +73,6 @@ timeline:
   marker_stroke_width: 1.0
   marker_radius: 4.0
   icon_size: 14
-  callout_offset_y: 20.0
   event_axis_padding: 24.0
   duration_offset_y: 20.0
   duration_lane_gap_y: 20.0

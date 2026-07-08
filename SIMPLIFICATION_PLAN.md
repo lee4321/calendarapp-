@@ -2,7 +2,7 @@
 
 > ## Execution status — 2026-07-08
 >
-> Executed after (and reconciled against) `CONSOLIDATION_PLAN.md`, which
+> Executed after (and reconciled against) `docs/archive/CONSOLIDATION_PLAN.md`, which
 > removed many of the fields this plan proposed to rename.
 >
 > - **Part 1 (naming):** DONE. 14 of Appendix B's fields no longer exist
@@ -340,7 +340,7 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 ## Part 3: Text Decoration Gap Resolution
 
 > **DEFERRED (2026-07-08).** This part adds ~96 new config fields, which
-> conflicts with the LOC-reduction goal of `CONSOLIDATION_PLAN.md`. Revisit
+> conflicts with the LOC-reduction goal of `docs/archive/CONSOLIDATION_PLAN.md`. Revisit
 > after that plan lands; when picked up, prefer expressing these as unified
 > theme tokens (`text:*` style bags) rather than new `CalendarConfig` fields.
 

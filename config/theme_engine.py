@@ -66,7 +66,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Weekly text styling — kept survivors only.  Phase 2 stripped the
     # weekly_text_* set entirely (font_name/color/size/opacity/alignment),
     # plus name_text_alignment + notes_text_alignment (no readers).
-    ("weekly.text", "font_size"): "weekly_text_font_size",
     ("weekly.name_text", "font_name"): "weekly_name_text_font_name",
     ("weekly.name_text", "font_color"): "weekly_name_text_font_color",
     ("weekly.name_text", "font_size"): "weekly_name_text_font_size",
@@ -95,7 +94,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "marker_stroke_width"): "timeline_marker_stroke_width",
     ("timeline", "marker_radius"): "timeline_marker_radius",
     ("timeline", "icon_size"): "timeline_icon_size",
-    ("timeline", "callout_offset_y"): "timeline_callout_offset_y",
     ("timeline", "duration_offset_y"): "timeline_duration_offset_y",
     ("timeline", "duration_lane_gap_y"): "timeline_duration_lane_gap_y",
     ("timeline", "duration_icon_visible"): "timeline_duration_icon_visible",
@@ -335,9 +333,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # alignment + name fields with no readers.
     ("mini_details", "title_text"): "mini_details_title_text",
     ("mini_details", "title_font_size"): "mini_details_title_font_size",
-    ("mini_details", "header_font_size"): "mini_details_header_font_size",
     ("mini_details.text", "font_color"): "mini_details_text_font_color",
-    ("mini_details.text", "font_size"): "mini_details_text_font_size",
     ("mini_details.text", "font_opacity"): "mini_details_text_font_opacity",
     ("mini_details.name_text", "font_color"): "mini_details_name_text_font_color",
     ("mini_details.name_text", "font_size"): "mini_details_name_text_font_size",
@@ -851,7 +847,6 @@ class ThemeEngine:
             ],
             "mini_details": [
                 ("title_font_size", "mini_details_title_font_size"),
-                ("header_font_size", "mini_details_header_font_size"),
             ],
             "blockplan": [
                 ("header_font_size", "blockplan_header_font_size"),

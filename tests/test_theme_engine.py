@@ -380,7 +380,6 @@ class TestThemeEngineApply:
                 "today_label_offset_y": 22.0,
                 "marker_radius": 6.5,
                 "icon_size": 11.0,
-                "callout_offset_y": 120,
                 "duration_offset_y": 80,
                 "duration_lane_gap_y": 14,
                 "top_colors": ["red", "blue"],
@@ -418,7 +417,6 @@ class TestThemeEngineApply:
         assert config.timeline_today_label_offset_y == 22.0
         assert config.timeline_marker_radius == 6.5
         assert config.timeline_icon_size == 11.0
-        assert config.timeline_callout_offset_y == 120
         assert config.timeline_duration_offset_y == 80
         assert config.timeline_duration_lane_gap_y == 14
         assert config.timeline_top_colors == ["red", "blue"]
@@ -910,7 +908,6 @@ class TestStrokeDasharray:
         config.weekly_name_text_font_size = 9.0
         config.event_icon_size = 9.0
         config.day_box_number_font_size = 13.0
-        config.day_box_icon_font_size = 13.0
         for k, v in overrides.items():
             setattr(config, k, v)
         _inject_heuristic_size_tokens(config)

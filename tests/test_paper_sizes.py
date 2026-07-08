@@ -115,12 +115,10 @@ class TestFormulaFontSizes(unittest.TestCase):
         other.pageX, other.pageY = 792.0, 1224.0
         other = setfontsizes(other)
 
-        self.assertGreater(config.week_number_percent, 0.0)
         self.assertGreater(config.margin_percent, 0.0)
         self.assertGreater(config.color_key_percent, 0.0)
         # Percent policies are set in setfontsizes() and should be invariant
         # across page sizes.
-        self.assertEqual(config.week_number_percent, other.week_number_percent)
         self.assertEqual(config.margin_percent, other.margin_percent)
         self.assertEqual(config.color_key_percent, other.color_key_percent)
 

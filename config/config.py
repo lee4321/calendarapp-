@@ -391,10 +391,8 @@ class CalendarConfig:
     mini_details_output_suffix: str = "_details"
     mini_details_title_text: str = "Event Details"
     mini_details_title_font_size: float | None = None
-    mini_details_header_font_size: float | None = None
     # ── Mini details text styling — kept survivors only.
     mini_details_text_font_color: str = "black"
-    mini_details_text_font_size: float | None = None
     mini_details_text_font_opacity: float = 1.0
     mini_details_name_text_font_color: str = "black"
     mini_details_name_text_font_size: float | None = None
@@ -456,7 +454,6 @@ class CalendarConfig:
     shrink_to_content: bool = False
 
     # Layout percentages (set by setfontsizes)
-    week_number_percent: float = 0.015
     margin_percent: float = 0.02
     # Optional explicit side margins in points (theme-overridable).
     margin_left: float | None = None
@@ -467,12 +464,10 @@ class CalendarConfig:
     header_percent: float = 0.020
     footer_percent: float = 0.015
     day_name_percent: float = 0.02
-    month_percent: float = 0.03
 
     # Font sizes (set by setfontsizes)
     week_number_font_size: float | None = None
     day_name_font_size: float | None = None
-    color_key_font_size: float | None = None
     header_left_font_size: float | None = None
     header_center_font_size: float | None = None
     header_right_font_size: float | None = None
@@ -480,7 +475,6 @@ class CalendarConfig:
     footer_center_font_size: float | None = None
     footer_right_font_size: float | None = None
     day_box_number_font_size: float | None = None
-    day_box_icon_font_size: float | None = None
     event_icon_size: float | None = None
 
     # Week number styling
@@ -550,7 +544,6 @@ class CalendarConfig:
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
     # _font_size set), weekly_name_text_alignment, and
     # weekly_notes_text_alignment — none had readers post-Phase-1.
-    weekly_text_font_size: float | None = None
     weekly_name_text_font_name: str = Fonts.RC_LIGHT
     weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None
@@ -587,7 +580,6 @@ class CalendarConfig:
     timeline_marker_stroke_width: float = 1.0
     timeline_marker_radius: float = 6
     timeline_icon_size: float = 8.0
-    timeline_callout_offset_y: float = 96.0
     # Extra padding (pts) added between the timeline axis and the bottom of
     # event callouts above the axis. Use this to push events away from tick
     # labels. Stacks on top of callout_offset_y / min-callout-offset.
@@ -2382,13 +2374,11 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         return fallback if sz is None else sz
 
     # Layout percentages (fixed ratios, work for all sizes)
-    config.week_number_percent = 0.02
     config.margin_percent = 0.05
     config.color_key_percent = 0.15
     config.header_percent = 0.020
     config.footer_percent = 0.018
     config.day_name_percent = 0.02
-    config.month_percent = 0.03
 
     # Font sizes — proportional to page height, with optional theme-selected
     # desired base size (event text) that scales all related sizes.
@@ -2411,11 +2401,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0),
         visualizer="weekly",
     )
-    config.color_key_font_size = _size(
-        "text:label",
-        _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0),
-        visualizer="weekly",
-    )
 
     # Header / footer are page chrome — no token analogue, heuristic only.
     config.header_left_font_size = _clamp(
@@ -2435,7 +2420,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         _clamp(_clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0),
         visualizer="weekly",
     )
-    config.day_box_icon_font_size = config.day_box_number_font_size
 
     # Shared between weekly + mini; no visualizer ctx so a single rule applies
     # to both unless a theme adds a per-visualizer override.
@@ -2455,7 +2439,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         config.weekly_name_text_font_size * 0.9,
         visualizer="weekly",
     )
-    config.weekly_text_font_size = config.weekly_name_text_font_size
     config.event_icon_size = config.weekly_name_text_font_size
 
     # Mini calendar font sizes
@@ -2486,17 +2469,11 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
         visualizer="mini",
     )
-    config.mini_details_header_font_size = _size(
-        "text:label",
-        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
     config.mini_details_name_text_font_size = _size(
         "text:event_name",
         _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
         visualizer="mini",
     )
-    config.mini_details_text_font_size = config.mini_details_name_text_font_size
     config.mini_details_notes_text_font_size = _size(
         "text:event_notes",
         _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),

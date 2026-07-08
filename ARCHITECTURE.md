@@ -19,4 +19,4 @@ in reading order:
 Working practices, layering rules, commenting standards, and the
 vocabulary glossary: [CONTRIBUTING.md](CONTRIBUTING.md).
 User-facing documentation: [USER_GUIDE.md](USER_GUIDE.md).
-Ongoing maintainability effort: [CONSOLIDATION_PLAN.md](CONSOLIDATION_PLAN.md).
+Completed 2026-07 maintainability effort: [CONSOLIDATION_PLAN.md](docs/archive/CONSOLIDATION_PLAN.md).

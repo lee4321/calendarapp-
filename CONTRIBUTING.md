@@ -2,7 +2,7 @@
 
 A quick orientation for anyone (human or agent) changing this codebase.
 The architecture reading order lives in `docs/architecture/README.md`
-(Phase 5 of `CONSOLIDATION_PLAN.md`); this file covers working practices.
+(built during the 2026-07 consolidation — `docs/archive/CONSOLIDATION_PLAN.md`); this file covers working practices.
 
 ## Ground rules
 

@@ -68,7 +68,6 @@ timeline:
   today_label_text: Today
   marker_radius: 4.0
   icon_size: 8
-  callout_offset_y: 30.0
   duration_offset_y: 30.0
   duration_lane_gap_y: 8.0
 compact_plan:

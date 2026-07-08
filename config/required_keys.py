@@ -141,7 +141,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("timeline.today_label_text",    "setting", "str", frozenset({"timeline"})),
     RequiredKey("timeline.marker_radius",       "setting", "float", frozenset({"timeline"})),
     RequiredKey("timeline.icon_size",           "setting", "float", frozenset({"timeline"})),
-    RequiredKey("timeline.callout_offset_y",    "setting", "float", frozenset({"timeline"})),
     RequiredKey("timeline.duration_offset_y",   "setting", "float", frozenset({"timeline"})),
     RequiredKey("timeline.duration_lane_gap_y", "setting", "float", frozenset({"timeline"})),
 
