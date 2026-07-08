@@ -874,6 +874,16 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         events: list,
         db: "CalendarDB | None" = None,
     ) -> None:
+        """Render the companion "details" page into its own SVG file.
+
+        Builds a second drawing (the month-grid drawing is saved and
+        restored around it) listing the range's events chronologically —
+        date, icon, name, notes — in one or more columns, with the same
+        page chrome (watermarks, decorations, header/footer) as the main
+        page.  Written next to the main output with the
+        ``mini_details_output_suffix`` filename suffix; enabled by
+        ``--mini-details`` (candybar reuses this for its details page).
+        """
         self._ensure_tokens(config)
         saved_drawing = self._drawing
         self._drawing = self._create_drawing(config)

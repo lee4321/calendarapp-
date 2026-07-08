@@ -1179,6 +1179,8 @@ class ThemeEngine:
 
         # --- pit.leader (global leader defaults) ---
         def _apply_leader(d: dict, side: str = "global") -> None:
+            """Apply one pit leader block (color/width/dasharray/stubs);
+            side is "global" or a concrete side for per-side overrides."""
             if not isinstance(d, dict):
                 return
             if side == "global":
@@ -1708,6 +1710,8 @@ class ThemeEngine:
 
     @staticmethod
     def _textstyle_from_dict(body: dict):
+        """Build a TextStyle from an element_overrides body dict;
+        malformed numbers fall back to defaults rather than raising."""
         from config.styles import TextStyle
         try:
             size = float(body.get("size", 8.0))
@@ -1728,6 +1732,8 @@ class ThemeEngine:
 
     @staticmethod
     def _boxstyle_from_dict(body: dict):
+        """Build a BoxStyle from an element_overrides body dict;
+        malformed numbers fall back to defaults rather than raising."""
         from config.styles import BoxStyle
         try:
             fill_opacity = float(body.get("fill_opacity", 1.0))
@@ -1752,6 +1758,8 @@ class ThemeEngine:
 
     @staticmethod
     def _linestyle_from_dict(body: dict):
+        """Build a LineStyle from an element_overrides body dict;
+        malformed numbers fall back to defaults rather than raising."""
         from config.styles import LineStyle
         try:
             width = float(body.get("width", 0.5))

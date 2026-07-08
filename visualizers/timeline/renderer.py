@@ -205,6 +205,16 @@ class TimelineRenderer(BaseSVGRenderer):
         events: list,
         db: "CalendarDB",
     ) -> tuple[int, list]:
+        """Assemble the timeline page for either axis orientation.
+
+        Sequence: compute axis geometry (horizontal or vertical) →
+        labella callout layout for point events (`_layout_callouts`) and
+        lane layout for durations → draw in layers: leader paths first
+        (under everything), then durations, callout boxes, the axis with
+        ticks/timebands, and finally the today marker.  Returns
+        ``(0, [])`` — the timeline never overflows; density is labella's
+        problem, not pagination's.
+        """
         area_x, area_y, area_w, area_h = coordinates.get(
             "TimelineArea", (0.0, 0.0, config.pageX, config.pageY)
         )
@@ -598,6 +608,8 @@ class TimelineRenderer(BaseSVGRenderer):
         config: "CalendarConfig",
         events: list[Event],
     ) -> tuple[list[Event], list[Event]]:
+        """Split into (point_events, duration_events), honoring the
+        --noevents / --nodurations content filters."""
         point_events: list[Event] = []
         duration_events: list[Event] = []
 
@@ -757,6 +769,15 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_y: float,
         style_engine: StyleEngine | None = None,
     ) -> list[TimelineDuration]:
+        """Lay out duration bars in lanes below a horizontal axis.
+
+        Chronologically sorted bars pack greedily into the first lane
+        whose previous bar ends at least ``min_gap`` px earlier.  Bars
+        are clamped to the user-typed range with ``continues_left/right``
+        flagged so the drawer can add continuation arrows; events wholly
+        outside the range are dropped.  Returns placement records only —
+        drawing happens in `_draw_duration`.
+        """
         if not events:
             return []
 
@@ -1026,6 +1047,12 @@ class TimelineRenderer(BaseSVGRenderer):
         item: TimelineCallout,
         axis_y: float,
     ) -> None:
+        """Draw one placed callout: axis dot, label box, box content
+        (icon, name, notes), and — horizontal axes only — the event date
+        near the dot, staggered over ``_CALL_OUT_DATE_ROWS`` rows so
+        neighboring dates don't collide.  Text is shrunk to fit via
+        `_fit_box_text_sizes`; the leader path was already drawn in
+        `_render_content`'s underlay pass."""
         title = item.event.task_name or "(untitled)"
         notes = (item.event.notes or "").strip()
 
@@ -1255,6 +1282,11 @@ class TimelineRenderer(BaseSVGRenderer):
         item: TimelineDuration,
         axis_y: float,
     ) -> None:
+        """Draw one placed duration below a horizontal axis: the bar
+        rect (fill opacity token-first from ``line:duration_bar``),
+        start/end axis markers, continuation arrows when the event
+        extends past the visible range, and the name / notes / date
+        text block sized to the bar's lane."""
         title = item.event.task_name or "(untitled duration)"
         notes = (item.event.notes or "").strip()
         start_day = self._safe_day(item.event.start, fallback=arrow.now())
@@ -2404,6 +2436,8 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_right: float,
         axis_y: float,
     ) -> None:
+        """Draw month-boundary ticks on a horizontal axis; labels are
+        suppressed beyond 18 ticks to avoid overlap."""
         # Default ticks to the first day of each month inside the visible range.
         month_start = start.floor("month")
         if month_start < start.floor("day"):
@@ -2532,6 +2566,10 @@ class TimelineRenderer(BaseSVGRenderer):
         area_y: float,
         area_h: float,
     ) -> None:
+        """Draw the vertical 'today' line (and its label) when today —
+        or the ``timeline_today_date`` override — falls in range.
+        ``timeline_today_line_direction`` (above/below/both) and
+        ``_length`` (0 = full span) shape the line around the axis."""
         today = self._resolve_today(config)
         if today < start.floor("day") or today > end.floor("day"):
             return
