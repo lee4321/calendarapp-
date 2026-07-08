@@ -18,6 +18,15 @@ calendar.db
 # Generated output
 output/
 
+# Local scratch area for files that don't belong in the repo
+# (old DB backups, one-off exports, experiments)
+attic/
+*.bak.*
+_completeness_*.xlsx
+
+# Editor config
+.vscode/
+
 # Logs
 *.log
 
