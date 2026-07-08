@@ -1,4 +1,30 @@
-"""Blockplan SVG renderer."""
+"""
+Blockplan SVG renderer — a spreadsheet-like program plan.
+
+Page anatomy (top to bottom):
+
+    ┌────────────┬──────────────────────────────────────────┐
+    │ heading    │  top time bands (one row per band dict)  │
+    ├────────────┼──────────────────────────────────────────┤
+    │ lane label │  swimlane 1: durations / events sections │
+    │ lane label │  swimlane 2: …                           │
+    ├────────────┼──────────────────────────────────────────┤
+    │ heading    │  bottom time bands                       │
+    └────────────┴──────────────────────────────────────────┘
+
+The left heading column occupies ``blockplan_label_column_ratio`` of the
+width; everything right of it is the timeline area, where X positions
+come from `_boundary_x()`: each *visible* day (see
+``shared.date_utils.visible_days``) gets an equal slice, so hidden
+weekends take no space.
+
+Inputs: raw event dicts (converted to ``shared.data_models.Event``),
+band dicts from ``blockplan_top/bottom_time_bands``, and swimlane defs
+from ``blockplan_swimlanes`` — all typically authored in a theme's
+``blockplan:`` section.  Style precedence per drawn item is
+token (`_tk`) → element style (``config.get_*_style``) → legacy
+``blockplan_*`` config fields.
+"""
 
 from __future__ import annotations
 
@@ -152,7 +178,15 @@ if TYPE_CHECKING:
 
 
 class BlockPlanRenderer(BaseSVGRenderer):
-    """Renderer for the blockplan spreadsheet-like visualization."""
+    """Renderer for the blockplan spreadsheet-like visualization.
+
+    Per-render state: `_render_content()` populates the token cache
+    (``self._tokens`` via ``TOKENS`` below) and ``self._style_engine``
+    (a ``StyleEngine`` over the theme's ``style_rules``); everything
+    else is passed as arguments — there is no other instance state to
+    initialize.  Entry point is ``render()`` on the base class, which
+    calls `_render_content()` here.
+    """
 
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "blockplan"
@@ -172,6 +206,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
         events: list,
         db: "CalendarDB",
     ) -> tuple[int, list]:
+        """Assemble the page: bands, vertical lines, then swimlanes.
+
+        Draw order matters — later calls paint on top:
+        background → top bands → rule-driven vertical lines / column
+        fills (swimlane region only) → top separator → swimlanes
+        (frames, labels, durations, events) → bottom separator →
+        bottom bands.  Returns ``(0, [])``: blockplan never overflows.
+        """
         area_x, area_y, area_w, area_h = coordinates.get(
             "BlockPlanArea", (0.0, 0.0, config.pageX, config.pageY)
         )
@@ -507,6 +549,37 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top_y: float,
         events: list | None = None,
     ) -> None:
+        """Draw a stack of time-band rows starting at ``top_y``.
+
+        Each *band* is a dict (from the theme's ``blockplan.top_bands``
+        / ``bottom_bands``, usually via the time-band catalog).  Keys
+        interpreted here:
+
+          unit          "date" / "dow" / "week" / "month" / "quarter" /
+                        "fiscal_*" / … (see shared/timeband.py), or
+                        "icon" for an icon-rule row.
+          label         heading-column text; also the key that
+                        ``vertical_line`` rules and ``box:band`` rules
+                        select on.
+          row_height    explicit row height; when absent the height is
+                        derived from the band font size.
+          show_every    render every Nth segment as one merged cell
+                        (date/dow cells never merge across a week
+                        boundary so week borders stay aligned).
+          label_values  explicit per-segment label list (cycled).
+          fill_color / fill_palette   segment fill: single color, list,
+                        or named DB palette — lists cycle per segment.
+          fill_rules    per-day-class overrides [{match:…, color:…,
+                        opacity:…}] for single-day cells (nwd shading).
+          font* / label_* / stroke_color / week_start   style overrides;
+                        label_* keys style the heading cell.
+          icon_rules / icon_height    "icon" bands only.
+
+        Single-day cells also get non-workday fills/icons from the
+        ``blockplan_{federal_holiday,company_holiday,weekend}_*`` config
+        fields; a federal holiday's DB icon (country flag) wins over the
+        static config icon, mirroring the weekly calendar.
+        """
         # Any band may want non-workday fills or day-based icon rules; build a
         # classifier cache once for every visible day and reuse across bands.
         _day_classes: dict[date, frozenset[str]] = {
@@ -1032,6 +1105,19 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _event_matches_lane(event: Event, lane: dict[str, Any]) -> bool:
+        """Legacy lane matcher for swimlane defs carrying a ``match:`` dict.
+
+        Criteria (all present keys must pass; an empty match accepts
+        everything): ``wbs_prefixes``, ``resource_groups``/``groups``,
+        ``resource_names_contains``, ``task_contains``,
+        ``notes_contains``, ``milestone``, ``rollup``,
+        ``event_type`` ("duration"/"event"/"any"), and ``priority``
+        (int or list) / ``priority_min`` / ``priority_max``.
+
+        Themes migrated to the unified format use ``swimlane_rules``
+        (LaneEngine) instead; this path serves un-migrated swimlane
+        defs and programmatic callers.
+        """
         match = lane.get("match", {}) if isinstance(lane, dict) else {}
         if not isinstance(match, dict) or not match:
             return True
@@ -1112,6 +1198,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
         events: list[Event],
         lanes: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
+        """Bucket events into swimlanes; returns one dict per lane.
+
+        Routing prefers the theme's ``swimlane_rules`` (LaneEngine,
+        first-match-wins by rule order); without rules it falls back to
+        each lane def's legacy ``match:`` dict, honoring
+        ``blockplan_lane_match_mode`` ("first" or "all" — "all" lets one
+        event appear in several lanes).  Events matched to no lane land
+        in the optional unmatched lane
+        (``blockplan_show_unmatched_lane`` / ``blockplan_unmatched_lane_name``).
+        Each returned dict: {name, lane (the def), events, durations}.
+        """
         result: list[dict[str, Any]] = []
         for lane in lanes:
             name = str(lane.get("name", "Lane")).strip() or "Lane"
@@ -1182,6 +1279,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _duration_rows(
         events: list[Event], lane_top: float, lane_bottom: float
     ) -> list[tuple[Event, int]]:
+        """Greedy row packing for duration bars: first row whose last
+        bar ended before this one starts (dates compare as YYYYMMDD
+        strings).  Returns (event, row_index) pairs; row count drives
+        the per-row height in `_draw_lane_durations`."""
         if not events:
             return []
         ordered = sorted(
@@ -1206,6 +1307,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _event_rows(
         events: list[Event], min_separation_days: int = 2
     ) -> list[tuple[Event, int]]:
+        """Row packing for point events (markers + labels): an event
+        joins a row only when it starts ``min_separation_days`` after
+        the row's previous event, so labels don't collide."""
         if not events:
             return []
         ordered = sorted(
@@ -1245,6 +1349,15 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top_y: float,
         bottom_y: float,
     ) -> None:
+        """Draw the swimlane region: equal-height lanes between the bands.
+
+        Each lane splits horizontally at ``split_ratio`` (per-lane
+        ``split_ratio`` key, else ``blockplan_lane_split_ratio``) into an
+        upper and lower content section; ``item_placement_order`` decides
+        whether durations or events/milestones take the upper one.  A
+        ratio of 0.0 or 1.0 removes the divider — the sections are then
+        sized proportionally to how many packed rows each type needs.
+        """
         lane_count = max(1, len(lane_defs))
         total_h = max(1.0, bottom_y - top_y)
         lane_h = total_h / lane_count
@@ -1466,6 +1579,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top: float,
         bottom: float,
     ) -> None:
+        """Draw one lane section's duration bars with name/notes/dates.
+
+        Bars are packed into rows (`_duration_rows`), clamped to the
+        visible range with continuation icons when an event extends
+        beyond it, and labeled inside or beside the bar depending on
+        available width.
+        """
         if not events:
             return
         rows = self._duration_rows(events, top, bottom)
@@ -1862,6 +1982,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top: float,
         bottom: float,
     ) -> None:
+        """Draw one lane section's point events: marker/icon + stacked
+        name, optional notes, and date text at the event's day position.
+        Row packing via `_event_rows` keeps nearby labels apart."""
         if not events or self._drawing is None:
             return
 
@@ -2120,6 +2243,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
         timeline_x: float,
         timeline_w: float,
     ) -> float:
+        """Map a date to its left-boundary X on the visible-day axis.
+
+        Every visible day gets an equal width slice; a day's boundary
+        sits after all visible days strictly before it, so hidden
+        weekends collapse to zero width.  Pass a segment's
+        ``end_exclusive`` to get its right edge.
+        """
         # Boundary position is the count of visible days strictly before 'day'.
         count = bisect_left(visible_days, day)
         total = max(1, len(visible_days))
@@ -2137,6 +2267,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
         lane_bottom: float,
         lane_top: float,
     ) -> None:
+        """Draw the heading-column lane label (multi-line supported).
+
+        Alignment comes from per-lane ``label_align_h``/``label_align_v``
+        falling back to the global ``blockplan_lane_label_align_*``;
+        color from per-lane ``label_color`` → ``text:swimlane_label``
+        token → the ec-label element style.  ``label_rotation`` (per-lane
+        or global) rotates around the cell center.
+        """
         text = str(lane_name or "")
         lines = [ln for ln in text.splitlines() if ln != ""]
         if not lines:
