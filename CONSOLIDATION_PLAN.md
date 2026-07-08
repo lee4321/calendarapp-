@@ -66,19 +66,18 @@ changes, then document what remains.
 Pure removal. Everything here is unreferenced by the runtime, or a completed
 one-shot artifact.
 
-### 1.1 Finished migration tooling  (~2,600 LOC incl. tests)
-The v1→v2 theme migration is done and all 7 shipped themes are migrated.
-- [ ] Confirm no theme YAML in the wild still needs conversion (the 7 in
-      `config/themes/` are migrated; ask: do external/user themes exist?).
-      **Decision gate — confirm before deleting.**
-- [ ] Delete `tools/migrate_theme.py` (1,357) and
-      `tools/migrate_theme_v1_to_v2.py` (548).
-- [ ] Delete their tests: `tests/test_migration_e2e.py`,
-      `tests/test_migrate_theme_vertical_lines.py`.
-- [ ] Review `tools/strip_element_bindings.py` — one-shot companion of the
-      element-catalog move (commit `86ed874b`); delete if so.
-- If deletion feels premature, `git tag pre-consolidation` first — the tag
-  preserves everything; the working tree gets lighter either way.
+### 1.1 Finished migration tooling  — RESOLVED 2026-07-08 (partial delete)
+**Gate outcome:** `tools/migrate_theme.py` and `tools/strip_element_bindings.py`
+are **live**, not one-shot: `validate_theme.py` imports `convert_theme`, and
+`theme_engine.py` / `unified_theme.py` runtime errors direct users with
+old-format themes to run them. External old-format themes are an anticipated
+input. They stay, along with `tests/test_migration_e2e.py`.
+- [x] Delete `tools/migrate_theme_v1_to_v2.py` (548) — superseded; its
+      conversions (hash_rules, swimlanes[].match, vertical_lines) are part of
+      `migrate_theme.py`'s pipeline; only its own test referenced it.
+- [x] Delete `tests/test_migrate_theme_vertical_lines.py` (126).
+- [x] `git tag pre-consolidation` preserves the deleted state.
+Actual yield: ~674 LOC (vs ~2,600 planned — the gate did its job).
 
 ### 1.2 Orphans and root clutter  (~240 LOC + repo hygiene)
 - [ ] Delete `timescales.py` (238 lines, zero importers).
