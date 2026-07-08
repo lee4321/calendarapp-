@@ -18,6 +18,7 @@ import arrow
 import drawsvg
 
 from renderers.glyph_cache import text_to_svg_group
+from renderers.svg_patterns import pattern_def_id, pattern_def_xml
 from renderers.text_utils import shrinktext, string_width
 
 if TYPE_CHECKING:
@@ -56,6 +57,40 @@ class BaseSVGRenderer(ABC):
         self._page_width: float = 0
         self._content_bbox_svg: tuple[float, float, float, float] | None = None
         self._icon_svg_map: dict[str, str] = {}
+        # SVG pattern decoration state. Renderers that support DB patterns
+        # load the cache from CalendarDB.get_all_patterns() and reset the
+        # registered-id set at the start of each page render.
+        self._pattern_svg_cache: dict[str, str] = {}
+        self._registered_pattern_ids: set[str] = set()
+
+    # =========================================================================
+    # SVG pattern decoration
+    # =========================================================================
+
+    def _ensure_svg_pattern_def(
+        self,
+        pattern_name: str | None,
+        color: str | None,
+    ) -> str | None:
+        """
+        Guarantee that a <pattern> element exists in the SVG <defs> for
+        (pattern_name, color) and return the element id for use in
+        fill="url(#...)".  Returns None if the pattern is unknown.
+
+        Pattern elements are registered at most once per Drawing instance;
+        call sites need not guard against duplicates.
+        """
+        raw_svg = self._pattern_svg_cache.get(pattern_name) if pattern_name else None
+        if not raw_svg:
+            return None
+
+        pat_id = pattern_def_id(pattern_name, color)
+        if pat_id in self._registered_pattern_ids:
+            return pat_id
+
+        self._drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color)))
+        self._registered_pattern_ids.add(pat_id)
+        return pat_id
 
     # =========================================================================
     # Unified-theme token resolution

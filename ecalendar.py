@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.06.25.0"
+__version__ = "26.07.08.0"
 
 import argparse
 import logging
@@ -3549,7 +3549,12 @@ def _generate_patternsheet_svg(
     import re
 
     from renderers.svg_base import BaseSVGRenderer
-    from visualizers.weekly.renderer import WeeklyCalendarRenderer
+    from renderers.svg_patterns import (
+        colorize_pattern_svg,
+        extract_pattern_inner,
+        parse_svg_tile_size,
+        pattern_def_id,
+    )
 
     MARGIN = 40
     TITLE_H = 55
@@ -3577,14 +3582,12 @@ def _generate_patternsheet_svg(
         x = MARGIN + col * CELL_W
         y = MARGIN + TITLE_H + r * CELL_H
 
-        safe_color = color.replace("#", "").replace(" ", "_")
-        safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
-        pat_id = f"pat-{safe_name}-{safe_color}"
+        pat_id = pattern_def_id(name, color)
 
         if pat_id not in seen_ids:
-            tile_w, tile_h = WeeklyCalendarRenderer._parse_svg_tile_size(raw_svg)
-            colorized = WeeklyCalendarRenderer._colorize_pattern_svg(raw_svg, color)
-            inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
+            tile_w, tile_h = parse_svg_tile_size(raw_svg)
+            colorized = colorize_pattern_svg(raw_svg, color)
+            inner = extract_pattern_inner(colorized)
 
             # Scale oversized tiles down so at least one full tile fits inside
             # the swatch.  Wrap the tile content in a <g transform="scale(s)">
@@ -3842,7 +3845,7 @@ def run(argv: list[str] | None = None) -> int:
         print('  Use in themes:  day_box.hash_pattern: "<name>"')
         print('  Use in rules:   hash_rules: [{pattern: "<name>", when: {...}}]')
         print()
-        from visualizers.weekly.renderer import WeeklyCalendarRenderer
+        from renderers.svg_patterns import parse_svg_tile_size
 
         col_width = max(len(n) for n in names) + 2
         cols = 3
@@ -3850,7 +3853,7 @@ def run(argv: list[str] | None = None) -> int:
             row_names = names[i : i + cols]
             parts = []
             for n in row_names:
-                tw, th = WeeklyCalendarRenderer._parse_svg_tile_size(all_patterns[n])
+                tw, th = parse_svg_tile_size(all_patterns[n])
                 tile = f"({int(tw)}x{int(th)})"
                 parts.append(f"{n:<{col_width}}{tile:<12}")
             print("  " + "  ".join(parts))

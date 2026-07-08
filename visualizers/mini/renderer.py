@@ -764,47 +764,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 return str(day_num)
         return str(day_num)
 
-    @staticmethod
-    def _parse_svg_tile_size(svg: str) -> tuple[float, float]:
-        """Extract tile width and height from a pattern SVG."""
-        return WeeklyCalendarRenderer._parse_svg_tile_size(svg)
-
-    @staticmethod
-    def _colorize_pattern_svg(svg: str, color: str | None) -> str:
-        """Replace black fills in a pattern SVG with the requested color."""
-        return WeeklyCalendarRenderer._colorize_pattern_svg(svg, color)
-
-    def _ensure_svg_pattern_def(
-        self,
-        pattern_name: str,
-        color: str | None,
-    ) -> str | None:
-        """Register a named SVG pattern in defs and return its id."""
-        raw_svg = self._pattern_svg_cache.get(pattern_name)
-        if not raw_svg:
-            return None
-
-        safe_color = (color or "black").replace("#", "").replace(" ", "_")
-        safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", pattern_name)
-        pat_id = f"pat-{safe_name}-{safe_color}"
-
-        if pat_id in self._registered_pattern_ids:
-            return pat_id
-
-        tile_w, tile_h = self._parse_svg_tile_size(raw_svg)
-        colorized = self._colorize_pattern_svg(raw_svg, color)
-        inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
-
-        pattern_xml = (
-            f'<pattern id="{pat_id}" x="0" y="0" '
-            f'width="{tile_w}" height="{tile_h}" '
-            f'patternUnits="userSpaceOnUse">'
-            f"{inner}"
-            f"</pattern>"
-        )
-        self._drawing.append_def(drawsvg.Raw(pattern_xml))
-        self._registered_pattern_ids.add(pat_id)
-        return pat_id
+    # _ensure_svg_pattern_def() is inherited from BaseSVGRenderer; the
+    # pattern string helpers live in renderers/svg_patterns.py.
 
     def _draw_mini_svg_pattern(
         self,

@@ -26,7 +26,6 @@ from renderers.svg_base import BaseSVGRenderer
 from shared.data_models import Event
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments
-from visualizers.weekly.renderer import WeeklyCalendarRenderer
 from visualizers.pit.labella_adapter import (
     PITPlacement,
     layout_pit_callouts,
@@ -623,40 +622,8 @@ class PITRenderer(BaseSVGRenderer):
                             css_class="ec-label",
                         )
 
-    # ------------------------------------------------------------------
-    # SVG pattern helpers (delegate to WeeklyCalendarRenderer statics)
-    # ------------------------------------------------------------------
-    def _ensure_svg_pattern_def(
-        self,
-        pattern_name: str,
-        color: str | None,
-    ) -> str | None:
-        """Inject (once) a DB pattern <defs> entry and return its id."""
-        raw_svg = self._pattern_svg_cache.get(pattern_name) if pattern_name else None
-        if not raw_svg:
-            return None
-
-        import re as _re
-        safe_color = (color or "black").replace("#", "").replace(" ", "_")
-        safe_name = _re.sub(r"[^a-zA-Z0-9_-]", "_", pattern_name)
-        pat_id = f"pat-{safe_name}-{safe_color}"
-
-        if pat_id in self._registered_pattern_ids:
-            return pat_id
-
-        tile_w, tile_h = WeeklyCalendarRenderer._parse_svg_tile_size(raw_svg)
-        colorized = WeeklyCalendarRenderer._colorize_pattern_svg(raw_svg, color)
-        inner = WeeklyCalendarRenderer._extract_pattern_inner(colorized)
-        pattern_xml = (
-            f'<pattern id="{pat_id}" x="0" y="0" '
-            f'width="{tile_w}" height="{tile_h}" '
-            f'patternUnits="userSpaceOnUse">'
-            f"{inner}"
-            f"</pattern>"
-        )
-        self._drawing.append_def(drawsvg.Raw(pattern_xml))
-        self._registered_pattern_ids.add(pat_id)
-        return pat_id
+    # _ensure_svg_pattern_def() is inherited from BaseSVGRenderer; the
+    # pattern string helpers live in renderers/svg_patterns.py.
 
     # ------------------------------------------------------------------
     # Label fill resolution
