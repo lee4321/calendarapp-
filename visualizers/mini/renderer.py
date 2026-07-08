@@ -649,46 +649,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     # Drawing helpers
     # =========================================================================
 
-    def _draw_circle(
-        self,
-        cx: float,
-        cy: float,
-        radius: float,
-        stroke: str = "black",
-        fill: str = "none",
-        stroke_width: float = 1.0,
-        stroke_opacity: float = 1.0,
-        css_class: str | None = None,
-    ) -> None:
-        """
-        Draw a circle in SVG coordinates.
-
-        Args:
-            cx: Center X in SVG coordinates
-            cy: Center Y in SVG coordinates (origin top-left, Y-down)
-            radius: Circle radius in points
-            stroke: Stroke color
-            fill: Fill color
-            stroke_width: Stroke width
-            stroke_opacity: Stroke opacity
-            css_class: Optional CSS class name(s) for the element
-        """
-        if _is_none_color(stroke) and _is_none_color(fill):
-            return
-        extra: dict = {}
-        if css_class:
-            extra["class_"] = css_class
-        circle = drawsvg.Circle(
-            cx,
-            cy,
-            radius,
-            fill=fill,
-            stroke=stroke,
-            stroke_width=stroke_width,
-            stroke_opacity=stroke_opacity,
-            **extra,
-        )
-        self._drawing.append(circle)
+    # _draw_circle() is inherited from BaseSVGRenderer.
 
     def _draw_mini_hash_lines(
         self,

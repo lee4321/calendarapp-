@@ -19,7 +19,7 @@ from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 from shared.data_models import Event
-from shared.date_utils import format_arrow_date
+from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine, StyleResult
@@ -1632,19 +1632,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         lines.append(current)
         return lines
 
-    @staticmethod
-    def _visible_days(start: date, end: date, weekend_style: int) -> list[date]:
-        """Return ordered list of visible dates respecting weekend_style."""
-        days: list[date] = []
-        cursor = start
-        while cursor <= end:
-            if weekend_style == 0:
-                if cursor.weekday() < 5:  # Mon–Fri only
-                    days.append(cursor)
-            else:
-                days.append(cursor)
-            cursor += timedelta(days=1)
-        return days
+    # Day-axis visibility lives in shared/date_utils.visible_days().
+    _visible_days = staticmethod(visible_days)
 
     @staticmethod
     def _seg_x(

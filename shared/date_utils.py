@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import arrow
@@ -315,6 +315,23 @@ def get_calendar_days(adjusted_start: str, adjusted_end: str) -> list[str]:
     caldays = [dt.format("YYYYMMDD") for dt in arrow.Arrow.range("day", start, end)]
     caldays.reverse()
     return caldays
+
+
+def visible_days(start: date, end: date, weekend_style: int) -> list[date]:
+    """Return the ordered list of dates rendered for a horizontal timeline.
+
+    Workweek-only styles (see ``weekend_style_is_workweek``) drop Saturday
+    and Sunday; every other style keeps all seven days. Used by the
+    blockplan and compactplan renderers to build their day axis.
+    """
+    days: list[date] = []
+    cursor = start
+    workweek_only = weekend_style_is_workweek(weekend_style)
+    while cursor <= end:
+        if not workweek_only or cursor.weekday() < 5:
+            days.append(cursor)
+        cursor += timedelta(days=1)
+    return days
 
 
 def index_events_by_day(events: list) -> dict[str, list]:

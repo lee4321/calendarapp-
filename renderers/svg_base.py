@@ -216,6 +216,50 @@ class BaseSVGRenderer(ABC):
         )
         self._drawing.append(rect)
 
+    def _draw_circle(
+        self,
+        cx: float,
+        cy: float,
+        radius: float,
+        stroke: str = "black",
+        fill: str = "none",
+        stroke_width: float = 1.0,
+        stroke_opacity: float | None = None,
+        css_class: str | None = None,
+    ) -> None:
+        """
+        Draw a circle in SVG coordinates.
+
+        Args:
+            cx: Center X in SVG coordinates
+            cy: Center Y in SVG coordinates (origin top-left, Y-down)
+            radius: Circle radius in points
+            stroke: Stroke color
+            fill: Fill color
+            stroke_width: Stroke width
+            stroke_opacity: Stroke opacity; None omits the SVG attribute
+            css_class: Optional CSS class name(s) for the element
+        """
+        if _is_none_color(stroke) and _is_none_color(fill):
+            return
+        # Insertion order matters: drawsvg emits attributes in kwarg order,
+        # so keep stroke-opacity ahead of class to match historical output.
+        extra: dict = {}
+        if stroke_opacity is not None:
+            extra["stroke_opacity"] = stroke_opacity
+        if css_class:
+            extra["class_"] = css_class
+        circle = drawsvg.Circle(
+            cx,
+            cy,
+            radius,
+            fill=fill,
+            stroke=stroke,
+            stroke_width=stroke_width,
+            **extra,
+        )
+        self._drawing.append(circle)
+
     def _draw_text(
         self,
         x: float,

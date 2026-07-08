@@ -2597,25 +2597,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-today-label",
         )
 
-    def _draw_circle(
-        self,
-        cx: float,
-        cy: float,
-        radius: float,
-        fill: str,
-        stroke: str,
-        stroke_width: float,
-    ) -> None:
-        self._drawing.append(
-            drawsvg.Circle(
-                cx,
-                cy,
-                radius,
-                fill=fill,
-                stroke=stroke,
-                stroke_width=stroke_width,
-            )
-        )
+    # _draw_circle() is inherited from BaseSVGRenderer.
 
     @staticmethod
     def _safe_day(date_str: str, fallback: arrow.Arrow) -> arrow.Arrow:
