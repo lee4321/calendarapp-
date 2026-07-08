@@ -48,7 +48,6 @@
 # --today-line-length=         # Length of today line in points (0 = full area)
 # --today-line-direction=      # Today line direction (above, below, or both)
 # --label-fill-opacity=        # Fill opacity for callout label boxes (0.0-1.0, default: 0.25)
-# --duration-fill-opacity=     # Fill opacity for duration bar rectangles (0.0-1.0, default: 0.25)
 
 # ── Fiscal Calendar ───────────────────────────────────────────
 # --fiscal=                    # Fiscal overlay (nrf-454, nrf-445, nrf-544, 13-period)

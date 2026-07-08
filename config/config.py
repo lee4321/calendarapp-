@@ -614,7 +614,6 @@ class CalendarConfig:
     timeline_date_color: str = "deepskyblue"
     timeline_label_stroke_width: float = 1.0
     timeline_label_fill_opacity: float = 0.25
-    timeline_duration_bar_fill_opacity: float = 0.25
     # stroke-dasharray for timeline elements
     timeline_axis_stroke_dasharray: str | None = None
     timeline_tick_stroke_dasharray: str | None = None

@@ -214,13 +214,21 @@ found **109 of 566 fields with zero production reads**.
       `pit.milestone_palette` — those keys were never wired to any renderer
       (silent no-ops). Keys removed from the YAMLs; if per-event/milestone
       pit palettes are wanted, that's a feature to build, not a config key.
-- [ ] **Batch 2 (~79 remaining candidates)** need case-by-case review:
+- [x] **No-op CLI flags resolved (2026-07-08, user-approved).** Exactly one
+      flag wrote a dead field: `--duration-fill-opacity` (-dfo) — removed
+      end to end incl. the `timeline.duration_bar_fill_opacity` key that 11
+      themes set with no effect (superseded by the `line:duration_bar`
+      token's opacity). `--label-fill-opacity` is LIVE via the
+      ec-callout-box style factory and stays. No argparse dest is parsed-
+      but-unapplied (verified via AST + string-consumer scan).
+- [ ] **Batch 2 (~78 remaining candidates)** need case-by-case review:
       `margin_*`/`include_margin` are FALSE positives (read inside
-      `config.resolve_page_margins()`); heuristic size fields are alive via
-      `_HEURISTIC_TOKEN_FIELDS`; a few are CLI-written (removing changes CLI
-      surface, e.g. `timeline_duration_bar_fill_opacity`); several are
-      referenced only by tests. Audit script:
-      scratchpad `audit_config_fields.py` (rerunnable).
+      `config.resolve_page_margins()`); `timeline_label_fill_opacity`-style
+      fields are alive via `get_box_style`/`get_line_style` factories in
+      config.py — any candidate with cfg-hits > 0 must be checked against
+      those factories; heuristic size fields are alive via
+      `_HEURISTIC_TOKEN_FIELDS`; several are referenced only by tests.
+      Audit script: scratchpad `audit_config_fields.py` (rerunnable).
 - [ ] Group surviving fields under section banner comments — fold into the
       Phase 4 commenting pass.
 - [ ] Fold in `SIMPLIFICATION_PLAN.md` Part 1 renames *after* Batch 2.

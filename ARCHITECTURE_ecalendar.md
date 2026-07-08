@@ -201,7 +201,7 @@ all subcommands and their option groups.
 - Watermark Options (`--watermark`, `--watermark-rotation-angle`, `--imagemark`)
 - Content Filtering (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`)
 - Mini Calendar Options (`--mini-columns`, `--mini-rows`, `--mini-no-adjacent`, …)
-- Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`, `--duration-fill-opacity`)
+- Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`)
 - Fiscal Options (`--fiscal`, `--fiscal-colors`, `--fiscal-year-offset`)
 - Week Number Options (`--weeknumbers`, `--week-number-mode`, `--week1-start`)
 - Theme (`--theme`)

@@ -143,7 +143,6 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--columns`, `-cols` | `N` | `iconsheet` | Number of icon columns per page (requires `--paginate`) | `iconsheet`: default `8` |
 | `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `excelheader`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. `US`) or a comma-separated list (e.g. `US,CA,GB`). If omitted on render commands, all holidays from the government table are included; `exportdata` defaults to `US,CA`. |  |
 | `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
-| `--duration-fill-opacity`, `-dfo` | `0.0-1.0` | `timeline` | Fill opacity for duration bar rectangles (default: 0.25). |  |
 | `--embed-data` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed the source event data (CSV) inside the SVG metadata so the rendered file carries its own data provenance. | default `False` |
 | `--empty`, `-e` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) | `blockplan`: default `False` |
 | `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter items by name substring (case-insensitive) |  |
@@ -1235,7 +1234,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_date_font` | `timeline.date.font_family` | `str` | `Fonts.R_BOLD` | font family |
 | `timeline_date_format` | `timeline.date_format` | `str` | `'MMM D'` | date format |
 | `timeline_duration_*_font_size` | `timeline_durations.size_rule` | `` | `` | Per-papersize timeline duration font sizes |
-| `timeline_duration_bar_fill_opacity` | `timeline.duration_bar_fill_opacity` | `float` | `0.25` | duration bar fill opacity |
 | `timeline_duration_bar_stroke_dasharray` | `timeline.duration_bar_stroke_dasharray` | `str | None` | `None` | duration bar stroke dasharray |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
 | `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | box width |

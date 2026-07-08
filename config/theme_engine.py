@@ -101,7 +101,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "duration_icon_visible"): "timeline_duration_icon_visible",
     ("timeline", "label_stroke_width"): "timeline_label_stroke_width",
     ("timeline", "label_fill_opacity"): "timeline_label_fill_opacity",
-    ("timeline", "duration_bar_fill_opacity"): "timeline_duration_bar_fill_opacity",
     ("timeline", "axis_stroke_dasharray"): "timeline_axis_stroke_dasharray",
     ("timeline", "tick_stroke_dasharray"): "timeline_tick_stroke_dasharray",
     ("timeline", "today_line_dasharray"): "timeline_today_line_dasharray",

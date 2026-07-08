@@ -1325,14 +1325,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         metavar="0.0-1.0",
         help="Fill opacity for callout label boxes (default: 0.25).",
     )
-    timeline_group.add_argument(
-        "--duration-fill-opacity",
-        "-dfo",
-        type=float,
-        default=None,
-        metavar="0.0-1.0",
-        help="Fill opacity for duration bar rectangles (default: 0.25).",
-    )
 
     # =====================================================================
     # PIT (Points in Time) options

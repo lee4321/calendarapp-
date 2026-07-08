@@ -273,8 +273,6 @@ def _apply_args_to_config(
         config.timeline_today_line_direction = args.today_line_direction
     if getattr(args, "label_fill_opacity", None) is not None:
         config.timeline_label_fill_opacity = args.label_fill_opacity
-    if getattr(args, "duration_fill_opacity", None) is not None:
-        config.timeline_duration_bar_fill_opacity = args.duration_fill_opacity
 
     # PIT options
     if getattr(args, "direction", None) is not None:

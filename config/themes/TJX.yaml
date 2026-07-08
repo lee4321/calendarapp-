@@ -189,7 +189,6 @@ timeline:
   duration_icon_visible: true
   label_stroke_width: 1.0
   label_fill_opacity: 0.25
-  duration_bar_fill_opacity: 0.75
   axis_stroke_dasharray: null
   tick_stroke_dasharray: null
   today_line_dasharray: null
