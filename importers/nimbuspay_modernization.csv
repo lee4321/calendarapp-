@@ -1,0 +1,92 @@
+Task_Name,Start_Date,Finish_Date,Priority,WBS,Rollup,Milestone,Percent_Complete,Resource_Group,Notes,Icon,Highlight_Color,Marks
+NimbusPay Modernization,2/2/2026,7/31/2026,0,NP,TRUE,FALSE,0.0,,Full program rollup spanning discovery through production rollout,,,
+Discovery & Requirements,2/2/2026,2/27/2026,0,NP.1,TRUE,FALSE,0.0,,Requirements elicitation and scoping phase,,,Discovery
+Architecture & Design,2/23/2026,3/13/2026,0,NP.2,TRUE,FALSE,0.0,,"System, API, data, and UX design",,,Design
+Development Sprints,3/16/2026,6/5/2026,0,NP.3,TRUE,FALSE,0.0,,Four iterative build sprints,,,Build
+QA & Testing,3/16/2026,6/19/2026,0,NP.4,TRUE,FALSE,0.0,,"Verification, validation, and quality gates",,,Verify
+Operations Readiness,5/4/2026,7/17/2026,0,NP.5,TRUE,FALSE,0.0,,"Infrastructure, monitoring, and runbooks for production",,,Operate
+Organizational Readiness,6/1/2026,7/17/2026,0,NP.6,TRUE,FALSE,0.0,,"Change management, training, and communications",,,Adopt
+User Acceptance,5/11/2026,6/26/2026,0,NP.7,TRUE,FALSE,0.0,,Beta program and stakeholder UAT cycles,,,UAT
+Production Deployment,7/6/2026,7/31/2026,0,NP.8,TRUE,FALSE,0.0,,Release candidate through hypercare,,,Launch
+Project Kickoff,2/2/2026,2/2/2026,0,NP.1,FALSE,TRUE,0.0,Product,All-hands kickoff and charter walkthrough,calendar,skyblue,Discovery
+Stakeholder Interviews,2/2/2026,2/13/2026,1,NP.1.1,FALSE,FALSE,0.0,Product,"Discovery sessions with finance, ops, and support leaders",group,skyblue,Discovery
+Business Requirements Workshop,2/9/2026,2/13/2026,1,NP.1.2,FALSE,FALSE,0.0,Product,Capture and prioritize functional requirements,presentation,skyblue,Discovery
+Regulatory Compliance Review,2/9/2026,2/20/2026,1,NP.1.3,FALSE,FALSE,0.0,Security,PCI DSS and SOC2 scope assessment,shield,skyblue,Discovery
+Legacy System Audit,2/2/2026,2/20/2026,2,NP.1.4,FALSE,FALSE,0.0,Backend,Catalog current services and data flows,analysis,skyblue,Discovery
+User Research Sessions,2/9/2026,2/20/2026,2,NP.1.5,FALSE,FALSE,0.0,UX,Contextual inquiries with merchant operators,heart,skyblue,Discovery
+Non-functional Requirements Draft,2/16/2026,2/27/2026,2,NP.1.6,FALSE,FALSE,0.0,Backend,"Throughput, latency, and availability targets",ruler,skyblue,Discovery
+Requirements Sign-off,2/27/2026,2/27/2026,0,NP.1,FALSE,TRUE,0.0,Product,Steering committee approves requirements baseline,check,skyblue,Discovery
+Architecture Vision Workshop,2/23/2026,2/27/2026,1,NP.2.1,FALSE,FALSE,0.0,Backend,Set north-star architecture and constraints,lightbulb,steelblue,Design
+System Architecture Spec,2/23/2026,3/6/2026,1,NP.2.2,FALSE,FALSE,0.0,Backend,Service decomposition and runtime topology,ruler,steelblue,Design
+API Contract Design,3/2/2026,3/13/2026,2,NP.2.3,FALSE,FALSE,0.0,Backend,OpenAPI specs for payments and identity surfaces,code,steelblue,Design
+Data Model Design,3/2/2026,3/13/2026,2,NP.2.4,FALSE,FALSE,0.0,Backend,Ledger schema and event sourcing patterns,database,steelblue,Design
+UX Wireframes,3/2/2026,3/13/2026,2,NP.2.5,FALSE,FALSE,0.0,UX,Low-fidelity flows for primary personas,pencil,steelblue,Design
+Visual Design System,3/9/2026,3/13/2026,2,NP.2.6,FALSE,FALSE,0.0,UX,Component library and tokens,presentation,steelblue,Design
+Security Threat Model,3/2/2026,3/13/2026,1,NP.2.7,FALSE,FALSE,0.0,Security,STRIDE analysis on new attack surface,shield,steelblue,Design
+Architecture Review Board,3/13/2026,3/13/2026,1,NP.2,FALSE,TRUE,0.0,Backend,Cross-team review and approval,star,steelblue,Design
+Sprint 1 Planning,3/16/2026,3/16/2026,1,NP.3.S1,FALSE,TRUE,0.0,Product,Backlog refinement for auth and API foundation,calendar,seagreen,Sprint1
+Identity Service Build,3/16/2026,4/3/2026,1,NP.3.S1.1,FALSE,FALSE,0.0,Backend,"OIDC issuer, user store, and token service",code,seagreen,Sprint1
+Auth Web Implementation,3/16/2026,4/3/2026,2,NP.3.S1.2,FALSE,FALSE,0.0,Frontend,"Sign-in, MFA, and account recovery screens",laptop,seagreen,Sprint1
+Mobile Auth Module,3/16/2026,4/3/2026,2,NP.3.S1.3,FALSE,FALSE,0.0,Mobile,iOS and Android biometric login,phone,seagreen,Sprint1
+CI/CD Pipeline Setup,3/16/2026,3/27/2026,1,NP.3.S1.4,FALSE,FALSE,0.0,DevOps,"Build, test, and artifact promotion stages",tools,seagreen,Sprint1
+Sprint 1 Demo,4/3/2026,4/3/2026,2,NP.3.S1,FALSE,FALSE,0.0,Product,Stakeholder demo of authentication flow,presenter,seagreen,Sprint1
+Sprint 1 Review,4/3/2026,4/3/2026,1,NP.3.S1,FALSE,TRUE,0.0,Product,Sprint outcomes accepted,flag,seagreen,Sprint1
+Sprint 2 Planning,4/6/2026,4/6/2026,1,NP.3.S2,FALSE,TRUE,0.0,Product,Plan core features sprint,calendar,mediumseagreen,Sprint2
+Payments Service Build,4/6/2026,4/24/2026,1,NP.3.S2.1,FALSE,FALSE,0.0,Backend,"Charge, refund, and dispute APIs",code,mediumseagreen,Sprint2
+Ledger Service Build,4/6/2026,4/24/2026,1,NP.3.S2.2,FALSE,FALSE,0.0,Backend,Double-entry ledger with idempotent writes,database,mediumseagreen,Sprint2
+Account Management UI,4/6/2026,4/24/2026,2,NP.3.S2.3,FALSE,FALSE,0.0,Frontend,Merchant dashboard for accounts and balances,laptop,mediumseagreen,Sprint2
+Mobile Payments Flow,4/6/2026,4/24/2026,2,NP.3.S2.4,FALSE,FALSE,0.0,Mobile,Tap-to-pay and receipt screens,phone,mediumseagreen,Sprint2
+Internal API Gateway,4/6/2026,4/17/2026,2,NP.3.S2.5,FALSE,FALSE,0.0,DevOps,"Routing, auth, and rate limiting",globe,mediumseagreen,Sprint2
+Sprint 2 Demo,4/24/2026,4/24/2026,2,NP.3.S2,FALSE,FALSE,0.0,Product,Demo of charge and ledger flows,presenter,mediumseagreen,Sprint2
+Sprint 2 Review,4/24/2026,4/24/2026,1,NP.3.S2,FALSE,TRUE,0.0,Product,Sprint outcomes accepted,flag,mediumseagreen,Sprint2
+Sprint 3 Planning,4/27/2026,4/27/2026,1,NP.3.S3,FALSE,TRUE,0.0,Product,Plan integration sprint,calendar,coral,Sprint3
+Bank Partner Integration,4/27/2026,5/15/2026,1,NP.3.S3.1,FALSE,FALSE,0.0,Backend,ACH and card-network connectors,globe,coral,Sprint3
+Notification Service,4/27/2026,5/8/2026,2,NP.3.S3.2,FALSE,FALSE,0.0,Backend,"Email, SMS, and push fan-out",code,coral,Sprint3
+Reporting Module,4/27/2026,5/15/2026,2,NP.3.S3.3,FALSE,FALSE,0.0,Frontend,Settlement and reconciliation reports,analysis,coral,Sprint3
+Mobile Push Notifications,4/27/2026,5/8/2026,2,NP.3.S3.4,FALSE,FALSE,0.0,Mobile,APNs and FCM wiring,phone,coral,Sprint3
+Observability Stack,4/27/2026,5/15/2026,2,NP.3.S3.5,FALSE,FALSE,0.0,DevOps,"Logs, metrics, and tracing baseline",server,coral,Sprint3
+Sprint 3 Demo,5/15/2026,5/15/2026,2,NP.3.S3,FALSE,FALSE,0.0,Product,Integration demo,presenter,coral,Sprint3
+Sprint 3 Review,5/15/2026,5/15/2026,1,NP.3.S3,FALSE,TRUE,0.0,Product,Sprint outcomes accepted,flag,coral,Sprint3
+Sprint 4 Planning,5/18/2026,5/18/2026,1,NP.3.S4,FALSE,TRUE,0.0,Product,Plan hardening sprint,calendar,gold,Sprint4
+Performance Tuning,5/18/2026,6/5/2026,1,NP.3.S4.1,FALSE,FALSE,0.0,Backend,Hot-path profiling and query optimization,lightbulb,gold,Sprint4
+Frontend Polish,5/18/2026,6/5/2026,2,NP.3.S4.2,FALSE,FALSE,0.0,Frontend,"Accessibility, copy, and visual cleanup",pencil,gold,Sprint4
+Mobile Hardening,5/18/2026,6/5/2026,2,NP.3.S4.3,FALSE,FALSE,0.0,Mobile,Crash fixes and offline behavior,wrench,gold,Sprint4
+Bug Bash Week,5/25/2026,5/29/2026,2,NP.3.S4.4,FALSE,FALSE,0.0,QA,Cross-team defect hunt,bug,gold,Sprint4
+Code Freeze,6/5/2026,6/5/2026,0,NP.3.S4,FALSE,TRUE,0.0,Product,Only release-critical changes accepted,clock,gold,Sprint4
+Sprint 4 Review,6/5/2026,6/5/2026,1,NP.3.S4,FALSE,TRUE,0.0,Product,Sprint outcomes accepted,flag,gold,Sprint4
+QA Test Plan,3/16/2026,3/27/2026,2,NP.4.1,FALSE,FALSE,0.0,QA,"Strategy, coverage matrix, and entry/exit criteria",clipboard,orange,Verify
+Unit Test Buildout,3/30/2026,5/1/2026,2,NP.4.2,FALSE,FALSE,0.0,QA,Component-level coverage with mocks,check,orange,Verify
+Integration Test Buildout,4/6/2026,5/15/2026,2,NP.4.3,FALSE,FALSE,0.0,QA,Service-to-service contract tests,tools,orange,Verify
+Regression Test Suite,5/4/2026,5/29/2026,2,NP.4.4,FALSE,FALSE,0.0,QA,Automated regression scenarios,analysis,orange,Verify
+Load & Performance Testing,5/11/2026,5/29/2026,1,NP.4.5,FALSE,FALSE,0.0,QA,Peak season traffic simulation,fire,orange,Verify
+Security Penetration Test,5/18/2026,6/5/2026,1,NP.4.6,FALSE,FALSE,0.0,Security,External vendor red-team engagement,shield,orange,Verify
+Accessibility Audit,5/18/2026,5/29/2026,2,NP.4.7,FALSE,FALSE,0.0,UX,WCAG 2.2 AA conformance review,heart,orange,Verify
+QA Sign-off,6/19/2026,6/19/2026,0,NP.4,FALSE,TRUE,0.0,QA,All quality gates met,check,orange,Verify
+Cloud Account Provisioning,5/4/2026,5/15/2026,2,NP.5.1,FALSE,FALSE,0.0,Ops,"Production and DR accounts, IAM, and VPCs",cloud,slategray,Operate
+Production Infrastructure Build,5/4/2026,5/29/2026,1,NP.5.2,FALSE,FALSE,0.0,Ops,Kubernetes clusters and managed data stores,server,slategray,Operate
+Monitoring & Alerting Setup,5/18/2026,6/12/2026,1,NP.5.3,FALSE,FALSE,0.0,Ops,"Dashboards, SLOs, and pager routing",warning,slategray,Operate
+Runbook Authoring,6/1/2026,6/26/2026,2,NP.5.4,FALSE,FALSE,0.0,Ops,Operational procedures for top scenarios,book,slategray,Operate
+Backup & DR Procedures,6/8/2026,6/26/2026,1,NP.5.5,FALSE,FALSE,0.0,Ops,RPO/RTO validation and failover drills,hourglass,slategray,Operate
+On-call Rotation Setup,6/22/2026,7/3/2026,2,NP.5.6,FALSE,FALSE,0.0,Ops,"Schedules, escalation, and handoff process",clock,slategray,Operate
+Operations Readiness Review,7/10/2026,7/10/2026,0,NP.5,FALSE,TRUE,0.0,Ops,Ops team certifies platform readiness,check,slategray,Operate
+Go/No-Go Decision,7/17/2026,7/17/2026,0,NP.5,FALSE,TRUE,0.0,Product,Steering committee approves launch,target,slategray,Operate
+Change Management Plan,6/1/2026,6/12/2026,2,NP.6.1,FALSE,FALSE,0.0,Product,Impact analysis and adoption roadmap,clipboard,plum,Adopt
+End-User Training Materials,6/1/2026,6/26/2026,2,NP.6.2,FALSE,FALSE,0.0,Training,Guides and recorded walkthroughs,book,plum,Adopt
+Support Team Training,6/22/2026,7/10/2026,2,NP.6.3,FALSE,FALSE,0.0,Training,Workshops for tier 1 and tier 2 support,group,plum,Adopt
+Stakeholder Comms Plan,6/8/2026,6/19/2026,2,NP.6.4,FALSE,FALSE,0.0,Product,Cross-org launch communications,presentation,plum,Adopt
+Launch Comms Drafted,6/22/2026,7/3/2026,2,NP.6.5,FALSE,FALSE,0.0,Product,External announcements and customer emails,notes,plum,Adopt
+Help Center Content,6/8/2026,7/10/2026,2,NP.6.6,FALSE,FALSE,0.0,Training,Knowledge base articles and FAQs,doc,plum,Adopt
+Training Sign-off,7/17/2026,7/17/2026,0,NP.6,FALSE,TRUE,0.0,Training,Org confirms readiness to adopt,check,plum,Adopt
+Beta Cohort Recruitment,5/11/2026,5/22/2026,2,NP.7.1,FALSE,FALSE,0.0,Product,Identify and onboard pilot merchants,group,mediumpurple,UAT
+UAT Cycle 1,5/25/2026,6/5/2026,1,NP.7.2,FALSE,FALSE,0.0,Stakeholders,Guided scenarios on staging environment,group,mediumpurple,UAT
+UAT Defect Triage,6/1/2026,6/12/2026,2,NP.7.3,FALSE,FALSE,0.0,Product,Prioritize and assign UAT-found defects,bug,mediumpurple,UAT
+UAT Cycle 2,6/15/2026,6/26/2026,1,NP.7.4,FALSE,FALSE,0.0,Stakeholders,Re-validation of fixes from cycle 1,group,mediumpurple,UAT
+UAT Sign-off,6/26/2026,6/26/2026,0,NP.7,FALSE,TRUE,0.0,Stakeholders,Business stakeholders accept the release,thumbsup,mediumpurple,UAT
+Release Candidate Build,7/6/2026,7/10/2026,1,NP.8.1,FALSE,FALSE,0.0,DevOps,"Tag, build, and stage RC1",rocket,crimson,Launch
+Pre-prod Smoke Test,7/13/2026,7/15/2026,1,NP.8.2,FALSE,FALSE,0.0,QA,Final smoke pass against production-like environment,check,crimson,Launch
+Canary Deployment 5%,7/20/2026,7/20/2026,1,NP.8.3,FALSE,TRUE,0.0,Ops,Limited rollout to opt-in cohort,target,crimson,Launch
+Production Rollout 25%,7/22/2026,7/22/2026,1,NP.8.4,FALSE,TRUE,0.0,Ops,Expand traffic share after canary,target,crimson,Launch
+Production Rollout 100%,7/24/2026,7/24/2026,0,NP.8.5,FALSE,TRUE,0.0,Ops,Full traffic on new platform,target,crimson,Launch
+Go-Live Event,7/27/2026,7/27/2026,0,NP.8,FALSE,TRUE,0.0,Product,Public launch announcement,rocket,crimson,Launch
+Hypercare Period,7/27/2026,7/31/2026,1,NP.8.6,FALSE,FALSE,0.0,Ops,Heightened monitoring and rapid response,fire,crimson,Launch
+Project Closeout,7/31/2026,7/31/2026,0,NP,FALSE,TRUE,0.0,Product,Retrospective and benefits handoff,trophy,crimson,Launch

@@ -1,0 +1,70 @@
+accent	#7fc97f, #beaed4, #fdc086, #ffff99, #386cb0, #f0027f, #bf5b17, #666666 
+blues	#f7fbff, #deebf7, #c6dbef, #9ecae1, #6baed6, #4292c6, #2171b5, #08519c, #08306b 
+bmh	#348abd, #a60628, #7a68a6, #467821, #d55e00, #cc79a7, #56b4e9, #009e73, #f0e442, #0072b2  
+bootstrap	#d9534f, #f9f9f9, #5bc0de, #5cb85c, #428bca
+brbg	#543005, #8c510a, #bf812d, #dfc27d, #f6e8c3, #f5f5f5, #c7eae5, #80cdc1, #35978f, #01665e, #003c30 
+bright	#023eff, #ff7c00, #1ac938, #e8000b, #8b2be2, #9f4800, #f14cc1, #a3a3a3, #ffc400, #00d7ff 
+bugn	#f7fcfd, #e5f5f9, #ccece6, #99d8c9, #66c2a4, #41ae76, #238b45, #006d2c, #00441b 
+bupu	#f7fcfd, #e0ecf4, #bfd3e6, #9ebcda, #8c96c6, #8c6bb1, #88419d, #810f7c, #4d004b 
+cappuccino	#4b3832, #854442, #fff4e6, #3c2f2f, #be9b7b
+colorblind	#0173b2, #de8f05, #029e73, #d55e00, #cc78bc, #ca9161, #fbafe4, #949494, #ece133, #56b4e9 
+coraltealblue	#385a7c, #f97171, #f99192, #8ad6cc, #b2eee6
+crackerjackrainbow	#c45b5b, #c97a49, #d4ad00, #5186b5, #b760b8
+dark	#001c7f, #b1400d, #12711c, #8c0800, #591e71, #592f0d, #a23582, #3c3c3c, #b8850a, #006374 
+deep	#4c72b0, #dd8452, #55a868, #c44e52, #8172b3, #937860, #da8bc3, #8c8c8c, #ccb974, #64b5cd 
+deepdark	#1b9e77, #d95f02, #7570b3, #e7298a, #66a61e, #e6ab02, #a6761d, #666666 
+fadedpostcard	#424b54, #b38d97, #d5aca9, #ebcfb2, #c5baaf
+five38	#008fd5, #fc4f30, #e5ae38, #6d904f, #8b8b8b, #810f7c 
+flame2vanilla	#f4e3b2, #f0c48c, #eda567, #ea8642, #e7681d
+gnbu	#f7fcf0, #e0f3db, #ccebc5, #a8ddb5, #7bccc4, #4eb3d3, #2b8cbe, #0868ac, #084081 
+grandmotherlycottage	#bf7b9f, #ebc0bb, #f0e5cf, #a19ac2, #5d725e
+greens	#f7fcf5, #e5f5e0, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #006d2c, #00441b 
+greys	#ffffff, #f0f0f0, #d9d9d9, #bdbdbd, #969696, #737373, #525252, #252525, #000000 
+blackgreen	#3a514d, #617471, #899794, #b0b9b8, #d8dcdb	
+lightcoral	#468499, #dddddd, #f08080, #bfaaaa, #81d8d0
+mintmeadow	#87bbbb, #5ea4ad, #62dadc, #98fbec, #7fe6d2	
+muted	#4878d0, #ee854a, #6acc64, #d65f5f, #956cb4, #8c613c, #dc7ec0, #797979, #d5bb67, #82c6e2 
+oranges	#fff5eb, #fee6ce, #fdd0a2, #fdae6b, #fd8d3c, #f16913, #d94801, #a63603, #7f2704 
+orrd	#fff7ec, #fee8c8, #fdd49e, #fdbb84, #fc8d59, #ef6548, #d7301f, #b30000, #7f0000 
+paired	#a6cee3, #1f78b4, #b2df8a, #33a02c, #fb9a99, #e31a1c, #fdbf6f, #ff7f00, #cab2d6, #6a3d9a, #ffff99, #b15928 
+pastel1	#a1c9f4, #ffb482, #8de5a1, #ff9f9b, #d0bbff, #debb9b, #fab0e4, #cfcfcf, #fffea3, #b9f2f0 
+pastel2	#fbb4ae, #b3cde3, #ccebc5, #decbe4, #fed9a6, #ffffcc, #e5d8bd, #fddaec, #f2f2f2 
+pastel3	#b3e2cd, #fdcdac, #cbd5e8, #f4cae4, #e6f5c9, #fff2ae, #f1e2cc, #cccccc 
+peppermintcherry	#e04b6b, #e5758a, #ecc0c9, #cde6d8, #c3e2d0
+petroff	#3f90da, #ffa90e, #bd1f01, #94a4a2, #832db6, #a96b59, #e76300, #b9ac70, #717581, #92dadd 
+piyg	#8e0152, #c51b7d, #de77ae, #f1b6da, #fde0ef, #f7f7f7, #e6f5d0, #b8e186, #7fbc41, #4d9221, #276419 
+prgn	#40004b, #762a83, #9970ab, #c2a5cf, #e7d4e8, #f7f7f7, #d9f0d3, #a6dba0, #5aae61, #1b7837, #00441b 
+pubu	#fff7fb, #ece7f2, #d0d1e6, #a6bddb, #74a9cf, #3690c0, #0570b0, #045a8d, #023858 
+pubugn	#fff7fb, #ece2f0, #d0d1e6, #a6bddb, #67a9cf, #3690c0, #02818a, #016c59, #014636 
+puor	#7f3b08, #b35806, #e08214, #fdb863, #fee0b6, #f7f7f7, #d8daeb, #b2abd2, #8073ac, #542788, #2d004b 
+purd	#f7f4f9, #e7e1ef, #d4b9da, #c994c7, #df65b0, #e7298a, #ce1256, #980043, #67001f 
+purples	#fcfbfd, #efedf5, #dadaeb, #bcbddc, #9e9ac8, #807dba, #6a51a3, #54278f, #3f007d 
+rdbu	#67001f, #b2182b, #d6604d, #f4a582, #fddbc7, #f7f7f7, #d1e5f0, #92c5de, #4393c3, #2166ac, #053061 
+rdgy	#67001f, #b2182b, #d6604d, #f4a582, #fddbc7, #ffffff, #e0e0e0, #bababa, #878787, #4d4d4d, #1a1a1a 
+rdpu	#fff7f3, #fde0dd, #fcc5c0, #fa9fb5, #f768a1, #dd3497, #ae017e, #7a0177, #49006a 
+rdylbu	#a50026, #d73027, #f46d43, #fdae61, #fee090, #ffffbf, #e0f3f8, #abd9e9, #74add1, #4575b4, #313695 
+rdylgn	#a50026, #d73027, #f46d43, #fdae61, #fee08b, #ffffbf, #d9ef8b, #a6d96a, #66bd63, #1a9850, #006837 
+redandyellow	#ffe05f, #eeb400, #e77500, #c70000, #940034
+reds	#fff5f0, #fee0d2, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #a50f15, #67000d 
+set1	#e41a1c, #377eb8, #4daf4a, #984ea3, #ff7f00, #ffff33, #a65628, #f781bf, #999999 
+set2	#66c2a5, #fc8d62, #8da0cb, #e78ac3, #a6d854, #ffd92f, #e5c494, #b3b3b3 
+set3	#8dd3c7, #ffffb3, #bebada, #fb8072, #80b1d3, #fdb462, #b3de69, #fccde5, #d9d9d9, #bc80bd, #ccebc5, #ffed6f 
+teals	#b2d8d8, #66b2b2, #008080, #006666, #004c4c
+softmints	#d4fff8, #bef7ee, #a9ece2, #7fdacc, #61ccbb
+sourgrapes	#f5fbda, #d9efbd, #b9d175, #a33e79, #450c3f
+spearmintburst	#5cbe86, #7dcb9e, #9dd8b6, #bee5cf, #def2e7
+spearmintice	#bfd3cb, #ccdcd5, #d9e5e0, #e5edea, #f2f6f5
+spearmintwater	#b1eae8, #c1eeed, #d0f2f1, #e0f7f6, #effbfa
+spectral	#9e0142, #d53e4f, #f46d43, #fdae61, #fee08b, #ffffbf, #e6f598, #abdda4, #66c2a5, #3288bd, #5e4fa2 
+summertime	#ffbe4f, #6bd2db, #0ea7b5, #0c457d, #e8702a
+tableaucolorblind	#006ba4, #ff800e, #ababab, #595959, #5f9ed1, #c85200, #898989, #a2c8ec, #ffbc79, #cfcfcf 
+trilledesbois	#91ccde, #e2c95c, #a8a796, #cd9370, #ba7bcb
+underwaterscene	#daf8e3, #97ebdb, #00c2c7, #0086ad, #005582
+vintagebeach	#e6b89c, #ead2ac, #b2b2b2, #9c9e9f, #6b7a8f
+vintagejapan	#cca481, #d3cdc4, #f1e7da, #233963, #ae8057
+vintagespace	#f23d50, #f4efcc, #00365c, #1c8097, #91b2b1
+vividcoral	#fe6332, #fe825b, #fea184, #ffc1ad, #ffe0d6
+ylgn	#ffffe5, #f7fcb9, #d9f0a3, #addd8e, #78c679, #41ab5d, #238443, #006837, #004529 
+ylgnbu	#ffffd9, #edf8b1, #c7e9b4, #7fcdbb, #41b6c4, #1d91c0, #225ea8, #253494, #081d58 
+ylorbr	#ffffe5, #fff7bc, #fee391, #fec44f, #fe9929, #ec7014, #cc4c02, #993404, #662506 
+ylorrd	#ffffcc, #ffeda0, #fed976, #feb24c, #fd8d3c, #fc4e2a, #e31a1c, #bd0026, #800026 
