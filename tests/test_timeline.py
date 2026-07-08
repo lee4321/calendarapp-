@@ -9,7 +9,7 @@ import pytest
 from config.config import create_calendar_config, setfontsizes
 from shared.data_models import Event
 from visualizers.timeline.layout import TimelineLayout
-from visualizers.timeline.orientation import Orientation, Side
+from shared.orientation import Orientation, Side
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,

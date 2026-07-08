@@ -26,7 +26,7 @@ from visualizers.timeline.labella_adapter import (
     CalloutPlacement,
     layout_callouts as _labella_layout_callouts,
 )
-from visualizers.timeline.orientation import Orientation, Side
+from shared.orientation import Orientation, Side
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

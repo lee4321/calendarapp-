@@ -38,7 +38,7 @@ from visualizers.pit.markers import (
     resolve_marker,
 )
 from shared.date_utils import format_arrow_date
-from visualizers.timeline.orientation import Orientation, Side, opposite
+from shared.orientation import Orientation, Side, opposite
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

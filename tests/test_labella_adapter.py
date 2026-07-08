@@ -18,7 +18,7 @@ import pytest
 from config.config import CalendarConfig
 from shared.data_models import Event
 from visualizers.timeline.labella_adapter import layout_callouts
-from visualizers.timeline.orientation import Orientation, Side
+from shared.orientation import Orientation, Side
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +301,7 @@ def test_both_partitions_events_between_sides(config, dense_events, orientation)
 def test_concrete_side_required_internally(config):
     # _layout_one_side rejects BOTH; the public API never calls it with BOTH
     # but defends against future regression.
-    from visualizers.timeline.labella_adapter import _layout_one_side
+    from shared.labella_layout import _layout_one_side
 
     with pytest.raises(ValueError):
         _layout_one_side(
@@ -310,6 +310,12 @@ def test_concrete_side_required_internally(config):
             axis_length=100.0,
             orientation=Orientation.HORIZONTAL,
             side=Side.BOTH,
-            config=config,
             pos_for_day=lambda d: 0.0,
+            node_width=lambda ev: 24.0,
+            node_height=lambda evs: 16.0,
+            density=0.85,
+            layer_gap=30.0,
+            min_pos=None,
+            max_pos=None,
+            on_side_events=None,
         )

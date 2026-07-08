@@ -1,5 +1,5 @@
 """
-Orientation + side primitives for the labella-driven timeline visualizer.
+Orientation + side primitives shared by the labella-driven callout visualizers (timeline, PIT).
 
 The timeline supports two axis orientations and three label-side modes,
 combined into four concrete labella directions:

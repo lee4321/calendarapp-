@@ -1,10 +1,10 @@
 """
 Adapter: events → labella-placed callouts for the timeline visualizer.
 
-Wraps the vendored labella primitives (`Force`, `Node`, `Renderer`) behind
-a single `layout_callouts()` function that returns a list of
-`CalloutPlacement` records in absolute SVG coordinates. The timeline
-renderer consumes the placements; it never imports labella directly.
+The layout skeleton (Force/Renderer invocation, Side.BOTH partitioning,
+placement records) lives in `shared/labella_layout.py`. This module
+supplies only the timeline-specific part: measuring label extents from
+`timeline_*` config fields and forwarding labella tuning values.
 
 Text measurement uses the project's PIL-based `string_width` — no LaTeX
 dependency.
@@ -12,73 +12,27 @@ dependency.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Callable, Sequence
 
 import arrow
 
-from config.config import CalendarConfig, get_font_path
+from config.config import CalendarConfig
 from renderers.glyph_cache import get_font_metrics
 from renderers.text_utils import string_width
 from shared.data_models import Event
-from vendor.labella import Force, Node, Renderer
-
-from visualizers.timeline.orientation import (
-    Orientation,
-    Side,
-    axis_to_xy,
-    labella_direction,
-    opposite,
+from shared.labella_layout import (
+    CalloutPlacement,
+    layout_callouts as _layout_callouts_shared,
+    resolve_font_path as _resolve_font_path,
 )
+from shared.orientation import Orientation, Side
+
+__all__ = ["CalloutPlacement", "layout_callouts"]
 
 # Horizontal padding added on each side of the measured text inside the
 # label box. The default mirrors the visual feel of the legacy renderer
 # without bloating dense layouts.
 _LABEL_PAD_X: float = 6.0
-
-# Fallback font used when a configured font name is missing from the
-# registry. Picked because the project's existing fallback chain ends here.
-_FALLBACK_FONT: str = "Roboto-Bold"
-
-
-@dataclass(frozen=True)
-class CalloutPlacement:
-    """One labella-placed callout, ready for the renderer to draw.
-
-    All coordinates are absolute SVG (Y-down). The leader path is in
-    labella's axis-local frame; pair it with `axis_origin` via a
-    `<g transform="translate(ox,oy)">` wrapper when emitting markup.
-    """
-
-    event: Event
-    # Dot at the axis (where the leader originates).
-    x_dot: float
-    y_dot: float
-    # Label box top-left.
-    x_label: float
-    y_label: float
-    label_w: float
-    label_h: float
-    # Which row (away from axis) labella placed the label on.
-    layer: int
-    # Labella's path "d" string, in axis-local coords (axis at origin).
-    leader_path_d: str
-    # Origin (idealPos=0) of the axis in absolute SVG coords.
-    axis_origin: tuple[float, float]
-    side: Side
-    orientation: Orientation
-
-
-def _resolve_font_path(font_name: str | None) -> str:
-    """Resolve a config font name to a TTF path, with fallback."""
-    name = font_name or _FALLBACK_FONT
-    try:
-        return get_font_path(name)
-    except KeyError:
-        try:
-            return get_font_path(_FALLBACK_FONT)
-        except KeyError:
-            return ""
 
 
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
@@ -171,125 +125,6 @@ def _renderer_node_height(
     return max(widest + 2.0 * _LABEL_PAD_X, 40.0)
 
 
-def _partition_for_both(
-    events: Sequence[Event],
-) -> tuple[list[Event], list[Event]]:
-    """Split events into (primary, secondary) lists for Side.BOTH.
-
-    Chronological alternation keeps the layout balanced regardless of
-    upstream sort order. Stable: equal-dated events retain their relative
-    order within their side.
-    """
-    ordered = sorted(
-        events,
-        key=lambda e: (
-            e.start,
-            e.priority,
-            (e.task_name or "").lower(),
-        ),
-    )
-    primary, secondary = [], []
-    for i, ev in enumerate(ordered):
-        (primary if i % 2 == 0 else secondary).append(ev)
-    return primary, secondary
-
-
-def _layout_one_side(
-    events: Sequence[Event],
-    *,
-    axis_origin: tuple[float, float],
-    axis_length: float,
-    orientation: Orientation,
-    side: Side,
-    config: CalendarConfig,
-    pos_for_day: Callable[[arrow.Arrow], float],
-) -> list[CalloutPlacement]:
-    """Run labella for a single concrete side and return placements."""
-    if not events:
-        return []
-    if side is Side.BOTH:
-        raise ValueError("_layout_one_side requires a concrete side")
-
-    direction = labella_direction(orientation, side)
-    node_height = _renderer_node_height(events, config, orientation)
-    layer_gap = float(config.timeline_labella_layer_gap)
-
-    min_pos = (
-        float(config.timeline_labella_min_pos)
-        if config.timeline_labella_min_pos is not None
-        else 0.0
-    )
-    max_pos = (
-        float(config.timeline_labella_max_pos)
-        if config.timeline_labella_max_pos is not None
-        else axis_length
-    )
-
-    # Build nodes.
-    nodes: list[Node] = []
-    for ev in events:
-        try:
-            day = arrow.get(ev.start, "YYYYMMDD")
-        except (arrow.ParserError, ValueError):
-            continue
-        ideal = pos_for_day(day)
-        width = _node_along_axis_extent(ev, config, orientation)
-        nodes.append(Node(idealPos=ideal, width=width, data=ev))
-
-    if not nodes:
-        return []
-
-    force = Force(
-        {
-            "minPos": min_pos,
-            "maxPos": max_pos,
-            "density": float(config.timeline_labella_density),
-        }
-    )
-    force.nodes(nodes)
-    force.compute()
-
-    renderer = Renderer(
-        {
-            "layerGap": layer_gap,
-            "nodeHeight": node_height,
-            "direction": direction,
-        }
-    )
-    renderer.layout(nodes)
-
-    placements: list[CalloutPlacement] = []
-    ox, oy = axis_origin
-    for n in nodes:
-        # node.x/y are top-left of the label rect in axis-local coords.
-        # node.dx/dy are extents in (x, y). Convert to absolute SVG.
-        x_label = ox + n.x
-        y_label = oy + n.y
-        label_w = n.dx
-        label_h = n.dy
-
-        x_dot, y_dot = axis_to_xy(n.idealPos, orientation, axis_origin)
-        leader = renderer.generatePath(n)
-
-        placements.append(
-            CalloutPlacement(
-                event=n.data,
-                x_dot=x_dot,
-                y_dot=y_dot,
-                x_label=x_label,
-                y_label=y_label,
-                label_w=label_w,
-                label_h=label_h,
-                layer=n.getLayerIndex(),
-                leader_path_d=leader,
-                axis_origin=axis_origin,
-                side=side,
-                orientation=orientation,
-            )
-        )
-    return placements
-
-
 def layout_callouts(
     events: Sequence[Event],
     *,
@@ -302,57 +137,21 @@ def layout_callouts(
 ) -> list[CalloutPlacement]:
     """Return labella-placed callouts for the given events.
 
-    Args:
-        events: Events to place. Empty input → empty output.
-        axis_origin: (x, y) where labella's idealPos=0 maps to in SVG.
-            For horizontal: the left end of the axis. For vertical: the
-            top end.
-        axis_length: Length of the axis in SVG units. Doubles as the
-            default max_pos when `config.timeline_labella_max_pos` is None.
-        orientation: HORIZONTAL or VERTICAL.
-        side: PRIMARY, SECONDARY, or BOTH. BOTH partitions events
-            chronologically into alternating sides and runs labella twice
-            with opposing directions.
-        config: Supplies font names/sizes, labella tuning, override widths.
-        pos_for_day: Maps an arrow Date to a 1-D axis position (must be in
-            the [0, axis_length] range — or the configured min_pos/max_pos
-            range if those are set).
-
-    Returns:
-        List of CalloutPlacement in input order for single-sided runs;
-        for BOTH, primary placements first, then secondary.
+    Thin wrapper over `shared.labella_layout.layout_callouts` that wires
+    the timeline's config fields into the shared engine. See the shared
+    module for full argument semantics.
     """
-    if not events:
-        return []
-
-    if side is Side.BOTH:
-        primary_events, secondary_events = _partition_for_both(events)
-        primary = _layout_one_side(
-            primary_events,
-            axis_origin=axis_origin,
-            axis_length=axis_length,
-            orientation=orientation,
-            side=Side.PRIMARY,
-            config=config,
-            pos_for_day=pos_for_day,
-        )
-        secondary = _layout_one_side(
-            secondary_events,
-            axis_origin=axis_origin,
-            axis_length=axis_length,
-            orientation=orientation,
-            side=opposite(Side.PRIMARY),
-            config=config,
-            pos_for_day=pos_for_day,
-        )
-        return primary + secondary
-
-    return _layout_one_side(
+    return _layout_callouts_shared(
         events,
         axis_origin=axis_origin,
         axis_length=axis_length,
         orientation=orientation,
         side=side,
-        config=config,
         pos_for_day=pos_for_day,
+        node_width=lambda ev: _node_along_axis_extent(ev, config, orientation),
+        node_height=lambda evs: _renderer_node_height(evs, config, orientation),
+        density=float(config.timeline_labella_density),
+        layer_gap=float(config.timeline_labella_layer_gap),
+        min_pos=config.timeline_labella_min_pos,
+        max_pos=config.timeline_labella_max_pos,
     )

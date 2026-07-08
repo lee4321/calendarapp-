@@ -34,7 +34,7 @@ from visualizers.pit.markers import (
 )
 from visualizers.pit.renderer import PITRenderer
 from visualizers.pit.visualizer import PITVisualizer
-from visualizers.timeline.orientation import Orientation, Side
+from shared.orientation import Orientation, Side
 
 
 # ---------------------------------------------------------------------------

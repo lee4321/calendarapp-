@@ -1,48 +1,51 @@
 """
 PIT labella adapter — events → placed callouts.
 
-Thin wrapper around the vendored labella primitives (`Force`, `Node`,
-`Renderer`) that returns a list of `PITPlacement` records in absolute
-SVG coordinates. The PIT renderer consumes the placements; it never
-imports labella directly.
+The layout skeleton (Force/Renderer invocation, Side.BOTH partitioning,
+placement records) lives in `shared/labella_layout.py`. This module
+supplies the PIT-specific parts:
 
-Mirrors `visualizers/timeline/labella_adapter.py` but:
-
-* drops duration / rollup / WBS handling — PIT only renders single-day
-  events and milestones,
-* uses PIT-local config fields (`pit_labella_*`, `pit_name_text_*`,
-  `pit_notes_text_*`) so PIT and timeline can be tuned independently,
-* enforces the `PIT_MAX_EVENTS_PER_SIDE` density cap with a logged
-  WARNING — over-budget layouts still render.
+* label measurement from `pit_*` config fields, including the inline
+  date line and the optional label icon (`extra_width_for_event`),
+* the `PIT_MAX_EVENTS_PER_SIDE` density cap with a logged WARNING —
+  over-budget layouts still render,
+* placement post-processing: re-anchoring the label along the axis
+  (`pit_leader_label_anchor`) and rewriting leader paths so they start
+  and end with straight perpendicular stubs (`pit_leader_*_stub`).
 """
 
 from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import replace
 from typing import Callable, Sequence
 
 import arrow
 
-from config.config import CalendarConfig, get_font_path
+from config.config import CalendarConfig
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
-from vendor.labella import Force, Node, Renderer
-
-# Reuse the timeline package's orientation primitives — they are pure and
-# direction-agnostic.
-from visualizers.timeline.orientation import (
-    Orientation,
-    Side,
-    axis_to_xy,
-    labella_direction,
-    opposite,
+from shared.labella_layout import (
+    CalloutPlacement,
+    layout_callouts as _layout_callouts_shared,
+    partition_for_both as _partition_for_both,
+    resolve_font_path as _resolve_font_path,
 )
+from shared.orientation import Orientation, Side
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "PIT_MAX_EVENTS_PER_SIDE",
+    "PITPlacement",
+    "layout_pit_callouts",
+]
+
+# The PIT renderer consumes the shared placement record; the historical
+# name is kept because the renderer and tests import it.
+PITPlacement = CalloutPlacement
 
 # Density safety cap from §10 of the plan. Above this, labella's Force
 # can struggle to converge; we emit a WARNING but still render so the
@@ -51,7 +54,6 @@ PIT_MAX_EVENTS_PER_SIDE: int = 80
 
 
 _LABEL_PAD_X: float = 6.0
-_FALLBACK_FONT: str = "Roboto-Bold"
 
 # Matches a signed int/float (incl. scientific notation) in an SVG path.
 _PATH_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
@@ -193,46 +195,6 @@ def _prepend_perp_stub(
     )
 
 
-@dataclass(frozen=True)
-class PITPlacement:
-    """One labella-placed PIT callout, ready for the renderer to draw.
-
-    All coordinates are absolute SVG (Y-down). The leader path is in
-    labella's axis-local frame — pair it with `axis_origin` via a
-    `<g transform="translate(ox,oy)">` wrapper when emitting markup.
-    """
-
-    event: Event
-    # Marker (dot) on the axis where the leader originates.
-    x_dot: float
-    y_dot: float
-    # Label box, top-left + extents.
-    x_label: float
-    y_label: float
-    label_w: float
-    label_h: float
-    # Which row labella placed the label on (0 = closest to the axis).
-    layer: int
-    # Labella's bezier "d" string, in axis-local coords.
-    leader_path_d: str
-    # Origin (idealPos=0) of the axis in absolute SVG coords.
-    axis_origin: tuple[float, float]
-    side: Side
-    direction: Orientation
-
-
-def _resolve_font_path(name: str | None) -> str:
-    """Resolve a font name to a TTF path, with fallback."""
-    tried = name or _FALLBACK_FONT
-    try:
-        return get_font_path(tried)
-    except KeyError:
-        try:
-            return get_font_path(_FALLBACK_FONT)
-        except KeyError:
-            return ""
-
-
 def _name_size(config: CalendarConfig) -> float:
     return float(config.pit_name_text_font_size or 11.0)
 
@@ -360,6 +322,22 @@ def _node_along_axis_extent(
     return _line_height_extent(config)
 
 
+def _extra_width_fn(
+    extra_width_for_event: Callable[[Event], float] | None,
+) -> Callable[[Event], float]:
+    """Wrap the optional per-event extra-width callback defensively."""
+
+    def _extra(ev: Event) -> float:
+        if extra_width_for_event is None:
+            return 0.0
+        try:
+            return float(extra_width_for_event(ev) or 0.0)
+        except Exception:
+            return 0.0
+
+    return _extra
+
+
 def _renderer_node_height(
     events: Sequence[Event],
     config: CalendarConfig,
@@ -375,17 +353,10 @@ def _renderer_node_height(
     if direction is Orientation.HORIZONTAL:
         return max(_line_height_extent(config), config.pit_labella_node_height)
 
-    def _extra(ev: Event) -> float:
-        if extra_width_for_event is None:
-            return 0.0
-        try:
-            return float(extra_width_for_event(ev) or 0.0)
-        except Exception:
-            return 0.0
-
+    extra = _extra_width_fn(extra_width_for_event)
     widest = max(
         (
-            _measured_text_width(e, config, extra_name_width=_extra(e))
+            _measured_text_width(e, config, extra_name_width=extra(e))
             for e in events
         ),
         default=0.0,
@@ -393,152 +364,46 @@ def _renderer_node_height(
     return max(widest + 2.0 * _LABEL_PAD_X, 40.0)
 
 
-def _partition_for_both(
-    events: Sequence[Event],
-) -> tuple[list[Event], list[Event]]:
-    """Split events into (primary, secondary) by chronological alternation.
-
-    Mirrors the timeline adapter's _partition_for_both so PIT and
-    timeline produce the same balance pattern under Side.BOTH.
-    """
-    ordered = sorted(
-        events,
-        key=lambda e: (e.start, e.priority, (e.task_name or "").lower()),
-    )
-    primary, secondary = [], []
-    for i, ev in enumerate(ordered):
-        (primary if i % 2 == 0 else secondary).append(ev)
-    return primary, secondary
-
-
-def _layout_one_side(
-    events: Sequence[Event],
-    *,
-    axis_origin: tuple[float, float],
-    axis_length: float,
-    direction: Orientation,
-    side: Side,
+def _re_anchor_and_stub(
+    placements: list[CalloutPlacement],
     config: CalendarConfig,
-    pos_for_day: Callable[[arrow.Arrow], float],
-    extra_width_for_event: Callable[[Event], float] | None = None,
-) -> list[PITPlacement]:
-    """Run labella for one concrete side and return placements."""
-    if not events:
-        return []
-    if side is Side.BOTH:
-        raise ValueError("_layout_one_side requires a concrete side")
+    direction: Orientation,
+) -> list[CalloutPlacement]:
+    """PIT post-pass over shared placements: re-anchor labels, add stubs.
 
-    if len(events) > PIT_MAX_EVENTS_PER_SIDE:
-        logger.warning(
-            "PIT: %d events on %s side exceeds soft cap of %d; "
-            "labella may not converge cleanly.",
-            len(events), side.value, PIT_MAX_EVENTS_PER_SIDE,
-        )
-
-    direction_str = labella_direction(direction, side)
-    node_height = _renderer_node_height(
-        events, config, direction,
-        extra_width_for_event=extra_width_for_event,
-    )
-    layer_gap = float(config.pit_labella_layer_gap)
-
-    def _extra(ev: Event) -> float:
-        if extra_width_for_event is None:
-            return 0.0
-        try:
-            return float(extra_width_for_event(ev) or 0.0)
-        except Exception:
-            return 0.0
-
-    # Build nodes.
-    nodes: list[Node] = []
-    for ev in events:
-        try:
-            day = arrow.get(ev.start, "YYYYMMDD")
-        except (arrow.ParserError, ValueError):
-            continue
-        ideal = pos_for_day(day)
-        width = _node_along_axis_extent(
-            ev, config, direction, extra_name_width=_extra(ev),
-        )
-        nodes.append(Node(idealPos=ideal, width=width, data=ev))
-
-    if not nodes:
-        return []
-
-    force = Force(
-        {
-            "minPos": 0.0,
-            "maxPos": axis_length,
-            "density": float(config.pit_labella_density),
-        }
-    )
-    force.nodes(nodes)
-    force.compute()
-
-    renderer = Renderer(
-        {
-            "layerGap": layer_gap,
-            "nodeHeight": node_height,
-            "direction": direction_str,
-        }
-    )
-    renderer.layout(nodes)
-
-    # Where the leader meets the box along the axis. labella reserves
-    # space centered on each node's currentPos, but its renderer reports
-    # the box origin (n.x / n.y) at currentPos itself — i.e. the leading
-    # edge. Shifting the box back onto currentPos ("center") makes the
-    # drawn geometry match labella's overlap model, so boxes that labella
-    # placed without collision actually render without collision.
+    Re-anchoring: labella reserves space centered on each node's
+    currentPos, but its renderer reports the box origin (n.x / n.y) at
+    currentPos itself — i.e. the leading edge. Shifting the box back onto
+    currentPos ("center") makes the drawn geometry match labella's
+    overlap model, so boxes that labella placed without collision
+    actually render without collision.
+    """
     anchor = getattr(config, "pit_leader_label_anchor", "center")
+    end_stub = float(config.pit_leader_end_stub)
+    start_stub = float(config.pit_leader_start_stub)
 
-    placements: list[PITPlacement] = []
-    ox, oy = axis_origin
-    for n in nodes:
-        x_label = ox + n.x
-        y_label = oy + n.y
-        label_w = n.dx
-        label_h = n.dy
-
+    out: list[CalloutPlacement] = []
+    for p in placements:
+        x_label, y_label = p.x_label, p.y_label
         # Re-anchor along the axis. Horizontal → shift x; vertical → y.
         if direction is Orientation.HORIZONTAL:
             if anchor == "center":
-                x_label -= label_w / 2.0
+                x_label -= p.label_w / 2.0
             elif anchor == "end":
-                x_label -= label_w
+                x_label -= p.label_w
         else:
             if anchor == "center":
-                y_label -= label_h / 2.0
+                y_label -= p.label_h / 2.0
             elif anchor == "end":
-                y_label -= label_h
+                y_label -= p.label_h
 
-        x_dot, y_dot = axis_to_xy(n.idealPos, direction, axis_origin)
-        leader = renderer.generatePath(n)
-        leader = _append_perp_stub(
-            leader, direction, float(config.pit_leader_end_stub)
-        )
-        leader = _prepend_perp_stub(
-            leader, direction, float(config.pit_leader_start_stub)
-        )
+        leader = _append_perp_stub(p.leader_path_d, direction, end_stub)
+        leader = _prepend_perp_stub(leader, direction, start_stub)
 
-        placements.append(
-            PITPlacement(
-                event=n.data,
-                x_dot=x_dot,
-                y_dot=y_dot,
-                x_label=x_label,
-                y_label=y_label,
-                label_w=label_w,
-                label_h=label_h,
-                layer=n.getLayerIndex(),
-                leader_path_d=leader,
-                axis_origin=axis_origin,
-                side=side,
-                direction=direction,
-            )
+        out.append(
+            replace(p, x_label=x_label, y_label=y_label, leader_path_d=leader)
         )
-    return placements
+    return out
 
 
 def layout_pit_callouts(
@@ -566,45 +431,39 @@ def layout_pit_callouts(
         config: Supplies font names/sizes and labella tuning.
         pos_for_day: Maps an arrow Date to a 1-D axis position in
             [0, axis_length].
+        extra_width_for_event: Optional per-event extra width for the
+            name line (label icon + gap).
 
     Returns:
         List of PITPlacement records. For BOTH, primary placements
         first, then secondary.
     """
-    if not events:
-        return []
+    extra = _extra_width_fn(extra_width_for_event)
 
-    if side is Side.BOTH:
-        primary_events, secondary_events = _partition_for_both(events)
-        primary = _layout_one_side(
-            primary_events,
-            axis_origin=axis_origin,
-            axis_length=axis_length,
-            direction=direction,
-            side=Side.PRIMARY,
-            config=config,
-            pos_for_day=pos_for_day,
-            extra_width_for_event=extra_width_for_event,
-        )
-        secondary = _layout_one_side(
-            secondary_events,
-            axis_origin=axis_origin,
-            axis_length=axis_length,
-            direction=direction,
-            side=opposite(Side.PRIMARY),
-            config=config,
-            pos_for_day=pos_for_day,
-            extra_width_for_event=extra_width_for_event,
-        )
-        return primary + secondary
+    def _warn_over_cap(side_events: Sequence[Event], concrete_side: Side) -> None:
+        if len(side_events) > PIT_MAX_EVENTS_PER_SIDE:
+            logger.warning(
+                "PIT: %d events on %s side exceeds soft cap of %d; "
+                "labella may not converge cleanly.",
+                len(side_events), concrete_side.value, PIT_MAX_EVENTS_PER_SIDE,
+            )
 
-    return _layout_one_side(
+    placements = _layout_callouts_shared(
         events,
         axis_origin=axis_origin,
         axis_length=axis_length,
-        direction=direction,
+        orientation=direction,
         side=side,
-        config=config,
         pos_for_day=pos_for_day,
-        extra_width_for_event=extra_width_for_event,
+        node_width=lambda ev: _node_along_axis_extent(
+            ev, config, direction, extra_name_width=extra(ev)
+        ),
+        node_height=lambda evs: _renderer_node_height(
+            evs, config, direction,
+            extra_width_for_event=extra_width_for_event,
+        ),
+        density=float(config.pit_labella_density),
+        layer_gap=float(config.pit_labella_layer_gap),
+        on_side_events=_warn_over_cap,
     )
+    return _re_anchor_and_stub(placements, config, direction)
