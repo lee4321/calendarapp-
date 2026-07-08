@@ -486,6 +486,12 @@ time_bands:
     label: Week
     label_format: Week {n}
 style_rules:
+  - name: timeline duration-bar fill opacity (ported from timeline.duration_bar_fill_opacity)
+    apply_to: line:duration_bar
+    select:
+      visualizer: timeline
+    style:
+      opacity: 0.25
   - name: base font — papersize override
     apply_to: text:base
     select:

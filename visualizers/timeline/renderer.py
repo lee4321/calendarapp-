@@ -126,7 +126,7 @@ class TimelineRenderer(BaseSVGRenderer):
     TOKENS = (
         "text:event_name", "text:event_notes", "text:event_date",
         "text:duration_date", "text:label", "text:today_label",
-        "line:axis", "line:today", "line:tick",
+        "line:axis", "line:today", "line:tick", "line:duration_bar",
         "icon:event", "icon:milestone",
     )
 
@@ -1271,10 +1271,16 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Duration bar.
         _dur_bar_style = config.get_line_style("ec-duration-bar")
+        # Bar-rect fill opacity is token-first: themes set it per-visualizer
+        # via a line:duration_bar rule with select: {visualizer: timeline}.
+        _tk_bar_opacity = self._tk("line:duration_bar").get("opacity")
         _sr = item.style or StyleResult()
         rect_kwargs = _sr.rect_overrides(
             fill=item.color,
-            fill_opacity=_dur_bar_style.opacity,
+            fill_opacity=(
+                _tk_bar_opacity if _tk_bar_opacity is not None
+                else _dur_bar_style.opacity
+            ),
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.9,
@@ -1607,10 +1613,16 @@ class TimelineRenderer(BaseSVGRenderer):
         bar_h = max(1.0, item.end_y - item.start_y)
 
         _dur_bar_style = config.get_line_style("ec-duration-bar")
+        # Bar-rect fill opacity is token-first: themes set it per-visualizer
+        # via a line:duration_bar rule with select: {visualizer: timeline}.
+        _tk_bar_opacity = self._tk("line:duration_bar").get("opacity")
         _sr = item.style or StyleResult()
         rect_kwargs = _sr.rect_overrides(
             fill=item.color,
-            fill_opacity=_dur_bar_style.opacity,
+            fill_opacity=(
+                _tk_bar_opacity if _tk_bar_opacity is not None
+                else _dur_bar_style.opacity
+            ),
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.9,

@@ -158,6 +158,12 @@ timeline_durations:
   date_font_size: 10
   date_color: black
 style_rules:
+  - name: timeline duration-bar fill opacity (ported from timeline.duration_bar_fill_opacity)
+    apply_to: line:duration_bar
+    select:
+      visualizer: timeline
+    style:
+      opacity: 0.75
   - name: base font — papersize override
     apply_to: text:base
     select:

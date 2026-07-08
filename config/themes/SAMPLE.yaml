@@ -136,6 +136,14 @@ excelheader:
       excel_font_size: 10
   vertical_lines: []
 style_rules:
+  # Per-visualizer token override example: timeline duration-bar fill opacity.
+  # (Bars in other visualizers read the shared ec-duration-bar element style.)
+  # - name: timeline duration-bar fill opacity
+  #   apply_to: line:duration_bar
+  #   select:
+  #     visualizer: timeline
+  #   style:
+  #     opacity: 0.75
   - name: define text:base
     define: text
     as: base
