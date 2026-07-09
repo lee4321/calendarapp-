@@ -335,6 +335,36 @@ def build_argv(command: str, values: dict, output_name: str) -> list[str]:
     return argv
 
 
+def preset_date_range(
+    preset: str, today: datetime.date | None = None
+) -> tuple[str, str] | None:
+    """Resolve a quick-range preset to ``(begin, end)`` YYYYMMDD strings.
+
+    Pure and window-free so it can be exercised headlessly. Returns ``None`` for
+    an unknown preset. Presets:
+      * ``"year"``    — Jan 1 .. Dec 31 of the current calendar year.
+      * ``"quarter"`` — first .. last day of the current calendar quarter.
+      * ``"90days"``  — today .. today + 90 days.
+    """
+    today = today or datetime.date.today()
+    if preset == "year":
+        begin = datetime.date(today.year, 1, 1)
+        end = datetime.date(today.year, 12, 31)
+    elif preset == "quarter":
+        start_month = ((today.month - 1) // 3) * 3 + 1  # 1, 4, 7, or 10
+        begin = datetime.date(today.year, start_month, 1)
+        end_month = start_month + 2  # 3, 6, 9, or 12 — always ends the quarter
+        # Quarter ends are Mar/Jun/Sep/Dec, so the last day is 31 or 30 (never Feb).
+        last_day = 31 if end_month in (3, 12) else 30
+        end = datetime.date(today.year, end_month, last_day)
+    elif preset == "90days":
+        begin = today
+        end = today + datetime.timedelta(days=90)
+    else:
+        return None
+    return begin.strftime("%Y%m%d"), end.strftime("%Y%m%d")
+
+
 def representative_values(command: str) -> dict:
     """Minimal, valid field values for headless coverage of ``command``.
 
@@ -368,6 +398,7 @@ class EcalendarApp:
         self.window = ui.MainWindow()
         self.window.generate = self._on_generate
         self.window.command_changed = self._on_command_changed
+        self.window.date_preset = self._on_date_preset
 
         # Cross-thread handoff: worker writes _result as one atomic tuple, the
         # poll Timer (on the loop thread) reads it. Everything the poller needs
@@ -381,6 +412,17 @@ class EcalendarApp:
 
     def _on_command_changed(self, index: int) -> None:
         self._apply_command(int(index))
+
+    # ----- quick-range date presets ------------------------------------------
+
+    def _on_date_preset(self, preset: str) -> None:
+        result = preset_date_range(str(preset))
+        if result is None:
+            return
+        begin, end = result
+        self.window.begin_date = begin
+        self.window.end_date = end
+        self.window.status_text = f"Set date range: {begin} – {end}"
 
     def _apply_command(self, index: int) -> None:
         index = max(0, min(index, len(COMMANDS) - 1))

@@ -201,6 +201,8 @@ export component MainWindow inherits Window {
 
     callback generate();
     callback command-changed(int);
+    // Quick-range preset: "year" | "quarter" | "90days". Python fills the dates.
+    callback date-preset(string);
 
     HorizontalBox {
         padding: 0px;
@@ -272,6 +274,14 @@ export component MainWindow inherits Window {
                                 if root.show_dates : LineEdit { text <=> root.begin_date; }
                                 if root.show_dates : Text { text: "End date (YYYYMMDD)"; }
                                 if root.show_dates : LineEdit { text <=> root.end_date; }
+                                if root.show_dates : Text { text: "Quick range  —  fills the dates above"; }
+                                if root.show_dates : HorizontalBox {
+                                    padding: 0px;
+                                    spacing: 6px;
+                                    Button { text: "This year"; clicked => { root.date-preset("year"); } }
+                                    Button { text: "This quarter"; clicked => { root.date-preset("quarter"); } }
+                                    Button { text: "Next 90 days"; clicked => { root.date-preset("90days"); } }
+                                }
                                 if root.show_database : Text { text: "Database"; }
                                 if root.show_database : LineEdit { text <=> root.database; }
                                 if root.show_country : Text { text: "Country code(s)  —  blank = US,CA"; }
