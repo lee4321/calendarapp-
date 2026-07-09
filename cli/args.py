@@ -151,7 +151,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     ───────────────────────────────────────────
     - Database Options        --database, --country
     - Output Options          --outputfile, --papersize, --orientation, --shrink
-    - Layout Options          --weekends, --header, --footer, --margin, --overflow
+    - Layout Options          --weekends, --header, --footer, --margin
+
+    Options that a view's renderer never reads are not registered on that
+    view's parser (per-view audit: docs/cli_theme_overrides.html, Appendix A).
+    E.g. --monthnames and --overflow are weekly-only, --shade exists only on
+    the day-grid views, and pit has no --nodurations (it always drops
+    multi-day durations).
     - Header/Footer text      --headerleft, --headercenter, --headerright, …
     - Watermark Options       --watermark-text, --watermark-rotation-angle, --watermark-image
     - Content Filtering       --noevents, --nodurations, --ignorecomplete,
@@ -594,12 +600,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Show only rollup entries",
     )
     _ebp_content.add_argument(
-        "--includenotes",
-        "-notes",
-        action="store_true",
-        help="Include notes (mirrors blockplan --includenotes)",
-    )
-    _ebp_content.add_argument(
         "--WBS",
         type=str,
         default="",
@@ -780,6 +780,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         compactplan,
     )
 
+    # Per-view option gating.  A flag whose value a view's renderer never
+    # reads is not registered on that view's parser at all
+    # (docs/cli_theme_overrides.html, Appendix A):
+    #   --shade         day-grid views only (shared day-style resolver)
+    #   --weekend-days  views that classify days via config.get_weekend_days()
+    #   --includenotes  views that render a notes line with event names
+    _shade_views = (weekly, mini, mini_icon, candybar)
+    _weekend_days_views = (weekly, timeline, blockplan, compactplan)
+    _includenotes_views = (weekly, timeline, pit, blockplan, compactplan)
+
     # Output options (SVG views: all options; text-mini: outputfile only)
     for view_parser in _svg_views:
         output_group = view_parser.add_argument_group("Output Options")
@@ -815,14 +825,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             choices=["portrait", "landscape"],
             help="Page orientation (default: landscape)",
         )
-        output_group.add_argument(
-            "--shrink",
-            action="store_true",
-            help=(
-                "Shrink SVG width/height/viewBox to the bounding box of "
-                "rendered content, removing blank page whitespace."
-            ),
-        )
+        if view_parser is not compactplan:
+            # compactplan always shrinks to content; the flag adds nothing there.
+            output_group.add_argument(
+                "--shrink",
+                action="store_true",
+                help=(
+                    "Shrink SVG width/height/viewBox to the bounding box of "
+                    "rendered content, removing blank page whitespace."
+                ),
+            )
         output_group.add_argument(
             "--embed-data",
             action="store_true",
@@ -857,17 +869,18 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "4=half weekends Monday start"
             ),
         )
-        layout_group.add_argument(
-            "--weekend-days",
-            type=str,
-            default=None,
-            metavar="DAYS",
-            help=(
-                "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
-                "non-working days for holiday/weekend classification. "
-                "Defaults to Sat/Sun when weekends are shown."
-            ),
-        )
+        if view_parser in _weekend_days_views:
+            layout_group.add_argument(
+                "--weekend-days",
+                type=str,
+                default=None,
+                metavar="DAYS",
+                help=(
+                    "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
+                    "non-working days for holiday/weekend classification. "
+                    "Defaults to Sat/Sun when weekends are shown."
+                ),
+            )
         layout_group.add_argument(
             "--margin",
             "-m",
@@ -886,12 +899,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Include page footer",
         )
-        layout_group.add_argument(
-            "--monthnames",
-            "-mn",
-            action="store_true",
-            help="Show month names on calendar",
-        )
+        if view_parser is weekly:
+            # include_month_name is read only by the weekly renderer.
+            layout_group.add_argument(
+                "--monthnames",
+                "-mn",
+                action="store_true",
+                help="Show month names on calendar",
+            )
         # Header/Footer text
         text_group = view_parser.add_argument_group("Header/Footer Text")
         text_group.add_argument(
@@ -933,7 +948,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Watermark image file",
         )
 
-        # Content filtering (SVG views include --shade and --overflow)
+        # Content filtering (day-grid views additionally get --shade; weekly
+        # alone gets --overflow)
         content_group = view_parser.add_argument_group("Content Filtering")
         content_group.add_argument(
             "--empty",
@@ -941,24 +957,27 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Create blank calendar (no events)",
         )
-        content_group.add_argument(
-            "--shade",
-            "-sh",
-            action="store_true",
-            help="Shade current date",
-        )
+        if view_parser in _shade_views:
+            content_group.add_argument(
+                "--shade",
+                "-sh",
+                action="store_true",
+                help="Shade current date",
+            )
         content_group.add_argument(
             "--noevents",
             "-ne",
             action="store_true",
             help="Exclude single-day events",
         )
-        content_group.add_argument(
-            "--nodurations",
-            "-nd",
-            action="store_true",
-            help="Exclude multi-day durations",
-        )
+        if view_parser is not pit:
+            # PIT drops multi-day durations unconditionally.
+            content_group.add_argument(
+                "--nodurations",
+                "-nd",
+                action="store_true",
+                help="Exclude multi-day durations",
+            )
         content_group.add_argument(
             "--ignorecomplete",
             "-ic",
@@ -977,12 +996,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Show only rollup entries",
         )
-        content_group.add_argument(
-            "--includenotes",
-            "-notes",
-            action="store_true",
-            help="Show notes with event names",
-        )
+        if view_parser in _includenotes_views:
+            content_group.add_argument(
+                "--includenotes",
+                "-notes",
+                action="store_true",
+                help="Show notes with event names",
+            )
         content_group.add_argument(
             "--WBS",
             type=str,
@@ -1004,12 +1024,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "Use 'all' for no filter. Default: active."
             ),
         )
-        content_group.add_argument(
-            "--overflow",
-            "-x",
-            action="store_true",
-            help="Create overflow page showing items",
-        )
+        if view_parser is weekly:
+            content_group.add_argument(
+                "--overflow",
+                "-x",
+                action="store_true",
+                help="Create overflow page showing items",
+            )
         content_group.add_argument(
             "--country",
             "-cc",
@@ -1024,7 +1045,9 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             ),
         )
 
-    # text-mini: weekends + content filtering only (no SVG layout, header/footer, watermark, shade, overflow)
+    # text-mini: weekends + content filtering only (no SVG layout,
+    # header/footer, watermark, shade, overflow; its renderer also never
+    # reads weekend_days or include_notes)
     _tm_layout = text_mini.add_argument_group("Layout Options")
     _tm_layout.add_argument(
         "--weekends",
@@ -1039,16 +1062,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "2=half weekends Sunday start, "
             "3=full week Monday start, "
             "4=half weekends Monday start"
-        ),
-    )
-    _tm_layout.add_argument(
-        "--weekend-days",
-        type=str,
-        default=None,
-        metavar="DAYS",
-        help=(
-            "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
-            "non-working days for holiday/weekend classification."
         ),
     )
     _tm_content = text_mini.add_argument_group("Content Filtering")
@@ -1087,12 +1100,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         "-ro",
         action="store_true",
         help="Show only rollup entries",
-    )
-    _tm_content.add_argument(
-        "--includenotes",
-        "-notes",
-        action="store_true",
-        help="Show notes with event names",
     )
     _tm_content.add_argument(
         "--WBS",
@@ -1151,17 +1158,19 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Number of rows of months (0 = auto from date range)",
         )
         g.add_argument(
+            "--mini-no-adjacent",
+            "-mna",
+            action="store_true",
+            help="Hide leading/trailing days from adjacent months",
+        )
+    # SVG mini views only — the text-mini month title is hardcoded.
+    for g in (mini_group, mini_icon_group):
+        g.add_argument(
             "--mini-title-format",
             type=str,
             default=None,
             metavar="FMT",
             help="Format string for month title (default: MMM YY)",
-        )
-        g.add_argument(
-            "--mini-no-adjacent",
-            "-mna",
-            action="store_true",
-            help="Hide leading/trailing days from adjacent months",
         )
     mini_group.add_argument(
         "--mini-grid-lines",

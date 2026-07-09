@@ -165,7 +165,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
 | `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
 | `--watermark-image`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
-| `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
+| `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `pit`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
 | `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
 | `--margin`, `-m` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Add page margins | `blockplan`: default `False` |
@@ -175,9 +175,9 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (default: squares) | `mini-icon`: choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
 | `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | `mini`: default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
-| `--mini-title-format` | `FMT` | `mini`, `mini-icon`, `text-mini` | Arrow format string for month title (default: MMM YY) |  |
-| `--monthnames`, `-mn` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Show month names on calendar | `blockplan`: default `False` |
-| `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
+| `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Arrow format string for month title (default: MMM YY) |  |
+| `--monthnames`, `-mn` |  | `weekly` | Show month names on calendar | default `False` |
+| `--nodurations`, `-nd` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
 | `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. | |
@@ -187,8 +187,8 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
 | `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
 | `--rows`, `-rows` | `N` | `iconsheet` | Number of icon rows per page (requires `--paginate`) | `iconsheet`: default `10` |
-| `--shade`, `-sh` |  | `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
-| `--shrink` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | `blockplan`: default `False` |
+| `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
+| `--shrink` |  | `blockplan`, `candybar`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. (`compactplan` and `candybar` always shrink.) | `blockplan`: default `False` |
 | `--sized` | `N` | `iconsheet` | Icon render box size in points (one integer sets width = height; label/spacing gaps unchanged). Requires `--paginate`. | `iconsheet`: default `24` |
 | `--status` | `LIST` | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include. Allowed values: `active`, `draft`, `cancelled`, `archived`, `on-hold`. Use `all` for no filter. Default: `active`. See [Event Status](#event-status) for details. | default `active` |
 | `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
@@ -199,7 +199,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--watermark-text`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
 | `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
-| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated ISO weekday list (`0=Mon..6=Sun`) marking non-working days for holiday/weekend classification. Overrides the implicit Sat/Sun pair selected by `--weekends`. |  |
+| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `excelheader`, `timeline`, `weekly` | Comma-separated ISO weekday list (`0=Mon..6=Sun`) marking non-working days for holiday/weekend classification. Overrides the implicit Sat/Sun pair selected by `--weekends`. |  |
 | `--weekends`, `-we` |  | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start | `blockplan`: default `0`; choices `0, 1, 2, 3, 4` |
 | `--weeknumbers`, `-wn` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Show week numbers | default `False` |
 
@@ -252,7 +252,8 @@ rows with one record per event/duration sourced from the events table. The
 command-line surface mirrors `blockplan` so the same filter flags work:
 `--theme`, `--weekends`, `--weekend-days`, `--country`, `--noevents`,
 `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`,
-`--includenotes`, `--WBS`, `--status`, `--empty`.
+`--WBS`, `--status`, `--empty`. (There is no `--includenotes` — the
+Notes column is always emitted.)
 
 Data-row behavior:
 
@@ -368,7 +369,7 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 **Layout auto-scaling:** The grid always fits all requested rows within the available content area. When the width-derived square-cell size would cause the bottom rows to overflow the page (common in landscape orientation with many rows), the cell height is reduced to fit — cells become slightly shorter than wide but remain visually compact.
 
 **Inherited `mini` options** — all flags and config fields that apply to `mini` also apply to `mini-icon`, including:
-`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--weekend-days`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
+`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
 
 ### `candybar`
 
@@ -420,7 +421,7 @@ The `corporate` theme ships with both enabled as a demonstration.
 | `--candybar-weekend-fill` | `COLOR` | Shade Sat/Sun day cells (default: no weekend shading). |
 | `--candybar-month-shading` |  | Tint day cells per month (alternating bands; theme sets colors). |
 
-Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and all event filter flags).
+Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`, `--empty`).
 
 ### `palettesheet`
 
@@ -495,7 +496,7 @@ In timeline, single-day events and multi-day durations are rendered differently 
 - Event markers on the main axis are always plain circles; event icons, when present and found in the icon table, appear inside the event callout box next to the title instead of on the axis marker.
 - Duration items render as a horizontal bar with start and end circles on the axis, plus start/end date labels below the bar.
 - Event callout boxes are lane-positioned and horizontally offset to reduce collisions. Their connector lines are routed to avoid other boxes when possible.
-- The `--shade` flag does not shade timeline events or bars. Instead, the timeline has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
+- The timeline does not take a `--shade` flag. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
 
 ### `weekly`
 

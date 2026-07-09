@@ -107,7 +107,6 @@ export component MainWindow inherits Window {
     in-out property <string> today_line_length: "";
     in-out property <string> today_line_direction: "(default)";
     in-out property <string> label_fill_opacity: "";
-    in-out property <string> duration_fill_opacity: "";
 
     // ===== PIT: axis & ticks =====
     in-out property <string> direction: "(default)";
@@ -164,18 +163,23 @@ export component MainWindow inherits Window {
     in property <bool> show_database: true;
     in property <bool> show_theme: true;
     in property <bool> show_page: true;          // papersize/orientation/shrink/embed
+    in property <bool> page_has_shrink: true;     // --shrink (not compactplan)
     in property <bool> show_weekends: true;       // weekends + weekend-days
+    in property <bool> weekends_has_days: true;   // --weekend-days
     in property <bool> show_layout_page: true;    // margin/header/footer/monthnames
+    in property <bool> layout_has_monthnames: true; // --monthnames (weekly only)
     in property <bool> show_headerfooter: true;
     in property <bool> show_watermark: true;
     in property <bool> show_country: true;
     in property <bool> show_content: true;
     in property <bool> cf_empty: true;
     in property <bool> cf_shade: true;
+    in property <bool> cf_nodurations: true;
     in property <bool> cf_overflow: true;
     in property <bool> cf_includenotes: true;
     in property <bool> show_weeknum: false;
     in property <bool> show_mini: false;
+    in property <bool> mini_has_title_format: true; // --mini-title-format (not text-mini)
     in property <bool> show_mini_extra: false;    // grid-lines/details
     in property <bool> show_miniicon: false;
     in property <bool> show_candybar: false;
@@ -329,7 +333,7 @@ export component MainWindow inherits Window {
                                     model: ["landscape", "portrait"];
                                     current-value <=> root.orientation;
                                 }
-                                if root.show_page : CheckBox { text: "Shrink to content bbox"; checked <=> root.shrink; }
+                                if root.show_page && root.page_has_shrink : CheckBox { text: "Shrink to content bbox"; checked <=> root.shrink; }
                                 if root.show_page : CheckBox { text: "Embed source data (CSV)"; checked <=> root.embed_data; }
                             }
                         }
@@ -350,10 +354,10 @@ export component MainWindow inherits Window {
                                     ];
                                     current-index <=> root.weekends_index;
                                 }
-                                if root.show_weekends : Text { text: "Weekend days (0=Mon..6=Sun)"; }
-                                if root.show_weekends : LineEdit { text <=> root.weekend_days; placeholder-text: "e.g. 5,6"; }
+                                if root.show_weekends && root.weekends_has_days : Text { text: "Weekend days (0=Mon..6=Sun)"; }
+                                if root.show_weekends && root.weekends_has_days : LineEdit { text <=> root.weekend_days; placeholder-text: "e.g. 5,6"; }
                                 if root.show_layout_page : CheckBox { text: "Page margins"; checked <=> root.margin; }
-                                if root.show_layout_page : CheckBox { text: "Show month names"; checked <=> root.monthnames; }
+                                if root.show_layout_page && root.layout_has_monthnames : CheckBox { text: "Show month names"; checked <=> root.monthnames; }
                             }
                         }
 
@@ -395,7 +399,7 @@ export component MainWindow inherits Window {
                                 if root.cf_empty : CheckBox { text: "Empty (no events)"; checked <=> root.empty; }
                                 if root.cf_shade : CheckBox { text: "Shade today"; checked <=> root.shade; }
                                 CheckBox { text: "Exclude single-day events"; checked <=> root.no_events; }
-                                CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
+                                if root.cf_nodurations : CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
                                 CheckBox { text: "Ignore 100% complete"; checked <=> root.ignore_complete; }
                                 CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
                                 CheckBox { text: "Rollups only"; checked <=> root.rollups_only; }
@@ -433,8 +437,8 @@ export component MainWindow inherits Window {
                                 LineEdit { text <=> root.mini_columns; placeholder-text: "blank = 3"; }
                                 Text { text: "Rows (0 = auto)"; }
                                 LineEdit { text <=> root.mini_rows; placeholder-text: "blank = auto"; }
-                                Text { text: "Title format"; }
-                                LineEdit { text <=> root.mini_title_format; placeholder-text: "blank = MMM YY"; }
+                                if root.mini_has_title_format : Text { text: "Title format"; }
+                                if root.mini_has_title_format : LineEdit { text <=> root.mini_title_format; placeholder-text: "blank = MMM YY"; }
                                 CheckBox { text: "Hide adjacent-month days"; checked <=> root.mini_no_adjacent; }
                                 if root.show_mini_extra : CheckBox { text: "Draw grid lines"; checked <=> root.mini_grid_lines; }
                                 if root.show_mini_extra : CheckBox { text: "Also emit details SVG"; checked <=> root.mini_details; }
@@ -486,8 +490,6 @@ export component MainWindow inherits Window {
                                 }
                                 Text { text: "Label fill opacity (0.0–1.0)"; }
                                 LineEdit { text <=> root.label_fill_opacity; placeholder-text: "blank = 0.25"; }
-                                Text { text: "Duration fill opacity (0.0–1.0)"; }
-                                LineEdit { text <=> root.duration_fill_opacity; placeholder-text: "blank = 0.25"; }
                             }
                         }
 

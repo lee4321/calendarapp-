@@ -174,7 +174,6 @@ FIELDS: list[tuple[str, str, str]] = [
     ("today_line_length", "--today-line-length", "value"),
     ("today_line_direction", "--today-line-direction", "value"),
     ("label_fill_opacity", "--label-fill-opacity", "value"),
-    ("duration_fill_opacity", "--duration-fill-opacity", "value"),
     # PIT — axis & ticks
     ("direction", "--direction", "value"),
     ("label_side", "--label-side", "value"),
@@ -445,18 +444,23 @@ class EcalendarApp:
         w.show_database = has("--database")
         w.show_theme = has("--theme")
         w.show_page = has("--papersize")
+        w.page_has_shrink = has("--shrink")
         w.show_weekends = has("--weekends")
+        w.weekends_has_days = has("--weekend-days")
         w.show_layout_page = has("--margin")
+        w.layout_has_monthnames = has("--monthnames")
         w.show_headerfooter = has("--headerleft")
         w.show_watermark = has("--watermark-text")
         w.show_country = has("--country")
         w.show_content = bool(flags & content_flags)
         w.cf_empty = has("--empty")
         w.cf_shade = has("--shade")
+        w.cf_nodurations = has("--nodurations")
         w.cf_overflow = has("--overflow")
         w.cf_includenotes = has("--includenotes")
         w.show_weeknum = has("--weeknumbers")
         w.show_mini = has("--mini-columns")
+        w.mini_has_title_format = has("--mini-title-format")
         w.show_mini_extra = has("--mini-grid-lines")
         w.show_miniicon = has("--mini-icon-set")
         w.show_candybar = has("--candybar-row-height")

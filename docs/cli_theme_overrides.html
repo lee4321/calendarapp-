@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventCalendar — CLI Options That Override Theme Values</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6470;
+    --border: #d7dce2; --head-bg: #f2f4f7; --row-alt: #f8fafb;
+    --accent: #0b5fa5; --code-bg: #eef1f4;
+    --win-cli-bg: #e3f2e6; --win-cli-fg: #1a6b2f;
+    --win-theme-bg: #fdeaea; --win-theme-fg: #a02121;
+    --win-part-bg: #fff4dd; --win-part-fg: #8a5a00;
+    --warn-bg: #fff8e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #dfe3e8; --muted: #98a2ae;
+      --border: #333a43; --head-bg: #21252c; --row-alt: #1b1f25;
+      --accent: #5aa8e0; --code-bg: #262b33;
+      --win-cli-bg: #17321d; --win-cli-fg: #7fd695;
+      --win-theme-bg: #3a1c1c; --win-theme-fg: #f0908f;
+      --win-part-bg: #37300f; --win-part-fg: #e8c15e;
+      --warn-bg: #2b2618;
+    }
+  }
+  body {
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--fg); background: var(--bg);
+    max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 4rem;
+  }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.2rem; margin-top: 2.4rem; border-bottom: 2px solid var(--border); padding-bottom: .3rem; }
+  h3 { font-size: 1.02rem; margin-top: 1.6rem; }
+  .subtitle { color: var(--muted); margin: 0 0 1.2rem; }
+  code, .opt {
+    font: 13px/1.4 "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    background: var(--code-bg); border-radius: 4px; padding: 1px 5px;
+    white-space: nowrap;
+  }
+  table { border-collapse: collapse; width: 100%; margin: .8rem 0 1.4rem; font-size: 13.5px; }
+  th, td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--head-bg); font-weight: 600; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  .tablewrap { overflow-x: auto; }
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    padding: 1px 8px; border-radius: 10px; white-space: nowrap;
+  }
+  .cli   { background: var(--win-cli-bg);   color: var(--win-cli-fg); }
+  .theme { background: var(--win-theme-bg); color: var(--win-theme-fg); }
+  .part  { background: var(--win-part-bg);  color: var(--win-part-fg); }
+  .note {
+    background: var(--warn-bg); border: 1px solid var(--border);
+    border-left: 4px solid var(--win-part-fg);
+    border-radius: 6px; padding: .7rem 1rem; margin: 1rem 0;
+  }
+  .verified { color: var(--win-cli-fg); font-weight: 700; }
+  .small { font-size: 12.5px; color: var(--muted); }
+  ul { margin: .4rem 0 .9rem; }
+  li { margin: .15rem 0; }
+</style>
+</head>
+<body>
+
+<h1>CLI Options That Override Theme Values</h1>
+<p class="subtitle">
+  EventCalendar v9 — full review of visualizer CLI options vs. theme-settable config fields.<br>
+  Generated 2026-07-09 from <code>cli/args.py</code>, <code>cli/config_assembly.py</code>,
+  <code>config/theme_engine.py</code>, and <code>ecalendar.run()</code>; precedence verified
+  empirically by capturing the final <code>CalendarConfig</code> handed to each visualizer.
+</p>
+
+<div class="note">
+  <strong>How precedence actually works.</strong> For calendar views, <code>run()</code> applies
+  CLI arguments first, then applies the theme <em>twice</em> (before and after
+  <code>setfontsizes()</code>). After the second theme pass,
+  <code>_reapply_post_theme_cli_overrides()</code> re-asserts only a small hand-picked set of CLI
+  flags. Consequence: <span class="badge cli">CLI wins</span> only for that re-asserted set;
+  for every other overlapping option the <span class="badge theme">theme wins</span> whenever the
+  loaded theme defines the same key — the explicit CLI value is silently discarded. This
+  contradicts the theme engine's documented contract
+  (<code>theme_engine.py</code> line 11: “CLI arguments always override theme values.”).
+  Rows marked ✓ were verified end-to-end with a conflicting theme + CLI value.
+</div>
+
+<h2>1&nbsp;&nbsp;True overrides — CLI wins over the theme</h2>
+<p>These options set a theme-settable field <em>and</em> are re-asserted after the final theme
+apply, so an explicit CLI value always takes effect.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Subcommands</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--mini-no-adjacent</span></td><td>mini, mini-icon, text-mini</td><td><code>mini_show_adjacent</code></td><td><code>mini_calendar.show_adjacent</code></td><td><span class="badge cli">CLI wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--direction</span></td><td>pit</td><td><code>pit_direction</code></td><td><code>pit.direction</code></td><td><span class="badge cli">CLI wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--label-side</span></td><td>pit</td><td><code>pit_label_side</code></td><td><code>pit.label_side</code></td><td><span class="badge cli">CLI wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--marker-size</span></td><td>pit</td><td><code>pit_marker_size</code></td><td><code>pit.axis.marker_size</code></td><td><span class="badge cli">CLI wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--label-icon-size</span></td><td>pit</td><td><code>pit_label_icon_size</code></td><td><code>pit.label.icon_size</code></td><td><span class="badge cli">CLI wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--label-icon-gap</span></td><td>pit</td><td><code>pit_label_icon_gap</code></td><td><code>pit.label.icon_gap</code></td><td><span class="badge cli">CLI wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--today-line / --no-today-line</span></td><td>pit</td><td><code>pit_show_today_line</code></td><td><code>pit.today_line.show</code></td><td><span class="badge cli">CLI wins</span></td><td class="verified">✓</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>2&nbsp;&nbsp;Overlapping options where the theme wins</h2>
+<p>These options write to a field the theme can also set, but they are <em>not</em> re-asserted
+after the second theme apply. They work normally when the theme omits the key; when the theme
+defines it, the CLI value is <strong>silently ignored</strong>.</p>
+
+<h3>All SVG views</h3>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Subcommands</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--watermark-text</span></td><td>all SVG views</td><td><code>watermark_text</code></td><td><code>watermark.text</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--watermark-rotation-angle</span></td><td>all SVG views</td><td><code>watermark_rotation_angle</code></td><td><code>watermark.rotation_angle</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--fiscal-year-offset</span></td><td>all calendar views</td><td><code>fiscal_year_offset</code></td><td><code>fiscal.year_offset</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Mini family</h3>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Subcommands</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--mini-title-format</span></td><td>mini, mini-icon</td><td><code>mini_title_format</code></td><td><code>mini_calendar.title_format</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--mini-grid-lines</span></td><td>mini, mini-icon</td><td><code>mini_grid_lines</code></td><td><code>mini_calendar.grid_lines</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Candybar</h3>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--candybar-row-height</span></td><td><code>candybar_row_height</code></td><td><code>candybar.row_height</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--candybar-cell-width</span></td><td><code>candybar_cell_width</code></td><td><code>candybar.cell_width</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-max-rows-per-page</span></td><td><code>candybar_max_rows_per_page</code></td><td><code>candybar.max_rows_per_page</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-suppress-weekends</span></td><td><code>candybar_suppress_weekends</code></td><td><code>candybar.suppress_weekends</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-no-week-numbers</span></td><td><code>candybar_show_week_numbers</code></td><td><code>candybar.show_week_numbers</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-month-side</span></td><td><code>candybar_month_label_side</code></td><td><code>candybar.month_label_side</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-month-rotation</span></td><td><code>candybar_month_rotation</code></td><td><code>candybar.month.rotation</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--candybar-weekend-fill</span></td><td><code>candybar_weekend_fill</code></td><td><code>candybar.weekend_fill</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--candybar-month-shading</span></td><td><code>candybar_month_shading</code></td><td><code>candybar.month_shading</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Timeline</h3>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--label-fill-opacity</span></td><td><code>timeline_label_fill_opacity</code></td><td><code>timeline.label_fill_opacity</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--fiscal-show-periods</span></td><td><code>timeline_show_fiscal_periods</code></td><td><code>timeline.show_fiscal_periods</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--fiscal-show-quarters</span></td><td><code>timeline_show_fiscal_quarters</code></td><td><code>timeline.show_fiscal_quarters</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>PIT (points in time)</h3>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Config field</th><th>Theme YAML key</th><th>Winner</th><th>Verified</th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span class="opt">--tick-unit</span></td><td><code>pit_tick_unit</code></td><td><code>pit.tick_unit</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--tick-interval</span></td><td><code>pit_tick_interval</code></td><td><code>pit.tick_interval</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--tick-label-format</span></td><td><code>pit_tick_label_format</code></td><td><code>pit.tick_label_format</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--tick-length</span></td><td><code>pit_tick_length</code></td><td><code>pit.tick_length</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--no-ticks</span></td><td><code>pit_show_ticks</code></td><td><code>pit.show_ticks</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--no-tick-labels</span></td><td><code>pit_show_tick_labels</code></td><td><code>pit.show_tick_labels</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--date-placement</span></td><td><code>pit_date_placement</code></td><td><code>pit.date_text.placement</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--today-label</span></td><td><code>pit_today_line_label</code></td><td><code>pit.today_line.label</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--event-icon</span></td><td><code>pit_default_event_icon</code></td><td><code>pit.default_event_icon</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--milestone-icon</span></td><td><code>pit_default_milestone_icon</code></td><td><code>pit.default_milestone_icon</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--leader-dash</span></td><td><code>pit_leader_stroke_dasharray</code></td><td><code>pit.leader.dasharray</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--leader-label-anchor</span></td><td><code>pit_leader_label_anchor</code></td><td><code>pit.leader_label_anchor</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+    <tr><td><span class="opt">--leader-length</span></td><td><code>pit_labella_layer_gap</code></td><td><code>pit.labella.layer_gap</code></td><td><span class="badge theme">Theme wins</span></td><td></td></tr>
+    <tr><td><span class="opt">--leader-stub</span></td><td><code>pit_leader_end_stub</code></td><td><code>pit.leader.end_stub</code></td><td><span class="badge theme">Theme wins</span></td><td class="verified">✓</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>3&nbsp;&nbsp;Partial overlap</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr>
+    <th>CLI option</th><th>Subcommands</th><th>Config field</th><th>Theme YAML key</th><th>Behavior</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="opt">--margin</span></td><td>all SVG views</td>
+      <td><code>include_margin</code>, <code>margin_*</code></td>
+      <td><code>layout.margin.{top,right,bottom,left}</code></td>
+      <td><span class="badge part">Complementary</span> — <span class="opt">--margin</span> enables
+      symmetric percentage margins; a theme <code>layout.margin</code> block forces
+      <code>include_margin = True</code> (even without the flag) and sets explicit per-side values,
+      which take precedence over the percentage default. The CLI flag cannot disable theme margins. Verified ✓.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p class="small">
+  <strong>Excel views:</strong> <code>excelheader</code> and <code>excelblockplan</code> apply the
+  theme once, after their CLI assignments; none of their CLI options
+  (<span class="opt">--weekends</span>, <span class="opt">--weekend-days</span>,
+  <span class="opt">--country</span>, content filters) map to theme-settable fields, so they have
+  no CLI/theme overlaps.
+</p>
+
+<h2>Appendix A&nbsp;&nbsp;Options with no effect on output (per visualization)</h2>
+<p>Every option accepted by a subcommand's parser whose value never influences that subcommand's
+output. “Warned” = <code>ecalendar.run()</code> prints a “not supported … will be ignored”
+warning; “Silent” = accepted with no feedback.</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Subcommand</th><th>No-effect options</th><th>Feedback</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>weekly</td><td>— none</td><td></td><td>All options are consumed.</td></tr>
+    <tr><td rowspan="3">mini / mini-icon</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--overflow</span></td><td>Warned</td>
+        <td><code>include_month_name</code> is read only by the weekly renderer; the mini renderer always reports 0 overflow entries.</td></tr>
+    <tr><td><span class="opt">--includenotes</span></td><td>Silent</td>
+        <td><code>include_notes</code> is never read by the mini family — the grid never shows notes, and the <span class="opt">--mini-details</span> page always shows them.</td></tr>
+    <tr><td><span class="opt">--weekend-days</span></td><td>Silent</td>
+        <td>Only consumed via <code>config.get_weekend_days()</code> in <code>shared/day_classifier.py</code>, which the mini family does not use.</td></tr>
+    <tr><td>candybar</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--overflow</span> (warned); <span class="opt">--includenotes</span>, <span class="opt">--weekend-days</span> (silent)</td><td>Mixed</td>
+        <td>Same reasons as mini (candybar reuses the mini renderer/day-style engine). Note <span class="opt">--shade</span> and <span class="opt">--fiscal-colors</span> <em>do</em> work on candybar via the shared day-style resolver.</td></tr>
+    <tr><td rowspan="2">text-mini</td>
+        <td><span class="opt">--mini-title-format</span></td><td>Silent</td>
+        <td>Month title is hardcoded to <code>arrow.format("MMMM")</code> in <code>text_mini/renderer.py</code>.</td></tr>
+    <tr><td><span class="opt">--includenotes</span>, <span class="opt">--weekend-days</span></td><td>Silent</td>
+        <td>Neither field is read by the text-mini renderer.</td></tr>
+    <tr><td>timeline</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
+        <td>Timeline draws no day grid or overflow page. (<span class="opt">--weekends</span>/<span class="opt">--weekend-days</span> <em>do</em> affect timeline via the day classifier.)</td></tr>
+    <tr><td rowspan="2">pit</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
+        <td>No day grid / overflow page.</td></tr>
+    <tr><td><span class="opt">--nodurations</span>, <span class="opt">--weekend-days</span></td><td>Silent</td>
+        <td>PIT drops multi-day durations unconditionally, so <span class="opt">--nodurations</span> is a no-op; PIT performs no weekend classification.</td></tr>
+    <tr><td>blockplan</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
+        <td>No day grid / overflow page.</td></tr>
+    <tr><td>compactplan</td>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span> (warned); <span class="opt">--shrink</span> (redundant)</td><td>Mixed</td>
+        <td>No day grid / overflow page; compactplan always shrinks to content, so the flag adds nothing (and is spuriously warned).</td></tr>
+    <tr><td>excelheader</td><td>— none</td><td></td><td>All options are consumed.</td></tr>
+    <tr><td>excelblockplan</td>
+        <td><span class="opt">--includenotes</span></td><td>Silent</td>
+        <td><code>config.include_notes</code> is set but never read by <code>generate_excel_blockplan()</code>; the Notes column is always emitted.</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">
+  Also: <span class="opt">--monthnames</span> writes <code>include_month_number = False</code>, but
+  <code>include_month_number</code> has <strong>no readers anywhere</strong> — it is a dead config field.
+  And every option in Section 2 becomes a conditional no-op whenever the loaded theme defines the same key.
+</p>
+
+<h2>Appendix B&nbsp;&nbsp;Spurious “will be ignored” warnings (options that actually work)</h2>
+<p>The <code>_svg_layout_checks</code> table in <code>ecalendar.run()</code> compares option names
+against <code>visualizer.supported_options</code>, but several names appear in no supported list
+(or the work happens in the shared <code>BaseSVGRenderer</code> regardless), so the warning is wrong:</p>
+<ul>
+  <li><span class="opt">--headerleft</span> / <span class="opt">--headercenter</span> /
+      <span class="opt">--headerright</span> / <span class="opt">--footerleft</span> /
+      <span class="opt">--footercenter</span> / <span class="opt">--footerright</span> —
+      warned on <em>every</em> view, yet render on every view when <span class="opt">--header</span>/<span class="opt">--footer</span> is enabled (verified ✓).</li>
+  <li><span class="opt">--watermark-rotation-angle</span> — warned on every view; applied by
+      <code>BaseSVGRenderer._render_text_watermark()</code> on every view.</li>
+  <li><span class="opt">--shrink</span> — warned on weekly, blockplan, compactplan; the viewBox
+      recomputation runs in <code>BaseSVGRenderer</code> for all views regardless (verified ✓ on weekly).</li>
+</ul>
+
+<p class="small">Review method: static trace of <code>argparse</code> option → <code>CalendarConfig</code>
+field → renderer/layout reads (including <code>getattr</code>-string access), cross-referenced with
+<code>THEME_TO_CONFIG_MAP</code>, <code>_apply_pit_blocks()</code>, <code>_apply_layout_overrides()</code>
+and <code>_reapply_post_theme_cli_overrides()</code>; precedence confirmed by running the real
+<code>ecalendar.run()</code> pipeline with a conflicting theme and capturing the final config
+(probe script + conflict theme preserved in session scratchpad).</p>
+
+</body>
+</html>

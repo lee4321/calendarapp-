@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.07.08.1"
+__version__ = "26.07.09.0"
 
 import logging
 import sys
@@ -150,7 +150,8 @@ def run(argv: list[str] | None = None) -> int:
           g. _apply_text_options  (template vars have resolved date boundaries now)
           h. setfontsizes  (auto-scale fonts to paper/page dimensions)
           i. Re-apply theme  (pass 2: explicit theme font sizes override auto-scaling)
-          j. _reapply_post_theme_cli_overrides  (restore CLI negation flags)
+          j. _reapply_post_theme_cli_overrides  (re-assert explicit CLI values
+             over theme-set fields — CLI always beats the theme)
           k. _resolve_palette_overrides  (palette names → hex colours)
           l. WeeklyCalendarLayout.calculate  (weekly only — pre-compute coords)
           m. _to_output_dir_path  (confine output to output/ directory)
@@ -567,7 +568,6 @@ def run(argv: list[str] | None = None) -> int:
         _ebp_config.ignorecomplete = args.ignorecomplete
         _ebp_config.milestones = args.milestones
         _ebp_config.rollups = args.rollups
-        _ebp_config.include_notes = args.includenotes
         _ebp_config.WBS = args.WBS
         _ebp_config.status_filter = _parse_status_filter(getattr(args, "status", None))
         if args.empty:
@@ -732,12 +732,11 @@ def run(argv: list[str] | None = None) -> int:
         for warning in warnings:
             logger.warning(warning)
 
-        if config.include_overflow and "overflow" not in visualizer.supported_options:
-            logger.warning(
-                f"--overflow is not supported for '{view_type}' visualization and will be ignored"
-            )
-
-        # Warn about SVG layout options not applicable to text-only output
+        # Warn about SVG layout options not applicable to text-only output.
+        # Options with per-view effects (--shade, --monthnames, --overflow,
+        # --shrink, --weekend-days, --includenotes, --nodurations) are gated
+        # at the parser level instead — a view that never reads them does not
+        # accept them (docs/cli_theme_overrides.html, Appendix A).
         _svg_layout_checks = [
             ("margin", getattr(args, "margin", False), "--margin"),
             ("header", getattr(args, "header", False), "--header"),
@@ -763,9 +762,6 @@ def run(argv: list[str] | None = None) -> int:
                 bool(getattr(args, "watermark_image", "")),
                 "--watermark-image",
             ),
-            ("shrink", getattr(args, "shrink", False), "--shrink"),
-            ("shade", getattr(args, "shade", False), "--shade"),
-            ("monthnames", getattr(args, "monthnames", False), "--monthnames"),
         ]
         for opt_name, was_set, flag in _svg_layout_checks:
             if was_set and opt_name not in visualizer.supported_options:
