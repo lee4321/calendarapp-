@@ -109,6 +109,93 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
     )
 
 
+# Simple one-to-one CLI → config assignments for the mini, candybar,
+# timeline, PIT, and fiscal option groups.  One row per option:
+# (args attribute, config attribute, kind).
+#
+# kind:
+#   "value"   — argparse default is None; assign when the user passed a value.
+#               store_true/store_false actions whose default is None (e.g.
+#               --candybar-suppress-weekends, --no-ticks, --today-line) also
+#               use this kind: the attribute is non-None only when given.
+#   "enable"  — store_true with default False; set the config field True.
+#   "disable" — store_true with default False; set the config field False.
+#
+# Every row is applied twice: once in _apply_args_to_config() and again in
+# _reapply_post_theme_cli_overrides() after the final theme.apply(), so an
+# explicit CLI value always beats a theme value for the same field — the
+# theme engine's documented contract.  Add new simple options here, not as
+# ad-hoc assignments, or the theme will silently win over the CLI
+# (docs/cli_theme_overrides.html, Section 2).
+_CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
+    # Mini calendar
+    ("mini_columns", "mini_columns", "value"),
+    ("mini_rows", "mini_rows", "value"),
+    ("mini_title_format", "mini_title_format", "value"),
+    ("mini_no_adjacent", "mini_show_adjacent", "disable"),
+    ("mini_grid_lines", "mini_grid_lines", "enable"),
+    ("mini_details", "include_mini_details", "enable"),
+    ("mini_icon_set", "mini_icon_set", "value"),
+    # Candybar
+    ("candybar_row_height", "candybar_row_height", "value"),
+    ("candybar_cell_width", "candybar_cell_width", "value"),
+    ("candybar_max_rows_per_page", "candybar_max_rows_per_page", "value"),
+    ("candybar_suppress_weekends", "candybar_suppress_weekends", "value"),
+    ("candybar_no_week_numbers", "candybar_show_week_numbers", "disable"),
+    ("candybar_month_side", "candybar_month_label_side", "value"),
+    ("candybar_month_rotation", "candybar_month_rotation", "value"),
+    ("candybar_weekend_fill", "candybar_weekend_fill", "value"),
+    ("candybar_month_shading", "candybar_month_shading", "value"),
+    # Timeline
+    ("today_line_length", "timeline_today_line_length", "value"),
+    ("today_line_direction", "timeline_today_line_direction", "value"),
+    ("label_fill_opacity", "timeline_label_fill_opacity", "value"),
+    # PIT
+    ("direction", "pit_direction", "value"),
+    ("label_side", "pit_label_side", "value"),
+    ("tick_unit", "pit_tick_unit", "value"),
+    ("tick_interval", "pit_tick_interval", "value"),
+    ("tick_label_format", "pit_tick_label_format", "value"),
+    ("tick_length", "pit_tick_length", "value"),
+    ("pit_show_ticks", "pit_show_ticks", "value"),
+    ("pit_show_tick_labels", "pit_show_tick_labels", "value"),
+    ("date_placement", "pit_date_placement", "value"),
+    ("pit_today_line", "pit_show_today_line", "value"),
+    ("today_date", "pit_today_date", "value"),
+    ("today_label", "pit_today_line_label", "value"),
+    ("event_icon", "pit_default_event_icon", "value"),
+    ("milestone_icon", "pit_default_milestone_icon", "value"),
+    ("marker_size", "pit_marker_size", "value"),
+    ("label_icon_size", "pit_label_icon_size", "value"),
+    ("label_icon_gap", "pit_label_icon_gap", "value"),
+    ("leader_dash", "pit_leader_stroke_dasharray", "value"),
+    ("leader_label_anchor", "pit_leader_label_anchor", "value"),
+    ("leader_length", "pit_labella_layer_gap", "value"),
+    ("leader_stub", "pit_leader_end_stub", "value"),
+    # Fiscal
+    ("fiscal_year_offset", "fiscal_year_offset", "value"),
+    ("fiscal_show_periods", "timeline_show_fiscal_periods", "enable"),
+    ("fiscal_show_quarters", "timeline_show_fiscal_quarters", "enable"),
+)
+
+
+def _apply_cli_config_overrides(args: Namespace, config: CalendarConfig) -> None:
+    """
+    Apply every explicitly-given CLI option in _CLI_CONFIG_OVERRIDES to config.
+
+    Options the user did not pass are left untouched, so config defaults and
+    theme-set values survive.  Idempotent — safe to call both before the theme
+    is applied and again afterwards to restore CLI precedence.
+    """
+    for arg_name, config_attr, kind in _CLI_CONFIG_OVERRIDES:
+        if kind == "value":
+            val = getattr(args, arg_name, None)
+            if val is not None:
+                setattr(config, config_attr, val)
+        elif getattr(args, arg_name, False):  # "enable" / "disable"
+            setattr(config, config_attr, kind == "enable")
+
+
 def _apply_args_to_config(
     args: Namespace,
     config: CalendarConfig,
@@ -125,18 +212,19 @@ def _apply_args_to_config(
     ────────────────
     1. Database source       → config.events  (description string for SVG metadata)
     2. Weekend style         → config.weekend_style
-    3. Month display         → config.include_month_name / include_month_number
+    3. Month display         → config.include_month_name
     4. Week numbers          → config.include_week_numbers
     5. Layout toggles        → header, footer, margin, overflow, shrink flags
     6. Paper size/orientation→ case-insensitive lookup; sets config.pageX/pageY;
                                raises ConfigError on unknown size
     7. Display options       → events, durations, milestones, rollups, WBS,
                                complete-filtering, today-shading, country
-    8. Mini calendar options → guarded with ``is not None`` so omitting a flag
-                               never overwrites a theme-set default
-    9. Timeline options      → today-line geometry, opacity overrides
-    10. Fiscal calendar      → type string, per-period colour flag, year offset
-    11. Week number mode     → ISO vs. custom-anchor
+    8. Simple field overrides→ mini / candybar / timeline / PIT / fiscal
+                               options via _CLI_CONFIG_OVERRIDES (applied only
+                               when explicitly given, and re-asserted after
+                               the theme by _reapply_post_theme_cli_overrides)
+    9. Fiscal calendar type  → type string + per-period colour flag
+    10. Week number mode     → ISO vs. custom-anchor
 
     Called by:
         run() for all calendar-visualizer subcommands, after the database and
@@ -162,7 +250,6 @@ def _apply_args_to_config(
     # Month display
     if getattr(args, "monthnames", False):
         config.include_month_name = True
-        config.include_month_number = False
     # Week numbers (weekly, mini, mini-icon, text-mini)
     if getattr(args, "weeknumbers", False):
         config.include_week_numbers = True
@@ -230,104 +317,14 @@ def _apply_args_to_config(
     config.country = getattr(args, "country", None)
     config.status_filter = _parse_status_filter(getattr(args, "status", None))
 
-    # Mini calendar options — only override config defaults when explicitly set
-    if getattr(args, "mini_columns", None) is not None:
-        config.mini_columns = args.mini_columns
-    if getattr(args, "mini_rows", None) is not None:
-        config.mini_rows = args.mini_rows
-    if getattr(args, "mini_title_format", None) is not None:
-        config.mini_title_format = args.mini_title_format
-    if getattr(args, "mini_no_adjacent", False):
-        config.mini_show_adjacent = False
-    if getattr(args, "mini_grid_lines", False):
-        config.mini_grid_lines = True
-    if getattr(args, "mini_details", False):
-        config.include_mini_details = True
-    if getattr(args, "mini_icon_set", None) is not None:
-        config.mini_icon_set = args.mini_icon_set
+    # Mini / candybar / timeline / PIT / fiscal simple field overrides —
+    # table-driven so the post-theme re-apply pass uses the identical list.
+    _apply_cli_config_overrides(args, config)
 
-    # Candybar options
-    if getattr(args, "candybar_row_height", None) is not None:
-        config.candybar_row_height = args.candybar_row_height
-    if getattr(args, "candybar_cell_width", None) is not None:
-        config.candybar_cell_width = args.candybar_cell_width
-    if getattr(args, "candybar_max_rows_per_page", None) is not None:
-        config.candybar_max_rows_per_page = args.candybar_max_rows_per_page
-    if getattr(args, "candybar_suppress_weekends", None) is not None:
-        config.candybar_suppress_weekends = args.candybar_suppress_weekends
-    if getattr(args, "candybar_no_week_numbers", False):
-        config.candybar_show_week_numbers = False
-    if getattr(args, "candybar_month_side", None) is not None:
-        config.candybar_month_label_side = args.candybar_month_side
-    if getattr(args, "candybar_month_rotation", None) is not None:
-        config.candybar_month_rotation = args.candybar_month_rotation
-    if getattr(args, "candybar_weekend_fill", None) is not None:
-        config.candybar_weekend_fill = args.candybar_weekend_fill
-    if getattr(args, "candybar_month_shading", None):
-        config.candybar_month_shading = True
-
-    # Timeline today-line options
-    if getattr(args, "today_line_length", None) is not None:
-        config.timeline_today_line_length = args.today_line_length
-    if getattr(args, "today_line_direction", None) is not None:
-        config.timeline_today_line_direction = args.today_line_direction
-    if getattr(args, "label_fill_opacity", None) is not None:
-        config.timeline_label_fill_opacity = args.label_fill_opacity
-
-    # PIT options
-    if getattr(args, "direction", None) is not None:
-        config.pit_direction = args.direction
-    if getattr(args, "label_side", None) is not None:
-        config.pit_label_side = args.label_side
-    if getattr(args, "tick_unit", None) is not None:
-        config.pit_tick_unit = args.tick_unit
-    if getattr(args, "date_placement", None) is not None:
-        config.pit_date_placement = args.date_placement
-    if getattr(args, "tick_interval", None) is not None:
-        config.pit_tick_interval = args.tick_interval
-    if getattr(args, "tick_label_format", None) is not None:
-        config.pit_tick_label_format = args.tick_label_format
-    if getattr(args, "tick_length", None) is not None:
-        config.pit_tick_length = args.tick_length
-    if getattr(args, "pit_show_ticks", None) is not None:
-        config.pit_show_ticks = args.pit_show_ticks
-    if getattr(args, "pit_show_tick_labels", None) is not None:
-        config.pit_show_tick_labels = args.pit_show_tick_labels
-    if getattr(args, "pit_today_line", None) is not None:
-        config.pit_show_today_line = args.pit_today_line
-    if getattr(args, "today_date", None) is not None:
-        config.pit_today_date = args.today_date
-    if getattr(args, "today_label", None) is not None:
-        config.pit_today_line_label = args.today_label
-    if getattr(args, "event_icon", None) is not None:
-        config.pit_default_event_icon = args.event_icon
-    if getattr(args, "milestone_icon", None) is not None:
-        config.pit_default_milestone_icon = args.milestone_icon
-    if getattr(args, "marker_size", None) is not None:
-        config.pit_marker_size = args.marker_size
-    if getattr(args, "label_icon_size", None) is not None:
-        config.pit_label_icon_size = args.label_icon_size
-    if getattr(args, "label_icon_gap", None) is not None:
-        config.pit_label_icon_gap = args.label_icon_gap
-    if getattr(args, "leader_dash", None) is not None:
-        config.pit_leader_stroke_dasharray = args.leader_dash
-    if getattr(args, "leader_label_anchor", None) is not None:
-        config.pit_leader_label_anchor = args.leader_label_anchor
-    if getattr(args, "leader_length", None) is not None:
-        config.pit_labella_layer_gap = args.leader_length
-    if getattr(args, "leader_stub", None) is not None:
-        config.pit_leader_end_stub = args.leader_stub
-
-    # Fiscal calendar
+    # Fiscal calendar type + period-colour flag (paired, so not in the table)
     if getattr(args, "fiscal", None):
         config.fiscal_calendar_type = args.fiscal
         config.fiscal_use_period_colors = getattr(args, "fiscal_colors", False)
-    if getattr(args, "fiscal_year_offset", None) is not None:
-        config.fiscal_year_offset = args.fiscal_year_offset
-    if getattr(args, "fiscal_show_periods", False):
-        config.timeline_show_fiscal_periods = True
-    if getattr(args, "fiscal_show_quarters", False):
-        config.timeline_show_fiscal_quarters = True
 
 
 def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
@@ -384,22 +381,24 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
 
 def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -> None:
     """
-    Re-assert explicit CLI negation flags that the theme may have overwritten.
+    Re-assert every explicit CLI value that the theme may have overwritten.
 
     The theme engine is applied *twice* in run():
       1. Before setfontsizes() — so base.size_rule can influence auto-scaling.
       2. After setfontsizes()  — so explicit theme font sizes take precedence.
 
-    This double-apply means that CLI flags whose intent is to *disable* a
-    theme-enabled feature can be silently undone on the second apply.  This
-    function re-asserts those flags after the final theme.apply() call.
+    The second apply silently overwrites any CLI option whose config field
+    the loaded theme also sets, violating the theme engine's contract that
+    CLI arguments always override theme values (the Section-2 finding of
+    docs/cli_theme_overrides.html).  This function therefore re-applies,
+    after the final theme.apply() call:
 
-    Currently guarded flags:
-        --mini-no-adjacent → forces config.mini_show_adjacent = False
-        PIT --direction / --label-side / --marker-size / --label-icon-size /
-        --label-icon-gap / --today-line / --no-today-line → re-asserted over
-        the theme's pit.direction / label_side / axis.marker_size /
-        label.icon_size / label.icon_gap / today_line.show keys.
+      * every explicitly-given option in _CLI_CONFIG_OVERRIDES (the mini,
+        candybar, timeline, PIT, and fiscal simple fields), and
+      * the header/footer/watermark text options (_apply_text_options).
+
+    Options the user left at their defaults are not touched, so theme values
+    still take effect for everything not on the command line.
 
     Called by:
         run() immediately after the second theme_engine.apply(config) call.
@@ -408,23 +407,8 @@ def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -
         args:   Namespace from argparse.parse_args() (checked for explicit flags).
         config: CalendarConfig instance to correct (mutated in-place).
     """
-    if getattr(args, "mini_no_adjacent", False):
-        config.mini_show_adjacent = False
-
-    # PIT scalars that are now theme-configurable: an explicit CLI flag must
-    # still win over the theme value the second theme.apply() restores.
-    if getattr(args, "direction", None) is not None:
-        config.pit_direction = args.direction
-    if getattr(args, "label_side", None) is not None:
-        config.pit_label_side = args.label_side
-    if getattr(args, "marker_size", None) is not None:
-        config.pit_marker_size = args.marker_size
-    if getattr(args, "label_icon_size", None) is not None:
-        config.pit_label_icon_size = args.label_icon_size
-    if getattr(args, "label_icon_gap", None) is not None:
-        config.pit_label_icon_gap = args.label_icon_gap
-    if getattr(args, "pit_today_line", None) is not None:
-        config.pit_show_today_line = args.pit_today_line
+    _apply_cli_config_overrides(args, config)
+    _apply_text_options(args, config)
 
 
 def _parse_status_filter(raw: str | None) -> "frozenset[str] | None":
