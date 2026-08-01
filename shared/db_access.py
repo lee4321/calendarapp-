@@ -49,6 +49,8 @@ class CalendarDB:
         self.db_path = db_path
         # In-memory government holidays populated by load_python_holidays().
         self._python_holidays: dict[str, list[dict]] = {}
+        # Shared connection, opened lazily on first query by _connect().
+        self._conn: sqlite3.Connection | None = None
 
     def load_python_holidays(
         self, country: str | None, adjustedstart: str, adjustedend: str
@@ -182,19 +184,43 @@ class CalendarDB:
                     }
                 )
 
+    def _connect(self) -> sqlite3.Connection:
+        """Return the shared connection, opening it on first use."""
+        if self._conn is None:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            self._conn = conn
+        return self._conn
+
     @contextmanager
     def _get_connection(self) -> Iterator[sqlite3.Connection]:
-        """Context manager for database connections."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
+        """Context manager yielding this instance's shared connection.
+
+        The connection is opened lazily on first use and then reused for the
+        life of the instance; leaving the ``with`` block does *not* close it.
+        A render issues thousands of small queries, and re-connecting per query
+        cost roughly a third of total runtime.  Call :meth:`close` for explicit
+        cleanup.
+
+        The connection keeps sqlite3's default ``check_same_thread=True``, so
+        sharing it across threads raises rather than corrupting state.
+        """
+        yield self._connect()
 
     def get_connection(self) -> Iterator[sqlite3.Connection]:
-        """Public context manager for database connections."""
+        """Public context manager for database connections.
+
+        Yields the same shared connection as :meth:`_get_connection`; callers
+        that commit or roll back on it are unaffected, but the connection stays
+        open after the block exits.
+        """
         return self._get_connection()
+
+    def close(self) -> None:
+        """Close the shared connection if it is open.  Safe to call repeatedly."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
     def get_events_for_date_range(
         self, start: str, end: str, user_id: int | None = None
