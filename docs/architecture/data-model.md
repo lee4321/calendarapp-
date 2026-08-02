@@ -59,8 +59,11 @@ into memory. Every category the package reports for a country is loaded
 (discovered from `supported_categories`, not a fixed list): public,
 government, bank and de-facto kinds are marked `nonworkday=1`; all other
 kinds — optional, half-day, unofficial, school, workday, armed-forces and
-the religious/ethnic ones — get titles without shading. Country-wide
-holidays only; subdivision (state/province) holidays are not loaded.
+the religious/ethnic ones — get titles without shading. `UA` is an
+exception: the package reports no public holidays for Ukraine from 2022 on
+(martial law) and files all eleven named days under `workday`, so `workday`
+is promoted to non-working for that country only. Country-wide holidays
+only; subdivision (state/province) holidays are not loaded.
 
 ## From rows to renderers
 

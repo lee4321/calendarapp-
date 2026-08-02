@@ -149,6 +149,76 @@ def test_informational_holiday_shares_a_nonwork_date(tmp_path):
     assert db2.is_government_nonworkday("20260405", "XX") is True
 
 
+def test_ua_promotes_workday_to_nonworking(tmp_path):
+    """Ukraine's martial-law holidays live in 'workday'; shade them anyway."""
+    lib = _FakeLib(
+        supported={"public", "workday"},
+        by_category={
+            "public": {},  # martial law: no public holidays from 2022 on
+            "workday": {
+                date(2026, 8, 24): "День незалежності України",
+                date(2026, 12, 25): "Різдво Христове",
+            },
+        },
+    )
+    db = CalendarDB(str(tmp_path / "cal.sqlite"))
+    db._load_country_holidays(lib, "UA", [2026])
+
+    assert _entries(db, "20260824") == [("День незалежності України", 1)]
+    assert _entries(db, "20261225") == [("Різдво Христове", 1)]
+    assert db.is_government_nonworkday("20260824", "UA") is True
+
+
+def test_ua_public_still_outranks_workday(tmp_path):
+    """Pre-2022 UA years have real public holidays; those names win a shared date."""
+    lib = _FakeLib(
+        supported={"public", "workday"},
+        by_category={
+            "public": {date(2021, 8, 24): "День незалежності України"},
+            "workday": {date(2021, 8, 24): "Робочий день"},
+        },
+    )
+    db = CalendarDB(str(tmp_path / "cal.sqlite"))
+    db._load_country_holidays(lib, "UA", [2021])
+
+    assert _entries(db, "20210824") == [("День незалежності України", 1)]
+
+
+def test_workday_stays_informational_for_other_countries(tmp_path):
+    """The UA promotion must not leak: elsewhere 'workday' means a worked day."""
+    lib = _FakeLib(
+        supported={"public", "workday"},
+        by_category={
+            "public": {date(2026, 1, 1): "Uudenvuodenpäivä"},
+            "workday": {date(2026, 5, 1): "Vappu"},
+        },
+    )
+    db = CalendarDB(str(tmp_path / "cal.sqlite"))
+    db._load_country_holidays(lib, "FI", [2026])
+
+    assert _entries(db, "20260101") == [("Uudenvuodenpäivä", 1)]
+    assert _entries(db, "20260501") == [("Vappu", 0)]
+    assert db.is_government_nonworkday("20260501", "FI") is False
+
+
+def test_real_package_ua_2026_is_fully_nonworking(tmp_path):
+    """Smoke test: every UA 2026 holiday the package reports comes back shaded."""
+    holidays_lib = pytest.importorskip("holidays")
+
+    db = CalendarDB(str(tmp_path / "cal.sqlite"))
+    db.load_python_holidays("UA", "20260101", "20261231")
+
+    entries = [e for v in db._python_holidays.values() for e in v]
+    assert entries, "expected UA holidays for 2026"
+    assert all(e["nonworkday"] == 1 for e in entries)
+
+    expected = holidays_lib.country_holidays(
+        "UA", years=[2026], categories=("workday",)
+    )
+    for d in expected:
+        assert db.is_government_nonworkday(d.strftime("%Y%m%d"), "UA") is True
+
+
 def test_unsupported_country_is_skipped(tmp_path):
     class _Missing:
         def country_holidays(self, country, years, categories=None):
