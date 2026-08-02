@@ -90,8 +90,245 @@ def _swatch_name_label(cx: float, baseline_y: float, name: str) -> str:
     return (
         f'  <text x="{cx}" y="{baseline_y}"'
         f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-        f' fill="#555" text-anchor="middle">{name.lower()}</text>'
+        f' fill="#555" text-anchor="middle">{_xml_escape(name.lower())}</text>'
     )
+
+
+# --------------------------------------------------------------------------- #
+# Pagination helpers shared by the colorsheet, fontsheet, iconsheet and        #
+# palettesheet                                                                 #
+# --------------------------------------------------------------------------- #
+#
+# All four sheets support the same ``--paginate`` model: instead of one very
+# large SVG, the items are split into pages and each page is written to its own
+# file with a ``_pNN`` suffix.  The colorsheet, fontsheet and iconsheet chunk by
+# ``columns × rows`` entries; the all-palettes sheet instead packs whole palette
+# sections into a per-page height budget (see _pack_palette_sections).  The
+# helpers below own that shared behaviour so the individual generators only have
+# to describe how one page is drawn.
+
+_SHEET_MARGIN = 40
+_SHEET_TITLE_H = 55
+
+
+def _xml_escape(text: str) -> str:
+    """Escape ``&``/``<``/``>`` so *text* is safe inside an SVG text node."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _paginate_items(items: list, columns: int, rows: int) -> list[list]:
+    """Split *items* into pages of at most ``columns × rows`` entries.
+
+    Always returns at least one (possibly empty) page so callers can render an
+    empty sheet rather than writing no file at all.
+    """
+    per_page = max(1, max(1, columns) * max(1, rows))
+    pages = [items[i : i + per_page] for i in range(0, len(items), per_page)]
+    return pages or [[]]
+
+
+def _page_output_path(output_path: Path, page_idx: int, npages: int) -> Path:
+    """Path for one page: ``sheet.svg`` → ``sheet_p03.svg`` (1-based).
+
+    A single-page run keeps the base filename unchanged.
+    """
+    if npages <= 1:
+        return output_path
+    return output_path.with_name(
+        f"{output_path.stem}_p{page_idx + 1:02d}{output_path.suffix}"
+    )
+
+
+def _write_sheet_pages(output_path: Path, pages: list[str]) -> list[Path]:
+    """Write rendered page documents, numbering them when there is more than one.
+
+    Returns the list of paths actually written, in page order.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for idx, document in enumerate(pages):
+        page_path = _page_output_path(output_path, idx, len(pages))
+        page_path.write_text(document, encoding="utf-8")
+        written.append(page_path)
+    return written
+
+
+def _range_subtitle(names: list[str]) -> str:
+    """``(first to last)`` subtitle describing the items on one page.
+
+    Used on paginated pages in place of the total item count, so a printed
+    stack of sheets can be located by name at a glance.  Collapses to
+    ``(name)`` when the page holds a single item, and to an empty string when
+    the page is empty.
+    """
+    if not names:
+        return ""
+    first, last = names[0], names[-1]
+    return f"({first})" if first == last else f"({first} to {last})"
+
+
+def _sheet_header_lines(
+    svg_w: float, svg_h: float, header: str, subtitle: str, title_dy: int = 36
+) -> list[str]:
+    """Opening SVG element, white background and the title line of a sheet page.
+
+    *subtitle* is the smaller grey parenthetical after the title — either an
+    item count (``(140 colors)``) or a page range from :func:`_range_subtitle`.
+    *title_dy* is the title baseline's offset below the top margin (the
+    fontsheet sits its title 4 pt lower than the swatch sheets).
+    """
+    subtitle_tspan = (
+        f'  <tspan font-size="18" font-weight="normal" font-style="normal"'
+        f' fill="#666">{_xml_escape(subtitle)}</tspan>'
+        if subtitle
+        else ""
+    )
+    return [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}"'
+        f' viewBox="0 0 {svg_w} {svg_h}">',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        f'  <text x="{_SHEET_MARGIN}" y="{_SHEET_MARGIN + title_dy}"'
+        f' font-family="Helvetica, Arial, sans-serif"'
+        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
+        f"{_xml_escape(header)}{subtitle_tspan}</text>",
+    ]
+
+
+def _render_swatch_page(
+    swatches: list[tuple[str, str, int, int, int]],
+    header: str,
+    subtitle: str,
+    ncols: int,
+    *,
+    box_w: int,
+    box_h: int,
+    label_h: int,
+    gap_x: int,
+    gap_y: int,
+) -> str:
+    """Render one page of colour swatches to an SVG document string.
+
+    Shared by the colorsheet and palettesheet, whose cells are identical apart
+    from box geometry: a filled box with the hex value and RGB triplet centred
+    inside it and the colour name below.
+
+    Args:
+        swatches: ``(name, fill, red, green, blue)`` tuples in display order.
+                  *fill* is the literal SVG paint (kept verbatim from the
+                  source data), while the RGB channels drive the labels.
+        header:   Sheet title drawn at the top left.
+        subtitle: Grey parenthetical after the title (count or page range).
+        ncols:    Swatches per row.
+        box_w/box_h/label_h/gap_x/gap_y: Cell geometry in points.
+    """
+    import math
+
+    cell_w = box_w + gap_x
+    cell_h = box_h + label_h + gap_y
+
+    n = len(swatches)
+    nrows = math.ceil(n / ncols) if n else 1
+    svg_w = _SHEET_MARGIN * 2 + ncols * cell_w - gap_x
+    svg_h = _SHEET_MARGIN + _SHEET_TITLE_H + nrows * cell_h - gap_y + _SHEET_MARGIN
+
+    lines = _sheet_header_lines(svg_w, svg_h, header, subtitle)
+
+    for i, (name, fill, red, green, blue) in enumerate(swatches):
+        row = i // ncols
+        col = i % ncols
+        x = _SHEET_MARGIN + col * cell_w
+        y = _SHEET_MARGIN + _SHEET_TITLE_H + row * cell_h
+        cx = x + box_w // 2
+
+        lines.append(
+            f'  <rect x="{x}" y="{y}" width="{box_w}" height="{box_h}"'
+            f' fill="{fill}" stroke="#bbbbbb" stroke-width="0.5"/>'
+        )
+        # Hex value + RGB triplet centred inside the swatch
+        lines.extend(_swatch_value_labels(cx, y + box_h // 2, red, green, blue))
+        # Colour name below the swatch (forced lowercase)
+        lines.append(_swatch_name_label(cx, y + box_h + 18, name))
+
+    lines.append("</svg>")
+    return "\n".join(lines)
+
+
+# Palette-sheet cell geometry (shared by the single-palette, all-palettes and
+# paginated variants).
+_PALETTE_BOX = 80
+_PALETTE_LABEL_H = 26
+_PALETTE_GAP_X = 10
+_PALETTE_GAP_Y = 14
+_PALETTE_MAX_COLS = 12
+
+
+def _palette_swatches(
+    colors: list[str], name_lookup: dict[str, str] | None
+) -> list[tuple[str, str, int, int, int]]:
+    """Hue-sort palette colours into ``(name, fill, r, g, b)`` swatch tuples.
+
+    The colour string from the database is kept verbatim as the SVG fill; the
+    label falls back to the hex value when the colour has no name in the
+    ``colors`` table.
+    """
+    swatches: list[tuple[str, str, int, int, int]] = []
+    for color in sorted(colors, key=_hex_hsv_sort_key):
+        hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
+        red, green, blue = _parse_hex_rgb(color)
+        swatches.append(
+            ((name_lookup or {}).get(hx) or hx, color, red, green, blue)
+        )
+    return swatches
+
+
+def _palette_pages(
+    name: str,
+    swatches: list[tuple[str, str, int, int, int]],
+    paginate: bool,
+    columns: int,
+    rows: int,
+    cell_size: int,
+) -> list[str]:
+    """Render one palette to a list of SVG page documents.
+
+    A non-paginated palette is always a single page up to
+    ``_PALETTE_MAX_COLS`` swatches wide.  When paginating, the palette is split
+    into ``columns × rows`` pages; the title subtitle then shows the page's
+    colour-name range instead of the palette's total colour count (a palette
+    that still fits on one page keeps the count).
+    """
+    n = len(swatches)
+    box = max(1, cell_size)
+    geometry = dict(
+        box_w=box,
+        box_h=box,
+        label_h=_PALETTE_LABEL_H,
+        gap_x=_PALETTE_GAP_X,
+        gap_y=_PALETTE_GAP_Y,
+    )
+
+    if not paginate:
+        ncols = min(n, _PALETTE_MAX_COLS) if n else 1
+        return [
+            _render_swatch_page(
+                swatches, name, f"({n} colors)", ncols, **geometry
+            )
+        ]
+
+    ncols = max(1, columns)
+    pages = _paginate_items(swatches, ncols, rows)
+    single = len(pages) == 1
+    return [
+        _render_swatch_page(
+            page,
+            name,
+            f"({n} colors)" if single else _range_subtitle([s[0] for s in page]),
+            ncols,
+            **geometry,
+        )
+        for page in pages
+    ]
 
 
 def _generate_palette_svg(
@@ -99,18 +336,33 @@ def _generate_palette_svg(
     colors: list[str],
     output_path: Path,
     name_lookup: dict[str, str] | None = None,
-) -> None:
+    paginate: bool = False,
+    columns: int = _PALETTE_MAX_COLS,
+    rows: int = 10,
+    cell_size: int = _PALETTE_BOX,
+) -> list[Path]:
     """
-    Write a standalone SVG file showing a colour palette as a grid of swatches.
+    Write one or more SVG files showing a colour palette as a grid of swatches.
 
-    Each swatch displays the colour as a filled box with its hex value as a
-    label below.  Up to 12 columns; additional rows are added for larger
-    palettes.  Swatches are sorted by perceptual hue (the same HSV ordering
-    used by the colorsheet).  The title bar shows the palette name and total
-    colour count.
+    Each swatch displays the colour as a filled box with its hex value and RGB
+    triplet inside it and the colour name below.  Swatches are sorted by
+    perceptual hue (the same HSV ordering used by the colorsheet).  The title
+    bar shows the palette name and total colour count.
 
     Provides a quick visual reference so users can choose palettes for their
     themes without needing to render a full calendar.
+
+    Output modes
+    ────────────
+    Single sheet (``paginate=False``, the default):
+        Every colour in one SVG written to ``output_path``, up to 12 swatches
+        per row.
+
+    Paginated (``paginate=True``):
+        The palette is split into pages of at most ``columns × rows`` swatches,
+        written with a ``_pNN`` suffix before the extension (a single resulting
+        page keeps the base filename).  The title subtitle then shows the
+        page's colour-name range, e.g. ``(azure to steelblue)``.
 
     Called by:
         run() when args.command == "palettesheet".
@@ -118,117 +370,220 @@ def _generate_palette_svg(
     Args:
         name:        Palette name shown in the SVG title.
         colors:      Ordered list of hex colour strings (e.g. ``["#4472C4", …]``).
-        output_path: Destination path for the generated SVG file.
+        output_path: Destination path for the generated SVG file (page suffix
+                     added automatically when more than one page is produced).
+        name_lookup: Uppercase-hex → colour-name map used for swatch labels.
+        paginate:    When True, split swatches across ``columns × rows`` pages.
+        columns:     Swatches per row on each page when paginating (default 12).
+        rows:        Rows of swatches per page when paginating (default 10).
+        cell_size:   Swatch box size in points (width = height); the label and
+                     spacing gaps are unchanged (default 80).
+
+    Returns:
+        List of ``Path`` objects actually written, in page order.
     """
-    import math
+    pages = _palette_pages(
+        name, _palette_swatches(colors, name_lookup), paginate, columns, rows, cell_size
+    )
+    return _write_sheet_pages(output_path, pages)
 
-    MARGIN = 40
-    TITLE_H = 55
 
-    colors = sorted(colors, key=_hex_hsv_sort_key)
-    n = len(colors)
+_PALETTE_SECTION_TITLE_H = 40
+_PALETTE_SECTION_GAP = 24
 
-    lines: list[str] = []
 
-    BOX_W = 80
-    BOX_H = 80
-    LABEL_H = 26
-    GAP_X = 10
-    GAP_Y = 14
-    MAX_COLS = 12
-    CELL_W = BOX_W + GAP_X
-    CELL_H = BOX_H + LABEL_H + GAP_Y
+def _palette_section_lines(
+    name: str,
+    swatches: list[tuple[str, str, int, int, int]],
+    ncols: int,
+    title_y: float,
+    grid_y: float,
+    box: int,
+) -> list[str]:
+    """SVG lines for one palette section: its title row plus its swatch grid.
 
-    ncols = min(n, MAX_COLS)
-    nrows = math.ceil(n / ncols)
-    svg_w = MARGIN * 2 + ncols * CELL_W - GAP_X
-    svg_h = MARGIN + TITLE_H + nrows * CELL_H - GAP_Y + MARGIN
+    Shared by the one-sheet-per-run layout and the packed pages produced by
+    ``--paginate``, so a palette looks the same either way.
+    """
+    cell_w = box + _PALETTE_GAP_X
+    cell_h = box + _PALETTE_LABEL_H + _PALETTE_GAP_Y
+    n = len(swatches)
 
     lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
-        f'  <text x="{MARGIN}" y="{MARGIN + 36}" font-family="Helvetica, Arial, sans-serif"'
-        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
-        f'{name}  <tspan font-size="18" font-weight="normal" font-style="normal" fill="#666">({n} colors)</tspan></text>',
+        f'  <text x="{_SHEET_MARGIN}" y="{title_y + 28}"'
+        f' font-family="Helvetica, Arial, sans-serif" font-size="22"'
+        f' font-weight="bold" font-style="italic" fill="#222">'
+        f'{_xml_escape(name)}  <tspan font-size="16" font-weight="normal"'
+        f' font-style="normal" fill="#666">({n} colors)</tspan></text>'
     ]
 
-    for i, color in enumerate(colors):
+    for i, (col_name, fill, red, green, blue) in enumerate(swatches):
         row = i // ncols
         col = i % ncols
-        x = MARGIN + col * CELL_W
-        y = MARGIN + TITLE_H + row * CELL_H
-
-        hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
-        red, green, blue = _parse_hex_rgb(color)
-        cx = x + BOX_W // 2
+        x = _SHEET_MARGIN + col * cell_w
+        y = grid_y + row * cell_h
+        cx = x + box // 2
         lines.append(
-            f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
-            f' fill="{color}" stroke="#bbbbbb" stroke-width="0.5"/>'
+            f'  <rect x="{x}" y="{y}" width="{box}" height="{box}"'
+            f' fill="{fill}" stroke="#bbbbbb" stroke-width="0.5"/>'
         )
         # Hex + RGB inside the swatch (same as the colorsheet)
-        lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
-        # Colour name below the swatch (same as the colorsheet); fall back to
+        lines.extend(_swatch_value_labels(cx, y + box // 2, red, green, blue))
+        # Colour name below the swatch (same as the colorsheet); falls back to
         # the hex value when the colour has no name in the database.
-        col_name = (name_lookup or {}).get(hx) or hx
-        lines.append(_swatch_name_label(cx, y + BOX_H + 18, col_name))
+        lines.append(_swatch_name_label(cx, y + box + 18, col_name))
+
+    return lines
+
+
+def _pack_palette_sections(
+    sections: list[tuple[str, list[tuple[str, str, int, int, int]], int, float]],
+    budget_h: float,
+) -> list[list[tuple[str, list[tuple[str, str, int, int, int]], int, float]]]:
+    """Greedily group whole palette sections into pages of at most *budget_h*.
+
+    Palettes are never split: a section that does not fit in the space left on
+    the current page starts the next one, and a section taller than a whole
+    page simply gets a page of its own (that page ends up taller than the
+    others rather than cutting the palette in half).
+
+    Args:
+        sections: ``(name, swatches, ncols, section_height)`` in render order.
+        budget_h: Content height one page should aim for, in points.
+
+    Returns:
+        List of pages, each a list of the sections placed on it.
+    """
+    pages: list[list] = []
+    current: list = []
+    used = 0.0
+    for section in sections:
+        height = section[3]
+        gap = _PALETTE_SECTION_GAP if current else 0
+        if current and used + gap + height > budget_h:
+            pages.append(current)
+            current = [section]
+            used = height
+        else:
+            current.append(section)
+            used += gap + height
+    if current:
+        pages.append(current)
+    return pages
+
+
+def _render_palette_sections_page(
+    sections: list[tuple[str, list[tuple[str, str, int, int, int]], int, float]],
+    svg_w: float,
+    min_content_h: float,
+    box: int,
+) -> str:
+    """Render a page holding one or more complete palette sections."""
+    content_h = sum(s[3] for s in sections) + _PALETTE_SECTION_GAP * max(
+        0, len(sections) - 1
+    )
+    svg_h = _SHEET_MARGIN * 2 + max(min_content_h, content_h)
+
+    lines: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}"'
+        f' viewBox="0 0 {svg_w} {svg_h}">',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+    ]
+
+    y_cursor = _SHEET_MARGIN
+    for name, swatches, ncols, height in sections:
+        lines.extend(
+            _palette_section_lines(
+                name,
+                swatches,
+                ncols,
+                y_cursor,
+                y_cursor + _PALETTE_SECTION_TITLE_H,
+                box,
+            )
+        )
+        y_cursor += height + _PALETTE_SECTION_GAP
 
     lines.append("</svg>")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    return "\n".join(lines)
 
 
 def _generate_all_palettes_svg(
     palettes: dict[str, list[str]],
     output_path: Path,
     name_lookup: dict[str, str] | None = None,
-) -> None:
+    paginate: bool = False,
+    columns: int = _PALETTE_MAX_COLS,
+    rows: int = 10,
+    cell_size: int = _PALETTE_BOX,
+) -> list[Path]:
     """
-    Write a single SVG containing every palette as a labeled section of swatches.
+    Write every palette in the database, either as one sheet or as packed pages.
 
-    Palettes are rendered top-to-bottom in alphabetical order. Each section has
-    a title row (palette name + colour count) followed by a grid of swatches
-    (up to 12 per row), sorted by perceptual hue (the same HSV ordering used by
-    the colorsheet), matching the layout used by ``_generate_palette_svg``.
+    Output modes
+    ────────────
+    Single sheet (``paginate=False``, the default):
+        One SVG containing every palette as a labeled section of swatches.
+        Palettes are rendered top-to-bottom in alphabetical order. Each section
+        has a title row (palette name + colour count) followed by a grid of
+        swatches (up to 12 per row), sorted by perceptual hue (the same HSV
+        ordering used by the colorsheet), matching the layout used by
+        ``_generate_palette_svg``.
+
+    Paginated (``paginate=True``):
+        The same sections, split across printable pages that each hold as many
+        *complete* palettes as fit: a page's content budget is the height of
+        ``rows`` swatch rows, sections are packed into it greedily in
+        alphabetical order, and a palette is never split across a page break
+        (one taller than a whole page gets its own, taller, page).  ``columns``
+        caps how wide each palette's grid wraps and therefore the page width.
+        Pages are numbered sequentially with a ``_pNN`` suffix.
 
     Called by:
         run() when args.command == "palettesheet" and no palette name is given.
+
+    Returns:
+        List of ``Path`` objects actually written, in page order.
     """
     import math
 
-    MARGIN = 40
-    TITLE_H = 40
-    SECTION_GAP = 24
+    box = max(1, cell_size) if paginate else _PALETTE_BOX
+    max_cols = max(1, columns) if paginate else _PALETTE_MAX_COLS
+    cell_w = box + _PALETTE_GAP_X
+    cell_h = box + _PALETTE_LABEL_H + _PALETTE_GAP_Y
 
-    BOX_W = 80
-    BOX_H = 80
-    LABEL_H = 26
-    GAP_X = 10
-    GAP_Y = 14
-    MAX_COLS = 12
-    CELL_W = BOX_W + GAP_X
-    CELL_H = BOX_H + LABEL_H + GAP_Y
-
-    palettes = {n: sorted(c, key=_hex_hsv_sort_key) for n, c in palettes.items()}
     names = sorted(palettes.keys())
-
-    max_cols_used = min(MAX_COLS, max((len(palettes[n]) for n in names), default=1))
-    svg_w = MARGIN * 2 + max_cols_used * CELL_W - GAP_X
-
-    sections: list[tuple[str, list[str], int, int]] = []
-    y_cursor = MARGIN
+    sections: list[tuple[str, list[tuple[str, str, int, int, int]], int, float]] = []
     for name in names:
-        colors = palettes[name]
-        n = len(colors)
-        ncols = min(n, MAX_COLS) if n else 1
+        swatches = _palette_swatches(palettes[name], name_lookup)
+        n = len(swatches)
+        ncols = min(n, max_cols) if n else 1
         nrows = math.ceil(n / ncols) if n else 0
-        title_y = y_cursor
-        grid_y = title_y + TITLE_H
-        sections.append((name, colors, title_y, grid_y))
-        y_cursor = grid_y + nrows * CELL_H - (GAP_Y if nrows else 0) + SECTION_GAP
+        height = (
+            _PALETTE_SECTION_TITLE_H + nrows * cell_h - (_PALETTE_GAP_Y if nrows else 0)
+        )
+        sections.append((name, swatches, ncols, height))
 
-    svg_h = y_cursor - SECTION_GAP + MARGIN
+    if paginate:
+        # A page aims to hold the same vertical space as ``rows`` swatch rows;
+        # whole palettes are then packed into that budget.
+        budget_h = max(1, rows) * cell_h - _PALETTE_GAP_Y
+        svg_w = _SHEET_MARGIN * 2 + max_cols * cell_w - _PALETTE_GAP_X
+        packed = _pack_palette_sections(sections, budget_h) or [[]]
+        pages = [
+            _render_palette_sections_page(page, svg_w, budget_h, box)
+            for page in packed
+        ]
+        return _write_sheet_pages(output_path, pages)
+
+    max_cols_used = min(max_cols, max((len(palettes[n]) for n in names), default=1))
+    svg_w = _SHEET_MARGIN * 2 + max_cols_used * cell_w - _PALETTE_GAP_X
+    svg_h = (
+        sum(s[3] for s in sections)
+        + _PALETTE_SECTION_GAP * max(0, len(sections) - 1)
+        + _SHEET_MARGIN * 2
+    )
 
     lines: list[str] = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -236,45 +591,49 @@ def _generate_all_palettes_svg(
         f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
     ]
 
-    for name, colors, title_y, grid_y in sections:
-        n = len(colors)
-        ncols = min(n, MAX_COLS) if n else 1
-        lines.append(
-            f'  <text x="{MARGIN}" y="{title_y + 28}"'
-            f' font-family="Helvetica, Arial, sans-serif" font-size="22"'
-            f' font-weight="bold" font-style="italic" fill="#222">'
-            f'{name}  <tspan font-size="16" font-weight="normal" font-style="normal" fill="#666">({n} colors)</tspan></text>'
-        )
-        for i, color in enumerate(colors):
-            row = i // ncols
-            col = i % ncols
-            x = MARGIN + col * CELL_W
-            y = grid_y + row * CELL_H
-            hx = color.upper() if color.startswith("#") else f"#{color.upper()}"
-            red, green, blue = _parse_hex_rgb(color)
-            cx = x + BOX_W // 2
-            lines.append(
-                f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
-                f' fill="{color}" stroke="#bbbbbb" stroke-width="0.5"/>'
+    y_cursor = _SHEET_MARGIN
+    for name, swatches, ncols, height in sections:
+        lines.extend(
+            _palette_section_lines(
+                name,
+                swatches,
+                ncols,
+                y_cursor,
+                y_cursor + _PALETTE_SECTION_TITLE_H,
+                box,
             )
-            # Hex + RGB inside the swatch (same as the colorsheet)
-            lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
-            # Colour name below the swatch (same as the colorsheet); fall back
-            # to the hex value when the colour has no name in the database.
-            col_name = (name_lookup or {}).get(hx) or hx
-            lines.append(_swatch_name_label(cx, y + BOX_H + 18, col_name))
+        )
+        y_cursor += height + _PALETTE_SECTION_GAP
 
     lines.append("</svg>")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
+    return [output_path]
+
+
+# Colorsheet cell geometry.  The box is wider than it is tall so the hex value
+# and RGB triplet fit on two lines inside the swatch; ``cell_size`` scales the
+# width and keeps this aspect ratio.
+_COLORSHEET_BOX_W = 110
+_COLORSHEET_BOX_H = 60
+_COLORSHEET_LABEL_H = 30
+_COLORSHEET_GAP_X = 12
+_COLORSHEET_GAP_Y = 10
+_COLORSHEET_MAX_COLS = 8
 
 
 def _generate_colorsheet_svg(
-    colors: list[dict], output_path: "Path", title: str = "Colors"
-) -> None:
+    colors: list[dict],
+    output_path: "Path",
+    title: str = "Colors",
+    paginate: bool = False,
+    columns: int = _COLORSHEET_MAX_COLS,
+    rows: int = 10,
+    cell_size: int = _COLORSHEET_BOX_W,
+) -> list["Path"]:
     """
-    Write an SVG grid of named-colour swatches from the database ``colors`` table.
+    Write one or more SVG grids of named-colour swatches from the ``colors`` table.
 
     Complements the ``colors`` listing command with a visual browseable sheet.
     The caller is responsible for ordering ``colors`` before passing them in;
@@ -287,68 +646,77 @@ def _generate_colorsheet_svg(
       dark text on light backgrounds — determined by luminance threshold 128)
     - EN colour name below the box
 
+    Output modes
+    ────────────
+    Single sheet (``paginate=False``, the default):
+        Every colour is laid out in one SVG written to ``output_path``, up to
+        ``_COLORSHEET_MAX_COLS`` swatches wide, headed by *title*.
+
+    Paginated (``paginate=True``):
+        Colours are split into pages of at most ``columns × rows`` swatches so
+        each sheet stays small enough to print.  Pages are written with a
+        ``_pNN`` suffix inserted before the extension (e.g.
+        ``colorsheet_p01.svg``); a single resulting page keeps the base
+        filename.  Each page keeps *title* as its header but replaces the
+        colour count with the page's name range, e.g. ``(azure to steelblue)``.
+
     Called by:
         run() when args.command == "colorsheet", after HSV sorting.
 
     Args:
         colors:      List of colour dicts with keys: EN, red, green, blue, hex.
-        output_path: Destination path for the generated SVG file.
+        output_path: Destination path for the generated SVG file (page suffix
+                     added automatically when more than one page is produced).
         title:       SVG title string (includes filter text when --filter is set).
+        paginate:    When True, split swatches across ``columns × rows`` pages.
+        columns:     Swatches per row on each page when paginating (default 8).
+        rows:        Rows of swatches per page when paginating (default 10).
+        cell_size:   Swatch box width in points; the height scales with it to
+                     keep the sheet's default aspect ratio, and the label and
+                     spacing gaps are unchanged (default 110).
+
+    Returns:
+        List of ``Path`` objects actually written, in page order.
     """
-    import math
-
-    MARGIN = 40
-    TITLE_H = 55
-    BOX_W = 110
-    BOX_H = 60
-    LABEL_H = 30
-    GAP_X = 12
-    GAP_Y = 10
-    MAX_COLS = 8
-    CELL_W = BOX_W + GAP_X
-    CELL_H = BOX_H + LABEL_H + GAP_Y
-
-    n = len(colors)
-    ncols = min(n, MAX_COLS)
-    nrows = math.ceil(n / ncols)
-    svg_w = MARGIN * 2 + ncols * CELL_W - GAP_X
-    svg_h = MARGIN + TITLE_H + nrows * CELL_H - GAP_Y + MARGIN
-
-    lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
-        f'  <text x="{MARGIN}" y="{MARGIN + 36}" font-family="Helvetica, Arial, sans-serif"'
-        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
-        f'{title}  <tspan font-size="18" font-weight="normal" font-style="normal" fill="#666">({n} colors)</tspan></text>',
-    ]
-
-    for i, row in enumerate(colors):
-        r_idx = i // ncols
-        col = i % ncols
-        x = MARGIN + col * CELL_W
-        y = MARGIN + TITLE_H + r_idx * CELL_H
-
+    swatches: list[tuple[str, str, int, int, int]] = []
+    for row in colors:
         name = str(row.get("EN") or "").strip()
         red = int(row.get("red") or 0)
         green = int(row.get("green") or 0)
         blue = int(row.get("blue") or 0)
-        hex_color = f"#{red:02x}{green:02x}{blue:02x}"
-        cx = x + BOX_W // 2
+        swatches.append((name, f"#{red:02x}{green:02x}{blue:02x}", red, green, blue))
 
-        lines.append(
-            f'  <rect x="{x}" y="{y}" width="{BOX_W}" height="{BOX_H}"'
-            f' fill="{hex_color}" stroke="#bbbbbb" stroke-width="0.5"/>'
+    n = len(swatches)
+    box_w = max(1, cell_size)
+    box_h = max(1, round(box_w * _COLORSHEET_BOX_H / _COLORSHEET_BOX_W))
+    geometry = dict(
+        box_w=box_w,
+        box_h=box_h,
+        label_h=_COLORSHEET_LABEL_H,
+        gap_x=_COLORSHEET_GAP_X,
+        gap_y=_COLORSHEET_GAP_Y,
+    )
+
+    if not paginate:
+        ncols = min(n, _COLORSHEET_MAX_COLS) if n else 1
+        pages = [
+            _render_swatch_page(swatches, title, f"({n} colors)", ncols, **geometry)
+        ]
+        return _write_sheet_pages(output_path, pages)
+
+    ncols = max(1, columns)
+    chunks = _paginate_items(swatches, ncols, rows)
+    pages = [
+        _render_swatch_page(
+            chunk,
+            title,
+            _range_subtitle([s[0] for s in chunk]),
+            ncols,
+            **geometry,
         )
-        # Hex value + RGB triplet centered inside the swatch
-        lines.extend(_swatch_value_labels(cx, y + BOX_H // 2, red, green, blue))
-        # Color name below the swatch (forced lowercase)
-        lines.append(_swatch_name_label(cx, y + BOX_H + 18, name))
-
-    lines.append("</svg>")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+        for chunk in chunks
+    ]
+    return _write_sheet_pages(output_path, pages)
 
 
 def _render_font_fullset(
@@ -404,7 +772,13 @@ def _render_font_fullset(
     paths: list[str] = []
 
     for cp in codepoints:
-        glyph = get_glyph(font_path, cp, font_size_int)
+        # Some mapped codepoints (control characters, unpaired combining marks)
+        # cannot be laid out by PIL/raqm and raise.  Skip just that glyph —
+        # letting it propagate would lose the whole font's sample instead.
+        try:
+            glyph = get_glyph(font_path, cp, font_size_int)
+        except Exception:
+            continue
         advance = glyph.advance_width if glyph.advance_width > 0 else font_size * 0.5
 
         # Wrap before placing if this glyph would exceed the right margin
@@ -425,49 +799,38 @@ def _render_font_fullset(
     return paths, total_height
 
 
-def _generate_fontsheet_svg(
-    font_registry: dict,
-    output_path: "Path",
-    color: str = "#222222",
-    title: str = "Fonts",
-    fullset: bool = False,
-) -> None:
+_FONTSHEET_PAGE_W = 1024
+_FONTSHEET_TITLE_H = 60
+_FONTSHEET_LABEL_H = 20
+_FONTSHEET_ENTRY_PAD = 16
+_FONTSHEET_COL_GAP = 32
+_FONTSHEET_COLS = 2
+_FONTSHEET_SAMPLE_SIZE = 16
+
+
+def _render_fontsheet_page(
+    fonts: list[tuple[str, str]],
+    header: str,
+    subtitle: str,
+    cols: int,
+    sample_size: int,
+    color: str,
+    fullset: bool,
+) -> str:
     """
-    Write an SVG sample sheet for every font in the registry.
+    Render one fontsheet page to an SVG document string.
 
-    Provides visual font browsing within the ecalendar ecosystem.  This is
-    important because fonts are rendered as glyph-path outlines — there is no
-    browser or OS font substitution to fall back on, so choosing the right
-    registered font name requires seeing how each font actually looks.
-
-    Two rendering modes
-    ───────────────────
-    fullset=False (default)
-        Two-column grid, uniform entry height.  Each font shows three fixed
-        sample rows rendered as ``<path>`` glyph outlines via text_to_svg_group():
-          - abcdefghijklmnopqrstuvwxyz
-          - ABCDEFGHIJKLMNOPQRSTUVWXYZ
-          - 1234567890!@#$%^&*()[]{}<>/?\\|`~
-
-    fullset=True  (--fullset flag)
-        Single column, variable entry height.  Every mapped codepoint is shown
-        in codepoint order, wrapping at the right margin.  Uses a two-pass
-        strategy: pass 1 calls _render_font_fullset() to measure each entry's
-        height; pass 2 positions and emits them once the total SVG height is known.
-
-    Called by:
-        run() when args.command == "fontsheet".
-
-    Calls:
-        text_to_svg_group()      (default mode, from renderers.glyph_cache)
-        _render_font_fullset()   (fullset mode)
+    Shared by the single-sheet and paginated paths of
+    :func:`_generate_fontsheet_svg`; see that function for the two layout modes.
 
     Args:
-        font_registry: Dict of ``{font_name: font_path}`` to render.
-        output_path:   Destination path for the generated SVG.
-        color:         Glyph fill colour (default ``"#222222"``).
-        title:         SVG title string.
-        fullset:       When True, renders every mapped codepoint per font.
+        fonts:       ``(font_name, font_path)`` pairs for this page, in order.
+        header:      Sheet title drawn at the top left.
+        subtitle:    Grey parenthetical after the title (font count or range).
+        cols:        Entry columns (ignored in fullset mode, which is 1-column).
+        sample_size: Sample text size in points.
+        color:       Glyph fill colour.
+        fullset:     When True, render every mapped codepoint per font.
     """
     from renderers.glyph_cache import text_to_svg_group
 
@@ -477,17 +840,16 @@ def _generate_fontsheet_svg(
         "1234567890!@#$%^&*()[]{}<>/?\\|`~",
     ]
 
-    MARGIN = 40
-    TITLE_H = 60
-    PAGE_W = 1024
+    MARGIN = _SHEET_MARGIN
+    TITLE_H = _FONTSHEET_TITLE_H
+    PAGE_W = _FONTSHEET_PAGE_W
     CONTENT_W = PAGE_W - 2 * MARGIN
-    SAMPLE_SIZE = 16
-    LABEL_H = 20
+    SAMPLE_SIZE = max(1, sample_size)
+    LABEL_H = _FONTSHEET_LABEL_H
     ROW_H = SAMPLE_SIZE + 5
-    ENTRY_PAD = 16
+    ENTRY_PAD = _FONTSHEET_ENTRY_PAD
 
-    fonts_sorted = sorted(font_registry.items(), key=lambda x: x[0].lower())
-    n = len(fonts_sorted)
+    fonts_sorted = fonts
 
     # ------------------------------------------------------------------ #
     # fullset: pre-render each font's glyphs to know the entry height     #
@@ -512,17 +874,7 @@ def _generate_fontsheet_svg(
             svg_h += LABEL_H + max(content_h, ROW_H) + ENTRY_PAD
         svg_h += MARGIN
 
-        lines = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{PAGE_W}" height="{svg_h}"'
-            f' viewBox="0 0 {PAGE_W} {svg_h}">',
-            f'  <rect width="{PAGE_W}" height="{svg_h}" fill="white"/>',
-            f'  <text x="{MARGIN}" y="{MARGIN + 40}"'
-            f' font-family="Helvetica, Arial, sans-serif"'
-            f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
-            f'{title}  <tspan font-size="18" font-weight="normal" font-style="normal"'
-            f' fill="#666">({n} fonts, full glyph set)</tspan></text>',
-        ]
+        lines = _sheet_header_lines(PAGE_W, svg_h, header, subtitle, title_dy=40)
 
         y = MARGIN + TITLE_H
         for font_name, font_path, path_elems, content_h in pre:
@@ -554,24 +906,14 @@ def _generate_fontsheet_svg(
     # default: fixed three sample rows, uniform entry height, 2 columns  #
     # ------------------------------------------------------------------ #
     else:
-        COLS = 2
-        COL_GAP = 32
+        COLS = max(1, cols)
+        COL_GAP = _FONTSHEET_COL_GAP
         COL_W = (CONTENT_W - (COLS - 1) * COL_GAP) // COLS
         ENTRY_H = LABEL_H + 3 * ROW_H + ENTRY_PAD
-        rows = (n + COLS - 1) // COLS
+        rows = (len(fonts_sorted) + COLS - 1) // COLS
         svg_h = MARGIN + TITLE_H + rows * ENTRY_H + MARGIN
 
-        lines = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{PAGE_W}" height="{svg_h}"'
-            f' viewBox="0 0 {PAGE_W} {svg_h}">',
-            f'  <rect width="{PAGE_W}" height="{svg_h}" fill="white"/>',
-            f'  <text x="{MARGIN}" y="{MARGIN + 40}"'
-            f' font-family="Helvetica, Arial, sans-serif"'
-            f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
-            f'{title}  <tspan font-size="18" font-weight="normal" font-style="normal"'
-            f' fill="#666">({n} fonts)</tspan></text>',
-        ]
+        lines = _sheet_header_lines(PAGE_W, svg_h, header, subtitle, title_dy=40)
 
         for idx, (font_name, font_path) in enumerate(fonts_sorted):
             col = idx % COLS
@@ -612,9 +954,103 @@ def _generate_fontsheet_svg(
                 y_row += ROW_H
 
     lines.append("</svg>")
+    return "\n".join(lines)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+def _generate_fontsheet_svg(
+    font_registry: dict,
+    output_path: "Path",
+    color: str = "#222222",
+    title: str = "Fonts",
+    fullset: bool = False,
+    paginate: bool = False,
+    columns: int = _FONTSHEET_COLS,
+    rows: int = 10,
+    cell_size: int = _FONTSHEET_SAMPLE_SIZE,
+) -> list["Path"]:
+    """
+    Write one or more SVG sample sheets for the fonts in the registry.
+
+    Provides visual font browsing within the ecalendar ecosystem.  This is
+    important because fonts are rendered as glyph-path outlines — there is no
+    browser or OS font substitution to fall back on, so choosing the right
+    registered font name requires seeing how each font actually looks.
+
+    Two rendering modes
+    ───────────────────
+    fullset=False (default)
+        Two-column grid, uniform entry height.  Each font shows three fixed
+        sample rows rendered as ``<path>`` glyph outlines via text_to_svg_group():
+          - abcdefghijklmnopqrstuvwxyz
+          - ABCDEFGHIJKLMNOPQRSTUVWXYZ
+          - 1234567890!@#$%^&*()[]{}<>/?\\|`~
+
+    fullset=True  (--fullset flag)
+        Single column, variable entry height.  Every mapped codepoint is shown
+        in codepoint order, wrapping at the right margin.  Uses a two-pass
+        strategy: pass 1 calls _render_font_fullset() to measure each entry's
+        height; pass 2 positions and emits them once the total SVG height is known.
+
+    Output modes
+    ────────────
+    Single sheet (``paginate=False``, the default):
+        Every font in one SVG written to ``output_path``.
+
+    Paginated (``paginate=True``):
+        Fonts are split into pages of at most ``columns × rows`` entries
+        (``columns`` is forced to 1 in fullset mode, which is inherently a
+        single column), written with a ``_pNN`` suffix before the extension; a
+        single resulting page keeps the base filename.  Each page keeps *title*
+        as its header but shows the page's font-name range in place of the font
+        count, e.g. ``(JuliaMono to Roboto)``.
+
+    Called by:
+        run() when args.command == "fontsheet".
+
+    Calls:
+        _render_fontsheet_page() per page.
+
+    Args:
+        font_registry: Dict of ``{font_name: font_path}`` to render.
+        output_path:   Destination path for the generated SVG (page suffix
+                       added automatically when more than one page is produced).
+        color:         Glyph fill colour (default ``"#222222"``).
+        title:         SVG title string.
+        fullset:       When True, renders every mapped codepoint per font.
+        paginate:      When True, split fonts across ``columns × rows`` pages.
+        columns:       Font columns per page when paginating (default 2).
+        rows:          Font rows per page when paginating (default 10).
+        cell_size:     Sample text size in points (default 16).
+
+    Returns:
+        List of ``Path`` objects actually written, in page order.
+    """
+    fonts_sorted = sorted(font_registry.items(), key=lambda x: x[0].lower())
+    n = len(fonts_sorted)
+    # fullset entries span the full content width, so they are always 1-column.
+    ncols = 1 if fullset else max(1, columns)
+    sample_size = max(1, cell_size)
+    count_subtitle = f"({n} fonts, full glyph set)" if fullset else f"({n} fonts)"
+
+    if not paginate:
+        page = _render_fontsheet_page(
+            fonts_sorted, title, count_subtitle, ncols, sample_size, color, fullset
+        )
+        return _write_sheet_pages(output_path, [page])
+
+    pages = [
+        _render_fontsheet_page(
+            chunk,
+            title,
+            _range_subtitle([name for name, _ in chunk]),
+            ncols,
+            sample_size,
+            color,
+            fullset,
+        )
+        for chunk in _paginate_items(fonts_sorted, ncols, rows)
+    ]
+    return _write_sheet_pages(output_path, pages)
 
 
 def _generate_iconsheet_svg(
@@ -712,9 +1148,6 @@ def _generate_iconsheet_svg(
         re.IGNORECASE | re.DOTALL,
     )
 
-    def _xml_escape(text: str) -> str:
-        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
     def _render_page(
         page_icons: list[dict], header: str, ncols: int, show_count: bool = True
     ) -> str:
@@ -810,23 +1243,17 @@ def _generate_iconsheet_svg(
         lines.append("</svg>")
         return "\n".join(lines)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     n = len(icons)
 
     # Single-sheet mode (default): one SVG holding every icon.
     if not paginate:
         ncols = min(n, _DEFAULT_COLS) if n else 1
-        output_path.write_text(_render_page(icons, title, ncols), encoding="utf-8")
-        return [output_path]
+        return _write_sheet_pages(output_path, [_render_page(icons, title, ncols)])
 
     # Paginated mode: split icons across columns × rows pages.
     ncols = max(1, columns)
-    per_page = max(1, ncols * max(1, rows))
-    npages = math.ceil(n / per_page) if n else 1
-    written: list[Path] = []
-
-    for page_idx in range(npages):
-        page_icons = icons[page_idx * per_page : (page_idx + 1) * per_page]
+    pages: list[str] = []
+    for page_icons in _paginate_items(icons, ncols, rows):
         if page_icons:
             first_name = str(page_icons[0].get("name") or "").strip()
             last_name = str(page_icons[-1].get("name") or "").strip()
@@ -837,21 +1264,9 @@ def _generate_iconsheet_svg(
             )
         else:
             header = title
+        pages.append(_render_page(page_icons, header, ncols, show_count=False))
 
-        if npages == 1:
-            page_path = output_path
-        else:
-            page_path = output_path.with_name(
-                f"{output_path.stem}_p{page_idx + 1:02d}{output_path.suffix}"
-            )
-
-        page_path.write_text(
-            _render_page(page_icons, header, ncols, show_count=False),
-            encoding="utf-8",
-        )
-        written.append(page_path)
-
-    return written
+    return _write_sheet_pages(output_path, pages)
 
 
 def _generate_patternsheet_svg(

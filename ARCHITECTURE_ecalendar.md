@@ -442,22 +442,26 @@ so themes remain database-independent.
 
 ---
 
-### `_generate_palette_svg(name, colors, output_path)`
+### `_generate_palette_svg(name, colors, output_path, name_lookup, paginate, columns, rows, cell_size) → list[Path]`
 
-**Purpose:** Writes a standalone SVG file previewing a named colour palette as a
-grid of colour boxes, each labelled with its hex value.
+**Purpose:** Writes one or more SVG files previewing a named colour palette as a
+grid of colour boxes, each labelled with its hex value, RGB triplet and name.
 
-**Layout:** Up to 10 columns; rows added as needed. Title shows palette name and
+**Layout:** Up to 12 columns; rows added as needed. Title shows palette name and
 colour count.
 
-**Called by:** `run()` when `args.command == "palette"`.
+**Pagination:** With `paginate=True` the swatches are split into `columns × rows`
+pages written as `<stem>_pNN.svg` (see *Sheet pagination* below); the title's
+colour count is then replaced by the page's colour-name range.
+
+**Called by:** `run()` when `args.command == "palettesheet"`.
 
 **Why it exists:** Provides a quick visual reference for palette contents so users
 can choose palettes for their themes without needing to render a full calendar.
 
 ---
 
-### `_generate_colorsheet_svg(colors, output_path, title)`
+### `_generate_colorsheet_svg(colors, output_path, title, paginate, columns, rows, cell_size) → list[Path]`
 
 **Purpose:** Writes an SVG grid of named-color swatches from the database `colors`
 table, sorted by HSV hue before this function is called.
@@ -465,11 +469,41 @@ table, sorted by HSV hue before this function is called.
 **Layout:** Up to 8 columns. Each swatch shows its hex value (white or dark text
 chosen by luminance) centred on the swatch, and the EN colour name below it.
 
+**Pagination:** With `paginate=True` the swatches are split into `columns × rows`
+pages written as `<stem>_pNN.svg` (see *Sheet pagination* below); each page keeps
+`title` but shows the page's colour-name range instead of the colour count.
+
 **Called by:** `run()` when `args.command == "colorsheet"`, after the caller has
 already sorted `colors` by HSV via the `_hsv_sort_key` nested function.
 
 **Why it exists:** Lets users browse the full named-colour library in a scannable
 visual format grouped by hue rather than alphabetically.
+
+---
+
+### Sheet pagination (`visualizers/sheets.py`)
+
+`colorsheet`, `fontsheet`, `iconsheet` and `palettesheet` share one pagination
+model, driven by the `--paginate` / `--columns` / `--rows` / `--sized` CLI group
+and validated once by `_validate_pagination_args()` in `ecalendar.py`.  The shared machinery lives in
+`visualizers/sheets.py`:
+
+- `_paginate_items(items, columns, rows)` — chunks items into page-sized lists.
+- `_write_sheet_pages(output_path, pages)` — writes each rendered page document,
+  inserting a `_pNN` suffix before the extension when a run yields more than one
+  page (a single page keeps the base filename).  Every generator returns the list
+  of paths actually written, which `run()` prints one per line.
+- `_render_swatch_page(...)` / `_range_subtitle(names)` — the colour-swatch page
+  renderer shared by the colorsheet and palettesheet, and the `(first to last)`
+  page subtitle used in place of an item count on paginated pages.
+
+`palettesheet` with no palette name does not chunk by item count: it keeps the
+labeled per-palette sections of the single sheet and packs whole sections into
+pages via `_pack_palette_sections()`, whose budget is the height of `rows` swatch
+rows.  A palette is never split across a page break — one taller than a whole
+page gets its own, taller, page — so a page holds as many complete palettes as
+fit.  `fontsheet` chunks by `columns × rows` entries and forces one column in
+`--fullset` mode.
 
 ---
 

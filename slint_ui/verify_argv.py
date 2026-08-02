@@ -28,9 +28,11 @@ from ecalendar_app import (  # noqa: E402  (import after sys.path fix in the mod
 )
 
 
-def _resolve(command: str, output_name: str, paginate: bool) -> Path | None:
+def _resolve(output_name: str, paginate: bool) -> Path | None:
     candidates: list[Path] = []
-    if command == "iconsheet" and paginate:
+    # colorsheet / iconsheet / palettesheet all write <stem>_pNN.svg when the
+    # run produces more than one page.
+    if paginate:
         stem = output_name[:-4] if output_name.endswith(".svg") else output_name
         candidates += [ROOT / "output" / f"{stem}_p01.svg"]
     candidates += [ROOT / "output" / output_name, ROOT / output_name]
@@ -48,14 +50,14 @@ def main() -> int:
         argv = build_argv(command, values, output_name)
 
         # Clean any stale output so "exists" means "this run produced it".
-        stale = _resolve(command, output_name, paginate=False)
+        stale = _resolve(output_name, paginate=False)
         if stale is not None:
             stale.unlink()
 
         proc = subprocess.run(
             argv, cwd=str(ROOT), capture_output=True, text=True, timeout=180
         )
-        out_path = _resolve(command, output_name, paginate=False)
+        out_path = _resolve(output_name, paginate=False)
         ok = proc.returncode == 0 and out_path is not None
 
         status = "PASS" if ok else "FAIL"

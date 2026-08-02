@@ -340,12 +340,58 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
     palettesheet.add_argument(
+        "--paginate",
+        action="store_true",
+        help=(
+            "Split the swatches across multiple printable SVG pages instead of "
+            "one large sheet. Enables --columns/--rows/--sized; without it a "
+            "single SVG containing every palette is produced (the default). "
+            "When every palette is rendered, each page is packed with as many "
+            "complete palettes as fit; a palette is never split across pages."
+        ),
+    )
+    palettesheet.add_argument(
+        "--columns",
+        "-cols",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Swatch columns per page (requires --paginate; default: 12)",
+    )
+    palettesheet.add_argument(
+        "--rows",
+        "-rows",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Swatch rows per page — with no palette name this is the page's "
+            "height budget for packing whole palettes "
+            "(requires --paginate; default: 10)"
+        ),
+    )
+    palettesheet.add_argument(
+        "--sized",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Swatch box size in points (one integer sets both width and height; "
+            "the label/spacing gaps are unchanged). Requires --paginate; "
+            "default: 80."
+        ),
+    )
+    palettesheet.add_argument(
         "--outputfile",
         "-of",
         type=str,
         default=None,
         metavar="PATH",
-        help="Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named)",
+        help=(
+            "Output file path (default: output/palettesheet.svg, or "
+            "output/<NAME>.svg when a palette is named). With --paginate, a "
+            "'_pNN' suffix is appended per page (e.g. palettesheet_p01.svg)."
+        ),
     )
 
     # iconsheet subcommand arguments
@@ -450,12 +496,51 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Filter colors by name substring (case-insensitive)",
     )
     colorsheet.add_argument(
+        "--paginate",
+        action="store_true",
+        help=(
+            "Split the colors across multiple printable SVG pages instead of "
+            "one large sheet. Enables --columns/--rows/--sized; without it a "
+            "single SVG containing every color is produced (the default)."
+        ),
+    )
+    colorsheet.add_argument(
+        "--columns",
+        "-cols",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Swatch columns per page (requires --paginate; default: 8)",
+    )
+    colorsheet.add_argument(
+        "--rows",
+        "-rows",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Swatch rows per page (requires --paginate; default: 10)",
+    )
+    colorsheet.add_argument(
+        "--sized",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Swatch box width in points (the height scales with it to keep the "
+            "sheet's aspect ratio; the label/spacing gaps are unchanged). "
+            "Requires --paginate; default: 110."
+        ),
+    )
+    colorsheet.add_argument(
         "--outputfile",
         "-of",
         type=str,
         default=None,
         metavar="PATH",
-        help="Output SVG path (default: output/colorsheet.svg)",
+        help=(
+            "Output SVG path (default: output/colorsheet.svg). With --paginate, "
+            "a '_pNN' suffix is appended per page (e.g. colorsheet_p01.svg)."
+        ),
     )
 
     # excelheader subcommand arguments
@@ -720,12 +805,54 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Glyph color (default: #222222)",
     )
     fontsheet.add_argument(
+        "--paginate",
+        action="store_true",
+        help=(
+            "Split the fonts across multiple printable SVG pages instead of one "
+            "large sheet. Enables --columns/--rows/--sized; without it a single "
+            "SVG containing every font is produced (the default)."
+        ),
+    )
+    fontsheet.add_argument(
+        "--columns",
+        "-cols",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Font columns per page (requires --paginate; default: 2). Ignored "
+            "with --fullset, which is always a single column."
+        ),
+    )
+    fontsheet.add_argument(
+        "--rows",
+        "-rows",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Font rows per page (requires --paginate; default: 10)",
+    )
+    fontsheet.add_argument(
+        "--sized",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Sample text size in points; entry heights follow it. "
+            "Requires --paginate; default: 16."
+        ),
+    )
+    fontsheet.add_argument(
         "--outputfile",
         "-of",
         type=str,
         default=None,
         metavar="PATH",
-        help="Output file name and path (default: output/fontsheet.svg)",
+        help=(
+            "Output file name and path (default: output/fontsheet.svg). With "
+            "--paginate, a '_pNN' suffix is appended per page "
+            "(e.g. fontsheet_p01.svg)."
+        ),
     )
     fontsheet.add_argument(
         "--fullset",

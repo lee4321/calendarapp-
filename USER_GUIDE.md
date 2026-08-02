@@ -138,6 +138,10 @@ PYTHONPATH=. uv run python ecalendar.py patternsheet -f wiggle -of wiggle.svg
 PYTHONPATH=. uv run python ecalendar.py iconsheet -f arrow -of arrows.svg
 PYTHONPATH=. uv run python ecalendar.py colorsheet -of colors.svg
 PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
+
+# Same sheets split into printable pages (colors_p01.svg, colors_p02.svg, ...)
+PYTHONPATH=. uv run python ecalendar.py colorsheet -f blue --paginate -cols 6 -rows 8 -of colors.svg
+PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 --paginate -cols 4 -rows 2 -of set2.svg
 ```
 
 ## Command-Line Option Catalog (All Options)
@@ -146,7 +150,7 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 |---|---|---|---|---|
 | `--WBS` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Stroke/glyph color (icons & patterns default `#333333`; fontsheet default `#222222`) | `iconsheet`: default `#333333`; `patternsheet`: default `#333333`; `fontsheet`: default `#222222` |
-| `--columns`, `-cols` | `N` | `iconsheet` | Number of icon columns per page (requires `--paginate`) | `iconsheet`: default `8` |
+| `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Number of item columns per page (requires `--paginate`). On `palettesheet` without a palette name it caps how wide each palette's grid wraps; ignored by `fontsheet --fullset`. | `colorsheet`: default `8`; `fontsheet`: default `2`; `iconsheet`: default `8`; `palettesheet`: default `12` |
 | `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `excelheader`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. `US`) or a comma-separated list (e.g. `US,CA,GB`). If omitted on render commands, all holidays from the government table are included; `exportdata` defaults to `US,CA`. |  |
 | `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
 | `--embed-data` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed the source event data (CSV) inside the SVG metadata so the rendered file carries its own data provenance. | default `False` |
@@ -180,16 +184,16 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `--nodurations`, `-nd` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
-| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. | |
+| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. With `--paginate` (`colorsheet`, `fontsheet`, `iconsheet`, `palettesheet`), a `_pNN` suffix is inserted before the extension for each page. | |
 | `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
-| `--paginate` |  | `iconsheet` | Split icons across multiple printable SVG pages instead of one large sheet; enables `--columns`/`--rows`. | `iconsheet`: default `False` |
+| `--paginate` |  | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Split the sheet's items across multiple printable SVG pages instead of one large sheet; enables `--columns`/`--rows`/`--sized`. On `palettesheet` without a palette name, each page is packed with as many complete palettes as fit. | default `False` |
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
 | `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
 | `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
-| `--rows`, `-rows` | `N` | `iconsheet` | Number of icon rows per page (requires `--paginate`) | `iconsheet`: default `10` |
+| `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Number of item rows per page (requires `--paginate`). On `palettesheet` without a palette name it sets the page's height budget in swatch rows. | default `10` |
 | `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
 | `--shrink` |  | `blockplan`, `candybar`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. (`compactplan` and `candybar` always shrink.) | `blockplan`: default `False` |
-| `--sized` | `N` | `iconsheet` | Icon render box size in points (one integer sets width = height; label/spacing gaps unchanged). Requires `--paginate`. | `iconsheet`: default `24` |
+| `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Cell box size in points; label/spacing gaps unchanged. One integer sets width = height on `iconsheet`/`palettesheet`; on `colorsheet` it sets the width and the height scales with it to keep the sheet's aspect ratio; on `fontsheet` it is the sample text size. Requires `--paginate`. | `iconsheet`: default `24`; `palettesheet`: default `80`; `colorsheet`: default `110`; `fontsheet`: default `16` |
 | `--status` | `LIST` | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include. Allowed values: `active`, `draft`, `cancelled`, `archived`, `on-hold`. Use `all` for no filter. Default: `active`. See [Event Status](#event-status) for details. | default `active` |
 | `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
@@ -441,7 +445,14 @@ Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via
 |---|---|---|---|
 | `NAME` | yes | Name of the palette to preview (case-sensitive, from DB `palettes` table) |  |
 
-Renders a single named palette as an SVG swatch sheet. Run `ecalendar.py palettes` to discover palette names.
+Renders a single named palette as an SVG swatch sheet. Run `ecalendar.py palettes` to discover palette names. Omit `NAME` to render every palette into one sheet, each palette as its own labeled section.
+
+Pass `--paginate` to split the sheet across multiple printable "pages" instead: `--columns`/`-cols` sets the swatches per row (default `12`), `--rows`/`-rows` the rows per page (default `10`), and `--sized N` the swatch box size in points (default `80`, width = height; the label and spacing gaps are unchanged). `--columns`/`--rows`/`--sized` are only valid together with `--paginate`. Pages get a `_pNN` suffix before the file extension (e.g. `palettesheet_p01.svg`).
+
+The two forms paginate differently:
+
+- **With a palette name**, that one palette's swatches are split into `columns × rows` pages, and each page's title keeps the palette name while the color count is replaced by the page's color-name range — for example `(azure to steelblue)`.
+- **Without a palette name**, pages hold the same labeled palette sections as the single sheet, packed so each page carries **as many complete palettes as fit**. A page's budget is the height of `--rows` swatch rows, palettes are packed into it in alphabetical order, and a palette is never split across a page break — one that is taller than a whole page simply gets its own, taller, page. This keeps the page count low: with the defaults the ~90 palettes in the database land on roughly a dozen sheets rather than one per palette.
 
 ### `patternsheet`
 
@@ -457,9 +468,13 @@ By default a single SVG containing every (name-sorted) icon is produced, with th
 
 No positional arguments. Use `--filter` to narrow the rendered grid by color name. Run `ecalendar.py colors` to discover color names.
 
+By default a single SVG containing every (hue-sorted) color is produced. Pass `--paginate` to instead split the swatches across multiple printable "pages": `--columns`/`-cols` sets the swatches per row (default `8`) and `--rows`/`-rows` the rows per page (default `10`), giving 80 colors per page by default. `--sized N` sets the swatch box width in points (default `110`); the height scales with it to keep the sheet's aspect ratio, and the label and spacing gaps are unchanged. `--columns`/`--rows`/`--sized` are only valid together with `--paginate`. When paginating, a `_pNN` suffix is inserted before the file extension (e.g. `colorsheet_p01.svg`), and each page keeps the sheet title but shows the page's color-name range in place of the color count — for example `(Eton blue to Robin egg blue)`.
+
 ### `fontsheet`
 
 No positional arguments. Three sample rows (uppercase, lowercase, digits/punct) are drawn for each registered font. Use `--filter` to narrow by font name, `--color` to set glyph color (default `#222222`), and `--fullset` to render every glyph in each font instead of the three fixed rows. Note that `--database` is not accepted because font files come from the `fonts/` directory rather than the DB.
+
+By default every font goes into a single SVG. Pass `--paginate` to split them across printable pages: `--columns`/`-cols` sets the font columns per page (default `2`) and `--rows`/`-rows` the rows per page (default `10`), giving 20 fonts per page by default. `--sized N` sets the sample text size in points (default `16`); entry heights follow it. `--columns`/`--rows`/`--sized` are only valid together with `--paginate`, and `--columns` is ignored with `--fullset` (a full glyph set spans the whole content width, so it is always one column — pair it with a small `--rows`, since each entry can run to hundreds of kilobytes). Pages get a `_pNN` suffix before the file extension (e.g. `fontsheet_p01.svg`), and each page keeps the sheet title but shows the page's font-name range in place of the font count.
 
 ### `exportdata`
 
