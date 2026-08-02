@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from importers.import_events import EVENTS_SCHEMA_ADDITIONS, ImportDatabase
+from importers.import_events import ImportDatabase
+from shared.db_access import CalendarDB
+from shared.events_schema import EVENTS_SCHEMA_ADDITIONS, migrate_events_table
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -133,6 +135,76 @@ def test_migrated_schema_matches_canonical_ddl(legacy_db):
         conn.close()
 
     assert migrated == _columns(fresh_path)
+
+
+def test_calendar_db_migrates_on_connect(legacy_db):
+    """The read layer migrates too -- a stale database must not fail on
+    the first query, since reads name every column explicitly."""
+    db = CalendarDB(legacy_db)
+    try:
+        db.get_all_events_in_range("20260101", "20261231")
+    finally:
+        db.close()
+
+    for column, _decl in EVENTS_SCHEMA_ADDITIONS:
+        assert column in _columns(legacy_db)
+
+
+def test_reading_a_stale_database_returns_the_new_fields(legacy_db):
+    conn = sqlite3.connect(legacy_db)
+    conn.execute(
+        "INSERT INTO events (user_id, import_id, name, start_date, end_date) "
+        "VALUES (1, 1, 'Legacy task', '20260115', '20260116')"
+    )
+    conn.commit()
+    conn.close()
+
+    db = CalendarDB(legacy_db)
+    try:
+        events = db.get_all_events_in_range("20260101", "20260131")
+    finally:
+        db.close()
+
+    assert len(events) == 1
+    assert events[0]["Task_Name"] == "Legacy task"
+    assert events[0]["Cost"] is None
+    assert events[0]["Custom1"] is None
+
+
+def test_migration_reports_only_what_it_added(legacy_db):
+    conn = sqlite3.connect(legacy_db)
+    try:
+        added = migrate_events_table(conn)
+        assert added == [c for c, _d in EVENTS_SCHEMA_ADDITIONS]
+        # Second pass has nothing left to do.
+        assert migrate_events_table(conn) == []
+    finally:
+        conn.close()
+
+
+def test_migration_skips_a_database_without_an_events_table(tmp_path):
+    """Some other SQLite file must not gain an events table by accident."""
+    path = str(tmp_path / "unrelated.sqlite")
+    conn = sqlite3.connect(path)
+    try:
+        conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)")
+        conn.commit()
+        assert migrate_events_table(conn) == []
+        tables = {
+            r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        assert tables == {"notes"}
+    finally:
+        conn.close()
+
+
+def test_migration_of_a_read_only_database_warns_instead_of_raising(legacy_db):
+    """Opening a read-only file for reading must still work."""
+    conn = sqlite3.connect(f"file:{legacy_db}?mode=ro", uri=True)
+    try:
+        assert migrate_events_table(conn) == []
+    finally:
+        conn.close()
 
 
 def test_additions_are_declared_in_events_sql():

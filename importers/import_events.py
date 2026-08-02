@@ -299,54 +299,20 @@ def normalize_row(row: dict) -> dict:
 # ============================================================================
 
 
-#: Columns added to `events` after the original schema, in the order the
-#: canonical DDL (events.sql) declares them.  Each is applied with a lazy
-#: ALTER TABLE so an existing database migrates in place: no rebuild, no
-#: data movement, and re-running is a no-op.
-EVENTS_SCHEMA_ADDITIONS: tuple[tuple[str, str], ...] = (
-    ("source_id", "TEXT"),
-    ("critical", "INTEGER"),
-    ("start_time", "TEXT"),
-    ("end_time", "TEXT"),
-    ("duration_text", "TEXT"),
-    ("effort_text", "TEXT"),
-    ("actual_start_date", "TEXT"),
-    ("actual_start_time", "TEXT"),
-    ("actual_end_date", "TEXT"),
-    ("actual_end_time", "TEXT"),
-    ("deadline", "TEXT"),
-    ("start_variance", "TEXT"),
-    ("finish_variance", "TEXT"),
-    ("fixed_cost", "REAL"),
-    ("cost", "REAL"),
-    ("percent_work_complete", "REAL"),
-    ("successors", "TEXT"),
-    ("custom1", "TEXT"),
-    ("custom2", "TEXT"),
-    ("custom3", "TEXT"),
-    ("custom4", "TEXT"),
-    ("custom5", "TEXT"),
-)
-
-
 class ImportDatabase(_ImportDatabaseBase):
     """Events importer database (rows land in the ``events`` table).
 
     All bookkeeping (import_history, id sequence, dedup, removal) comes
     from importers.common.ImportDatabase.
+
+    The `events` schema migration is not applied here: this class holds a
+    CalendarDB, and CalendarDB migrates on connect -- so opening the
+    database for writing and for reading go through the same code.  See
+    :mod:`shared.events_schema`.
     """
 
     ROW_TABLE = "events"
     UNIT_LABEL = "events"
-
-    def extra_migrations(self, conn) -> None:
-        """Bring an existing `events` table up to the current schema."""
-        for column, decl in EVENTS_SCHEMA_ADDITIONS:
-            try:
-                conn.execute(f"ALTER TABLE events ADD COLUMN {column} {decl}")
-            except sqlite3.OperationalError:
-                pass  # Column already exists (or table not created yet)
-        conn.commit()
 
 
 # ============================================================================
