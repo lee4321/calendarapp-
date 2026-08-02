@@ -6,23 +6,26 @@ plus the ``generate_excel_header`` entry point used by the former.
 
 Layout (shared between excelheader and excelblockplan)
 ------------------------------------------------------
-Columns A-W : project-tracking labels — one per ``events`` table column
-              ``id | status | priority | wbs | rollup | milestone |
-              percent_complete | name | effort | duration | start_date |
-              end_date | earliest_start_date | latest_start_date |
-              earliest_end_date | latest_end_date | predecessors |
-              resource_names | resource_group | notes | icon | color | tags``
-Column X    : reserved for the continuation icon (filled by excelblockplan
-              when a duration extends beyond the visible range)
-Columns Y+  : one column per visible calendar day (width = 3 chars)
-Rows 1..N   : timeband rows — heading label placed in column W,
-              segment values starting at column Y
-Row  N+1    : column-header row with the A-W label names
-Rows N+2..  : data rows (excelheader: ``DATA_ROWS`` empty rows;
-              excelblockplan: one row per event/duration)
+The three column landmarks are derived from ``FIXED_COLUMNS``, so adding a
+column there moves everything to its right.  With the current list the label
+block is A-AS, the continuation column is AT and the days start at AU.
 
-Freeze panes are set at column Y / column-header row so the label columns
-and timeband rows stay visible while scrolling.
+Label block   : project-tracking labels — one per ``events`` table column,
+                in the order ``events.sql`` declares them (see
+                ``FIXED_COLUMNS``)
+CONTINUATION_COL : reserved for the continuation icon (filled by
+                excelblockplan when a duration extends beyond the visible
+                range)
+FIRST_DATE_COL+ : one column per visible calendar day (width = 3 chars)
+Rows 1..N     : timeband rows — heading label placed in the last label
+                column, segment values starting at FIRST_DATE_COL
+Row  N+1      : column-header row with the label names
+Rows N+2..    : data rows (excelheader: ``DATA_ROWS`` empty rows;
+                excelblockplan: one row per event/duration)
+
+The freeze pane holds the timeband rows only.  The label columns are not
+frozen: the full events-table column set is far wider than a screen, so
+pinning it would hide the date grid the sheet exists to show.
 """
 
 from __future__ import annotations
@@ -69,7 +72,13 @@ def _resolve_excel_token(config: "CalendarConfig", token: str) -> dict:
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-# Fixed label columns A-W — one per events-table column the user can plan around.
+# Fixed label columns — one per events-table column the user can plan around,
+# in the order events.sql declares them.  The schedule data elements added
+# after the original schema follow `tags`, matching both the DDL and the
+# migration order so the sheet, the table and the importer all read alike.
+#
+# Everything downstream derives from this list's length, so adding a column
+# here shifts the continuation marker and the whole date grid automatically.
 FIXED_COLUMNS: list[tuple[str, float]] = [
     ("id", 6),
     ("status", 9),
@@ -94,10 +103,33 @@ FIXED_COLUMNS: list[tuple[str, float]] = [
     ("icon", 10),
     ("color", 10),
     ("tags", 12),
+    # Schedule data elements
+    ("source_id", 10),
+    ("critical", 8),
+    ("start_time", 9),
+    ("end_time", 9),
+    ("duration_text", 12),
+    ("effort_text", 12),
+    ("actual_start_date", 15),
+    ("actual_start_time", 12),
+    ("actual_end_date", 15),
+    ("actual_end_time", 12),
+    ("deadline", 12),
+    ("start_variance", 13),
+    ("finish_variance", 13),
+    ("fixed_cost", 11),
+    ("cost", 10),
+    ("percent_work_complete", 15),
+    ("successors", 16),
+    ("custom1", 14),
+    ("custom2", 14),
+    ("custom3", 14),
+    ("custom4", 14),
+    ("custom5", 14),
 ]
-LABEL_COL_END = len(FIXED_COLUMNS)              # 23 = column W
-CONTINUATION_COL = LABEL_COL_END + 1            # 24 = column X
-FIRST_DATE_COL = LABEL_COL_END + 2              # 25 = column Y
+LABEL_COL_END = len(FIXED_COLUMNS)              # 45 = column AS
+CONTINUATION_COL = LABEL_COL_END + 1            # 46 = column AT
+FIRST_DATE_COL = LABEL_COL_END + 2              # 47 = column AU
 DATA_ROWS = 100
 DAY_COL_WIDTH = 3.0  # Excel character-width units
 
@@ -457,7 +489,7 @@ def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
     # Alignment lookup intentionally does NOT fall back to excelheader for
     # excelblockplan — the two views have different visual defaults (excelheader
     # left-anchors labels in column A; excelblockplan right-anchors them so the
-    # text visually sits in column W, the rightmost label column).
+    # text visually sits in the rightmost label column).
     if subcommand == "excelblockplan":
         header_label_align_h = str(
             _cfg(f"{subcommand}_header_label_align_h", default="right")
@@ -541,7 +573,7 @@ def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
 
 
 def _setup_column_widths(ws: Any, visible_days: list[date]) -> None:
-    """Set widths for A-W label columns, the X continuation column and Y+ days."""
+    """Set widths for the label columns, the continuation column and the days."""
     for col_idx, (_, width) in enumerate(FIXED_COLUMNS, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
     ws.column_dimensions[get_column_letter(CONTINUATION_COL)].width = DAY_COL_WIDTH
@@ -567,9 +599,9 @@ def _write_timebands(
 ) -> int:
     """Write the timeband rows and return the next free row index.
 
-    The band heading label (``band["label"]``) is placed in column W
+    The band heading label (``band["label"]``) is placed in the last label column
     (rightmost label column) by merging cells A:W and aligning per
-    ``label_align_h``.  Segment cells start at column Y so the X column
+    ``label_align_h``.  Segment cells start at FIRST_DATE_COL so the continuation column
     (reserved for the continuation icon) stays clear.
     """
     tk_heading = _resolve_excel_token(config, "text:heading")
@@ -623,7 +655,7 @@ def _write_timebands(
         )
         _apply_fill(heading_cell, heading_fill_color)
 
-        # ── Icon band — one cell per visible day in Y+ ────────────────────
+        # ── Icon band — one cell per visible day ─────────────────────────
         if str(band.get("unit", "")).strip().lower() == "icon":
             icon_rules = list(band.get("icon_rules") or [])
             day_icon_map = compute_icon_band_days(
@@ -759,7 +791,7 @@ def _write_column_header_row(
     right_border_cols: dict[int, dict],
     settings: dict,
 ) -> None:
-    """Write the A-W label row, then apply holiday shading / vertical-line borders."""
+    """Write the label row, then apply holiday shading / vertical-line borders."""
     header_font = Font(
         name=settings["font_name"], size=settings["font_size"], bold=True
     )
@@ -804,10 +836,12 @@ def _prepare_sheet(
     Event dataclasses sourced for icon-band evaluation; callers can reuse
     them for downstream rendering.
 
-    When ``freeze`` is ``True`` (default) a freeze pane is set at the first
-    date column / header row.  Pass ``False`` to leave the sheet
-    fully scrollable — clearing ``freeze_panes`` after the fact would leave
-    orphaned ``<selection pane>`` elements in the XML and corrupt the file.
+    When ``freeze`` is ``True`` (default) a freeze pane keeps the timeband
+    rows in view while the sheet scrolls; the label columns are not frozen,
+    since the full events-table column set is too wide to pin.  Pass
+    ``False`` to leave the sheet fully scrollable — clearing
+    ``freeze_panes`` after the fact would leave orphaned ``<selection
+    pane>`` elements in the XML and corrupt the file.
     """
     visible_days = compute_visible_days(config)
     settings = _read_band_settings(config, subcommand)
@@ -894,8 +928,11 @@ def _prepare_sheet(
     data_start_row = header_row + 1
 
     if freeze:
-        # Freeze pane: keep label cols + timeband rows visible.
-        ws.freeze_panes = f"{get_column_letter(FIRST_DATE_COL)}{header_row}"
+        # Freeze the timeband rows only, not the label columns.  With 45
+        # label columns the frozen block would be ~560 character-widths
+        # and leave no room on screen for the date grid it exists to
+        # annotate, so horizontal scrolling stays free.
+        ws.freeze_panes = f"A{header_row}"
 
     return wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, band_events, settings
 
@@ -909,7 +946,7 @@ def generate_excel_header(
 ) -> None:
     """Generate the Excel workbook for the ``excelheader`` subcommand.
 
-    Produces the shared A-W / Y+ skeleton plus ``DATA_ROWS`` empty data rows
+    Produces the shared label / date-grid skeleton plus ``DATA_ROWS`` empty data rows
     decorated with holiday shading and vertical-line borders.
 
     Args:

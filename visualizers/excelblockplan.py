@@ -1,26 +1,28 @@
 """Excel workbook generator — blockplan-style data sheet.
 
-Builds on the same A-W / Y+ skeleton produced by :mod:`visualizers.excelheader`
-and fills in the data rows with one record per event and duration sourced from
+Builds on the same skeleton produced by :mod:`visualizers.excelheader` and
+fills in the data rows with one record per event and duration sourced from
 the events table.
 
 Layout reminder (see :mod:`visualizers.excelheader` for the full spec)
 ----------------------------------------------------------------------
-Rows 1..N   : timeband rows — heading label in column W, segment values from Y
-Row  N+1    : column-header row with the 23 events-table column names in A-W
+Rows 1..N   : timeband rows — heading in the last label column, segment
+              values from FIRST_DATE_COL
+Row  N+1    : column-header row with every events-table column name, one per
+              entry in ``FIXED_COLUMNS``
 Rows N+2..  : one row per event/duration after filtering, ordered by start_date
 
 For each data row:
-    - Columns A-W hold the corresponding events-table field values.
-    - Column X holds a continuation marker when a duration extends past the
+    - The label columns hold the corresponding events-table field values.
+    - CONTINUATION_COL holds a marker when a duration extends past the
       visible range (left ◀ / right ▶ / both ◀▶ glyph).
     - Single-day events place the resolved icon name in the start-date day
-      column (Y+).  The icon cell font colour and fill come from
-      ``style_rules`` evaluated for the event.
+      column.  The icon cell font colour and fill come from ``style_rules``
+      evaluated for the event.
     - Multi-day durations fill every day column between start and end with the
       style-resolved colour.
     - After all data is drawn, holiday/special-day shading is applied to the
-      Y+ columns.  Cells that already carry data are decorated with a
+      date columns.  Cells that already carry data are decorated with a
       ``lightUp`` pattern that visibly combines the holiday colour and the
       underlying data colour so both remain visible.
 
@@ -86,7 +88,36 @@ _EVENT_FIELD_MAP: dict[str, str] = {
     "icon": "Icon",
     "color": "Color",
     "tags": "Tags",
+    # Schedule data elements.  "id" above is the events primary key;
+    # "source_id" is the identifier from the originating scheduling tool.
+    "source_id": "Source_ID",
+    "critical": "Critical",
+    "start_time": "Start_Time",
+    "end_time": "End_Time",
+    "duration_text": "Duration_Text",
+    "effort_text": "Effort_Text",
+    "actual_start_date": "Actual_Start_Date",
+    "actual_start_time": "Actual_Start_Time",
+    "actual_end_date": "Actual_End_Date",
+    "actual_end_time": "Actual_End_Time",
+    "deadline": "Deadline",
+    "start_variance": "Start_Variance",
+    "finish_variance": "Finish_Variance",
+    "fixed_cost": "Fixed_Cost",
+    "cost": "Cost",
+    "percent_work_complete": "Percent_Work_Complete",
+    "successors": "Successors",
+    "custom1": "Custom1",
+    "custom2": "Custom2",
+    "custom3": "Custom3",
+    "custom4": "Custom4",
+    "custom5": "Custom5",
 }
+
+#: Fields written as Excel numbers rather than passed through as-is.
+_NUMERIC_FIELDS: frozenset[str] = frozenset(
+    {"percent_complete", "percent_work_complete", "cost", "fixed_cost"}
+)
 
 
 def _format_cell_value(field_name: str, raw: Any) -> Any:
@@ -97,12 +128,15 @@ def _format_cell_value(field_name: str, raw: Any) -> Any:
     "None".  Date strings stay as ``YYYYMMDD`` text on purpose — adding Excel
     date-type coercion is out of scope and would prevent custom formatting on
     rows that mix populated and blank dates.
+
+    Times (``start_time`` and friends) are ``HHMM`` text for the same reason:
+    coercing them to Excel time values would turn "0800" into 0.333.
     """
     if raw is None:
         return ""
     if isinstance(raw, bool):
         return 1 if raw else 0
-    if field_name == "percent_complete" and isinstance(raw, (int, float)):
+    if field_name in _NUMERIC_FIELDS and isinstance(raw, (int, float)):
         return float(raw)
     return raw
 
@@ -251,7 +285,7 @@ def generate_excel_blockplan(
         row = data_start_row + row_offset
         ws.row_dimensions[row].height = 14
 
-        # ── Columns A-W : events-table fields ─────────────────────────────
+        # ── Label columns : events-table fields ──────────────────────────
         for col_idx, (field_name, _w) in enumerate(FIXED_COLUMNS, start=1):
             db_key = _EVENT_FIELD_MAP.get(field_name)
             raw = filtered[row_offset].get(db_key) if db_key else None

@@ -7,7 +7,7 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 
 from config.config import create_calendar_config
-from visualizers.excelblockplan import generate_excel_blockplan
+from visualizers.excelblockplan import _EVENT_FIELD_MAP, generate_excel_blockplan
 from visualizers.excelheader import (
     CONTINUATION_COL,
     FIRST_DATE_COL,
@@ -127,8 +127,8 @@ def test_excelblockplan_creates_file_with_planner_sheet(tmp_path):
     assert "Planner" in wb.sheetnames
 
 
-def test_excelblockplan_column_header_row_has_all_23_labels(tmp_path):
-    """Row N+1 must populate columns A-W with the events-table field names."""
+def test_excelblockplan_column_header_row_has_every_label(tmp_path):
+    """Row N+1 must populate the label block with the events-table field names."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
     generate_excel_blockplan(cfg, _BaseDB(), out)
@@ -140,10 +140,21 @@ def test_excelblockplan_column_header_row_has_all_23_labels(tmp_path):
         ws.cell(row=header_row, column=c).value for c in range(1, LABEL_COL_END + 1)
     ]
     assert headers == expected
-    # X column reserved for the continuation icon — header cell is empty
+    # Continuation column is reserved for the icon — header cell is empty
     assert ws.cell(row=header_row, column=CONTINUATION_COL).value in ("", None)
-    # First date column starts at Y (= FIRST_DATE_COL)
-    assert get_column_letter(FIRST_DATE_COL) == "Y"
+    assert FIRST_DATE_COL == CONTINUATION_COL + 1
+
+
+def test_excelblockplan_every_events_table_column_is_mapped():
+    """Every label column must resolve to a key CalendarDB actually returns.
+
+    A column present in FIXED_COLUMNS but absent from _EVENT_FIELD_MAP would
+    silently write blanks for the whole sheet.
+    """
+    unmapped = [
+        name for name, _w in FIXED_COLUMNS if name not in _EVENT_FIELD_MAP
+    ]
+    assert not unmapped, f"label columns with no events-table source: {unmapped}"
 
 
 def test_excelblockplan_events_each_on_own_row_ordered_by_start(tmp_path):

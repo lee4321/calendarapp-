@@ -100,8 +100,10 @@ def test_excelheader_creates_file(tmp_path):
     assert "Planner" in wb.sheetnames
 
 
-def test_excelheader_day_columns_start_at_y(tmp_path):
-    """Date columns must begin at column Y (index 25), skipping X (continuation)."""
+def test_excelheader_day_columns_follow_the_continuation_column(tmp_path):
+    """Date columns begin one past the continuation column, which is itself
+    one past the label block.  Derived from FIXED_COLUMNS so adding a label
+    column shifts the grid rather than breaking this test."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
     config.excelheader_top_time_bands = [
@@ -110,17 +112,17 @@ def test_excelheader_day_columns_start_at_y(tmp_path):
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    # 23 label columns (A-W) + column X (continuation) → date columns start at Y
-    assert LABEL_COL_END == 23
-    assert CONTINUATION_COL == 24
-    assert FIRST_DATE_COL == 25
-    assert get_column_letter(FIRST_DATE_COL) == "Y"
-    # The date-band row should have a value in column Y
+    assert LABEL_COL_END == len(FIXED_COLUMNS)
+    assert CONTINUATION_COL == LABEL_COL_END + 1
+    assert FIRST_DATE_COL == LABEL_COL_END + 2
+    # The date-band row should have a value in the first date column.
     assert ws.cell(row=1, column=FIRST_DATE_COL).value is not None
+    # ...and nothing in the continuation column, which excelblockplan owns.
+    assert ws.cell(row=1, column=CONTINUATION_COL).value in ("", None)
 
 
 def test_excelheader_fixed_label_columns(tmp_path):
-    """Column-header row must contain the 23 events-table field names in A-W."""
+    """Column-header row must contain every events-table field name."""
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
     config.excelheader_top_time_bands = [
@@ -139,7 +141,12 @@ def test_excelheader_fixed_label_columns(tmp_path):
     # Confirm key columns by position so future re-orderings break the test.
     assert headers[0] == "id"
     assert headers[7] == "name"
-    assert headers[-1] == "tags"
+    assert headers[22] == "tags"
+    assert headers[-1] == "custom5"
+    # The schedule data elements are present and follow the original block.
+    for field in ("source_id", "critical", "deadline", "cost", "successors"):
+        assert field in headers
+        assert headers.index(field) > headers.index("tags")
 
 
 def test_excelheader_day_column_width(tmp_path):
@@ -256,8 +263,12 @@ def test_excelheader_vertical_lines_produce_right_borders(tmp_path):
     )
 
 
-def test_excelheader_freeze_panes_set(tmp_path):
-    """Freeze panes must be set at column F / column-header row."""
+def test_excelheader_freeze_panes_hold_rows_not_columns(tmp_path):
+    """Timeband rows freeze; label columns do not.
+
+    The full events-table column set is far wider than a screen, so freezing
+    it would push the date grid out of view entirely.
+    """
     out = tmp_path / "header.xlsx"
     config = _base_config(out)
     config.excelheader_top_time_bands = [
@@ -266,8 +277,8 @@ def test_excelheader_freeze_panes_set(tmp_path):
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    # 1 band row → header on row 2 — freeze at the first date column (Y).
-    assert ws.freeze_panes == f"{get_column_letter(FIRST_DATE_COL)}2"
+    # 1 band row → header on row 2; freeze above it, at column A.
+    assert ws.freeze_panes == "A2"
 
 
 def test_excelheader_weekends_excluded_when_style_zero(tmp_path):
