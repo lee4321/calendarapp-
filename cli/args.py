@@ -1980,7 +1980,7 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     if subcommand in svg_calendar_subcommands:
         print("\nAvailable fonts (for theme/config font fields):")
         print("  (Use 'ecalendar.py fonts' for a full list.)")
-        print("  Example names: Roboto-Regular, NotoSans-Condensed, JuliaMono-Regular")
+        print("  Example names: Roboto-Regular, RobotoCondensed-Light, JuliaMono-Regular")
 
         print("\nAvailable colors (for theme/config color fields):")
         print("  (Use 'ecalendar.py colors' for a full list.)")

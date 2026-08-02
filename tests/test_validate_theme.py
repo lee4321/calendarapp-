@@ -11,6 +11,7 @@ import yaml
 # Make tools/ importable as a package.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from config.theme_engine import find_unregistered_fonts  # noqa: E402
 from tools.validate_theme import main  # noqa: E402
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
@@ -131,3 +132,47 @@ def test_no_bundled_theme_contains_stray_element_bindings() -> None:
             if "element" in targets:
                 failures.append(f"{theme_path.name}: style_rules[{i}] is `apply_to: element`")
     assert not failures, "Stray element bindings still in shipped themes:\n" + "\n".join(failures)
+
+
+def test_unregistered_font_exit_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A font name outside FONT_REGISTRY fails the validator, not the renderer."""
+    theme = tmp_path / "badfont.yaml"
+    theme.write_text(yaml.safe_dump({
+        "theme": {"name": "badfont", "version": "3.0"},
+        "base": {"font_family": "NotoSans-Condensed"},
+        "style_rules": [
+            {
+                "name": "define text:body",
+                "define": "text",
+                "as": "body",
+                "style": {"font": "NotoSans-Condensed", "size": 8},
+            },
+        ],
+    }))
+    rc = main([str(theme), "--visualizer", "weekly"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "not in FONT_REGISTRY" in captured.err
+    # Both the plain section and the style_rules entry are reported.
+    assert "base.font_family" in captured.err
+    assert "style_rules[0].style.font" in captured.err
+
+
+def test_no_bundled_theme_references_unregistered_fonts() -> None:
+    """Every shipped theme must render without a get_font_path() KeyError.
+
+    leemini.yaml shipped `NotoSans-Condensed` and `FiraCode-Regular`, neither
+    of which has a file under fonts/; the weekly view crashed on the first day
+    box it drew.
+    """
+    failures: list[str] = []
+    for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
+        raw = yaml.safe_load(theme_path.read_text()) or {}
+        for font_path, font in find_unregistered_fonts(raw):
+            failures.append(f"{theme_path.name}: {font!r} at {font_path}")
+    assert not failures, (
+        "Shipped themes reference fonts missing from FONT_REGISTRY:\n"
+        + "\n".join(failures)
+    )

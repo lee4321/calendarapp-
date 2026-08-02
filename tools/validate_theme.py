@@ -9,19 +9,24 @@ unified runtime (design §11.2).  The script:
      the parser rejects it (legacy section names, unknown selectors,
      malformed rules), the error is printed and the script exits non-zero.
 
-  2. For each requested visualizer (default: all), runs the
+  2. Checks every font name the theme references against
+     ``FONT_REGISTRY``.  An unregistered name is a latent ``KeyError``
+     from ``get_font_path()`` the moment that style is rendered.
+
+  3. For each requested visualizer (default: all), runs the
      :func:`config.required_keys.check_required_keys` probe and reports
      any missing settings or tokens with the §11.2 error format —
      including a paste-ready snippet pulled from basic.yaml.
 
-  3. Optionally runs the theme through the converter first
+  4. Optionally runs the theme through the converter first
      (``--convert``).  Useful when validating a legacy theme without
      committing the conversion.
 
 Exit codes
 ----------
   0 — theme parses cleanly and satisfies every requested visualizer.
-  1 — theme parses but is missing one or more required keys.
+  1 — theme parses but references unregistered fonts, or is missing one
+      or more required keys.
   2 — theme does not parse (invalid schema).
 
 Examples
@@ -49,6 +54,7 @@ from config.required_keys import (
     check_required_keys,
     format_missing_key_error,
 )
+from config.theme_engine import find_unregistered_fonts
 from config.unified_theme import ThemeError, parse_theme
 
 
@@ -179,6 +185,24 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 2
 
+    # Font names must be in FONT_REGISTRY, or get_font_path() raises KeyError
+    # mid-render.  Checked against the raw YAML so `style_rules` entries and
+    # plain sections are covered alike.
+    any_missing = False
+    unregistered = find_unregistered_fonts(raw)
+    if unregistered:
+        any_missing = True
+        print(
+            f"\nerror: {theme_path} references {len(unregistered)} font name(s) "
+            "not in FONT_REGISTRY.  Rendering fails with KeyError when the "
+            "style is used.  Run `uv run python ecalendar.py fonts` for the "
+            "registered names, or drop the TTF/OTF into fonts/.",
+            file=sys.stderr,
+        )
+        for font_path, font in unregistered:
+            print(f"  {font!r} at {font_path}", file=sys.stderr)
+        print(file=sys.stderr)
+
     # Warn about catalog tokens that fell back to defaults.
     fallback = _tokens_missing_for_catalog(theme, requested)
     for kind_token, vs in sorted(fallback.items()):
@@ -189,7 +213,6 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # Required-key probe per requested visualizer.
-    any_missing = False
     for v in requested:
         missing = check_required_keys(theme, v)
         if not missing:
