@@ -28,6 +28,22 @@ logger = logging.getLogger(__name__)
 # per country from ``supported_categories`` rather than hard-coded, so countries
 # whose holidays live in categories this file has never heard of still load.
 _NONWORK_CATEGORIES: tuple[str, ...] = ("public", "government", "bank", "de_facto")
+
+# Per-country replacements for the tuple above, for countries the package models
+# in a way that would otherwise leave the calendar bare.
+#
+# UA: under martial law Ukraine has no public holidays in law, so the package
+# reports zero 'public' days from 2022 onward and files all eleven named days
+# (New Year, Independence Day, Christmas, ...) under 'workday' instead — see
+# ``_populate_common(is_martial_law=True)`` in holidays/countries/ukraine.py.
+# Since the package applies that to every future year with no end date, an
+# unmodified UA calendar would show no non-working days at all.  'workday' is
+# promoted to non-working *for UA only*: in the 26 other countries using the
+# category it means a day that is named but genuinely worked (Finland's Vappu
+# and Äitienpäivä, Belarus's Constitution Day), which must stay unshaded.
+_COUNTRY_NONWORK_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "UA": (*_NONWORK_CATEGORIES, "workday"),
+}
 # Countries loaded when no --country flag is given.
 _DEFAULT_COUNTRIES: tuple[str, ...] = ("US", "CA")
 # The 'holidays' package joins several holidays sharing one date into a single
@@ -75,7 +91,8 @@ class CalendarDB:
         nonworkday=1 (shaded on the calendar); all other categories — optional,
         half-day, unofficial, school, workday, armed-forces and the
         religious/ethnic ones — are marked nonworkday=0 (title shown, no
-        shading).
+        shading).  :data:`_COUNTRY_NONWORK_CATEGORIES` overrides that split for
+        countries needing it (UA, whose holidays all sit in 'workday').
 
         When *country* is None the default countries (US and CA) are loaded.
 
@@ -121,11 +138,12 @@ class CalendarDB:
         - The categories are discovered from the package's own
           ``supported_categories`` for the country, not from a fixed list, so
           nothing a country declares is silently dropped.
-        - Categories in :data:`_NONWORK_CATEGORIES` form a single nonwork pool,
-          unioned by date in precedence order: 'public' names win when several
-          cover the same day, and days only a later category knows about (e.g.
-          CA Boxing Day, which is 'government') are still included as
-          nonworkday=1.
+        - Categories in :data:`_NONWORK_CATEGORIES` — or the country's entry in
+          :data:`_COUNTRY_NONWORK_CATEGORIES`, when it has one — form a single
+          nonwork pool, unioned by date in precedence order: 'public' names win
+          when several cover the same day, and days only a later category knows
+          about (e.g. CA Boxing Day, which is 'government') are still included
+          as nonworkday=1.
         - Every remaining supported category is added as nonworkday=0.
         - A date carrying several holidays arrives from the package as one
           delimiter-joined string; each name becomes its own entry.
@@ -146,7 +164,10 @@ class CalendarDB:
         supported: set[str] = set(
             getattr(probe, "supported_categories", None) or {"public"}
         )
-        nonwork_cats = [c for c in _NONWORK_CATEGORIES if c in supported]
+        nonwork_categories = _COUNTRY_NONWORK_CATEGORIES.get(
+            country, _NONWORK_CATEGORIES
+        )
+        nonwork_cats = [c for c in nonwork_categories if c in supported]
         # Anything the package reports that is not a nonworking category is
         # informational.  Sorted for deterministic output across runs.
         info_cats = sorted(supported.difference(nonwork_cats))
@@ -165,9 +186,7 @@ class CalendarDB:
             by_date: dict[str, list[str]] = {}
             for dt, name in h.items():
                 by_date.setdefault(dt.strftime("%Y%m%d"), []).extend(
-                    n.strip()
-                    for n in name.split(_HOLIDAY_NAME_DELIMITER)
-                    if n.strip()
+                    n.strip() for n in name.split(_HOLIDAY_NAME_DELIMITER) if n.strip()
                 )
             return by_date
 
