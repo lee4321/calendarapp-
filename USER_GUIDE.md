@@ -227,18 +227,29 @@ PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
 | `END_DATE` | yes | End date in YYYYMMDD format |
 
 Generates an Excel workbook (`.xlsx`) using the shared blockplan-style layout:
-columns A–W carry the 23 events-table field names (`id`, `status`, `priority`,
-`wbs`, `rollup`, `milestone`, `percent_complete`, `name`, `effort`, `duration`,
-`start_date`, `end_date`, `earliest_start_date`, `latest_start_date`,
-`earliest_end_date`, `latest_end_date`, `predecessors`, `resource_names`,
-`resource_group`, `notes`, `icon`, `color`, `tags`), column X is reserved for
-the continuation marker (used by `excelblockplan`), and one column per visible
-day starts at column Y. Timeband rows place their heading label in column W
-with segment values starting at column Y. After the column-header row,
-`excelheader` writes 100 empty data rows decorated with holiday shading and
-vertical-line borders so the workbook can be used as a planning template.
-Timeband configuration uses `excelheader.top_time_bands` and
+columns A–AS carry all 45 events-table field names in schema order (`id`,
+`status`, `priority`, `wbs`, `rollup`, `milestone`, `percent_complete`, `name`,
+`effort`, `duration`, `start_date`, `end_date`, `earliest_start_date`,
+`latest_start_date`, `earliest_end_date`, `latest_end_date`, `predecessors`,
+`resource_names`, `resource_group`, `notes`, `icon`, `color`, `tags`, then the
+schedule data elements: `source_id`, `critical`, `start_time`, `end_time`,
+`duration_text`, `effort_text`, `actual_start_date`, `actual_start_time`,
+`actual_end_date`, `actual_end_time`, `deadline`, `start_variance`,
+`finish_variance`, `fixed_cost`, `cost`, `percent_work_complete`, `successors`,
+`custom1`–`custom5`), column AT is reserved for the continuation marker (used by
+`excelblockplan`), and one column per visible day starts at column AU. Timeband
+rows place their heading label in the last label column with segment values
+starting at the first date column. After the column-header row, `excelheader`
+writes 100 empty data rows decorated with holiday shading and vertical-line
+borders so the workbook can be used as a planning template. Timeband
+configuration uses `excelheader.top_time_bands` and
 `excelheader.vertical_lines` from the active theme.
+
+The label columns are **not** frozen — with the full events-table column set
+they are far wider than a screen, and freezing them would push the calendar
+grid out of view. `excelheader` freezes the timeband rows only;
+`excelblockplan` sets no freeze pane at all, since its rows are independent
+records rather than a grid you scroll within.
 
 ### `excelblockplan`
 
@@ -258,17 +269,18 @@ Notes column is always emitted.)
 Data-row behavior:
 
 - Rows are ordered by `start_date`, then by `name`.
-- Each event or duration occupies its own row — cells in columns A–W are
-  written independently (never merged) so per-cell colour and font rules
-  from `style_rules` can apply.
+- Each event or duration occupies its own row — cells in the label columns
+  (A–AS) are written independently (never merged) so per-cell colour and font
+  rules from `style_rules` can apply.
 - **Single-day events**: the resolved icon glyph (theme `style_rules`'
-  `icon:` → events.icon → `●`) is placed in the day column (Y+) that
+  `icon:` → events.icon → `●`) is placed in the day column (AU+) that
   corresponds to the event's start date.
 - **Multi-day durations**: every visible day column between start and end
   is filled with the style-resolved colour (or `events.color` when no rule
   matches).
 - **Continuation marker**: when a duration extends past the visible range,
-  column X carries `◀`, `▶`, or `◀▶` to indicate which side(s) continue.
+  column AT (the column just after the label block) carries `◀`, `▶`, or
+  `◀▶` to indicate which side(s) continue.
 - **Holiday overlay**: after all data rows are drawn the federal-holiday /
   company-holiday / weekend decoration is applied to the day columns. When
   a cell already holds an event icon or duration colour, the overlay uses
