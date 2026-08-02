@@ -55,8 +55,12 @@ Standalone lookup tables (no relations): `icon` (name → SVG),
 
 **Government holidays are not stored.** `CalendarDB.load_python_holidays()`
 loads them per country and date range from the `holidays` Python package
-into memory; public/government kinds are marked `nonworkday=1`,
-optional/half-day/unofficial kinds get titles without shading.
+into memory. Every category the package reports for a country is loaded
+(discovered from `supported_categories`, not a fixed list): public,
+government, bank and de-facto kinds are marked `nonworkday=1`; all other
+kinds — optional, half-day, unofficial, school, workday, armed-forces and
+the religious/ethnic ones — get titles without shading. Country-wide
+holidays only; subdivision (state/province) holidays are not loaded.
 
 ## From rows to renderers
 

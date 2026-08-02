@@ -17,12 +17,22 @@ from shared.events_schema import migrate_events_table
 
 logger = logging.getLogger(__name__)
 
-# Holiday categories from the 'holidays' package that count as non-working days.
-_NONWORK_CATEGORIES: frozenset[str] = frozenset({"public", "government"})
-# Additional informational holiday categories (shown as titles, not shaded).
-_EXTRA_CATEGORIES: frozenset[str] = frozenset({"optional", "half_day", "unofficial"})
+# Holiday categories from the 'holidays' package that count as non-working days,
+# in precedence order: when several of them fall on one date, the name from the
+# earliest category in this tuple is the one shown.
+#
+# Every *other* category the package reports for a country (optional, half_day,
+# unofficial, school, workday, armed_forces and the religious/ethnic ones such as
+# catholic, orthodox, hebrew, islamic, hindu, chinese, ...) is loaded too, but as
+# informational — a title with no shading.  The set of categories is discovered
+# per country from ``supported_categories`` rather than hard-coded, so countries
+# whose holidays live in categories this file has never heard of still load.
+_NONWORK_CATEGORIES: tuple[str, ...] = ("public", "government", "bank", "de_facto")
 # Countries loaded when no --country flag is given.
 _DEFAULT_COUNTRIES: tuple[str, ...] = ("US", "CA")
+# The 'holidays' package joins several holidays sharing one date into a single
+# string with this separator; entries are split back apart on load.
+_HOLIDAY_NAME_DELIMITER: str = "; "
 
 
 def _parse_country_codes(country: str | None) -> frozenset[str] | None:
@@ -60,10 +70,12 @@ class CalendarDB:
         """
         Load government holidays from the 'holidays' Python package.
 
-        Loads public, government, optional, half-day, and unofficial holidays
-        for every country in scope.  Public and government holidays are marked
-        nonworkday=1 (shaded on the calendar); optional/half-day/unofficial
-        holidays are marked nonworkday=0 (title shown, no shading).
+        Loads *every* holiday category the package supports for each country in
+        scope.  Public, government, bank and de-facto holidays are marked
+        nonworkday=1 (shaded on the calendar); all other categories — optional,
+        half-day, unofficial, school, workday, armed-forces and the
+        religious/ethnic ones — are marked nonworkday=0 (title shown, no
+        shading).
 
         When *country* is None the default countries (US and CA) are loaded.
 
@@ -103,15 +115,24 @@ class CalendarDB:
         self, holidays_lib, country: str, years: list[int]
     ) -> None:
         """
-        Load all supported holiday categories for *country* into _python_holidays.
+        Load every holiday category *country* supports into _python_holidays.
 
         Strategy:
-        - 'public' and 'government' are treated as a single nonwork pool.
-          They are unioned by date: 'public' names take precedence when both
-          cover the same day; 'government'-only days (e.g. CA Boxing Day) are
-          still included as nonworkday=1.
-        - 'optional', 'half_day', 'unofficial' are added as nonworkday=0
-          for dates not already covered by the nonwork pool.
+        - The categories are discovered from the package's own
+          ``supported_categories`` for the country, not from a fixed list, so
+          nothing a country declares is silently dropped.
+        - Categories in :data:`_NONWORK_CATEGORIES` form a single nonwork pool,
+          unioned by date in precedence order: 'public' names win when several
+          cover the same day, and days only a later category knows about (e.g.
+          CA Boxing Day, which is 'government') are still included as
+          nonworkday=1.
+        - Every remaining supported category is added as nonworkday=0.
+        - A date carrying several holidays arrives from the package as one
+          delimiter-joined string; each name becomes its own entry.
+
+        Entries are ordered nonwork-first per country, so callers that show a
+        single title (``get_holiday_title_for_date``) keep showing the
+        nonworking holiday rather than an informational one.
         """
         # Probe the country to discover which categories it supports.
         try:
@@ -122,69 +143,66 @@ class CalendarDB:
             )
             return
 
-        supported: set[str] = set(getattr(probe, "supported_categories", {"public"}))
+        supported: set[str] = set(
+            getattr(probe, "supported_categories", None) or {"public"}
+        )
+        nonwork_cats = [c for c in _NONWORK_CATEGORIES if c in supported]
+        # Anything the package reports that is not a nonworking category is
+        # informational.  Sorted for deterministic output across runs.
+        info_cats = sorted(supported.difference(nonwork_cats))
 
-        # --- Step 1: build nonwork pool (public ∪ government), deduped by date ---
-        # Load 'public' first so its names take precedence over 'government' names
-        # on days covered by both.
-        nonwork_dates: dict[str, str] = {}  # daykey → display name
-        for cat in ("public", "government"):
-            if cat not in supported:
-                continue
+        country_icon = country.lower()
+
+        def load(cat: str) -> dict[str, list[str]]:
+            """Return {daykey: [holiday name, ...]} for one category."""
             try:
                 h = holidays_lib.country_holidays(
                     country, years=years, categories=(cat,)
                 )
             except Exception as e:
                 logger.debug(f"Could not load '{cat}' holidays for {country}: {e}")
-                continue
+                return {}
+            by_date: dict[str, list[str]] = {}
             for dt, name in h.items():
-                daykey = dt.strftime("%Y%m%d")
-                nonwork_dates.setdefault(daykey, name)  # first writer (public) wins
+                by_date.setdefault(dt.strftime("%Y%m%d"), []).extend(
+                    n.strip()
+                    for n in name.split(_HOLIDAY_NAME_DELIMITER)
+                    if n.strip()
+                )
+            return by_date
 
-        country_icon = country.lower()
-        for daykey, name in nonwork_dates.items():
-            self._python_holidays.setdefault(daykey, []).append(
+        def add(daykey: str, name: str, nonworkday: int) -> None:
+            """Append one holiday, skipping names already held for this country."""
+            entries = self._python_holidays.setdefault(daykey, [])
+            if any(
+                e.get("country") == country and e.get("displayname") == name
+                for e in entries
+            ):
+                return
+            entries.append(
                 {
                     "displayname": name,
                     "icon": country_icon,
-                    "nonworkday": 1,
+                    "nonworkday": nonworkday,
                     "country": country,
                 }
             )
 
-        # --- Step 2: add informational (non-nonwork) holidays ---
-        for cat in ("optional", "half_day", "unofficial"):
-            if cat not in supported:
-                continue
-            try:
-                h = holidays_lib.country_holidays(
-                    country, years=years, categories=(cat,)
-                )
-            except Exception as e:
-                logger.debug(f"Could not load '{cat}' holidays for {country}: {e}")
-                continue
-            for dt, name in h.items():
-                daykey = dt.strftime("%Y%m%d")
-                # Skip dates already covered as nonwork days.
-                if daykey in nonwork_dates:
-                    continue
-                # Deduplicate by name within this country+date.
-                existing_names = {
-                    e["displayname"]
-                    for e in self._python_holidays.get(daykey, [])
-                    if e.get("country") == country
-                }
-                if name in existing_names:
-                    continue
-                self._python_holidays.setdefault(daykey, []).append(
-                    {
-                        "displayname": name,
-                        "icon": country_icon,
-                        "nonworkday": 0,
-                        "country": country,
-                    }
-                )
+        # --- Step 1: nonwork pool, deduped by date in category precedence order ---
+        nonwork_dates: dict[str, list[str]] = {}
+        for cat in nonwork_cats:
+            for daykey, names in load(cat).items():
+                nonwork_dates.setdefault(daykey, names)  # first category wins
+
+        for daykey, names in nonwork_dates.items():
+            for name in names:
+                add(daykey, name, 1)
+
+        # --- Step 2: informational holidays from every remaining category ---
+        for cat in info_cats:
+            for daykey, names in load(cat).items():
+                for name in names:
+                    add(daykey, name, 0)
 
     def _connect(self) -> sqlite3.Connection:
         """Return the shared connection, opening it on first use.
