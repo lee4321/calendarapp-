@@ -24,6 +24,7 @@ import argparse
 import sys
 import os
 import logging
+import re
 import shlex
 import sqlite3
 from typing import Dict, Any
@@ -38,17 +39,20 @@ import pandas
 from importers.common import (
     ImportDatabase as _ImportDatabaseBase,
     ImportResult,
+    coerce_source_text,
     compute_file_hash,
     convert_date,
+    convert_datetime,
     determine_file_type,
     find_files,
     list_import_history,
     parse_import_pattern,
-    process_dates,
+    process_datetimes,
     read_file,
     remove_import,
     setup_logging as _setup_logging_common,
 )
+from shared.duration_parser import normalize_decimal_separators, parse_duration
 
 
 # ============================================================================
@@ -84,15 +88,30 @@ def log(message, level="info"):
 
 SUPPORTED_EXTENSIONS = {".xlsx", ".xls", ".csv", ".txt"}
 
-# Mapping: Source Column Name (lowercase) -> Database Column Name
-# Keys are matched case-insensitively; first match per DB column wins.
+# Mapping: Source Column Name -> Database Column Name.
+#
+# Keys are written here in readable snake_case but matched through
+# _canon() below, which strips case, spaces, underscores, hyphens, dots
+# and percent signs.  One entry therefore covers every spelling of a
+# name: "early_start", "EarlyStart", "Early Start" and "earlystart" all
+# resolve together.  First match per DB column wins.
 COLUMN_MAPPING = {
-    # Task name
+    # Task name.  NOTE: "summary" is deliberately absent here -- in the
+    # schedule data-element vocabulary Summary is the rollup flag, not
+    # the task name.  It is mapped to "rollup" further down.
     "task_name": "name",
     "name": "name",
     "title": "name",
     "task": "name",
-    "summary": "name",
+    # Source-system identifier (GUID or integer from the scheduling
+    # tool).  Distinct from events.id, which is our own autoincrement
+    # key; predecessors/successors reference these values.
+    "id": "source_id",
+    "guid": "source_id",
+    "task_id": "source_id",
+    "uid": "source_id",
+    "unique_id": "source_id",
+    "source_id": "source_id",
     # Start date
     "start_date": "start_date",
     "start": "start_date",
@@ -135,21 +154,46 @@ COLUMN_MAPPING = {
     "priority": "priority",
     # WBS
     "wbs": "wbs",
-    # Rollup
+    # Rollup (a.k.a. Summary task)
     "rollup": "rollup",
+    "summary": "rollup",
     # Milestone
     "milestone": "milestone",
+    # Critical path
+    "critical": "critical",
     # Percent complete
     "percent_complete": "percent_complete",
     "complete": "percent_complete",
     "% complete": "percent_complete",
+    # Percent work (effort) complete
+    "percent_work_complete": "percent_work_complete",
+    "% work complete": "percent_work_complete",
     # Effort
     "effort": "effort",
+    "work": "effort",
     # Duration
     "duration": "duration",
-    # Predecessors
+    # Actual start / finish
+    "actual_start": "actual_start_date",
+    "actual_start_date": "actual_start_date",
+    "actual_finish": "actual_end_date",
+    "actual_end": "actual_end_date",
+    "actual_finish_date": "actual_end_date",
+    "actual_end_date": "actual_end_date",
+    # Deadline
+    "deadline": "deadline",
+    # Schedule variances (signed duration strings, e.g. "-4h")
+    "start_variance": "start_variance",
+    "finish_variance": "finish_variance",
+    "end_variance": "finish_variance",
+    # Costs
+    "cost": "cost",
+    "fixed_cost": "fixed_cost",
+    # Predecessors / successors
     "predecessors": "predecessors",
     "predecessor": "predecessors",
+    "successors": "successors",
+    "successor": "successors",
     # Resource names
     "resource_names": "resource_names",
     "resource_name": "resource_names",
@@ -158,8 +202,10 @@ COLUMN_MAPPING = {
     "assigned_to": "resource_names",
     # Resource group
     "resource_group": "resource_group",
+    "resource_groups": "resource_group",
     "group": "resource_group",
     "team": "resource_group",
+    "department": "resource_group",
     # Notes
     "notes": "notes",
     "description": "notes",
@@ -175,6 +221,13 @@ COLUMN_MAPPING = {
     "tag": "tags",
     "marks": "tags",
     "mark": "tags",
+    # Free-form custom fields.  No length limit -- concatenate any extra
+    # source-system fields into these to drive selection and styling.
+    "custom1": "custom1",
+    "custom2": "custom2",
+    "custom3": "custom3",
+    "custom4": "custom4",
+    "custom5": "custom5",
 }
 
 
@@ -182,12 +235,50 @@ COLUMN_MAPPING = {
 # Row Normalization
 # ============================================================================
 
+#: Punctuation and whitespace removed before alias lookup.
+_CANON_STRIP_RE = re.compile(r"[\s_\-.%]+")
+
+
+def _canon(name) -> str:
+    """Reduce a column name to its comparison form (see COLUMN_MAPPING)."""
+    return _CANON_STRIP_RE.sub("", str(name).strip().lower())
+
+
+def _build_canonical_mapping() -> dict:
+    """Canonicalize COLUMN_MAPPING keys, rejecting genuine conflicts.
+
+    Two spellings of the same name collapsing to one key is expected and
+    harmless.  Two *different* names collapsing onto conflicting DB
+    columns is a bug in the table above, so it fails loudly at import.
+    """
+    canonical: dict = {}
+    for source_name, db_col in COLUMN_MAPPING.items():
+        key = _canon(source_name)
+        existing = canonical.get(key)
+        if existing is not None and existing != db_col:
+            raise ValueError(
+                f"COLUMN_MAPPING conflict: '{source_name}' canonicalizes to "
+                f"'{key}', which already maps to '{existing}' (not '{db_col}')"
+            )
+        canonical[key] = db_col
+    return canonical
+
+
+#: COLUMN_MAPPING keyed by _canon() form -- the dict actually consulted.
+CANONICAL_COLUMN_MAPPING = _build_canonical_mapping()
+
+
+def lookup_column(source_name) -> str | None:
+    """Resolve a source column name to its DB column, or None."""
+    return CANONICAL_COLUMN_MAPPING.get(_canon(source_name))
+
 
 def normalize_row(row: dict) -> dict:
     """Map source column names to DB column names using COLUMN_MAPPING.
 
-    Column names are matched case-insensitively.  When multiple source columns
-    resolve to the same DB column the first one encountered wins.
+    Column names are matched ignoring case, spaces, underscores, hyphens,
+    dots and percent signs.  When multiple source columns resolve to the
+    same DB column the first one encountered wins.
 
     Args:
         row: Dict of raw column_name → value from a DataFrame row.
@@ -197,7 +288,7 @@ def normalize_row(row: dict) -> dict:
     """
     normalized: dict = {}
     for src_col, value in row.items():
-        db_col = COLUMN_MAPPING.get(str(src_col).strip().lower())
+        db_col = lookup_column(src_col)
         if db_col is not None:
             normalized.setdefault(db_col, value)
     return normalized
@@ -206,6 +297,36 @@ def normalize_row(row: dict) -> dict:
 # ============================================================================
 # Database Operations
 # ============================================================================
+
+
+#: Columns added to `events` after the original schema, in the order the
+#: canonical DDL (events.sql) declares them.  Each is applied with a lazy
+#: ALTER TABLE so an existing database migrates in place: no rebuild, no
+#: data movement, and re-running is a no-op.
+EVENTS_SCHEMA_ADDITIONS: tuple[tuple[str, str], ...] = (
+    ("source_id", "TEXT"),
+    ("critical", "INTEGER"),
+    ("start_time", "TEXT"),
+    ("end_time", "TEXT"),
+    ("duration_text", "TEXT"),
+    ("effort_text", "TEXT"),
+    ("actual_start_date", "TEXT"),
+    ("actual_start_time", "TEXT"),
+    ("actual_end_date", "TEXT"),
+    ("actual_end_time", "TEXT"),
+    ("deadline", "TEXT"),
+    ("start_variance", "TEXT"),
+    ("finish_variance", "TEXT"),
+    ("fixed_cost", "REAL"),
+    ("cost", "REAL"),
+    ("percent_work_complete", "REAL"),
+    ("successors", "TEXT"),
+    ("custom1", "TEXT"),
+    ("custom2", "TEXT"),
+    ("custom3", "TEXT"),
+    ("custom4", "TEXT"),
+    ("custom5", "TEXT"),
+)
 
 
 class ImportDatabase(_ImportDatabaseBase):
@@ -217,6 +338,15 @@ class ImportDatabase(_ImportDatabaseBase):
 
     ROW_TABLE = "events"
     UNIT_LABEL = "events"
+
+    def extra_migrations(self, conn) -> None:
+        """Bring an existing `events` table up to the current schema."""
+        for column, decl in EVENTS_SCHEMA_ADDITIONS:
+            try:
+                conn.execute(f"ALTER TABLE events ADD COLUMN {column} {decl}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists (or table not created yet)
+        conn.commit()
 
 
 # ============================================================================
@@ -464,6 +594,81 @@ def import_generated_events(
 # ============================================================================
 
 
+#: Schedule-window columns stored as a bare YYYYMMDD date.  The source
+#: may carry a time; nothing reads these at sub-day resolution, so it is
+#: dropped rather than spend a column per field on it.
+_DATE_ONLY_COLS = frozenset(
+    {
+        "earliest_start_date",
+        "latest_start_date",
+        "earliest_end_date",
+        "latest_end_date",
+        "deadline",
+    }
+)
+
+#: Date columns that keep their time component in a companion column.
+_DATETIME_COLS = {
+    "actual_start_date": "actual_start_time",
+    "actual_end_date": "actual_end_time",
+}
+
+#: Text durations parsed into decimal days, keeping the source string.
+_DURATION_COLS = {"duration": "duration_text", "effort": "effort_text"}
+
+_BOOLEAN_COLS = frozenset({"rollup", "milestone", "critical"})
+_CURRENCY_COLS = frozenset({"cost", "fixed_cost"})
+_FRACTION_COLS = frozenset({"percent_complete", "percent_work_complete"})
+
+_TRUE_VALUES = frozenset({"TRUE", "T", "1", "YES", "Y"})
+
+#: Stripped from currency values once separators are resolved.  Commas
+#: are handled by normalize_decimal_separators, not removed blindly --
+#: "1,5" is one and a half, not fifteen.
+_CURRENCY_NOISE_RE = re.compile(r"[$£€¥,\s]")
+
+
+def _is_blank(value) -> bool:
+    """True for None, NaN/NaT, and whitespace-only values."""
+    return not (pandas.notna(value) and str(value).strip())
+
+
+def _to_currency(value) -> float | None:
+    """Parse a currency cell ('$250.00', '(1,200)') to a float."""
+    if _is_blank(value):
+        return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+
+    text = _CURRENCY_NOISE_RE.sub(
+        "", normalize_decimal_separators(str(value).strip())
+    )
+    negative = text.startswith("(") and text.endswith(")")
+    if negative:
+        text = text[1:-1]
+    try:
+        amount = float(text)
+    except ValueError:
+        return None
+    return -amount if negative else amount
+
+
+def _to_fraction(value) -> float:
+    """Parse a completion cell to a 0.0-1.0 fraction.
+
+    Both conventions appear in the wild, so accept either: values above 1
+    are read as percentages ('85' -> 0.85), values at or below 1 are
+    already fractions ('0.85', '1.0').
+    """
+    if _is_blank(value):
+        return 0.0
+    try:
+        number = float(str(value).strip().rstrip("%"))
+    except (ValueError, TypeError):
+        return 0.0
+    return number / 100.0 if number > 1.0 else number
+
+
 def transform_row(row, user_id, import_id, event_id):
     """
     Transform DataFrame row to database record.
@@ -480,8 +685,8 @@ def transform_row(row, user_id, import_id, event_id):
     # Normalize column names (case-insensitive, alias-aware)
     norm = normalize_row(row)
 
-    # Process dates first
-    start_date, end_date, dates_valid = process_dates(
+    # Process dates first, keeping any YYYYMMDDTHHMM time component
+    start_date, start_time, end_date, end_time, dates_valid = process_datetimes(
         norm.get("start_date"), norm.get("end_date")
     )
 
@@ -495,14 +700,9 @@ def transform_row(row, user_id, import_id, event_id):
         "import_id": import_id,
         "status": "active",
         "start_date": start_date,
+        "start_time": start_time,
         "end_date": end_date,
-    }
-
-    date_cols = {
-        "earliest_start_date",
-        "latest_start_date",
-        "earliest_end_date",
-        "latest_end_date",
+        "end_time": end_time,
     }
 
     # Map remaining normalized columns with type coercions
@@ -512,34 +712,28 @@ def transform_row(row, user_id, import_id, event_id):
 
         if db_col == "priority":
             try:
-                value = int(value) if pandas.notna(value) and str(value).strip() else 0
+                value = int(value) if not _is_blank(value) else 0
             except (ValueError, TypeError):
                 value = 0
-        elif db_col in ("rollup", "milestone"):
-            value = 1 if str(value).strip().upper() in ("TRUE", "1", "YES") else 0
-        elif db_col == "percent_complete":
-            try:
-                value = (
-                    float(value) if pandas.notna(value) and str(value).strip() else 0.0
-                )
-            except (ValueError, TypeError):
-                value = 0.0
-        elif db_col in ("effort", "duration"):
-            try:
-                value = (
-                    float(value) if pandas.notna(value) and str(value).strip() else None
-                )
-            except (ValueError, TypeError):
-                value = None
-        elif db_col in date_cols:
+        elif db_col in _BOOLEAN_COLS:
+            value = 1 if str(value).strip().upper() in _TRUE_VALUES else 0
+        elif db_col in _FRACTION_COLS:
+            value = _to_fraction(value)
+        elif db_col in _CURRENCY_COLS:
+            value = _to_currency(value)
+        elif db_col in _DURATION_COLS:
+            # Keep the source string verbatim; store decimal days alongside.
+            raw = coerce_source_text(value)
+            event[_DURATION_COLS[db_col]] = raw
+            value = parse_duration(raw)
+        elif db_col in _DATETIME_COLS:
+            value, time_part = convert_datetime(value)
+            event[_DATETIME_COLS[db_col]] = time_part
+        elif db_col in _DATE_ONLY_COLS:
             value = convert_date(value)
         else:
-            # String fields - handle NaN
-            value = (
-                str(value).strip()
-                if pandas.notna(value) and str(value).strip()
-                else None
-            )
+            # String fields - handle NaN and pandas' numeric coercion
+            value = coerce_source_text(value)
 
         event[db_col] = value
 
@@ -921,9 +1115,7 @@ def main():
                     log(f"  Columns: {', '.join(df.columns)}")
 
                     # Check for required columns (case-insensitive via COLUMN_MAPPING)
-                    norm_cols = {
-                        COLUMN_MAPPING.get(c.strip().lower()) for c in df.columns
-                    }
+                    norm_cols = {lookup_column(c) for c in df.columns}
                     missing = []
                     if "name" not in norm_cols:
                         missing.append("Task_Name (or equivalent)")
@@ -1011,7 +1203,7 @@ def main():
                 log(f"    Columns: {', '.join(df.columns[:5])}...")
 
                 # Check for required columns (case-insensitive via COLUMN_MAPPING)
-                norm_cols = {COLUMN_MAPPING.get(c.strip().lower()) for c in df.columns}
+                norm_cols = {lookup_column(c) for c in df.columns}
                 missing = []
                 if "name" not in norm_cols:
                     missing.append("Task_Name (or equivalent)")

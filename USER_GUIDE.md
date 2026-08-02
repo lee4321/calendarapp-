@@ -559,6 +559,273 @@ The opacity applies to the event name, event icon, duration bar fill, duration n
 
 **Import.** The importer (`importers/import_events.py`) reads `Status` (or `State`) from the source file's columns. When the column is absent or blank, the row is stored with `status='active'`. CSV / XLSX files exported via `exportdata` round-trip cleanly: status is preserved column-for-column.
 
+## Importing Events
+
+Project and schedule data lives in the `events` table and is loaded with
+`importers/import_events.py`. The importer accepts XLSX / XLS / CSV / TSV input,
+matches column names loosely (see [Accepted column names](#accepted-column-names)),
+hashes each file for duplicate detection, and records every run in `import_history`.
+
+**Start from the template.** [`templates/event_template.xlsx`](templates/event_template.xlsx)
+carries every supported column in order, with the description and format of each
+one attached as a cell comment, dropdown validation on the True/False columns, and
+three worked example rows. Delete the example rows, paste your data in, and import.
+The workbook's second sheet, `Data Dictionary`, restates the full element reference
+below for people filling the sheet in.
+
+```sh
+# Import the filled-in template
+uv run python importers/import_events.py templates/event_template.xlsx
+
+# Re-import after editing the source (replaces the previous batch by file hash)
+uv run python importers/import_events.py MyProject.xlsx --replace
+
+# Import every supported file in a directory
+uv run python importers/import_events.py Events/ --verbose
+
+# Validate without writing -- reports row count, columns, and missing required fields
+uv run python importers/import_events.py MyProject.xlsx --dry-run
+
+# Review what is already in import_history (with row counts per import)
+uv run python importers/import_events.py --list
+
+# Drop a previous import and all of its events
+uv run python importers/import_events.py --remove 15 --force
+```
+
+Excel is the preferred format: it handles multiple comma-separated entries and
+special characters (`/ ' " $`) without the quoting rules a CSV imposes. When a
+workbook contains a sheet named `Events`, that sheet is read; otherwise the first
+sheet is used.
+
+### Required columns
+
+Only three are mandatory: **`Name`**, **`Start`**, and **`Finish`**. Everything else
+is optional and may be omitted entirely — absent columns are simply not set.
+
+A blank `Start` is filled from `Finish` (and vice versa), so single-date events need
+only one of the two. A reversed pair is swapped rather than rejected. A row with no
+parseable date on either side, or with a blank `Name`, is reported as a failed row;
+use `--skip-errors` to import the rest of the file anyway.
+
+### Data elements
+
+`Name`, `Start` and `Finish` are marked **\***; all others are optional.
+
+| Column | Also accepted | Description | Format | Example |
+| --- | --- | --- | --- | --- |
+| `ID` | `GUID` | Unique ID for the task. | Alphanumeric string | `143` |
+| `Name` **\*** | `TaskName` | Name of the task. | Alphanumeric string | `Ditch` |
+| `WBS` | — | A unique code (work breakdown structure) used to represent a task's position within the hierarchical structure of tasks. | Alphanumeric string separated by periods (.) | `PROJ1.Act1.Task.143` |
+| `Priority` | — | Indicates the level of importance assigned to a task. | Alphanumeric string. 1 highest, 99 lowest priority | `77` |
+| `Milestone` | — | Indicates whether a task is a milestone. | True or False - can be 0 for false and 1 for true | `False` |
+| `Summary` | `Rollup` | Indicates whether a task is a summary task. | True or False - can be 0 for false and 1 for true | `False` |
+| `Critical` | — | Indicates whether a task has room in the schedule to slip, or if it is on the critical path. | True or False - can be 0 for false and 1 for true | `False` |
+| `Start` **\*** | `StartDate` | Date and time that a task is scheduled to begin. | YYYYMMDDTHHMM | `20260602T1230` |
+| `Finish` **\*** | `EndDate` | The date and time that a task is scheduled to be completed. | YYYYMMDDTHHMM | `20260602T1630` |
+| `Duration` | — | Total span of active working time for a task. Not to be confused with the effort required to complete this task. | Alphanumeric string | `4hr` |
+| `Work` | `Effort` | Total amount of work scheduled to be performed on a task by all assigned resources. | Alphanumeric string | `0.5d` |
+| `EarlyStart` | `earliest_start_date` | The earliest date that a task can begin, based on the early start dates of predecessor and successor tasks and other constraints. | YYYYMMDDTHHMM | `20260523T0800` |
+| `EarlyFinish` | `earliest_end_date` | The earliest date that a task can finish, based on early finish dates of predecessor and successor tasks, other constraints. | YYYYMMDDTHHMM | `20260523T1700` |
+| `LateStart` | `latest_start_date` | The latest date that a task can start without delaying the finish of the project. | YYYYMMDDTHHMM | `20260603T0800` |
+| `LateFinish` | `latest_end_date` | The latest date that a task can finish without delaying the finish of the project. | YYYYMMDDTHHMM | `20260603T1630` |
+| `ActualStart` | — | Date and time that a task actually began. | YYYYMMDDTHHMM | `20260602T0800` |
+| `ActualFinish` | — | Date and time that a task actually finished. | YYYYMMDDTHHMM | `20260602T1200` |
+| `Deadline` | — | Date entered as a deadline for the task. | YYYYMMDDTHHMM | `20260630` |
+| `StartVariance` | — | The difference between a task's baseline start date and its currently scheduled start date. | Alphanumeric string | `-4h` |
+| `FinishVariance` | — | The amount of time that represents the difference between a task's baseline finish date and its current finish date. | Alphanumeric string | `-4h` |
+| `FixedCost` | — | A task expense that is not associated with people performing the work - this may be the cost of a fixed price contract, capital acquisition, equipment rental or other non-labor fee. This is the summation of all costs related to this task. | Numeric | `250.00` |
+| `PercentComplete` | `percent_complete` | The current status of a task, expressed as the percentage of the task's duration that has been completed. | Decimal number between 0 and 1.0 where 1 is 100% | `1.0` |
+| `PercentWorkComplete` | — | The current status of a task, expressed as the percentage of the task's work / effort that has been completed. | Decimal number between 0 and 1.0 where 1 is 100% | `1.0` |
+| `Cost` | — | The total scheduled, or projected, cost for the labor associated with the task. This should exclude any FixedCost items. This is the summation of all labor costs related to this task. | Numeric | `200.00` |
+| `Notes` | — | Notes about the task. | Alphanumeric string | `This is the ditch that must be placed 4' from the road for drainage for the water tower.` |
+| `Resources` | `resource_names` | Names of people associated to this task. | Alphanumeric string | `Pete, Garcia` |
+| `ResourceGroups` | `resource_groups` | Department(s) associated to this task. | Alphanumeric string | `Facilities` |
+| `Predecessors` | — | Specifies the predecessor tasks. | ID values or WBS values | `123` |
+| `Successors` | — | Specifies the successor tasks. | ID values or WBS values | `258` |
+| `Icon` | — | Name of icon to be used in visualizations of this task. | Alphanumeric string | `shovel` |
+| `Color` | — | Name of the color to be used in visualizations for this task. | Alphanumeric string | `Green` |
+| `Tags` | — | Strings associated with this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | `Construction, Grounds` |
+| `Custom1` | — | Custom field holding company / user specific value(s) related to this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | `Equipment: $250.00` |
+| `Custom2` | — | Custom field holding company / user specific value(s) related to this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | `Pete: $25/hr Garcia: $25/hr` |
+| `Custom3` | — | Custom field holding company / user specific value(s) related to this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | `CoA: 99345B2026` |
+| `Custom4` | — | Custom field holding company / user specific value(s) related to this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | `Greenbriar Resorts` |
+| `Custom5` | — | Custom field holding company / user specific value(s) related to this task to be used for selection, filtering, and style rule definition. | Alphanumeric string | — |
+
+### Dates and times
+
+The canonical format is `YYYYMMDDTHHMM` — `20260602T1230` for 2 June 2026, 12:30pm.
+The importer is deliberately lenient and also accepts:
+
+- the colon form, `20260602T12:30`
+- a bare date with no time, `20260602`
+- `YYYY-MM-DD`, `M/D/YYYY`, `M/D/YY`, `6/2/2026 4:30 PM`, and anything else
+  `dateutil` can parse
+
+`Start` and `Finish` keep their time-of-day in separate `start_time` / `end_time`
+columns (`HHMM`), leaving `start_date` / `end_date` as plain `YYYYMMDD` day keys —
+which is what every calendar view indexes on. `ActualStart` / `ActualFinish` are
+stored the same way. A value with no time recorded leaves the time column `NULL`,
+so midnight stays distinguishable from "not specified".
+
+`EarlyStart`, `EarlyFinish`, `LateStart`, `LateFinish` and `Deadline` keep the date
+only; a time supplied for those is accepted and discarded, since no view reads those
+windows at sub-day resolution.
+
+> **Excel tip.** Format the date columns as *Text* before typing, or Excel will
+> reinterpret `20260602T1230` as its own date serial. The supplied template already
+> does this.
+
+### Durations
+
+`Duration`, `Work`, `StartVariance` and `FinishVariance` are free text. Each is stored
+twice: verbatim in a `*_text` column, and parsed into **decimal days** in the numeric
+column, so nothing you typed is lost.
+
+| Unit | Accepted spellings | In days |
+| --- | --- | --- |
+| Minutes | `m`, `min`, `mins`, `minute`, `minutes` | 1 / 480 |
+| Hours | `h`, `hr`, `hrs`, `hour`, `hours` | 1 / 8 |
+| Days | `d`, `dy`, `day`, `days` | 1 |
+| Weeks | `w`, `wk`, `wks`, `week`, `weeks` | 5 |
+| Months | `mo`, `mos`, `mon`, `month`, `months` | 20 |
+
+Conversion assumes an 8-hour workday, a 5-day week and a 20-day month; those three
+constants live at the top of [`shared/duration_parser.py`](shared/duration_parser.py).
+
+**Accepted forms**
+
+| Form | Example | Decimal days |
+| --- | --- | --- |
+| Single term | `4hr` | `0.5` |
+| Decimal value | `0.5d`, `1.5weeks` | `0.5`, `7.5` |
+| Leading decimal point | `.5` | `0.5` |
+| Bare number, taken as days | `3` | `3.0` |
+| Compound, spaced | `1d 4h` | `1.5` |
+| Compound, unspaced | `2w3d` | `13.0` |
+| Three or more terms | `1d 4h 30m` | `1.5625` |
+| Negative, for the variance fields | `-4h`, `-1d 4h` | `-0.5`, `-1.5` |
+| Explicit positive sign | `+1d` | `1.0` |
+| Any capitalization | `4 HR`, `4Hr` | `0.5` |
+| Surrounding whitespace | `  4hr  ` | `0.5` |
+| Estimated-duration mark | `4h?` | `0.5` |
+| Cell already typed as a number | `4`, `2.5` | `4.0`, `2.5` |
+
+**Values that do not parse**
+
+Blank cells, and text such as `n/a`, `TBD`, `abc`, `-`, or a partial match like
+`4hr of prep`. The whole string must be accounted for — otherwise `4hr of prep`
+would silently yield half a day. These leave the numeric column `NULL` while the
+`*_text` column still holds the original string, so one unparseable cell costs one
+field, never the whole row.
+
+> **`m` means minutes, not months.** `1m` is one minute; use `1mo` or longer for
+> months. This follows the schedule exports the importer reads, where minutes are
+> common and months are always spelled out — but it is the opposite of the
+> convention some scheduling tools use.
+
+**Decimal commas and thousands separators**
+
+Both conventions are understood; which character is the decimal point is decided by
+position rather than assumed.
+
+| Input | Reads as | Rule |
+| --- | --- | --- |
+| `1,5` | `1.5` | fewer than three digits after the comma — decimal comma |
+| `1,50` | `1.5` | fewer than three digits after the comma — decimal comma |
+| `1,200` | `1200` | exactly three digits after the comma — thousands separator |
+| `1,234,567` | `1234567` | thousands separators throughout |
+| `1,234.5` | `1234.5` | both present — the later `.` is the decimal |
+| `1.234,5` | `1234.5` | both present — the later `,` is the decimal |
+
+One case is genuinely ambiguous: `1,500` could mean fifteen hundred or one-and-a-half
+written with three decimal places. It resolves as **1500**, the conventional reading —
+three-decimal-place durations do not occur in practice. Write `1.5` if you mean one
+and a half.
+
+### Other value formats
+
+- **True/False columns** (`Milestone`, `Summary`, `Critical`) accept `True`/`False`,
+  `T`/`F`, `Yes`/`No`, `Y`/`N`, `1`/`0`. Anything unrecognized reads as false.
+- **`PercentComplete` / `PercentWorkComplete`** accept either convention: `0.85` and
+  `85` both store as `0.85`. Values above 1 are read as percentages.
+- **`Cost` / `FixedCost`** accept currency decoration — `$250.00`, `€1.234,56`,
+  `1,200`, and `(500)` for a negative — and store as a plain number. They use the
+  same decimal-comma and thousands-separator rules as
+  [Durations](#durations) above.
+- **`Priority`** is an integer, 1 highest through 99 lowest. Blank reads as `0`.
+- **`Resources`, `ResourceGroups`, `Tags`** hold comma-separated lists.
+- **`Custom1`–`Custom5`, `Notes`, `Tags`** have no length limit. Concatenate any extra
+  fields from your source system into them to drive selection, filtering, and
+  `style_rules` matching.
+- **`ID`** is the identifier from your source system, stored in `source_id`. It is
+  kept separate from the `events.id` primary key, which this application assigns.
+  `Predecessors` and `Successors` reference `ID` or `WBS` values.
+- **`WBS`** values should be unique across all projects; include a project identifier
+  in the WBS structure to guarantee it.
+
+### Accepted column names
+
+Column names are matched ignoring case, spaces, underscores, hyphens, dots and
+percent signs — so `EarlyStart`, `early_start`, `Early Start` and `earlystart` are
+all the same column. The names below are the additional aliases on top of each
+element's own name and the "Also accepted" column in the table above.
+
+| Database column | Aliases |
+| --- | --- |
+| `name` | `name`, `task_name`, `title`, `task` |
+| `source_id` | `id`, `guid`, `task_id`, `uid`, `unique_id` |
+| `start_date` | `start`, `start_date`, `begin`, `begin_date`, `date` |
+| `end_date` | `finish`, `end`, `end_date`, `finish_date`, `due`, `due_date` |
+| `earliest_start_date` | `early_start`, `earliest_start`, `es_date` |
+| `latest_start_date` | `late_start`, `latest_start`, `ls_date` |
+| `earliest_end_date` | `early_finish`, `earliest_finish`, `earliest_end`, `ef_date` |
+| `latest_end_date` | `late_finish`, `latest_finish`, `latest_end`, `lf_date` |
+| `actual_start_date` | `actual_start` |
+| `actual_end_date` | `actual_finish`, `actual_end` |
+| `status` | `status`, `state` |
+| `rollup` | `rollup`, `summary` |
+| `percent_complete` | `percent_complete`, `complete`, `% complete` |
+| `effort` | `work`, `effort` |
+| `finish_variance` | `finish_variance`, `end_variance` |
+| `resource_names` | `resources`, `resource`, `resource_names`, `assigned_to` |
+| `resource_group` | `resource_groups`, `resource_group`, `group`, `team`, `department` |
+| `notes` | `notes`, `note`, `description` |
+| `color` | `color`, `colour`, `highlight_color` |
+| `tags` | `tags`, `tag`, `marks`, `mark` |
+
+> **Behaviour change.** `Summary` now maps to the **rollup** flag, matching the
+> schedule data-element vocabulary where a summary task is a rollup. It previously
+> mapped to the task name. If you have existing files that used `Summary` as the
+> task name, rename that column to `Name` before re-importing.
+
+`Status` is not part of the schedule element set but is read if present; see
+[Event Status](#event-status) for the allowed values and how each renders. When the
+column is absent or blank the row is stored as `active`.
+
+### Round-tripping
+
+`exportdata` writes the same column set the importer reads, so an export can be
+edited and re-imported without loss. Times ride along inside the date columns as an
+ISO `T` suffix, and durations export as the original text rather than the parsed
+number.
+
+```sh
+uv run python ecalendar.py exportdata 20260101 20261231 -o events.csv
+uv run python importers/import_events.py events.csv
+```
+
+### Import history and schema migration
+
+Every run inserts a row in `import_history` (id, userid, filename, date, filehash,
+command), and each imported event is tagged with that `import_id` — so `--replace`
+and `--remove` target one batch without touching rows from other imports or
+hand-edited entries. Import IDs are never reused.
+
+On first run the importer brings an older `events` table up to the current schema
+with a lazy `ALTER TABLE ... ADD COLUMN` per missing column. It is additive only:
+existing rows and their data are untouched, and re-running is a no-op.
+
 ## Importing Special Days
 
 Company special days (founders days, all-hands picnics, hack days, locale-specific observances) live in the `specialdays` table and are loaded with `importers/import_specialdays.py`. The importer mirrors `import_events.py` in shape: XLSX / XLS / CSV / TSV input, case-insensitive column aliasing, SHA-256 hashing for duplicate detection, and full `import_history` tracking.
