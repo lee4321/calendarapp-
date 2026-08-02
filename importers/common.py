@@ -187,6 +187,36 @@ class ImportResult:
 # ============================================================================
 
 
+def coerce_source_text(value) -> str | None:
+    """Render a spreadsheet cell as the text the author typed.
+
+    pandas types a column of numeric-looking strings as float64, so an ID
+    of "143" arrives as 143.0 and a date of "20260630" as 20260630.0 --
+    both of which stringify with a ".0" that breaks date parsing and
+    corrupts identifiers.  Whole floats are therefore rendered without
+    the fractional part.
+
+    Args:
+        value: Raw cell value of any type.
+
+    Returns:
+        Cleaned text, or None when the value is missing or blank.
+    """
+    if value is None:
+        return None
+    try:
+        if pandas.isnull(value):
+            return None
+    except (TypeError, ValueError):
+        pass  # Array-likes and exotic types are handled by str() below.
+
+    if isinstance(value, float) and float(value).is_integer():
+        return str(int(value))
+
+    text = str(value).strip()
+    return text or None
+
+
 def convert_date(date_value, target_format="YYYYMMDD"):
     """
     Convert date from various formats to YYYYMMDD.
@@ -200,10 +230,9 @@ def convert_date(date_value, target_format="YYYYMMDD"):
     Returns:
         str: Formatted date string or None if invalid
     """
-    if pandas.isnull(date_value) or not str(date_value).strip():
+    date_str = coerce_source_text(date_value)
+    if date_str is None:
         return None
-
-    date_str = str(date_value).strip()
 
     try:
         parsed_date = dateutil_parse(date_str)
@@ -216,6 +245,78 @@ def convert_date(date_value, target_format="YYYYMMDD"):
 
     except (ValueError, TypeError):
         return None
+
+
+def convert_datetime(value, target_format="YYYYMMDD"):
+    """
+    Split a date-with-optional-time into its date and time parts.
+
+    Accepts everything :func:`convert_date` does, plus the compact
+    schedule-export form ``YYYYMMDDTHHMM`` and its colon variant
+    ``YYYYMMDDTHH:MM``.  A value with no time component yields a ``None``
+    time rather than a spurious ``"0000"``, so midnight and "no time
+    given" stay distinguishable.
+
+    Args:
+        value: Input date/datetime string or pandas NaT/NaN
+        target_format: Arrow format string for the date part
+
+    Returns:
+        tuple: ``(date_str, time_str)`` -- ``time_str`` is ``HHMM`` or
+        ``None``.  Both are ``None`` when the value is unparseable.
+    """
+    text = coerce_source_text(value)
+    if text is None:
+        return None, None
+
+    try:
+        # Parsing twice against different defaults reveals whether the
+        # source actually carried a time: if it did, both agree; if it
+        # did not, each takes its own default.
+        low = dateutil_parse(text, default=datetime(2000, 1, 1, 0, 0))
+        high = dateutil_parse(text, default=datetime(2000, 1, 1, 23, 59))
+    except (ValueError, TypeError, OverflowError):
+        return None, None
+
+    # Year 1900 and earlier indicates a parsing failure, matching convert_date.
+    if low.year < 1950:
+        return None, None
+
+    date_str = arrow.Arrow.fromdatetime(low).format(target_format)
+    has_time = (low.hour, low.minute) == (high.hour, high.minute)
+    time_str = f"{low.hour:02d}{low.minute:02d}" if has_time else None
+    return date_str, time_str
+
+
+def process_datetimes(start_raw, end_raw):
+    """
+    Convert start/end date-times, applying the same edge-case rules as
+    :func:`process_dates` while preserving the time components.
+
+    - If only one side is valid, the other side copies it (date and time).
+    - If start > end (comparing date then time): swap both pairs.
+
+    Returns:
+        tuple: ``(start_date, start_time, end_date, end_time, is_valid)``
+    """
+    start_date, start_time = convert_datetime(start_raw)
+    end_date, end_time = convert_datetime(end_raw)
+
+    if start_date is None and end_date is None:
+        return None, None, None, None, False
+    if start_date is None:
+        return end_date, end_time, end_date, end_time, True
+    if end_date is None:
+        return start_date, start_time, start_date, start_time, True
+
+    # Compare on date first, falling back to time only within the same day.
+    start_key = (start_date, start_time or "")
+    end_key = (end_date, end_time or "")
+    if start_key > end_key:
+        start_date, end_date = end_date, start_date
+        start_time, end_time = end_time, start_time
+
+    return start_date, start_time, end_date, end_time, True
 
 
 def process_dates(start_raw, end_raw):
@@ -266,11 +367,28 @@ def determine_file_type(filename):
     return None
 
 
+#: Worksheet names preferred over sheet 0 when present in a workbook.
+#: The event template ships a "Data Dictionary" sheet alongside the data,
+#: and sheet order is not guaranteed once a user has edited the file.
+PREFERRED_SHEETS = ("Events", "Special Days", "SpecialDays")
+
+
+def _select_sheet(filepath):
+    """Pick which worksheet to read: a preferred name, else the first."""
+    names = pandas.ExcelFile(filepath).sheet_names
+    lowered = {n.strip().lower(): n for n in names}
+    for preferred in PREFERRED_SHEETS:
+        match = lowered.get(preferred.lower())
+        if match is not None:
+            return match
+    return 0
+
+
 def read_file(filepath):
     """Read an importable file into a DataFrame."""
     file_type = determine_file_type(filepath)
     if file_type == "excel":
-        df = pandas.read_excel(filepath)
+        df = pandas.read_excel(filepath, sheet_name=_select_sheet(filepath))
     elif file_type == "csv":
         df = pandas.read_csv(filepath)
     else:

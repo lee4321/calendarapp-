@@ -42,6 +42,35 @@ class Event:
     color: Optional[str] = None
     status: str = "active"
 
+    # Schedule data elements.  All optional: rows imported before these
+    # columns existed, and files that omit the columns, leave them unset.
+    source_id: Optional[str] = None
+    critical: bool = False
+    start_time: Optional[str] = None  # HHMM
+    end_time: Optional[str] = None  # HHMM
+    duration: Optional[float] = None  # decimal days
+    duration_text: Optional[str] = None  # source string, e.g. "4hr"
+    effort: Optional[float] = None  # decimal days
+    effort_text: Optional[str] = None  # source string, e.g. "0.5d"
+    actual_start_date: Optional[str] = None
+    actual_start_time: Optional[str] = None
+    actual_end_date: Optional[str] = None
+    actual_end_time: Optional[str] = None
+    deadline: Optional[str] = None
+    start_variance: Optional[str] = None
+    finish_variance: Optional[str] = None
+    cost: Optional[float] = None
+    fixed_cost: Optional[float] = None
+    percent_work_complete: float = 0.0
+    predecessors: Optional[str] = None
+    successors: Optional[str] = None
+    tags: Optional[str] = None
+    custom1: Optional[str] = None
+    custom2: Optional[str] = None
+    custom3: Optional[str] = None
+    custom4: Optional[str] = None
+    custom5: Optional[str] = None
+
     @classmethod
     def from_dict(cls, data: dict) -> "Event":
         """
@@ -69,6 +98,32 @@ class Event:
             wbs=data.get("WBS"),
             color=data.get("Color") or data.get("color") or None,
             status=(data.get("Status") or "active"),
+            source_id=data.get("Source_ID"),
+            critical=bool(data.get("Critical")),
+            start_time=data.get("Start_Time"),
+            end_time=data.get("End_Time"),
+            duration=data.get("Duration"),
+            duration_text=data.get("Duration_Text"),
+            effort=data.get("Effort"),
+            effort_text=data.get("Effort_Text"),
+            actual_start_date=data.get("Actual_Start_Date"),
+            actual_start_time=data.get("Actual_Start_Time"),
+            actual_end_date=data.get("Actual_End_Date"),
+            actual_end_time=data.get("Actual_End_Time"),
+            deadline=data.get("Deadline"),
+            start_variance=data.get("Start_Variance"),
+            finish_variance=data.get("Finish_Variance"),
+            cost=data.get("Cost"),
+            fixed_cost=data.get("Fixed_Cost"),
+            percent_work_complete=data.get("Percent_Work_Complete", 0.0) or 0.0,
+            predecessors=data.get("Predecessors"),
+            successors=data.get("Successors"),
+            tags=data.get("Tags"),
+            custom1=data.get("Custom1"),
+            custom2=data.get("Custom2"),
+            custom3=data.get("Custom3"),
+            custom4=data.get("Custom4"),
+            custom5=data.get("Custom5"),
         )
 
     @property

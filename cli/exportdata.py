@@ -39,14 +39,50 @@ _EXPORTDATA_COLUMNS: list[str] = [
     "icon",
     "color",
     "tags",
+    # Schedule data elements.  Times ride along inside the date columns
+    # as an ISO "T" suffix, which the importer re-splits on read, so the
+    # round trip stays lossless without separate time columns.
+    "id",
+    "critical",
+    "actual_start_date",
+    "actual_end_date",
+    "deadline",
+    "start_variance",
+    "finish_variance",
+    "cost",
+    "fixed_cost",
+    "percent_work_complete",
+    "successors",
+    "custom1",
+    "custom2",
+    "custom3",
+    "custom4",
+    "custom5",
 ]
 
 
-def _fmt_date(d: str | None) -> str:
-    """Convert YYYYMMDD → YYYY-MM-DD; leave other strings untouched."""
+def _fmt_date(d: str | None, time: str | None = None) -> str:
+    """Convert YYYYMMDD → YYYY-MM-DD, appending an HHMM time as "THH:MM".
+
+    Other strings are left untouched.  The importer accepts both the
+    plain-date and the date-with-time forms.
+    """
     if d and len(d) == 8 and d.isdigit():
-        return f"{d[:4]}-{d[4:6]}-{d[6:]}"
-    return d or ""
+        d = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+    elif not d:
+        return ""
+    if time and len(str(time)) == 4 and str(time).isdigit():
+        return f"{d}T{str(time)[:2]}:{str(time)[2:]}"
+    return d
+
+
+def _fmt_duration(ev: dict, text_key: str, numeric_key: str) -> str:
+    """Prefer the verbatim source duration; fall back to decimal days."""
+    text = ev.get(text_key)
+    if text:
+        return text
+    value = ev.get(numeric_key)
+    return "" if value is None else value
 
 
 def _event_to_row(ev: dict) -> dict:
@@ -54,8 +90,12 @@ def _event_to_row(ev: dict) -> dict:
     return {
         "task_name": ev.get("Task_Name", ""),
         "status": ev.get("Status", ""),
-        "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date")),
-        "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date")),
+        "start_date": _fmt_date(
+            ev.get("Start") or ev.get("Start_Date"), ev.get("Start_Time")
+        ),
+        "finish_date": _fmt_date(
+            ev.get("End") or ev.get("Finish_Date"), ev.get("End_Time")
+        ),
         "earliest_start_date": _fmt_date(ev.get("Earliest_Start_Date")),
         "latest_start_date": _fmt_date(ev.get("Latest_Start_Date")),
         "earliest_end_date": _fmt_date(ev.get("Earliest_End_Date")),
@@ -65,8 +105,8 @@ def _event_to_row(ev: dict) -> dict:
         "rollup": ev.get("Rollup", ""),
         "milestone": ev.get("Milestone", ""),
         "percent_complete": ev.get("Percent_Complete", ""),
-        "effort": ev.get("Effort", ""),
-        "duration": ev.get("Duration", ""),
+        "effort": _fmt_duration(ev, "Effort_Text", "Effort"),
+        "duration": _fmt_duration(ev, "Duration_Text", "Duration"),
         "predecessors": ev.get("Predecessors", ""),
         "resource_names": ev.get("Resource_Names", ""),
         "resource_group": ev.get("Resource_Group", ""),
@@ -74,6 +114,26 @@ def _event_to_row(ev: dict) -> dict:
         "icon": ev.get("Icon", ""),
         "color": ev.get("Color", ""),
         "tags": ev.get("Tags", ""),
+        "id": ev.get("Source_ID", ""),
+        "critical": ev.get("Critical", ""),
+        "actual_start_date": _fmt_date(
+            ev.get("Actual_Start_Date"), ev.get("Actual_Start_Time")
+        ),
+        "actual_end_date": _fmt_date(
+            ev.get("Actual_End_Date"), ev.get("Actual_End_Time")
+        ),
+        "deadline": _fmt_date(ev.get("Deadline")),
+        "start_variance": ev.get("Start_Variance", ""),
+        "finish_variance": ev.get("Finish_Variance", ""),
+        "cost": ev.get("Cost", ""),
+        "fixed_cost": ev.get("Fixed_Cost", ""),
+        "percent_work_complete": ev.get("Percent_Work_Complete", ""),
+        "successors": ev.get("Successors", ""),
+        "custom1": ev.get("Custom1", ""),
+        "custom2": ev.get("Custom2", ""),
+        "custom3": ev.get("Custom3", ""),
+        "custom4": ev.get("Custom4", ""),
+        "custom5": ev.get("Custom5", ""),
     }
 
 
