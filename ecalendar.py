@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.07.09.0"
+__version__ = "26.08.02.0"
 
 import logging
 import sys
@@ -97,6 +97,36 @@ from visualizers.sheets import (  # noqa: E402,F401
 # =============================================================================
 # Palette Resolution
 # =============================================================================
+
+
+def _validate_pagination_args(args) -> int:
+    """
+    Validate the shared ``--paginate`` option group of the sample-sheet commands.
+
+    ``colorsheet``, ``fontsheet``, ``iconsheet`` and ``palettesheet`` all expose
+    the same pagination flags, so the same two rules apply to each of them:
+    ``--columns``/``--rows``/``--sized`` are only meaningful alongside
+    ``--paginate``, and ``--sized`` must be a positive number of points.
+
+    Called by:
+        run() at the start of the colorsheet / fontsheet / iconsheet /
+        palettesheet branches.
+
+    Returns:
+        0 when the arguments are valid, 1 after printing an error to stderr.
+    """
+    if not args.paginate and (
+        args.columns is not None or args.rows is not None or args.sized is not None
+    ):
+        print(
+            "Error: --columns/--rows/--sized require --paginate.",
+            file=sys.stderr,
+        )
+        return 1
+    if args.sized is not None and args.sized < 1:
+        print("Error: --sized must be a positive integer.", file=sys.stderr)
+        return 1
+    return 0
 
 
 # =============================================================================
@@ -261,21 +291,29 @@ def run(argv: list[str] | None = None) -> int:
         if not registry:
             print(f"Error: no fonts match filter '{args.filter}'.", file=sys.stderr)
             return 1
+        rc = _validate_pagination_args(args)
+        if rc:
+            return rc
         out_path = (
             Path(args.outputfile)
             if args.outputfile
             else Path("output") / "fontsheet.svg"
         )
         sheet_title = "Fonts" if not args.filter else f"Fonts: {args.filter}"
-        _generate_fontsheet_svg(
+        written = _generate_fontsheet_svg(
             registry,
             out_path,
             color=args.color,
             title=sheet_title,
             fullset=args.fullset,
+            paginate=args.paginate,
+            columns=args.columns if args.columns is not None else 2,
+            rows=args.rows if args.rows is not None else 10,
+            cell_size=args.sized if args.sized is not None else 16,
         )
         if not args.quiet:
-            print(out_path)
+            for page_path in written:
+                print(page_path)
         return 0
 
     if args.command == "papersizes":
@@ -341,18 +379,9 @@ def run(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        # --columns/--rows/--sized only make sense when paginating.
-        if not args.paginate and (
-            args.columns is not None or args.rows is not None or args.sized is not None
-        ):
-            print(
-                "Error: --columns/--rows/--sized require --paginate.",
-                file=sys.stderr,
-            )
-            return 1
-        if args.sized is not None and args.sized < 1:
-            print("Error: --sized must be a positive integer.", file=sys.stderr)
-            return 1
+        rc = _validate_pagination_args(args)
+        if rc:
+            return rc
         if args.outputfile:
             out_path = Path(args.outputfile)
         else:
@@ -441,14 +470,26 @@ def run(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
+        rc = _validate_pagination_args(args)
+        if rc:
+            return rc
         if args.outputfile:
             out_path = Path(args.outputfile)
         else:
             out_path = Path("output") / "colorsheet.svg"
         sheet_title = "Colors" if not args.filter else f"Colors: {args.filter}"
-        _generate_colorsheet_svg(filtered, out_path, title=sheet_title)
+        written = _generate_colorsheet_svg(
+            filtered,
+            out_path,
+            title=sheet_title,
+            paginate=args.paginate,
+            columns=args.columns if args.columns is not None else 8,
+            rows=args.rows if args.rows is not None else 10,
+            cell_size=args.sized if args.sized is not None else 110,
+        )
         if not args.quiet:
-            print(out_path)
+            for page_path in written:
+                print(page_path)
         return 0
 
     if args.command == "palettes":
@@ -464,9 +505,18 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "palettesheet":
+        rc = _validate_pagination_args(args)
+        if rc:
+            return rc
         db = _open_calendar_db(args.database)
         # Map uppercase hex → colour name so swatches can be labelled like the colorsheet
         name_lookup = {c["hex"].upper(): c["EN"] for c in db.get_all_colors()}
+        page_opts = dict(
+            paginate=args.paginate,
+            columns=args.columns if args.columns is not None else 12,
+            rows=args.rows if args.rows is not None else 10,
+            cell_size=args.sized if args.sized is not None else 80,
+        )
         if args.palette_name is None:
             all_palettes = db.get_all_palettes()
             if not all_palettes:
@@ -477,9 +527,12 @@ def run(argv: list[str] | None = None) -> int:
                 if args.outputfile
                 else Path("output") / "palettesheet.svg"
             )
-            _generate_all_palettes_svg(all_palettes, out_path, name_lookup)
+            written = _generate_all_palettes_svg(
+                all_palettes, out_path, name_lookup, **page_opts
+            )
             if not args.quiet:
-                print(out_path)
+                for page_path in written:
+                    print(page_path)
             return 0
         colors = db.get_palette(args.palette_name)
         if colors is None:
@@ -497,9 +550,12 @@ def run(argv: list[str] | None = None) -> int:
         else:
             safe_name = args.palette_name.replace("/", "_").replace("\\", "_")
             out_path = Path("output") / f"{safe_name}.svg"
-        _generate_palette_svg(args.palette_name, colors, out_path, name_lookup)
+        written = _generate_palette_svg(
+            args.palette_name, colors, out_path, name_lookup, **page_opts
+        )
         if not args.quiet:
-            print(out_path)
+            for page_path in written:
+                print(page_path)
         return 0
 
     # Calendar views and excelheader require date args

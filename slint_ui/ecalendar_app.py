@@ -557,7 +557,10 @@ class EcalendarApp:
         self, command: str, output_name: str, paginate: bool
     ) -> Path | None:
         candidates: list[Path] = []
-        if command == "iconsheet" and paginate:
+        # The paginating sheets (colorsheet / iconsheet / palettesheet) write
+        # <stem>_pNN.svg whenever a run produces more than one page, so preview
+        # the first page when the un-suffixed file is absent.
+        if paginate:
             stem = output_name[:-4] if output_name.endswith(".svg") else output_name
             candidates += [ROOT / "output" / f"{stem}_p01.svg", ROOT / f"{stem}_p01.svg"]
         candidates += [ROOT / "output" / output_name, ROOT / output_name]
