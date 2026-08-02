@@ -14,6 +14,7 @@ CLI arguments always override theme values.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -512,8 +513,68 @@ VALID_SECTIONS = frozenset(
 # removed) and won't appear in any post-migration theme YAML.
 _NEW_FORMAT_SECTIONS = frozenset({"style_rules"})
 
-# Keys that reference font names (for validation)
-FONT_KEYS = frozenset({"font_family", "font_name", "number_font", "notes_font"})
+# Sections whose font names refer to system-installed fonts (Excel output),
+# not to FONT_REGISTRY.
+FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader", "excelblockplan"})
+
+
+def is_font_key(key: Any) -> bool:
+    """True if ``key`` names a theme setting whose value is a FONT_REGISTRY name.
+
+    Matched by shape rather than an explicit list, so keys added to themes
+    later (``*_font``, ``*_font_name``) are validated without touching this
+    module.  The size/color/opacity companions (``font_size``,
+    ``header_font_size``, ``font_color``) deliberately do not match, and
+    neither does the ``band_fonts`` mapping.
+
+    ``key`` is whatever YAML produced — colour maps are keyed by ints — so
+    non-string keys simply are not font keys.
+    """
+    if not isinstance(key, str):
+        return False
+    return key == "font" or key.endswith(("_font", "font_name", "font_family"))
+
+
+def iter_font_references(data: Any, path: str = "") -> Iterator[tuple[str, str]]:
+    """Yield ``(dotted_path, font_name)`` for every font name in theme data.
+
+    Recurses through lists as well as dicts: ``style_rules`` is a list, so a
+    dict-only walk sees none of the ``style.font`` values a unified theme
+    actually renders with.
+    """
+    if isinstance(data, dict):
+        for key, value in data.items():
+            current_path = f"{path}.{key}" if path else key
+            if not path and key in FONT_VALIDATION_SKIP_SECTIONS:
+                continue
+            if is_font_key(key):
+                if isinstance(value, str) and value:
+                    yield current_path, value
+            else:
+                yield from iter_font_references(value, current_path)
+    elif isinstance(data, list):
+        for index, item in enumerate(data):
+            yield from iter_font_references(item, f"{path}[{index}]")
+
+
+def find_unregistered_fonts(
+    data: Any,
+    registry: dict[str, str] | None = None,
+) -> list[tuple[str, str]]:
+    """Return ``(dotted_path, font_name)`` for font names missing from the registry.
+
+    Every such reference is a latent ``KeyError`` from
+    :func:`config.config.get_font_path` at render time.
+    """
+    if registry is None:
+        from config.config import FONT_REGISTRY
+
+        registry = FONT_REGISTRY
+    return [
+        (path, font)
+        for path, font in iter_font_references(data)
+        if font not in registry
+    ]
 
 
 class ThemeError(Exception):
@@ -611,34 +672,14 @@ class ThemeEngine:
                 unknown,
             )
 
-        from config.config import FONT_REGISTRY
-
-        self._validate_fonts(self._theme_data, FONT_REGISTRY)
-
-    # Sections where font names refer to system-installed fonts, not FONT_REGISTRY
-    _FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader", "excelblockplan"})
-
-    def _validate_fonts(
-        self,
-        data: Any,
-        registry: dict[str, str],
-        path: str = "",
-    ) -> None:
-        """Recursively check that font reference values are in FONT_REGISTRY."""
-        if isinstance(data, dict):
-            for key, value in data.items():
-                current_path = f"{path}.{key}" if path else key
-                if not path and key in self._FONT_VALIDATION_SKIP_SECTIONS:
-                    continue
-                if key in FONT_KEYS and isinstance(value, str):
-                    if value not in registry:
-                        logger.warning(
-                            "Theme font '%s' at '%s' is not in FONT_REGISTRY",
-                            value,
-                            current_path,
-                        )
-                else:
-                    self._validate_fonts(value, registry, current_path)
+        for font_path, font in find_unregistered_fonts(self._theme_data):
+            logger.warning(
+                "Theme '%s' font '%s' at '%s' is not in FONT_REGISTRY; "
+                "rendering will fail when this style is used",
+                self._theme_name,
+                font,
+                font_path,
+            )
 
     def _resolve_value(self, section_path: str, key: str) -> Any | None:
         """

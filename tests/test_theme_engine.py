@@ -9,7 +9,13 @@ import pytest
 import yaml
 
 from config.config import CalendarConfig, create_calendar_config
-from config.theme_engine import ThemeEngine, ThemeError
+from config.theme_engine import (
+    ThemeEngine,
+    ThemeError,
+    find_unregistered_fonts,
+    is_font_key,
+    iter_font_references,
+)
 
 
 class TestThemeEngineListing:
@@ -1331,6 +1337,80 @@ class TestThemeEngineValidation:
             with caplog.at_level("WARNING"):
                 engine.load(f.name)
             assert "NonexistentFont-Bold" in caplog.text
+
+    def test_invalid_font_in_style_rules_logged(self, caplog):
+        """`style_rules` is a list; a dict-only walk missed every font in it.
+
+        This is how leemini.yaml shipped six `NotoSans-Condensed` references
+        that crashed the weekly renderer with a KeyError.
+        """
+        theme_data = {
+            "theme": {"name": "Test"},
+            "style_rules": [
+                {
+                    "name": "define text:body",
+                    "define": "text",
+                    "as": "body",
+                    "style": {"font": "NonexistentFont-Bold", "size": 8},
+                },
+            ],
+        }
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(theme_data, f)
+            f.flush()
+            engine = ThemeEngine()
+            with caplog.at_level("WARNING"):
+                engine.load(f.name)
+            assert "NonexistentFont-Bold" in caplog.text
+
+
+class TestFontReferenceScanner:
+    """Tests for iter_font_references / find_unregistered_fonts."""
+
+    def test_finds_fonts_in_nested_lists_and_dicts(self):
+        found = dict(
+            (path, font)
+            for path, font in iter_font_references({
+                "base": {"font_family": "Roboto-Bold"},
+                "style_rules": [
+                    {"style": {"font": "Roboto-Regular"}},
+                    {"style": {"font": "Roboto-Light"}},
+                ],
+                "mini_calendar": {"cell_font": "JuliaMono-Regular"},
+            })
+        )
+        assert found == {
+            "base.font_family": "Roboto-Bold",
+            "style_rules[0].style.font": "Roboto-Regular",
+            "style_rules[1].style.font": "Roboto-Light",
+            "mini_calendar.cell_font": "JuliaMono-Regular",
+        }
+
+    def test_size_color_and_plural_keys_are_not_font_names(self):
+        """`font_size`/`font_color`/`band_fonts` hold no FONT_REGISTRY name."""
+        assert not is_font_key("font_size")
+        assert not is_font_key("header_font_size")
+        assert not is_font_key("font_color")
+        assert not is_font_key("font_opacity")
+        assert not is_font_key("band_fonts")
+        assert is_font_key("font")
+        assert is_font_key("font_family")
+        assert is_font_key("cell_bold_font")
+        assert is_font_key("label_font_name")
+
+    def test_excel_sections_are_skipped(self):
+        """Excel output uses system-installed fonts, not FONT_REGISTRY."""
+        data = {"excelheader": {"band_fonts": {"q": {"excel_font_name": "Calibri"}}}}
+        assert find_unregistered_fonts(data) == []
+
+    def test_registered_fonts_report_clean(self):
+        assert find_unregistered_fonts({"base": {"font_family": "Roboto-Bold"}}) == []
+
+    def test_unregistered_font_is_reported_with_path(self):
+        data = {"style_rules": [{"style": {"font": "NotoSans-Condensed"}}]}
+        assert find_unregistered_fonts(data) == [
+            ("style_rules[0].style.font", "NotoSans-Condensed"),
+        ]
 
 
 class TestElementCatalogBindings:

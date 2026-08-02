@@ -3,7 +3,7 @@ theme:
   version: '2.0'
   description: Testing various elements — unified theme model
 base:
-  font_family: NotoSans-Condensed
+  font_family: RobotoCondensed-Regular
   default_missing_icon: null
 layout:
   margin:
@@ -96,20 +96,20 @@ weekly:
   name_text:
     font_color: darkslategrey
   notes_text:
-    font_name: NotoSans-CondensedLightItalic
+    font_name: RobotoCondensed-LightItalic
     font_color: red
   overflow:
     icon: warningtriangle
     color: darkorange
 mini_calendar:
-  cell_font: FiraCode-Regular
-  cell_bold_font: FiraCode-Bold
+  cell_font: JuliaMono-Regular
+  cell_bold_font: JuliaMono-Bold
   cell_font_size: 18
-  title_font: FiraCode-Regular
+  title_font: JuliaMono-Regular
   title_font_size: null
   title_format: MMMM YYYY
   title_color: midnightblue
-  header_font: FiraCode-Regular
+  header_font: JuliaMono-Regular
   header_font_size: null
   header_color: slategrey
   day_number_glyphs: null
@@ -125,7 +125,7 @@ mini_calendar:
   milestone_stroke_width: 1.0
   milestone_stroke_opacity: 1.0
   current_day_color: lightskyblue
-  week_number_font: FiraCode-Regular
+  week_number_font: JuliaMono-Regular
   week_number_font_size: null
   week_number_color: slategrey
   week_number_label_format: W{num}
@@ -525,21 +525,21 @@ style_rules:
     define: text
     as: body
     style:
-      font: NotoSans-Condensed
+      font: RobotoCondensed-Regular
       size: 8
       color: darkslategrey
   - name: define text:body_secondary
     define: text
     as: body_secondary
     style:
-      font: NotoSans-CondensedLightItalic
+      font: RobotoCondensed-LightItalic
       size: 7
       color: red
   - name: define text:label
     define: text
     as: label
     style:
-      font: NotoSans-Condensed
+      font: RobotoCondensed-Regular
       size: 7
       color: slategrey
   - name: define text:label_bold
@@ -553,21 +553,21 @@ style_rules:
     define: text
     as: caption
     style:
-      font: NotoSans-Condensed
+      font: RobotoCondensed-Regular
       size: 6
       color: slategrey
   - name: define text:day_number
     define: text
     as: day_number
     style:
-      font: NotoSans-Condensed
+      font: RobotoCondensed-Regular
       size: 10
       color: midnightblue
   - name: define text:month_title
     define: text
     as: month_title
     style:
-      font: FiraCode-Regular
+      font: JuliaMono-Regular
       size: 8
       color: midnightblue
   - name: define box:default

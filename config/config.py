@@ -1911,14 +1911,16 @@ def _build_font_registry() -> dict[str, str]:
     Each font file contributes an entry keyed by its stem (e.g. "Roboto-Bold").
     TTF entries take precedence over OTF when both share the same stem.
     Compatibility aliases that differ from the stem are added afterwards.
+
+    Extensions match case-insensitively, so a file shipped as ``.TTF``
+    registers the same as a ``.ttf`` one.
     """
     fonts_dir = Path(__file__).parent.parent / "fonts"
     registry: dict[str, str] = {}
     if fonts_dir.is_dir():
-        for font in sorted(fonts_dir.glob("*.otf")):
-            registry[font.stem] = f"fonts/{font.name}"
-        for font in sorted(fonts_dir.glob("*.ttf")):
-            registry[font.stem] = f"fonts/{font.name}"
+        for pattern in ("*.otf", "*.ttf"):
+            for font in sorted(fonts_dir.glob(pattern, case_sensitive=False)):
+                registry[font.stem] = f"fonts/{font.name}"
     return registry
 
 
