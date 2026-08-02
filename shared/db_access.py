@@ -13,6 +13,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Iterator
 
+from shared.events_schema import migrate_events_table
+
 logger = logging.getLogger(__name__)
 
 # Holiday categories from the 'holidays' package that count as non-working days.
@@ -185,10 +187,17 @@ class CalendarDB:
                 )
 
     def _connect(self) -> sqlite3.Connection:
-        """Return the shared connection, opening it on first use."""
+        """Return the shared connection, opening it on first use.
+
+        Opening also brings the `events` table up to the current column
+        set.  Reads name every column explicitly, so a database last
+        written by an older version would otherwise fail on the first
+        query rather than simply missing the newer fields.
+        """
         if self._conn is None:
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
+            migrate_events_table(conn)
             self._conn = conn
         return self._conn
 
