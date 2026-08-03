@@ -916,7 +916,13 @@ There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `li
 uv run python tools/migrate_theme.py --in-place path/to/theme.yaml
 ```
 
-The 17 bundled themes (`default`, `corporate`, `dark`, `vibrant`, `accent`, `leemini`, `Julia`, `TJX`, `TJX*`, `minimal`, `basic`, `SAMPLE`) are already in the unified schema. Two reference themes serve as anchors:
+Several themes ship with the application, and all of them are already in the unified schema. The set changes between releases, so rather than relying on a static enumeration here, ask the application for the current list:
+
+```bash
+PYTHONPATH=. uv run python ecalendar.py themes
+```
+
+Two of the bundled themes serve as reference anchors:
 
 - **`basic.yaml`** — the minimum viable theme. One value per required key, deliberately plain styling (Roboto-Regular, black on white, no patterns). Copy it as a starting point for new themes.
 - **`SAMPLE.yaml`** — a complete annotated reference. Every required key is set; optional features (content rules for holidays/sprints/priorities, milestone halos, band alternation, vline patterns, swimlane fills, lane routing) appear as annotated examples.
