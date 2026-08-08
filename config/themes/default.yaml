@@ -474,27 +474,90 @@ blockplan:
     - name: Engineering
     - name: Operations
   top_bands:
-    - band: pi
+    - band: fiscal_quarter
       row_height: 24
-    - band: sprint
+    - band: month_2
       row_height: 18
+gantt:
+  # Table geometry.  Column definitions are layout, not style — style_rules
+  # govern how the cells look, this decides which cells exist.
+  table_width_ratio: 0.38
+  row_height: 14.0
+  header_row_height: 18.0
+  indent_per_level: 8.0
+  sort:
+    - wbs
+    - start_date
+  band_row_height: 10.0
+  bar_height: 8.0
+  min_day_width: 4.0     # 0 = never split the range across pages
+  # Marks.  Icon names resolve against the `icon` table.
+  milestone_icon: diamond-fill
+  deadline_icon: square-fill
+  rollup_icon: check
+  milestone_flag_icon: check
+  snapped_event_icon: arrow-left-circle
+  offchart_dep_icon: crosssquare
+  continuation_icon: arrow-bar-right
+  progress_color: black
+  progress_width: 1.5
+  float_opacity_scale: 0.4
+  show_dependencies: true
+  show_today_line: true
+  today_date: null
+  details_title_text: Gantt Details
+  # Per-column keys: field, header, width (fraction of the table, renormalized),
+  # align, max_lines, wrap, truncate, render (text|icon), icon, format,
+  # date_format, indent.
+  columns:
+    - { field: link_ref,        header: Ref,       width: 0.03, render: icon, align: center }
+    - { field: source_id,        header: ID,        width: 0.035, align: right }
+    - { field: name,             header: Task Name, width: 0.215, max_lines: 2, indent: true }
+    - { field: status,           header: Status,    width: 0.045 }
+    - { field: priority,         header: Pri,       width: 0.025, align: right }
+    - { field: wbs,              header: WBS,       width: 0.05 }
+    - { field: rollup,           header: Roll,      width: 0.02, render: icon, align: center }
+    - { field: milestone,        header: MS,        width: 0.02, render: icon, align: center }
+    - { field: percent_complete, header: '%',       width: 0.035, align: right, format: '{:.0%}' }
+    - { field: effort_text,      header: Effort,    width: 0.045, align: right }
+    - { field: duration_text,    header: Duration,  width: 0.045, align: right }
+    - { field: start_date,       header: Start,     width: 0.08, date_format: dd MM/DD/YY }
+    - { field: end_date,         header: Finish,    width: 0.08, date_format: dd MM/DD/YY }
+    - { field: resource_names,   header: Resources, width: 0.065, max_lines: 1 }
+    - { field: resource_group,   header: Group,     width: 0.055 }
+    - { field: notes,            header: Notes,     width: 0.075, max_lines: 2 }
+    - { field: deadline,         header: Deadline,  width: 0.08, date_format: dd MM/DD/YY }
+  # Bottom bands mirror the top when omitted.
+  top_bands:
+    - band: month
+      row_height: 12
+    - band: week
+      row_height: 10
 time_bands:
-  pi:
-    unit: interval
-    label: PI
-    interval_days: 70
-    prefix: 'PI '
-    start_index: 5
-    anchor_date: '20241007'
+  fiscal_quarter:
+    unit: fiscal_quarter
+    label: Fiscal Quarter
+    label_format: Q{q}-FY{fy2}
     show_every: 1
-  sprint:
-    unit: interval
-    label: Sprint
-    interval_days: 14
-    prefix: 'Sprint '
-    start_index: 1
-    max_index: 5
-    anchor_date: '20241007'
+  month:
+    unit: month
+    label: Month
+    date_format: MMMM
+    show_every: 1
+  date:
+    unit: date
+    label: Date
+    date_format: D
+    show_every: 1
+  dow:
+    unit: date
+    label: DoW
+    date_format: dd
+    show_every: 1
+  month_2:
+    unit: month
+    label: Month
+    date_format: MMM YYYY
     show_every: 1
   date_range:
     unit: week
@@ -504,7 +567,19 @@ time_bands:
     unit: week
     label: Week
     label_format: Week {n}
+  dow_2:
+    unit: date
+    label: DoW
+    date_format: ddd
+    show_every: 1
+
 style_rules:
+  - name: gantt dependency arrows
+    apply_to: line:dependency_arrow
+    style:
+      stroke: navy
+      stroke_width: 1.0
+      stroke_opacity: 0.85
   - name: timeline duration-bar fill opacity (ported from timeline.duration_bar_fill_opacity)
     apply_to: line:duration_bar
     select:

@@ -92,6 +92,26 @@ excelheader:
   band_row_height: 18.0
   top_bands: []
   vertical_lines: []
+gantt:
+  table_width_ratio: 0.38
+  row_height: 14.0
+  header_row_height: 18.0
+  band_row_height: 10.0
+  bar_height: 8.0
+  indent_per_level: 8.0
+  min_day_width: 4.0
+  progress_color: black
+  float_opacity_scale: 0.4
+  milestone_icon: diamond-fill
+  deadline_icon: square-fill
+  rollup_icon: check
+  show_dependencies: true
+  show_today_line: true
+time_bands:
+  date_range:
+    unit: week
+    label: Date Range
+    label_format: '{start} – {end}'
 style_rules:
   - name: define text:base
     define: text

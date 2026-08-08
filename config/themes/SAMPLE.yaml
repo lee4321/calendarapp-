@@ -125,6 +125,80 @@ blockplan:
     - fiscal_quarter
     - month
   bottom_bands: []
+gantt:
+  # ── Geometry ────────────────────────────────────────────────────────────
+  table_width_ratio: 0.38   # task table's share of the content width
+  row_height: 14.0          # fixed and uniform; cells truncate, never grow
+  header_row_height: 18.0
+  band_row_height: 10.0     # per-band default; a band may set its own
+  indent_per_level: 8.0     # WBS depth × this, applied to indent: columns
+  bar_height: 8.0
+  min_day_width: 4.0        # split the range across pages below this; 0 = never
+  sort:                     # WBS segments compare numerically: 1.9 before 1.10
+    - wbs
+    - start_date
+  # ── Marks ───────────────────────────────────────────────────────────────
+  milestone_icon: diamond-fill
+  deadline_icon: square-fill
+  rollup_icon: check              # the task table's rollup column
+  milestone_flag_icon: check      # the task table's milestone column
+  snapped_event_icon: arrow-left-circle   # event moved off a hidden weekend
+  offchart_dep_icon: crosssquare          # predecessor nowhere in the chart
+  # Cross-page dependencies: one number per source event, drawn at the stub
+  # and again in each unreachable successor's `link_ref` column.  Families
+  # are consumed in order, giving 300 references before numbering degrades
+  # to the unnumbered marker above.
+  link_ref_icon_families: [circle-, darkcircle-, square-]
+  link_ref_family_size: 100
+  link_ref_max_icons: 2     # icons drawn in one reference cell
+  continuation_icon: arrow-bar-right      # bar runs past the range
+  progress_color: black
+  progress_width: 1.5
+  float_opacity_scale: 0.4  # earliest/latest bars, relative to the task bar
+  show_dependencies: true
+  show_today_line: true
+  today_date: null          # YYYYMMDD to fix "today"; null = the wall clock
+  show_details: true        # write the companion <output>_details.svg
+  details_title_text: Gantt Details
+  # ── Task table ──────────────────────────────────────────────────────────
+  # Column keys: field, header, width (renormalized), align, max_lines,
+  # truncate, render (text|icon), icon, format, date_format, indent.
+  # `field` names the events table (name, start_date, …); dates accept any
+  # Arrow format plus the `dd` two-letter weekday token.
+  columns:
+    - { field: link_ref,        header: Ref,       width: 0.03, render: icon, align: center }
+    - { field: source_id,        header: ID,        width: 0.035, align: right }
+    - { field: name,             header: Task Name, width: 0.215, max_lines: 2, indent: true }
+    - { field: status,           header: Status,    width: 0.045 }
+    - { field: priority,         header: Pri,       width: 0.025, align: right }
+    - { field: wbs,              header: WBS,       width: 0.05 }
+    - { field: rollup,           header: Roll,      width: 0.02, render: icon, align: center }
+    - { field: milestone,        header: MS,        width: 0.02, render: icon, align: center }
+    - { field: percent_complete, header: '%',       width: 0.035, align: right, format: '{:.0%}' }
+    - { field: effort_text,      header: Effort,    width: 0.045, align: right }
+    - { field: duration_text,    header: Duration,  width: 0.045, align: right }
+    - { field: start_date,       header: Start,     width: 0.08, date_format: dd MM/DD/YY }
+    - { field: end_date,         header: Finish,    width: 0.08, date_format: dd MM/DD/YY }
+    - { field: resource_names,   header: Resources, width: 0.065, max_lines: 1 }
+    - { field: resource_group,   header: Group,     width: 0.055 }
+    - { field: notes,            header: Notes,     width: 0.075, max_lines: 2 }
+    - { field: deadline,         header: Deadline,  width: 0.08, date_format: dd MM/DD/YY }
+  # Timescale.  `top_bands` / `bottom_bands` reference entries in the
+  # top-level `time_bands:` catalog, exactly as blockplan does; omit
+  # `bottom_bands` and the bottom axis mirrors the top.
+  top_bands:
+    - { band: fiscal_quarter, row_height: 12 }
+    - { band: month,          row_height: 12 }
+    - { band: week,           row_height: 10 }
+  bottom_bands:
+    - { band: month, row_height: 10 }
+  #
+  # Either stack takes **any number** of bands, each with its own
+  # `row_height` (or the `band_row_height` default above), e.g. fiscal
+  # quarter over month over week over day-of-week.  Should the stacks and
+  # the column-header row together want more than 75% of the content
+  # height, every chrome row is scaled down proportionally — no band is
+  # dropped, and the task body always keeps positive height.
 excelheader:
   font_name: Calibri
   font_size: 9
@@ -137,6 +211,34 @@ excelheader:
       excel_font_name: Calibri
       excel_font_size: 10
   vertical_lines: []
+time_bands:
+  # Shared catalog of band definitions.  Visualizers do not define bands
+  # inline; they *reference* these by name from their own `top_bands` /
+  # `bottom_bands` / `bands` lists, so one definition serves blockplan,
+  # compactplan, excelheader and gantt alike.
+  #
+  # `unit` picks the segmentation: date | week | month | year | interval |
+  # fiscal_quarter | fiscal_period | icon.  Label text comes from
+  # `date_format` (an Arrow format, `dd` supported) or `label_format`
+  # (a template over the segment's own fields).
+  fiscal_quarter:
+    unit: fiscal_quarter
+    label: Fiscal Quarter
+    label_format: 'Q{q}-FY{fy2}'
+    show_every: 1
+  month:
+    unit: month
+    label: Month
+    date_format: MMMM
+    show_every: 1
+  week:
+    unit: week
+    label: Week
+    label_format: Week {n}
+  date_range:
+    unit: week
+    label: Date Range
+    label_format: '{start} – {end}'
 style_rules:
   # Per-visualizer token override example: timeline duration-bar fill opacity.
   # (Bars in other visualizers read the shared ec-duration-bar element style.)
