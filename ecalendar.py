@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.08.02.0"
+__version__ = "26.08.08.0"
 
 import logging
 import sys
@@ -242,6 +242,7 @@ def run(argv: list[str] | None = None) -> int:
         "timeline",
         "pit",
         "blockplan",
+        "gantt",
         "compactplan",
     }
     if (

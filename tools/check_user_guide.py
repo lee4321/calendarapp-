@@ -25,7 +25,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GUIDE = ROOT / "USER_GUIDE.md"
 
-FENCE_RE = re.compile(r"```(?:bash|sh|console)?\n(.*?)```", re.DOTALL)
+# Any language tag, not just the shell ones: a ```yaml block that the
+# pattern failed to recognize as an *opening* fence used to shift the
+# scanner's parity, so every example after the first YAML sample fell
+# outside any matched block and was silently skipped.
+FENCE_RE = re.compile(r"```[A-Za-z0-9_+-]*\n(.*?)```", re.DOTALL)
 
 
 def extract_commands(text: str) -> list[str]:

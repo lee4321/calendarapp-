@@ -64,6 +64,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "pit",
     "compact_plan",
     "blockplan",
+    "gantt",
     "excelheader",
     "time_bands",
     "style_rules",

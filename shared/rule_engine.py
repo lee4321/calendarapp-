@@ -571,8 +571,26 @@ class StyleEngine:
         Layer all event/duration rules that match the given event.
         Returns a StyleResult with accumulated overrides.
         """
+        return self.evaluate_target(
+            "duration" if event.is_duration else "event", event, ctx
+        )
+
+    def evaluate_target(
+        self,
+        target: str,
+        event: "Event",
+        ctx: DayContext | None = None,
+    ) -> StyleResult:
+        """
+        Layer every rule whose ``apply_to`` names *target*, selected against
+        *event*'s fields.
+
+        Same matching as :meth:`evaluate_event`, with the target named
+        explicitly so a renderer can style marks that are neither an event
+        box nor a duration box -- the Gantt's dependency arrows, for
+        instance, select on the successor task's fields.
+        """
         result = StyleResult()
-        target = "duration" if event.is_duration else "event"
 
         for rule in self._applicable_rules(target):
             select = rule.get("select", {})

@@ -48,6 +48,7 @@ SUBCOMMAND_META: dict[str, dict[str, object]] = {
     "text-mini":   {"ext": ".txt",  "accepts_theme": False, "output_dir": "output"},
     "timeline":    {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "blockplan":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
+    "gantt":       {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "compactplan": {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "excelheader": {"ext": ".xlsx", "accepts_theme": True,  "output_dir": None},
 }
