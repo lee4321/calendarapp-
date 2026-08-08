@@ -27,8 +27,8 @@ graduate to the shell at any time).
 **Home** has three columns:
 
 - **Calendar views** — `weekly`, `mini`, `mini-icon`, `candybar`, `text-mini`,
-  `timeline`, `pit`, `blockplan`, `compactplan`, `excelheader`, `excelblockplan`,
-  `exportdata`.
+  `timeline`, `pit`, `blockplan`, `gantt`, `compactplan`, `excelheader`,
+  `excelblockplan`, `exportdata`.
 - **Reference sheets / listings** — the `*sheet` previews plus `themes`,
   `papersizes`, `patterns`, `icons`, `colors`, `palettes`, `fonts`.
 - **Data** — the **Import Hub** (see below).
@@ -68,6 +68,7 @@ for the module-level architecture.
 | `timeline` | Generate a timeline SVG. |
 | `pit` | Generate a Points-in-Time SVG (clean axis + marker-per-event + bezier leaders). |
 | `blockplan` | Generate a blockplan SVG. |
+| `gantt` | Generate a Gantt chart SVG: task table on the left, timescale on the right, with duration bars, percent-complete lines, milestones, rollup brackets and dependency arrows. Also writes a companion `_details.svg` listing every task plus anything the chart could not show faithfully. |
 | `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
 | `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
 | `excelblockplan` | Generate an `.xlsx` workbook with the same timeband header rows as `excelheader` plus one row per event/duration in the range (with style-rule decoration and holiday overlays). |
@@ -110,6 +111,9 @@ PYTHONPATH=. uv run python ecalendar.py timeline 20260101 20261231 -tll 120 -tld
 # Blockplan view
 PYTHONPATH=. uv run python ecalendar.py blockplan 20260101 20261231 -th corporate -of blockplan.svg
 
+# Gantt chart: task table + bars + dependency arrows, plus chart_details.svg
+PYTHONPATH=. uv run python ecalendar.py gantt 20260101 20260630 -th default -of chart.svg
+
 # Compact activities plan
 PYTHONPATH=. uv run python ecalendar.py compactplan 20260309 20260424 -th corporate -of compact.svg
 
@@ -146,65 +150,103 @@ PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 --paginate -cols 4 -ro
 
 ## Command-Line Option Catalog (All Options)
 
+Generated from the argument parser by `tools/generate_option_catalog.py`.
+Run that script after changing `cli/args.py` rather than editing this
+table by hand.
+
 | Option(s) | Metavar | Commands | Description | Defaults/Choices |
 |---|---|---|---|---|
-| `--WBS` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
-| `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Stroke/glyph color (icons & patterns default `#333333`; fontsheet default `#222222`) | `iconsheet`: default `#333333`; `patternsheet`: default `#333333`; `fontsheet`: default `#222222` |
-| `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Number of item columns per page (requires `--paginate`). On `palettesheet` without a palette name it caps how wide each palette's grid wraps; ignored by `fontsheet --fullset`. | `colorsheet`: default `8`; `fontsheet`: default `2`; `iconsheet`: default `8`; `palettesheet`: default `12` |
-| `--country`, `-cc` | `CODE` | `blockplan`, `compactplan`, `excelheader`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. `US`) or a comma-separated list (e.g. `US,CA,GB`). If omitted on render commands, all holidays from the government table are included; `exportdata` defaults to `US,CA`. |  |
-| `--database`, `-db` | `PATH` | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | `blockplan`: default `calendar.db` |
-| `--embed-data` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed the source event data (CSV) inside the SVG metadata so the rendered file carries its own data provenance. | default `False` |
-| `--empty`, `-e` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) | `blockplan`: default `False` |
-| `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter items by name substring (case-insensitive) |  |
-| `--fullset` |  | `fontsheet` | Show every glyph in the font instead of the three fixed sample rows | `fontsheet`: default `False` |
-| `--fiscal` | `TYPE` | `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period) | `weekly`: choices `nrf-454, nrf-445, nrf-544, 13-period` |
-| `--fiscal-colors` |  | `weekly` | Use fiscal period colors instead of Gregorian month colors for day box backgrounds | `weekly`: default `False` |
-| `--footercenter`, `-fc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Center footer text |  |
-| `--footerleft`, `-fl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Left footer text |  |
-| `--footerright`, `-fr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right footer text |  |
-| `--footer`, `-ft` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page footer | `blockplan`: default `False` |
-| `--headercenter`, `-hc` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Center header text |  |
-| `--headerleft`, `-hl` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Left header text |  |
-| `--headerright`, `-hr` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Right header text |  |
-| `--header`, `-ht` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Include page header | `blockplan`: default `False` |
-| `--ignorecomplete`, `-ic` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | `blockplan`: default `False` |
-| `--watermark-image`, `-wi` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark image file |  |
-| `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `pit`, `timeline`, `weekly` | Include notes with events | `blockplan`: default `False` |
-| `--milestones`, `-mo` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only milestones | `blockplan`: default `False` |
+| `--WBS` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
+| `--candybar-cell-width` | `POINTS` | `candybar` | Fixed day-cell width in points (default: 0 = square, width == row height) |  |
+| `--candybar-max-rows-per-page` | `N` | `candybar` | Split into side-by-side strips after N week rows (0 = single strip) |  |
+| `--candybar-month-rotation` | `DEGREES` | `candybar` | Rotate the month-name label (e.g. -90 for vertical, reading up) |  |
+| `--candybar-month-shading` |  | `candybar` | Tint day cells per month (alternating bands; theme can set colors) |  |
+| `--candybar-month-side` |  | `candybar` | Side for the merged month-name box (default: right) | choices `left, right` |
+| `--candybar-no-week-numbers` |  | `candybar` | Hide the week-number column (shown by default) | default `False` |
+| `--candybar-row-height` | `POINTS` | `candybar` | Fixed week-row height in points (default: 0 = auto-fit to page) |  |
+| `--candybar-suppress-weekends` |  | `candybar` | Drop Sat/Sun columns (default: weekends are shown) |  |
+| `--candybar-weekend-fill` | `COLOR` | `candybar` | Shade Sat/Sun day cells with this color (default: no weekend shading) |  |
+| `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Glyph color (default: #222222) (`iconsheet`: Stroke color for icons (default: #333333)) (`patternsheet`: Fill color for pattern tiles (default: #333333)) | `fontsheet`: default `#222222`; `iconsheet`, `patternsheet`: default `#333333` |
+| `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch columns per page (requires --paginate; default: 8) (`fontsheet`: Font columns per page (requires --paginate; default: 2). Ignored with --fullset, which is always a single column.) (`iconsheet`: Icon columns per page (requires --paginate; default: 8)) (`palettesheet`: Swatch columns per page (requires --paginate; default: 12)) |  |
+| `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. (`excelblockplan`, `excelheader`: ISO 3166-1 alpha-2 country code(s) for holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries.) |  |
+| `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
+| `--date-placement` |  | `pit` | Where each event date is drawn: inline (a line inside the label box, with the name/notes — never collides; default), axis (opposite the axis at the marker — the ruler look, but dates collide when events cluster), or none. | choices `inline, axis, none` |
+| `--direction` |  | `pit` | Axis direction (default: horizontal). Note: --orientation remains the page-orientation flag (portrait/landscape). | choices `horizontal, vertical` |
+| `--embed-data` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed source event data (CSV) inside SVG metadata | default `False` |
+| `--empty`, `-e` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) (`excelblockplan`: Create blank workbook (no events)) | default `False` |
+| `--event-icon` | `NAME` | `pit` | DB icon name drawn inside each event's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |  |
+| `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter colors by name substring (case-insensitive) (`fontsheet`: Filter fonts by name substring (case-insensitive)) (`iconsheet`: Filter icons by name substring (case-insensitive)) (`patternsheet`: Filter patterns by name substring (case-insensitive)) |  |
+| `--fiscal` | `TYPE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). weekly/mini: period labels and day-box colors. text-mini: period start markers. timeline: fiscal period/quarter bands (see --fiscal-show-periods/quarters). blockplan/compactplan: NRF-aware fiscal_quarter bands. | choices `nrf-454, nrf-445, nrf-544, 13-period` |
+| `--fiscal-colors` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Use fiscal period colors instead of Gregorian month colors for day box backgrounds | default `False` |
+| `--fiscal-show-periods` |  | `timeline` | Show a fiscal period band row above the timeline axis (requires --fiscal) | default `False` |
+| `--fiscal-show-quarters` |  | `timeline` | Show a fiscal quarter band row above the timeline axis (requires --fiscal) | default `False` |
+| `--fiscal-year-offset` | `N` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Offset added to the fiscal period start year to produce the displayed fiscal year number. 0 = start year (e.g. FY starting Feb 2026 → FY2026), 1 = start year + 1 (e.g. FY starting Oct 2025 → FY2026, US federal default), -1 = start year − 1. Default: auto (0 for NRF). |  |
+| `--footer`, `-ft` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Include page footer | default `False` |
+| `--footercenter`, `-fc` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Center footer text |  |
+| `--footerleft`, `-fl` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Left footer text |  |
+| `--footerright`, `-fr` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Right footer text |  |
+| `--fullset` |  | `fontsheet` | Show every glyph in the font instead of the three fixed sample rows | default `False` |
+| `--header`, `-ht` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Include page header | default `False` |
+| `--headercenter`, `-hc` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Center header text |  |
+| `--headerleft`, `-hl` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Left header text |  |
+| `--headerright`, `-hr` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Right header text |  |
+| `--ignorecomplete`, `-ic` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | default `False` |
+| `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `gantt`, `pit`, `timeline`, `weekly` | Show notes with event names | default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
-| `--margin`, `-m` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Add page margins | `blockplan`: default `False` |
+| `--label-icon-gap` | `POINTS` | `pit` | Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0). |  |
+| `--label-icon-size` | `POINTS` | `pit` | Longest viewBox side of the label-box icon, in points. Defaults to the event-name font size so the glyph fits cleanly on the name baseline. |  |
+| `--label-side` |  | `pit` | Which side(s) of the axis the labels occupy. primary = above (horizontal) / right (vertical); secondary = below / left; both = chronologically alternating. Default: both. | choices `primary, secondary, both` |
+| `--leader-dash` | `DASHARRAY` | `pit` | SVG stroke-dasharray for leaders, e.g. "4,2". |  |
+| `--leader-label-anchor` |  | `pit` | Where the leader meets the label box along the axis. center (default) joins the box middle and never collides; start/end join the leading/trailing edge and may overlap on dense timelines. | choices `start, center, end` |
+| `--leader-length` | `POINTS` | `pit` | Distance from the axis to the first row of labels, i.e. the leader length (default: 8.0). Larger values lengthen leaders and widen row-to-row spacing. |  |
+| `--leader-stub` | `POINTS` | `pit` | Length of the straight perpendicular segment where each leader meets its label box (default: 6.0). Keeps the arrowhead flush with the line; 0 disables. Equivalent to pit.leader.end_stub. |  |
+| `--margin`, `-m` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Add page margins | default `False` |
+| `--marker-size` | `POINTS` | `pit` | Bounding-box size of the axis marker (built-in circle / diamond) in points (default: 7.0). |  |
+| `--milestone-icon` | `NAME` | `pit` | DB icon name drawn inside each milestone's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |  |
+| `--milestones`, `-mo` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Show only milestones | default `False` |
 | `--mini-columns`, `-mc` | `N` | `mini`, `mini-icon`, `text-mini` | Number of months per row in mini calendar (default: 3) |  |
-| `--mini-details` |  | `mini`, `mini-icon` | Generate a second SVG with mini calendar event details | `mini`: default `False` |
-| `--mini-grid-lines` |  | `mini`, `mini-icon` | Draw grid lines between day cells | `mini`: default `False` |
-| `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (default: squares) | `mini-icon`: choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
-| `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | `mini`: default `False` |
+| `--mini-details` |  | `mini`, `mini-icon` | Generate a second SVG with mini calendar event details | default `False` |
+| `--mini-grid-lines` |  | `mini`, `mini-icon` | Draw grid lines between day cells | default `False` |
+| `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (choices: squares, darksquare, darkcircles, circles, squircles, darksquircles; default: squares) | choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
+| `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
-| `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Arrow format string for month title (default: MMM YY) |  |
+| `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Format string for month title (default: MMM YY) |  |
 | `--monthnames`, `-mn` |  | `weekly` | Show month names on calendar | default `False` |
-| `--nodurations`, `-nd` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | `blockplan`: default `False` |
-| `--noevents`, `-ne` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | `blockplan`: default `False` |
-| `--orientation`, `-o` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Page orientation (default: portrait) | `blockplan`: default `portrait`; choices `portrait, landscape` |
-| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fontsheet`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `text-mini`, `timeline`, `weekly` | Output file path. Render commands write under `output/` by default. Defaults: `blockplan`/`weekly`/`mini`/`mini-icon`/`text-mini`/`timeline`/`compactplan` → `output/calendar.svg`; `excelheader` → `output/excelheader.xlsx`; `exportdata` → `output/exportdata_YYYYMMDD.csv`; `colorsheet` → `output/colorsheet.svg`; `iconsheet` → `output/iconsheet.svg`; `patternsheet` → `output/patternsheet.svg`; `fontsheet` → `output/fontsheet.svg`; `palettesheet` → `output/pallet.svg`. With `--paginate` (`colorsheet`, `fontsheet`, `iconsheet`, `palettesheet`), a `_pNN` suffix is inserted before the extension for each page. | |
+| `--no-tick-labels` |  | `pit` | Draw tick marks but no tick labels. |  |
+| `--no-ticks` |  | `pit` | Suppress axis tick marks and labels. |  |
+| `--no-today-line` |  | `pit` | Suppress the today line. | default `True` |
+| `--nodurations`, `-nd` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Exclude multi-day durations | default `False` |
+| `--noevents`, `-ne` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | default `False` |
+| `--orientation`, `-o` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Page orientation (default: landscape) | default `landscape`; choices `portrait, landscape` |
+| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `candybar`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fontsheet`, `gantt`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Output filename (always written under output/) (`colorsheet`: Output SVG path (default: output/colorsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. colorsheet_p01.svg).) (`excelblockplan`: Output .xlsx path (default: output/ExcelBlockplan.xlsx)) (`excelheader`: Output .xlsx path (default: output/excelheader.xlsx)) (`exportdata`: Output CSV file path (default: output/exportdata_YYYYMMDD.csv)) (`fontsheet`: Output file name and path (default: output/fontsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. fontsheet_p01.svg).) (`iconsheet`: Output file name and path (default: output/iconsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. iconsheet_p01.svg).) (`palettesheet`: Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named). With --paginate, a '_pNN' suffix is appended per page (e.g. palettesheet_p01.svg).) (`patternsheet`: Output file name and path (default: output/patternsheet.svg)) | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly`: default `ecalendar.svg` |
 | `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
-| `--paginate` |  | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Split the sheet's items across multiple printable SVG pages instead of one large sheet; enables `--columns`/`--rows`/`--sized`. On `palettesheet` without a palette name, each page is packed with as many complete palettes as fit. | default `False` |
-| `--papersize`, `-ps` | `SIZE` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Paper size (default: Tabloid). | `blockplan`: default `Tabloid` |
-| `--quiet`, `-q` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | `blockplan`: default `False` |
-| `--rollups`, `-ro` |  | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | `blockplan`: default `False` |
-| `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Number of item rows per page (requires `--paginate`). On `palettesheet` without a palette name it sets the page's height budget in swatch rows. | default `10` |
-| `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | `weekly`: default `False` |
-| `--shrink` |  | `blockplan`, `candybar`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. (`compactplan` and `candybar` always shrink.) | `blockplan`: default `False` |
-| `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Cell box size in points; label/spacing gaps unchanged. One integer sets width = height on `iconsheet`/`palettesheet`; on `colorsheet` it sets the width and the height scales with it to keep the sheet's aspect ratio; on `fontsheet` it is the sample text size. Requires `--paginate`. | `iconsheet`: default `24`; `palettesheet`: default `80`; `colorsheet`: default `110`; `fontsheet`: default `16` |
-| `--status` | `LIST` | `blockplan`, `compactplan`, `exportdata`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include. Allowed values: `active`, `draft`, `cancelled`, `archived`, `on-hold`. Use `all` for no filter. Default: `active`. See [Event Status](#event-status) for details. | default `active` |
-| `--theme`, `-th` | `THEME` | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') |  |
-| `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | `timeline`: choices `above, below, both` |
+| `--paginate` |  | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Split the colors across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every color is produced (the default). (`fontsheet`: Split the fonts across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every font is produced (the default).) (`iconsheet`: Split the icons across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows; without it a single SVG containing every icon is produced (the default).) (`palettesheet`: Split the swatches across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every palette is produced (the default). When every palette is rendered, each page is packed with as many complete palettes as fit; a palette is never split across pages.) | default `False` |
+| `--papersize`, `-ps` | `SIZE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Paper size (default: Widescreen). | default `Widescreen` |
+| `--quiet`, `-q` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | default `False` |
+| `--rollups`, `-ro` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | default `False` |
+| `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch rows per page (requires --paginate; default: 10) (`fontsheet`: Font rows per page (requires --paginate; default: 10)) (`iconsheet`: Icon rows per page (requires --paginate; default: 10)) (`palettesheet`: Swatch rows per page — with no palette name this is the page's height budget for packing whole palettes (requires --paginate; default: 10)) |  |
+| `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | default `False` |
+| `--shrink` |  | `blockplan`, `candybar`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | default `False` |
+| `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch box width in points (the height scales with it to keep the sheet's aspect ratio; the label/spacing gaps are unchanged). Requires --paginate; default: 110. (`fontsheet`: Sample text size in points; entry heights follow it. Requires --paginate; default: 16.) (`iconsheet`: Icon cell size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 24.) (`palettesheet`: Swatch box size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 80.) |  |
+| `--status` | `LIST` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include (active, draft, cancelled, archived, on-hold). Use 'all' for no filter. Default: active. |  |
+| `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`, `excelheader`: Theme name or path to .yaml theme file) |  |
+| `--tick-interval` | `DAYS` | `pit` | For --tick-unit interval, days between ticks (default: 1). |  |
+| `--tick-label-format` | `FMT` | `pit` | Arrow date format for tick labels (e.g. 'MMM D'). For week/interval units the timeband label is used when omitted. |  |
+| `--tick-length` | `POINTS` | `pit` | Half-length of each axis tick mark, per side (default: 5.0). |  |
+| `--tick-unit` |  | `pit` | Axis tick granularity (timeband unit). Default: month. | choices `month, week, fiscal_quarter, fiscal_period, interval, date, year` |
+| `--today-date` | `YYYYMMDD` | `pit` | Override the today-line position. Lets a forward-dated presentation be prepared with the 'correct' today indicator. |  |
+| `--today-label` | `TEXT` | `pit` | Today-line label text (default: "today"; "" suppresses). |  |
+| `--today-line` |  | `pit` | Draw the today line (default: on). |  |
+| `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
-| `--verbose`, `-v` |  | `blockplan`, `colors`, `colorsheet`, `compactplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | `blockplan`: default `0` |
-| `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise in SVG coordinates) |  |
-| `--watermark-text`, `-wt` |  | `blockplan`, `compactplan`, `mini`, `mini-icon`, `timeline`, `weekly` | Watermark text |  |
+| `--verbose`, `-v` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | default `0` |
+| `--watermark-image`, `-wi` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark image file |  |
+| `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise coordinates) |  |
+| `--watermark-text`, `-wt` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
-| `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 numbering (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
-| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `excelheader`, `timeline`, `weekly` | Comma-separated ISO weekday list (`0=Mon..6=Sun`) marking non-working days for holiday/weekend classification. Overrides the implicit Sat/Sun pair selected by `--weekends`. |  |
-| `--weekends`, `-we` |  | `blockplan`, `compactplan`, `excelheader`, `mini`, `mini-icon`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start | `blockplan`: default `0`; choices `0, 1, 2, 3, 4` |
+| `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
+| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `timeline`, `weekly` | Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification. Defaults to Sat/Sun when weekends are shown. (`excelblockplan`, `excelheader`: Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification.) |  |
+| `--weekends`, `-we` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start (`excelblockplan`, `excelheader`: Weekend style: 0=work week only (default), 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start) | default `0`; choices `0, 1, 2, 3, 4` |
 | `--weeknumbers`, `-wn` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Show week numbers | default `False` |
 
 ## Positional Arguments by Command
@@ -225,10 +267,10 @@ PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 --paginate -cols 4 -ro
 
 ### `excelheader`
 
-| Name | Required | Description |
-|---|---|---|
-| `START_DATE` | yes | Start date in YYYYMMDD format |
-| `END_DATE` | yes | End date in YYYYMMDD format |
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
 Generates an Excel workbook (`.xlsx`) using the shared blockplan-style layout:
 columns A–AS carry all 45 events-table field names in schema order (`id`,
@@ -257,10 +299,10 @@ records rather than a grid you scroll within.
 
 ### `excelblockplan`
 
-| Name | Required | Description |
-|---|---|---|
-| `START_DATE` | yes | Start date in YYYYMMDD format |
-| `END_DATE` | yes | End date in YYYYMMDD format |
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
 Generates the same workbook skeleton as `excelheader` but populates the data
 rows with one record per event/duration sourced from the events table. The
@@ -326,11 +368,18 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 - `--shade` highlights the current day column when today falls within the date range.
 - `--weekends` controls whether weekend columns are included in the x-axis day list (same as all other commands).
 
+### `gantt`
+
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
+
 ### `help`
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, text-mini, timeline, blockplan, compactplan, themes, papersizes, patterns, icons, colors, palettes, fonts, exportdata |
+| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, candybar, text-mini, timeline, pit, blockplan, gantt, compactplan, excelheader, excelblockplan, themes, papersizes, patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes, palettesheet, fonts, fontsheet, exportdata |
 
 ### `mini`
 
@@ -391,8 +440,8 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `START_DATE` | no | Start date in YYYYMMDD format |  |
-| `END_DATE` | no | End date in YYYYMMDD format |  |
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
 #### `candybar` layout and behavior
 
@@ -443,7 +492,7 @@ Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `NAME` | yes | Name of the palette to preview (case-sensitive, from DB `palettes` table) |  |
+| `NAME` | no | Name of the palette to preview (case-sensitive, from DB palettes table). If omitted, every palette is rendered into a single SVG. |  |
 
 Renders a single named palette as an SVG swatch sheet. Run `ecalendar.py palettes` to discover palette names. Omit `NAME` to render every palette into one sheet, each palette as its own labeled section.
 
@@ -549,6 +598,13 @@ In weekly, day-box cells are drawn first, events and durations are placed into t
 - Item placement order is controlled by `item_placement_order`. Type tokens (`milestones`, `events`, `durations`) determine grouping order, and `priority` or `alphabetical` determine ordering within each group.
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
 - Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
+
+### `pit`
+
+| Name | Required | Description | Choices |
+|---|---|---|---|
+| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
+| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
 ## Event Status
 
@@ -2702,6 +2758,300 @@ All other `ec-*` classes use presentation attributes (not inline style), so a pl
 - **No fiscal bands, WBS groups, or icon bands.** These are supported by `timeline` and `blockplan`; PIT intentionally omits them for visual clarity.
 
 ---
+
+## Gantt Subcommand
+
+The `gantt` subcommand generates a classic **Gantt chart**: a task table on the left, a
+date-scaled plotting area on the right, and one row per task running across both. It is
+the densest of the plan views — where `blockplan` groups work into swimlanes and
+`compactplan` packs durations around a single axis, `gantt` keeps one task per row and
+adds the three things a schedule review needs: **dependencies**, **progress**, and the
+**schedule window** (earliest/latest dates).
+
+### Page anatomy
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ header                                                       │
+├───────────────────────┬──────────────────────────────────────┤
+│                       │ top time bands (month / week / …)    │
+├───────────────────────┼──────────────────────────────────────┤
+│ column headers        │                                      │
+├───────────────────────┼──────────────────────────────────────┤
+│ task table            │ bars, milestones, arrows              │
+│ (one row per task)    │ over non-working-day shading         │
+├───────────────────────┼──────────────────────────────────────┤
+│                       │ bottom time bands                    │
+├───────────────────────┴──────────────────────────────────────┤
+│ footer                                                       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Every run also writes a companion **details page** (`<output>_details.svg`) — see
+[The details page](#the-details-page) below.
+
+### Usage examples
+
+```bash
+# Six-month chart with the default theme
+uv run python ecalendar.py gantt 20260202 20260731 -of gantt_h1.svg
+
+# One programme only, using the WBS filter, with notes in the task rows
+uv run python ecalendar.py gantt 20260202 20260731 --WBS NP --includenotes -of nimbuspay.svg
+
+# Show weekends as shaded columns instead of removing them from the axis
+uv run python ecalendar.py gantt 20260202 20260430 --weekends 1 -of gantt_7day.svg
+
+# Milestones only, on a wide sheet, corporate theme
+uv run python ecalendar.py gantt 20260101 20261231 --milestones -th corporate -ps Tabloid --orientation landscape -of milestones.svg
+
+# Drop finished work and any single-day events; keep the multi-day bars
+uv run python ecalendar.py gantt 20260202 20260731 --ignorecomplete --noevents -of gantt_open.svg
+
+# Fiscal-quarter aware run against the NRF 4-5-4 retail calendar
+uv run python ecalendar.py gantt 20260202 20260731 --fiscal nrf-454 -of gantt_fiscal.svg
+```
+
+### The task table
+
+Columns are theme configuration, not styling: the `gantt.columns` list decides which
+fields appear, in what order, and how each behaves. `style_rules` then decide how the
+resulting cells *look*.
+
+| Key | Meaning |
+|---|---|
+| `field` | Column from the `events` table — `name`, `start_date`, `end_date`, `wbs`, `notes`, `source_id`, … — or the synthetic `link_ref` (cross-page dependency numbers) |
+| `header` | Heading text (defaults to `field`) |
+| `width` | Share of the table width. Widths are renormalized, so any scale works |
+| `align` | `left` (default), `center`, `right` |
+| `max_lines` | Wrap up to this many lines, then truncate with an ellipsis |
+| `truncate` | Truncate rather than overflow (default true) |
+| `render` | `text` (default) or `icon` — an icon column draws a glyph when the value is truthy |
+| `icon` | Icon name for an `icon` column (defaults per field, e.g. `check` for `rollup`) |
+| `format` | Python format spec, e.g. `'{:.0%}'` for `percent_complete` |
+| `date_format` | Arrow format string, plus the `dd` two-letter weekday token (`dd MM/DD/YY` → `Mo 02/02/26`) |
+| `indent` | Shift this column's text by the row's WBS depth |
+
+The default set leads with `link_ref` (see
+[Dependencies](#dependencies)) and then the sixteen columns the requirements call for:
+`source_id`, `name`,
+`status`, `priority`, `wbs`, `rollup`, `milestone`, `percent_complete`, `effort`,
+`duration`, `start_date`, `end_date`, `resource_names`, `resource_group`, `notes`,
+`deadline`. Effort and duration render the **text** the source system exported
+(`"10 days"`), not the parsed decimal — the numeric columns exist for arithmetic.
+
+Row height is fixed and uniform: a value too long for its column loses characters, never
+pushes the row taller.
+
+**Ordering and indentation.** Rows sort by WBS then start date, comparing WBS segments
+numerically — so `1.10` follows `1.9` rather than `1.1`. Tasks with no WBS form a second
+block after every numbered task, ordered by start date. Indentation comes from WBS depth,
+so `3.1.2` sits two levels in. No parent rows are invented: a level appears only when the
+schedule actually contains that task.
+
+### Weekends and non-working days
+
+The `--weekends` style decides the shape of the axis, not just its shading:
+
+| `--weekends` | Effect on the chart |
+|---|---|
+| `0` (default) | Saturday and Sunday are **removed from the axis entirely**. Bars span the working days they actually cover, and a five-day task is five columns wide regardless of which weekend it crosses |
+| `1`–`4` | Every day gets a column; non-working days are shaded behind the bars |
+
+Country holidays are always columns and always shaded, so adding `--country` never
+changes the width of the chart. The one casualty is a holiday that falls on a hidden
+weekend — it has no column to shade, so it is reported on the details page instead.
+
+A single-day event landing on a hidden weekend is drawn on the **next working day** with a
+marker icon (`arrow-left-circle` by default), and likewise reported.
+
+### Dependencies
+
+Arrows come from the `events.predecessors` column and resolve against `events.source_id`
+— the identifier your scheduling tool assigned, not EventCalendar's own row id. The
+MS Project grammar is supported:
+
+```
+12            → finish-to-start on task 12, no lag
+12FS+3d       → finish-to-start, three days' lag
+7SS,9FF-2d    → two predecessors: start-to-start on 7, finish-to-finish on 9 less two days
+15FS+50%      → percentage lag
+15FS+3ed      → elapsed (calendar) days
+```
+
+Each arrow leaves and enters the bar edges its link type implies — `FS` right-to-left,
+`SS` left-to-left, `FF` right-to-right — which keeps overlapping work reading correctly
+instead of as backward arrows. Lag is parsed and stored but does not currently offset the
+arrow geometry.
+
+**Links the pagination breaks.** When a link's two ends land on different pages the arrow
+cannot be drawn, so the link is *numbered* instead and the number appears at both ends:
+
+* on the page holding the source event, one stub arrow leaves its bar and ends in a
+  numbered icon — one stub however many successors it could not reach;
+* on the page holding each unreachable successor, the same icon appears in the
+  **reference column**, the left-most column of the task table.
+
+So ⑦ beside a stub on page 1 is the same link as ⑦ in the reference column on page 3.
+Numbers are drawn from `circle-1`…`circle-100`, then `darkcircle-`, then `square-` —
+300 references before numbering degrades. All of them are listed on the details page with
+their icon name.
+
+A reference matching **no** task, or a predecessor cell that cannot be parsed, has no far
+end to number: it keeps an unnumbered `crosssquare` stub. The rule is
+*numbered ⇒ the other end is somewhere in this document; unnumbered ⇒ it is not.*
+
+If your export has no predecessor data, no arrows are drawn and nothing else changes.
+
+### Bars, progress, and the schedule window
+
+| Element | Drawn from | Notes |
+|---|---|---|
+| Duration bar | `start_date` → `end_date` | Single-day events are one column wide |
+| Progress line | `percent_complete` | Measured against the **working-day** span, so it lines up with the drawn bar; black by default |
+| Float bars | `earliest_start_date`, `latest_start_date`, `earliest_end_date`, `latest_end_date` | Same color as the bar at reduced opacity; omitted entirely when the dates are absent |
+| Rollup bracket | `rollup` rows | A downward-facing bracket over the row's own dates; no progress line or float bars. Omitted when the row has no dates — children are never consulted |
+| Milestone | `milestone` rows | A filled diamond anchored on `end_date` |
+| Deadline | `deadline` | A themed icon in the task's row |
+| Continuation icon | bars crossing `START_DATE` / `END_DATE` | Drawn inside the clipped edge, and reported on the details page |
+| Today line | wall clock, or `gantt.today_date` | Same semantics as the `pit` view: suppressed when outside the range |
+
+### Stacking the timescale
+
+Both `gantt.top_bands` and `gantt.bottom_bands` take as many bands as you want, drawn
+top to bottom in the order listed, each with its own `row_height`:
+
+```yaml
+gantt:
+  top_bands:
+    - { band: fiscal_quarter, row_height: 12 }
+    - { band: month,          row_height: 12 }
+    - { band: week,           row_height: 10 }
+    - { band: dow,            row_height: 9 }
+  bottom_bands:
+    - { band: month_2, row_height: 10 }
+    - { band: date,    row_height: 9 }
+```
+
+Bands name entries in the theme's top-level `time_bands:` catalog, the same catalog
+`blockplan` and `compactplan` draw from. Omitting `bottom_bands` mirrors the top stack
+onto the bottom axis; an empty list removes that axis entirely.
+
+If the two stacks plus the column-header row together want more than 75% of the content
+height, every chrome row is scaled down in proportion — no band is dropped, and the task
+body always keeps positive height.
+
+### Pagination
+
+The chart splits across pages on both axes when it does not fit:
+
+- **Vertically**, when there are more rows than the page height allows. Every page repeats
+  the column headers and the full timescale.
+- **Horizontally**, when a day column would fall below `gantt.min_day_width` (4 pt by
+  default; set it to `0` to fit any range onto one page, however thin the columns). Every
+  page repeats the task table, and the timescale *continues* rather than restarting — week
+  48 is followed by week 49, not by week 1.
+
+Pages run row-major, so following one task's bar across the date range means turning
+consecutive pages. Continuation files are named `<output>_p2.svg`, `<output>_p3.svg`, and
+so on.
+
+### The details page
+
+Every run writes `<output>_details.svg` alongside the chart; set
+`gantt.show_details: false` in a theme to suppress it. It has two sections:
+
+1. **Tasks** — every row in chart order, through the same columns as the chart's table.
+2. **Exceptions** — one line per item the chart could not show faithfully:
+
+| Reported | Why |
+|---|---|
+| Bar begins before the start of the range | Clipped to the first column |
+| Bar continues past the end of the range | Clipped to the last column |
+| Moved to the next working day | Single-day event on a hidden weekend |
+| Holiday hidden with its weekend | No column exists to shade |
+| Not drawn — every day of the span is hidden | A multi-day task falling entirely on hidden days |
+| Predecessor is not on the chart | Filtered out or on another page |
+| Predecessor does not match any task | No task carries that `source_id` |
+| Predecessor could not be parsed | The cell's syntax was not understood |
+
+The exception log paginates rather than truncating (`<output>_details_p2.svg`, …) — a
+report that quietly dropped its last few lines would defeat the purpose.
+
+### Inherited content-filter flags
+
+These flags are shared with the other plan views and apply identically to `gantt`:
+
+| Flag | Short | Description |
+|---|---|---|
+| `--noevents` | `-ne` | Exclude single-day events |
+| `--nodurations` | `-nd` | Exclude multi-day durations |
+| `--milestones` | `-mo` | Show only milestones |
+| `--rollups` | `-ro` | Show only rollup entries |
+| `--ignorecomplete` | `-ic` | Exclude 100% complete items |
+| `--includenotes` | `-notes` | Show notes with event names |
+| `--WBS` | | WBS filter expression (comma-separated, `!` excludes) |
+| `--status` | | Event status filter (`active` by default; `all` for everything) |
+| `--weekends` | `-w` | Weekend style 0-4 (see above) |
+| `--country` | `-cc` | Country code(s) for government holidays |
+| `--empty` | `-e` | Render the frame and timescale with no tasks |
+
+A filtered-out task stops being a link target as well as a row: its dependents draw the
+off-chart stub instead of an arrow.
+
+### Theme reference
+
+All keys live under `gantt:` in a theme file. `config/themes/SAMPLE.yaml` carries the
+fully annotated set; `config/themes/default.yaml` shows a working configuration including
+`columns:` and band references.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `table_width_ratio` | `0.38` | Task table's share of the content width |
+| `row_height` | `14.0` | Fixed row height |
+| `header_row_height` | `18.0` | Column-header row height |
+| `band_row_height` | `10.0` | Default height per time-band row |
+| `indent_per_level` | `8.0` | Points of indent per WBS level |
+| `bar_height` | `8.0` | Duration-bar thickness |
+| `min_day_width` | `4.0` | Split the range across pages below this; `0` disables |
+| `sort` | `[wbs, start_date]` | Row ordering |
+| `columns` | 16-column set | The task table (see above) |
+| `top_bands` / `bottom_bands` | month + week | Timescale rows; reference the `time_bands` catalog. **Any number of bands** in either stack, each with its own `row_height`. Omit `bottom_bands` and the bottom axis mirrors the top |
+| `progress_color` | `black` | Percent-complete line |
+| `progress_width` | `1.5` | Percent-complete line width |
+| `float_opacity_scale` | `0.4` | Float-bar opacity, relative to the bar |
+| `milestone_icon` | `diamond-fill` | Milestone glyph |
+| `deadline_icon` | `square-fill` | Deadline glyph |
+| `rollup_icon` / `milestone_flag_icon` | `check` | Task-table icon columns |
+| `snapped_event_icon` | `arrow-left-circle` | Event moved off a hidden weekend |
+| `offchart_dep_icon` | `crosssquare` | Marker for a predecessor that is nowhere in the chart |
+| `link_ref_icon_families` | `[circle-, darkcircle-, square-]` | Numbered-icon families for cross-page links, used in order |
+| `link_ref_family_size` | `100` | Numbers available per family |
+| `link_ref_max_icons` | `2` | Icons drawn in one reference cell |
+| `continuation_icon` | `arrow-bar-right` | Bar clipped at a range edge |
+| `show_dependencies` | `true` | Draw dependency arrows |
+| `show_today_line` | `true` | Draw the today line |
+| `today_date` | `null` | Fix "today" at a `YYYYMMDD` date for a forward-dated review |
+| `show_details` | `true` | Write the companion `_details.svg` page |
+| `details_title_text` | `Gantt Details` | Title on the companion page |
+
+Bars, milestones and arrows are styled through `style_rules` like every other element:
+
+```yaml
+style_rules:
+  - name: critical-path bars in red
+    apply_to: box:duration
+    select: { tags: critical }
+    style: { fill: crimson, fill_opacity: 0.8 }
+  - name: dependency arrows
+    apply_to: line:dependency_arrow
+    style: { stroke: navy, stroke_width: 1.0, stroke_opacity: 0.85 }
+```
+
+The `ec-*` classes the Gantt emits — usable from an external stylesheet — are
+`ec-column-header`, `ec-task-cell`, `ec-row-band`, `ec-duration-bar`, `ec-progress-line`,
+`ec-float-bar`, `ec-rollup-bracket`, `ec-dependency-arrow`, `ec-milestone-marker`,
+`ec-band-cell`, `ec-tick-label`, `ec-today-line`, and `ec-grid-line`.
 
 ## ExcelHeader Subcommand
 

@@ -56,6 +56,13 @@ class Event:
     actual_start_time: Optional[str] = None
     actual_end_date: Optional[str] = None
     actual_end_time: Optional[str] = None
+    # Schedule window (float).  Populated only by tools that export a
+    # critical-path analysis; the Gantt draws float bars when they are
+    # present and simply omits them when they are not.
+    earliest_start_date: Optional[str] = None  # YYYYMMDD
+    latest_start_date: Optional[str] = None  # YYYYMMDD
+    earliest_end_date: Optional[str] = None  # YYYYMMDD
+    latest_end_date: Optional[str] = None  # YYYYMMDD
     deadline: Optional[str] = None
     start_variance: Optional[str] = None
     finish_variance: Optional[str] = None
@@ -110,6 +117,10 @@ class Event:
             actual_start_time=data.get("Actual_Start_Time"),
             actual_end_date=data.get("Actual_End_Date"),
             actual_end_time=data.get("Actual_End_Time"),
+            earliest_start_date=data.get("Earliest_Start_Date"),
+            latest_start_date=data.get("Latest_Start_Date"),
+            earliest_end_date=data.get("Earliest_End_Date"),
+            latest_end_date=data.get("Latest_End_Date"),
             deadline=data.get("Deadline"),
             start_variance=data.get("Start_Variance"),
             finish_variance=data.get("Finish_Variance"),

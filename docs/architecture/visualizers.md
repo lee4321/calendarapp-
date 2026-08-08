@@ -66,6 +66,32 @@ diagram in `visualizers/blockplan/renderer.py`'s module docstring. Lane
 routing: theme `swimlane_rules` (LaneEngine) or legacy per-lane `match:`
 dicts. Rule-driven vertical lines/column fills pin to band segments.
 
+## gantt — task table plus dependency chart
+
+Task table on the left, timescale chart on the right; page-anatomy diagram
+in `visualizers/gantt/renderer.py`'s module docstring. Split across small
+modules: `columns.py` (the task table's column model, resolution and
+wrap/truncate), `rows.py` (WBS-numeric ordering and indentation),
+`bars.py` (bar geometry on the visible-day axis), `dependencies.py` (link
+resolution and orthogonal routing), `details.py` (the companion
+`_details.svg` page and the exception log), `layout.py` (page frame plus
+`plan_pages`).
+
+Two things shape everything else. First, the axis is a list of *visible*
+days, so under `weekend_style 0` all horizontal geometry is column-index
+based, not linear in date. Second, the chart paginates on both axes
+(`_p2`, `_p3`, …), which is why band segments are built once for the whole
+range and sliced per page rather than rebuilt — otherwise interval
+counters restart at every break.
+
+Dependencies come from `events.predecessors`, parsed by
+`shared/predecessors.py` and resolved against `events.source_id`. Each
+link leaves and enters the edge its type implies (FS/SS/FF/SF); lag is
+parsed and stored but does not shift geometry. Anything the chart cannot
+show faithfully — a clipped bar, an event moved off a hidden weekend, an
+off-chart predecessor — is recorded as a `GanttException` and listed on
+the details page instead of being silently dropped.
+
 ## compactplan — dense activity plan
 
 Time bands on top, then activity rows grouped by resource group with a

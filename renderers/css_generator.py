@@ -35,6 +35,13 @@ _INLINE_STYLED_CLASSES: frozenset[str] = frozenset({
     "ec-callout-leader",
     "ec-callout-box",
     "ec-milestone-marker",
+    # Gantt: the progress line's color, the float bar's fill (mirroring
+    # its task's bar), the rollup bracket and the dependency arrows are
+    # all resolved per item from config plus the style-rule engine.
+    "ec-progress-line",
+    "ec-float-bar",
+    "ec-rollup-bracket",
+    "ec-dependency-arrow",
 })
 
 

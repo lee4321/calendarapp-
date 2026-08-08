@@ -209,6 +209,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Generate a SVG Points-in-Time timeline (single-day events + milestones)",
     )
     blockplan = sub.add_parser("blockplan", help="Generate a SVG blockplan")
+    gantt = sub.add_parser(
+        "gantt",
+        help="Generate a SVG Gantt chart (task table + timescale with dependencies)",
+    )
     compactplan = sub.add_parser(
         "compactplan",
         help="Generate a SVG compressed activities timeline",
@@ -271,6 +275,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "timeline",
             "pit",
             "blockplan",
+            "gantt",
             "compactplan",
             "excelheader",
             "excelblockplan",
@@ -305,6 +310,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         timeline,
         pit,
         blockplan,
+        gantt,
         compactplan,
         excelheader,
         excelblockplan,
@@ -871,6 +877,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         timeline,
         pit,
         blockplan,
+        gantt,
         compactplan,
         excelheader,
         excelblockplan,
@@ -904,6 +911,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         timeline,
         pit,
         blockplan,
+        gantt,
         compactplan,
     )
 
@@ -914,8 +922,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     #   --weekend-days  views that classify days via config.get_weekend_days()
     #   --includenotes  views that render a notes line with event names
     _shade_views = (weekly, mini, mini_icon, candybar)
-    _weekend_days_views = (weekly, timeline, blockplan, compactplan)
-    _includenotes_views = (weekly, timeline, pit, blockplan, compactplan)
+    _weekend_days_views = (weekly, timeline, blockplan, gantt, compactplan)
+    _includenotes_views = (weekly, timeline, pit, blockplan, gantt, compactplan)
 
     # Output options (SVG views: all options; text-mini: outputfile only)
     for view_parser in _svg_views:
@@ -1687,6 +1695,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         timeline,
         pit,
         blockplan,
+        gantt,
         compactplan,
     )
     for _vp in _fiscal_views:
@@ -1757,6 +1766,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         timeline,
         pit,
         blockplan,
+        gantt,
         compactplan,
         excelheader,
         excelblockplan,
