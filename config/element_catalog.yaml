@@ -22,7 +22,7 @@ elements:
   # ── Text ───────────────────────────────────────────────────────────────────
   ec-heading:        { kind: text, token: heading,        scope: [all],                                description: "Section/area heading text" }
   ec-label:          { kind: text, token: label,          scope: [all],                                description: "Short label text (DOW headers, tick labels)" }
-  ec-tick-label:     { kind: text, token: label,          scope: [timeline, blockplan, compactplan],   description: "Axis tick label" }
+  ec-tick-label:     { kind: text, token: label,          scope: [timeline, blockplan, compactplan, gantt],   description: "Axis tick label" }
   ec-day-number:     { kind: text, token: day_number,     scope: [weekly, mini, mini-icon],            description: "Day-of-month number" }
   ec-month-title:    { kind: text, token: month_title,    scope: [weekly, mini, mini-icon],            description: "Mini calendar month heading" }
   ec-month-box-label: { kind: text, token: month_title,   scope: [candybar],                           description: "Candybar merged month-box label" }
@@ -33,7 +33,7 @@ elements:
   ec-event-date:     { kind: text, token: event_date,     scope: [all],                                description: "Event date label" }
   ec-duration-date:  { kind: text, token: duration_date,  scope: [all],                                description: "Duration start/end date label" }
   ec-holiday-title:  { kind: text, token: holiday_title,  scope: [weekly, mini, mini-icon],            description: "Holiday / special-day name in day box" }
-  ec-today-label:    { kind: text, token: today_label,    scope: [timeline, blockplan, compactplan],   description: "'Today' marker label" }
+  ec-today-label:    { kind: text, token: today_label,    scope: [timeline, blockplan, compactplan, gantt],   description: "'Today' marker label" }
   ec-header-text:    { kind: text, token: heading,        scope: [all],                                description: "Page header L/C/R text" }
   ec-footer-text:    { kind: text, token: caption,        scope: [all],                                description: "Page footer L/C/R text" }
   ec-watermark:      { kind: text, token: heading,        scope: [all],                                description: "Watermark overlay text" }
@@ -47,8 +47,8 @@ elements:
   ec-month-box:      { kind: box, token: cell,     scope: [candybar],                           description: "Candybar merged month-box rectangle" }
   ec-month-band:     { kind: box, token: cell,     scope: [candybar],                           description: "Candybar per-month day-cell band shade" }
   ec-weekend:        { kind: box, token: cell,     scope: [candybar],                           description: "Candybar weekend day-cell tint" }
-  ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelheader], description: "Lane / heading-column cell" }
-  ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelheader], description: "Time-band segment cell" }
+  ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelheader, gantt], description: "Lane / heading-column cell" }
+  ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelheader, gantt], description: "Time-band segment cell" }
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
   ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
   ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }
@@ -56,8 +56,8 @@ elements:
 
   # ── Line ───────────────────────────────────────────────────────────────────
   ec-grid-line:      { kind: line, token: grid,      scope: [all],                              description: "Cell / grid boundary" }
-  ec-axis-line:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan], description: "Timeline / blockplan axis" }
-  ec-axis-tick:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan], description: "Axis tick mark" }
+  ec-axis-line:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Timeline / blockplan axis" }
+  ec-axis-tick:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Axis tick mark" }
   ec-today-line:     { kind: line, token: today,     scope: [all],                              description: "Today indicator vertical line" }
   ec-separator:      { kind: line, token: separator, scope: [all],                              description: "Section / row separator" }
   ec-connector:      { kind: line, token: grid,      scope: [timeline],                         description: "Dependency / callout connector line" }
@@ -73,15 +73,24 @@ elements:
   ec-overflow-icon:     { kind: icon, token: overflow,  scope: [weekly, mini, mini-icon],          description: "Overflow indicator" }
   ec-holiday-icon:      { kind: icon, token: event,     scope: [weekly, mini, mini-icon, timeline], description: "Holiday glyph" }
   ec-nwd-icon:          { kind: icon, token: event,     scope: [weekly, mini, mini-icon],          description: "Non-workday glyph" }
-  ec-milestone-marker:  { kind: icon, token: milestone, scope: [timeline, blockplan, compactplan], description: "Milestone diamond / circle" }
+  ec-milestone-marker:  { kind: icon, token: milestone, scope: [timeline, blockplan, compactplan, gantt], description: "Milestone diamond / circle" }
   ec-milestone-flag:    { kind: icon, token: milestone, scope: [compactplan],                      description: "Milestone flag pennant" }
-  ec-duration-marker:   { kind: icon, token: duration,  scope: [timeline, blockplan],              description: "Duration start / end cap" }
-  ec-continuation-icon: { kind: icon, token: duration,  scope: [compactplan],                      description: "Continuation arrow for clipped durations" }
+  ec-duration-marker:   { kind: icon, token: duration,  scope: [timeline, blockplan, gantt],              description: "Duration start / end cap" }
+  ec-continuation-icon: { kind: icon, token: duration,  scope: [compactplan, gantt],                      description: "Continuation arrow for clipped durations" }
   ec-legend-swatch:     { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend color swatch" }
   ec-legend-icon:       { kind: icon, token: event,     scope: [timeline, compactplan],            description: "Legend item icon" }
   ec-pit-event-marker:  { kind: icon, token: event,     scope: [pit],                              description: "PIT event marker glyph on the axis" }
   ec-pit-label-icon:    { kind: icon, token: event,     scope: [pit],                              description: "PIT label-box icon glyph (left of event name)" }
   ec-pit-marker-arrow-head: { kind: icon, token: event, scope: [pit],                              description: "PIT leader arrowhead <marker> glyph" }
+
+  # ── Gantt ──────────────────────────────────────────────────────────────────
+  ec-column-header:     { kind: text, token: label,     scope: [gantt],                            description: "Task-table column header" }
+  ec-task-cell:         { kind: text, token: body,      scope: [gantt],                            description: "Task-table cell text" }
+  ec-row-band:          { kind: box,  token: cell,      scope: [gantt],                            description: "Alternating task-row band" }
+  ec-progress-line:     { kind: line, token: axis,      scope: [gantt],                            description: "Percent-complete line on a duration bar" }
+  ec-dependency-arrow:  { kind: line, token: grid,      scope: [gantt],                            description: "Dependency arrow" }
+  ec-float-bar:         { kind: box,  token: duration,  scope: [gantt],                            description: "Earliest/latest float span" }
+  ec-rollup-bracket:    { kind: line, token: axis,      scope: [gantt],                            description: "Rollup summary bracket" }
 
 
 # Modifier classes — applied alongside an element class to convey extra state.

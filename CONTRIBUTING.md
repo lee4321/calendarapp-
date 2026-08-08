@@ -17,6 +17,18 @@ The architecture reading order lives in `docs/architecture/README.md`
     `tools/refcorpus.sh render` in the same commit.
 - SVG attribute *order* is significant to the guard: drawsvg emits kwargs in
   call order, so keep kwarg order stable when touching draw helpers.
+- Theme band references are guarded: a visualizer's `top_bands`/`bands` list
+  names entries in that theme's top-level `time_bands:` catalog, and
+  `tests/test_theme_band_references.py` fails if any name does not resolve.
+  Renaming or removing a catalog entry means updating everything that
+  references it — the engine only warns at run time and silently drops the band.
+- CLI docs are generated: after changing `cli/args.py`, run
+  `uv run python tools/generate_option_catalog.py` to refresh both the option
+  catalog and the per-command positional tables in `USER_GUIDE.md`
+  (`tests/test_option_catalog.py` fails otherwise). The generator replaces only
+  the tables — the hand-written prose under each `### <command>` heading is
+  left alone. New guide examples are executed by
+  `uv run python tools/check_user_guide.py`.
 
 ## Layering
 

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gantt Visualization — Open Questions</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1c1d1f;
+    --muted: #5f6368;
+    --rule: #e3e5e8;
+    --accent: #1a5fb4;
+    --code-bg: #f4f5f7;
+    --block-bg: #f8f9fb;
+    --warn-bg: #fff6e5;
+    --warn-br: #e0a33a;
+    --ok-br: #4a8f4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --fg: #e6e8ea;
+      --muted: #a2a8b0;
+      --rule: #2b2f36;
+      --accent: #78aeff;
+      --code-bg: #22262c;
+      --block-bg: #1c1f24;
+      --warn-bg: #2e2718;
+      --warn-br: #c9962f;
+      --ok-br: #66a869;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 5rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 52rem; margin: 0 auto; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 .5rem; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 1.15rem; margin: 2.75rem 0 .75rem; padding-bottom: .35rem;
+    border-bottom: 1px solid var(--rule); letter-spacing: -0.005em;
+  }
+  h2 .tag {
+    font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: #fff; background: var(--warn-br); border-radius: 3px; padding: .1rem .4rem;
+    vertical-align: middle; margin-left: .5rem;
+  }
+  p.lede { color: var(--muted); margin: 0 0 1.5rem; }
+  ol { padding-left: 1.5rem; }
+  ol > li { margin: 0 0 1rem; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .875em; background: var(--code-bg); padding: .1rem .3rem; border-radius: 3px;
+  }
+  a { color: var(--accent); }
+  .note {
+    background: var(--block-bg); border-left: 3px solid var(--rule);
+    padding: .75rem 1rem; margin: .75rem 0 1.25rem; border-radius: 0 4px 4px 0;
+  }
+  .note.data { background: var(--warn-bg); border-left-color: var(--warn-br); }
+  .sug { display: block; margin-top: .3rem; color: var(--muted); font-size: .94em; }
+  .sug strong { color: var(--fg); }
+  .closing {
+    margin-top: 3rem; padding: 1rem 1.25rem; background: var(--block-bg);
+    border-left: 3px solid var(--ok-br); border-radius: 0 4px 4px 0;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Gantt Visualization — Questions To Be Addressed</h1>
+<p class="lede">
+  Review of <code>gantt_chart_requirements.txt</code> against the existing codebase
+  (<code>visualizers/blockplan/</code>, <code>visualizers/pit/</code>, <code>shared/rule_engine.py</code>,
+  <code>shared/timeband.py</code>, <code>config/element_catalog.yaml</code>, <code>cli/args.py</code>,
+  and the <code>events</code> schema), plus the three example images.
+  Items marked <em>blocking</em> must be settled before a plan can be written; the rest have a suggested
+  default that can be adopted as a stated assumption.
+</p>
+
+<h2>A. Data availability <span class="tag">blocking</span></h2>
+<div class="note data">
+  The columns the spec is built around are empty in the current database. Over the 105 rows in
+  <code>events</code>: <strong>0</strong> non-empty <code>predecessors</code>, <strong>0</strong> non-empty
+  <code>wbs</code>, <strong>0</strong> <code>earliest_start_date</code>/<code>latest_*</code>, and every
+  <code>percent_complete</code> is <code>0.0</code>. There are 9 rollups and 22 milestones.
+</div>
+<ol>
+  <li>Where does dependency / WBS / float data come from — a new import (MS&nbsp;Project XML, P6, CSV)?
+    Can you supply a sample file so there is a real dataset to develop and test against? Without one, the three
+    headline features (arrows, float bars, progress) are untestable.</li>
+  <li><code>predecessors</code> is free text. <code>importers/import_events.py:108</code> states that
+    predecessors/successors reference <code>source_id</code>, not <code>events.id</code> — please confirm.
+    What syntax must be parsed: MS&nbsp;Project style <code>"12FS+3d,15SS"</code> (comma list, link type, lag),
+    or a bare id list?
+    <span class="sug"><strong>Suggested:</strong> parse comma-separated
+      <code>&lt;id&gt;[FS|SS|FF|SF][±&lt;n&gt;d]</code>; a bare id means FS; lag ignored for geometry.</span></li>
+  <li><code>duration</code> and <code>effort</code> are REAL, alongside text twins <code>duration_text</code>
+    and <code>effort_text</code>. Which does the column render, and with what unit suffix ("10 days")?</li>
+  <li><code>rollup</code> and <code>milestone</code> are integers. In the task table, render as what — a
+    checkmark icon, "Yes"/blank, or nothing (indentation alone conveys rollup)?
+    <span class="sug"><strong>Suggested:</strong> themeable icon, blank when false.</span></li>
+  <li>The default column list has no ID column, but example2 shows Predecessors/Successors columns that are only
+    readable with one. Should <code>id</code>/<code>source_id</code>, <code>predecessors</code>, and
+    <code>successors</code> be available as columns (just not defaults)?</li>
+</ol>
+
+<h2>B. Task-list rows and sorting</h2>
+<ol start="6">
+  <li>Are rollup rows actual event rows (<code>rollup=1</code>), or should parent rows be synthesized from the
+    WBS hierarchy when no such row exists?
+    <span class="sug"><strong>Suggested:</strong> only real rows; no synthesis.</span></li>
+  <li>WBS sort must be segment-wise numeric (<code>1.10</code> after <code>1.9</code>), not lexical — confirm.
+    And where do empty-WBS rows go: interleaved by <code>start_date</code>, or grouped after all WBS rows?
+    <span class="sug"><strong>Suggested:</strong> grouped after.</span></li>
+  <li>Is indent depth the count of WBS segments? What indents a child whose <code>wbs</code> is empty?
+    <span class="sug"><strong>Suggested:</strong> depth from segment count; empty WBS = depth 0.</span></li>
+  <li>Row height: fixed and uniform (wrap limited to N lines, then truncate), or auto-expanding to fit wrapped
+    <code>notes</code>? Auto-expansion breaks a clean grid and complicates paging.
+    <span class="sug"><strong>Suggested:</strong> uniform height, per-column <code>max_lines</code>, ellipsis.</span></li>
+</ol>
+
+<h2>C. Pagination <span class="tag">blocking</span></h2>
+<div class="note">
+  No precedent exists in the codebase: both blockplan and compactplan explicitly never overflow
+  (<code>visualizers/blockplan/renderer.py:215</code> — "blockplan never overflows"). A Gantt of 200 tasks over
+  18 months cannot fit one sheet.
+</div>
+<ol start="10">
+  <li>Vertical overflow: paginate into multiple pages repeating the column header and timescale, auto-shrink the
+    row height to fit, or truncate?
+    <span class="sug"><strong>Suggested:</strong> paginate, repeating header + timescale.</span></li>
+  <li>Horizontal overflow (long date range): paginate across pages repeating the task table on each, force-fit the
+    whole range onto one width, or require the caller to narrow <code>--start/--end</code>?
+    <span class="sug"><strong>Suggested:</strong> force-fit to one page width for v1; paginate later.</span></li>
+  <li>Does output file naming follow the existing <code>_overflow.svg</code> convention, or
+    <code>_p2</code>, <code>_p3</code>…?</li>
+</ol>
+
+<h2>D. Timescale and weekends</h2>
+<ol start="13">
+  <li><code>weekend_style = 0</code> currently <em>removes</em> non-working columns entirely (blockplan's
+    <code>_visible_days</code>). That makes the x-axis non-linear, so bars must be laid out per visible-day
+    column rather than by linear date interpolation. Confirm that is the intent (example0 shows exactly this
+    M–F axis), rather than "show all days, shade the weekends".</li>
+  <li>When weekends are hidden, are country holidays still columns that get shaded, or also removed from the axis?
+    <span class="sug"><strong>Suggested:</strong> kept as columns and shaded — otherwise the axis silently changes
+      per country.</span></li>
+  <li>Timescale extent: driven by the existing <code>--start/--end</code> calendar range, or auto-fit to the
+    min/max dates of the filtered task set?
+    <span class="sug"><strong>Suggested:</strong> the calendar range, as every other view does.</span></li>
+  <li>The spec covers bars starting before the scale. What about bars ending after it — hard clip, or clip with a
+    continuation arrow (compactplan already has <code>ec-continuation-icon</code>)?
+    <span class="sug"><strong>Suggested:</strong> clip with a continuation marker at both ends.</span></li>
+  <li>Reuse the blockplan band configuration verbatim (<code>gantt_top_time_bands</code> /
+    <code>gantt_bottom_time_bands</code>, same band dicts), or define a new schema?</li>
+</ol>
+
+<h2>E. Bars, progress, floats, milestones</h2>
+<ol start="18">
+  <li>Percent-complete: is the ratio measured against calendar span or <em>working-day</em> span? They differ once
+    weekends are dropped.
+    <span class="sug"><strong>Suggested:</strong> working days, so the line matches the drawn bar.</span></li>
+  <li>Do rollup brackets also get a progress line and float bars, or bar only?
+    <span class="sug"><strong>Suggested:</strong> bracket only.</span></li>
+  <li>Is the rollup bracket drawn from the rollup row's own <code>start_date</code>/<code>end_date</code>, or from
+    the min/max of its WBS children? The two can disagree.
+    <span class="sug"><strong>Suggested:</strong> the row's own dates; fall back to children only when the row's
+      dates are empty.</span></li>
+  <li><code>deadline</code> is in the default column list. Should it also render a marker on the chart (the usual
+    inverted triangle/arrow), or stay text-only? The spec does not say.</li>
+  <li>Single-day events landing on a hidden weekend or holiday: skip, snap to the next visible working day, or
+    force the column in?
+    <span class="sug"><strong>Suggested:</strong> snap forward, and log it.</span></li>
+  <li>Milestone anchor date when <code>start_date ≠ end_date</code> — start, or end?
+    <span class="sug"><strong>Suggested:</strong> <code>end_date</code>, per MS&nbsp;Project convention.</span></li>
+  <li>Float bars when <code>earliest_*</code>/<code>latest_*</code> are empty (100% of current rows): draw nothing
+    at all — confirm.</li>
+</ol>
+
+<h2>F. Dependency arrows</h2>
+<ol start="25">
+  <li>Support all four link types (FS/SS/FF/SF) with correct anchor points, or FS-only for v1?
+    <span class="sug"><strong>Suggested:</strong> FS-only; other types fall back to FS geometry.</span></li>
+  <li>Backward links (successor starts before the predecessor ends) need routing around the bar. Accept a simple
+    three-segment dogleg that may cross other bars, or invest in collision-avoiding routing?
+    <span class="sug"><strong>Suggested:</strong> simple dogleg; routing quality is a later pass.</span></li>
+  <li>When a predecessor is filtered out, off-page, or outside the date range: drop the arrow silently, or draw a
+    stub indicating an off-chart dependency?
+    <span class="sug"><strong>Suggested:</strong> drop, with a debug log.</span></li>
+  <li>On by default, or opt-in via CLI flag / presence of a style rule? The document says "via theme definition
+    style_rules", which reads as opt-in — confirm.</li>
+</ol>
+
+<h2>G. Theming and configuration architecture</h2>
+<ol start="29">
+  <li><strong>(blocking)</strong> Column definitions — which columns, order, width, justification, wrap/truncate,
+    sort order, date format — are <em>layout config</em>, not visual style, whereas the unified
+    <code>style_rules</code> schema is <code>match</code>/<code>apply_to</code>/<code>style</code>. Should these
+    live in a dedicated <code>gantt.columns:</code> theme section, the way <code>blockplan.swimlanes</code> does,
+    with <code>style_rules</code> handling only fill/stroke/font?
+    <span class="sug"><strong>Strongly suggested:</strong> yes — forcing column layout through
+      <code>style_rules</code> fights the schema.</span></li>
+  <li><code>'dd'</code> is not an Arrow token: Arrow supports <code>ddd</code>/<code>dddd</code>, and
+    <code>format('dd')</code> returns an empty string (verified). Confirm <code>dd</code> should be a custom
+    pre-pass token meaning the two-letter weekday ("Mo", "Tu"), and whether it applies to gantt columns only or to
+    all date formatting app-wide.</li>
+  <li>Which CLI flags are wanted beyond the shared set — e.g. <code>--columns</code>,
+    <code>--no-dependencies</code>, <code>--today-date</code>? These must go in
+    <code>_CLI_CONFIG_OVERRIDES</code> in <code>cli/config_assembly.py</code> to survive theme precedence.</li>
+  <li>Today line: mirror the PIT keys as <code>gantt_show_today_line</code> / <code>gantt_today_date</code> (same
+    semantics — <code>YYYYMMDD</code> override else wall clock, suppressed when outside the range), or read the
+    <code>pit_*</code> keys directly?
+    <span class="sug"><strong>Suggested:</strong> mirror as <code>gantt_*</code>.</span></li>
+  <li>Subcommand name — <code>gantt</code>? Any expectation of an Excel counterpart (<code>excelgantt</code>, as
+    <code>excelblockplan</code> mirrors <code>blockplan</code>)?
+    <span class="sug"><strong>Assumed out of scope.</strong></span></li>
+  <li>New <code>ec-*</code> classes must be registered in <code>config/element_catalog.yaml</code> (CI enforces
+    this). Proposed additions: <code>ec-task-cell</code>, <code>ec-column-header</code>, <code>ec-row-band</code>,
+    <code>ec-progress-line</code>, <code>ec-dependency-arrow</code>, <code>ec-float-bar</code>,
+    <code>ec-rollup-bracket</code>. Any naming preference, and should any of them reuse an existing token rather
+    than getting a new one?</li>
+  <li>Do all 19 theme YAMLs need a <code>gantt:</code> section, or code-level defaults plus a section in
+    <code>default.yaml</code>/<code>SAMPLE.yaml</code> only?
+    <span class="sug"><strong>Suggested:</strong> the latter.</span></li>
+</ol>
+
+<h2>H. Scope check</h2>
+<ol start="36">
+  <li>The document says "only those [features] that are completely unique should be planned." My reading of what is
+    genuinely new: the task-table/column grid, dependency-arrow routing, progress lines, float bars, and rollup
+    brackets. Reusable as-is: timebands, weekend/holiday day classification, <code>RuleEngine</code>, today-line
+    logic, content filters, text/glyph rendering, and paper/orientation handling. Does that split match your
+    expectation, or is there existing code you expect to be reused that this misses?</li>
+</ol>
+
+<div class="closing">
+  <strong>Minimum to unblock:</strong> A.1, A.2, C.10, and G.29. Everything else can proceed on the suggested
+  defaults, recorded as explicit assumptions in the plan.
+</div>
+
+<footer>
+  Generated 2026-08-02 · source: <code>gantt_chart_requirements.txt</code>, <code>example0.jpeg</code>,
+  <code>example1.png</code>, <code>example2.png</code>
+</footer>
+
+</main>
+</body>
+</html>

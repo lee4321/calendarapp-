@@ -51,6 +51,7 @@ VISUALIZERS: frozenset[str] = frozenset({
     "text-mini",
     "timeline",
     "blockplan",
+    "gantt",
     "compactplan",
     "excelheader",
 })
@@ -155,6 +156,16 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("blockplan.unmatched_lane_name",     "setting", "str", frozenset({"blockplan"})),
     RequiredKey("blockplan.swimlanes",               "setting", "list[{name}]",
                 frozenset({"blockplan"})),
+
+    # ── gantt ──
+    # Geometry a theme should state outright; everything else (columns,
+    # icons, colors) has a working default in CalendarConfig, so requiring
+    # it would only duplicate the dataclass across every theme file.
+    RequiredKey("gantt.table_width_ratio",  "setting", "float (0-1)",
+                frozenset({"gantt"})),
+    RequiredKey("gantt.row_height",         "setting", "float", frozenset({"gantt"})),
+    RequiredKey("gantt.header_row_height",  "setting", "float", frozenset({"gantt"})),
+    RequiredKey("gantt.band_row_height",    "setting", "float", frozenset({"gantt"})),
 
     # ── compact_plan ──
     RequiredKey("compact_plan.legend_area_ratio", "setting", "float (0-1)",

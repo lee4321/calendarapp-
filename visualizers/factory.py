@@ -33,6 +33,7 @@ class VisualizerFactory:
             from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
             from visualizers.timeline.visualizer import TimelineVisualizer
             from visualizers.blockplan.visualizer import BlockPlanVisualizer
+            from visualizers.gantt.visualizer import GanttVisualizer
             from visualizers.compactplan.visualizer import CompactPlanVisualizer
             from visualizers.pit.visualizer import PITVisualizer
 
@@ -44,6 +45,7 @@ class VisualizerFactory:
                 "text-mini": TextMiniCalendarVisualizer,
                 "timeline": TimelineVisualizer,
                 "blockplan": BlockPlanVisualizer,
+                "gantt": GanttVisualizer,
                 "compactplan": CompactPlanVisualizer,
                 "pit": PITVisualizer,
             }

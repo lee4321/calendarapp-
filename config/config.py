@@ -8,6 +8,7 @@ Sets default values that will be used unless overridden
 from __future__ import annotations
 
 import arrow
+import copy
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -991,6 +992,103 @@ class CalendarConfig:
     )
     blockplan_vertical_line_fill_opacity: float = 0.2
 
+    # ── Gantt ─────────────────────────────────────────────────────────────────
+    # Task table on the left, timescale chart on the right.  Column layout is
+    # configuration rather than style, so it lives here and in the theme's
+    # `gantt.columns:` section; style_rules govern only the visuals.
+    gantt_columns: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"field": "link_ref", "header": "Ref", "width": 0.03,
+             "render": "icon", "align": "center"},
+            {"field": "source_id", "header": "ID", "width": 0.035, "align": "right"},
+            {"field": "name", "header": "Task Name", "width": 0.215,
+             "max_lines": 2, "indent": True},
+            {"field": "status", "header": "Status", "width": 0.045},
+            {"field": "priority", "header": "Pri", "width": 0.025, "align": "right"},
+            {"field": "wbs", "header": "WBS", "width": 0.05},
+            {"field": "rollup", "header": "Roll", "width": 0.02,
+             "render": "icon", "align": "center"},
+            {"field": "milestone", "header": "MS", "width": 0.02,
+             "render": "icon", "align": "center"},
+            {"field": "percent_complete", "header": "%", "width": 0.035,
+             "align": "right", "format": "{:.0%}"},
+            {"field": "effort_text", "header": "Effort", "width": 0.045,
+             "align": "right"},
+            {"field": "duration_text", "header": "Duration", "width": 0.045,
+             "align": "right"},
+            {"field": "start_date", "header": "Start", "width": 0.08,
+             "date_format": "dd MM/DD/YY"},
+            {"field": "end_date", "header": "Finish", "width": 0.08,
+             "date_format": "dd MM/DD/YY"},
+            {"field": "resource_names", "header": "Resources", "width": 0.065,
+             "max_lines": 1},
+            {"field": "resource_group", "header": "Group", "width": 0.055},
+            {"field": "notes", "header": "Notes", "width": 0.075, "max_lines": 2},
+            {"field": "deadline", "header": "Deadline", "width": 0.08,
+             "date_format": "dd MM/DD/YY"},
+        ]
+    )
+    gantt_table_width_ratio: float = 0.38
+    gantt_row_height: float = 14.0
+    gantt_header_row_height: float = 18.0
+    gantt_indent_per_level: float = 8.0
+    gantt_sort: list[str] = field(default_factory=lambda: ["wbs", "start_date"])
+    # Timescale.  Bands use the blockplan band schema; bottom defaults to a
+    # copy of the top (see __post_init__) so a theme declaring only top bands
+    # gets a mirrored bottom axis.
+    gantt_top_time_bands: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {
+                "label": "Month",
+                "unit": "month",
+                "date_format": "MMM YYYY",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+            {
+                "label": "Week",
+                "unit": "week",
+                "label_format": "W{n}",
+                "fill_color": "none",
+                "show_every": 1,
+            },
+        ]
+    )
+    gantt_bottom_time_bands: list[dict[str, Any]] | None = None
+    gantt_band_row_height: float = 10.0
+    # Horizontal pagination: the narrowest a day column may get before the
+    # date range is split across pages.  0 disables the split, fitting the
+    # whole range onto one page however thin the columns become.
+    gantt_min_day_width: float = 4.0
+    # Marks.  Icon names resolve against the `icon` table.
+    gantt_milestone_icon: str = "diamond-fill"
+    gantt_deadline_icon: str = "square-fill"
+    gantt_rollup_icon: str = "check"
+    gantt_milestone_flag_icon: str = "check"
+    gantt_snapped_event_icon: str = "arrow-left-circle"
+    gantt_offchart_dep_icon: str = "crosssquare"
+    # Cross-page dependency references.  Families are consumed in order, so
+    # numbering survives 300 breaks before falling back to the unnumbered
+    # marker above.
+    gantt_link_ref_icon_families: list[str] = field(
+        default_factory=lambda: ["circle-", "darkcircle-", "square-"]
+    )
+    gantt_link_ref_family_size: int = 100
+    gantt_link_ref_max_icons: int = 2
+    gantt_continuation_icon: str = "arrow-bar-right"
+    gantt_bar_height: float = 8.0
+    gantt_progress_color: str = "black"
+    gantt_progress_width: float = 1.5
+    gantt_float_opacity_scale: float = 0.4
+    gantt_show_dependencies: bool = True
+    # Today line — mirrors the PIT semantics exactly.
+    gantt_show_today_line: bool = True
+    gantt_today_date: str | None = None
+    # Companion details page.
+    include_gantt_details: bool = True
+    gantt_details_output_suffix: str = "_details"
+    gantt_details_title_text: str = "Gantt Details"
+
     # ── Compact Activities Plan ───────────────────────────────────────────────
     compactplan_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
@@ -1250,6 +1348,19 @@ class CalendarConfig:
             "forestgreen",
         ]
     )
+
+    def get_gantt_bottom_bands(self) -> list[dict[str, Any]]:
+        """The Gantt's bottom time bands, mirroring the top when unset.
+
+        ``gantt_bottom_time_bands`` stays ``None`` until a theme declares
+        ``gantt.bottom_bands``, so "unset" survives theme application and
+        the mirror reflects the theme's *own* top bands rather than the
+        dataclass defaults.  Deep-copied so per-band edits made while
+        drawing one axis cannot reach the other.
+        """
+        if self.gantt_bottom_time_bands is None:
+            return copy.deepcopy(self.gantt_top_time_bands)
+        return self.gantt_bottom_time_bands
 
     def __post_init__(self) -> None:
         """Validate configuration invariants after construction."""
