@@ -18,6 +18,19 @@ import drawsvg
 from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
+
+# Clear space kept after a milestone label before the next one may share
+# its lane, and the label line height as a multiple of the font size.
+_MILESTONE_LABEL_GAP = 6.0
+_MILESTONE_LABEL_LINE_RATIO = 1.25
+_MILESTONE_PENNANT_RATIO = 0.7
+
+# Clear space between the ink of two adjacent duration rows.
+_DURATION_ROW_GAP = 1.5
+
+# Clear space between the top of the activity band and the lowest
+# milestone pennant, so labels never land on a duration bar.
+_MILESTONE_BAND_CLEARANCE = 3.0
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
@@ -314,7 +327,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         show_legend = bool(config.compactplan_show_legend)
 
         line_w = float(config.compactplan_duration_line_width)
-        flag_h = float(config.compactplan_milestone_flag_height)
 
         # ------------------------------------------------------------------
         # PHASE 1 — Place duration rows.
@@ -336,11 +348,27 @@ class CompactPlanRenderer(BaseSVGRenderer):
             durations, group_color_map, day_x, area_x, area_x + area_w,
             px_per_day, config, axis_y,
         )
+        milestone_lanes = self._place_milestone_labels(
+            milestones, day_x, px_per_day, config, area_x + area_w
+        )
+        # Duration rows sit both above and below the axis, and milestone
+        # labels ride at the stem tip — so a stem only as tall as the
+        # configured flag height plants its label in the middle of the bars.
+        # Lift the base stem clear of the topmost row; the label lanes then
+        # stack above that.
+        ms_stem_base = float(config.compactplan_milestone_flag_height)
+        if placed:
+            band_top_offset = axis_y - (
+                min(p.row_y for p in placed) - line_w / 2.0
+            )
+            ms_stem_base = max(
+                ms_stem_base, band_top_offset + _MILESTONE_BAND_CLEARANCE
+            )
 
         # ------------------------------------------------------------------
         # PHASE 2 — Compute actual content bounds from placed rows and flags.
-        # Duration lines are centred on row_y; milestone stems reach up by
-        # flag_h from the axis.
+        # Duration lines are centred on row_y; milestone stems reach up from
+        # the axis by ms_stem_base plus their label lane.
         # ------------------------------------------------------------------
         if placed:
             min_content_y = min(p.row_y for p in placed) - line_w / 2.0
@@ -350,7 +378,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
             max_content_y = axis_y
 
         if milestones:
-            min_content_y = min(min_content_y, axis_y - flag_h)
+            # Staggered labels ride on taller stems, so the tallest lane in
+            # use — not the configured flag height — sets the top edge.
+            top_lane = max(milestone_lanes.values(), default=0)
+            tallest_flag = self._milestone_flag_height(
+                config, top_lane, ms_stem_base
+            )
+            min_content_y = min(min_content_y, axis_y - tallest_flag)
             max_content_y = max(max_content_y, axis_y)
 
         # ------------------------------------------------------------------
@@ -498,7 +532,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Milestones
         for m in milestones:
-            self._draw_milestone(m, day_x, px_per_day, axis_y, config, db)
+            self._draw_milestone(
+                m, day_x, px_per_day, axis_y, config, db,
+                label_lane=milestone_lanes.get(id(m), 0),
+                stem_base_h=ms_stem_base,
+                max_label_x=area_x + area_w,
+            )
 
         # ------------------------------------------------------------------
         # Multi-column section: left = group legend, then milestone roster
@@ -853,7 +892,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         from config.config import ICON_SETS
 
         axis_padding = float(config.compactplan_axis_padding)
-        lane_spacing = float(config.compactplan_lane_spacing)
         line_w = float(config.compactplan_duration_line_width)
 
         # Build per-duration icon list (one unique icon per line, cycling by index).
@@ -862,6 +900,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
             getattr(config, "compactplan_duration_icon_list", "darksquare") or "darksquare"
         )
         icon_list: list[str] = ICON_SETS.get(list_name, []) if show_dur_icons else []
+
+        # Rows must clear whatever is actually drawn on them.  The configured
+        # spacing is a request, not a licence to overlap: a 5pt bar carrying an
+        # 8pt start icon needs more than the 6pt default, or consecutive rows
+        # collide and the icons of one row sit on the bar of the next.
+        ink_h = line_w
+        if icon_list:
+            ink_h = max(
+                ink_h,
+                float(
+                    config.get_icon_style("ec-duration-icon").size
+                    or config.compactplan_duration_icon_height
+                ),
+            )
+        lane_spacing = max(
+            float(config.compactplan_lane_spacing), ink_h + _DURATION_ROW_GAP
+        )
 
         # Sort by start date for deterministic placement and stable icon assignment.
         sorted_durations = sorted(durations, key=lambda e: e.start)
@@ -935,6 +990,96 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # Milestone drawing
     # ------------------------------------------------------------------
 
+    def _milestone_x(
+        self, start_d: date, day_x: dict[date, float], px_per_day: float
+    ) -> float:
+        """Centre x of the day column a milestone falls in."""
+        if start_d in day_x:
+            return day_x[start_d] + px_per_day / 2.0
+        return (
+            self._date_to_x(start_d, day_x, day_x.get(start_d, 0.0), px_per_day)
+            + px_per_day / 2.0
+        )
+
+    def _place_milestone_labels(
+        self,
+        milestones: list[Event],
+        day_x: dict[date, float],
+        px_per_day: float,
+        config: "CalendarConfig",
+        max_label_x: float | None = None,
+    ) -> dict[int, int]:
+        """
+        Assign each milestone a label lane so labels never overlap.
+
+        Every label used to be drawn at one fixed y beside its pennant, so any
+        two milestones close together in time wrote their names on top of each
+        other.  Labels are packed into lanes the same way durations are packed
+        into rows: walk them left to right and take the first lane whose
+        occupied x-intervals this label clears.  The lane then raises that
+        milestone's stem, so the label rides at its own pennant and stays
+        visibly tied to its date.
+
+        Returns {id(event): lane index}; lane 0 is the original height.
+        """
+        if not config.compactplan_show_milestone_labels:
+            return {}
+
+        flag_w = float(config.compactplan_milestone_flag_width)
+        font_name = self._resolve_font(
+            getattr(config, "compactplan_name_text_font_name", None),
+            config,
+            italic=True,
+        )
+        font_size = float(
+            getattr(config, "compactplan_name_text_font_size", None) or 8.0
+        )
+        try:
+            font_path = get_font_path(font_name)
+        except Exception:
+            font_path = None
+
+        dated: list[tuple[float, float, int]] = []
+        for evt in milestones:
+            start_d = self._parse_date(evt.start)
+            if start_d is None or not evt.task_name:
+                continue
+            x = self._milestone_x(start_d, day_x, px_per_day)
+            try:
+                text_w = (
+                    string_width(evt.task_name, font_path, font_size)
+                    if font_path
+                    else font_size * 0.5 * len(evt.task_name)
+                )
+            except Exception:
+                text_w = font_size * 0.5 * len(evt.task_name)
+            # The label starts past the pennant; keep a gap so adjacent
+            # labels in one lane never touch.  Near the right edge the drawing
+            # code flips the label to the left of the stem, so pack the
+            # interval it will actually occupy.
+            if max_label_x is not None and x + flag_w + 3.0 + text_w > max_label_x:
+                x1 = x - 3.0 - text_w - _MILESTONE_LABEL_GAP
+                x2 = x
+            else:
+                x1 = x
+                x2 = x + flag_w + 3.0 + text_w + _MILESTONE_LABEL_GAP
+            dated.append((x1, x2, id(evt)))
+
+        lanes: list[list[tuple[float, float]]] = []
+        assigned: dict[int, int] = {}
+        for x1, x2, key in sorted(dated):
+            target = None
+            for lane_idx, occupied in enumerate(lanes):
+                if not self._overlaps(x1, x2, occupied):
+                    target = lane_idx
+                    break
+            if target is None:
+                lanes.append([])
+                target = len(lanes) - 1
+            lanes[target].append((x1, x2))
+            assigned[key] = target
+        return assigned
+
     def _draw_milestone(
         self,
         evt: Event,
@@ -943,14 +1088,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
         axis_y: float,
         config: "CalendarConfig",
         db: "CalendarDB",
+        label_lane: int = 0,
+        stem_base_h: float | None = None,
+        max_label_x: float | None = None,
     ) -> None:
         start_d = self._parse_date(evt.start)
         if start_d is None:
             return
 
-        x = self._date_to_x(start_d, day_x, day_x.get(start_d, 0.0), px_per_day) + px_per_day / 2.0
-        if start_d in day_x:
-            x = day_x[start_d] + px_per_day / 2.0
+        x = self._milestone_x(start_d, day_x, px_per_day)
 
         color = evt.color or config.get_element_color("ec-milestone-marker", "black")
         _style_engine = getattr(self, "_style_engine", None)
@@ -961,8 +1107,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
         if _sr.fill_color:
             color = _sr.fill_color
-        flag_h = float(config.compactplan_milestone_flag_height)
         flag_w = float(config.compactplan_milestone_flag_width)
+        # A milestone in a higher label lane gets a longer stem so its name
+        # clears the labels below it and still rides on its own pennant.
+        # Only the stem grows: the pennant and the icon keep their configured
+        # size, or milestones would appear to change importance by lane.
+        base_h = float(config.compactplan_milestone_flag_height)
+        stem_h = self._milestone_flag_height(config, label_lane, stem_base_h)
+        pennant_h = base_h * _MILESTONE_PENNANT_RATIO
 
         # Try icon first
         icon_name = _sr.icon if _sr.icon is not None else (
@@ -972,9 +1124,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if icon_name and db is not None:
             icon_svg = db.get_icon_svg(icon_name) if hasattr(db, "get_icon_svg") else None
             if icon_svg:
-                icon_size = flag_h + 4.0
+                icon_size = base_h + 4.0
                 icon_x = x - icon_size / 2.0
-                icon_y = axis_y - flag_h - icon_size / 2.0
+                icon_y = axis_y - stem_h - icon_size / 2.0
                 self._drawing.append(
                     drawsvg.Raw(
                         f'<g transform="translate({icon_x:.2f},{icon_y:.2f}) scale({icon_size/24:.4f})">'
@@ -984,7 +1136,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 drew_icon = True
 
         if not drew_icon:
-            self._draw_flag_marker(x, axis_y, flag_h, flag_w, color)
+            self._draw_flag_marker(x, axis_y, stem_h, flag_w, color, pennant_h)
 
         # Milestone label
         if config.compactplan_show_milestone_labels and evt.task_name:
@@ -1004,13 +1156,53 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 opacity=label_opacity,
             )
             label_x = x + flag_w + 3.0
-            label_y = axis_y - flag_h / 2.0
+            # Centre the label on the pennant at the top of the stem.
+            label_y = axis_y - stem_h + pennant_h / 2.0
+            # A milestone near the end of the range would otherwise run its
+            # label off the page; flip it to the left of the stem instead.
+            anchor = "start"
+            if max_label_x is not None:
+                try:
+                    text_w = string_width(
+                        evt.task_name, get_font_path(label_font), font_size
+                    )
+                except Exception:
+                    text_w = 0.0
+                if text_w and label_x + text_w > max_label_x:
+                    label_x = x - 3.0
+                    anchor = "end"
             self._draw_text(
                 label_x, label_y, evt.task_name,
                 label_font, font_size,
                 fill=label_color, fill_opacity=label_opacity,
+                anchor=anchor,
                 css_class="ec-event-name",
             )
+
+    @staticmethod
+    def _milestone_label_step(config: "CalendarConfig") -> float:
+        """Vertical distance between milestone label lanes (one text line)."""
+        font_size = float(
+            getattr(config, "compactplan_name_text_font_size", None) or 8.0
+        )
+        return font_size * _MILESTONE_LABEL_LINE_RATIO
+
+    @classmethod
+    def _milestone_flag_height(
+        cls,
+        config: "CalendarConfig",
+        label_lane: int,
+        base: float | None = None,
+    ) -> float:
+        """
+        Stem height for a milestone in ``label_lane``.
+
+        ``base`` is the lane-0 stem length, raised by the caller to clear the
+        activity band; it falls back to the configured flag height.
+        """
+        if base is None:
+            base = float(config.compactplan_milestone_flag_height)
+        return base + max(0, label_lane) * cls._milestone_label_step(config)
 
     def _draw_flag_marker(
         self,
@@ -1019,8 +1211,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
         flag_h: float,
         flag_w: float,
         color: str,
+        pennant_h: float | None = None,
     ) -> None:
-        """Draw a flag-on-stem milestone marker matching the reference SVG design."""
+        """
+        Draw a flag-on-stem milestone marker matching the reference SVG design.
+
+        ``flag_h`` is the stem length; ``pennant_h`` sizes the pennant and
+        defaults to a fixed share of it.  Staggered labels pass the two
+        separately so a taller stem does not also inflate the pennant.
+        """
         stem_top = axis_y - flag_h
         # Vertical stem
         self._draw_line(x, axis_y, x, stem_top, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
@@ -1028,7 +1227,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
 
         # Pennant: a parallelogram/trapezoid to the right of stem tip
-        pennant_h = flag_h * 0.7
+        if pennant_h is None:
+            pennant_h = flag_h * _MILESTONE_PENNANT_RATIO
         p_top = stem_top
         p_bot = stem_top + pennant_h
         indent = flag_w * 0.23  # taper indent at attachment points
