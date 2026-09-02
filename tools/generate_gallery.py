@@ -27,6 +27,14 @@ Usage::
     uv run python tools/generate_gallery.py 20260105 20260630 --themes default,dark
     uv run python tools/generate_gallery.py 20260105 20260630 --views weekly,timeline
     uv run python tools/generate_gallery.py 20260105 20260630 --include-nonsvg
+    uv run python tools/generate_gallery.py 20260105 20260630 --milestones --status all
+
+The ecalendar content filters (``--empty``, ``--noevents``, ``--nodurations``,
+``--ignorecomplete``, ``--milestones``, ``--rollups``, ``--shade``,
+``--includenotes``, ``--overflow``, ``--WBS``, ``--status``) are accepted here
+and forwarded to every run, so a batch can be narrowed to one slice of the data
+and still be compared theme by theme.  ecalendar registers those flags per view,
+so each one is only passed to the views whose parser accepts it.
 
 An HTML contact sheet (``output/gallery_<stamp>.html``) is written at the end
 so the whole batch can be browsed in one page; suppress it with ``--no-index``.
@@ -57,6 +65,7 @@ SVG_VIEWS = (
     "timeline",
     "pit",
     "blockplan",
+    "gantt",
     "compactplan",
 )
 
@@ -67,6 +76,122 @@ NONSVG_VIEWS = {
     "excelheader": {"themed": True, "ext": ".xlsx"},
     "excelblockplan": {"themed": True, "ext": ".xlsx"},
 }
+
+
+# Views that register the "Content Filtering" argument group.  excelheader is
+# a page-furniture view with no event content, so it takes none of them.
+FILTERABLE_VIEWS = frozenset(SVG_VIEWS) | {"text-mini", "excelblockplan"}
+
+
+@dataclass(frozen=True)
+class Filter:
+    """
+    One ecalendar content filter the gallery forwards to its runs.
+
+    ``views`` matters: ecalendar gates these flags per view (cli/args.py), and
+    passing one to a view whose parser does not register it is an argparse
+    error rather than a no-op — so a filter is only appended to the runs that
+    can accept it.  ``metavar`` of None means a store_true flag; anything else
+    is a value option.
+    """
+
+    flag: str
+    views: frozenset[str]
+    help: str
+    metavar: str | None = None
+
+    @property
+    def dest(self) -> str:
+        """Attribute name argparse gives this flag on the gallery namespace."""
+        return self.flag.lstrip("-").replace("-", "_")
+
+    @property
+    def takes_value(self) -> bool:
+        return self.metavar is not None
+
+
+CONTENT_FILTERS = (
+    Filter("--empty", FILTERABLE_VIEWS, "Render blank calendars (no events)"),
+    Filter("--noevents", FILTERABLE_VIEWS, "Exclude single-day events"),
+    # pit drops multi-day durations unconditionally and has no --nodurations.
+    Filter(
+        "--nodurations",
+        FILTERABLE_VIEWS - {"pit"},
+        "Exclude multi-day durations",
+    ),
+    Filter(
+        "--ignorecomplete",
+        FILTERABLE_VIEWS,
+        "Exclude fully complete (100 percent) items",
+    ),
+    Filter("--milestones", FILTERABLE_VIEWS, "Show only milestones"),
+    Filter("--rollups", FILTERABLE_VIEWS, "Show only rollup entries"),
+    Filter(
+        "--shade",
+        frozenset({"weekly", "mini", "mini-icon", "candybar"}),
+        "Shade the current date",
+    ),
+    Filter(
+        "--includenotes",
+        frozenset({"weekly", "timeline", "pit", "blockplan", "gantt", "compactplan"}),
+        "Show notes with event names",
+    ),
+    Filter(
+        "--overflow",
+        frozenset({"weekly"}),
+        "Emit the weekly overflow page",
+    ),
+    Filter(
+        "--WBS",
+        FILTERABLE_VIEWS,
+        "WBS filter expression; comma-separated tokens, '!' excludes",
+        metavar="EXPR",
+    ),
+    Filter(
+        "--status",
+        FILTERABLE_VIEWS,
+        "Comma-separated statuses to include, or 'all' (default: active)",
+        metavar="LIST",
+    ),
+)
+
+
+def filter_argv(args: argparse.Namespace, view: str) -> list[str]:
+    """Return the content-filter arguments this view accepts, as CLI tokens."""
+    argv: list[str] = []
+    for filt in CONTENT_FILTERS:
+        if view not in filt.views:
+            continue
+        value = getattr(args, filt.dest)
+        if filt.takes_value:
+            if value is not None:
+                argv += [filt.flag, value]
+        elif value:
+            argv.append(filt.flag)
+    return argv
+
+
+def filter_scope_note(filt: Filter) -> str:
+    """Help-text suffix naming the views a filter reaches, when not all of them."""
+    if filt.views == FILTERABLE_VIEWS:
+        return ""
+    excluded = FILTERABLE_VIEWS - filt.views
+    if len(excluded) < len(filt.views):
+        return f" [all views except {', '.join(sorted(excluded))}]"
+    return f" [{', '.join(sorted(filt.views))} only]"
+
+
+def active_filters(args: argparse.Namespace) -> list[str]:
+    """Describe the filters in effect, for the run banner and contact sheet."""
+    active: list[str] = []
+    for filt in CONTENT_FILTERS:
+        value = getattr(args, filt.dest)
+        if filt.takes_value:
+            if value is not None:
+                active.append(f"{filt.flag} {value}")
+        elif value:
+            active.append(filt.flag)
+    return active
 
 
 @dataclass
@@ -144,6 +269,8 @@ def build_jobs(args: argparse.Namespace, stamp: str) -> list[Job]:
             str(args.weekends),
             "--country",
             args.country,
+            # Every subcommand runs --outputfile through
+            # _to_output_dir_path(), so a bare name always lands in output/.
             "--outputfile",
             filename,
         ]
@@ -156,6 +283,7 @@ def build_jobs(args: argparse.Namespace, stamp: str) -> list[Job]:
                 "--orientation",
                 args.orientation,
             ]
+        argv += filter_argv(args, view)
         jobs.append(Job(view=view, theme=theme, filename=filename, argv=argv))
 
     for view in args.views:
@@ -182,14 +310,9 @@ def run_job(job: Job) -> Result:
         cwd=REPO_ROOT,
     )
     # A run can emit more than the named file (e.g. weekly overflow pages,
-    # paginated sheets); every extra shares the base stem.
-    produced = sorted(
-        {
-            *OUTPUT_DIR.glob(f"{stem}*"),
-            # excel views write relative to the working directory, not output/.
-            *REPO_ROOT.glob(f"{stem}*"),
-        }
-    )
+    # paginated sheets, mini/gantt detail sheets); every extra shares the base
+    # stem.  Every view is asked for an output/ path, so one glob covers them.
+    produced = sorted(OUTPUT_DIR.glob(f"{stem}*"))
     return Result(
         job=job,
         returncode=proc.returncode,
@@ -227,6 +350,12 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
         f"weekends={args.weekends} · countries {html.escape(args.country)}"
         "</p>",
     ]
+    filters = active_filters(args)
+    if filters:
+        parts.append(
+            "<p class='meta'>filters: "
+            f"<code>{html.escape(' '.join(filters))}</code></p>"
+        )
 
     for view in sorted(by_view):
         parts.append(f"<h2>{html.escape(view)}</h2><div class='grid'>")
@@ -316,6 +445,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="US,UA",
         help="Holiday country codes (default: US,UA)",
     )
+    filter_group = parser.add_argument_group(
+        "Content Filtering",
+        "Forwarded to every ecalendar run, so a batch renders one slice of "
+        "the data across all themes.",
+    )
+    for filt in CONTENT_FILTERS:
+        help_text = filt.help + filter_scope_note(filt)
+        if filt.takes_value:
+            filter_group.add_argument(
+                filt.flag,
+                type=str,
+                default=None,
+                metavar=filt.metavar,
+                help=help_text,
+            )
+        else:
+            filter_group.add_argument(filt.flag, action="store_true", help=help_text)
+
     parser.add_argument(
         "--jobs",
         "-j",
@@ -369,6 +516,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         if args.include_nonsvg:
             args.views += sorted(NONSVG_VIEWS)
 
+    # A filter no selected view accepts is silently dropped by filter_argv;
+    # say so rather than leaving the reviewer to wonder why nothing changed.
+    selected = set(args.views)
+    for filt in CONTENT_FILTERS:
+        value = getattr(args, filt.dest)
+        if (value is not None if filt.takes_value else value) and not (
+            filt.views & selected
+        ):
+            print(
+                f"warning: {filt.flag} applies to no selected view "
+                f"(accepted by: {', '.join(sorted(filt.views))})",
+                file=sys.stderr,
+            )
+
     return args
 
 
@@ -383,6 +544,9 @@ def main(argv: list[str] | None = None) -> int:
         f"{args.papersize} {args.orientation}, weekends={args.weekends}, "
         f"countries {args.country}"
     )
+    filters = active_filters(args)
+    if filters:
+        print(f"content filters: {' '.join(filters)}")
 
     if args.dry_run:
         for job in jobs:
@@ -395,8 +559,16 @@ def main(argv: list[str] | None = None) -> int:
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         for res in pool.map(run_job, jobs):
             results.append(res)
-            status = "ok " if res.returncode == 0 else "FAIL"
-            names = ", ".join(p.name for p in res.files) or res.job.filename
+            # A zero exit with no file in output/ is still a miss — report it
+            # as one rather than echoing the name the run was asked for.
+            if res.returncode != 0:
+                status, names = "FAIL", res.job.filename
+            elif not res.files:
+                status = "MISS"
+                names = f"{res.job.filename} (nothing written to {OUTPUT_DIR.name}/)"
+            else:
+                status = "ok "
+                names = ", ".join(p.name for p in res.files)
             print(f"  [{status}] {names}")
             if res.returncode != 0:
                 for line in res.output.splitlines()[-5:]:

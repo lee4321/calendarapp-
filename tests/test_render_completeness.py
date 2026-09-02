@@ -35,11 +35,10 @@ THEMES_DIR = REPO_ROOT / "config" / "themes"
 #   accepts_theme: True when the subcommand accepts ``--theme``; text-mini
 #                  is intentionally non-themed (renders pure-glyph output)
 #                  so it gets exercised once with the default config.
-#   output_dir:   where ecalendar writes the result.  Weekly/mini/timeline/
-#                  blockplan/compactplan run their --outputfile through
-#                  ecalendar._to_output_dir_path which strips any directory
-#                  component and forces output to ``output/<basename>``.
-#                  Excelheader writes to whatever path is given.
+#   output_dir:   where ecalendar writes the result.  Every subcommand runs
+#                  its --outputfile through ecalendar._to_output_dir_path,
+#                  which strips any directory component and forces output to
+#                  ``output/<basename>`` — the excel workbooks included.
 SUBCOMMAND_META: dict[str, dict[str, object]] = {
     "weekly":      {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "mini":        {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
@@ -50,7 +49,7 @@ SUBCOMMAND_META: dict[str, dict[str, object]] = {
     "blockplan":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "gantt":       {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "compactplan": {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "excelheader": {"ext": ".xlsx", "accepts_theme": True,  "output_dir": None},
+    "excelheader": {"ext": ".xlsx", "accepts_theme": True,  "output_dir": "output"},
 }
 
 

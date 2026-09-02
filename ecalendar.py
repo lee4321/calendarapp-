@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.08.08.0"
+__version__ = "26.09.02.0"
 
 import logging
 import sys
@@ -596,7 +596,7 @@ def run(argv: list[str] | None = None) -> int:
             _eh_te.apply(_eh_config)
             _resolve_palette_overrides(_eh_config, _eh_db)
         out_path = (
-            Path(args.outputfile)
+            Path(_to_output_dir_path(args.outputfile))
             if args.outputfile
             else Path("output") / "excelheader.xlsx"
         )
@@ -644,7 +644,7 @@ def run(argv: list[str] | None = None) -> int:
             _ebp_te.apply(_ebp_config)
             _resolve_palette_overrides(_ebp_config, _ebp_db)
         out_path = (
-            Path(args.outputfile)
+            Path(_to_output_dir_path(args.outputfile))
             if args.outputfile
             else Path("output") / "ExcelBlockplan.xlsx"
         )
@@ -679,7 +679,7 @@ def run(argv: list[str] | None = None) -> int:
         exported = filter_events(raw_events, _ed_config)
 
         out_path = (
-            Path(args.outputfile)
+            Path(_to_output_dir_path(args.outputfile))
             if args.outputfile
             else Path("output") / f"exportdata_{_ed_config.adjustedstart}.csv"
         )

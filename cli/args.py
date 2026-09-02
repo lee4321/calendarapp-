@@ -125,7 +125,9 @@ def _to_output_dir_path(filename: str) -> str:
         ``_to_output_dir_path("../secret/cal.svg")`` → ``"output/cal.svg"``
 
     Called by:
-        run() when setting config.outputfile for calendar-visualizer commands.
+        run() when setting config.outputfile for calendar-visualizer commands,
+        and when resolving --outputfile for the excelheader/excelblockplan
+        workbooks and the exportdata CSV.
     """
     return str(Path("output") / Path(filename).name)
 
@@ -556,7 +558,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help="Output .xlsx path (default: output/excelheader.xlsx)",
+        help=(
+            "Output .xlsx file name (always written under output/; "
+            "default: output/excelheader.xlsx)"
+        ),
     )
     excelheader.add_argument(
         "--theme",
@@ -612,7 +617,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help="Output .xlsx path (default: output/ExcelBlockplan.xlsx)",
+        help=(
+            "Output .xlsx file name (always written under output/; "
+            "default: output/ExcelBlockplan.xlsx)"
+        ),
     )
     excelblockplan.add_argument(
         "--theme",
@@ -725,7 +733,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help="Output CSV file path (default: output/exportdata_YYYYMMDD.csv)",
+        help=(
+            "Output CSV file name (always written under output/; "
+            "default: output/exportdata_YYYYMMDD.csv)"
+        ),
     )
     _ed_content = exportdata.add_argument_group("Content Filtering")
     _ed_content.add_argument(
