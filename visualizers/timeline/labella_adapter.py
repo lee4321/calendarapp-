@@ -20,6 +20,7 @@ from config.config import CalendarConfig
 from renderers.glyph_cache import get_font_metrics
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
     layout_callouts as _layout_callouts_shared,
@@ -27,12 +28,34 @@ from shared.labella_layout import (
 )
 from shared.orientation import Orientation, Side
 
-__all__ = ["CalloutPlacement", "layout_callouts"]
+__all__ = ["CalloutPlacement", "callout_date_extent", "layout_callouts"]
 
 # Horizontal padding added on each side of the measured text inside the
 # label box. The default mirrors the visual feel of the legacy renderer
 # without bloating dense layouts.
 _LABEL_PAD_X: float = 6.0
+
+#: Gap between the title and the date that shares its line inside the box.
+_DATE_GAP_X: float = 8.0
+
+
+def callout_date_extent(
+    date_label: str, font_name: str | None, font_size: float
+) -> float:
+    """Width the in-box date claims on the title line, gap included.
+
+    The renderer reserves exactly this much when it fits the title, so the
+    box measured here is the box drawn there.
+    """
+    if not date_label:
+        return 0.0
+    font_path = _resolve_font_path(font_name)
+    width = (
+        string_width(date_label, font_path, font_size)
+        if font_path
+        else len(date_label) * font_size * 0.5
+    )
+    return width + _DATE_GAP_X
 
 
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
@@ -46,6 +69,9 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
         string_width(event.task_name, name_font_path, name_size)
         if name_font_path else len(event.task_name or "") * name_size * 0.5
     )
+    # The date shares the title line, so the box has to be wide enough for
+    # both or the title would be squeezed to make room at draw time.
+    name_w += _date_extent_for(event, config)
     notes_w = 0.0
     if event.notes:
         notes_w = (
@@ -53,6 +79,28 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
             if notes_font_path else len(event.notes) * notes_size * 0.5
         )
     return max(name_w, notes_w)
+
+
+def _date_extent_for(event: Event, config: CalendarConfig) -> float:
+    """Width the event's in-box date adds to the title line."""
+    try:
+        day = arrow.get(str(event.start)[:8], "YYYYMMDD")
+    except (arrow.ParserError, ValueError, TypeError):
+        return 0.0
+    label = format_arrow_date(day, config.timeline_date_format)
+    # Mirrors TimelineRenderer._callout_metrics()'s date fallback.  A theme
+    # that sets a larger text:event_date size is only visible to the renderer,
+    # which then fits the title into whatever room is left — the title shrinks
+    # slightly rather than the date colliding with it.
+    # weekly_name_text_font_size is None until setfontsizes() runs, and the
+    # layout is exercised without it in tests.
+    base = (
+        config.weekly_name_text_font_size
+        or config.timeline_name_text_font_size
+        or 12.0
+    )
+    size = max(8.0, float(base) * 0.95)
+    return callout_date_extent(label, config.timeline_date_font, size)
 
 
 def _line_height_extent(config: CalendarConfig) -> float:
@@ -134,12 +182,18 @@ def layout_callouts(
     side: Side,
     config: CalendarConfig,
     pos_for_day: Callable[[arrow.Arrow], float],
+    min_layer_gap: float = 0.0,
 ) -> list[CalloutPlacement]:
     """Return labella-placed callouts for the given events.
 
     Thin wrapper over `shared.labella_layout.layout_callouts` that wires
     the timeline's config fields into the shared engine. See the shared
     module for full argument semantics.
+
+    ``min_layer_gap`` is a floor on the theme's layer gap. The innermost row
+    of boxes sits exactly one layer gap off the axis, so the renderer uses
+    this to keep that row clear of the axis tick labels drawn in the same
+    band.
     """
     return _layout_callouts_shared(
         events,
@@ -151,7 +205,9 @@ def layout_callouts(
         node_width=lambda ev: _node_along_axis_extent(ev, config, orientation),
         node_height=lambda evs: _renderer_node_height(evs, config, orientation),
         density=float(config.timeline_labella_density),
-        layer_gap=float(config.timeline_labella_layer_gap),
+        layer_gap=max(
+            float(config.timeline_labella_layer_gap), float(min_layer_gap)
+        ),
         min_pos=config.timeline_labella_min_pos,
         max_pos=config.timeline_labella_max_pos,
     )

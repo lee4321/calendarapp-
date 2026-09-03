@@ -23,6 +23,7 @@ The adapters inject their measurements as callables (`node_width`,
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Callable, Sequence
 
 import arrow
@@ -37,6 +38,14 @@ from shared.orientation import (
     opposite,
 )
 from vendor.labella import Force, Node, Renderer
+
+#: Overlap smaller than this is rounding, not a collision.
+_OVERLAP_TOLERANCE = 0.01
+#: How far the density drops per retry, how many retries, and the floor
+#: below which relaxing further only adds rows without separating labels.
+_DENSITY_RELAX_STEP = 0.8
+_MAX_DENSITY_RELAXATIONS = 12
+_MIN_DENSITY = 0.05
 
 # Fallback font used when a configured font name is missing from the
 # registry. Picked because the project's existing fallback chain ends here.
@@ -106,7 +115,7 @@ def partition_for_both(
     return primary, secondary
 
 
-def _layout_one_side(
+def _run_labella(
     events: Sequence[Event],
     *,
     axis_origin: tuple[float, float],
@@ -122,7 +131,7 @@ def _layout_one_side(
     max_pos: float | None,
     on_side_events: Callable[[Sequence[Event], Side], None] | None,
 ) -> list[CalloutPlacement]:
-    """Run labella for a single concrete side and return placements."""
+    """One labella pass for a concrete side, at exactly the density given."""
     if not events:
         return []
     if side is Side.BOTH:
@@ -187,6 +196,71 @@ def _layout_one_side(
                 orientation=orientation,
             )
         )
+    return placements
+
+
+def _same_row_overlap(placements: Sequence[CalloutPlacement]) -> bool:
+    """True when two labels sharing a row overlap along the axis.
+
+    Labella's distributor decides how many layers to use by comparing the
+    *total* width of all labels against ``density * axis_length``.  That is a
+    global capacity test: a set of labels whose total width fits one layer can
+    still be impossible to place there when the events cluster in time, and
+    the constraint solver then leaves them overlapping rather than opening
+    another layer.  Rows are compared by drawn position, not by layer index,
+    because a label's layer index and its final row do not always agree.
+    """
+    rows: dict[tuple[float, float], list[tuple[float, float]]] = {}
+    for p in placements:
+        # Group by the coordinate perpendicular to the axis.
+        key = (
+            (round(p.y_label, 3), 0.0)
+            if p.orientation is Orientation.HORIZONTAL
+            else (0.0, round(p.x_label, 3))
+        )
+        span = (
+            (p.x_label, p.label_w)
+            if p.orientation is Orientation.HORIZONTAL
+            else (p.y_label, p.label_h)
+        )
+        rows.setdefault(key, []).append(span)
+
+    for spans in rows.values():
+        spans.sort()
+        for (start, extent), (next_start, _) in pairwise(spans):
+            if next_start < start + extent - _OVERLAP_TOLERANCE:
+                return True
+    return False
+
+
+def _layout_one_side(
+    events: Sequence[Event],
+    **kwargs,
+) -> list[CalloutPlacement]:
+    """Lay out one side, opening more rows until no two labels collide.
+
+    The requested density is honoured whenever it produces a clean layout —
+    the common case, where this costs one pass and changes nothing.  When it
+    does not, the density is relaxed step by step, which is what makes the
+    distributor open another layer, until the labels are clear or the floor
+    is reached.  Falling back to the last attempt keeps a too-dense timeline
+    rendering rather than failing.
+    """
+    density = float(kwargs.pop("density"))
+    placements = _run_labella(events, density=density, **kwargs)
+    if not placements or not _same_row_overlap(placements):
+        return placements
+
+    # The hook (PIT's density warning) fires on the first pass only.
+    kwargs["on_side_events"] = None
+    for _ in range(_MAX_DENSITY_RELAXATIONS):
+        density *= _DENSITY_RELAX_STEP
+        if density < _MIN_DENSITY:
+            break
+        attempt = _run_labella(events, density=density, **kwargs)
+        if not _same_row_overlap(attempt):
+            return attempt
+        placements = attempt
     return placements
 
 

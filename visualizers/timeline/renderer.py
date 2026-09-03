@@ -26,6 +26,7 @@ from shared.icon_band import compute_icon_band_days
 from shared.timeband import build_segments as _build_band_segments
 from visualizers.timeline.labella_adapter import (
     CalloutPlacement,
+    callout_date_extent,
     layout_callouts as _labella_layout_callouts,
 )
 from shared.orientation import Orientation, Side
@@ -34,6 +35,10 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
     from visualizers.base import CoordinateDict
+
+#: Breathing room between the top of the axis tick labels and the innermost
+#: row of callout boxes.
+_AXIS_LABEL_MARGIN = 2.0
 
 
 def _timeline_style_rules(config: "CalendarConfig") -> list:
@@ -73,7 +78,6 @@ class TimelineCallout:
     box_y: float
     box_width: float
     box_height: float
-    date_row: int = 0
     # Labella leader. Empty string is permitted for fallback paths.
     leader_path_d: str = ""
     axis_origin: tuple[float, float] = (0.0, 0.0)
@@ -120,8 +124,6 @@ class TimelineDuration:
 
 class TimelineRenderer(BaseSVGRenderer):
     """Renderer for timeline visualization."""
-
-    _CALL_OUT_DATE_ROWS = 3
 
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "timeline"
@@ -693,7 +695,6 @@ class TimelineRenderer(BaseSVGRenderer):
             or config.timeline_name_text_font_color
         ]
         palette_secondary = config.timeline_bottom_colors or palette_primary
-        date_rows = max(1, self._CALL_OUT_DATE_ROWS)
 
         # Pre-resolve color + rule-engine style per event, keyed by identity
         # so the post-labella lookup is robust to reordering (Side.BOTH
@@ -726,6 +727,11 @@ class TimelineRenderer(BaseSVGRenderer):
             side=side,
             config=config,
             pos_for_day=pos_for_day,
+            min_layer_gap=(
+                self._axis_label_clearance(config, start, end)
+                if orientation is Orientation.HORIZONTAL
+                else 0.0
+            ),
         )
 
         # For Side.BOTH the secondary-side events get the secondary palette.
@@ -750,7 +756,6 @@ class TimelineRenderer(BaseSVGRenderer):
                     box_y=p.y_label,
                     box_width=p.label_w,
                     box_height=p.label_h,
-                    date_row=source_idx % date_rows,
                     leader_path_d=p.leader_path_d,
                     axis_origin=p.axis_origin,
                     orientation=p.orientation,
@@ -1049,10 +1054,9 @@ class TimelineRenderer(BaseSVGRenderer):
         item: TimelineCallout,
         axis_y: float,
     ) -> None:
-        """Draw one placed callout: axis dot, label box, box content
-        (icon, name, notes), and — horizontal axes only — the event date
-        near the dot, staggered over ``_CALL_OUT_DATE_ROWS`` rows so
-        neighboring dates don't collide.  Text is shrunk to fit via
+        """Draw one placed callout: axis dot, label box, and box content
+        (icon, name, notes, and — horizontal axes only — the event date,
+        right-aligned on the title line).  Text is shrunk to fit via
         `_fit_box_text_sizes`; the leader path was already drawn in
         `_render_content`'s underlay pass."""
         title = item.event.task_name or "(untitled)"
@@ -1097,6 +1101,17 @@ class TimelineRenderer(BaseSVGRenderer):
         icon_gap = 2.0
         icon_reserved = (title_font_size + icon_gap) if has_icon else 0.0
 
+        # The date rides on the title line, right-aligned inside the box, so
+        # it is unambiguously this event's date.  Its width is reserved here
+        # and matched by the layout's measurement, so the title never has to
+        # shrink to make room for it.
+        date_label = self._callout_date_label(config, item)
+        date_reserved = (
+            self._callout_date_width(config, date_label, date_font_size)
+            if date_label
+            else 0.0
+        )
+
         _name_style = config.get_text_style("ec-event-name")
         _notes_style = config.get_text_style("ec-event-notes")
         tk_name = self._tk("text:event_name")
@@ -1116,7 +1131,7 @@ class TimelineRenderer(BaseSVGRenderer):
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
-            item.box_width - 12.0 - icon_reserved,
+            item.box_width - 12.0 - icon_reserved - date_reserved,
             item.box_height,
             title_font_path,
             notes_font_path,
@@ -1172,10 +1187,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 box_ctx=self._event_ctx(item.event),
             )
             title_text_x = text_x + fitted_title + icon_gap
-            title_max_w = item.box_width - 12.0 - fitted_title - icon_gap
+            title_max_w = (
+                item.box_width - 12.0 - fitted_title - icon_gap - date_reserved
+            )
         else:
             title_text_x = text_x
-            title_max_w = item.box_width - 12.0
+            title_max_w = item.box_width - 12.0 - date_reserved
 
         self._draw_text(
             title_text_x,
@@ -1202,20 +1219,15 @@ class TimelineRenderer(BaseSVGRenderer):
                 css_class="ec-event-notes",
             )
 
-        # Date label below the dot — horizontal-only. On vertical timelines
-        # the date is implicit (events are ordered along the axis); the
-        # label box itself shows the task name.
-        if item.orientation is Orientation.HORIZONTAL:
+        # Date, right-aligned on the title line inside the box.  It used to
+        # be drawn near the axis at the event's dot, staggered over a few
+        # rows by source index — which put it nowhere near its own callout,
+        # let two dates share a row and collide, and dropped it on top of any
+        # box sitting in the innermost layer.  In the box it travels with the
+        # event it belongs to and cannot collide with another event's date.
+        if date_label:
             _event_date_style = config.get_text_style("ec-event-date")
             tk_event_date = self._tk("text:event_date")
-            date_label = format_arrow_date(
-                self._safe_day(item.event.start, fallback=arrow.now()),
-                config.timeline_date_format,
-            )
-            date_row_gap_factor = 1.35
-            date_y = axis_y - (
-                date_font_size * (0.9 + (item.date_row * date_row_gap_factor))
-            )
             date_font, _, date_color, _ = _sr.text_override(
                 "event_date",
                 font=(
@@ -1230,13 +1242,13 @@ class TimelineRenderer(BaseSVGRenderer):
                 ),
             )
             self._draw_text(
-                item.x_dot,
-                date_y,
+                item.box_x + item.box_width - 6.0,
+                title_y,
                 date_label,
                 date_font,
                 date_font_size,
                 fill=date_color,
-                anchor="middle",
+                anchor="end",
                 css_class="ec-event-date",
             )
 
@@ -2454,8 +2466,8 @@ class TimelineRenderer(BaseSVGRenderer):
             return
 
         draw_labels = len(ticks) <= 18
-        tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        tick_h = self._axis_tick_height(config)
+        label_size = self._axis_tick_label_size(config)
 
         _tick_style = config.get_line_style("ec-axis-tick")
         for m in ticks:
@@ -2650,6 +2662,79 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
     # _draw_circle() is inherited from BaseSVGRenderer.
+
+    @staticmethod
+    def _axis_tick_height(config: "CalendarConfig") -> float:
+        """Half-length of a month tick mark, above and below the axis."""
+        return max(6.0, config.timeline_axis_width * 2.5)
+
+    @staticmethod
+    def _axis_tick_label_size(config: "CalendarConfig") -> float:
+        """Font size of the month tick labels."""
+        return max(7.0, float(config.weekly_name_text_font_size or 10.0) * 0.8)
+
+    def _axis_label_clearance(
+        self, config: "CalendarConfig", start: arrow.Arrow, end: arrow.Arrow
+    ) -> float:
+        """Height the tick marks and their labels claim above the axis.
+
+        The innermost callout row sits exactly ``layer_gap`` above the axis,
+        so without this the month labels — which are drawn above the axis —
+        end up printed inside that row's boxes.  Returns 0 when no labels
+        will be drawn, leaving the theme's layer gap untouched.
+        """
+        month_start = start.floor("month")
+        if month_start < start.floor("day"):
+            month_start = month_start.shift(months=1)
+        month_end = end.floor("month")
+        tick_count = (
+            len(list(arrow.Arrow.range("month", month_start, month_end)))
+            if month_start <= month_end
+            else 0
+        )
+        # Mirrors _draw_month_ticks: no ticks, or too many to label, means
+        # nothing is drawn up there.
+        if tick_count == 0 or tick_count > 18:
+            return 0.0
+
+        label_size = self._axis_tick_label_size(config)
+        # Baseline sits at tick_h + 1.5 label heights above the axis; glyphs
+        # rise about another 0.8 of the size above that baseline.
+        return (
+            self._axis_tick_height(config)
+            + label_size * 2.3
+            + _AXIS_LABEL_MARGIN
+        )
+
+    def _callout_date_label(
+        self, config: "CalendarConfig", item: "TimelineCallout"
+    ) -> str:
+        """The date shown inside a callout box, or "" when it has none.
+
+        Vertical timelines order their events along the axis, so the date is
+        implicit there and the box carries only the name.
+        """
+        if item.orientation is not Orientation.HORIZONTAL:
+            return ""
+        return format_arrow_date(
+            self._safe_day(item.event.start, fallback=arrow.now()),
+            config.timeline_date_format,
+        )
+
+    def _callout_date_width(
+        self, config: "CalendarConfig", date_label: str, font_size: float
+    ) -> float:
+        """Width the in-box date needs, including the gap before it.
+
+        Kept in step with the layout: timeline_callout_date_extent() measures
+        the same thing when sizing the box, so what is reserved here is what
+        was budgeted there.
+        """
+        if not date_label:
+            return 0.0
+        return callout_date_extent(
+            date_label, config.timeline_date_font, font_size
+        )
 
     @staticmethod
     def _safe_day(date_str: str, fallback: arrow.Arrow) -> arrow.Arrow:
