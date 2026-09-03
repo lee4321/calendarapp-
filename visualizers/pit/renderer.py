@@ -263,6 +263,11 @@ class PITRenderer(BaseSVGRenderer):
     ) -> str | None:
         """Inject (once) and return the id of a built-in SVG marker.
 
+        Delegates to :py:meth:`BaseSVGRenderer._ensure_arrow_marker_def`,
+        which the Gantt's dependency leaders share.  The ``pit-marker``
+        prefix and the element class are kept so ids and markup are
+        unchanged from when this was PIT's own implementation.
+
         Args:
             kind: "arrow-head" or "none". Anything else degrades to a
                 no-op return.
@@ -274,37 +279,13 @@ class PITRenderer(BaseSVGRenderer):
             embedding in a ``marker-start="url(#…)"`` attribute, or
             ``None`` when ``kind`` is "none" / unknown / size <= 0.
         """
-        if not kind or kind == "none" or size <= 0:
-            return None
-        key = (kind, color, round(float(size), 3))
-        existing = self._pit_marker_ids.get(key)
-        if existing:
-            return existing
-        # Slugify color for the id. Hex stays as is sans '#'; non-hex
-        # gets a quick alphanumeric squeeze.
-        slug = "".join(ch for ch in color if ch.isalnum()) or "c"
-        size_slug = str(round(size, 2)).replace(".", "_")
-        marker_id = f"pit-marker-{kind}-{slug}-{size_slug}"
-
-        if kind == "arrow-head":
-            # An equilateral-ish triangle whose tip sits at refX/refY so
-            # the line endpoint coincides with the tip.
-            s = float(size)
-            inner = (
-                f'<marker id="{marker_id}" markerUnits="userSpaceOnUse" '
-                f'viewBox="0 0 {s} {s}" '
-                f'markerWidth="{s}" markerHeight="{s}" '
-                f'refX="{s}" refY="{s/2}" orient="auto" '
-                f'class="ec-pit-marker-arrow-head">'
-                f'<path d="M 0 0 L {s} {s/2} L 0 {s} Z" '
-                f'fill="{color}" stroke="none"/>'
-                f'</marker>'
-            )
-            self._drawing.append_def(drawsvg.Raw(inner))
-            self._pit_marker_ids[key] = marker_id
-            return marker_id
-
-        return None
+        return self._ensure_arrow_marker_def(
+            kind,
+            color,
+            size,
+            prefix="pit-marker",
+            css_class="ec-pit-marker-arrow-head",
+        )
 
     @staticmethod
     def _marker_attr_pair(kind: str, color: str, size: float) -> str:

@@ -10,7 +10,7 @@ from visualizers.gantt.dependencies import (
     ARROW_STYLE_TARGET,
     DEFAULT_STUB,
     RowAnchor,
-    arrow_head,
+    curved_path,
     resolve_dependencies,
     route_arrow,
     stub_route,
@@ -139,68 +139,86 @@ def test_an_unknown_type_falls_back_to_finish_to_start():
     assert route.tip == (SUCCESSOR.left, SUCCESSOR.y)
 
 
-# ── Routing ───────────────────────────────────────────────────────────────
+# ── Routing: the PIT leader construction ──────────────────────────────────
 
 
-def test_a_route_is_always_three_orthogonal_segments():
+def test_a_route_is_a_stub_then_a_curve_then_a_stub():
+    """Same shape as a PIT callout leader: L … C … L."""
     route = route_arrow(PREDECESSOR, SUCCESSOR, "FS")
-    assert len(route.segments) == 3
-    for x1, y1, x2, y2 in route.segments:
-        assert x1 == x2 or y1 == y2, "segments must be axis-aligned"
+    assert route.path_d.startswith("M ")
+    assert route.path_d.count(" C ") == 1, "exactly one cubic segment"
+    assert route.path_d.count(" L ") == 2, "a stub at each end"
 
 
-def test_a_forward_route_turns_clear_of_the_entry():
+def test_the_path_starts_and_ends_on_the_anchors():
     route = route_arrow(PREDECESSOR, SUCCESSOR, "FS")
-    turn_x = route.points[1][0]
-    assert turn_x == pytest.approx(SUCCESSOR.left - DEFAULT_STUB)
-    assert PREDECESSOR.right < turn_x < SUCCESSOR.left
+    assert route.tail == (PREDECESSOR.right, PREDECESSOR.y)
+    assert route.tip == (SUCCESSOR.left, SUCCESSOR.y)
+    assert route.path_d.startswith(f"M {PREDECESSOR.right:.8f} {PREDECESSOR.y:.8f}")
+    assert route.path_d.endswith(f"L {SUCCESSOR.left:.8f} {SUCCESSOR.y:.8f}")
 
 
-def test_a_backward_link_folds_into_a_dogleg_that_still_points_right():
-    """The successor starts before the predecessor ends (answer 26)."""
+def test_the_stubs_leave_and_arrive_perpendicular_to_the_bars():
+    """A stub on each end is what keeps the curve from cusping."""
+    route = route_arrow(PREDECESSOR, SUCCESSOR, "FS")
+    _start, exit_stub, entry_stub, _end = route.points
+
+    assert exit_stub == (PREDECESSOR.right + DEFAULT_STUB, PREDECESSOR.y)
+    assert entry_stub == (SUCCESSOR.left - DEFAULT_STUB, SUCCESSOR.y)
+
+
+def test_the_curve_control_points_sit_on_the_horizontal_midline():
+    """hCurveBetween's signature: both controls at the midpoint x."""
+    route = route_arrow(PREDECESSOR, SUCCESSOR, "FS")
+    _start, exit_stub, entry_stub, _end = route.points
+    mid_x = (exit_stub[0] + entry_stub[0]) / 2
+
+    curve = route.path_d.split(" C ")[1]
+    numbers = [float(value) for value in curve.split(" L ")[0].split()]
+    assert numbers[0] == pytest.approx(mid_x)
+    assert numbers[1] == pytest.approx(exit_stub[1])
+    assert numbers[2] == pytest.approx(mid_x)
+    assert numbers[3] == pytest.approx(entry_stub[1])
+
+
+def test_a_start_to_start_route_leaves_leftward():
+    route = route_arrow(PREDECESSOR, SUCCESSOR, "SS")
+    _start, exit_stub, _entry_stub, _end = route.points
+    assert exit_stub[0] == pytest.approx(PREDECESSOR.left - DEFAULT_STUB)
+
+
+def test_a_finish_to_finish_route_arrives_from_the_right():
+    route = route_arrow(PREDECESSOR, SUCCESSOR, "FF")
+    _start, _exit_stub, entry_stub, end = route.points
+    assert entry_stub[0] == pytest.approx(SUCCESSOR.right + DEFAULT_STUB)
+    assert end == (SUCCESSOR.right, SUCCESSOR.y)
+
+
+def test_a_backward_link_is_the_same_construction():
+    """The successor starts before the predecessor ends; the curve doubles back."""
     earlier = RowAnchor(left=100.0, right=150.0, y=30.0)
     route = route_arrow(PREDECESSOR, earlier, "FS")
 
-    assert len(route.segments) == 3
-    assert route.head_dir == +1
-    turn_x = route.points[1][0]
-    assert turn_x == pytest.approx(earlier.left - DEFAULT_STUB)
-    assert turn_x < PREDECESSOR.right, "the first segment doubles back"
+    assert route.path_d.count(" C ") == 1
+    assert route.tip == (earlier.left, earlier.y)
+    _start, exit_stub, entry_stub, _end = route.points
+    assert entry_stub[0] < exit_stub[0], "the curve runs back to the left"
 
 
-def test_a_start_to_start_route_turns_left_of_both_bars():
-    route = route_arrow(PREDECESSOR, SUCCESSOR, "SS")
-    turn_x = route.points[1][0]
-    assert turn_x == pytest.approx(
-        min(PREDECESSOR.left, SUCCESSOR.left) - DEFAULT_STUB
-    )
-
-
-def test_a_finish_to_finish_route_turns_right_of_both_bars():
-    route = route_arrow(PREDECESSOR, SUCCESSOR, "FF")
-    turn_x = route.points[1][0]
-    assert turn_x == pytest.approx(
-        max(PREDECESSOR.right, SUCCESSOR.right) + DEFAULT_STUB
-    )
-
-
-def test_the_stub_route_arrives_from_the_left():
+def test_the_stub_route_is_a_straight_run_into_the_bar():
     route = stub_route(SUCCESSOR, length=12.0)
     assert route.head_dir == +1
     assert route.tip == (SUCCESSOR.left, SUCCESSOR.y)
-    assert route.points[0][0] < SUCCESSOR.left
+    assert route.tail[0] < SUCCESSOR.left
+    assert " C " not in route.path_d
 
 
-def test_the_arrow_head_is_two_segments_meeting_at_the_tip():
-    segments = arrow_head((50.0, 20.0), +1, 4.0)
-    assert len(segments) == 2
-    assert all(seg[2:] == (50.0, 20.0) for seg in segments)
-    assert all(seg[0] < 50.0 for seg in segments), "head opens to the left"
+def test_curved_path_is_built_from_the_labella_primitive():
+    """The same helper the PIT leaders use, so the shapes cannot diverge."""
+    from vendor.labella.renderer import hCurveBetween
 
-
-def test_a_left_pointing_head_opens_to_the_right():
-    segments = arrow_head((50.0, 20.0), -1, 4.0)
-    assert all(seg[0] > 50.0 for seg in segments)
+    path = curved_path((0.0, 0.0), (4.0, 0.0), (16.0, 10.0), (20.0, 10.0))
+    assert hCurveBetween([4.0, 0.0], [16.0, 10.0]) in path
 
 
 # ── Drawing ───────────────────────────────────────────────────────────────
@@ -216,22 +234,29 @@ def linked_tasks() -> list[dict]:
     ]
 
 
-def test_a_link_draws_a_route_and_a_head():
+def test_a_link_draws_one_curved_path():
     renderer = render(linked_tasks())
-    arrows = renderer.of_class(renderer.polylines, "ec-dependency-arrow")
-    assert len(arrows) == 2                      # route + head
-    assert len(arrows[0]["segments"]) == 3
-    assert len(arrows[1]["segments"]) == 2
+    arrows = renderer.of_class(renderer.paths, "ec-dependency-arrow")
+    assert len(arrows) == 1, "one path, not a route plus a drawn head"
+    assert " C " in arrows[0]["path_d"]
+
+
+def test_the_head_is_an_oriented_marker_not_drawn_segments():
+    renderer = render(linked_tasks())
+    arrow = renderer.of_class(renderer.paths, "ec-dependency-arrow")[0]
+    assert arrow["marker_end"], "the arrowhead is an SVG marker"
+    assert renderer.markers, "a marker def was injected"
+    assert renderer.markers[0]["kind"] == "arrow-head"
 
 
 def test_dependencies_can_be_switched_off():
     renderer = render(linked_tasks(), gantt_show_dependencies=False)
-    assert renderer.of_class(renderer.polylines, "ec-dependency-arrow") == []
+    assert renderer.of_class(renderer.paths, "ec-dependency-arrow") == []
 
 
 def test_no_arrows_without_predecessor_data():
     renderer = render([task(Source_ID="1"), task(Source_ID="2")])
-    assert renderer.of_class(renderer.polylines, "ec-dependency-arrow") == []
+    assert renderer.of_class(renderer.paths, "ec-dependency-arrow") == []
 
 
 def test_an_offchart_predecessor_draws_the_marker_icon():
@@ -252,17 +277,18 @@ def test_a_style_rule_restyles_the_arrows():
     events[1]["Resource_Group"] = "Delivery"
     renderer = render(events, theme_style_rules=[rule])
 
-    arrows = renderer.of_class(renderer.polylines, "ec-dependency-arrow")
+    arrows = renderer.of_class(renderer.paths, "ec-dependency-arrow")
     assert arrows[0]["stroke"] == "crimson"
     assert arrows[0]["stroke_width"] == pytest.approx(2.0)
 
 
-def test_the_arrow_head_is_never_dashed():
+def test_a_dashed_arrow_keeps_a_solid_head():
+    """The marker is a filled glyph, so the dash pattern cannot reach it."""
     rule = {
         "apply_to": ARROW_STYLE_TARGET,
         "style": {"stroke": "black", "stroke_dasharray": "4 2"},
     }
     renderer = render(linked_tasks(), theme_style_rules=[rule])
-    route, head = renderer.of_class(renderer.polylines, "ec-dependency-arrow")
-    assert route["stroke_dasharray"] == "4 2"
-    assert head.get("stroke_dasharray") is None
+    arrow = renderer.of_class(renderer.paths, "ec-dependency-arrow")[0]
+    assert arrow["stroke_dasharray"] == "4 2"
+    assert arrow["marker_end"]

@@ -220,7 +220,7 @@ def test_a_same_page_link_still_draws_a_real_arrow(tmp_path):
     renderer = render_paged(tasks, tmp_path)
 
     assert renderer._references == {}
-    assert renderer.of_class(renderer.polylines, "ec-dependency-arrow")
+    assert renderer.of_class(renderer.paths, "ec-dependency-arrow")
     assert not [i for i in renderer.icons if i["icon"].startswith("circle-")]
 
 
