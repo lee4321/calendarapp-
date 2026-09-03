@@ -20,6 +20,10 @@ Supported ``unit`` values:
   - ``icon`` — per-day icon glyphs driven by ``icon_rules``.  Not produced by
     this module (returns an empty segment list); handled directly by each
     visualizer's band renderer via :func:`shared.icon_band.compute_icon_band_days`.
+  - ``holiday`` — per-day country flags taken from the holiday rows
+    themselves.  Like ``icon`` it has no labeled segments (returns an empty
+    list); handled by the visualizer via
+    :func:`shared.holiday_band.compute_holiday_band_days`.
 """
 
 from __future__ import annotations
@@ -72,9 +76,11 @@ def build_segments(
     segments: list[BandSegment] = []
     one_day = timedelta(days=1)
 
-    # ``icon`` bands have no labeled segments — per-day icons are emitted
-    # directly by the visualizer via shared.icon_band.compute_icon_band_days.
-    if unit == "icon":
+    # ``icon`` and ``holiday`` bands have no labeled segments — their per-day
+    # marks are emitted directly by the visualizer, via
+    # shared.icon_band.compute_icon_band_days and
+    # shared.holiday_band.compute_holiday_band_days respectively.
+    if unit in {"icon", "holiday"}:
         return segments
 
     if unit == "fiscal_quarter":

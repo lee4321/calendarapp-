@@ -1052,6 +1052,16 @@ class CalendarConfig:
                 "fill_color": "none",
                 "show_every": 1,
             },
+            {
+                # Country flags for the holidays on each day.  Sits closest to
+                # the chart so a flag lines up with the bars under it.  Set
+                # nonworkdays_only to hide observances that do not close the
+                # office (Groundhog Day and the like).
+                "label": "Holidays",
+                "unit": "holiday",
+                "fill_color": "none",
+                "nonworkdays_only": False,
+            },
         ]
     )
     gantt_bottom_time_bands: list[dict[str, Any]] | None = None

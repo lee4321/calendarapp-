@@ -32,7 +32,7 @@ rows past the bottom of the body are not drawn yet.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import arrow
 
@@ -40,6 +40,7 @@ from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import string_width
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
+from shared.holiday_band import HolidayMark, compute_holiday_band_days
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment, build_segments
 from visualizers.gantt.bars import (
@@ -93,6 +94,9 @@ _CELL_PAD = 2.0
 
 #: Fallback bar fill when neither a rule, the event, nor the theme says.
 _DEFAULT_BAR_FILL = "#888888"
+
+#: Horizontal gap between two flags sharing one holiday-band day cell.
+_HOLIDAY_FLAG_GAP = 1.0
 
 
 def _page_output_path(output_path: str, page_number: int) -> str:
@@ -149,6 +153,11 @@ class GanttRenderer(BaseSVGRenderer):
         "icon:event", "icon:duration", "icon:milestone",
     )
 
+    #: Holiday marks per visible day, resolved once per render in
+    #: _render_content.  Empty until then so a band row drawn without a
+    #: render pass (tests, subclasses) simply shows no flags.
+    _holiday_days: ClassVar["dict[date, list[HolidayMark]]"] = {}
+
     def _render_content(
         self,
         config: "CalendarConfig",
@@ -186,6 +195,10 @@ class GanttRenderer(BaseSVGRenderer):
         # page, so a sprint or month keeps its identity and its numbering
         # across horizontal page breaks (answer 11).
         segments = self._build_all_segments(config, start, end, days, db)
+        # Holiday bands draw the flag on the holiday row itself, so the marks
+        # are resolved once here (db in hand) and sliced per page like the
+        # band segments are.
+        self._holiday_days = compute_holiday_band_days(days, db, config)
         self._log_hidden_holidays(config, start, end, days, db)
 
         pages = self._plan_pages(config, coordinates, rows, days)
@@ -482,6 +495,11 @@ class GanttRenderer(BaseSVGRenderer):
         if day_w <= 0 or h <= 0:
             return
 
+        # A holiday band has no labeled segments — it draws one flag per day.
+        if str(band.get("unit", "date")).strip().lower() == "holiday":
+            self._draw_holiday_band_row(config, band, days, x, y, w, h)
+            return
+
         day_index = {day: index for index, day in enumerate(days)}
         color, width, opacity = self._grid_style()
         box = config.get_box_style("ec-band-cell")
@@ -517,6 +535,65 @@ class GanttRenderer(BaseSVGRenderer):
                 font, font_size, token.get("color") or "black",
                 align="center", css_class="ec-tick-label",
             )
+
+    def _draw_holiday_band_row(
+        self,
+        config: "CalendarConfig",
+        band: dict[str, Any],
+        days: list[date],
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+    ) -> None:
+        """Draw one flag per holiday in this page's day columns.
+
+        Unlike a labelled band every cell is a single day, so the row is drawn
+        per day rather than per segment.  Days with no holiday still get their
+        cell, keeping the row's grid continuous with the bands above it.
+        """
+        day_w = self._day_width(w, days)
+        color, width, opacity = self._grid_style()
+        box = config.get_box_style("ec-band-cell")
+        # Leave a little air around the flag so it does not touch the grid.
+        icon_size = max(min(h - 2.0, day_w - 2.0), 3.0)
+        show_all = not bool(band.get("nonworkdays_only", False))
+
+        for index, day in enumerate(days):
+            cell_x = x + index * day_w
+            self._draw_rect(
+                cell_x, y, day_w, h,
+                fill=box.fill or "none",
+                fill_opacity=float(
+                    box.fill_opacity if box.fill_opacity is not None else 1.0
+                ),
+                stroke=color, stroke_width=width, stroke_opacity=opacity,
+                css_class="ec-band-cell",
+            )
+
+            marks = [
+                m
+                for m in self._holiday_days.get(day, ())
+                if show_all or m.nonworkday
+            ]
+            if not marks:
+                continue
+
+            # More flags than the column can hold would overlap illegibly;
+            # draw what fits, centred as a group.
+            per_icon = icon_size + _HOLIDAY_FLAG_GAP
+            max_icons = max(int((day_w - 1.0) // per_icon), 1)
+            drawn = marks[:max_icons]
+            group_w = len(drawn) * per_icon - _HOLIDAY_FLAG_GAP
+            icon_x = cell_x + (day_w - group_w) / 2.0
+            baseline = y + h / 2.0 + icon_size / 2.0
+
+            for mark in drawn:
+                self._draw_icon_svg(
+                    mark.icon, icon_x, baseline, icon_size,
+                    css_class="ec-holiday-icon",
+                )
+                icon_x += per_icon
 
     def _draw_column_headers(
         self,
