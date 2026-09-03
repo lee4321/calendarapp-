@@ -336,6 +336,107 @@ class BaseSVGRenderer(ABC):
                 svg_markup = f'<g transform="{combined_transform}">{svg_markup}</g>'
             self._drawing.append(drawsvg.Raw(svg_markup))
 
+    def _ensure_arrow_marker_def(
+        self,
+        kind: str,
+        color: str,
+        size: float,
+        *,
+        prefix: str = "marker",
+        css_class: str = "",
+    ) -> str | None:
+        """Inject (once) and return the id of a built-in SVG marker.
+
+        ``orient="auto"`` makes the glyph follow the path's tangent at its
+        endpoint, which is what lets a curved leader carry an arrowhead
+        that points the way the curve is actually travelling.  Defs are
+        deduplicated per render on ``(kind, color, size)``.
+
+        Args:
+            kind: "arrow-head", or "none"/unknown for a no-op.
+            color: Fill for the glyph.
+            size: ``markerWidth`` / ``markerHeight`` in user units.
+            prefix: Id prefix, so each visualizer keeps its own namespace.
+            css_class: Optional class on the ``<marker>`` element.
+
+        Returns:
+            The fragment id (no leading ``#``) for ``marker-end="url(#…)"``,
+            or None when nothing should be drawn.
+        """
+        if not kind or kind == "none" or size <= 0 or self._drawing is None:
+            return None
+        if kind != "arrow-head":
+            return None
+
+        cache = getattr(self, "_arrow_marker_ids", None)
+        if cache is None:
+            cache = {}
+            self._arrow_marker_ids = cache
+
+        key = (prefix, kind, color, round(float(size), 3))
+        existing = cache.get(key)
+        if existing:
+            return existing
+
+        slug = "".join(ch for ch in color if ch.isalnum()) or "c"
+        size_slug = str(round(size, 2)).replace(".", "_")
+        marker_id = f"{prefix}-{kind}-{slug}-{size_slug}"
+
+        # A triangle whose tip sits at refX/refY, so the path's endpoint
+        # coincides with the tip rather than the glyph's bounding box.
+        s = float(size)
+        class_attr = f' class="{css_class}"' if css_class else ""
+        self._drawing.append_def(
+            drawsvg.Raw(
+                f'<marker id="{marker_id}" markerUnits="userSpaceOnUse" '
+                f'viewBox="0 0 {s} {s}" '
+                f'markerWidth="{s}" markerHeight="{s}" '
+                f'refX="{s}" refY="{s / 2}" orient="auto"{class_attr}>'
+                f'<path d="M 0 0 L {s} {s / 2} L 0 {s} Z" '
+                f'fill="{color}" stroke="none"/>'
+                f"</marker>"
+            )
+        )
+        cache[key] = marker_id
+        return marker_id
+
+    def _draw_path(
+        self,
+        path_d: str,
+        *,
+        stroke: str = "black",
+        stroke_width: float = 1.0,
+        stroke_opacity: float = 1.0,
+        stroke_dasharray: str | None = None,
+        stroke_linecap: str = "round",
+        stroke_linejoin: str = "round",
+        marker_start: str | None = None,
+        marker_end: str | None = None,
+        css_class: str | None = None,
+    ) -> None:
+        """Stroke a raw SVG path, optionally capped with marker defs.
+
+        Marker ids come from :py:meth:`_ensure_arrow_marker_def`.
+        """
+        if not path_d or self._drawing is None:
+            return
+
+        dash = f' stroke-dasharray="{stroke_dasharray}"' if stroke_dasharray else ""
+        start = f' marker-start="url(#{marker_start})"' if marker_start else ""
+        end = f' marker-end="url(#{marker_end})"' if marker_end else ""
+        cls = f' class="{css_class}"' if css_class else ""
+
+        self._drawing.append(
+            drawsvg.Raw(
+                f'<path d="{path_d}" fill="none" stroke="{stroke}" '
+                f'stroke-width="{stroke_width:.3f}" '
+                f'stroke-opacity="{stroke_opacity}" '
+                f'stroke-linecap="{stroke_linecap}" '
+                f'stroke-linejoin="{stroke_linejoin}"'
+                f"{dash}{start}{end}{cls}/>"
+            )
+        )
+
     def _draw_line(
         self,
         x1: float,

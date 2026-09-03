@@ -59,6 +59,8 @@ class _CaptureRenderer(GanttRenderer):
         self.polylines: list[dict] = []
         self.icons: list[dict] = []
         self.texts: list[dict] = []
+        self.paths: list[dict] = []
+        self.markers: list[dict] = []
 
     def _draw_rect(self, x, y, w, h, **kwargs):
         self.rects.append({"x": x, "y": y, "w": w, "h": h, **kwargs})
@@ -71,6 +73,13 @@ class _CaptureRenderer(GanttRenderer):
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
         self.texts.append({"x": x, "y": y, "text": str(text), **kwargs})
+
+    def _draw_path(self, path_d, **kwargs):
+        self.paths.append({"path_d": path_d, **kwargs})
+
+    def _ensure_arrow_marker_def(self, kind, color, size, **kwargs):
+        self.markers.append({"kind": kind, "color": color, "size": size, **kwargs})
+        return f"{kwargs.get('prefix', 'marker')}-{kind}"
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
         self.icons.append(

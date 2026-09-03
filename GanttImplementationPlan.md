@@ -39,7 +39,7 @@ visualizers/gantt/renderer.py       # SVG drawing of one page
 visualizers/gantt/columns.py        # column model: resolve, format, wrap/truncate
 visualizers/gantt/rows.py           # row ordering (WBS-numeric) and indentation
 visualizers/gantt/bars.py           # bar geometry on the visible-day axis
-visualizers/gantt/dependencies.py   # link graph + orthogonal dogleg routing
+visualizers/gantt/dependencies.py   # link graph + curved-leader routing
 visualizers/gantt/details.py        # gantt_details.svg (listing + exception log)
 shared/predecessors.py              # MS Project dependency-string parser
 importers/generators/gantt_generator.py   # test-data generator
@@ -424,10 +424,14 @@ Draw order (back to front), per page:
   doglegs. Lag is still **not** applied to geometry — an `SS+3d` arrow anchors at both
   left edges without the 3-day offset — so the parsed `lag_days`/`lag_percent` remain
   unused in v1 as originally planned.
-- Routing stays uniform regardless of type: orthogonal segments only, arrowhead at the
-  entry edge. Forward geometry is a 3-segment route (exit stub → vertical → approach);
-  when the entry point lies behind the exit point, the same 3-segment dogleg is used
-  (answer 26). No collision avoidance in v1 — overlaps are accepted.
+- Routing stays uniform regardless of type. **Revised 2026-08-08** to the PIT leader
+  construction: a perpendicular stub off the exit edge, a `hCurveBetween` cubic across
+  the gap (control points on the horizontal midline, so the curve leaves and arrives
+  tangentially), and a matching stub into the entry edge. The arrowhead is an SVG
+  `<marker>` with `orient="auto"`, so it follows the tangent instead of being fixed
+  left or right. A backward link is the same construction; the curve doubles back. No
+  collision avoidance — overlaps are accepted. This supersedes the original orthogonal
+  three-segment dogleg (requirement §58, answer 26).
 - Arrows whose predecessor row is off the current *page* but on the chart are clipped at
   the page boundary; arrows whose predecessor is off the *chart* get the stub + icon.
 

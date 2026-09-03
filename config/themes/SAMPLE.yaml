@@ -158,6 +158,12 @@ gantt:
   progress_width: 1.5
   float_opacity_scale: 0.4  # earliest/latest bars, relative to the task bar
   show_dependencies: true
+  # Arrows are curved leaders drawn like the PIT callout leaders; the head
+  # is an SVG marker that orients itself along the curve.
+  arrow_marker_end: arrow-head     # or `none` for a bare leader
+  arrow_marker_end_size: 6.0
+  arrow_linecap: round
+  arrow_linejoin: round
   show_today_line: true
   today_date: null          # YYYYMMDD to fix "today"; null = the wall clock
   show_details: true        # write the companion <output>_details.svg

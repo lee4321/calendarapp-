@@ -73,7 +73,7 @@ in `visualizers/gantt/renderer.py`'s module docstring. Split across small
 modules: `columns.py` (the task table's column model, resolution and
 wrap/truncate), `rows.py` (WBS-numeric ordering and indentation),
 `bars.py` (bar geometry on the visible-day axis), `dependencies.py` (link
-resolution and orthogonal routing), `details.py` (the companion
+resolution and curved-leader routing), `details.py` (the companion
 `_details.svg` page and the exception log), `layout.py` (page frame plus
 `plan_pages`).
 
@@ -87,7 +87,10 @@ counters restart at every break.
 Dependencies come from `events.predecessors`, parsed by
 `shared/predecessors.py` and resolved against `events.source_id`. Each
 link leaves and enters the edge its type implies (FS/SS/FF/SF); lag is
-parsed and stored but does not shift geometry. Anything the chart cannot
+parsed and stored but does not shift geometry.  The leader itself is the
+PIT construction — perpendicular stub, `hCurveBetween` cubic, arrowhead
+as an `orient="auto"` SVG marker — so the two views draw connectors the
+same way. Anything the chart cannot
 show faithfully — a clipped bar, an event moved off a hidden weekend, an
 off-chart predecessor — is recorded as a `GanttException` and listed on
 the details page instead of being silently dropped.

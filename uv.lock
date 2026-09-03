@@ -23,7 +23,6 @@ dependencies = [
     { name = "arrow" },
     { name = "drawsvg" },
     { name = "fonttools" },
-    { name = "graph-layout" },
     { name = "holidays" },
     { name = "intervaltree" },
     { name = "openpyxl" },
@@ -45,7 +44,6 @@ requires-dist = [
     { name = "arrow", specifier = ">=1.3.0" },
     { name = "drawsvg", specifier = ">=2.4.0" },
     { name = "fonttools", specifier = ">=4.50.0" },
-    { name = "graph-layout", specifier = ">=0.1.8" },
     { name = "holidays", specifier = ">=0.92" },
     { name = "intervaltree", specifier = ">=3.1.0" },
     { name = "openpyxl", specifier = ">=3.1.0" },
@@ -117,28 +115,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/40/cc11f378b561a67bea850ab50063366a0d1dd3f6d0a30ce0f874b0ad5664/fonttools-4.61.1-cp314-cp314t-win32.whl", hash = "sha256:aed04cabe26f30c1647ef0e8fbb207516fd40fe9472e9439695f5c6998e60ac5", size = 2335377, upload-time = "2025-12-12T17:31:16.49Z" },
     { url = "https://files.pythonhosted.org/packages/e4/ff/c9a2b66b39f8628531ea58b320d66d951267c98c6a38684daa8f50fb02f8/fonttools-4.61.1-cp314-cp314t-win_amd64.whl", hash = "sha256:2180f14c141d2f0f3da43f3a81bc8aa4684860f6b0e6f9e165a4831f24e6a23b", size = 2400613, upload-time = "2025-12-12T17:31:18.769Z" },
     { url = "https://files.pythonhosted.org/packages/c7/4e/ce75a57ff3aebf6fc1f4e9d508b8e5810618a33d900ad6c19eb30b290b97/fonttools-4.61.1-py3-none-any.whl", hash = "sha256:17d2bf5d541add43822bcf0c43d7d847b160c9bb01d15d5007d84e2217aaa371", size = 1148996, upload-time = "2025-12-12T17:31:21.03Z" },
-]
-
-[[package]]
-name = "graph-layout"
-version = "0.1.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "sortedcontainers" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7e/a9/7ac8fa220af3698610395aa194038906b8efae670f24ab197403a56b1a71/graph_layout-0.1.8.tar.gz", hash = "sha256:6dccdb02d1db0e613642ae60cb8d8cebb59a6f895c1c9afbca512185d7fa6b8c", size = 528554, upload-time = "2026-02-24T05:09:30.075Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/e6/99ca2096ec8fbfdd50e39eb053779d4ad1b6c7871405d150a5e1a01dc655/graph_layout-0.1.8-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:28a6b3d953d4658abf574609e0823de6fc3d3dc7b790d1e9ee3b1fbccec8636f", size = 377617, upload-time = "2026-02-24T05:09:06.311Z" },
-    { url = "https://files.pythonhosted.org/packages/4f/96/902aff63f132d380c534c9a64e0daf9ab6a76a47557349d1b78e790abdf7/graph_layout-0.1.8-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:6e9105e49b8b1f3bdc44a2e22e8519b4d60207a0f3f10d1559373b5f7bf8a7a7", size = 362398, upload-time = "2026-02-24T05:09:07.824Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/95/e91034d28084ccaae69e0d7ecc7669c3c8249907ca2f2579a84dc3ad0223/graph_layout-0.1.8-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:36bcb51b202b35d6c20dd6e7791969d559d709eb7affedd814d9e20ab05a7503", size = 1241500, upload-time = "2026-02-24T05:09:09.403Z" },
-    { url = "https://files.pythonhosted.org/packages/16/26/ff0059a68eabe48113359b81e484774c446fe94437080d1bb46f99661b12/graph_layout-0.1.8-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:7f0c5742044634a376cf5b1b954814cf82079001cd73b0ba1d6232fba533b691", size = 1236310, upload-time = "2026-02-24T05:09:11.044Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/b3/36f8f15948925639682b0aa9589834c03c4436a04aa74bd79fe3751ebbe5/graph_layout-0.1.8-cp313-cp313-win_amd64.whl", hash = "sha256:0d2bc12b785be5c3b7b997994232c811524afbb23bdf6922640c76b1e4568e48", size = 366098, upload-time = "2026-02-24T05:09:12.609Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/f7/6992f4334b9dd0b54fa422ae73e17283052243037ee1f128b8b6852c10dc/graph_layout-0.1.8-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:e74272c5efb44b4ef371b20c3b7e99377e5ce40edd1e63b2e45848115aae30d6", size = 378375, upload-time = "2026-02-24T05:09:13.945Z" },
-    { url = "https://files.pythonhosted.org/packages/fa/e7/c6c97d4bfe2f61d3b56b69a955977d8b51a06362eac275a870f9ed859cba/graph_layout-0.1.8-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:5729b6b4b6c5673ad8c7126edd22b1e4faf8910022f731b361e7918c2ea00128", size = 363293, upload-time = "2026-02-24T05:09:15.311Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/91/1d6a03ee458d8f1d6eae393e758f0ccc4f1c5ee75edb484039fc9dbacd88/graph_layout-0.1.8-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:bff3d8dea427cabbc5f6c98c02708f37bf1b5904a450642555adeb2ee5fcf9c5", size = 1237849, upload-time = "2026-02-24T05:09:17.036Z" },
-    { url = "https://files.pythonhosted.org/packages/43/88/66fddd39d1e50d9b385e0b349b8ef6cfc5212a90a77ae37ca9e603c9fada/graph_layout-0.1.8-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:cb62f76eee479a31ca3cf9a46bd7b28f15c6941d03806bac6b3b9fe197c38385", size = 1220816, upload-time = "2026-02-24T05:09:18.898Z" },
-    { url = "https://files.pythonhosted.org/packages/e9/0d/224db60e75d69971bd702232a873e7dd4d974851fe584ec7046b38a84685/graph_layout-0.1.8-cp314-cp314-win_amd64.whl", hash = "sha256:8c8e19697ca1481eed845ef9e9ef1ec4f2cfe612880659d6894d807d6eca9768", size = 370981, upload-time = "2026-02-24T05:09:20.31Z" },
 ]
 
 [[package]]

@@ -1101,6 +1101,13 @@ class CalendarConfig:
     gantt_progress_width: float = 1.5
     gantt_float_opacity_scale: float = 0.4
     gantt_show_dependencies: bool = True
+    # Dependency arrows are curved leaders drawn the way PIT draws its
+    # callout leaders, so they take the same styling vocabulary: an SVG
+    # marker that orients itself along the curve, plus stroke joins.
+    gantt_arrow_marker_end: str = "arrow-head"
+    gantt_arrow_marker_end_size: float = 6.0
+    gantt_arrow_linecap: str = "round"
+    gantt_arrow_linejoin: str = "round"
     # Today line — mirrors the PIT semantics exactly.
     gantt_show_today_line: bool = True
     gantt_today_date: str | None = None

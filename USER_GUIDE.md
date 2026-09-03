@@ -2892,6 +2892,13 @@ Each arrow leaves and enters the bar edges its link type implies — `FS` right-
 instead of as backward arrows. Lag is parsed and stored but does not currently offset the
 arrow geometry.
 
+Arrows are drawn as **curved leaders**, the same construction the `pit` view uses for its
+callout leaders: a short perpendicular stub off the bar edge, a cubic bezier across the
+gap, and a matching stub into the target — the stubs are what stop the curve cusping
+where it meets a bar. The arrowhead is an SVG marker with `orient="auto"`, so it points
+along the curve's tangent rather than being fixed horizontally. `gantt.arrow_marker_end`,
+`arrow_marker_end_size`, `arrow_linecap` and `arrow_linejoin` tune it.
+
 **Links the pagination breaks.** When a link's two ends land on different pages the arrow
 cannot be drawn, so the link is *numbered* instead and the number appears at both ends:
 
@@ -3038,6 +3045,9 @@ fully annotated set; `config/themes/default.yaml` shows a working configuration 
 | `link_ref_max_icons` | `2` | Icons drawn in one reference cell |
 | `continuation_icon` | `arrow-bar-right` | Bar clipped at a range edge |
 | `show_dependencies` | `true` | Draw dependency arrows |
+| `arrow_marker_end` | `arrow-head` | Arrowhead marker; `none` to omit |
+| `arrow_marker_end_size` | `6.0` | Arrowhead size in points |
+| `arrow_linecap` / `arrow_linejoin` | `round` | Leader stroke joins |
 | `show_today_line` | `true` | Draw the today line |
 | `today_date` | `null` | Fix "today" at a `YYYYMMDD` date for a forward-dated review |
 | `show_details` | `true` | Write the companion `_details.svg` page |

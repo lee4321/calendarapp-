@@ -1,5 +1,5 @@
 """
-Gantt dependency arrows: resolution and orthogonal routing.
+Gantt dependency arrows: resolution and curved-leader routing.
 
 Links are resolved against ``events.source_id`` -- the identifier the
 source system assigned -- and each one is drawn from the edge its type
@@ -25,11 +25,21 @@ schedule most overlapping work is expressed as ``SS``/``FF``, and
 forcing those to finish-to-start geometry would draw correct schedules
 as backward-running arrows.
 
-Routing is uniform regardless of type: three orthogonal segments --
-stub out of the exit edge, one vertical, one horizontal into the entry
-edge -- with the arrowhead at the entry.  When the entry sits behind the
-exit the same three segments form the backward dogleg (answer 26); no
-collision avoidance is attempted, so arrows may cross other bars.
+Routing follows the PIT leader algorithm rather than the orthogonal
+dogleg the requirements first described: a short perpendicular stub out
+of the exit edge, a cubic bezier across the gap
+(:func:`vendor.labella.renderer.hCurveBetween` -- control points on the
+horizontal midline, so the curve leaves and arrives tangentially), and a
+matching stub into the entry edge.  The stubs are what keep the curve
+from forming a cusp where it meets a bar, exactly as
+``pit/labella_adapter._append_perp_stub`` does for callout leaders.
+
+The arrowhead is an SVG ``<marker>`` with ``orient="auto"``, so it points
+along the curve's tangent instead of being fixed left or right.
+
+A backward link -- successor starting before its predecessor ends -- is
+the same construction; the curve simply doubles back.  No collision
+avoidance is attempted, so arrows may cross other bars.
 """
 
 from __future__ import annotations
@@ -38,6 +48,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from shared.predecessors import Link, parse_links_with_rejects
+from vendor.labella.renderer import lineTo as _lineTo, moveTo as _moveTo
 from visualizers.gantt.details import (
     KIND_OFFCHART_DEPENDENCY,
     KIND_UNPARSEABLE_PREDECESSOR,
@@ -84,22 +95,24 @@ class RowAnchor:
 
 @dataclass(frozen=True)
 class ArrowRoute:
-    """An orthogonal polyline plus the direction its head points."""
+    """A curved leader: its SVG path plus where it starts and ends.
 
+    ``head_dir`` is retained for callers that need to know which way the
+    arrow travels, but the drawn arrowhead orients itself from the path
+    tangent rather than from this value.
+    """
+
+    path_d: str
     points: list[tuple[float, float]]
     head_dir: int          # +1 when the head points right, -1 when left
 
     @property
-    def segments(self) -> list[tuple[float, float, float, float]]:
-        """The route as ``(x1, y1, x2, y2)`` segments, ready to draw."""
-        return [
-            (x1, y1, x2, y2)
-            for (x1, y1), (x2, y2) in zip(self.points, self.points[1:])
-        ]
-
-    @property
     def tip(self) -> tuple[float, float]:
         return self.points[-1]
+
+    @property
+    def tail(self) -> tuple[float, float]:
+        return self.points[0]
 
 
 @dataclass(frozen=True)
@@ -330,29 +343,48 @@ def route_arrow(
     exit_x = predecessor.edge(exit_side)
     entry_x = successor.edge(entry_side)
 
-    # The vertical clears the exit edge on its stub side and sits on the
-    # side the entry is approached from.  When both constraints pull the
-    # same way, take the outermost; when they conflict -- a backward link
-    # -- the entry wins, so the arrowhead still points the right way and
-    # the first segment doubles back as the dogleg.
-    exit_limit = exit_x + exit_dir * stub
-    entry_limit = entry_x + entry_dir * stub
-
-    if exit_dir > 0 and entry_dir > 0:
-        turn_x = max(exit_limit, entry_limit)
-    elif exit_dir < 0 and entry_dir < 0:
-        turn_x = min(exit_limit, entry_limit)
-    else:
-        turn_x = entry_limit
+    # Stubs stand the curve off each bar so it meets the edge travelling
+    # perpendicular to it -- the same trick PIT uses to avoid a cusp where
+    # a leader meets its axis dot.
+    exit_stub = (exit_x + exit_dir * stub, predecessor.y)
+    entry_stub = (entry_x + entry_dir * stub, successor.y)
 
     return ArrowRoute(
+        path_d=curved_path(
+            (exit_x, predecessor.y), exit_stub, entry_stub, (entry_x, successor.y)
+        ),
         points=[
             (exit_x, predecessor.y),
-            (turn_x, predecessor.y),
-            (turn_x, successor.y),
+            exit_stub,
+            entry_stub,
             (entry_x, successor.y),
         ],
         head_dir=-entry_dir,
+    )
+
+
+def curved_path(
+    start: tuple[float, float],
+    exit_stub: tuple[float, float],
+    entry_stub: tuple[float, float],
+    end: tuple[float, float],
+) -> str:
+    """``M`` start, ``L`` out to the stub, ``C`` across, ``L`` in to the end.
+
+    The curve is :func:`vendor.labella.renderer.hCurveBetween`, the same
+    primitive the PIT callout leaders are built from: a cubic whose
+    control points sit on the horizontal midline between its endpoints,
+    so it leaves and arrives horizontally.
+    """
+    from vendor.labella.renderer import hCurveBetween, lineTo, moveTo
+
+    return " ".join(
+        [
+            moveTo(list(start)),
+            lineTo(list(exit_stub)),
+            hCurveBetween(list(exit_stub), list(entry_stub)),
+            lineTo(list(end)),
+        ]
     )
 
 
@@ -364,23 +396,15 @@ def stub_route(
     The renderer caps the far end with the off-chart icon (answer 27).
     """
     entry_x = successor.left
+    tail = (entry_x - length - stub, successor.y)
+    head = (entry_x, successor.y)
     return ArrowRoute(
-        points=[(entry_x - length - stub, successor.y), (entry_x, successor.y)],
+        path_d=" ".join(
+            [
+                _moveTo(list(tail)),
+                _lineTo(list(head)),
+            ]
+        ),
+        points=[tail, head],
         head_dir=+1,
     )
-
-
-def arrow_head(
-    tip: tuple[float, float], head_dir: int, size: float
-) -> list[tuple[float, float, float, float]]:
-    """Two short segments forming a V arrowhead at *tip*.
-
-    Stroke-drawn rather than a filled polygon so the head inherits the
-    same theme stroke color and width as the route itself.
-    """
-    x, y = tip
-    back_x = x - head_dir * size
-    return [
-        (back_x, y - size * 0.5, x, y),
-        (back_x, y + size * 0.5, x, y),
-    ]

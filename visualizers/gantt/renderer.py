@@ -64,7 +64,6 @@ from visualizers.gantt.dependencies import (
     ArrowRoute,
     CrossPageReference,
     RowAnchor,
-    arrow_head,
     assign_cross_page_references,
     resolve_dependencies,
     route_arrow,
@@ -1315,8 +1314,11 @@ class GanttRenderer(BaseSVGRenderer):
         if engine is not None and row is not None:
             style = engine.evaluate_target(ARROW_STYLE_TARGET, row.event)
 
+        tail = (source.right, source.y)
+        head = (source.right + length, source.y)
         route = ArrowRoute(
-            points=[(source.right, source.y), (source.right + length, source.y)],
+            path_d=f"M {tail[0]:.8f} {tail[1]:.8f} L {head[0]:.8f} {head[1]:.8f}",
+            points=[tail, head],
             head_dir=+1,
         )
         self._draw_arrow(config, route, style)
@@ -1332,10 +1334,16 @@ class GanttRenderer(BaseSVGRenderer):
     def _draw_arrow(
         self,
         config: "CalendarConfig",
-        route,
+        route: ArrowRoute,
         style: StyleResult,
     ) -> None:
-        """Stroke one route and its head, both themed as one line."""
+        """Stroke one curved leader, capped with an oriented arrowhead.
+
+        The head is an SVG ``<marker>`` rather than drawn segments, so it
+        follows the curve's tangent — the same mechanism PIT uses for its
+        callout leaders.  A ``style_rule`` may override the stroke and the
+        marker kind/size through the usual vocabulary.
+        """
         token = self._tk("line:grid")
         color = style.stroke_color or token.get("color") or "grey"
         width = float(style.stroke_width or token.get("width") or 1.0)
@@ -1345,20 +1353,28 @@ class GanttRenderer(BaseSVGRenderer):
             else (token.get("opacity") or 0.9)
         )
 
-        self._draw_lines(
-            route.segments,
+        override = style.leader_override or {}
+        marker_kind = override.get("marker_end") or config.gantt_arrow_marker_end
+        marker_size = float(
+            override.get("marker_end_size") or config.gantt_arrow_marker_end_size
+        )
+        marker_id = self._ensure_arrow_marker_def(
+            marker_kind,
+            override.get("arrow_color") or color,
+            marker_size,
+            prefix="gantt-marker",
+            css_class="ec-dependency-arrow",
+        )
+
+        self._draw_path(
+            route.path_d,
             stroke=color,
             stroke_width=width,
             stroke_opacity=opacity,
             stroke_dasharray=style.stroke_dasharray,
-            css_class="ec-dependency-arrow",
-        )
-        # The head is never dashed — a dashed arrowhead reads as noise.
-        self._draw_lines(
-            arrow_head(route.tip, route.head_dir, DEFAULT_STUB),
-            stroke=color,
-            stroke_width=width,
-            stroke_opacity=opacity,
+            stroke_linecap=override.get("linecap") or config.gantt_arrow_linecap,
+            stroke_linejoin=override.get("linejoin") or config.gantt_arrow_linejoin,
+            marker_end=marker_id,
             css_class="ec-dependency-arrow",
         )
 
