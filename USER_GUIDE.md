@@ -1603,10 +1603,16 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_text_color` | `timeline_durations.text_color` | `str | None` | `None` | text color |
 | `timeline_event_*_font_size` | `timeline_events.size_rule` | `` | `` | Per-papersize timeline event font sizes |
 | `timeline_event_box_height` | `timeline_events.box_height` | `float | None` | `None` | box height |
-| `timeline_event_box_width` | `timeline_events.box_width` | `float | None` | `None` | box width |
+| `timeline_event_box_width` | `timeline_events.box_width` | `float | None` | `None` | box width. `None` sizes each callout from its own text, so the boxes come out ragged; every shipped theme pins a value so one timeline's boxes share a width |
 | `timeline_event_name_font_size` | `timeline_events.name_font_size` | `float | None` | `None` | name font size |
 | `timeline_event_notes_font_size` | `timeline_events.notes_font_size` | `float | None` | `None` | notes font size |
 | `timeline_event_text_color` | `timeline_events.text_color` | `str | None` | `None` | text color |
+| `timeline_holiday_date_color` | `timeline.holiday_date_color` | `str | None` | `None` | holiday date color; falls back to the icon color, then the tick color |
+| `timeline_holiday_date_font_size` | `timeline.holiday_date_font_size` | `float | None` | `None` | holiday date font size; defaults to 0.68 x the icon size |
+| `timeline_holiday_date_format` | `timeline.holiday_date_format` | `str | None` | `None` | holiday date format; falls back to `timeline.date_format` |
+| `timeline_holiday_icon_color` | `timeline.holiday_icon_color` | `str | None` | `None` | holiday icon color; `None` keeps the icon's own colors |
+| `timeline_holiday_icon_size` | `timeline.holiday_icon_size` | `float` | `10.0` | holiday icon size |
+| `timeline_holiday_icon_y_offset` | `timeline.holiday_icon_y_offset` | `float` | `4.0` | gap below the axis to the top of the holiday icon |
 | `timeline_icon_size` | `timeline.icon_size` | `float` | `8.0` | icon size |
 | `timeline_label_fill_opacity` | `timeline.label_fill_opacity` | `float` | `0.25` | label fill opacity |
 | `timeline_label_stroke_dasharray` | `timeline.label_stroke_dasharray` | `str | None` | `None` | label stroke dasharray |
@@ -1616,6 +1622,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_marker_stroke_width` | `timeline.marker_stroke_width` | `float` | `1.0` | marker stroke width |
 | `timeline_notes_color` | `timeline.notes.font_color` | `str` | `'deepskyblue'` | font color |
 | `timeline_notes_font` | `timeline.notes.font_family` | `str` | `Fonts.RC_BOLD` | font family |
+| `timeline_show_holiday_dates` | `timeline.show_holiday_dates` | `bool` | `True` | print each holiday's date under its icon |
+| `timeline_show_holiday_icons` | `timeline.show_holiday_icons` | `bool` | `True` | draw the government-holiday icon row below the axis |
 | `timeline_tick_color` | `timeline.tick_color` | `str` | `'grey'` | tick color |
 | `timeline_tick_label_format` | `timeline.tick_label_format` | `str` | `'MMM D'` | tick label format |
 | `timeline_tick_stroke_dasharray` | `timeline.tick_stroke_dasharray` | `str | None` | `None` | tick stroke dasharray |

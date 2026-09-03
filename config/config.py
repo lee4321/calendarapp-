@@ -656,6 +656,16 @@ class CalendarConfig:
     timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
     timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
 
+    # Date label drawn under each holiday icon, so a reader can name the day
+    # the icon sits on without counting axis ticks.
+    timeline_show_holiday_dates: bool = True
+    # None = follow timeline_date_format.
+    timeline_holiday_date_format: str | None = None
+    # None = size relative to the icon (see _holiday_date_font_size()).
+    timeline_holiday_date_font_size: float | None = None
+    # None = follow timeline_tick_color.
+    timeline_holiday_date_color: str | None = None
+
     # ---- labella-driven label placement ----
     # Axis orientation. "horizontal" → axis runs left-to-right, labels above
     # (primary) or below (secondary). "vertical" → axis runs top-to-bottom,

@@ -112,6 +112,15 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "top_time_bands"): "timeline_top_time_bands",
     ("timeline", "bottom_time_bands"): "timeline_bottom_time_bands",
     ("timeline", "ticks"): "timeline_ticks",
+    # Government-holiday marks drawn under the axis (icon + its date).
+    ("timeline", "show_holiday_icons"): "timeline_show_holiday_icons",
+    ("timeline", "holiday_icon_size"): "timeline_holiday_icon_size",
+    ("timeline", "holiday_icon_color"): "timeline_holiday_icon_color",
+    ("timeline", "holiday_icon_y_offset"): "timeline_holiday_icon_y_offset",
+    ("timeline", "show_holiday_dates"): "timeline_show_holiday_dates",
+    ("timeline", "holiday_date_format"): "timeline_holiday_date_format",
+    ("timeline", "holiday_date_font_size"): "timeline_holiday_date_font_size",
+    ("timeline", "holiday_date_color"): "timeline_holiday_date_color",
     # Timeline orientation + labella label-placement options.
     ("timeline", "orientation"): "timeline_orientation",
     ("timeline", "label_side"): "timeline_label_side",

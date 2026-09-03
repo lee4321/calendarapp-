@@ -101,6 +101,8 @@ timeline:
   icon_size: 8
   duration_offset_y: 30.0
   duration_lane_gap_y: 8.0
+timeline_events:
+  box_width: 115
 compact_plan:
   legend_area_ratio: 0.28
   bands:

@@ -549,6 +549,12 @@ class TimelineRenderer(BaseSVGRenderer):
         min_y = axis_tick_top
         max_y = axis_date_bottom
 
+        # Holiday icons and their date labels hang below the axis. Durations
+        # usually reach further down and would cover this, but a timeline with
+        # no duration bars would otherwise crop the band away under --shrink.
+        if getattr(config, "timeline_show_holiday_icons", True):
+            max_y = max(max_y, axis_y + self._holiday_band_extent(config))
+
         # Callouts extend above axis_y (box_y is the SVG top of the box)
         for callout in callouts:
             min_y = min(min_y, callout.box_y)
@@ -559,7 +565,7 @@ class TimelineRenderer(BaseSVGRenderer):
         max_x = axis_right
         if durations:
             title_size, notes_size, d_date_size, bar_h = self._duration_metrics(config)
-            min_duration_offset = self._min_duration_offset(d_date_size)
+            min_duration_offset = self._min_duration_offset(config, d_date_size)
             duration_offset = max(
                 config.timeline_duration_offset_y, min_duration_offset
             )
@@ -1260,7 +1266,7 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> None:
         """Draw only the vertical aligner lines from the axis to the duration bar."""
         title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(date_size)
+        min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_h + (date_size * 1.8) + lane_gap
@@ -1307,7 +1313,7 @@ class TimelineRenderer(BaseSVGRenderer):
         end_day = self._safe_day(item.event.end, fallback=start_day)
 
         title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(date_size)
+        min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_h + (date_size * 1.8) + lane_gap
@@ -1598,7 +1604,7 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> None:
         """Horizontal aligner lines from the vertical axis to the duration bar."""
         title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(date_size)
+        min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_thickness + lane_gap
@@ -1642,7 +1648,7 @@ class TimelineRenderer(BaseSVGRenderer):
         end_day = self._safe_day(item.event.end, fallback=start_day)
 
         title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(date_size)
+        min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
         lane_stride = bar_thickness + lane_gap
@@ -1988,10 +1994,16 @@ class TimelineRenderer(BaseSVGRenderer):
         bar_h = top_pad + title_size + line_gap + notes_size + bottom_pad
         return title_size, notes_size, date_size, bar_h
 
-    @staticmethod
-    def _min_duration_offset(date_size: float) -> float:
-        """Minimum axis-to-bar clearance so timeline date labels remain unobstructed."""
-        return max(22.0, date_size * 3.2)
+    def _min_duration_offset(self, config: "CalendarConfig", date_size: float) -> float:
+        """Minimum axis-to-bar clearance so what sits under the axis stays legible.
+
+        The clearance has to cover the timeline date labels and, when holiday
+        marks are drawn, the icon-plus-date band that shares the same strip.
+        """
+        clearance = max(22.0, date_size * 3.2)
+        if getattr(config, "timeline_show_holiday_icons", True):
+            clearance = max(clearance, self._holiday_band_extent(config) + 2.0)
+        return clearance
 
     def _draw_timeline_bands(
         self,
@@ -2395,24 +2407,43 @@ class TimelineRenderer(BaseSVGRenderer):
                     css_class="ec-label",
                 )
 
-    def _draw_holiday_icons(
+    @staticmethod
+    def _holiday_icon_size(config: "CalendarConfig") -> float:
+        """Drawn height of one holiday icon; <= 0 suppresses the whole band."""
+        return float(getattr(config, "timeline_holiday_icon_size", 10.0))
+
+    @staticmethod
+    def _holiday_date_font_size(config: "CalendarConfig") -> float:
+        """Font size of the date printed under a holiday icon.
+
+        Defaults to a fraction of the icon so the pair reads as one mark
+        rather than as a label that happens to sit near an icon.
+        """
+        configured = getattr(config, "timeline_holiday_date_font_size", None)
+        if configured:
+            return float(configured)
+        return max(6.0, TimelineRenderer._holiday_icon_size(config) * 0.68)
+
+    def _holiday_marks(
         self,
         config: "CalendarConfig",
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
         axis_right: float,
-        axis_y: float,
         db: "CalendarDB",
-    ) -> None:
-        """Render one icon per government-holiday date below the axis line."""
-        size = float(getattr(config, "timeline_holiday_icon_size", 10.0))
-        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
-        if size <= 0:
-            return
-        color = getattr(config, "timeline_holiday_icon_color", None)
-        baseline_y = axis_y + y_offset + (size * 0.80)
+    ) -> list[tuple[float, str, str]]:
+        """Return (x, icon_name, date_label) for each government holiday.
 
+        One mark per date: a day carrying several holidays is represented by
+        the first one that is a nonworkday and has an icon, matching what the
+        axis itself can show at that x.
+        """
+        date_format = (
+            getattr(config, "timeline_holiday_date_format", None)
+            or config.timeline_date_format
+        )
+        marks: list[tuple[float, str, str]] = []
         seen: set[str] = set()
         for day in arrow.Arrow.range("day", start.floor("day"), end.floor("day")):
             daykey = day.format("YYYYMMDD")
@@ -2430,9 +2461,71 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             if not icon_name:
                 continue
-            x = self._x_for_day(day, start, end, axis_left, axis_right)
+            marks.append(
+                (
+                    self._x_for_day(day, start, end, axis_left, axis_right),
+                    str(icon_name),
+                    format_arrow_date(day, date_format),
+                )
+            )
+        return marks
+
+    @staticmethod
+    def _assign_holiday_date_rows(
+        labels: list[tuple[float, float]],
+        max_rows: int = 2,
+    ) -> list[int]:
+        """Place each date label on a row where it clears its neighbours.
+
+        ``labels`` is (center_x, width) in axis order.  Holidays cluster —
+        Christmas Eve and Christmas Day, Thanksgiving and the day after — so
+        a single row would print those dates on top of each other.  Labels
+        that fit nowhere return -1 and are left undrawn: the icon still marks
+        the day, and a smeared date would say less than none.
+        """
+        gap = 3.0
+        row_right: list[float] = []
+        rows: list[int] = []
+        for center_x, width in labels:
+            left = center_x - width / 2.0
+            for row in range(max_rows):
+                if row == len(row_right):
+                    row_right.append(left + width + gap)
+                    rows.append(row)
+                    break
+                if left >= row_right[row]:
+                    row_right[row] = left + width + gap
+                    rows.append(row)
+                    break
+            else:
+                rows.append(-1)
+        return rows
+
+    def _draw_holiday_icons(
+        self,
+        config: "CalendarConfig",
+        start: arrow.Arrow,
+        end: arrow.Arrow,
+        axis_left: float,
+        axis_right: float,
+        axis_y: float,
+        db: "CalendarDB",
+    ) -> None:
+        """Render each government holiday below the axis as an icon and,
+        unless suppressed, the date it falls on."""
+        size = self._holiday_icon_size(config)
+        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
+        if size <= 0:
+            return
+        color = getattr(config, "timeline_holiday_icon_color", None)
+        baseline_y = axis_y + y_offset + (size * 0.80)
+
+        marks = self._holiday_marks(
+            config, start, end, axis_left, axis_right, db
+        )
+        for x, icon_name, _date_label in marks:
             self._draw_icon_svg(
-                str(icon_name),
+                icon_name,
                 x,
                 baseline_y,
                 size,
@@ -2440,6 +2533,61 @@ class TimelineRenderer(BaseSVGRenderer):
                 color=color,
                 css_class="ec-holiday-icon",
             )
+
+        if not getattr(config, "timeline_show_holiday_dates", True):
+            return
+
+        date_size = self._holiday_date_font_size(config)
+        if date_size <= 0:
+            return
+        # ec-holiday-date is catalog-bound to text:event_date, so a theme that
+        # styles event dates styles these too unless the holiday-specific
+        # config field overrides it.
+        _date_style = config.get_text_style("ec-holiday-date")
+        font_name = _date_style.font or config.timeline_date_font
+        font_path = self._safe_font_path(font_name)
+        date_color = (
+            getattr(config, "timeline_holiday_date_color", None)
+            or _date_style.color
+            or color
+            or config.timeline_tick_color
+        )
+        # First date row clears the icon's descender; further rows stack below.
+        first_baseline = axis_y + y_offset + size + (date_size * 0.95)
+        row_stride = date_size * 1.15
+
+        labelled = [(x, label) for x, _icon, label in marks if label]
+        rows = self._assign_holiday_date_rows(
+            [(x, string_width(label, font_path, date_size)) for x, label in labelled]
+        )
+        for (x, label), row in zip(labelled, rows):
+            if row < 0:
+                continue
+            self._draw_text(
+                x,
+                first_baseline + (row * row_stride),
+                label,
+                font_name,
+                date_size,
+                fill=date_color,
+                anchor="middle",
+                css_class="ec-holiday-date",
+            )
+
+    def _holiday_band_extent(self, config: "CalendarConfig") -> float:
+        """Height the holiday icons and their dates claim below the axis."""
+        size = self._holiday_icon_size(config)
+        if size <= 0 or not getattr(config, "timeline_show_holiday_icons", True):
+            return 0.0
+        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
+        extent = y_offset + size
+        if getattr(config, "timeline_show_holiday_dates", True):
+            date_size = self._holiday_date_font_size(config)
+            if date_size > 0:
+                # Two rows are the most _assign_holiday_date_rows() will use,
+                # and the last row's descenders hang below its baseline.
+                extent += (date_size * 0.95) + (date_size * 1.15) + (date_size * 0.3)
+        return extent
 
     def _draw_month_ticks(
         self,

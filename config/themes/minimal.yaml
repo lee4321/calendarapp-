@@ -17,6 +17,8 @@ gantt:
   rollup_icon: check
   show_dependencies: true
   show_today_line: true
+timeline_events:
+  box_width: 150
 style_rules:
   - name: define text:heading
     define: text

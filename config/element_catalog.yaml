@@ -33,6 +33,7 @@ elements:
   ec-event-date:     { kind: text, token: event_date,     scope: [all],                                description: "Event date label" }
   ec-duration-date:  { kind: text, token: duration_date,  scope: [all],                                description: "Duration start/end date label" }
   ec-holiday-title:  { kind: text, token: holiday_title,  scope: [weekly, mini, mini-icon],            description: "Holiday / special-day name in day box" }
+  ec-holiday-date:   { kind: text, token: event_date,     scope: [timeline],                           description: "Date printed under a timeline holiday icon" }
   ec-today-label:    { kind: text, token: today_label,    scope: [timeline, blockplan, compactplan, gantt],   description: "'Today' marker label" }
   ec-header-text:    { kind: text, token: heading,        scope: [all],                                description: "Page header L/C/R text" }
   ec-footer-text:    { kind: text, token: caption,        scope: [all],                                description: "Page footer L/C/R text" }
