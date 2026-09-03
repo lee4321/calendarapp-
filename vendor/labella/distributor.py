@@ -106,8 +106,13 @@ class Distributor(object):
             currentLayerWidth = puntedWidth
             puntedNodes = []
 
+            # CalendarApp change from upstream (`> 2`): a layer may be
+            # reduced to a single node.  Upstream stops at two, so when two
+            # labels are together wider than the layer allows they are left
+            # overlapping instead of being split apart — which is exactly the
+            # case near an axis end, where there is no room to slide them.
             while (
-                len(nodesInCurrentLayer) > 2 and currentLayerWidth > maxWidth
+                len(nodesInCurrentLayer) > 1 and currentLayerWidth > maxWidth
             ):
                 # Sort by overlaps
                 nodesInCurrentLayer.sort(

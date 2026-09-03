@@ -319,3 +319,98 @@ def test_concrete_side_required_internally(config):
             max_pos=None,
             on_side_events=None,
         )
+
+
+# ---------------------------------------------------------------------------
+# Row splitting under clustering
+# ---------------------------------------------------------------------------
+#
+# The distributor sizes layers by comparing the *total* width of all labels
+# against ``density * axis_length``.  That global test passes for label sets
+# that still cannot be placed in one layer, because the events cluster in
+# time; the constraint solver then leaves them overlapping.  The layout
+# relaxes density until the rows are clean, so these cases must not overlap
+# however tightly the events bunch.
+
+
+@pytest.fixture
+def clustered_events() -> list[Event]:
+    """Long labels bunched into two tight clusters on a wide axis.
+
+    Total width fits one layer at the default density, so the distributor
+    sees no reason to split — but half of them share a fortnight.
+    """
+    raw = [
+        ("Canary Deployment 5 percent",  "20260717"),
+        ("Production Rollout 25 percent", "20260717"),
+        ("Production Rollout 100 percent", "20260720"),
+        ("Go/No-Go Decision Meeting",    "20260720"),
+        ("Training Sign-off Complete",   "20260722"),
+        ("Operations Readiness Review",  "20260722"),
+        ("Go-Live Event Announcement",   "20260724"),
+        ("Project Closeout Retrospective", "20260724"),
+    ]
+    return [_ev(name, day) for name, day in raw]
+
+
+def _rows(placements):
+    rows: dict[float, list[tuple[float, float]]] = {}
+    for p in placements:
+        rows.setdefault(round(p.y_label, 3), []).append((p.x_label, p.label_w))
+    return rows
+
+
+def _worst_overlap(placements) -> float:
+    worst = 0.0
+    for spans in _rows(placements).values():
+        spans.sort()
+        for (x, w), (next_x, _) in zip(spans, spans[1:]):
+            worst = max(worst, (x + w) - next_x)
+    return worst
+
+
+def test_clustered_labels_are_split_across_rows(config, clustered_events):
+    placements = layout_callouts(
+        clustered_events,
+        axis_origin=(0.0, 400.0),
+        axis_length=1766.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 1766.0),
+    )
+    assert len(placements) == len(clustered_events)
+    assert _worst_overlap(placements) <= 0.01
+    # Splitting is the mechanism: one row could not have held them.
+    assert len(_rows(placements)) > 1
+
+
+def test_a_sparse_timeline_keeps_the_requested_density(config):
+    """Relaxation is a fallback — a layout that already fits is untouched."""
+    events = [_ev("One", "20260401"), _ev("Two", "20260601"), _ev("Three", "20260731")]
+    kwargs = dict(
+        axis_origin=(0.0, 400.0),
+        axis_length=1766.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 1766.0),
+    )
+    placements = layout_callouts(events, **kwargs)
+    assert _worst_overlap(placements) <= 0.01
+    # Room to spare, so everything stays on the innermost row.
+    assert len(_rows(placements)) == 1
+
+
+def test_the_box_is_measured_wide_enough_for_its_date(config):
+    """The date shares the title line, so the box must budget for it."""
+    from visualizers.timeline.labella_adapter import (
+        _date_extent_for,
+        _measured_text_width,
+    )
+
+    event = _ev("Go-Live Event", "20260724")
+    date_w = _date_extent_for(event, config)
+    assert date_w > 0
+    # The measured line includes the date, not just the name.
+    assert _measured_text_width(event, config) > date_w

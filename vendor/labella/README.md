@@ -25,9 +25,18 @@ geometric primitives.
 - **Replaced `__init__.py`** — original imported `__version__` from a module we
   did not vendor; replacement exposes only `Force`, `Node`, `Renderer`.
 
+- **Patched `distributor.py`** — `algorithm_overlap()` stopped punting nodes
+  out of a layer once two were left (`len(nodesInCurrentLayer) > 2`). Two
+  labels that together exceed the layer width were therefore left overlapping
+  rather than split across layers, which is what happens when events cluster
+  near an axis end and there is no room to slide them apart. The guard is now
+  `> 1`, so a layer may hold a single label. Paired with the density
+  relaxation in `shared/labella_layout.py`, which is what lowers the layer
+  capacity enough for the guard to be reached.
+
 All other files (`force.py`, `node.py`, `renderer.py`, `metrics.py`,
-`utils.py`, `distributor.py`, `removeOverlap.py`, `vpsc.py`) are
-**unmodified** from upstream master at the time of vendoring (2026-06-04).
+`utils.py`, `removeOverlap.py`, `vpsc.py`) are **unmodified** from upstream
+master at the time of vendoring (2026-06-04).
 Their original per-file docstrings preserve the upstream author and license
 attribution.
 

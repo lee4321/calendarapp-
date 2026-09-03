@@ -417,7 +417,13 @@ def test_timeline_callout_uses_configured_event_name_and_notes_font_sizes(tmp_pa
     assert notes and notes[0]["size"] == 11.0
 
 
-def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
+def test_timeline_callout_date_is_drawn_inside_its_own_box(tmp_path):
+    """The date belongs to its callout, not to a band near the axis.
+
+    It used to be drawn at the event's dot, staggered over a fixed number of
+    rows by source index: nowhere near its own box, free to collide with a
+    neighbour's date, and landing on top of any box in the innermost layer.
+    """
     config = _base_config(tmp_path / "timeline_callout_date_rows.svg")
     config.timeline_date_format = "YYYYMMDD"
     renderer = _CaptureTimelineRenderer()
@@ -432,7 +438,6 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
         box_y=230.0,
         box_width=120.0,
         box_height=70.0,
-        date_row=0,
     )
     callout_b = TimelineCallout(
         event=Event(task_name="B", start="20260111", end="20260111"),
@@ -440,11 +445,10 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
         x_dot=205.0,
         y_dot=300.0,
         lane=0,
-        box_x=155.0,
+        box_x=400.0,
         box_y=220.0,
         box_width=120.0,
         box_height=70.0,
-        date_row=1,
     )
     renderer._draw_callout(config, callout_a, axis_y=300.0)
     renderer._draw_callout(config, callout_b, axis_y=300.0)
@@ -452,17 +456,15 @@ def test_timeline_callout_dates_stagger_by_row_to_reduce_overwrite(tmp_path):
     date_a = [c for c in renderer.text_calls if c["text"] == "20260110"]
     date_b = [c for c in renderer.text_calls if c["text"] == "20260111"]
     assert date_a and date_b
-    assert date_a[0]["y"] != date_b[0]["y"]
 
+    for date, callout in ((date_a[0], callout_a), (date_b[0], callout_b)):
+        # Right-aligned on the title line, so the anchor sits at the box's
+        # right edge and the baseline within its vertical span.
+        assert callout.box_x < date["x"] <= callout.box_x + callout.box_width
+        assert callout.box_y <= date["y"] <= callout.box_y + callout.box_height
 
-# NOTE: the legacy orthogonal-routing connector tests
-# (test_timeline_callout_connector_uses_orthogonal_segments,
-#  test_timeline_callout_connector_avoids_other_event_rectangles,
-#  test_timeline_callout_connector_offsets_x_by_date_row) were removed
-# when the timeline switched from `graph_layout`-based orthogonal
-# connectors to labella's curved bezier leaders. Leader correctness is
-# covered by the labella adapter tests in tests/test_labella_adapter.py
-# and by the smoke render in test_timeline_renderer_generates_svg.
+    # Each date tracks its own box rather than a shared row near the axis.
+    assert date_a[0]["x"] != date_b[0]["x"]
 
 
 def test_timeline_callout_uses_configured_event_box_width_and_height(tmp_path):
@@ -785,3 +787,65 @@ def test_today_line_clamped_to_area(tmp_path):
     line = _today_line_call(renderer)
     assert min(line["y1"], line["y2"]) >= 20.0
     assert max(line["y1"], line["y2"]) <= 600.0
+
+
+# ── Axis tick labels vs the innermost callout row ──────────────────────────
+#
+# Month labels are drawn above the axis, and the innermost row of callout
+# boxes sits exactly one layer gap above it.  With the theme's gap alone
+# (8pt by default) the labels printed inside those boxes.
+
+
+def test_axis_label_clearance_covers_the_tick_furniture(tmp_path):
+    config = _base_config(tmp_path / "clearance.svg")
+    renderer = TimelineRenderer()
+    start = arrow.get("20260401", "YYYYMMDD")
+    end = arrow.get("20260731", "YYYYMMDD")
+
+    clearance = renderer._axis_label_clearance(config, start, end)
+    tick_h = renderer._axis_tick_height(config)
+    label_size = renderer._axis_tick_label_size(config)
+
+    # Must clear the tick mark plus the label's baseline offset and ascent.
+    assert clearance > tick_h + label_size * 1.5
+    assert clearance > config.timeline_labella_layer_gap
+
+
+def test_no_clearance_reserved_when_labels_are_suppressed(tmp_path):
+    """Past 18 month ticks _draw_month_ticks draws no labels at all."""
+    config = _base_config(tmp_path / "clearance_none.svg")
+    renderer = TimelineRenderer()
+    clearance = renderer._axis_label_clearance(
+        config,
+        arrow.get("20200101", "YYYYMMDD"),
+        arrow.get("20260101", "YYYYMMDD"),
+    )
+    assert clearance == 0.0
+
+
+def test_the_innermost_callout_row_clears_the_axis_labels(tmp_path):
+    """End to end: the gap the boxes get is the clearance, not the theme gap."""
+    config = _base_config(tmp_path / "clearance_layout.svg")
+    renderer = TimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    start = arrow.get("20260401", "YYYYMMDD")
+    end = arrow.get("20260731", "YYYYMMDD")
+    axis_y = 400.0
+    callouts = renderer._layout_callouts(
+        config,
+        [
+            Event(task_name="Alpha", start="20260405", end="20260405"),
+            Event(task_name="Beta", start="20260620", end="20260620"),
+        ],
+        start,
+        end,
+        axis_origin=(60.0, axis_y),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+    )
+    assert callouts
+    clearance = renderer._axis_label_clearance(config, start, end)
+    innermost_bottom = max(c.box_y + c.box_height for c in callouts)
+    assert axis_y - innermost_bottom >= clearance - 0.01
