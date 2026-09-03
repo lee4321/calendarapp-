@@ -533,6 +533,8 @@ gantt:
       row_height: 12
     - band: week
       row_height: 10
+    - band: holiday
+      row_height: 10
 time_bands:
   fiscal_quarter:
     unit: fiscal_quarter
@@ -549,6 +551,11 @@ time_bands:
     label: Date
     date_format: D
     show_every: 1
+  holiday:
+    unit: holiday
+    label: Holidays
+    # true hides observances that do not close the office
+    nonworkdays_only: false
   dow:
     unit: date
     label: DoW

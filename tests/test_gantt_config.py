@@ -89,7 +89,11 @@ def test_bottom_bands_mirror_the_top_when_unset():
 def test_mirror_follows_the_theme_not_the_dataclass_default(themed_config):
     """The mirror has to be resolved after the theme applies, not at __init__."""
     top = themed_config.gantt_top_time_bands
-    assert [band.get("row_height") for band in top] == [12, 10]
+    # default.yaml declares month / week / holiday, with these row heights —
+    # the dataclass default carries no row_height at all, so matching these
+    # proves the theme won.
+    assert [band.get("row_height") for band in top] == [12, 10, 10]
+    assert [band.get("unit") for band in top] == ["month", "week", "holiday"]
     assert themed_config.get_gantt_bottom_bands() == top
 
 
