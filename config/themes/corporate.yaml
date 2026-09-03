@@ -240,6 +240,8 @@ timeline:
   date:
     font_family: Roboto-Bold
     font_color: aliceblue
+timeline_events:
+  box_width: 150
 pit:
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both

@@ -234,6 +234,8 @@ timeline:
   date:
     font_family: SairaExtraCondensed-Bold
     font_color: royalblue
+timeline_events:
+  box_width: 115
 pit:
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both

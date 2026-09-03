@@ -243,7 +243,7 @@ timeline:
     font_family: Roboto-Bold
     font_color: deepskyblue
 timeline_events:
-  box_width: null
+  box_width: 170
   box_height: 24
 timeline_durations:
   box_width: null

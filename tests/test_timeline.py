@@ -314,7 +314,7 @@ def test_timeline_duration_minimum_offset_exceeds_timeline_date_height(tmp_path)
     renderer._draw_duration(config, laid_out[0], axis_y=300.0)
 
     _, _, date_size, _ = renderer._duration_metrics(config)
-    expected_min = renderer._min_duration_offset(date_size)
+    expected_min = renderer._min_duration_offset(config, date_size)
     # In SVG coords bar["y"] is the top edge (smallest y), expected_min below axis_y=300.
     bar = renderer.rect_calls[0]
     assert round(bar["y"] - 300.0, 2) == round(expected_min, 2)
@@ -849,3 +849,97 @@ def test_the_innermost_callout_row_clears_the_axis_labels(tmp_path):
     clearance = renderer._axis_label_clearance(config, start, end)
     innermost_bottom = max(c.box_y + c.box_height for c in callouts)
     assert axis_y - innermost_bottom >= clearance - 0.01
+
+
+class _HolidayDB(_DummyDB):
+    """Minimal DB stub: every listed daykey is a nonworkday with an icon."""
+
+    def __init__(self, daykeys: list[str]):
+        self._daykeys = set(daykeys)
+
+    def get_holidays_for_date(self, daykey, country=None):
+        if daykey not in self._daykeys:
+            return []
+        return [{"displayname": "Holiday", "icon": "flag-us", "nonworkday": True}]
+
+
+class _CaptureHolidayRenderer(_CaptureTimelineRenderer):
+    def __init__(self):
+        super().__init__()
+        self.icon_calls: list[dict] = []
+
+    def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
+        self.icon_calls.append(
+            {"icon": icon_name, "x": x, "y": baseline_y, "size": size}
+        )
+        return True
+
+
+def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
+    config = _base_config(tmp_path / "holiday_dates.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260630", "YYYYMMDD")
+    renderer._draw_holiday_icons(
+        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119", "20260525"])
+    )
+
+    assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
+    dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
+    assert [d["text"] for d in dates] == ["Jan 19", "May 25"]
+    # Each date is centered on its own icon and sits below it.
+    for icon, date in zip(renderer.icon_calls, dates):
+        assert date["x"] == pytest.approx(icon["x"])
+        assert date["y"] > icon["y"]
+
+
+def test_timeline_holiday_dates_stagger_instead_of_colliding(tmp_path):
+    """Back-to-back holidays get their own row rather than one smeared label."""
+    config = _base_config(tmp_path / "holiday_stagger.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20261231", "YYYYMMDD")
+    renderer._draw_holiday_icons(
+        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260703", "20260704"])
+    )
+
+    dates = [c for c in renderer.text_calls if c["text"] in ("Jul 3", "Jul 4")]
+    assert len(dates) == 2
+    assert dates[0]["y"] < dates[1]["y"]
+
+
+def test_timeline_holiday_dates_can_be_switched_off(tmp_path):
+    config = _base_config(tmp_path / "holiday_no_dates.svg")
+    config.country = "US"
+    config.timeline_show_holiday_dates = False
+    renderer = _CaptureHolidayRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260630", "YYYYMMDD")
+    renderer._draw_holiday_icons(
+        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119"])
+    )
+
+    assert len(renderer.icon_calls) == 1
+    assert not [c for c in renderer.text_calls if c["text"] == "Jan 19"]
+
+
+def test_duration_bars_clear_the_holiday_date_band(tmp_path):
+    """The date row under the axis must not end up beneath a duration bar."""
+    config = _base_config(tmp_path / "holiday_clearance.svg")
+    renderer = TimelineRenderer()
+    _, _, date_size, _ = renderer._duration_metrics(config)
+
+    with_dates = renderer._min_duration_offset(config, date_size)
+    config.timeline_show_holiday_dates = False
+    without_dates = renderer._min_duration_offset(config, date_size)
+
+    assert with_dates >= renderer._holiday_band_extent(config)
+    assert with_dates > without_dates
