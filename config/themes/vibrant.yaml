@@ -862,6 +862,20 @@ style_rules:
       fill:
         - '#fff0f5'
         - '#f0fff4'
+  # One line per day, pinned to the left edge of every Date-band segment, so
+  # the daily band reads as a grid the bars can be measured against. Thin and
+  # faint on purpose: at 1.5pt / 0.85 opacity (the theme's vertical_line_*
+  # defaults) sixty of these would out-shout the bars they are there to serve.
+  - name: blockplan_vline_daily
+    apply_to: box:vline
+    select:
+      band: Date
+      repeat: true
+    style:
+      align: start
+      stroke: deeppink
+      stroke_width: 0.5
+      stroke_opacity: 0.35
   - name: Route Engineering
     apply_to: lane
     select:
