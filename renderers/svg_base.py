@@ -1188,7 +1188,7 @@ class BaseSVGRenderer(ABC):
 
     def _draw_icon_band_row(
         self,
-        day_cells: "list[tuple[float, float, list[tuple[str, str]]]]",
+        day_cells: "list[tuple[float, float, list[tuple[str, str | None]]]]",
         row_y: float,
         row_h: float,
         icon_h: float,
@@ -1202,6 +1202,8 @@ class BaseSVGRenderer(ABC):
         day_cells:
             Sequence of ``(cell_x, cell_w, [(icon_name, color), ...])`` — one
             entry per visible day.  Days with no icons have an empty icon list.
+            A ``None`` color leaves the icon's own colors alone, which is what
+            a multi-colored glyph such as a country flag needs.
         row_y:
             Top Y coordinate of the band row.
         row_h:

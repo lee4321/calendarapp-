@@ -41,6 +41,7 @@ from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day, day_rule_matches
+from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import DayContext, StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
@@ -593,7 +594,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
         # day-driven icon rules both need rendered icons), or if non-workday
         # icons are configured for date/dow cells.
         _has_icon_band = any(
-            str(b.get("unit", "")).strip().lower() == "icon" for b in bands
+            str(b.get("unit", "")).strip().lower() in {"icon", "holiday"}
+            for b in bands
         )
         _has_nwd_icons = bool(
             config.blockplan_federal_holiday_icon
@@ -621,8 +623,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
             unit = str(band.get("unit", "date")).strip().lower()
 
-            # ── Icon band — one cell per visible day, icons driven by rules ──
-            if unit == "icon":
+            # ── Per-day glyph bands — one cell per visible day ──────────────
+            # "icon" takes its glyph from the theme's icon_rules; "holiday"
+            # takes it from the holiday row itself, so each country brings its
+            # own flag and adding a country needs no theme edit.
+            if unit in {"icon", "holiday"}:
                 # Heading cell (left column — same as regular bands).
                 _heading_cell_style = config.get_box_style("ec-heading-cell")
                 heading_fill = band.get(
@@ -656,21 +661,39 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         else _heading_text_style.opacity
                     )
                 )
+                heading_x, heading_anchor = self._band_heading_text_pos(
+                    config, band, left_x, timeline_x
+                )
                 self._draw_text(
-                    left_x + 6.0,
+                    heading_x,
                     y_top + (row_h * 0.50) + (heading_font_size * 0.30),
                     str(band.get("label", "")),
                     heading_font, heading_font_size,
                     fill=heading_color, fill_opacity=heading_opacity,
-                    anchor="start",
+                    anchor=heading_anchor,
                     max_width=max(8.0, timeline_x - left_x - 10),
                     css_class="ec-heading",
                 )
-                # Icon cells.
-                icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(
-                    _band_events, icon_rules, visible_days, classify_fn=_classify
-                )
+                # Glyph cells.
+                if unit == "holiday":
+                    # No color is passed with the flag: a country flag is
+                    # already multi-colored, and recoloring it would make two
+                    # countries indistinguishable.
+                    holiday_days = compute_holiday_band_days(
+                        visible_days,
+                        db,
+                        config,
+                        nonworkdays_only=bool(band.get("nonworkdays_only", False)),
+                    )
+                    day_icon_map = {
+                        day: [(mark.icon, None) for mark in marks]
+                        for day, marks in holiday_days.items()
+                    }
+                else:
+                    icon_rules = list(band.get("icon_rules") or [])
+                    day_icon_map = compute_icon_band_days(
+                        _band_events, icon_rules, visible_days, classify_fn=_classify
+                    )
                 icon_h = float(band.get("icon_height") or row_h * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 day_cells = [
@@ -748,10 +771,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
             heading_fill = band.get(
                 "label_fill_color", _heading_cell_style.fill
             )
-            heading_align_h = self._normalize_halign(
-                band.get("label_align_h", config.blockplan_header_label_align_h),
-                default="left",
-            )
             tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
             stroke = band.get("stroke_color", tb_color)
 
@@ -768,16 +787,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_dasharray=tb_dasharray,
                 css_class="ec-heading-cell",
             )
-            heading_w = timeline_x - left_x
-            if heading_align_h == "center":
-                heading_x = left_x + (heading_w * 0.5)
-                heading_anchor = "middle"
-            elif heading_align_h == "right":
-                heading_x = timeline_x - 6.0
-                heading_anchor = "end"
-            else:
-                heading_x = left_x + 6.0
-                heading_anchor = "start"
+            heading_x, heading_anchor = self._band_heading_text_pos(
+                config, band, left_x, timeline_x
+            )
             self._draw_text(
                 heading_x,
                 y_top + (row_h * 0.50) + (heading_font_size * 0.30),
@@ -2375,3 +2387,27 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _normalize_halign(value: str | None, default: str = "left") -> str:
         v = str(value or default).strip().lower()
         return v if v in {"left", "center", "right"} else default
+
+    def _band_heading_text_pos(
+        self,
+        config: "CalendarConfig",
+        band: dict[str, Any],
+        left_x: float,
+        timeline_x: float,
+    ) -> tuple[float, str]:
+        """Return ``(x, anchor)`` for a band's heading label.
+
+        Every band's heading shares one column, so they have to share one
+        alignment. Keeping the arithmetic here is what stops the per-day
+        glyph bands (``icon`` / ``holiday``) from drifting back to a
+        hard-coded left edge while the labelled bands follow the theme.
+        """
+        align = self._normalize_halign(
+            band.get("label_align_h", config.blockplan_header_label_align_h),
+            default="left",
+        )
+        if align == "center":
+            return left_x + ((timeline_x - left_x) * 0.5), "middle"
+        if align == "right":
+            return timeline_x - 6.0, "end"
+        return left_x + 6.0, "start"
