@@ -2165,7 +2165,7 @@ style_rules:
 
 | Key | Type | Description |
 |---|---|---|
-| `unit` | `str` | `fiscal_quarter` \| `fiscal_period` \| `month` \| `week` \| `interval` \| `date` \| `dow` \| `countdown` \| `countup` \| `icon` |
+| `unit` | `str` | `fiscal_quarter` \| `fiscal_period` \| `month` \| `week` \| `interval` \| `date` \| `dow` \| `countdown` \| `countup` \| `icon` \| `holiday` |
 | `label` | `str` | Text shown in the heading column cell |
 | `label_format` | `str` | Format for week/fiscal_quarter/countdown/countup; placeholders: `{week}` `{fy}` `{fy2}` `{q}` `{n}` |
 | `date_format` | `str` | Arrow format for month/date/dow labels; e.g. `"MMM"`, `"MMMM"`, `"D"`, `"ddd"` |
@@ -2183,6 +2183,7 @@ style_rules:
 | `icon_rules` | `list[dict]` | **icon only** — required: list of icon rules (see below) |
 | `icon_height` | `float` | **icon only** — display height of each icon in pts (defaults to `row_height * 0.65`) |
 | `fill_color` | `str` | **icon only** — background fill for every day cell (`"none"` = transparent) |
+| `nonworkdays_only` | `bool` | **holiday only** — hide observances that carry a flag but do not close the office (default `false`) |
 
 > **`countdown` unit:** Each visible day cell shows the number of counting-days between that day and `target_date`. The value is **0** on the target day itself, **positive** for days before it (days remaining), and **negative** for days after (days elapsed). Use `label_format: "{n}d"` to append a suffix, or `label_format: "D-{n}"` for a launch-style label. Combine `skip_weekends: true` and `skip_nonworkdays: true` to count only business days.
 
@@ -2211,6 +2212,16 @@ style_rules:
 > | `nonworkday` | day matches any of the three classes above |
 >
 > A rule that contains any of the four day-based keys (`federal_holiday`, `company_holiday`, `weekend`, `nonworkday`) is evaluated once per visible day against the non-workday classifier rather than against events. All other rules evaluate against each event whose start (or `datekey`, for milestones) falls on that day.
+
+> **`holiday` unit:** Per-day glyph row like `icon`, but the glyph comes from the holiday row itself rather than from theme rules, so each country brings its own flag and adding a country needs no theme edit — only its holidays loaded. Holidays are read for `--country`, and a day carrying two holidays from different countries draws both flags side by side. Supported by `gantt` and `blockplan`. It shows more than the non-workday shading does: shading goes through the non-workday classifier, which only reports holidays flagged `nonworkday`, so an observance such as Groundhog Day never reaches it. Set `nonworkdays_only: true` to narrow the band to the days that actually close the office.
+>
+> ```yaml
+> time_bands:
+>   holiday:
+>     unit: holiday
+>     label: Holidays
+>     nonworkdays_only: false
+> ```
 
 Visual properties (segment fill, label color/font/size, alternation across segments) go in `style_rules` on `box:band` and `text:band_label`. Per-placement geometry (`row_height`, `show_every` overrides) goes inline on the reference, as shown in the `blockplan.top_bands` example above.
 
@@ -3152,7 +3163,7 @@ time_bands:
     date_format: "D"
 ```
 
-All standard `unit` types are supported in the catalog: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, `countup`, and `icon`.
+All standard `unit` types are supported in the catalog: `fiscal_quarter`, `month`, `week`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon`, and `holiday`.
 
 Icon bands (`unit: "icon"`) render a colored bullet symbol (●) in each day cell where a matching event exists. Icons are matched using `icon_rules` on the catalog entry — the same rule schema as blockplan icon bands. Example:
 

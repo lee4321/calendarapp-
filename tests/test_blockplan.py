@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from config.config import (
     create_calendar_config,
     create_sample_blockplan_swimlanes_from_wbs,
@@ -1310,3 +1312,146 @@ def test_blockplan_countup_skip_nonworkdays(tmp_path):
     assert "2" in renderer.text_values
     # Jan 30 → Wed Feb 4: Jan31, Feb1(skip), Feb2, Feb3, Feb4 = 4
     assert "4" in renderer.text_values
+
+
+# ── Holiday band ──────────────────────────────────────────────────────────
+#
+# `unit: holiday` draws the flag carried by each holiday row, so a country is
+# added by loading its holidays rather than by editing a theme. The blockplan
+# shares the computation with the gantt (shared/holiday_band.py); these tests
+# cover the blockplan's own band row, which is what the theme reaches.
+
+
+class _BlockPlanFlagDB(_DummyDB):
+    """A DummyDB that also answers holiday lookups and serves flag icons."""
+
+    def __init__(self, rows: dict[str, list[dict]] | None = None):
+        self.rows = rows or {}
+
+    def get_holidays_for_date(self, daykey, country=None):
+        return self.rows.get(daykey, [])
+
+    @staticmethod
+    def get_icon_svg_map():
+        return {
+            "us": '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
+            "ua": '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
+        }
+
+
+def _holiday_row(icon, name, nonworkday=1, country="US"):
+    return {
+        "icon": icon,
+        "displayname": name,
+        "nonworkday": nonworkday,
+        "country": country,
+    }
+
+
+def _render_with_holiday_band(tmp_path, db, **band_overrides):
+    config = _base_config(tmp_path / "blockplan_holiday.svg")
+    config.adjustedstart, config.adjustedend = "20260202", "20260227"
+    band = {"label": "Holidays", "unit": "holiday"}
+    band.update(band_overrides)
+    config.blockplan_top_time_bands = [band]
+    coords = BlockPlanLayout().calculate(config)
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, [], db)
+    return renderer
+
+
+def test_blockplan_holiday_band_draws_the_holidays_own_flag(tmp_path):
+    db = _BlockPlanFlagDB({"20260216": [_holiday_row("us", "Presidents Day")]})
+    renderer = _render_with_holiday_band(tmp_path, db)
+
+    assert [c["icon_name"] for c in renderer.icon_calls] == ["us"]
+    # No color is forced onto a flag — recoloring makes countries identical.
+    assert renderer.icon_calls[0].get("color") is None
+
+
+def test_blockplan_holiday_band_labels_its_heading(tmp_path):
+    db = _BlockPlanFlagDB()
+    renderer = _render_with_holiday_band(tmp_path, db)
+    assert "Holidays" in renderer.text_values
+
+
+def test_blockplan_holiday_band_draws_two_countries_side_by_side(tmp_path):
+    db = _BlockPlanFlagDB(
+        {
+            "20260216": [
+                _holiday_row("us", "US Day"),
+                _holiday_row("ua", "UA Day", country="UA"),
+            ]
+        }
+    )
+    renderer = _render_with_holiday_band(tmp_path, db)
+
+    assert sorted(c["icon_name"] for c in renderer.icon_calls) == ["ua", "us"]
+    assert len({round(c["x"], 3) for c in renderer.icon_calls}) == 2
+
+
+def test_blockplan_holiday_band_is_empty_on_an_ordinary_day(tmp_path):
+    renderer = _render_with_holiday_band(tmp_path, _BlockPlanFlagDB())
+    assert renderer.icon_calls == []
+
+
+def test_blockplan_holiday_band_can_hide_observances(tmp_path):
+    """nonworkdays_only narrows the band to days that close the office."""
+    db = _BlockPlanFlagDB(
+        {"20260202": [_holiday_row("us", "Groundhog Day", nonworkday=0)]}
+    )
+    assert _render_with_holiday_band(tmp_path, db).icon_calls
+    shown = _render_with_holiday_band(tmp_path, db, nonworkdays_only=True)
+    assert shown.icon_calls == []
+
+
+# ── Band heading alignment ────────────────────────────────────────────────
+#
+# Every band's heading shares one column, so `header_label_align_h` has to
+# move all of them. The per-day glyph bands (`icon` / `holiday`) once drew
+# their heading at a hard-coded left edge, so a right-aligned theme left the
+# Holidays label sitting under the others' left margin.
+
+
+def _heading_call(renderer, label):
+    return next(c for c in renderer.text_calls if c["text"] == label)
+
+
+@pytest.mark.parametrize(
+    "align, anchor",
+    [("left", "start"), ("center", "middle"), ("right", "end")],
+)
+def test_blockplan_glyph_band_heading_follows_the_theme_alignment(
+    tmp_path, align, anchor
+):
+    config = _base_config(tmp_path / f"blockplan_align_{align}.svg")
+    config.adjustedstart, config.adjustedend = "20260202", "20260227"
+    config.blockplan_header_label_align_h = align
+    config.blockplan_top_time_bands = [
+        {"label": "Month", "unit": "month", "date_format": "MMM"},
+        {"label": "Holidays", "unit": "holiday"},
+    ]
+    coords = BlockPlanLayout().calculate(config)
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, [], _BlockPlanFlagDB())
+
+    holidays = _heading_call(renderer, "Holidays")
+    month = _heading_call(renderer, "Month")
+    assert holidays["anchor"] == anchor
+    # The two headings share a column, so they share an x as well as an anchor.
+    assert holidays["x"] == pytest.approx(month["x"])
+
+
+def test_blockplan_band_can_override_the_theme_alignment(tmp_path):
+    """A per-band label_align_h still wins over the blockplan-wide setting."""
+    config = _base_config(tmp_path / "blockplan_align_override.svg")
+    config.adjustedstart, config.adjustedend = "20260202", "20260227"
+    config.blockplan_header_label_align_h = "right"
+    config.blockplan_top_time_bands = [
+        {"label": "Holidays", "unit": "holiday", "label_align_h": "left"},
+    ]
+    coords = BlockPlanLayout().calculate(config)
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, [], _BlockPlanFlagDB())
+
+    assert _heading_call(renderer, "Holidays")["anchor"] == "start"
