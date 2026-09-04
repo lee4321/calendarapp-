@@ -600,6 +600,11 @@ class CalendarConfig:
     timeline_event_box_height: float | None = None
     timeline_duration_box_width: float | None = None
     timeline_duration_box_height: float | None = None
+    # How many leading WBS segments group duration bars: 2 makes NP.3.S1.4
+    # and NP.3.S2.1 both "NP.3", so a phase's bars sort together and share a
+    # color. 0 disables grouping — bars run in date order with the palette
+    # cycling per bar, as they did before.
+    timeline_duration_wbs_group_depth: int = 2
     timeline_duration_date_font: str | None = None
     timeline_duration_date_font_size: float | None = None
     timeline_duration_date_color: str | None = None
@@ -686,6 +691,12 @@ class CalendarConfig:
     # Override the labella minPos/maxPos constraints (in axis-local units).
     # None → defaults to the axis bounds (axis_left/axis_top → axis_right/
     # axis_bottom) at render time.
+    # Straight perpendicular segments at each end of a callout leader, in
+    # points. labella's bezier leaves the axis dot and arrives at the box at
+    # a shallow angle; a short straight stub makes both ends meet their
+    # anchor square-on, the same treatment PIT gives its leaders. 0 disables.
+    timeline_leader_start_stub: float = 4.0
+    timeline_leader_end_stub: float = 4.0
     timeline_labella_min_pos: float | None = None
     timeline_labella_max_pos: float | None = None
 

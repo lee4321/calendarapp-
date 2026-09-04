@@ -1,5 +1,5 @@
 """
-WBS filtering utilities.
+WBS utilities: filtering, ordering and grouping.
 
 Filter syntax:
 - Comma-separated tokens.
@@ -109,3 +109,47 @@ def filter_events(
     if not compiled:
         return list(events)
     return [e for e in events if compiled.matches(e.get(field))]
+
+
+def wbs_sort_key(wbs: str | None) -> tuple:
+    """Segment-wise key for a WBS code.
+
+    Each dot-separated segment becomes ``(0, number, "")`` when it is
+    numeric and ``(1, 0.0, text)`` otherwise, so ``1.10`` sorts after
+    ``1.9`` instead of before it -- the ordering plain string comparison
+    gets wrong.  Mixed codes ("2.A.1") still order deterministically.
+    """
+    segments = _wbs_segments(wbs)
+    key: list[tuple[int, float, str]] = []
+    for segment in segments:
+        try:
+            key.append((0, float(segment), ""))
+        except ValueError:
+            key.append((1, 0.0, segment.lower()))
+    return tuple(key)
+
+
+def wbs_depth(wbs: str | None) -> int:
+    """Indentation level: one per WBS segment past the first."""
+    segments = _wbs_segments(wbs)
+    return max(0, len(segments) - 1)
+
+
+def _wbs_segments(wbs: str | None) -> list[str]:
+    """Split a WBS code into its non-empty segments."""
+    if not wbs:
+        return []
+    return [seg for seg in str(wbs).strip().split(".") if seg]
+
+def wbs_group(wbs: str | None, depth: int) -> str:
+    """The WBS prefix that groups a task with its siblings.
+
+    ``depth`` is how many leading segments make the group: 2 turns
+    ``NP.3.S1.4`` into ``NP.3``, so a phase's tasks share one group while
+    ``NP.1`` and ``NP.2`` stay apart.  A code shorter than ``depth`` is its
+    own group, and a task with no WBS returns "" — callers order that block
+    last rather than scattering unnumbered tasks through the hierarchy.
+    """
+    if depth <= 0:
+        return ""
+    return ".".join(_wbs_segments(wbs)[:depth])

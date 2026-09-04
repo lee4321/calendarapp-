@@ -7,6 +7,8 @@ import drawsvg
 import pytest
 
 from config.config import create_calendar_config, setfontsizes
+from renderers.glyph_cache import get_ink_extents
+from shared.wbs_filter import wbs_group
 from shared.data_models import Event
 from visualizers.timeline.layout import TimelineLayout
 from shared.orientation import Orientation, Side
@@ -943,3 +945,335 @@ def test_duration_bars_clear_the_holiday_date_band(tmp_path):
 
     assert with_dates >= renderer._holiday_band_extent(config)
     assert with_dates > without_dates
+
+
+# ── Callout box text geometry ─────────────────────────────────────────────
+#
+# The fitter and the drawing pass used to carry separate formulas: the fitter
+# allowed 1.2*title + 1.2*notes + 2, the renderer drew the notes baseline at
+# 1.15*title + 1.55*notes and reserved nothing for descenders. A box the
+# fitter called a fit still hung the notes' descenders below its bottom edge.
+
+
+def _ink_bottom(renderer, config, box_height, box_width, title, notes,
+                date_reserved=0.0):
+    """Return (box_height, lowest inked y) for one callout's text block."""
+    title_size, notes_size, _ = renderer._callout_metrics(config)
+    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+    fitted_title, fitted_notes = renderer._fit_box_text_sizes(
+        title, notes,
+        box_width - 12.0 - date_reserved, box_height,
+        title_path, notes_path, title_size, notes_size,
+        notes_width=box_width - 12.0,
+        height_for=lambda ts, ns, has: renderer._callout_text_geometry(
+            box_height, ts, ns, title_path, notes_path, has
+        )[2],
+    )
+    _title_dy, notes_dy, _ = renderer._callout_text_geometry(
+        box_height, fitted_title, fitted_notes, title_path, notes_path, True
+    )
+    descent = get_ink_extents(notes_path)[1] * fitted_notes
+    return notes_dy + descent, fitted_notes
+
+
+@pytest.mark.parametrize(
+    "notes",
+    [
+        "Public launch announcement",          # has a descender
+        "jjggppqqyy",                          # nothing but descenders
+        "ok",                                  # short enough not to shrink
+        "Retrospective and benefits handoff",  # long enough to shrink
+    ],
+)
+def test_callout_notes_descenders_stay_inside_the_box(tmp_path, notes):
+    config = _base_config(tmp_path / "callout_descender.svg")
+    renderer = TimelineRenderer()
+    bottom, _ = _ink_bottom(renderer, config, 24.0, 170.0, "Go-Live Event", notes)
+    assert bottom <= 24.0
+
+
+def test_callout_text_block_is_centred_in_the_box(tmp_path):
+    """Slack is shared top and bottom, not dumped below the last line."""
+    config = _base_config(tmp_path / "callout_centre.svg")
+    renderer = TimelineRenderer()
+    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+
+    title_dy, notes_dy, required = renderer._callout_text_geometry(
+        40.0, 10.0, 8.0, title_path, notes_path, True
+    )
+    above = title_dy - get_ink_extents(title_path)[0] * 10.0
+    below = 40.0 - (notes_dy + get_ink_extents(notes_path)[1] * 8.0)
+    assert above == pytest.approx(below, abs=0.01)
+    assert required < 40.0
+
+
+def test_the_fitter_and_the_renderer_agree_on_height(tmp_path):
+    """The height the fitter checks is the height the drawn block occupies."""
+    config = _base_config(tmp_path / "callout_agree.svg")
+    renderer = TimelineRenderer()
+    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+
+    box_height = 18.0
+    title_dy, notes_dy, required = renderer._callout_text_geometry(
+        box_height, 10.0, 8.0, title_path, notes_path, True
+    )
+    drawn_top = title_dy - get_ink_extents(title_path)[0] * 10.0
+    drawn_bottom = notes_dy + get_ink_extents(notes_path)[1] * 8.0
+    assert required == pytest.approx(drawn_bottom - drawn_top + 3.0, abs=0.01)
+
+
+def test_notes_are_measured_against_the_whole_inner_box(tmp_path):
+    """The date rides the title line, so it must not shrink the notes."""
+    config = _base_config(tmp_path / "callout_notes_width.svg")
+    renderer = TimelineRenderer()
+    notes = "Retrospective and benefits handoff"
+
+    # A wide date reservation on the title line...
+    _bottom, with_date = _ink_bottom(
+        renderer, config, 24.0, 170.0, "Go-Live", notes, date_reserved=40.0
+    )
+    # ...must leave the notes at the size they get with no date at all.
+    _bottom, without_date = _ink_bottom(
+        renderer, config, 24.0, 170.0, "Go-Live", notes, date_reserved=0.0
+    )
+    assert with_date == pytest.approx(without_date)
+
+
+def test_a_callout_without_notes_still_places_its_title(tmp_path):
+    config = _base_config(tmp_path / "callout_no_notes.svg")
+    renderer = TimelineRenderer()
+    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+
+    title_dy, notes_dy, required = renderer._callout_text_geometry(
+        24.0, 10.0, 8.0, title_path, notes_path, False
+    )
+    assert title_dy == pytest.approx(notes_dy)
+    assert title_dy - get_ink_extents(title_path)[0] * 10.0 >= 0.0
+    assert required < 24.0
+
+
+# ── Duration bar connectors ───────────────────────────────────────────────
+#
+# A bar is widened to whatever its name and notes need (_layout_durations),
+# so on a short event the right edge lands on a date the event does not end
+# on. Both edges used to get a leader up to the axis, and the one at the
+# right edge pointed confidently at the wrong day.
+
+
+def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260630", "YYYYMMDD")
+    laid_out = renderer._layout_durations(
+        config, [event], start, end, axis_left, axis_right, 300.0
+    )
+    renderer._draw_duration_connectors(config, laid_out[0], axis_y=300.0)
+    return laid_out[0], [c["x1"] for c in renderer.line_calls]
+
+
+def test_a_duration_bar_gets_one_connector_at_its_start(tmp_path):
+    config = _base_config(tmp_path / "duration_connector.svg")
+    event = Event(task_name="Short", start="20260210", end="20260212")
+
+    item, xs = _duration_connector_xs(config, event)
+    assert xs == [item.start_x]
+
+
+def test_no_connector_is_drawn_at_the_padded_end_of_a_bar(tmp_path):
+    """The regression: a stretched bar's right edge is not its end date."""
+    config = _base_config(tmp_path / "duration_padded.svg")
+    # One day long, but a name far too wide for one day's worth of axis.
+    event = Event(
+        task_name="A name much wider than a single day of this axis",
+        start="20260210",
+        end="20260210",
+    )
+
+    item, xs = _duration_connector_xs(config, event)
+    # The bar really was padded, so the two edges disagree...
+    assert item.end_x > item.start_x
+    # ...and only the honest edge carries a leader.
+    assert xs == [item.start_x]
+    assert item.end_x not in xs
+
+
+def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
+    config = _base_config(tmp_path / "duration_vertical.svg")
+    config.timeline_orientation = "vertical"
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    item = TimelineDuration(
+        event=Event(task_name="Short", start="20260210", end="20260212"),
+        color="gold",
+        start_x=0.0,
+        end_x=0.0,
+        lane=0,
+        start_y=200.0,
+        end_y=260.0,
+        min_width=0.0,
+        orientation=Orientation.VERTICAL,
+        lane_side=Side.PRIMARY,
+    )
+    renderer._draw_duration_connectors_vertical(config, item, axis_x=100.0)
+
+    assert [c["y1"] for c in renderer.line_calls] == [item.start_y]
+
+
+# ── Duration bars grouped by WBS ──────────────────────────────────────────
+#
+# Bars used to run in date order with the palette cycling per bar, so two
+# tasks in the same phase looked no more related than two picked at random.
+# They now sort by WBS group and every bar in a group takes one color.
+
+
+def _dur(name, start, end, wbs=None):
+    return Event(task_name=name, start=start, end=end, wbs=wbs)
+
+
+def _grouped_bars(config, events):
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    return renderer._layout_durations(
+        config,
+        events,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
+    )
+
+
+def _phase_events():
+    return [
+        _dur("B build 1", "20260302", "20260306", "NP.2.1"),
+        _dur("A plan 1", "20260202", "20260206", "NP.1.1"),
+        _dur("B build 2", "20260309", "20260313", "NP.2.S4.7"),
+        _dur("A plan 2", "20260209", "20260213", "NP.1.2"),
+        _dur("C ship", "20260401", "20260403", "NP.3"),
+    ]
+
+
+def test_bars_sharing_a_wbs_group_share_a_color(tmp_path):
+    config = _base_config(tmp_path / "wbs_color.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    bars = _grouped_bars(config, _phase_events())
+
+    by_group: dict[str, set[str]] = {}
+    for bar in bars:
+        by_group.setdefault(wbs_group(bar.event.wbs, 2), set()).add(bar.color)
+    assert by_group  # sanity: bars were laid out
+    for group, colors in by_group.items():
+        assert len(colors) == 1, f"{group} drew in {sorted(colors)}"
+
+
+def test_different_wbs_groups_get_different_colors(tmp_path):
+    config = _base_config(tmp_path / "wbs_distinct.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_bottom_colors = ["red", "green", "blue", "gold"]
+    bars = _grouped_bars(config, _phase_events())
+
+    per_group = {wbs_group(b.event.wbs, 2): b.color for b in bars}
+    assert len(per_group) == 3          # NP.1, NP.2, NP.3
+    assert len(set(per_group.values())) == 3
+
+
+def test_bars_are_ordered_so_each_group_is_contiguous(tmp_path):
+    config = _base_config(tmp_path / "wbs_order.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    bars = _grouped_bars(config, _phase_events())
+
+    groups = [wbs_group(b.event.wbs, 2) for b in bars]
+    runs = [g for i, g in enumerate(groups) if i == 0 or groups[i - 1] != g]
+    assert runs == sorted(set(groups)), "a group was split by another group"
+    # WBS order, not the input order (which led with NP.2).
+    assert runs == ["NP.1", "NP.2", "NP.3"]
+
+
+def test_deeper_codes_fold_into_their_group(tmp_path):
+    """NP.2.S4.7 belongs with NP.2.1 at depth 2, not in a group of its own."""
+    config = _base_config(tmp_path / "wbs_fold.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    bars = _grouped_bars(config, _phase_events())
+
+    colors = {
+        b.event.task_name: b.color
+        for b in bars
+        if b.event.task_name in ("B build 1", "B build 2")
+    }
+    assert len(colors) == 2
+    assert len(set(colors.values())) == 1
+
+
+def test_bars_without_a_wbs_form_a_block_after_the_numbered_ones(tmp_path):
+    config = _base_config(tmp_path / "wbs_none.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    events = _phase_events() + [
+        _dur("Loose 1", "20260210", "20260214"),
+        _dur("Loose 2", "20260220", "20260224"),
+    ]
+    bars = _grouped_bars(config, events)
+
+    named = [bool(b.event.wbs) for b in bars]
+    # Every WBS bar precedes every unnumbered one.
+    assert named == sorted(named, reverse=True)
+    loose = {b.color for b in bars if not b.event.wbs}
+    assert len(loose) == 1
+
+
+def test_group_depth_zero_restores_date_order_and_per_bar_colors(tmp_path):
+    config = _base_config(tmp_path / "wbs_off.svg")
+    config.timeline_duration_wbs_group_depth = 0
+    config.timeline_bottom_colors = ["red", "green", "blue", "gold"]
+    bars = _grouped_bars(config, _phase_events())
+
+    starts = [b.event.start for b in bars]
+    assert starts == sorted(starts)
+    # Consecutive bars cycle rather than sharing a group color.
+    assert bars[0].color != bars[1].color
+
+
+def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
+    config = _base_config(tmp_path / "wbs_vertical.svg")
+    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_orientation = "vertical"
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    bars = renderer._layout_durations_vertical(
+        config,
+        _phase_events(),
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_x=200.0,
+        axis_top=50.0,
+        axis_bottom=700.0,
+        side=Side.PRIMARY,
+    )
+    by_group: dict[str, set[str]] = {}
+    for bar in bars:
+        by_group.setdefault(wbs_group(bar.event.wbs, 2), set()).add(bar.color)
+    assert by_group
+    for colors in by_group.values():
+        assert len(colors) == 1
+
+
+@pytest.mark.parametrize(
+    "wbs, depth, expected",
+    [
+        ("NP.3.S1.4", 2, "NP.3"),
+        ("NP.3.S1.4", 3, "NP.3.S1"),
+        ("NP", 2, "NP"),          # shorter than the depth → its own group
+        (None, 2, ""),            # no WBS → the unnumbered block
+        ("", 2, ""),
+        ("NP.1", 0, ""),          # depth 0 → grouping off
+    ],
+)
+def test_wbs_group_prefixes(wbs, depth, expected):
+    assert wbs_group(wbs, depth) == expected

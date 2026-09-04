@@ -8,7 +8,7 @@ and duration bars aligned to start/end dates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from datetime import date
 
@@ -16,11 +16,13 @@ import arrow
 import drawsvg
 
 from config.config import get_font_path, resolve_continuation_icon
+from renderers.glyph_cache import get_ink_extents
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine, StyleResult
+from shared.wbs_filter import wbs_group, wbs_sort_key
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
 from shared.timeband import build_segments as _build_band_segments
@@ -122,6 +124,13 @@ class TimelineDuration:
     lane_side: Side = Side.SECONDARY
 
 
+#: Air kept above the title's ink and below the notes' ink inside a callout.
+_CALLOUT_PAD_Y: float = 1.5
+
+#: Space between the title's descenders and the notes' ascenders.
+_CALLOUT_LINE_GAP: float = 1.0
+
+
 class TimelineRenderer(BaseSVGRenderer):
     """Renderer for timeline visualization."""
 
@@ -140,7 +149,70 @@ class TimelineRenderer(BaseSVGRenderer):
     # so the token-aware version is the single source of truth.
 
     @staticmethod
+    def _ink_extents_pt(font_path: str | None, size: float) -> tuple[float, float]:
+        """Ink height above and below the baseline, in points."""
+        if not font_path or size <= 0:
+            return size * 0.75, size * 0.22
+        ascent, descent = get_ink_extents(font_path)
+        return ascent * size, descent * size
+
+    @classmethod
+    def _callout_text_geometry(
+        cls,
+        box_height: float,
+        title_size: float,
+        notes_size: float,
+        title_font_path: str | None,
+        notes_font_path: str | None,
+        has_notes: bool,
+    ) -> tuple[float, float, float]:
+        """Vertical layout of a callout box's text.
+
+        Returns ``(title_dy, notes_dy, required_height)`` — the two baselines
+        as offsets from the box top, and the height the block needs.
+
+        One function serves both the fitter and the drawing pass on purpose.
+        They used to carry separate formulas — the fitter allowed
+        ``1.2 * title + 1.2 * notes + 2``, the renderer drew the notes
+        baseline at ``1.15 * title + 1.55 * notes`` and counted no descender
+        at all — so a box the fitter called a fit still hung the notes'
+        descenders up to 1.9pt below its bottom edge.
+
+        Extents come from the glyph outlines rather than the OS/2 typo
+        metrics, which are line-spacing advice and overstate the ink badly
+        for some fonts (see :func:`renderers.glyph_cache.get_ink_extents`).
+        """
+        title_ascent, title_descent = cls._ink_extents_pt(
+            title_font_path, title_size
+        )
+        if has_notes:
+            notes_ascent, notes_descent = cls._ink_extents_pt(
+                notes_font_path, notes_size
+            )
+            gap = _CALLOUT_LINE_GAP
+        else:
+            notes_ascent = notes_descent = gap = 0.0
+
+        block_h = (
+            title_ascent + title_descent + gap + notes_ascent + notes_descent
+        )
+        # Centre the block, so a box taller than its text does not strand the
+        # lines against the top edge. The clamp keeps the title inside its
+        # padding when the box is too short for the block to fit at all.
+        top = max(_CALLOUT_PAD_Y, (box_height - block_h) / 2.0)
+        title_dy = top + title_ascent
+        # With no notes there is no second baseline; returning the title's
+        # keeps a caller that ignores ``has_notes`` from drawing below the ink.
+        notes_dy = (
+            title_dy + title_descent + gap + notes_ascent
+            if has_notes
+            else title_dy
+        )
+        return title_dy, notes_dy, block_h + (2.0 * _CALLOUT_PAD_Y)
+
+    @classmethod
     def _fit_box_text_sizes(
+        cls,
         text: str,
         notes: str,
         text_width: float,
@@ -149,22 +221,38 @@ class TimelineRenderer(BaseSVGRenderer):
         notes_font_path: str | None,
         title_size: float,
         notes_size: float,
+        notes_width: float | None = None,
+        height_for: "Callable[[float, float, bool], float] | None" = None,
     ) -> tuple[float, float]:
-        """Shrink title/notes fonts to fit a constrained box width and height."""
+        """Shrink title/notes fonts to fit a constrained box width and height.
+
+        ``notes_width`` is the width available to the notes line when it
+        differs from the title's — inside a callout the title shares its line
+        with the icon and the date, and the notes line has the box to itself.
+        Measuring both against the title's narrower budget shrank the notes
+        to clear space they were never drawn near. Defaults to
+        ``text_width``.
+
+        ``height_for`` supplies the height model, so the caller that draws the
+        text is the one that decides how much room it needs; the default is
+        the flat 1.2-per-line box the duration bars lay out with.
+        """
         width = max(8.0, text_width)
+        n_width = max(8.0, text_width if notes_width is None else notes_width)
         tsize = shrinktext(text, width, title_font_path, title_size)
         nsize = (
-            shrinktext(notes, width, notes_font_path, notes_size)
+            shrinktext(notes, n_width, notes_font_path, notes_size)
             if notes
             else notes_size
         )
 
-        def required_h(ts: float, ns: float, has_notes: bool) -> float:
-            # Use ~1.2 line height per row plus a small inner padding. The
-            # earlier 1.9/1.7 multipliers were generous and caused declared
-            # font sizes to be shrunk well below the box's actual capacity.
-            line_h = ts * 1.2 + ((ns * 1.2) if has_notes else 0.0)
-            return line_h + 2.0
+        def default_height(ts: float, ns: float, has: bool) -> float:
+            # ~1.2 line height per row plus a small inner padding. The earlier
+            # 1.9/1.7 multipliers were generous and caused declared font sizes
+            # to be shrunk well below the box's actual capacity.
+            return ts * 1.2 + ((ns * 1.2) if has else 0.0) + 2.0
+
+        required_h = height_for or default_height
 
         has_notes = bool(notes)
         need = required_h(tsize, nsize, has_notes)
@@ -176,7 +264,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 nsize = max(5.0, nsize * factor)
             tsize = shrinktext(text, width, title_font_path, tsize)
             if has_notes:
-                nsize = shrinktext(notes, width, notes_font_path, nsize)
+                nsize = shrinktext(notes, n_width, notes_font_path, nsize)
             guard = 0
             while required_h(tsize, nsize, has_notes) > box_height and guard < 30:
                 tsize = max(6.0, tsize - 0.2)
@@ -302,6 +390,19 @@ class TimelineRenderer(BaseSVGRenderer):
             axis_right = axis_x
             axis_y = axis_top
 
+        # Room one side of the axis has for its stack of callout rows. The
+        # axis sits at 44% of the content area, so the near side is the
+        # smaller of the two — using it bounds both sides safely.
+        # A box stroked exactly on the page edge loses half its border to
+        # the clip, so the bounds are inset by half the stroke.
+        _edge_inset = config.get_box_style("ec-callout-box").stroke_width / 2.0
+        if orient is Orientation.HORIZONTAL:
+            callout_room = max(0.0, axis_y - (area_y + top_bands_h))
+            label_bounds = (area_x + _edge_inset, area_x + area_w - _edge_inset)
+        else:
+            callout_room = max(0.0, axis_origin[0] - area_x)
+            label_bounds = (area_y + _edge_inset, area_y + area_h - _edge_inset)
+
         callouts = self._layout_callouts(
             config,
             point_events,
@@ -311,6 +412,12 @@ class TimelineRenderer(BaseSVGRenderer):
             axis_length=axis_length,
             orientation=orient,
             side=label_side,
+            # Rows past the edge of the drawable area carry labels nobody
+            # can read, so the layout stops buying them there.
+            max_extent=callout_room,
+            # A box that runs off the paper is a box the reader loses the
+            # end of, so placement is bounded by the page, not the axis.
+            label_bounds=label_bounds,
             style_engine=style_engine,
         )
         if orient is Orientation.HORIZONTAL:
@@ -644,6 +751,8 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_length: float,
         orientation: Orientation,
         side: Side,
+        max_extent: float | None = None,
+        label_bounds: tuple[float, float] | None = None,
         style_engine: StyleEngine | None = None,
     ) -> list[TimelineCallout]:
         """Place point-event callouts using the labella VPSC algorithm.
@@ -738,6 +847,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 if orientation is Orientation.HORIZONTAL
                 else 0.0
             ),
+            max_extent=max_extent,
+            label_bounds=label_bounds,
         )
 
         # For Side.BOTH the secondary-side events get the secondary palette.
@@ -771,6 +882,71 @@ class TimelineRenderer(BaseSVGRenderer):
 
         return out
 
+    @staticmethod
+    def _order_durations(
+        config: "CalendarConfig", events: list[Event]
+    ) -> tuple[list[Event], dict[int, str]]:
+        """Order duration events and decide what color each one gets.
+
+        Bars are grouped by the first ``timeline_duration_wbs_group_depth``
+        segments of their WBS, so ``NP.3.S1.4`` and ``NP.3.S2.1`` both land
+        in ``NP.3``.  A group's bars sort together and take one color from
+        the palette, which is what lets a phase read as a band without a
+        legend.  Unnumbered bars form their own block after the numbered
+        ones — interleaving them by date would scatter them through the
+        hierarchy, the same reasoning the gantt's row ordering uses.
+
+        Depth 0 turns grouping off: bars run in date order and the palette
+        cycles per bar, as it did before grouping existed.
+
+        Returns ``(ordered_events, {id(event): color})``.
+        """
+        def date_key(event: Event) -> tuple:
+            return (
+                event.start,
+                event.end,
+                event.priority,
+                event.task_name.lower() if event.task_name else "",
+            )
+
+        depth = int(getattr(config, "timeline_duration_wbs_group_depth", 0) or 0)
+
+        if depth > 0:
+            groups = {id(e): wbs_group(e.wbs, depth) for e in events}
+            ordered = sorted(
+                events,
+                key=lambda e: (
+                    0 if groups[id(e)] else 1,
+                    wbs_sort_key(groups[id(e)]),
+                    wbs_sort_key(e.wbs),
+                    date_key(e),
+                ),
+            )
+        else:
+            groups = {id(e): "" for e in events}
+            ordered = sorted(events, key=date_key)
+
+        _notes_style = config.get_text_style("ec-event-notes")
+        palette = config.timeline_bottom_colors or [
+            _notes_style.color or config.timeline_notes_text_font_color
+        ]
+
+        colors: dict[int, str] = {}
+        if depth > 0:
+            # Palette entries are handed out in draw order, so adjacent
+            # bands never land on the same color.
+            per_group: dict[str, str] = {}
+            for event in ordered:
+                group = groups[id(event)]
+                if group not in per_group:
+                    per_group[group] = palette[len(per_group) % len(palette)]
+                colors[id(event)] = per_group[group]
+        else:
+            for index, event in enumerate(ordered):
+                colors[id(event)] = palette[index % len(palette)]
+
+        return ordered, colors
+
     def _layout_durations(
         self,
         config: "CalendarConfig",
@@ -794,20 +970,11 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered = sorted(
-            events,
-            key=lambda e: (
-                e.start,
-                e.end,
-                e.priority,
-                e.task_name.lower() if e.task_name else "",
-            ),
-        )
+        ordered, duration_colors = self._order_durations(config, events)
 
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_width * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
-        palette = config.timeline_bottom_colors or [_layout_notes_style.color or config.timeline_notes_text_font_color]
         title_size, notes_size, _, _ = self._duration_metrics(config)
         title_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
         notes_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
@@ -863,7 +1030,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 ex = min(axis_right, sx + min_width)
 
             lane = self._place_span_in_lane(lane_last_end, sx, ex, min_gap)
-            color = palette[idx % len(palette)]
+            color = duration_colors[id(event)]
             _sr = style_engine.evaluate_event(event) if style_engine is not None else None
             if _sr is not None and _sr.fill_color:
                 color = _sr.fill_color
@@ -913,15 +1080,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered = sorted(
-            events,
-            key=lambda e: (
-                e.start,
-                e.end,
-                e.priority,
-                e.task_name.lower() if e.task_name else "",
-            ),
-        )
+        ordered, duration_colors = self._order_durations(config, events)
 
         if side is Side.BOTH:
             # Chronological alternation mirrors how callouts split for
@@ -944,9 +1103,6 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_height * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
-        palette = config.timeline_bottom_colors or [
-            _layout_notes_style.color or config.timeline_notes_text_font_color
-        ]
         title_size, notes_size, _, _ = self._duration_metrics(config)
         title_font_path = self._safe_font_path(
             _layout_notes_style.font or config.timeline_notes_text_font_name
@@ -1002,7 +1158,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 ey = min(axis_bottom, sy + min_length)
 
             lane = self._place_span_in_lane(lane_last_end, sy, ey, min_gap)
-            color = palette[idx % len(palette)]
+            color = duration_colors[id(event)]
             _sr = style_engine.evaluate_event(event) if style_engine is not None else None
             if _sr is not None and _sr.fill_color:
                 color = _sr.fill_color
@@ -1134,6 +1290,8 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         title_font_path = self._safe_font_path(name_font_default)
         notes_font_path = self._safe_font_path(notes_font_default)
+        # The title line shares its width with the icon and the date; the
+        # notes line has the whole inner box, so it is measured against that.
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -1143,11 +1301,23 @@ class TimelineRenderer(BaseSVGRenderer):
             notes_font_path,
             title_font_size,
             notes_font_size,
+            notes_width=item.box_width - 12.0,
+            height_for=lambda ts, ns, has: self._callout_text_geometry(
+                item.box_height, ts, ns, title_font_path, notes_font_path, has
+            )[2],
         )
 
         text_x = item.box_x + 6.0
-        title_y = item.box_y + fitted_title * 1.15
-        notes_y = title_y + (fitted_notes * 1.55)
+        title_dy, notes_dy, _ = self._callout_text_geometry(
+            item.box_height,
+            fitted_title,
+            fitted_notes,
+            title_font_path,
+            notes_font_path,
+            bool(notes),
+        )
+        title_y = item.box_y + title_dy
+        notes_y = item.box_y + notes_dy
 
         event_text_color = (
             tk_name.get("color")
@@ -1264,7 +1434,14 @@ class TimelineRenderer(BaseSVGRenderer):
         item: TimelineDuration,
         axis_y: float,
     ) -> None:
-        """Draw only the vertical aligner lines from the axis to the duration bar."""
+        """Draw the vertical aligner line from the axis to the duration bar.
+
+        Only the bar's left edge gets one.  A bar is widened to whatever its
+        name and notes need (see ``_layout_durations``), so on a short event
+        the right edge sits at a date the event does not end on — a leader
+        there pointed confidently at the wrong day.  The left edge is always
+        the true start date, so that one still says something.
+        """
         title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
@@ -1277,17 +1454,6 @@ class TimelineRenderer(BaseSVGRenderer):
             item.start_x,
             axis_y,
             item.start_x,
-            bar_y,
-            stroke=item.color,
-            stroke_width=0.9,
-            stroke_opacity=0.8,
-            stroke_dasharray=_dur_bar_style.dasharray or None,
-            css_class="ec-connector",
-        )
-        self._draw_line(
-            item.end_x,
-            axis_y,
-            item.end_x,
             bar_y,
             stroke=item.color,
             stroke_width=0.9,
@@ -1602,7 +1768,12 @@ class TimelineRenderer(BaseSVGRenderer):
         item: TimelineDuration,
         axis_x: float,
     ) -> None:
-        """Horizontal aligner lines from the vertical axis to the duration bar."""
+        """Horizontal aligner line from the vertical axis to the duration bar.
+
+        Start edge only, for the reason given in
+        :py:meth:`_draw_duration_connectors`: the far edge is padded out to fit
+        the label and does not mark the end date.
+        """
         title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
@@ -1617,17 +1788,6 @@ class TimelineRenderer(BaseSVGRenderer):
             item.start_y,
             bar_near_axis_x,
             item.start_y,
-            stroke=item.color,
-            stroke_width=0.9,
-            stroke_opacity=0.8,
-            stroke_dasharray=_dur_bar_style.dasharray or None,
-            css_class="ec-connector",
-        )
-        self._draw_line(
-            axis_x,
-            item.end_y,
-            bar_near_axis_x,
-            item.end_y,
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.8,

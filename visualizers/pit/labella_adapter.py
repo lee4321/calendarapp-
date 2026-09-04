@@ -17,7 +17,6 @@ supplies the PIT-specific parts:
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import replace
 from typing import Callable, Sequence
 
@@ -29,8 +28,10 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
+    append_perp_stub,
     layout_callouts as _layout_callouts_shared,
     partition_for_both as _partition_for_both,
+    prepend_perp_stub,
     resolve_font_path as _resolve_font_path,
 )
 from shared.orientation import Orientation, Side
@@ -54,146 +55,6 @@ PIT_MAX_EVENTS_PER_SIDE: int = 80
 
 
 _LABEL_PAD_X: float = 6.0
-
-# Matches a signed int/float (incl. scientific notation) in an SVG path.
-_PATH_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
-
-
-def _append_perp_stub(
-    path_d: str, direction: Orientation, stub: float
-) -> str:
-    """Make a leader's final segment a straight perpendicular stub.
-
-    labella ends each leader with a cubic Bézier whose *endpoint tangent*
-    is perpendicular to the axis, but the visible curve arrives at a
-    shallow angle. An ``orient="auto"`` arrowhead orients to that exact
-    endpoint tangent (perpendicular), so the head points straight at the
-    box while the line comes in diagonally — they look detached.
-
-    We pull the final cubic back by ``stub`` units along the perpendicular
-    (toward the axis) and append a straight ``L`` to the original box
-    endpoint. The last drawn segment is then genuinely perpendicular, so
-    the arrowhead sits flush on it. labella always sets the final control
-    point collinear with the endpoint on the perpendicular axis
-    (``c2.x == ex`` horizontal / ``c2.y == ey`` vertical), so trimming the
-    endpoint keeps the curve's exit tangent perpendicular — no cusp.
-
-    Args:
-        path_d: The leader path ``d`` string (ends with a cubic ``C``).
-        direction: Axis orientation (horizontal → vary y; vertical → x).
-        stub: Desired stub length in user units. ``<= 0`` is a no-op.
-
-    Returns:
-        The rewritten path, or the original if it can't be parsed or the
-        final cubic has no perpendicular extent to trim.
-    """
-    if stub <= 0 or not path_d:
-        return path_d
-    i = path_d.rfind("C")
-    if i < 0:
-        return path_d
-    head = path_d[:i]
-    nums = _PATH_NUM_RE.findall(path_d[i + 1:])
-    if len(nums) < 6:
-        return path_d
-    c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in nums[-6:])
-
-    if direction is Orientation.HORIZONTAL:
-        # Perpendicular is vertical: trim along y, keep x.
-        span = ey - c2y
-        if span == 0:
-            return path_d
-        s = min(stub, 0.85 * abs(span))
-        qx, qy = ex, ey - s * (1.0 if span > 0 else -1.0)
-    else:
-        # Perpendicular is horizontal: trim along x, keep y.
-        span = ex - c2x
-        if span == 0:
-            return path_d
-        s = min(stub, 0.85 * abs(span))
-        qx, qy = ex - s * (1.0 if span > 0 else -1.0), ey
-
-    return (
-        f"{head}C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} "
-        f"{qx:.8f} {qy:.8f} L {ex:.8f} {ey:.8f}"
-    )
-
-
-def _prepend_perp_stub(
-    path_d: str, direction: Orientation, stub: float
-) -> str:
-    """Make a leader's first segment a straight perpendicular stub.
-
-    Mirror of :func:`_append_perp_stub` on the axis side. labella's first
-    cubic leaves the axis with a perpendicular tangent (``c1.x == sx`` for
-    horizontal axes, ``c1.y == sy`` for vertical), but the visible curve
-    bends away at a shallow angle. A ``marker_start`` rendered with
-    ``orient="auto"`` aligns to that endpoint tangent (perpendicular) and
-    appears detached from the curve.
-
-    We insert an ``L`` from the original axis point to a point pulled
-    ``stub`` units along the perpendicular (toward ``c1``), then start the
-    cubic from that pulled point. Since ``c1`` is unchanged and remains
-    collinear with the new start on the perpendicular axis, the curve's
-    entry tangent stays perpendicular — no cusp.
-
-    Args:
-        path_d: The leader path ``d`` string (starts with ``M`` followed
-            by a cubic ``C``).
-        direction: Axis orientation (horizontal → vary y; vertical → x).
-        stub: Desired stub length in user units. ``<= 0`` is a no-op.
-
-    Returns:
-        The rewritten path, or the original if it can't be parsed or the
-        first cubic has no perpendicular extent to trim.
-    """
-    if stub <= 0 or not path_d:
-        return path_d
-    if not path_d.lstrip().startswith("M"):
-        return path_d
-    c_idx = path_d.find("C")
-    if c_idx < 0:
-        return path_d
-    m_nums = _PATH_NUM_RE.findall(path_d[:c_idx])
-    if len(m_nums) < 2:
-        return path_d
-    sx, sy = float(m_nums[-2]), float(m_nums[-1])
-
-    # Locate the 6 numbers of the first cubic and the index just past them.
-    tail_start = -1
-    found = 0
-    for m in _PATH_NUM_RE.finditer(path_d, c_idx + 1):
-        found += 1
-        if found == 6:
-            tail_start = m.end()
-            break
-    if found < 6 or tail_start < 0:
-        return path_d
-    cubic_nums = _PATH_NUM_RE.findall(path_d[c_idx + 1:tail_start])
-    c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in cubic_nums[:6])
-    tail = path_d[tail_start:]
-
-    if direction is Orientation.HORIZONTAL:
-        # Perpendicular is vertical: trim along y, keep x.
-        span = c1y - sy
-        if span == 0:
-            return path_d
-        s = min(stub, 0.85 * abs(span))
-        qx, qy = sx, sy + s * (1.0 if span > 0 else -1.0)
-    else:
-        # Perpendicular is horizontal: trim along x, keep y.
-        span = c1x - sx
-        if span == 0:
-            return path_d
-        s = min(stub, 0.85 * abs(span))
-        qx, qy = sx + s * (1.0 if span > 0 else -1.0), sy
-
-    return (
-        f"M {sx:.8f} {sy:.8f} L {qx:.8f} {qy:.8f} "
-        f"C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} {ex:.8f} {ey:.8f}"
-        f"{tail}"
-    )
-
 
 def _name_size(config: CalendarConfig) -> float:
     return float(config.pit_name_text_font_size or 11.0)
@@ -397,8 +258,8 @@ def _re_anchor_and_stub(
             elif anchor == "end":
                 y_label -= p.label_h
 
-        leader = _append_perp_stub(p.leader_path_d, direction, end_stub)
-        leader = _prepend_perp_stub(leader, direction, start_stub)
+        leader = append_perp_stub(p.leader_path_d, direction, end_stub)
+        leader = prepend_perp_stub(leader, direction, start_stub)
 
         out.append(
             replace(p, x_label=x_label, y_label=y_label, leader_path_d=leader)
