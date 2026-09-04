@@ -12,6 +12,7 @@ dependency.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Callable, Sequence
 
 import arrow
@@ -23,7 +24,9 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
+    append_perp_stub,
     layout_callouts as _layout_callouts_shared,
+    prepend_perp_stub,
     resolve_font_path as _resolve_font_path,
 )
 from shared.orientation import Orientation, Side
@@ -183,6 +186,8 @@ def layout_callouts(
     config: CalendarConfig,
     pos_for_day: Callable[[arrow.Arrow], float],
     min_layer_gap: float = 0.0,
+    max_extent: float | None = None,
+    label_bounds: tuple[float, float] | None = None,
 ) -> list[CalloutPlacement]:
     """Return labella-placed callouts for the given events.
 
@@ -194,8 +199,19 @@ def layout_callouts(
     of boxes sits exactly one layer gap off the axis, so the renderer uses
     this to keep that row clear of the axis tick labels drawn in the same
     band.
+
+    ``max_extent`` is how far from the axis one side may reach — the room
+    the page actually has. It caps how many rows the overlap search will
+    open, which is what keeps leaders from growing past the paper.
+
+    ``label_bounds`` are the page edges along the axis; no box is placed
+    with any part of itself outside them.
+
+    Each finished leader gets a straight perpendicular stub at both ends,
+    the same post-pass PIT applies to its callout leaders — see
+    :func:`shared.labella_layout.append_perp_stub`.
     """
-    return _layout_callouts_shared(
+    placements = _layout_callouts_shared(
         events,
         axis_origin=axis_origin,
         axis_length=axis_length,
@@ -205,9 +221,45 @@ def layout_callouts(
         node_width=lambda ev: _node_along_axis_extent(ev, config, orientation),
         node_height=lambda evs: _renderer_node_height(evs, config, orientation),
         density=float(config.timeline_labella_density),
-        layer_gap=max(
-            float(config.timeline_labella_layer_gap), float(min_layer_gap)
+        # The theme's gap is the row stride; the axis-label clearance is a
+        # one-off offset of the whole stack. Folding the clearance into the
+        # gap, as this used to, charged it again for every row — a 24-row
+        # stack paid ~26pt of tick-label clearance 24 times over.
+        layer_gap=float(config.timeline_labella_layer_gap),
+        stack_offset=max(
+            0.0,
+            float(min_layer_gap) - float(config.timeline_labella_layer_gap),
         ),
         min_pos=config.timeline_labella_min_pos,
         max_pos=config.timeline_labella_max_pos,
+        max_extent=max_extent,
+        label_bounds=label_bounds,
     )
+    return _add_leader_stubs(placements, config, orientation)
+
+
+def _add_leader_stubs(
+    placements: list[CalloutPlacement],
+    config: CalendarConfig,
+    orientation: Orientation,
+) -> list[CalloutPlacement]:
+    """Straighten both ends of every leader with a perpendicular stub.
+
+    labella's bezier leaves the axis dot and meets the box at a shallow
+    angle, so a leader reads as grazing its anchors rather than arriving at
+    them.  The stubs pull each end back along the perpendicular and finish
+    the run with a straight segment, which is what makes the join look
+    deliberate — and, where a theme turns markers on, gives an
+    ``orient="auto"`` arrowhead a segment to sit flush on.
+    """
+    start_stub = float(config.timeline_leader_start_stub)
+    end_stub = float(config.timeline_leader_end_stub)
+    if start_stub <= 0 and end_stub <= 0:
+        return placements
+
+    out: list[CalloutPlacement] = []
+    for p in placements:
+        leader = append_perp_stub(p.leader_path_d, orientation, end_stub)
+        leader = prepend_perp_stub(leader, orientation, start_stub)
+        out.append(replace(p, leader_path_d=leader))
+    return out

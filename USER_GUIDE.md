@@ -1597,6 +1597,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
 | `timeline_duration_date_font_size` | `timeline_durations.date_font_size` | `float | None` | `None` | date font size |
 | `timeline_duration_lane_gap_y` | `timeline.duration_lane_gap_y` | `float` | `8.0` | duration lane gap y |
+| `timeline_duration_wbs_group_depth` | `timeline_durations.wbs_group_depth` | `int` | `2` | leading WBS segments that group duration bars: bars in a group sort together and share one palette color. `0` disables grouping (date order, palette cycles per bar) |
 | `timeline_duration_name_font_size` | `timeline_durations.name_font_size` | `float | None` | `None` | name font size |
 | `timeline_duration_notes_font_size` | `timeline_durations.notes_font_size` | `float | None` | `None` | notes font size |
 | `timeline_duration_offset_y` | `timeline.duration_offset_y` | `float` | `44.0` | duration offset y |
@@ -1617,6 +1618,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_label_fill_opacity` | `timeline.label_fill_opacity` | `float` | `0.25` | label fill opacity |
 | `timeline_label_stroke_dasharray` | `timeline.label_stroke_dasharray` | `str | None` | `None` | label stroke dasharray |
 | `timeline_label_stroke_width` | `timeline.label_stroke_width` | `float` | `1.0` | label stroke width |
+| `timeline_leader_end_stub` | `timeline.leader.end_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader meets its box; `0` = pure bezier |
+| `timeline_leader_start_stub` | `timeline.leader.start_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader leaves the axis dot; `0` = pure bezier |
 | `timeline_marker_radius` | `timeline.marker_radius` | `float` | `6` | marker radius |
 | `timeline_marker_stroke_color` | `timeline.marker_stroke_color` | `str` | `'black'` | marker stroke color |
 | `timeline_marker_stroke_width` | `timeline.marker_stroke_width` | `float` | `1.0` | marker stroke width |

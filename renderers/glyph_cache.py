@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
 from PIL import ImageFont
@@ -95,6 +96,58 @@ def get_font_metrics(font_path: str) -> tuple[int, int, int]:
     upm = ttfont["head"].unitsPerEm
     os2 = ttfont["OS/2"]
     return upm, os2.sTypoAscender, os2.sTypoDescender
+
+
+#: Letters sampled to find how far a font's outlines reach above and below
+#: the baseline.  Ascenders and caps for the top, the usual descenders for
+#: the bottom.
+_INK_ASCENDER_SAMPLE = "ATbdhkl"
+_INK_DESCENDER_SAMPLE = "gjpqy"
+
+#: Used when a font cannot be measured — close to the Roboto family's ink.
+_INK_FALLBACK = (0.75, 0.22)
+
+
+@lru_cache(maxsize=64)
+def get_ink_extents(font_path: str) -> tuple[float, float]:
+    """Return ``(ascent, descent)`` in em units, measured from real outlines.
+
+    OS/2 typo metrics are line-spacing advice, not ink.  SairaExtraCondensed
+    declares a 0.439em descender while its deepest ``g`` only reaches
+    0.203em; reserving space from the declared figure would shrink text to
+    clear room nothing occupies.  Both values are returned positive, so a
+    line's total height is ``ascent + descent``.
+    """
+    try:
+        ttfont = _load_ttfont(font_path)
+        upm = ttfont["head"].unitsPerEm
+        glyph_set = ttfont.getGlyphSet()
+        cmap = ttfont.getBestCmap()
+    except Exception:
+        return _INK_FALLBACK
+
+    def _extreme(sample: str, index: int, pick) -> float | None:
+        best: float | None = None
+        for char in sample:
+            glyph_name = cmap.get(ord(char))
+            if not glyph_name or glyph_name not in glyph_set:
+                continue
+            pen = BoundsPen(glyph_set)
+            try:
+                glyph_set[glyph_name].draw(pen)
+            except Exception:
+                continue
+            if not pen.bounds:
+                continue
+            value = pen.bounds[index]
+            best = value if best is None else pick(best, value)
+        return best
+
+    top = _extreme(_INK_ASCENDER_SAMPLE, 3, max)
+    bottom = _extreme(_INK_DESCENDER_SAMPLE, 1, min)
+    if top is None or bottom is None:
+        return _INK_FALLBACK
+    return top / upm, -bottom / upm
 
 
 def text_to_svg_group(

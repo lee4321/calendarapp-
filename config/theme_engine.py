@@ -124,6 +124,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Timeline orientation + labella label-placement options.
     ("timeline", "orientation"): "timeline_orientation",
     ("timeline", "label_side"): "timeline_label_side",
+    ("timeline.leader", "start_stub"): "timeline_leader_start_stub",
+    ("timeline.leader", "end_stub"): "timeline_leader_end_stub",
     ("timeline.labella", "layer_gap"): "timeline_labella_layer_gap",
     ("timeline.labella", "node_height"): "timeline_labella_node_height",
     ("timeline.labella", "density"): "timeline_labella_density",
@@ -142,6 +144,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline_events", "box_height"): "timeline_event_box_height",
     ("timeline_durations", "box_width"): "timeline_duration_box_width",
     ("timeline_durations", "box_height"): "timeline_duration_box_height",
+    ("timeline_durations", "wbs_group_depth"): "timeline_duration_wbs_group_depth",
     ("timeline_durations", "date_font"): "timeline_duration_date_font",
     ("timeline_durations", "date_font_size"): "timeline_duration_date_font_size",
     ("timeline_durations", "date_color"): "timeline_duration_date_color",

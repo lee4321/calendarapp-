@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from shared.data_models import Event
+# Re-exported: WBS ordering is shared with the timeline's duration
+# grouping, but callers and tests still reach it through this module.
+from shared.wbs_filter import wbs_depth, wbs_sort_key  # noqa: F401
 from visualizers.gantt.columns import resolve_field
 
 if TYPE_CHECKING:
@@ -92,34 +95,3 @@ def _scalar_key(value: Any) -> tuple[int, Any]:
     if isinstance(value, (int, float)):
         return (0, float(value))
     return (1, str(value).lower())
-
-
-def wbs_sort_key(wbs: str | None) -> tuple:
-    """Segment-wise key for a WBS code.
-
-    Each dot-separated segment becomes ``(0, number, "")`` when it is
-    numeric and ``(1, 0.0, text)`` otherwise, so ``1.10`` sorts after
-    ``1.9`` instead of before it -- the ordering plain string comparison
-    gets wrong.  Mixed codes ("2.A.1") still order deterministically.
-    """
-    segments = _wbs_segments(wbs)
-    key: list[tuple[int, float, str]] = []
-    for segment in segments:
-        try:
-            key.append((0, float(segment), ""))
-        except ValueError:
-            key.append((1, 0.0, segment.lower()))
-    return tuple(key)
-
-
-def wbs_depth(wbs: str | None) -> int:
-    """Indentation level: one per WBS segment past the first."""
-    segments = _wbs_segments(wbs)
-    return max(0, len(segments) - 1)
-
-
-def _wbs_segments(wbs: str | None) -> list[str]:
-    """Split a WBS code into its non-empty segments."""
-    if not wbs:
-        return []
-    return [seg for seg in str(wbs).strip().split(".") if seg]
