@@ -585,7 +585,7 @@ class GanttRenderer(BaseSVGRenderer):
             drawn = marks[:max_icons]
             group_w = len(drawn) * per_icon - _HOLIDAY_FLAG_GAP
             icon_x = cell_x + (day_w - group_w) / 2.0
-            baseline = y + h / 2.0 + icon_size / 2.0
+            baseline = self._icon_baseline(y + h / 2.0, icon_size)
 
             for mark in drawn:
                 self._draw_icon_svg(
@@ -740,11 +740,12 @@ class GanttRenderer(BaseSVGRenderer):
 
             if column.render == "icon":
                 if cell_icon_visible(column, row.event):
+                    icon_size = min(font_size, row_h - 1.0)
                     self._draw_icon_svg(
                         column.icon,
                         col_x + col_w / 2,
-                        row_y + row_h / 2 + font_size / 3,
-                        min(font_size, row_h - 1.0),
+                        self._icon_baseline(row_y + row_h / 2, icon_size),
+                        icon_size,
                         anchor="middle",
                         css_class="ec-event-icon",
                     )
@@ -937,7 +938,7 @@ class GanttRenderer(BaseSVGRenderer):
             self._draw_icon_svg(
                 config.gantt_snapped_event_icon,
                 geometry.x + geometry.width / 2,
-                bar_y + bar_h,
+                self._icon_baseline(bar_y + bar_h / 2, bar_h),
                 bar_h,
                 anchor="middle",
                 css_class="ec-event-icon",
@@ -1010,13 +1011,15 @@ class GanttRenderer(BaseSVGRenderer):
         """Icons inside the bar edges where the span leaves the range."""
         if geometry.clipped_start:
             self._draw_icon_svg(
-                "arrow-bar-left", geometry.x + bar_h / 2, bar_y + bar_h, bar_h,
+                "arrow-bar-left", geometry.x + bar_h / 2,
+                self._icon_baseline(bar_y + bar_h / 2, bar_h), bar_h,
                 anchor="middle", css_class="ec-continuation-icon",
             )
         if geometry.clipped_end:
             self._draw_icon_svg(
                 config.gantt_continuation_icon,
-                geometry.x + geometry.width - bar_h / 2, bar_y + bar_h, bar_h,
+                geometry.x + geometry.width - bar_h / 2,
+                self._icon_baseline(bar_y + bar_h / 2, bar_h), bar_h,
                 anchor="middle", css_class="ec-continuation-icon",
             )
 
@@ -1080,7 +1083,7 @@ class GanttRenderer(BaseSVGRenderer):
         self._draw_icon_svg(
             style.icon or config.gantt_milestone_icon,
             axis.center_of(index),
-            row_y + (row_h + size) / 2,
+            self._icon_baseline(row_y + row_h / 2, size),
             size,
             anchor="middle",
             color=style.icon_color or self._tk("icon:milestone").get("color"),
@@ -1115,7 +1118,7 @@ class GanttRenderer(BaseSVGRenderer):
         self._draw_icon_svg(
             config.gantt_deadline_icon,
             axis.center_of(index),
-            row_y + (row_h + size) / 2,
+            self._icon_baseline(row_y + row_h / 2, size),
             size,
             anchor="middle",
             css_class="ec-event-icon",
@@ -1274,7 +1277,7 @@ class GanttRenderer(BaseSVGRenderer):
                 self._draw_icon_svg(
                     config.gantt_offchart_dep_icon,
                     tail_x,
-                    tail_y + DEFAULT_STUB,
+                    self._icon_baseline(tail_y, DEFAULT_STUB * 2),
                     DEFAULT_STUB * 2,
                     anchor="middle",
                     css_class="ec-event-icon",
@@ -1325,7 +1328,7 @@ class GanttRenderer(BaseSVGRenderer):
         self._draw_icon_svg(
             reference.icon,
             source.right + length + DEFAULT_STUB,
-            source.y + DEFAULT_STUB,
+            self._icon_baseline(source.y, DEFAULT_STUB * 2),
             DEFAULT_STUB * 2,
             anchor="middle",
             css_class="ec-event-icon",
@@ -1408,7 +1411,7 @@ class GanttRenderer(BaseSVGRenderer):
             self._draw_icon_svg(
                 icon,
                 first_x + position * step,
-                row_y + row_h / 2 + font_size / 3,
+                self._icon_baseline(row_y + row_h / 2, size),
                 size,
                 anchor="middle",
                 css_class="ec-event-icon",
