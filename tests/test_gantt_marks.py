@@ -117,6 +117,7 @@ def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None
     renderer._render_content(config, coords, events, db or _DummyDB())
     # Expected geometry is derived from the layout, never re-derived from
     # page size — margins are not zero.
+    renderer.config = config
     renderer.chart_x, _y, renderer.chart_w, _h = coords["GanttChartBody"]
     renderer.table_x = coords["GanttTableBody"][0]
     renderer.day_w = renderer.chart_w / 10
@@ -391,3 +392,68 @@ def test_a_today_date_on_a_hidden_day_snaps_to_the_next_column():
     )
     lines = renderer.of_class(renderer.lines, "ec-today-line")
     assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 5)
+
+
+# ── Icon centring ─────────────────────────────────────────────────────────
+#
+# _draw_icon_svg takes a text-style baseline and hangs the glyph from it, so
+# the glyph's middle sits 0.3 * size *above* the baseline it is given. Every
+# call site used to work that offset out for itself and most got it wrong,
+# leaving icons sitting low in their row — milestones by 0.2 * size.
+
+#: Where a glyph's middle lands for a given baseline (see _draw_icon_svg).
+def _glyph_mid(icon: dict) -> float:
+    return icon["y"] - icon["size"] * 0.30
+
+
+def _row_band(renderer, config, row_index: int) -> tuple[float, float]:
+    """(top, height) of one task row in the chart body."""
+    coords = GanttLayout().calculate(config)
+    _x, table_y, _w, _h = coords["GanttTableBody"]
+    row_h = max(float(config.gantt_row_height), 1.0)
+    return table_y + row_index * row_h, row_h
+
+
+def test_a_milestone_glyph_is_centred_in_its_row():
+    renderer = render([task(Milestone=1, Start="20260204", End="20260204")])
+    marks = renderer.of_class(renderer.icons, "ec-milestone-marker")
+    assert marks
+
+    top, row_h = _row_band(renderer, renderer.config, 0)
+    assert _glyph_mid(marks[0]) == pytest.approx(top + row_h / 2, abs=0.01)
+
+
+def test_a_deadline_glyph_is_centred_in_its_row():
+    renderer = render([task(Deadline="20260210")])
+    marks = [
+        i for i in renderer.of_class(renderer.icons, "ec-event-icon")
+        if i["icon"] == renderer.config.gantt_deadline_icon
+    ]
+    assert marks
+
+    top, row_h = _row_band(renderer, renderer.config, 0)
+    assert _glyph_mid(marks[0]) == pytest.approx(top + row_h / 2, abs=0.01)
+
+
+def test_continuation_icons_sit_on_the_bar_centreline():
+    """A bar clipped at the range edge marks it with an arrow icon."""
+    renderer = render([task(Start="20260101", End="20260213")])
+    marks = renderer.of_class(renderer.icons, "ec-continuation-icon")
+    assert marks
+
+    bars = renderer.of_class(renderer.rects, "ec-duration-bar")
+    assert bars
+    bar_mid = bars[0]["y"] + bars[0]["h"] / 2
+    for icon in marks:
+        assert _glyph_mid(icon) == pytest.approx(bar_mid, abs=0.01)
+
+
+def test_the_icon_baseline_helper_centres_the_glyph_box():
+    """The one place the 0.3 offset is written down."""
+    from renderers.svg_base import BaseSVGRenderer
+
+    for size in (6.0, 10.4, 18.0):
+        baseline = BaseSVGRenderer._icon_baseline(100.0, size)
+        top = baseline - size * 0.80
+        bottom = baseline + size * 0.20
+        assert (top + bottom) / 2 == pytest.approx(100.0)

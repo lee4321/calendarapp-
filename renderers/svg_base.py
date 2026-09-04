@@ -1186,6 +1186,19 @@ class BaseSVGRenderer(ABC):
         self._drawing.append(drawsvg.Raw(nested_svg))
         return True
 
+    @staticmethod
+    def _icon_baseline(center_y: float, size: float) -> float:
+        """Baseline that puts an icon's centre on ``center_y``.
+
+        :py:meth:`_draw_icon_svg` takes a text-style baseline and hangs the
+        glyph from it — top at ``baseline - 0.80 * size``, bottom at
+        ``baseline + 0.20 * size`` — so the glyph's middle sits 0.3 * size
+        *above* the baseline it is given.  Callers that want an icon centred
+        in a row or a bar have to add that back, and every one that worked it
+        out for itself got a slightly different answer.
+        """
+        return center_y + (size * 0.30)
+
     def _draw_icon_band_row(
         self,
         day_cells: "list[tuple[float, float, list[tuple[str, str | None]]]]",
@@ -1217,7 +1230,7 @@ class BaseSVGRenderer(ABC):
         #   icon top     = baseline_y - 0.8 * icon_h
         #   icon centre  = baseline_y - 0.3 * icon_h  =  row_y + row_h * 0.5
         #   → baseline_y = row_y + row_h * 0.5 + 0.3 * icon_h
-        icon_baseline_y = row_y + row_h * 0.5 + icon_h * 0.3
+        icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, icon_h)
         draw_fill = str(fill_color or "none").strip().lower()
         has_fill = draw_fill not in ("none", "transparent", "")
 
