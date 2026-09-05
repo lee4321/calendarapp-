@@ -1607,6 +1607,9 @@ class TimelineRenderer(BaseSVGRenderer):
         icon = getattr(config, "default_missing_icon", None)
         if not icon:
             return
+        configured = getattr(config, "default_missing_icon_size", None)
+        if configured and configured > 0:
+            size = float(configured)
         self._draw_icon_svg(
             str(icon),
             x,
@@ -1878,6 +1881,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 anchor="start",
                 color=dur_icon_color,
                 fallback_name=config.default_missing_icon,
+                fallback_size=config.default_missing_icon_size,
                 fallback_color=dur_icon_color,
                 transform=icon_transform,
                 css_class="ec-duration-icon",

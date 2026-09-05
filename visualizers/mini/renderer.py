@@ -574,6 +574,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 anchor="middle",
                 color=text_color,
                 fallback_name=config.default_missing_icon,
+                fallback_size=config.default_missing_icon_size,
                 fallback_color=text_color,
                 css_class="ec-event-icon",
             )

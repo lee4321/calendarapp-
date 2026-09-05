@@ -1649,3 +1649,19 @@ def test_a_callout_without_an_icon_still_lines_its_columns_up(tmp_path):
     date = _by_class(renderer, "ec-event-date")[0]
     assert name["x"] == pytest.approx(notes["x"])
     assert date["x"] < name["x"]
+
+
+def test_the_overflow_marker_takes_the_configured_missing_icon_size(tmp_path):
+    """The marker drawn where a duration bar ran out of room sizes with it."""
+    config, events = _overflow_setup(tmp_path, "ovf_size.svg")
+    renderer, bars = _lay_out(config, events)
+    deep = max(bars, key=lambda b: b.lane)
+    bar_y, bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    limit = bar_y - 1.0
+
+    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    assert renderer.icon_calls[-1]["size"] == pytest.approx(bar_h)
+
+    config.default_missing_icon_size = 21.0
+    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    assert renderer.icon_calls[-1]["size"] == pytest.approx(21.0)

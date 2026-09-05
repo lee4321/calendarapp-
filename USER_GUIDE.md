@@ -1391,6 +1391,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `(meta)` | `theme.description` | `` | `` | Theme description text |
 | `(meta)` | `theme.name` | `` | `` | Theme display name |
 | `default_missing_icon` | `base.default_missing_icon` | `str | None` | `None` | default missing icon |
+| `default_missing_icon_size` | `base.default_missing_icon_size` | `float | None` | `None` | drawn size of that stand-in glyph, in points; `None` keeps it the size of whatever it replaces |
 | `desired_font_size` | `base.font_size` | `float | None` | `None` | Base font size fallback |
 | `desired_font_size` | `base.size_rule` | `float | None` | `None` | Conditional font sizes by papersize |
 | `duration_icon_color` | `durations.icon_color` | `str` | `'navy'` | icon color |

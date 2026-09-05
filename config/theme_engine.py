@@ -58,6 +58,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "font_color"): "day_box_color",
     # Base / global
     ("base", "default_missing_icon"): "default_missing_icon",
+    ("base", "default_missing_icon_size"): "default_missing_icon_size",
     # Events (icon/placement only — text fields moved to weekly.name_text/notes_text)
     ("events", "icon_color"): "event_icon_color",
     ("events", "item_placement_order"): "item_placement_order",

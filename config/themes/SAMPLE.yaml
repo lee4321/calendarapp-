@@ -5,6 +5,9 @@ theme:
 base:
   font_family: FiraSans-Light
   default_missing_icon: applet-closed
+  # Drawn size of that stand-in, in points. Omit (or null) to keep it the
+  # size of whatever it replaces.
+  default_missing_icon_size: null
 layout:
   margin:
     top: 0.5in

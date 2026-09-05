@@ -1106,6 +1106,7 @@ class BaseSVGRenderer(ABC):
         color: str | None = None,
         fallback_name: str | None = None,
         fallback_color: str | None = None,
+        fallback_size: float | None = None,
         transform: str | None = None,
         css_class: str | None = None,
         box_token: str | None = None,
@@ -1116,7 +1117,10 @@ class BaseSVGRenderer(ABC):
         Draw an icon from the DB icon cache at text-like baseline coordinates.
 
         If icon_name is specified but not found in the cache and fallback_name is
-        provided, the fallback icon is drawn with fallback_color instead.
+        provided, the fallback icon is drawn with fallback_color instead — at
+        ``fallback_size`` when the theme sets one, otherwise at ``size``, so a
+        stand-in can be made deliberately larger or smaller than the glyph it
+        replaces.
 
         When ``box_token`` is set (e.g. ``"box:milestone"``), the matching
         ``apply_to:`` rules are resolved against ``box_ctx`` and painted as a
@@ -1136,6 +1140,8 @@ class BaseSVGRenderer(ABC):
         ):
             svg_markup = self._resolve_icon_svg(fallback_name)
             color = fallback_color
+            if fallback_size is not None and fallback_size > 0:
+                size = float(fallback_size)
         if not svg_markup or size <= 0 or self._drawing is None:
             return False
 

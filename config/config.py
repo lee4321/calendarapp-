@@ -1313,6 +1313,11 @@ class CalendarConfig:
 
     # Default icon shown when an event's icon name cannot be found in the icons table
     default_missing_icon: str | None = None
+    # Drawn size of that stand-in glyph, in points. None keeps it the size of
+    # whatever it replaces — the icon the caller asked for, or the mark the
+    # visualizer would have drawn — which is right when the substitute should
+    # sit in the same hole, and wrong when it should be conspicuous.
+    default_missing_icon_size: float | None = None
 
     # Watermark text
     watermark_text: str = ""
