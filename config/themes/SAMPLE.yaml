@@ -101,6 +101,20 @@ text_mini:
   nonworkday_symbols:
     - ·
 timeline:
+  # leading WBS segments that share one color; 0 = off
+  wbs_group_depth: 2
+  # government-holiday marks under the axis
+  show_holiday_icons: true
+  holiday_icon_size: 10.0
+  # null keeps each flag's own colors
+  holiday_icon_color: null
+  holiday_icon_y_offset: 4.0
+  # print each holiday's date under its icon
+  show_holiday_dates: true
+  # null follows timeline.date_format
+  holiday_date_format: null
+  holiday_date_font_size: null
+  holiday_date_color: null
   tick_label_format: M/D
   # Distance from the axis to the built-in month-tick date labels.
   # tick_label_gap is measured from the tick's tip so it moves with the

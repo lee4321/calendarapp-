@@ -3,6 +3,8 @@ theme:
   version: '3.0'
   description: Absolute minimum viable theme. See design §11.4.
 base:
+  # size of the stand-in glyph; null = the size of what it replaces
+  default_missing_icon_size: null
   font_family: Roboto-Regular
   default_missing_icon: applet-closed
 layout:
@@ -63,6 +65,31 @@ text_mini:
   nonworkday_symbols:
     - ·
 timeline:
+  leader:
+    # one curve per leader instead of one per row it crosses
+    direct: true
+    # straight perpendicular run at the axis dot
+    start_stub: 4.0
+    # and at the box
+    end_stub: 4.0
+  # leading WBS segments that share one color; 0 = off
+  wbs_group_depth: 2
+  # government-holiday marks under the axis
+  show_holiday_icons: true
+  holiday_icon_size: 10.0
+  # null keeps each flag's own colors
+  holiday_icon_color: null
+  holiday_icon_y_offset: 4.0
+  # print each holiday's date under its icon
+  show_holiday_dates: true
+  # null follows timeline.date_format
+  holiday_date_format: null
+  holiday_date_font_size: null
+  holiday_date_color: null
+  # axis-to-tick-date distance; null = 1.5 label heights
+  tick_label_gap: null
+  # the whole distance; wins over the gap
+  tick_label_offset_y: null
   tick_label_format: M/D
   today_date: ''
   today_label_text: Today
@@ -95,6 +122,11 @@ excelheader:
   top_bands: []
   vertical_lines: []
 gantt:
+  # dependency arrowhead; none to omit
+  arrow_marker_end: arrow-head
+  arrow_marker_end_size: 6.0
+  arrow_linecap: round
+  arrow_linejoin: round
   table_width_ratio: 0.38
   row_height: 14.0
   header_row_height: 18.0
