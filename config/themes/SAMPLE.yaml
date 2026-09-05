@@ -102,6 +102,12 @@ text_mini:
     - ·
 timeline:
   tick_label_format: M/D
+  # Distance from the axis to the built-in month-tick date labels.
+  # tick_label_gap is measured from the tick's tip so it moves with the
+  # tick; tick_label_offset_y is the whole distance and wins. Both null =
+  # 1.5 label heights past the tick. A `ticks:` band below sets its own.
+  tick_label_gap: null
+  tick_label_offset_y: null
   today_date: ''
   today_label_text: Today
   marker_radius: 4.2

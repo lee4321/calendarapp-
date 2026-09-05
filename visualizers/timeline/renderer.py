@@ -2719,6 +2719,7 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             offset = tb.get("label_offset_y")
             gap = tb.get("label_gap")
+            # (kept inline: this walks every band to find the deepest)
             if offset is not None:
                 lo = float(offset)
             elif gap is not None:
@@ -2877,14 +2878,12 @@ class TimelineRenderer(BaseSVGRenderer):
             or tk_event_date.get("font")
             or config.timeline_date_font
         )
-        label_offset = band.get("label_offset_y")
-        label_gap = band.get("label_gap")
-        if label_offset is not None:
-            label_offset_y = float(label_offset)
-        elif label_gap is not None:
-            label_offset_y = tick_h + float(label_gap)
-        else:
-            label_offset_y = tick_h + label_size * 1.5
+        label_offset_y = self._tick_label_offset(
+            tick_h,
+            label_size,
+            band.get("label_gap"),
+            band.get("label_offset_y"),
+        )
 
         last_idx = len(ticks) - 1
         for idx, (tick_date, tick_label) in enumerate(ticks):
@@ -3151,7 +3150,12 @@ class TimelineRenderer(BaseSVGRenderer):
             if draw_labels:
                 self._draw_text(
                     x,
-                    axis_y - (tick_h + label_size * 1.5),
+                    axis_y - self._tick_label_offset(
+                        tick_h,
+                        label_size,
+                        config.timeline_tick_label_gap,
+                        config.timeline_tick_label_offset_y,
+                    ),
                     format_arrow_date(m, config.timeline_tick_label_format),
                     self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
@@ -3334,6 +3338,28 @@ class TimelineRenderer(BaseSVGRenderer):
         return max(6.0, config.timeline_axis_width * 2.5)
 
     @staticmethod
+    def _tick_label_offset(
+        tick_h: float,
+        label_size: float,
+        gap: float | None,
+        offset: float | None,
+    ) -> float:
+        """Distance from the axis to a tick's date label, in points.
+
+        ``offset`` is that distance outright; ``gap`` is measured from the
+        tick's tip, so it moves with ``tick_length``.  With neither, the
+        label sits 1.5 label heights past the tick.  Shared by the built-in
+        month ticks and the ``timeline.ticks`` bands, which described the
+        same three rules separately until a theme key existed for the
+        built-in path.
+        """
+        if offset is not None:
+            return float(offset)
+        if gap is not None:
+            return tick_h + float(gap)
+        return tick_h + label_size * 1.5
+
+    @staticmethod
     def _axis_tick_label_size(config: "CalendarConfig") -> float:
         """Font size of the month tick labels."""
         return max(7.0, float(config.weekly_name_text_font_size or 10.0) * 0.8)
@@ -3363,13 +3389,15 @@ class TimelineRenderer(BaseSVGRenderer):
             return 0.0
 
         label_size = self._axis_tick_label_size(config)
-        # Baseline sits at tick_h + 1.5 label heights above the axis; glyphs
-        # rise about another 0.8 of the size above that baseline.
-        return (
-            self._axis_tick_height(config)
-            + label_size * 2.3
-            + _AXIS_LABEL_MARGIN
+        # Glyphs rise about 0.8 of the size above their own baseline, so the
+        # row has to clear the configured offset plus that.
+        baseline = self._tick_label_offset(
+            self._axis_tick_height(config),
+            label_size,
+            config.timeline_tick_label_gap,
+            config.timeline_tick_label_offset_y,
         )
+        return baseline + (label_size * 0.8) + _AXIS_LABEL_MARGIN
 
     def _callout_date_label(
         self, config: "CalendarConfig", item: "TimelineCallout"
