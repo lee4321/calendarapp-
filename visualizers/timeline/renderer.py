@@ -8,7 +8,7 @@ and duration bars aligned to start/end dates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Sequence
 
 from datetime import date
 
@@ -348,6 +348,12 @@ class TimelineRenderer(BaseSVGRenderer):
         self._populate_tokens(config)
         point_events, duration_events = self._split_events(config, event_objs)
         style_engine = StyleEngine(_timeline_style_rules(config))
+        # One color per WBS group for the whole chart, so a phase's events,
+        # milestones and bars match instead of each layout cycling its own
+        # palette independently.
+        group_colors = self._wbs_group_colors(
+            config, list(point_events) + list(duration_events)
+        )
 
         # Compute the axis geometry for the chosen orientation. axis_origin
         # is the (x, y) where the 1-D idealPos=0 maps in absolute SVG. For
@@ -424,6 +430,7 @@ class TimelineRenderer(BaseSVGRenderer):
             # A box that runs off the paper is a box the reader loses the
             # end of, so placement is bounded by the page, not the axis.
             label_bounds=label_bounds,
+            group_colors=group_colors,
             style_engine=style_engine,
         )
         if orient is Orientation.HORIZONTAL:
@@ -436,6 +443,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 axis_right,
                 axis_y,
                 style_engine,
+                group_colors=group_colors,
             )
         else:
             durations = self._layout_durations_vertical(
@@ -448,6 +456,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 axis_bottom=axis_end[1],
                 side=label_side,
                 style_engine=style_engine,
+                group_colors=group_colors,
             )
 
         # Pass 1: emit labella's curved bezier leader paths under everything
@@ -787,6 +796,7 @@ class TimelineRenderer(BaseSVGRenderer):
         side: Side,
         max_extent: float | None = None,
         label_bounds: tuple[float, float] | None = None,
+        group_colors: dict[str, str] | None = None,
         style_engine: StyleEngine | None = None,
     ) -> list[TimelineCallout]:
         """Place point-event callouts using the labella VPSC algorithm.
@@ -839,6 +849,9 @@ class TimelineRenderer(BaseSVGRenderer):
             ),
         )
 
+        group_colors = group_colors or {}
+        group_depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
+
         palette_primary = config.timeline_top_colors or [
             config.get_text_style("ec-event-name").color
             or config.timeline_name_text_font_color
@@ -853,7 +866,12 @@ class TimelineRenderer(BaseSVGRenderer):
             base_palette = (
                 palette_secondary if side is Side.SECONDARY else palette_primary
             )
-            color = base_palette[idx % len(base_palette)]
+            group = wbs_group(event.wbs, group_depth) if group_colors else None
+            color = (
+                group_colors[group]
+                if group is not None and group in group_colors
+                else base_palette[idx % len(base_palette)]
+            )
             sr = style_engine.evaluate_event(event) if style_engine else None
             if sr is not None and sr.fill_color:
                 color = sr.fill_color
@@ -885,12 +903,17 @@ class TimelineRenderer(BaseSVGRenderer):
             label_bounds=label_bounds,
         )
 
-        # For Side.BOTH the secondary-side events get the secondary palette.
-        # Walk placements and reassign color for the secondary side.
+        # For Side.BOTH the secondary-side events get the secondary palette
+        # — unless a WBS group already decided the color, which has to hold
+        # on both sides of the axis or the group stops being one color.
         out: list[TimelineCallout] = []
         for p in placements:
             color, sr, source_idx = per_event[id(p.event)]
-            if p.side is Side.SECONDARY and config.timeline_bottom_colors:
+            if (
+                not group_colors
+                and p.side is Side.SECONDARY
+                and config.timeline_bottom_colors
+            ):
                 color = config.timeline_bottom_colors[
                     source_idx % len(config.timeline_bottom_colors)
                 ]
@@ -917,12 +940,61 @@ class TimelineRenderer(BaseSVGRenderer):
         return out
 
     @staticmethod
+    def _wbs_group_colors(
+        config: "CalendarConfig", events: "Sequence[Event]"
+    ) -> dict[str, str]:
+        """One color per WBS group, shared by every item drawn on the chart.
+
+        Events, milestones and duration bars are laid out separately but
+        belong to one schedule, so a phase reads as a phase only if its
+        colour is the same above and below the axis.  The map is therefore
+        built once over all of them, in date order, so a group takes the
+        palette entry its earliest item would have taken.
+
+        ``timeline_top_colors`` is the palette: with one colour per group
+        there is only one palette to draw from, so a theme's
+        ``bottom_colors`` no longer separates durations from callouts while
+        grouping is on.
+
+        Returns ``{}`` when grouping is off, which leaves each layout to its
+        own per-item palette cycling.
+        """
+        depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
+        if depth <= 0:
+            return {}
+
+        _notes_style = config.get_text_style("ec-event-notes")
+        palette = (
+            config.timeline_top_colors
+            or config.timeline_bottom_colors
+            or [_notes_style.color or config.timeline_notes_text_font_color]
+        )
+
+        ordered = sorted(
+            events,
+            key=lambda e: (
+                e.start,
+                e.end,
+                e.priority,
+                e.task_name.lower() if e.task_name else "",
+            ),
+        )
+        colors: dict[str, str] = {}
+        for event in ordered:
+            group = wbs_group(event.wbs, depth)
+            if group not in colors:
+                colors[group] = palette[len(colors) % len(palette)]
+        return colors
+
+    @staticmethod
     def _order_durations(
-        config: "CalendarConfig", events: list[Event]
+        config: "CalendarConfig",
+        events: list[Event],
+        group_colors: dict[str, str] | None = None,
     ) -> tuple[list[Event], dict[int, str]]:
         """Order duration events and decide what color each one gets.
 
-        Bars are grouped by the first ``timeline_duration_wbs_group_depth``
+        Bars are grouped by the first ``timeline_wbs_group_depth``
         segments of their WBS, so ``NP.3.S1.4`` and ``NP.3.S2.1`` both land
         in ``NP.3``.  A group's bars sort together and take one color from
         the palette, which is what lets a phase read as a band without a
@@ -933,8 +1005,18 @@ class TimelineRenderer(BaseSVGRenderer):
         Depth 0 turns grouping off: bars run in date order and the palette
         cycles per bar, as it did before grouping existed.
 
+        ``group_colors`` is the chart-wide map from
+        :py:meth:`_wbs_group_colors`, so a bar takes the same colour as the
+        milestones and events in its phase.
+
         Returns ``(ordered_events, {id(event): color})``.
         """
+        # A caller that lays bars out on their own — a test, or any future
+        # path that skips _render_content — still gets grouped colors; the
+        # map is only passed in so events and bars agree chart-wide.
+        if not group_colors:
+            group_colors = TimelineRenderer._wbs_group_colors(config, events)
+
         def date_key(event: Event) -> tuple:
             return (
                 event.start,
@@ -943,7 +1025,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 event.task_name.lower() if event.task_name else "",
             )
 
-        depth = int(getattr(config, "timeline_duration_wbs_group_depth", 0) or 0)
+        depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
 
         if depth > 0:
             groups = {id(e): wbs_group(e.wbs, depth) for e in events}
@@ -960,22 +1042,15 @@ class TimelineRenderer(BaseSVGRenderer):
             groups = {id(e): "" for e in events}
             ordered = sorted(events, key=date_key)
 
-        _notes_style = config.get_text_style("ec-event-notes")
-        palette = config.timeline_bottom_colors or [
-            _notes_style.color or config.timeline_notes_text_font_color
-        ]
-
         colors: dict[int, str] = {}
         if depth > 0:
-            # Palette entries are handed out in draw order, so adjacent
-            # bands never land on the same color.
-            per_group: dict[str, str] = {}
             for event in ordered:
-                group = groups[id(event)]
-                if group not in per_group:
-                    per_group[group] = palette[len(per_group) % len(palette)]
-                colors[id(event)] = per_group[group]
+                colors[id(event)] = group_colors.get(groups[id(event)], "")
         else:
+            _notes_style = config.get_text_style("ec-event-notes")
+            palette = config.timeline_bottom_colors or [
+                _notes_style.color or config.timeline_notes_text_font_color
+            ]
             for index, event in enumerate(ordered):
                 colors[id(event)] = palette[index % len(palette)]
 
@@ -991,6 +1066,7 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_right: float,
         axis_y: float,
         style_engine: StyleEngine | None = None,
+        group_colors: dict[str, str] | None = None,
     ) -> list[TimelineDuration]:
         """Lay out duration bars in lanes below a horizontal axis.
 
@@ -1004,7 +1080,9 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered, duration_colors = self._order_durations(config, events)
+        ordered, duration_colors = self._order_durations(
+            config, events, group_colors
+        )
 
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_width * 0.01)
@@ -1117,6 +1195,7 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_bottom: float,
         side: Side = Side.SECONDARY,
         style_engine: StyleEngine | None = None,
+        group_colors: dict[str, str] | None = None,
     ) -> list[TimelineDuration]:
         """Place vertical-orientation duration bars alongside the axis.
 
@@ -1135,7 +1214,9 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered, duration_colors = self._order_durations(config, events)
+        ordered, duration_colors = self._order_durations(
+            config, events, group_colors
+        )
 
         if side is Side.BOTH:
             # Chronological alternation mirrors how callouts split for
@@ -1147,11 +1228,13 @@ class TimelineRenderer(BaseSVGRenderer):
                     config, primary_events, start, end,
                     axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
                     side=Side.PRIMARY, style_engine=style_engine,
+                    group_colors=group_colors,
                 )
                 + self._layout_durations_vertical(
                     config, secondary_events, start, end,
                     axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
                     side=Side.SECONDARY, style_engine=style_engine,
+                    group_colors=group_colors,
                 )
             )
 

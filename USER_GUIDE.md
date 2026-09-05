@@ -1598,7 +1598,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
 | `timeline_duration_date_font_size` | `timeline_durations.date_font_size` | `float | None` | `None` | date font size |
 | `timeline_duration_lane_gap_y` | `timeline.duration_lane_gap_y` | `float` | `8.0` | duration lane gap y |
-| `timeline_duration_wbs_group_depth` | `timeline_durations.wbs_group_depth` | `int` | `2` | leading WBS segments that group duration bars: bars in a group sort together and share one palette color. `0` disables grouping (date order, palette cycles per bar) |
+| `timeline_wbs_group_depth` | `timeline.wbs_group_depth` | `int` | `2` | leading WBS segments that group chart items: every event, milestone and duration bar in a group takes one color from `timeline.top_colors`, and bars in a group sort together. `0` disables grouping, leaving each layout to cycle its own palette per item. Also accepted at its original key, `timeline_durations.wbs_group_depth` |
 | `timeline_duration_name_font_size` | `timeline_durations.name_font_size` | `float | None` | `None` | name font size |
 | `timeline_duration_notes_font_size` | `timeline_durations.notes_font_size` | `float | None` | `None` | notes font size |
 | `timeline_duration_offset_y` | `timeline.duration_offset_y` | `float` | `44.0` | duration offset y |
