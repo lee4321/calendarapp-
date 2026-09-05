@@ -449,25 +449,86 @@ def _stack_depth(placements) -> float:
     return max(abs(p.y_label - p.axis_origin[1]) for p in placements)
 
 
-def test_the_row_search_stops_at_the_room_available(config):
-    """A stack that would run off the page is not worth the rows."""
-    kwargs = dict(
-        axis_origin=(0.0, 400.0),
-        axis_length=1766.0,
-        orientation=Orientation.HORIZONTAL,
-        side=Side.PRIMARY,
-        config=config,
-        pos_for_day=_pos_for_day_factory("20260401", "20260731", 1766.0),
+def test_the_row_search_stops_at_the_room_available(monkeypatch):
+    """Rows are spent while the page has room for them, and no further.
+
+    Driven through `_layout_one_side` directly: with boxes centred on their
+    solved position the drawn spans finally agree with the solver's own
+    model, so real input rarely overlaps at all any more and the retry loop
+    this guards is hard to reach from the outside.
+    """
+    from shared import labella_layout as LL
+
+    def placement(x: float, y: float) -> LL.CalloutPlacement:
+        return LL.CalloutPlacement(
+            event=_ev("E", "20260601"),
+            x_dot=x, y_dot=400.0,
+            x_label=x, y_label=y,
+            label_w=100.0, label_h=10.0,
+            layer=0, leader_path_d="M 0 0",
+            axis_origin=(0.0, 400.0),
+            side=Side.PRIMARY, orientation=Orientation.HORIZONTAL,
+        )
+
+    depths = []
+
+    def fake_run(events, **kwargs):
+        # Every attempt is deeper than the last and never resolves the
+        # overlap — the case the cap exists for.
+        depth = 40.0 * (len(depths) + 1)
+        depths.append(depth)
+        return [placement(0.0, 400.0 - depth), placement(50.0, 400.0 - depth)]
+
+    monkeypatch.setattr(LL, "_run_labella", fake_run)
+
+    result = LL._layout_one_side(
+        [_ev("A", "20260601"), _ev("B", "20260601")],
+        axis_origin=(0.0, 400.0), axis_length=500.0,
+        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        pos_for_day=lambda d: 0.0,
+        node_width=lambda ev: 100.0, node_height=lambda evs: 10.0,
+        density=0.75, layer_gap=8.0,
+        max_extent=100.0, on_side_events=None,
     )
-    events = _same_day_events()
 
-    uncapped = layout_callouts(events, **kwargs)
-    capped = layout_callouts(events, max_extent=100.0, **kwargs)
+    # It stopped at the first attempt that would have exceeded the room...
+    assert depths == [40.0, 80.0, 120.0]
+    # ...and kept the shallowest layout it had, not the one that overflowed.
+    assert LL._stack_extent(result) == pytest.approx(40.0)
 
-    assert _stack_depth(capped) <= 100.0
-    assert _stack_depth(capped) < _stack_depth(uncapped)
-    # Nothing is dropped to achieve it.
-    assert len(capped) == len(events)
+
+def test_the_row_search_is_unbounded_without_a_limit(monkeypatch):
+    """No max_extent means the old behaviour: relax until clean or spent."""
+    from shared import labella_layout as LL
+
+    calls = []
+
+    def fake_run(events, **kwargs):
+        calls.append(kwargs["density"])
+        y = 400.0 - 40.0 * len(calls)
+        overlapping = len(calls) < 4
+        second_x = 50.0 if overlapping else 400.0
+        return [
+            LL.CalloutPlacement(
+                event=_ev("E", "20260601"), x_dot=x, y_dot=400.0,
+                x_label=x, y_label=y, label_w=100.0, label_h=10.0,
+                layer=0, leader_path_d="M 0 0", axis_origin=(0.0, 400.0),
+                side=Side.PRIMARY, orientation=Orientation.HORIZONTAL,
+            )
+            for x in (0.0, second_x)
+        ]
+
+    monkeypatch.setattr(LL, "_run_labella", fake_run)
+    result = LL._layout_one_side(
+        [_ev("A", "20260601"), _ev("B", "20260601")],
+        axis_origin=(0.0, 400.0), axis_length=500.0,
+        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        pos_for_day=lambda d: 0.0,
+        node_width=lambda ev: 100.0, node_height=lambda evs: 10.0,
+        density=0.75, layer_gap=8.0, on_side_events=None,
+    )
+    assert len(calls) == 4              # kept going until the overlap cleared
+    assert LL._row_overlap_count(result) == 0
 
 
 def test_a_generous_bound_still_reaches_a_clean_layout(config):
@@ -562,7 +623,7 @@ def _late_events():
 
 
 def test_no_callout_box_is_placed_past_the_bounds(config):
-    bounds = (0.0, 500.0)
+    bounds = (0.0, 400.0)
     placements = layout_callouts(
         _late_events(),
         axis_origin=(0.0, 400.0),
@@ -590,12 +651,12 @@ def test_without_bounds_a_late_box_still_overhangs(config):
         config=config,
         pos_for_day=_pos_for_day_factory("20260401", "20260731", 480.0),
     )
-    assert max(right for _left, right in _box_spans(placements)) > 500.0
+    assert max(right for _left, right in _box_spans(placements)) > 400.0
 
 
 def test_a_clamped_label_keeps_its_leader_attached(config):
     """Clamping currentPos, not the placement, moves the leader with it."""
-    bounds = (0.0, 500.0)
+    bounds = (0.0, 400.0)
     placements = layout_callouts(
         _late_events(),
         axis_origin=(0.0, 400.0),
@@ -609,8 +670,10 @@ def test_a_clamped_label_keeps_its_leader_attached(config):
     for p in placements:
         tokens = p.leader_path_d.split()
         numbers = [float(t) for t in tokens if not t.isalpha()]
-        # The path's last point is where the leader meets its label.
-        assert numbers[-2] == pytest.approx(p.x_label - p.axis_origin[0], abs=0.51)
+        # The path's last point is where the leader meets its label — the
+        # middle of the box, since boxes are centred on their solved spot.
+        centre = p.x_label + p.label_w / 2.0 - p.axis_origin[0]
+        assert numbers[-2] == pytest.approx(centre, abs=0.51)
 
 
 def test_bounds_are_honoured_on_a_vertical_axis(config):
@@ -807,8 +870,9 @@ def test_a_direct_leader_ends_on_its_own_label(config):
     for p in _deep_stack(config):
         tokens = p.leader_path_d.strip().split()
         end_x = float(tokens[-2])
-        # The leader meets the box at the same x the box is drawn from.
-        assert end_x == pytest.approx(p.x_label - p.axis_origin[0], abs=0.51)
+        # The leader meets the middle of the box it belongs to.
+        centre = p.x_label + p.label_w / 2.0 - p.axis_origin[0]
+        assert end_x == pytest.approx(centre, abs=0.51)
 
 
 def test_direct_routing_is_used_for_a_vertical_axis_too(config):
@@ -823,3 +887,84 @@ def test_direct_routing_is_used_for_a_vertical_axis_too(config):
         pos_for_day=_pos_for_day_factory("20260701", "20260731", 600.0),
     )
     assert {_segment_count(p.leader_path_d) for p in placements} == {3}
+
+
+# ── Box anchoring ─────────────────────────────────────────────────────────
+#
+# labella solves a position per label and its own model treats that as the
+# label's centre — Node.distanceFrom compares currentPos +/- width/2. The
+# box used to be drawn *from* that position as its leading edge, so every
+# box sat half a width right of the date it belongs to and its leader
+# arrived at the bottom-left corner.
+
+
+def test_a_box_is_centred_on_the_position_solved_for_it(config):
+    placements = layout_callouts(
+        [_ev("Alpha", "20260405"), _ev("Beta", "20260620")],
+        axis_origin=(0.0, 400.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 670.0),
+    )
+    assert placements
+    for p in placements:
+        # The leader ends on the solved position, so the box's middle — not
+        # its left edge — is what sits there.
+        end_x = float(p.leader_path_d.strip().split()[-2]) + p.axis_origin[0]
+        assert p.x_label + p.label_w / 2 == pytest.approx(end_x, abs=0.51)
+
+
+def test_a_sparse_box_lands_on_its_own_date(config):
+    """With room to place it, a box is centred over its axis dot."""
+    placements = layout_callouts(
+        [_ev("Only", "20260601")],
+        axis_origin=(0.0, 400.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 670.0),
+    )
+    p = placements[0]
+    assert p.x_label + p.label_w / 2 == pytest.approx(p.x_dot, abs=1.0)
+
+
+def test_centring_is_opt_in(config):
+    """PIT re-anchors in its own post-pass, so the default stays 'start'."""
+    from shared.labella_layout import layout_callouts as shared_layout
+
+    common = dict(
+        axis_origin=(0.0, 400.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 670.0),
+        node_width=lambda ev: 120.0,
+        node_height=lambda evs: 24.0,
+        density=0.75,
+        layer_gap=8.0,
+    )
+    events = [_ev("Only", "20260601")]
+    default = shared_layout(events, **common)[0]
+    centred = shared_layout(events, label_anchor="center", **common)[0]
+    assert centred.x_label == pytest.approx(default.x_label - 60.0)
+
+
+def test_the_page_clamp_follows_the_anchor(config):
+    """A centred box is clamped by its own edges, not its solved point."""
+    bounds = (0.0, 400.0)
+    placements = layout_callouts(
+        _late_events(),
+        axis_origin=(0.0, 400.0),
+        axis_length=480.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260401", "20260731", 480.0),
+        label_bounds=bounds,
+    )
+    for p in placements:
+        assert p.x_label >= bounds[0] - 0.01
+        assert p.x_label + p.label_w <= bounds[1] + 0.01
