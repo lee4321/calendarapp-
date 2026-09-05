@@ -567,6 +567,14 @@ class CalendarConfig:
     timeline_tick_color: str = "grey"
     timeline_date_format: str = "MMM D"
     timeline_tick_label_format: str = "MMM D"
+    # Distance from a tick mark's tip to its date label, in points. None
+    # falls back to 1.5 label heights. Mirrors a tick band's ``label_gap``;
+    # without it the built-in month ticks could only be moved by changing
+    # timeline.axis_width, which resizes the tick marks as well.
+    timeline_tick_label_gap: float | None = None
+    # The whole distance from the axis to the label, tick length included.
+    # Wins over the gap when both are set, like a band's label_offset_y.
+    timeline_tick_label_offset_y: float | None = None
     timeline_today_date: str = ""
     timeline_today_label_text: str = "Today"
     timeline_today_label_offset_y: float = 10.0

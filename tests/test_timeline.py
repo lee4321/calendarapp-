@@ -1790,3 +1790,69 @@ def test_the_group_palette_comes_from_the_top_colors(tmp_path):
 
     colors = renderer._wbs_group_colors(config, _mixed_wbs_events())
     assert set(colors.values()) == {"red", "green"}
+
+
+# ── Tick-label distance ───────────────────────────────────────────────────
+#
+# A `timeline.ticks` band could always place its labels with `label_gap` /
+# `label_offset_y`. The built-in month ticks hard-coded the distance, so on a
+# theme without a ticks band the only lever was `timeline.axis_width`, which
+# resizes the tick marks too.
+
+
+def test_the_tick_label_distance_defaults_to_the_old_formula(tmp_path):
+    config = _base_config(tmp_path / "tick_default.svg")
+    renderer = TimelineRenderer()
+    tick_h = renderer._axis_tick_height(config)
+    label_size = renderer._axis_tick_label_size(config)
+
+    assert renderer._tick_label_offset(tick_h, label_size, None, None) == (
+        pytest.approx(tick_h + label_size * 1.5)
+    )
+
+
+def test_a_gap_is_measured_from_the_tick_tip(tmp_path):
+    """So it moves with tick_length rather than overlapping a long tick."""
+    renderer = TimelineRenderer()
+    assert renderer._tick_label_offset(8.0, 7.0, 20.0, None) == pytest.approx(28.0)
+    assert renderer._tick_label_offset(2.0, 7.0, 20.0, None) == pytest.approx(22.0)
+
+
+def test_an_offset_is_the_whole_distance_and_wins(tmp_path):
+    renderer = TimelineRenderer()
+    assert renderer._tick_label_offset(8.0, 7.0, 20.0, 40.0) == pytest.approx(40.0)
+    assert renderer._tick_label_offset(8.0, 7.0, None, 40.0) == pytest.approx(40.0)
+
+
+def test_the_built_in_ticks_read_the_theme_keys(tmp_path):
+    config = _base_config(tmp_path / "tick_keys.svg")
+    config.timeline_tick_label_gap = 20.0
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    renderer._draw_month_ticks(
+        config,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+        60.0, 700.0, 300.0,
+    )
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert labels
+    tick_h = renderer._axis_tick_height(config)
+    assert labels[0]["y"] == pytest.approx(300.0 - (tick_h + 20.0))
+
+
+def test_the_callout_clearance_follows_the_configured_gap(tmp_path):
+    """A wider gap must push the innermost row of boxes out with it."""
+    config = _base_config(tmp_path / "tick_clear.svg")
+    renderer = TimelineRenderer()
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260430", "YYYYMMDD")
+
+    narrow = renderer._axis_label_clearance(config, start, end)
+    config.timeline_tick_label_gap = 40.0
+    wide = renderer._axis_label_clearance(config, start, end)
+    assert wide > narrow
+    assert wide - narrow == pytest.approx(
+        40.0 - renderer._axis_tick_label_size(config) * 1.5
+    )

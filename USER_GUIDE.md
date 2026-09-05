@@ -1631,6 +1631,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_show_holiday_icons` | `timeline.show_holiday_icons` | `bool` | `True` | draw the government-holiday icon row below the axis |
 | `timeline_tick_color` | `timeline.tick_color` | `str` | `'grey'` | tick color |
 | `timeline_tick_label_format` | `timeline.tick_label_format` | `str` | `'MMM D'` | tick label format |
+| `timeline_tick_label_gap` | `timeline.tick_label_gap` | `float | None` | `None` | clear space between a tick mark's tip and its date label, so it moves with the tick length. `None` = 1.5 label heights. Ignored where a `timeline.ticks` band sets its own `label_gap` |
+| `timeline_tick_label_offset_y` | `timeline.tick_label_offset_y` | `float | None` | `None` | the whole distance from the axis to the label, tick length included; wins over `tick_label_gap` |
 | `timeline_tick_stroke_dasharray` | `timeline.tick_stroke_dasharray` | `str | None` | `None` | tick stroke dasharray |
 | `timeline_title_color` | `timeline.title.font_color` | `str` | `'deepskyblue'` | font color |
 | `timeline_title_font` | `timeline.title.font_family` | `str` | `Fonts.R_BOLD` | font family |

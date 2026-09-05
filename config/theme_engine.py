@@ -87,6 +87,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "tick_color"): "timeline_tick_color",
     ("timeline", "date_format"): "timeline_date_format",
     ("timeline", "tick_label_format"): "timeline_tick_label_format",
+    ("timeline", "tick_label_gap"): "timeline_tick_label_gap",
+    ("timeline", "tick_label_offset_y"): "timeline_tick_label_offset_y",
     ("timeline", "today_date"): "timeline_today_date",
     ("timeline", "today_label_text"): "timeline_today_label_text",
     ("timeline", "today_label_offset_y"): "timeline_today_label_offset_y",
