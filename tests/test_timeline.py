@@ -1166,7 +1166,7 @@ def _phase_events():
 
 def test_bars_sharing_a_wbs_group_share_a_color(tmp_path):
     config = _base_config(tmp_path / "wbs_color.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     bars = _grouped_bars(config, _phase_events())
 
     by_group: dict[str, set[str]] = {}
@@ -1179,7 +1179,7 @@ def test_bars_sharing_a_wbs_group_share_a_color(tmp_path):
 
 def test_different_wbs_groups_get_different_colors(tmp_path):
     config = _base_config(tmp_path / "wbs_distinct.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     config.timeline_bottom_colors = ["red", "green", "blue", "gold"]
     bars = _grouped_bars(config, _phase_events())
 
@@ -1190,7 +1190,7 @@ def test_different_wbs_groups_get_different_colors(tmp_path):
 
 def test_bars_are_ordered_so_each_group_is_contiguous(tmp_path):
     config = _base_config(tmp_path / "wbs_order.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     bars = _grouped_bars(config, _phase_events())
 
     groups = [wbs_group(b.event.wbs, 2) for b in bars]
@@ -1203,7 +1203,7 @@ def test_bars_are_ordered_so_each_group_is_contiguous(tmp_path):
 def test_deeper_codes_fold_into_their_group(tmp_path):
     """NP.2.S4.7 belongs with NP.2.1 at depth 2, not in a group of its own."""
     config = _base_config(tmp_path / "wbs_fold.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     bars = _grouped_bars(config, _phase_events())
 
     colors = {
@@ -1217,7 +1217,7 @@ def test_deeper_codes_fold_into_their_group(tmp_path):
 
 def test_bars_without_a_wbs_form_a_block_after_the_numbered_ones(tmp_path):
     config = _base_config(tmp_path / "wbs_none.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     events = _phase_events() + [
         _dur("Loose 1", "20260210", "20260214"),
         _dur("Loose 2", "20260220", "20260224"),
@@ -1233,7 +1233,7 @@ def test_bars_without_a_wbs_form_a_block_after_the_numbered_ones(tmp_path):
 
 def test_group_depth_zero_restores_date_order_and_per_bar_colors(tmp_path):
     config = _base_config(tmp_path / "wbs_off.svg")
-    config.timeline_duration_wbs_group_depth = 0
+    config.timeline_wbs_group_depth = 0
     config.timeline_bottom_colors = ["red", "green", "blue", "gold"]
     bars = _grouped_bars(config, _phase_events())
 
@@ -1245,7 +1245,7 @@ def test_group_depth_zero_restores_date_order_and_per_bar_colors(tmp_path):
 
 def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
     config = _base_config(tmp_path / "wbs_vertical.svg")
-    config.timeline_duration_wbs_group_depth = 2
+    config.timeline_wbs_group_depth = 2
     config.timeline_orientation = "vertical"
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
@@ -1665,3 +1665,128 @@ def test_the_overflow_marker_takes_the_configured_missing_icon_size(tmp_path):
     config.default_missing_icon_size = 21.0
     renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
     assert renderer.icon_calls[-1]["size"] == pytest.approx(21.0)
+
+
+# ── One color per WBS group, chart-wide ───────────────────────────────────
+#
+# Callouts and duration bars are laid out separately and each used to cycle
+# its own palette, so a phase's milestone and its bars were unrelated colors.
+# The map is now built once over every item type.
+
+
+def _mixed_wbs_events():
+    """One point event, one milestone and one bar in each of two groups."""
+    return [
+        Event(task_name="A plan", start="20260202", end="20260220", wbs="1.1"),
+        Event(task_name="A gate", start="20260223", end="20260223", wbs="1.2",
+              milestone=True),
+        Event(task_name="A note", start="20260225", end="20260225", wbs="1.3"),
+        Event(task_name="B build", start="20260302", end="20260320", wbs="2.1"),
+        Event(task_name="B gate", start="20260323", end="20260323", wbs="2.2",
+              milestone=True),
+        Event(task_name="B note", start="20260325", end="20260325", wbs="2.3"),
+    ]
+
+
+def test_every_item_type_in_a_group_takes_one_color(tmp_path):
+    config = _base_config(tmp_path / "wbs_all.svg")
+    config.timeline_wbs_group_depth = 1
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    events = _mixed_wbs_events()
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260630", "YYYYMMDD")
+
+    group_colors = renderer._wbs_group_colors(config, events)
+    points, durations = renderer._split_events(config, events)
+    assert points and durations, "the fixture should have both kinds"
+
+    callouts = renderer._layout_callouts(
+        config, points, start, end,
+        axis_origin=(60.0, 300.0), axis_length=670.0,
+        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        group_colors=group_colors,
+    )
+    bars = renderer._layout_durations(
+        config, durations, start, end, 60.0, 730.0, 300.0,
+        group_colors=group_colors,
+    )
+
+    by_group: dict[str, set[str]] = {}
+    for item in list(callouts) + list(bars):
+        by_group.setdefault(wbs_group(item.event.wbs, 1), set()).add(item.color)
+    assert set(by_group) == {"1", "2"}
+    for group, colors in by_group.items():
+        assert len(colors) == 1, f"group {group} drew in {sorted(colors)}"
+    # ...and the two groups are told apart.
+    assert len({next(iter(c)) for c in by_group.values()}) == 2
+
+
+def test_a_milestone_matches_the_bars_in_its_phase(tmp_path):
+    config = _base_config(tmp_path / "wbs_ms.svg")
+    config.timeline_wbs_group_depth = 1
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    events = _mixed_wbs_events()
+    group_colors = renderer._wbs_group_colors(config, events)
+    points, durations = renderer._split_events(config, events)
+
+    callouts = renderer._layout_callouts(
+        config, points,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        axis_origin=(60.0, 300.0), axis_length=670.0,
+        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        group_colors=group_colors,
+    )
+    bars = renderer._layout_durations(
+        config, durations,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        60.0, 730.0, 300.0, group_colors=group_colors,
+    )
+    milestone = next(c for c in callouts if c.event.task_name == "A gate")
+    bar = next(b for b in bars if b.event.task_name == "A plan")
+    assert milestone.color == bar.color
+
+
+def test_the_secondary_palette_does_not_break_a_group_color(tmp_path):
+    """Side.BOTH used to recolor the far side; a group has to survive that."""
+    config = _base_config(tmp_path / "wbs_both.svg")
+    config.timeline_wbs_group_depth = 1
+    config.timeline_bottom_colors = ["magenta", "cyan"]
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    events = [e for e in _mixed_wbs_events() if e.start == e.end]
+
+    group_colors = renderer._wbs_group_colors(config, events)
+    callouts = renderer._layout_callouts(
+        config, events,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        axis_origin=(60.0, 300.0), axis_length=670.0,
+        orientation=Orientation.HORIZONTAL, side=Side.BOTH,
+        group_colors=group_colors,
+    )
+    by_group: dict[str, set[str]] = {}
+    for c in callouts:
+        by_group.setdefault(wbs_group(c.event.wbs, 1), set()).add(c.color)
+    for colors in by_group.values():
+        assert len(colors) == 1
+    assert not ({"magenta", "cyan"} & {c.color for c in callouts})
+
+
+def test_grouping_off_leaves_each_layout_its_own_palette(tmp_path):
+    config = _base_config(tmp_path / "wbs_off_all.svg")
+    config.timeline_wbs_group_depth = 0
+    renderer = _CaptureOverflowRenderer()
+    assert renderer._wbs_group_colors(config, _mixed_wbs_events()) == {}
+
+
+def test_the_group_palette_comes_from_the_top_colors(tmp_path):
+    """One color per group means one palette; top_colors is it."""
+    config = _base_config(tmp_path / "wbs_palette.svg")
+    config.timeline_wbs_group_depth = 1
+    config.timeline_top_colors = ["red", "green"]
+    config.timeline_bottom_colors = ["magenta", "cyan"]
+    renderer = _CaptureOverflowRenderer()
+
+    colors = renderer._wbs_group_colors(config, _mixed_wbs_events())
+    assert set(colors.values()) == {"red", "green"}

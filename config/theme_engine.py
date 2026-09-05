@@ -146,7 +146,9 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline_events", "box_height"): "timeline_event_box_height",
     ("timeline_durations", "box_width"): "timeline_duration_box_width",
     ("timeline_durations", "box_height"): "timeline_duration_box_height",
-    ("timeline_durations", "wbs_group_depth"): "timeline_duration_wbs_group_depth",
+    ("timeline", "wbs_group_depth"): "timeline_wbs_group_depth",
+    # Accepted where it first shipped, when grouping only reached the bars.
+    ("timeline_durations", "wbs_group_depth"): "timeline_wbs_group_depth",
     ("timeline_durations", "date_font"): "timeline_duration_date_font",
     ("timeline_durations", "date_font_size"): "timeline_duration_date_font_size",
     ("timeline_durations", "date_color"): "timeline_duration_date_color",

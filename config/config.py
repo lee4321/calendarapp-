@@ -600,11 +600,11 @@ class CalendarConfig:
     timeline_event_box_height: float | None = None
     timeline_duration_box_width: float | None = None
     timeline_duration_box_height: float | None = None
-    # How many leading WBS segments group duration bars: 2 makes NP.3.S1.4
-    # and NP.3.S2.1 both "NP.3", so a phase's bars sort together and share a
-    # color. 0 disables grouping — bars run in date order with the palette
-    # cycling per bar, as they did before.
-    timeline_duration_wbs_group_depth: int = 2
+    # How many leading WBS segments group chart items: 2 makes NP.3.S1.4 and
+    # NP.3.S2.1 both "NP.3", so a phase's events, milestones and duration
+    # bars share one color and its bars sort together. 0 disables grouping —
+    # each layout cycles its own palette per item, as before.
+    timeline_wbs_group_depth: int = 2
     timeline_duration_date_font: str | None = None
     timeline_duration_date_font_size: float | None = None
     timeline_duration_date_color: str | None = None
