@@ -40,6 +40,7 @@ from shared.orientation import (
     opposite,
 )
 from vendor.labella import Force, Node, Renderer
+from vendor.labella.renderer import hCurveBetween, moveTo, vCurveBetween
 
 #: Overlap smaller than this is rounding, not a collision.
 _OVERLAP_TOLERANCE = 0.01
@@ -267,6 +268,43 @@ _PERPENDICULAR: dict[str, tuple[int, float]] = {
 }
 
 
+def _leader_path(
+    renderer: Renderer, node: Node, direction: str, direct: bool
+) -> str:
+    """The leader for one node, routed directly or through its ancestors.
+
+    labella threads a leader through the solved position of every ancestor
+    stub, emitting a curve-and-line pair per layer, so a label eight rows up
+    arrives with fifteen segments.  Worse than the count, those chains all
+    run through the same congested channel and cross the boxes between —
+    the ribbons of hatching over the middle rows are leaders, not borders.
+
+    ``direct`` skips the chain and draws one curve from the axis dot to the
+    label's own near edge: three segments once the perpendicular stubs are
+    added, whatever the depth.  Row count is what makes a leader *long*;
+    this is what stops it being *convoluted*.
+    """
+    if not direct:
+        return renderer.generatePath(node)
+
+    options = renderer.options
+    gap = options["nodeHeight"] + options["layerGap"]
+    # Matches Renderer.getWayPoints: the label's near edge sits one
+    # node-height inside the layer's outer boundary.
+    offset = (gap * (node.getLayerIndex() + 1)) - options["nodeHeight"]
+
+    if direction in ("up", "down"):
+        sign = -1.0 if direction == "up" else 1.0
+        start = [node.idealPos, 0.0]
+        end = [node.currentPos, sign * offset]
+        return " ".join([moveTo(start), vCurveBetween(start, end)])
+
+    sign = -1.0 if direction == "left" else 1.0
+    start = [0.0, node.idealPos]
+    end = [sign * offset, node.currentPos]
+    return " ".join([moveTo(start), hCurveBetween(start, end)])
+
+
 def _offset_leader_path(path_d: str, direction: str, offset: float) -> str:
     """Push every point of a leader except its axis end `offset` outward.
 
@@ -326,6 +364,7 @@ def _run_labella(
     layer_gap: float,
     stack_offset: float = 0.0,
     label_bounds: tuple[float, float] | None = None,
+    direct_leaders: bool = False,
     min_pos: float | None = None,
     max_pos: float | None,
     on_side_events: Callable[[Sequence[Event], Side], None] | None,
@@ -400,7 +439,9 @@ def _run_labella(
                 label_h=n.dy,
                 layer=n.getLayerIndex(),
                 leader_path_d=_offset_leader_path(
-                    renderer.generatePath(n), direction, stack_offset
+                    _leader_path(renderer, n, direction, direct_leaders),
+                    direction,
+                    stack_offset,
                 ),
                 axis_origin=axis_origin,
                 side=side,
@@ -595,6 +636,7 @@ def layout_callouts(
     layer_gap: float,
     stack_offset: float = 0.0,
     label_bounds: tuple[float, float] | None = None,
+    direct_leaders: bool = False,
     min_pos: float | None = None,
     max_pos: float | None = None,
     max_extent: float | None = None,
@@ -627,6 +669,9 @@ def layout_callouts(
         label_bounds: (low, high) along the axis, in absolute SVG units, that
             every label box must lie within — normally the page edges. None
             leaves placement unclamped.
+        direct_leaders: Draw each leader straight from its dot to its own
+            label instead of threading it through the ancestor stubs — see
+            `_leader_path`.
         max_extent: How far from the axis one side may reach, in SVG units.
             Caps how many rows the overlap search will open — see
             `_layout_one_side`. Applied to each side. None = uncapped.
@@ -652,6 +697,7 @@ def layout_callouts(
         layer_gap=layer_gap,
         stack_offset=stack_offset,
         label_bounds=label_bounds,
+        direct_leaders=direct_leaders,
         min_pos=min_pos,
         max_pos=max_pos,
         max_extent=max_extent,

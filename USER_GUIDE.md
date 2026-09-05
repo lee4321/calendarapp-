@@ -1619,6 +1619,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_label_fill_opacity` | `timeline.label_fill_opacity` | `float` | `0.25` | label fill opacity |
 | `timeline_label_stroke_dasharray` | `timeline.label_stroke_dasharray` | `str | None` | `None` | label stroke dasharray |
 | `timeline_label_stroke_width` | `timeline.label_stroke_width` | `float` | `1.0` | label stroke width |
+| `timeline_leader_direct` | `timeline.leader.direct` | `bool` | `True` | route each leader straight from its axis dot to its own box. `False` restores labella's routing, which threads it through every ancestor row — a curve-and-line pair per row |
 | `timeline_leader_end_stub` | `timeline.leader.end_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader meets its box; `0` = pure bezier |
 | `timeline_leader_start_stub` | `timeline.leader.start_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader leaves the axis dot; `0` = pure bezier |
 | `timeline_marker_radius` | `timeline.marker_radius` | `float` | `6` | marker radius |

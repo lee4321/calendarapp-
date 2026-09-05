@@ -213,6 +213,9 @@ def layout_callouts(
     Each finished leader gets a straight perpendicular stub at both ends,
     the same post-pass PIT applies to its callout leaders — see
     :func:`shared.labella_layout.append_perp_stub`.
+
+    Leaders are routed straight from dot to box unless a theme turns
+    ``timeline.leader.direct`` off.
     """
     placements = _layout_callouts_shared(
         events,
@@ -237,6 +240,7 @@ def layout_callouts(
         max_pos=config.timeline_labella_max_pos,
         max_extent=max_extent,
         label_bounds=label_bounds,
+        direct_leaders=bool(config.timeline_leader_direct),
     )
     return _add_leader_stubs(placements, config, orientation)
 
