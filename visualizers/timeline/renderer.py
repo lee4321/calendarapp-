@@ -130,6 +130,12 @@ _CALLOUT_PAD_Y: float = 1.5
 #: Space between the title's descenders and the notes' ascenders.
 _CALLOUT_LINE_GAP: float = 1.0
 
+#: Inset from a duration bar's edge to its in-bar start / end date.
+_DURATION_DATE_PAD_X: float = 3.0
+
+#: Clear space kept between an in-bar date and the bar's title.
+_DURATION_DATE_GAP_X: float = 4.0
+
 
 class TimelineRenderer(BaseSVGRenderer):
     """Renderer for timeline visualization."""
@@ -471,13 +477,40 @@ class TimelineRenderer(BaseSVGRenderer):
                 f'stroke-opacity="{leader_opacity}" fill="none"{dash_attr}/>'
                 f'</g>'
             ))
+        # How far the duration band may reach before it leaves the paper.
+        # None under --shrink: the viewBox is grown to whatever the bars
+        # need, so every lane is drawn however deep the stack goes.
+        if config.shrink_to_content:
+            duration_limit = None
+            room_primary = room_secondary = None
+        elif orient is Orientation.HORIZONTAL:
+            duration_limit = area_y + area_h - bottom_bands_h
+            room_primary = room_secondary = None
+        else:
+            # Vertical bars fan out on both sides of the axis, and the axis
+            # is not centred, so each side is measured against its own room.
+            duration_limit = None
+            room_primary = max(0.0, area_x + area_w - axis_origin[0])
+            room_secondary = max(0.0, axis_origin[0] - area_x)
+
+        def _vertical_room(item: TimelineDuration) -> float | None:
+            if config.shrink_to_content:
+                return None
+            return (
+                room_primary
+                if item.lane_side is Side.PRIMARY
+                else room_secondary
+            )
+
         if orient is Orientation.HORIZONTAL:
             for duration in durations:
-                self._draw_duration_connectors(config, duration, axis_y)
+                self._draw_duration_connectors(
+                    config, duration, axis_y, duration_limit
+                )
         else:
             for duration in durations:
                 self._draw_duration_connectors_vertical(
-                    config, duration, axis_origin[0]
+                    config, duration, axis_origin[0], _vertical_room(duration)
                 )
 
         # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
@@ -573,9 +606,11 @@ class TimelineRenderer(BaseSVGRenderer):
             self._draw_callout(config, callout, axis_y)
         for duration in durations:
             if duration.orientation is Orientation.VERTICAL:
-                self._draw_duration_vertical(config, duration, axis_origin[0])
+                self._draw_duration_vertical(
+                    config, duration, axis_origin[0], _vertical_room(duration)
+                )
             else:
-                self._draw_duration(config, duration, axis_y)
+                self._draw_duration(config, duration, axis_y, duration_limit)
 
         # Timebands: top bands stack above the timeline area; bottom bands
         # stack below it. Only drawn when declared in the theme.
@@ -677,7 +712,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 config.timeline_duration_offset_y, min_duration_offset
             )
             lane_gap = max(config.timeline_duration_lane_gap_y, d_date_size * 0.9)
-            lane_stride_h = bar_h + (d_date_size * 1.8) + lane_gap
+            lane_stride_h = bar_h + lane_gap
             lane_stride_v = bar_h + lane_gap
 
             for dur in durations:
@@ -695,8 +730,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 else:
                     bar_bottom = axis_y + duration_offset
                     bar_y = bar_bottom + (dur.lane * lane_stride_h)
-                    label_y = bar_y + bar_h + (d_date_size * 1.1)
-                    max_y = max(max_y, label_y + d_date_size)
+                    max_y = max(max_y, bar_y + bar_h)
 
         # Extend bounds for declared timebands (only when present).
         top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
@@ -975,9 +1009,15 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_width * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
-        title_size, notes_size, _, _ = self._duration_metrics(config)
+        title_size, notes_size, date_size, _ = self._duration_metrics(config)
         title_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
         notes_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
+        date_font_path = self._safe_font_path(
+            config.get_text_style("ec-duration-date").font
+            or config.timeline_duration_date_font
+            or self._tk("text:duration_date").get("font")
+            or config.timeline_date_font
+        )
 
         out: list[TimelineDuration] = []
 
@@ -1021,10 +1061,25 @@ class TimelineRenderer(BaseSVGRenderer):
                 notes_w = string_width(
                     (event.notes or "").strip(), notes_font_path, notes_size
                 )
+                # The start/end dates sit inside the bar's ends, so a bar has
+                # to be wide enough for them plus whatever text it carries —
+                # otherwise the title is squeezed to nothing on a short event.
+                dates_w = self._duration_dates_width(
+                    format_arrow_date(
+                        self._safe_day(event.start, fallback=start),
+                        config.timeline_date_format,
+                    ),
+                    format_arrow_date(
+                        self._safe_day(event.end, fallback=start),
+                        config.timeline_date_format,
+                    ),
+                    date_font_path,
+                    date_size,
+                )
                 min_width = max(
                     max(16.0, self._page_width * 0.02),
-                    name_w + 12.0,
-                    notes_w + 12.0,
+                    name_w + 12.0 + dates_w,
+                    notes_w + 12.0 + dates_w,
                 )
             if ex - sx < min_width:
                 ex = min(axis_right, sx + min_width)
@@ -1103,12 +1158,18 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_last_end: list[float] = []
         min_gap = max(10.0, self._page_height * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
-        title_size, notes_size, _, _ = self._duration_metrics(config)
+        title_size, notes_size, date_size, _ = self._duration_metrics(config)
         title_font_path = self._safe_font_path(
             _layout_notes_style.font or config.timeline_notes_text_font_name
         )
         notes_font_path = self._safe_font_path(
             _layout_notes_style.font or config.timeline_notes_text_font_name
+        )
+        date_font_path = self._safe_font_path(
+            config.get_text_style("ec-duration-date").font
+            or config.timeline_duration_date_font
+            or self._tk("text:duration_date").get("font")
+            or config.timeline_date_font
         )
 
         out: list[TimelineDuration] = []
@@ -1149,10 +1210,24 @@ class TimelineRenderer(BaseSVGRenderer):
                 notes_w = string_width(
                     (event.notes or "").strip(), notes_font_path, notes_size
                 )
+                # The dates ride inside the bar's two along-axis ends, so the
+                # bar has to be long enough for them and its label both.
+                dates_w = self._duration_dates_width(
+                    format_arrow_date(
+                        self._safe_day(event.start, fallback=start),
+                        config.timeline_date_format,
+                    ),
+                    format_arrow_date(
+                        self._safe_day(event.end, fallback=start),
+                        config.timeline_date_format,
+                    ),
+                    date_font_path,
+                    date_size,
+                )
                 min_length = max(
                     max(16.0, self._page_height * 0.02),
-                    name_w + 12.0,
-                    notes_w + 12.0,
+                    name_w + 12.0 + dates_w,
+                    notes_w + 12.0 + dates_w,
                 )
             if ey - sy < min_length:
                 ey = min(axis_bottom, sy + min_length)
@@ -1263,10 +1338,10 @@ class TimelineRenderer(BaseSVGRenderer):
         icon_gap = 2.0
         icon_reserved = (title_font_size + icon_gap) if has_icon else 0.0
 
-        # The date rides on the title line, right-aligned inside the box, so
-        # it is unambiguously this event's date.  Its width is reserved here
-        # and matched by the layout's measurement, so the title never has to
-        # shrink to make room for it.
+        # The box is two columns: a narrow left one carrying the icon over
+        # the date, and the text column with the name over the notes.  The
+        # left column is as wide as the wider of its two occupants, so the
+        # date sits under the icon without running beneath the notes.
         date_label = self._callout_date_label(config, item)
         date_reserved = (
             self._callout_date_width(config, date_label, date_font_size)
@@ -1290,18 +1365,19 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         title_font_path = self._safe_font_path(name_font_default)
         notes_font_path = self._safe_font_path(notes_font_default)
-        # The title line shares its width with the icon and the date; the
-        # notes line has the whole inner box, so it is measured against that.
+        # Both text lines start after the left column, so both are measured
+        # against the same width.
+        left_column = max(icon_reserved, date_reserved)
+        text_width = item.box_width - 12.0 - left_column
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
-            item.box_width - 12.0 - icon_reserved - date_reserved,
+            text_width,
             item.box_height,
             title_font_path,
             notes_font_path,
             title_font_size,
             notes_font_size,
-            notes_width=item.box_width - 12.0,
             height_for=lambda ts, ns, has: self._callout_text_geometry(
                 item.box_height, ts, ns, title_font_path, notes_font_path, has
             )[2],
@@ -1362,45 +1438,42 @@ class TimelineRenderer(BaseSVGRenderer):
                 ),
                 box_ctx=self._event_ctx(item.event),
             )
-            title_text_x = text_x + fitted_title + icon_gap
-            title_max_w = (
-                item.box_width - 12.0 - fitted_title - icon_gap - date_reserved
-            )
-        else:
-            title_text_x = text_x
-            title_max_w = item.box_width - 12.0 - date_reserved
+
+        # One left edge for the name and the notes both — the notes used to
+        # start at the box edge, under the icon, which read as a hanging
+        # indent nobody asked for.
+        content_x = text_x + left_column
+        content_max_w = max(8.0, item.box_width - 12.0 - left_column)
 
         self._draw_text(
-            title_text_x,
+            content_x,
             title_y,
             title,
             name_font,
             fitted_title,
             fill=name_color,
             fill_opacity=name_opacity,
-            max_width=title_max_w,
+            max_width=content_max_w,
             css_class="ec-event-name",
         )
 
         if notes:
             self._draw_text(
-                text_x,
+                content_x,
                 notes_y,
                 notes,
                 notes_font,
                 fitted_notes,
                 fill=notes_color,
                 fill_opacity=notes_opacity,
-                max_width=item.box_width - 12.0,
+                max_width=content_max_w,
                 css_class="ec-event-notes",
             )
 
-        # Date, right-aligned on the title line inside the box.  It used to
-        # be drawn near the axis at the event's dot, staggered over a few
-        # rows by source index — which put it nowhere near its own callout,
-        # let two dates share a row and collide, and dropped it on top of any
-        # box sitting in the innermost layer.  In the box it travels with the
-        # event it belongs to and cannot collide with another event's date.
+        # Date, in the left column under the icon.  It sits with the event
+        # it belongs to — it used to be drawn near the axis at the event's
+        # dot, staggered by source index, which put it nowhere near its own
+        # callout and let two dates collide.
         if date_label:
             _event_date_style = config.get_text_style("ec-event-date")
             tk_event_date = self._tk("text:event_date")
@@ -1418,21 +1491,138 @@ class TimelineRenderer(BaseSVGRenderer):
                 ),
             )
             self._draw_text(
-                item.box_x + item.box_width - 6.0,
-                title_y,
+                text_x,
+                notes_y,
                 date_label,
                 date_font,
                 date_font_size,
                 fill=date_color,
-                anchor="end",
+                anchor="start",
+                max_width=max(8.0, left_column),
                 css_class="ec-event-date",
             )
+
+    def _duration_bar_y(
+        self, config: "CalendarConfig", item: TimelineDuration, axis_y: float
+    ) -> tuple[float, float]:
+        """``(bar_y, bar_h)`` for one horizontal duration bar.
+
+        The connector and the bar itself both need this and used to compute
+        it separately; sharing it is what lets the connector know whether the
+        bar it points at was actually drawn.
+        """
+        _title, _notes, date_size, bar_h = self._duration_metrics(config)
+        duration_offset = max(
+            config.timeline_duration_offset_y,
+            self._min_duration_offset(config, date_size),
+        )
+        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
+        # The start/end dates ride inside the bar, so a row is the bar plus
+        # the gap to the next one — no label band underneath.
+        lane_stride = bar_h + lane_gap
+        return axis_y + duration_offset + (item.lane * lane_stride), bar_h
+
+    @staticmethod
+    def _duration_dates_width(
+        start_label: str,
+        end_label: str,
+        font_path: str | None,
+        size: float,
+    ) -> float:
+        """Horizontal room the two in-bar dates claim, padding included.
+
+        Reserved before the title is fitted and matched by the layout's
+        `min_width`, so what the bar promises the dates is what they get.
+        """
+        def measure(text: str) -> float:
+            if not text:
+                return 0.0
+            if not font_path:
+                return len(text) * size * 0.5
+            return string_width(text, font_path, size)
+
+        return (
+            measure(start_label)
+            + measure(end_label)
+            + (2.0 * _DURATION_DATE_PAD_X)
+            + (2.0 * _DURATION_DATE_GAP_X)
+        )
+
+    def _duration_row_extent(self, config: "CalendarConfig") -> float:
+        """Vertical room one duration row needs, its date labels included.
+
+        The dates sit inside the bar, so the row is just the rect.  Kept as
+        its own method because `_actual_content_bounds` reserves the same
+        figure and the two must not drift.
+        """
+        _title, _notes, _date_size, bar_h = self._duration_metrics(config)
+        return bar_h
+
+    def _duration_bar_x(
+        self, config: "CalendarConfig", item: TimelineDuration, axis_x: float
+    ) -> tuple[float, float, float]:
+        """``(near_edge_x, thickness, sign)`` for one vertical duration bar.
+
+        ``sign`` is +1 on the primary side (right of the axis), -1 on the
+        secondary.
+        """
+        _title, _notes, date_size, bar_thickness = self._duration_metrics(config)
+        duration_offset = max(
+            config.timeline_duration_offset_y,
+            self._min_duration_offset(config, date_size),
+        )
+        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
+        lane_stride = bar_thickness + lane_gap
+        sign = 1.0 if item.lane_side is Side.PRIMARY else -1.0
+        near_x = axis_x + sign * (duration_offset + (item.lane * lane_stride))
+        return near_x, bar_thickness, sign
+
+    @staticmethod
+    def _duration_fits(bar_far_edge: float, limit: float | None) -> bool:
+        """True when a bar's far edge is inside the drawable area.
+
+        ``limit`` is None whenever nothing constrains the band — no page
+        bound was supplied, or --shrink is growing the page to fit the
+        content, in which case every bar is drawn however deep the stack
+        goes.
+        """
+        return limit is None or bar_far_edge <= limit
+
+    def _draw_missing_box_marker(
+        self,
+        config: "CalendarConfig",
+        x: float,
+        y: float,
+        size: float,
+        color: str,
+    ) -> None:
+        """Mark a leader whose box ran out of room with the missing icon.
+
+        Without it the leader still gets drawn and simply runs off the page,
+        which reads as a line pointing at a bar that is not there.  The glyph
+        is the theme's ``base.default_missing_icon``; a theme that leaves it
+        unset gets a leader that stops at the edge and nothing else, which is
+        still better than one that leaves the paper.
+        """
+        icon = getattr(config, "default_missing_icon", None)
+        if not icon:
+            return
+        self._draw_icon_svg(
+            str(icon),
+            x,
+            self._icon_baseline(y, size),
+            size,
+            anchor="middle",
+            color=color,
+            css_class="ec-overflow-icon",
+        )
 
     def _draw_duration_connectors(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
         axis_y: float,
+        limit: float | None = None,
     ) -> None:
         """Draw the vertical aligner line from the axis to the duration bar.
 
@@ -1441,38 +1631,56 @@ class TimelineRenderer(BaseSVGRenderer):
         the right edge sits at a date the event does not end on — a leader
         there pointed confidently at the wrong day.  The left edge is always
         the true start date, so that one still says something.
+
+        When the bar itself did not fit below ``limit`` the leader stops at
+        the edge of the drawable area and ends in the theme's missing-box
+        icon, instead of running off the page toward a bar nobody drew.
         """
-        title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(config, date_size)
-        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
-        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_h + (date_size * 1.8) + lane_gap
-        bar_bottom = axis_y + duration_offset
-        bar_y = bar_bottom + (item.lane * lane_stride)
+        bar_y, bar_h = self._duration_bar_y(config, item, axis_y)
+        row_extent = self._duration_row_extent(config)
+        fits = self._duration_fits(bar_y + row_extent, limit)
+        end_y = bar_y if fits else float(limit) - row_extent
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
             item.start_x,
             axis_y,
             item.start_x,
-            bar_y,
+            end_y,
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.8,
             stroke_dasharray=_dur_bar_style.dasharray or None,
             css_class="ec-connector",
         )
+        if not fits:
+            self._draw_missing_box_marker(
+                config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color
+            )
 
     def _draw_duration(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
         axis_y: float,
+        limit: float | None = None,
     ) -> None:
         """Draw one placed duration below a horizontal axis: the bar
         rect (fill opacity token-first from ``line:duration_bar``),
         start/end axis markers, continuation arrows when the event
         extends past the visible range, and the name / notes / date
-        text block sized to the bar's lane."""
+        text block sized to the bar's lane.
+
+        A bar whose lane falls past ``limit`` is not drawn at all — its
+        leader carries the missing-box icon instead (see
+        :py:meth:`_draw_duration_connectors`), which says more than a bar
+        printed off the edge of the paper.
+        """
+        _probe_y, _probe_h = self._duration_bar_y(config, item, axis_y)
+        if not self._duration_fits(
+            _probe_y + self._duration_row_extent(config), limit
+        ):
+            return
+
         title = item.event.task_name or "(untitled duration)"
         notes = (item.event.notes or "").strip()
         start_day = self._safe_day(item.event.start, fallback=arrow.now())
@@ -1482,7 +1690,7 @@ class TimelineRenderer(BaseSVGRenderer):
         min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_h + (date_size * 1.8) + lane_gap
+        lane_stride = bar_h + lane_gap
 
         bar_bottom = axis_y + duration_offset
         bar_y = bar_bottom + (item.lane * lane_stride)
@@ -1590,7 +1798,22 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         title_font_path = self._safe_font_path(dur_name_font_default)
         notes_font_path = self._safe_font_path(dur_notes_font_default)
-        text_w = max(10.0, item.end_x - item.start_x - 6.0)
+
+        # The start/end dates sit inside the bar's two ends, so the title and
+        # notes get what is left between them rather than the whole bar.
+        start_label = format_arrow_date(start_day, config.timeline_date_format)
+        end_label = format_arrow_date(end_day, config.timeline_date_format)
+        date_font_path = self._safe_font_path(
+            config.get_text_style("ec-duration-date").font
+            or config.timeline_duration_date_font
+            or self._tk("text:duration_date").get("font")
+            or config.timeline_date_font
+        )
+        dates_w = self._duration_dates_width(
+            start_label, end_label, date_font_path, date_size
+        )
+        bar_w = max(1.0, item.end_x - item.start_x)
+        text_w = max(10.0, bar_w - 6.0 - dates_w)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -1740,11 +1963,13 @@ class TimelineRenderer(BaseSVGRenderer):
             font=date_font_base,
             color=date_color_base,
         )
-        date_y = bar_y + bar_h + (date_size * 1.1)
+        # Inside the bar, one at each end, on the title's baseline — the
+        # same arrangement the event callouts use for their date.
+        date_y = title_y
         self._draw_text(
-            item.start_x,
+            item.start_x + _DURATION_DATE_PAD_X,
             date_y,
-            format_arrow_date(start_day, config.timeline_date_format),
+            start_label,
             start_date_font,
             date_size,
             fill=start_date_color,
@@ -1752,9 +1977,9 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-duration-date",
         )
         self._draw_text(
-            item.end_x,
+            item.end_x - _DURATION_DATE_PAD_X,
             date_y,
-            format_arrow_date(end_day, config.timeline_date_format),
+            end_label,
             end_date_font,
             date_size,
             fill=end_date_color,
@@ -1767,26 +1992,33 @@ class TimelineRenderer(BaseSVGRenderer):
         config: "CalendarConfig",
         item: TimelineDuration,
         axis_x: float,
+        limit: float | None = None,
     ) -> None:
         """Horizontal aligner line from the vertical axis to the duration bar.
 
         Start edge only, for the reason given in
         :py:meth:`_draw_duration_connectors`: the far edge is padded out to fit
         the label and does not mark the end date.
+
+        ``limit`` is how far from the axis this side may reach; a lane past it
+        gets a leader that stops at the edge and ends in the missing-box icon
+        rather than one that runs off the page.
         """
-        title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(config, date_size)
-        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
-        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_thickness + lane_gap
-        # PRIMARY = right of axis (+X), SECONDARY = left (-X).
-        sign = 1.0 if item.lane_side is Side.PRIMARY else -1.0
-        bar_near_axis_x = axis_x + sign * (duration_offset + (item.lane * lane_stride))
+        bar_near_axis_x, bar_thickness, sign = self._duration_bar_x(
+            config, item, axis_x
+        )
+        far_edge = bar_near_axis_x + sign * bar_thickness
+        fits = self._duration_fits(abs(far_edge - axis_x), limit)
+        end_x = (
+            bar_near_axis_x
+            if fits
+            else axis_x + sign * (float(limit) - bar_thickness)
+        )
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
             axis_x,
             item.start_y,
-            bar_near_axis_x,
+            end_x,
             item.start_y,
             stroke=item.color,
             stroke_width=0.9,
@@ -1794,14 +2026,33 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_dasharray=_dur_bar_style.dasharray or None,
             css_class="ec-connector",
         )
+        if not fits:
+            self._draw_missing_box_marker(
+                config,
+                end_x + sign * (bar_thickness / 2.0),
+                item.start_y,
+                bar_thickness,
+                item.color,
+            )
 
     def _draw_duration_vertical(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
         axis_x: float,
+        limit: float | None = None,
     ) -> None:
-        """Draw a vertical-orientation duration bar (left of axis)."""
+        """Draw a vertical-orientation duration bar (left of axis).
+
+        A lane past ``limit`` is skipped; its leader carries the missing-box
+        icon instead.
+        """
+        _near_x, _thickness, _sign = self._duration_bar_x(config, item, axis_x)
+        if not self._duration_fits(
+            abs(_near_x + _sign * _thickness - axis_x), limit
+        ):
+            return
+
         title = item.event.task_name or "(untitled duration)"
         notes = (item.event.notes or "").strip()
         start_day = self._safe_day(item.event.start, fallback=arrow.now())
@@ -1928,8 +2179,20 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         title_font_path = self._safe_font_path(dur_name_font_default)
         notes_font_path = self._safe_font_path(dur_notes_font_default)
-        # Available "width" for the rotated text is the bar's along-axis length.
-        text_w = max(10.0, bar_h - 6.0)
+        # Available "width" for the rotated text is the bar's along-axis
+        # length, less the two dates that now sit inside its ends.
+        start_label = format_arrow_date(start_day, config.timeline_date_format)
+        end_label = format_arrow_date(end_day, config.timeline_date_format)
+        date_font_path = self._safe_font_path(
+            config.get_text_style("ec-duration-date").font
+            or config.timeline_duration_date_font
+            or self._tk("text:duration_date").get("font")
+            or config.timeline_date_font
+        )
+        dates_w = self._duration_dates_width(
+            start_label, end_label, date_font_path, date_size
+        )
+        text_w = max(10.0, bar_h - 6.0 - dates_w)
         fitted_title, fitted_notes = self._fit_box_text_sizes(
             title,
             notes,
@@ -2034,24 +2297,31 @@ class TimelineRenderer(BaseSVGRenderer):
             font=date_font_base,
             color=date_color_base,
         )
+        # Inside the bar's two along-axis ends, rotated with the label.
+        # rotate(-90 cx cy) maps a pre-rotation offset of +dx along x onto
+        # -dx along y, so the start date is laid out to the right of centre
+        # to come out at the bar's top.
+        half = (bar_h / 2.0) - _DURATION_DATE_PAD_X
         self._draw_text(
-            cx,
-            bar_y - (date_size * 0.3),
-            format_arrow_date(start_day, config.timeline_date_format),
+            cx + half,
+            cy,
+            start_label,
             start_date_font,
             date_size,
             fill=start_date_color,
-            anchor="middle",
+            anchor="end",
+            transform=rot,
             css_class="ec-duration-date",
         )
         self._draw_text(
-            cx,
-            bar_y + bar_h + (date_size * 1.1),
-            format_arrow_date(end_day, config.timeline_date_format),
+            cx - half,
+            cy,
+            end_label,
             end_date_font,
             date_size,
             fill=end_date_color,
-            anchor="middle",
+            anchor="start",
+            transform=rot,
             css_class="ec-duration-date",
         )
 

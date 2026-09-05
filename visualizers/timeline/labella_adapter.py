@@ -62,7 +62,13 @@ def callout_date_extent(
 
 
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
-    """Horizontal text extent of the longest line in the label."""
+    """Horizontal extent the label's two columns need.
+
+    The box is a narrow left column — the icon above the date — beside a
+    text column holding the name above the notes.  Both text lines share one
+    left edge, so the box needs the wider of them plus the left column; the
+    date is what sizes that column, being wider than any icon.
+    """
     name_font_path = _resolve_font_path(config.timeline_name_text_font_name)
     notes_font_path = _resolve_font_path(config.timeline_notes_text_font_name)
     name_size = float(config.timeline_name_text_font_size or 12.0)
@@ -72,16 +78,13 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
         string_width(event.task_name, name_font_path, name_size)
         if name_font_path else len(event.task_name or "") * name_size * 0.5
     )
-    # The date shares the title line, so the box has to be wide enough for
-    # both or the title would be squeezed to make room at draw time.
-    name_w += _date_extent_for(event, config)
     notes_w = 0.0
     if event.notes:
         notes_w = (
             string_width(event.notes, notes_font_path, notes_size)
             if notes_font_path else len(event.notes) * notes_size * 0.5
         )
-    return max(name_w, notes_w)
+    return max(name_w, notes_w) + _date_extent_for(event, config)
 
 
 def _date_extent_for(event: Event, config: CalendarConfig) -> float:

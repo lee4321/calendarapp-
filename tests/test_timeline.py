@@ -34,11 +34,15 @@ class _CaptureTimelineRenderer(TimelineRenderer):
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
         self.text_calls.append(
-            {"x": x, "y": y, "text": text, "font": font_name, "size": font_size}
+            {
+                "x": x, "y": y, "text": text,
+                "font": font_name, "size": font_size,
+                **kwargs,
+            }
         )
 
     def _draw_rect(self, x, y, w, h, **kwargs):
-        self.rect_calls.append({"x": x, "y": y, "w": w, "h": h})
+        self.rect_calls.append({"x": x, "y": y, "w": w, "h": h, **kwargs})
 
     def _draw_line(self, x1, y1, x2, y2, **kwargs):
         self.line_calls.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
@@ -1277,3 +1281,371 @@ def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
 )
 def test_wbs_group_prefixes(wbs, depth, expected):
     assert wbs_group(wbs, depth) == expected
+
+
+# ── Duration bars that run out of room ────────────────────────────────────
+#
+# A fixed page can hold fewer duration lanes than the layout produces. The
+# bars past the bottom used to be drawn anyway, off the paper, leaving their
+# leaders running down to nothing. Now the leader stops at the edge and ends
+# in the theme's default_missing_icon, and the bar is not drawn at all.
+
+
+class _CaptureOverflowRenderer(_CaptureTimelineRenderer):
+    def __init__(self):
+        super().__init__()
+        self.icon_calls: list[dict] = []
+
+    def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
+        self.icon_calls.append(
+            {"icon": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs}
+        )
+        return True
+
+
+def _overflow_setup(tmp_path, name, lanes=6):
+    """A config plus `lanes` durations that each need their own lane."""
+    config = _base_config(tmp_path / name)
+    config.default_missing_icon = "missing-box"
+    events = [
+        Event(
+            task_name=f"Task {i}",
+            start=f"202601{10 + i:02d}",
+            end=f"202601{12 + i:02d}",
+            wbs=f"1.{i}",
+        )
+        for i in range(lanes)
+    ]
+    return config, events
+
+
+def _lay_out(config, events, axis_y=300.0):
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    bars = renderer._layout_durations(
+        config,
+        events,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        axis_y,
+    )
+    return renderer, bars
+
+
+def test_a_bar_past_the_limit_is_not_drawn(tmp_path):
+    config, events = _overflow_setup(tmp_path, "ovf_bar.svg")
+    renderer, bars = _lay_out(config, events)
+    deep = max(bars, key=lambda b: b.lane)
+    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+
+    renderer.rect_calls.clear()
+    renderer._draw_duration(config, deep, 300.0, limit=bar_y - 1.0)
+    assert renderer.rect_calls == []
+
+    # Same bar, room to spare: it draws.
+    renderer._draw_duration(config, deep, 300.0, limit=bar_y + 10_000.0)
+    assert renderer.rect_calls
+
+
+def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
+    config, events = _overflow_setup(tmp_path, "ovf_leader.svg")
+    renderer, bars = _lay_out(config, events)
+    deep = max(bars, key=lambda b: b.lane)
+    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    limit = bar_y - 1.0
+
+    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+
+    assert len(renderer.line_calls) == 1
+    end_y = renderer.line_calls[0]["y2"]
+    assert end_y < bar_y                 # pulled back from the missing bar
+    assert end_y <= limit                # and inside the drawable area
+
+    assert len(renderer.icon_calls) == 1
+    icon = renderer.icon_calls[0]
+    assert icon["icon"] == "missing-box"
+    assert icon["x"] == pytest.approx(deep.start_x)
+
+
+def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
+    config, events = _overflow_setup(tmp_path, "ovf_fits.svg")
+    renderer, bars = _lay_out(config, events)
+    shallow = min(bars, key=lambda b: b.lane)
+    bar_y, _bar_h = renderer._duration_bar_y(config, shallow, 300.0)
+
+    renderer._draw_duration_connectors(config, shallow, 300.0, limit=bar_y + 10_000.0)
+    assert renderer.icon_calls == []
+    assert renderer.line_calls[0]["y2"] == pytest.approx(bar_y)
+
+
+def test_no_limit_draws_every_bar(tmp_path):
+    """--shrink grows the page instead, so nothing is held back."""
+    config, events = _overflow_setup(tmp_path, "ovf_none.svg")
+    renderer, bars = _lay_out(config, events)
+    renderer.rect_calls.clear()
+    for bar in bars:
+        renderer._draw_duration(config, bar, 300.0, limit=None)
+    # One bar rect each, and no leader was cut short.
+    assert len(renderer.rect_calls) == len(bars)
+    assert renderer.icon_calls == []
+
+
+def test_a_theme_without_a_missing_icon_still_clamps_the_leader(tmp_path):
+    config, events = _overflow_setup(tmp_path, "ovf_noicon.svg")
+    config.default_missing_icon = None
+    renderer, bars = _lay_out(config, events)
+    deep = max(bars, key=lambda b: b.lane)
+    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+
+    renderer._draw_duration_connectors(config, deep, 300.0, limit=bar_y - 1.0)
+    assert renderer.icon_calls == []
+    assert renderer.line_calls[0]["y2"] < bar_y
+
+
+def test_a_duration_row_is_just_its_bar(tmp_path):
+    """The dates ride inside the bar, so no band is reserved beneath it."""
+    config, _events = _overflow_setup(tmp_path, "ovf_dates.svg")
+    renderer = _CaptureOverflowRenderer()
+    _t, _n, _date_size, bar_h = renderer._duration_metrics(config)
+    assert renderer._duration_row_extent(config) == pytest.approx(bar_h)
+
+
+# ── Start / end dates inside the duration bar ─────────────────────────────
+#
+# The dates used to sit in a band below the bar, which cost every row an
+# extra 2.1 date-heights of vertical space. They now ride inside the bar's
+# two ends, on the title's baseline.
+
+
+def _drawn_duration(tmp_path, name, event, axis_y=300.0):
+    config = _base_config(tmp_path / name)
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    bars = renderer._layout_durations(
+        config,
+        [event],
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        axis_y,
+    )
+    renderer._draw_duration(config, bars[0], axis_y)
+    return config, renderer, bars[0]
+
+
+def _date_texts(renderer):
+    return [c for c in renderer.text_calls if c.get("css_class") == "ec-duration-date"]
+
+
+def test_the_start_and_end_dates_are_drawn_inside_the_bar(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260320")
+    config, renderer, bar = _drawn_duration(tmp_path, "in_bar.svg", event)
+    bar_y, bar_h = renderer._duration_bar_y(config, bar, 300.0)
+
+    dates = _date_texts(renderer)
+    assert len(dates) == 2
+    for date in dates:
+        assert bar.start_x <= date["x"] <= bar.end_x
+        assert bar_y <= date["y"] <= bar_y + bar_h
+
+
+def test_the_start_date_sits_at_the_left_end_and_the_end_date_at_the_right(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260320")
+    config, renderer, bar = _drawn_duration(tmp_path, "in_bar_ends.svg", event)
+
+    start_date, end_date = _date_texts(renderer)
+    assert start_date["anchor"] == "start"
+    assert end_date["anchor"] == "end"
+    assert start_date["x"] == pytest.approx(bar.start_x + 3.0)
+    assert end_date["x"] == pytest.approx(bar.end_x - 3.0)
+    # Both on one baseline, which is the title's.
+    assert start_date["y"] == pytest.approx(end_date["y"])
+    titles = [c for c in renderer.text_calls if c.get("css_class") == "ec-event-name"]
+    assert titles and titles[0]["y"] == pytest.approx(start_date["y"])
+
+
+def test_a_bar_is_widened_to_hold_its_dates_and_its_title(tmp_path):
+    """A one-day event still has to fit both dates plus its name."""
+    config = _base_config(tmp_path / "in_bar_width.svg")
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    bars = renderer._layout_durations(
+        config,
+        [Event(task_name="Ship", start="20260210", end="20260210")],
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
+    )
+    bar = bars[0]
+    _t, _n, date_size, _bar_h = renderer._duration_metrics(config)
+    date_font = renderer._safe_font_path(config.timeline_date_font)
+    needed = renderer._duration_dates_width("Feb 10", "Feb 10", date_font, date_size)
+    assert bar.end_x - bar.start_x >= needed
+
+
+def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
+    """Reclaiming that band is what lets the lanes pack tighter."""
+    config = _base_config(tmp_path / "in_bar_stride.svg")
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    events = [
+        Event(task_name=f"T{i}", start="20260210", end="20260320", wbs=f"1.{i}")
+        for i in range(3)
+    ]
+    bars = renderer._layout_durations(
+        config, events,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        50.0, 700.0, 300.0,
+    )
+    lanes = sorted({b.lane for b in bars})
+    assert len(lanes) >= 2
+
+    _t, _n, date_size, bar_h = renderer._duration_metrics(config)
+    lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
+    y0, _ = renderer._duration_bar_y(config, bars[0], 300.0)
+    y1, _ = renderer._duration_bar_y(
+        config, next(b for b in bars if b.lane == 1), 300.0
+    )
+    assert y1 - y0 == pytest.approx(bar_h + lane_gap)
+
+
+def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
+    config = _base_config(tmp_path / "in_bar_vertical.svg")
+    config.timeline_orientation = "vertical"
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    bars = renderer._layout_durations_vertical(
+        config,
+        [Event(task_name="Build", start="20260210", end="20260320")],
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_x=200.0,
+        axis_top=50.0,
+        axis_bottom=700.0,
+        side=Side.PRIMARY,
+    )
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+
+    dates = _date_texts(renderer)
+    assert len(dates) == 2
+    # Rotated with the label, and pulled in from each along-axis end.
+    for date in dates:
+        assert "rotate(-90" in (date.get("transform") or "")
+    cx_values = {round(d["x"], 3) for d in dates}
+    assert len(cx_values) == 2      # one toward each end, not stacked
+
+
+# ── Callout box columns ───────────────────────────────────────────────────
+#
+# The box is two columns: the icon over the date on the left, the name over
+# the notes on the right. The date used to be right-aligned on the title
+# line and the notes started at the box edge under the icon, so the two text
+# lines had different left edges.
+
+
+def _callout(**overrides):
+    kwargs = dict(
+        event=Event(
+            task_name="Go-Live Event",
+            start="20260727",
+            end="20260727",
+            notes="Public launch announcement",
+        ),
+        color="gold",
+        x_dot=200.0,
+        y_dot=300.0,
+        lane=0,
+        box_x=150.0,
+        box_y=230.0,
+        box_width=200.0,
+        box_height=30.0,
+    )
+    kwargs.update(overrides)
+    return TimelineCallout(**kwargs)
+
+
+def _drawn_callout(tmp_path, name, **overrides):
+    config = _base_config(tmp_path / name)
+    renderer = _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    # An icon only draws when it resolves, and no DB is loaded here.
+    renderer._icon_svg_map = {"rocket": '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>'}
+    renderer._draw_callout(config, _callout(**overrides), axis_y=300.0)
+    return config, renderer
+
+
+def _by_class(renderer, css_class):
+    return [c for c in renderer.text_calls if c.get("css_class") == css_class]
+
+
+def test_the_notes_share_a_left_edge_with_the_name(tmp_path):
+    _config, renderer = _drawn_callout(tmp_path, "callout_align.svg")
+    name = _by_class(renderer, "ec-event-name")[0]
+    notes = _by_class(renderer, "ec-event-notes")[0]
+    assert notes["x"] == pytest.approx(name["x"])
+    assert notes["y"] > name["y"]        # second line
+
+
+def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
+    _config, renderer = _drawn_callout(
+        tmp_path, "callout_date.svg",
+        event=Event(
+            task_name="Go-Live Event", start="20260727", end="20260727",
+            notes="Public launch announcement", icon="rocket",
+        ),
+    )
+    date = _by_class(renderer, "ec-event-date")[0]
+    notes = _by_class(renderer, "ec-event-notes")[0]
+    assert renderer.icon_calls, "the fixture should draw an icon"
+    icon = renderer.icon_calls[0]
+
+    assert date["anchor"] == "start"
+    assert date["x"] == pytest.approx(icon["x"])   # same column as the icon
+    assert date["y"] == pytest.approx(notes["y"])  # the notes' line
+    assert date["x"] < notes["x"]                  # left of the text column
+
+
+def test_the_date_is_no_longer_on_the_title_line(tmp_path):
+    _config, renderer = _drawn_callout(tmp_path, "callout_notline.svg")
+    name = _by_class(renderer, "ec-event-name")[0]
+    date = _by_class(renderer, "ec-event-date")[0]
+    assert date["y"] != pytest.approx(name["y"])
+
+
+def test_the_left_column_is_as_wide_as_its_widest_occupant(tmp_path):
+    """A date wider than the icon widens the column, not the notes' indent."""
+    config, renderer = _drawn_callout(
+        tmp_path, "callout_col.svg",
+        event=Event(
+            task_name="Go-Live Event", start="20260727", end="20260727",
+            notes="Public launch announcement", icon="rocket",
+        ),
+    )
+    date = _by_class(renderer, "ec-event-date")[0]
+    notes = _by_class(renderer, "ec-event-notes")[0]
+    column = notes["x"] - date["x"]
+
+    date_size = renderer._callout_metrics(config)[2]
+    needed = renderer._callout_date_width(config, date["text"], date_size)
+    assert column >= needed - 0.01
+
+
+def test_a_callout_without_an_icon_still_lines_its_columns_up(tmp_path):
+    _config, renderer = _drawn_callout(
+        tmp_path, "callout_noicon.svg",
+        event=Event(
+            task_name="Go-Live Event", start="20260727", end="20260727",
+            notes="Public launch announcement",
+        ),
+    )
+    assert renderer.icon_calls == []
+    name = _by_class(renderer, "ec-event-name")[0]
+    notes = _by_class(renderer, "ec-event-notes")[0]
+    date = _by_class(renderer, "ec-event-date")[0]
+    assert name["x"] == pytest.approx(notes["x"])
+    assert date["x"] < name["x"]
