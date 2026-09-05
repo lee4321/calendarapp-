@@ -351,6 +351,9 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("fiscal", "end_label_format"): "fiscal_period_end_label_format",
     ("fiscal", "year_offset"): "fiscal_year_offset",
     # Mini calendar
+    # mini-icon has no section of its own — it is the mini renderer with day
+    # numbers swapped for glyphs, so it reads mini_calendar like the rest.
+    ("mini_calendar", "icon_set"): "mini_icon_set",
     ("mini_calendar", "cell_font"): "mini_cell_font",
     ("mini_calendar", "cell_bold_font"): "mini_cell_bold_font",
     ("mini_calendar", "title_font"): "mini_title_font",

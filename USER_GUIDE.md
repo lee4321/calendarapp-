@@ -1553,11 +1553,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 #### `mini-icon`
 
-`mini-icon` shares all theme keys from the `mini` section above — every `mini_calendar.*` theme key applies identically. The one additional config field is not theme-configurable (set via `--mini-icon-set` / `-mis`):
+`mini-icon` shares all theme keys from the `mini` section above — every `mini_calendar.*` theme key applies identically, because `MiniIconRenderer` subclasses the mini renderer and only swaps day numbers for glyphs. One key is used by `mini-icon` alone:
 
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
-| `mini_icon_set` | *(not themeable)* | `str` | `'squares'` | Icon set used for day-number icons. Choices: `squares`, `darksquare`, `circles`, `darkcircles`, `squircles`, `darksquircles`. |
+| `mini_icon_set` | `mini_calendar.icon_set` | `str` | `'squares'` | Icon set used for day-number icons. Choices: `squares`, `darksquare`, `circles`, `darkcircles`, `squircles`, `darksquircles`. `--mini-icon-set` / `-mis` overrides the theme. |
 
 #### `text-mini`
 
@@ -2283,7 +2283,7 @@ Each visualizer reads two kinds of theme content:
 Per-visualizer non-styling surfaces:
 
 - `weekly` — week-number format, day-name format, overflow icon name.
-- `mini` — `mini_calendar.title_format`, layout dimensions; `mini_calendar.icon_set` name (mini-icon variant).
+- `mini` — `mini_calendar.title_format`, layout dimensions; `mini_calendar.icon_set` names the glyph set the `mini-icon` variant draws day numbers from.
 - `text-mini` — symbol/glyph name registry; not an SVG renderer.
 - `timeline` — `timeline.tick_label_format`, axis/callout/lane geometry, `today_date` / `today_label_text` content references.
 - `blockplan` — swimlane and timeband lists, `label_column_ratio`, lane match policy, vertical-line and band declarations (visual styling lives in `style_rules`, e.g. `apply_to: box:vline`).
