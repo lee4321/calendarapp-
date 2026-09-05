@@ -365,6 +365,7 @@ def _run_labella(
     stack_offset: float = 0.0,
     label_bounds: tuple[float, float] | None = None,
     direct_leaders: bool = False,
+    label_anchor: str = "start",
     min_pos: float | None = None,
     max_pos: float | None,
     on_side_events: Callable[[Sequence[Event], Side], None] | None,
@@ -417,13 +418,19 @@ def _run_labella(
         }
     )
     renderer.layout(nodes)
-    _clamp_labels_to_bounds(nodes, orientation, axis_origin, label_bounds)
+    _clamp_labels_to_bounds(
+        nodes, orientation, axis_origin, label_bounds, label_anchor
+    )
 
     placements: list[CalloutPlacement] = []
     ox, oy = axis_origin
     index, sign = _PERPENDICULAR.get(direction, (1, 1.0))
     shift_x = sign * stack_offset if index == 0 else 0.0
     shift_y = sign * stack_offset if index == 1 else 0.0
+    # labella solves a position and its own model treats it as the label's
+    # centre; drawing the box from it as a leading edge puts every box half
+    # a width off its date and lands the leader on a corner.
+    centred = label_anchor == "center"
     for n in nodes:
         # node.x/y are top-left of the label rect in axis-local coords.
         # node.dx/dy are extents in (x, y). Convert to absolute SVG.
@@ -433,8 +440,14 @@ def _run_labella(
                 event=n.data,
                 x_dot=x_dot,
                 y_dot=y_dot,
-                x_label=ox + n.x + shift_x,
-                y_label=oy + n.y + shift_y,
+                x_label=(
+                    ox + n.x + shift_x
+                    - (n.dx / 2.0 if centred and orientation is Orientation.HORIZONTAL else 0.0)
+                ),
+                y_label=(
+                    oy + n.y + shift_y
+                    - (n.dy / 2.0 if centred and orientation is Orientation.VERTICAL else 0.0)
+                ),
                 label_w=n.dx,
                 label_h=n.dy,
                 layer=n.getLayerIndex(),
@@ -456,6 +469,7 @@ def _clamp_labels_to_bounds(
     orientation: Orientation,
     axis_origin: tuple[float, float],
     label_bounds: tuple[float, float] | None,
+    label_anchor: str = "start",
 ) -> None:
     """Pull any label whose box falls outside `label_bounds` back inside.
 
@@ -484,14 +498,18 @@ def _clamp_labels_to_bounds(
     )
     lo = low - origin
     hi = high - origin
+    # Where the box sits relative to the solved position — its leading edge,
+    # or centred on it.
+    centred = label_anchor == "center"
     for node in nodes:
-        room = hi - node.width
-        if room < lo:
+        low_limit = lo + (node.width / 2.0) if centred else lo
+        high_limit = hi - (node.width / 2.0) if centred else hi - node.width
+        if high_limit < low_limit:
             # Wider than the page: hugging the low edge at least keeps the
             # box's leading corner and the start of its text on the paper.
-            node.currentPos = lo
+            node.currentPos = low_limit
         else:
-            node.currentPos = min(max(node.currentPos, lo), room)
+            node.currentPos = min(max(node.currentPos, low_limit), high_limit)
         # Renderer.layout() already copied currentPos into the render
         # fields, so they have to be refreshed here.
         if orientation is Orientation.HORIZONTAL:
@@ -637,6 +655,7 @@ def layout_callouts(
     stack_offset: float = 0.0,
     label_bounds: tuple[float, float] | None = None,
     direct_leaders: bool = False,
+    label_anchor: str = "start",
     min_pos: float | None = None,
     max_pos: float | None = None,
     max_extent: float | None = None,
@@ -672,6 +691,9 @@ def layout_callouts(
         direct_leaders: Draw each leader straight from its dot to its own
             label instead of threading it through the ancestor stubs — see
             `_leader_path`.
+        label_anchor: "start" draws each box from the solved position;
+            "center" centres it there, which is what labella's own model
+            means and what puts a box on its date.
         max_extent: How far from the axis one side may reach, in SVG units.
             Caps how many rows the overlap search will open — see
             `_layout_one_side`. Applied to each side. None = uncapped.
@@ -698,6 +720,7 @@ def layout_callouts(
         stack_offset=stack_offset,
         label_bounds=label_bounds,
         direct_leaders=direct_leaders,
+        label_anchor=label_anchor,
         min_pos=min_pos,
         max_pos=max_pos,
         max_extent=max_extent,

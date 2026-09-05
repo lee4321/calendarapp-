@@ -216,6 +216,10 @@ def layout_callouts(
 
     Leaders are routed straight from dot to box unless a theme turns
     ``timeline.leader.direct`` off.
+
+    Boxes are centred on their solved position, so a box sits on its own
+    date as closely as the overlap solver allows and its leader arrives at
+    the middle of the box rather than a corner.
     """
     placements = _layout_callouts_shared(
         events,
@@ -241,6 +245,9 @@ def layout_callouts(
         max_extent=max_extent,
         label_bounds=label_bounds,
         direct_leaders=bool(config.timeline_leader_direct),
+        # Centre each box on the position labella solved for it, which is
+        # the position it optimised toward the event's own date.
+        label_anchor="center",
     )
     return _add_leader_stubs(placements, config, orientation)
 
