@@ -105,6 +105,10 @@ timeline:
   duration_offset_y: 30.0
   duration_lane_gap_y: 8.0
   leader:
+    # false threads each leader through every row it passes, labella's own
+    # routing: one curve-and-line pair per row, all crossing the boxes
+    # between. true draws one curve from the dot to the box.
+    direct: true
     # Straight perpendicular segments at each end of a callout leader.
     # labella's bezier leaves the axis dot and meets the box at a shallow
     # angle; the stubs make both ends arrive square-on. 0 = pure bezier.

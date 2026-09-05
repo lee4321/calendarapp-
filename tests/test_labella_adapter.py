@@ -739,3 +739,87 @@ def test_stub_rewrites_leave_odd_paths_alone(path):
 
     assert append_perp_stub(path, Orientation.HORIZONTAL, 4.0) == path
     assert prepend_perp_stub(path, Orientation.HORIZONTAL, 4.0) == path
+
+
+# ── Leader routing ────────────────────────────────────────────────────────
+#
+# labella threads a leader through the solved position of every ancestor
+# stub, emitting a curve-and-line pair per row, so a label eight rows up
+# arrived with fifteen segments — and those chains all ran through one
+# channel, crossing the boxes between. Direct routing draws one curve from
+# the dot to the label's own edge instead.
+
+
+def _segment_count(path_d: str) -> int:
+    return path_d.count("C") + path_d.count("L")
+
+
+def _deep_stack(config, **kwargs):
+    """Events clustered tightly enough that labella opens several rows."""
+    events = [_ev(f"Event number {i}", f"202607{10 + i:02d}") for i in range(12)]
+    return layout_callouts(
+        events,
+        axis_origin=(0.0, 400.0),
+        axis_length=600.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260701", "20260731", 600.0),
+        **kwargs,
+    )
+
+
+def test_direct_routing_gives_every_leader_the_same_few_segments(config):
+    config.timeline_leader_direct = True
+    placements = _deep_stack(config)
+    assert len({p.layer for p in placements}) > 2, "the fixture should stack up"
+
+    counts = {_segment_count(p.leader_path_d) for p in placements}
+    # One curve plus the two perpendicular stubs, whatever the depth.
+    assert counts == {3}
+
+
+def test_layered_routing_costs_a_segment_pair_per_row(config):
+    """The behaviour direct routing replaces, kept reachable by a theme."""
+    config.timeline_leader_direct = False
+    placements = _deep_stack(config)
+
+    by_layer = {}
+    for p in placements:
+        by_layer.setdefault(p.layer, _segment_count(p.leader_path_d))
+    deepest = max(by_layer)
+    assert deepest >= 2
+    # Segments grow with depth: each extra row adds a curve and a line.
+    assert by_layer[deepest] > by_layer[min(by_layer)]
+    assert by_layer[deepest] > 3
+
+
+def test_a_direct_leader_still_starts_on_its_own_dot(config):
+    config.timeline_leader_direct = True
+    for p in _deep_stack(config):
+        tokens = p.leader_path_d.split()
+        start_x = float(tokens[1])
+        assert start_x == pytest.approx(p.x_dot - p.axis_origin[0], abs=0.01)
+
+
+def test_a_direct_leader_ends_on_its_own_label(config):
+    config.timeline_leader_direct = True
+    for p in _deep_stack(config):
+        tokens = p.leader_path_d.strip().split()
+        end_x = float(tokens[-2])
+        # The leader meets the box at the same x the box is drawn from.
+        assert end_x == pytest.approx(p.x_label - p.axis_origin[0], abs=0.51)
+
+
+def test_direct_routing_is_used_for_a_vertical_axis_too(config):
+    config.timeline_leader_direct = True
+    placements = layout_callouts(
+        [_ev(f"Event {i}", f"202607{10 + i:02d}") for i in range(12)],
+        axis_origin=(300.0, 0.0),
+        axis_length=600.0,
+        orientation=Orientation.VERTICAL,
+        side=Side.PRIMARY,
+        config=config,
+        pos_for_day=_pos_for_day_factory("20260701", "20260731", 600.0),
+    )
+    assert {_segment_count(p.leader_path_d) for p in placements} == {3}

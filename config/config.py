@@ -695,6 +695,12 @@ class CalendarConfig:
     # points. labella's bezier leaves the axis dot and arrives at the box at
     # a shallow angle; a short straight stub makes both ends meet their
     # anchor square-on, the same treatment PIT gives its leaders. 0 disables.
+    # Route each callout leader straight from its axis dot to its own box.
+    # False restores labella's own routing, which threads a leader through
+    # the solved position of every ancestor stub — one curve-and-line pair
+    # per row, all funnelled through the same channel and crossing the boxes
+    # between.
+    timeline_leader_direct: bool = True
     timeline_leader_start_stub: float = 4.0
     timeline_leader_end_stub: float = 4.0
     timeline_labella_min_pos: float | None = None

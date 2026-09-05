@@ -125,6 +125,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Timeline orientation + labella label-placement options.
     ("timeline", "orientation"): "timeline_orientation",
     ("timeline", "label_side"): "timeline_label_side",
+    ("timeline.leader", "direct"): "timeline_leader_direct",
     ("timeline.leader", "start_stub"): "timeline_leader_start_stub",
     ("timeline.leader", "end_stub"): "timeline_leader_end_stub",
     ("timeline.labella", "layer_gap"): "timeline_labella_layer_gap",
