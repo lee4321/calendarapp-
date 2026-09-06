@@ -127,10 +127,11 @@ def content_specs() -> list[ImporterSpec]:
         ),
         ImporterSpec(
             key="colors", title="Colors", script="importers/import_rcairo_colors.py",
-            summary="Rcairocolors.csv -> colors table",
+            summary="Colors CSV (name,hex,r,g,b) -> colors table",
             fields=[
                 ImportField("db", "Database", "path", "--db", "calendar.db"),
-                ImportField("csv", "CSV file", "path", "--csv", "Rcairocolors.csv"),
+                ImportField("csv", "CSV file", "path", "--csv",
+                            help="CSV with name,hex,r,g,b columns"),
             ],
         ),
     ]

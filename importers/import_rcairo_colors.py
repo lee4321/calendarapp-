@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Import Rcairocolors.csv into the calendar.db colors table.
+"""Import an R/cairo colors CSV into the calendar.db colors table.
 
 Maps CSV columns (name, hex, r, g, b) to DB columns (EN, hex, red, green, blue).
 ES, DE, and FR columns are left empty.
 
 Usage:
-    uv run python importers/import_rcairo_colors.py [--db calendar.db] [--csv Rcairocolors.csv] [--replace]
+    uv run python importers/import_rcairo_colors.py --csv COLORS.csv [--db calendar.db] [--replace]
 """
 
 import argparse
@@ -16,9 +16,13 @@ from pathlib import Path
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Import Rcairocolors.csv into calendar.db colors table")
+    parser = argparse.ArgumentParser(description="Import an R/cairo colors CSV into the calendar.db colors table")
     parser.add_argument("--db", default="calendar.db", help="Path to SQLite database (default: calendar.db)")
-    parser.add_argument("--csv", default="Rcairocolors.csv", help="Path to CSV file (default: Rcairocolors.csv)")
+    parser.add_argument(
+        "--csv",
+        required=True,
+        help="Path to the CSV file (name,hex,r,g,b columns)",
+    )
     parser.add_argument(
         "--replace",
         action="store_true",
