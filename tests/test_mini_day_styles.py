@@ -1,3 +1,5 @@
+import pytest
+
 from config.config import create_calendar_config, setfontsizes
 from visualizers.mini.day_styles import DayStyleResolver, DayStyle
 from visualizers.mini.renderer import MiniCalendarRenderer
@@ -108,88 +110,173 @@ def test_mini_circle_stroke_style_is_configurable():
     assert renderer.circle_calls[0]["stroke_opacity"] == 0.35
 
 
-def test_mini_icons_are_centered_vertically():
+# ── Corner icons ──────────────────────────────────────────────────────────
+#
+# An event's icon used to be drawn in place of the day number, so a day
+# carrying one said nothing about which day it was — and a second event, or a
+# holiday landing on the same day, silently overwrote the first one's mark.
+# Icons now ring the number in the cell's corners: top-right first, then
+# clockwise, four at most, drawn semi-transparent over the number.
+
+
+class _IconCapture(MiniCalendarRenderer):
+    """Captures icon and text draws without touching a real drawing."""
+
+    def __init__(self):
+        super().__init__()
+        self.icon_calls = []
+        self.text_calls = []
+
+    def _draw_rect(self, *args, **kwargs):
+        return None
+
+    def _draw_line(self, *args, **kwargs):
+        return None
+
+    def _draw_circle(self, *args, **kwargs):
+        return None
+
+    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
+        self.text_calls.append(text)
+
+    def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
+        self.icon_calls.append(
+            {"icon_name": icon_name, "x": x, "baseline_y": baseline_y,
+             "size": size, **kwargs}
+        )
+        return True
+
+    def _resolve_icon_svg(self, icon_name):
+        return "<svg viewBox='0 0 24 24'></svg>" if icon_name else None
+
+
+def _corner_cy(call, size):
+    """Recover a corner's centre y from the baseline _draw_icon_svg took."""
+    return call["baseline_y"] - size * 0.30
+
+
+def _drawn(config, style, x=0.0, y=0.0, w=20.0, h=20.0, day=15):
+    renderer = _IconCapture()
+    renderer._draw_day_cell(config, x, y, w, h, day, style)
+    return renderer
+
+
+def test_the_day_number_survives_an_event_icon():
+    """The whole point: a cell never trades its day number for an icon."""
     config = _config()
-
-    class _CaptureRenderer(MiniCalendarRenderer):
-        def __init__(self):
-            super().__init__()
-            self.icon_calls = []
-
-        def _draw_rect(self, *args, **kwargs):
-            return None
-
-        def _draw_text(self, *args, **kwargs):
-            return None
-
-        def _draw_line(self, *args, **kwargs):
-            return None
-
-        def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-            self.icon_calls.append(
-                {
-                    "icon_name": icon_name,
-                    "x": x,
-                    "baseline_y": baseline_y,
-                    "size": size,
-                    **kwargs,
-                }
-            )
-            return True
-
-        def _resolve_icon_svg(self, icon_name):
-            return "<svg viewBox='0 0 24 24'></svg>" if icon_name else None
-
-    renderer = _CaptureRenderer()
-    cy = 10.0
-
-    replace_style = DayStyle(icon_replace="star")
-    renderer._draw_day_cell(config, 0, 0, 20, 20, 15, replace_style)
-    replace_call = renderer.icon_calls[0]
-    assert replace_call["anchor"] == "middle"
-    assert replace_call["baseline_y"] == cy + (replace_call["size"] * 0.30)
-
-    append_style = DayStyle(icon_append="star")
-    renderer._draw_day_cell(config, 0, 0, 20, 20, 15, append_style)
-    append_call = renderer.icon_calls[1]
-    assert append_call["anchor"] == "middle"
-    assert append_call["baseline_y"] == cy + (append_call["size"] * 0.30)
-
-
-def test_mini_event_icon_replaces_day_number():
-    config = _config()
-
-    class _CaptureRenderer(MiniCalendarRenderer):
-        def __init__(self):
-            super().__init__()
-            self.text_calls = []
-            self.icon_calls = []
-
-        def _draw_rect(self, *args, **kwargs):
-            return None
-
-        def _draw_line(self, *args, **kwargs):
-            return None
-
-        def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
-            self.text_calls.append(text)
-
-        def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-            self.icon_calls.append(icon_name)
-            return True
-
-        def _resolve_icon_svg(self, icon_name):
-            return "<svg viewBox='0 0 24 24'></svg>" if icon_name else None
-
     style = DayStyleResolver(config, _StubDB()).resolve(
         "20260115",
         [{"Start": "20260115", "End": "20260115", "Icon": "star"}],
     )
-    renderer = _CaptureRenderer()
-    renderer._draw_day_cell(config, 0, 0, 20, 20, 15, style)
+    renderer = _drawn(config, style)
 
-    assert renderer.icon_calls == ["star"]
-    assert renderer.text_calls == []
+    assert [c["icon_name"] for c in renderer.icon_calls] == ["star"]
+    assert renderer.text_calls == ["15"]
+
+
+def test_icons_fill_the_corners_clockwise_from_the_top_right():
+    config = _config()
+    style = DayStyle()
+    for name in ("a", "b", "c", "d"):
+        style.add_icon(name)
+    renderer = _drawn(config, style, x=0.0, y=0.0, w=20.0, h=20.0)
+
+    size = 20.0 * config.mini_event_icon_scale
+    pad = config.mini_grid_line_width
+    lo = pad + size / 2.0
+    hi = 20.0 - pad - size / 2.0
+    placed = [
+        (round(c["x"], 4), round(_corner_cy(c, size), 4))
+        for c in renderer.icon_calls
+    ]
+    assert placed == [
+        (round(hi, 4), round(lo, 4)),   # top-right
+        (round(hi, 4), round(hi, 4)),   # bottom-right
+        (round(lo, 4), round(hi, 4)),   # bottom-left
+        (round(lo, 4), round(lo, 4)),   # top-left
+    ]
+
+
+def test_only_four_icons_fit_and_the_lowest_ranked_are_dropped():
+    from visualizers.mini.day_styles import (
+        ICON_RANK_EVENT,
+        ICON_RANK_HOLIDAY,
+        ICON_RANK_MILESTONE,
+    )
+
+    config = _config()
+    style = DayStyle()
+    style.add_icon("event1", ICON_RANK_EVENT)
+    style.add_icon("event2", ICON_RANK_EVENT)
+    style.add_icon("event3", ICON_RANK_EVENT)
+    style.add_icon("milestone", ICON_RANK_MILESTONE)
+    style.add_icon("holiday", ICON_RANK_HOLIDAY)
+
+    names = [c["icon_name"] for c in _drawn(config, style).icon_calls]
+    assert len(names) == 4
+    # There are only four corners, so the fifth mark goes — the least
+    # important one, not whichever happened to be added last.
+    assert names[0] == "holiday"
+    assert names[1] == "milestone"
+    assert "event3" not in names
+
+
+def test_a_holiday_and_an_event_on_one_day_both_get_a_corner():
+    """Neither used to survive the other: both wrote the same field."""
+    config = _config()
+    db = _StubDB(holidays=[{"displayname": "Holiday", "icon": "flag-us"}])
+    style = DayStyleResolver(config, db).resolve(
+        "20260115",
+        [{"Start": "20260115", "End": "20260115", "Icon": "star"}],
+    )
+
+    names = [c["icon_name"] for c in _drawn(config, style).icon_calls]
+    assert names == ["flag-us", "star"]     # holiday outranks the event
+
+
+def test_the_same_icon_from_two_sources_takes_one_corner():
+    config = _config()
+    db = _StubDB(special_days=[{"name": "Company Day", "icon": "star"}])
+    style = DayStyleResolver(config, db).resolve(
+        "20260115",
+        [{"Start": "20260115", "End": "20260115", "Icon": "star"}],
+    )
+
+    assert [c["icon_name"] for c in _drawn(config, style).icon_calls] == ["star"]
+
+
+def test_two_events_on_one_day_each_keep_their_icon():
+    config = _config()
+    style = DayStyleResolver(config, _StubDB()).resolve(
+        "20260115",
+        [
+            {"Start": "20260115", "End": "20260115", "Icon": "star"},
+            {"Start": "20260115", "End": "20260115", "Icon": "rocket"},
+        ],
+    )
+
+    names = [c["icon_name"] for c in _drawn(config, style).icon_calls]
+    assert names == ["star", "rocket"]
+
+
+def test_the_icon_size_and_opacity_come_from_the_theme():
+    config = _config()
+    config.mini_event_icon_scale = 0.4
+    config.mini_event_icon_opacity = 0.25
+    style = DayStyle()
+    style.add_icon("star")
+
+    call = _drawn(config, style, w=30.0, h=20.0).icon_calls[0]
+    # A fraction of the cell's shorter side, so an oblong cell stays square.
+    assert call["size"] == pytest.approx(20.0 * 0.4)
+    assert call["opacity"] == pytest.approx(0.25)
+
+
+def test_a_day_with_no_icons_draws_none():
+    config = _config()
+    renderer = _drawn(config, DayStyle())
+    assert renderer.icon_calls == []
+    assert renderer.text_calls == ["15"]
 
 
 def test_mini_grid_lines_are_inset_to_avoid_bottom_clip():

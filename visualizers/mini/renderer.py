@@ -478,20 +478,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             or config.get_element_color("ec-day-number", config.mini_day_color)
         )
 
-        # Determine text to display
+        # The day number is always drawn. An event's icon used to stand in
+        # for it, which cost the cell the one thing every cell has to say;
+        # icons now go in the corners around it (step 7c).
         display_text = self._format_day_number(day_num, config)
-        replace_icon_name = style.icon_replace or style.icon_append
-        # An icon will be drawn either when the requested icon resolves OR
-        # when the theme's default_missing_icon resolves as a fallback for a
-        # requested-but-missing icon.  In both cases the day-number text is
-        # suppressed so the icon stands in its place.
-        has_replace_icon = bool(self._resolve_icon_svg(replace_icon_name)) or (
-            bool(replace_icon_name)
-            and bool(config.default_missing_icon)
-            and bool(self._resolve_icon_svg(config.default_missing_icon))
-        )
-        if has_replace_icon:
-            display_text = ""
 
         # Determine font
         _ts_day = config.get_text_style("ec-day-number")
@@ -563,22 +553,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 7. Draw day number text
         day_num_css = "ec-day-number ec-adjacent" if style.is_adjacent_month else "ec-day-number"
-        if has_replace_icon:
-            icon_size = font_size * 0.85
-            icon_baseline_y = cy + (icon_size * 0.30)
-            self._draw_icon_svg(
-                replace_icon_name,
-                cx,
-                icon_baseline_y,
-                icon_size,
-                anchor="middle",
-                color=text_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=text_color,
-                css_class="ec-event-icon",
-            )
-        elif style.outlined:
+        if style.outlined:
             # Outlined: draw with very low opacity fill, rely on stroke
             # Since text_to_svg_group produces <path> elements, we
             # can't directly set stroke on them via _draw_text.
@@ -606,6 +581,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 anchor="middle",
                 css_class=day_num_css,
             )
+
+        # 7c. Corner icons, over the day number.
+        self._draw_corner_icons(config, x, y, w, h, style, text_color)
 
         # 7b. Fiscal period start label (small text at bottom of cell)
         if style.fiscal_period_label:
@@ -651,6 +629,63 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     # =========================================================================
 
     # _draw_circle() is inherited from BaseSVGRenderer.
+
+    #: Corner order for a cell's icons: top-right first, then clockwise.
+    #: Each entry is the (x, y) corner as fractions of the cell, so the
+    #: geometry reads the same for any cell size.
+    _ICON_CORNERS = ((1, 0), (1, 1), (0, 1), (0, 0))
+
+    def _draw_corner_icons(
+        self,
+        config: "CalendarConfig",
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        style: DayStyle,
+        default_color: str,
+    ) -> None:
+        """Draw a day's event / holiday icons in the cell's corners.
+
+        Up to four — one per corner, filled top-right first and then
+        clockwise, highest-ranked icon in the first corner.  A fifth icon on
+        one day has nowhere to go and is dropped; ``corner_icons`` sheds the
+        lowest-ranked ones so what survives is what the reader most needs.
+
+        The icons are drawn over the day number at
+        ``mini_calendar.event_icon_opacity`` so the number stays readable
+        underneath — a cell that shows only an icon has lost the one thing
+        every cell has to say, which is what these used to do.
+        """
+        icons = style.corner_icons(len(self._ICON_CORNERS))
+        if not icons:
+            return
+
+        scale = max(0.0, float(config.mini_event_icon_scale))
+        size = min(w, h) * scale
+        if size <= 0:
+            return
+        opacity = max(0.0, min(1.0, float(config.mini_event_icon_opacity)))
+        # Half a stroke keeps an icon off the grid line it would otherwise
+        # sit on; the cell's own inset is already applied by the caller.
+        pad = config.mini_grid_line_width
+
+        for icon, (fx, fy) in zip(icons, self._ICON_CORNERS):
+            cx = x + pad + (size / 2.0) if fx == 0 else x + w - pad - (size / 2.0)
+            cy = y + pad + (size / 2.0) if fy == 0 else y + h - pad - (size / 2.0)
+            self._draw_icon_svg(
+                icon.name,
+                cx,
+                self._icon_baseline(cy, size),
+                size,
+                anchor="middle",
+                color=default_color,
+                fallback_name=config.default_missing_icon,
+                fallback_size=config.default_missing_icon_size,
+                fallback_color=default_color,
+                css_class="ec-event-icon",
+                opacity=opacity,
+            )
 
     def _draw_mini_hash_lines(
         self,

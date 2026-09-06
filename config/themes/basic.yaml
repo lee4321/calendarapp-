@@ -37,6 +37,11 @@ mini_calendar:
   title_format: MMMM YYYY
   week_number_label_format: W{num}
   icon_set: squares
+  # event / holiday / special-day icons in a day cell's corners, drawn
+  # alongside the day number rather than in place of it: up to four, filled
+  # top-right first and then clockwise
+  event_icon_scale: 0.25      # fraction of the cell's shorter side
+  event_icon_opacity: 0.6     # keeps the day number legible underneath
 mini_details:
   output_suffix: _details
   title_text: Event Details

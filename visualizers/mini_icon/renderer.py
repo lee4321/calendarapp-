@@ -133,7 +133,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
     ) -> None:
         """Draw the layers that belong *over* duration bars.
 
-        Order: milestone circle → day-number icon (with text fallback).
+        Order: milestone circle → day-number icon (with text fallback) →
+        corner icons for the day's events, holidays and special days.
         """
         ctx = {"visualizer": "mini", "papersize": config.papersize}
         day_text = self._resolve_token(config, "text:day_number", ctx)
@@ -168,13 +169,10 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 ),
             )
 
-        # 6. Determine which icon to draw.
-        #    Priority: event icon_replace → event icon_append → day-number icon.
-        icon_name = (
-            style.icon_replace
-            or style.icon_append
-            or self._get_day_icon_name(day_num, config)
-        )
+        # 6. The day glyph. It is always drawn — an event's icon used to
+        #    stand in for it, which left the cell saying nothing about which
+        #    day it was; event icons now ring it in the corners (step 8).
+        icon_name = self._get_day_icon_name(day_num, config)
 
         # Scale icon to fill most of the cell height.
         icon_size = min(w, h) * 0.80
@@ -218,3 +216,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 fill_opacity=style.text_opacity,
                 anchor="middle",
             )
+
+        # 8. Event / holiday / special-day icons in the cell's corners, over
+        #    the day glyph. Inherited from MiniCalendarRenderer so both mini
+        #    views ring a day the same way.
+        self._draw_corner_icons(config, x, y, w, h, style, text_color)
