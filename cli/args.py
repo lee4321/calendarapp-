@@ -121,6 +121,12 @@ def _to_output_dir_path(filename: str) -> str:
     rather than raising an error so that users who copy paths from other
     contexts are not penalised.
 
+    A *filename* with no basename at all (``.``, a bare ``/``, whitespace) is
+    the one case that raises: it would otherwise collapse to the string
+    ``"output"`` — the directory itself — and callers append a suffix to that,
+    so the gantt/mini companion details page would be written as
+    ``output_details.svg`` in the working directory, escaping ``output/``.
+
     Example:
         ``_to_output_dir_path("../secret/cal.svg")`` → ``"output/cal.svg"``
 
@@ -128,8 +134,17 @@ def _to_output_dir_path(filename: str) -> str:
         run() when setting config.outputfile for calendar-visualizer commands,
         and when resolving --outputfile for the excelheader/excelblockplan
         workbooks and the exportdata CSV.
+
+    Raises:
+        ConfigError: If *filename* has no usable basename.
     """
-    return str(Path("output") / Path(filename).name)
+    name = Path(filename).name
+    if not name.strip() or name in (".", ".."):
+        raise ConfigError(
+            f"--outputfile {filename!r} names no file; pass a filename such "
+            "as 'chart.svg' (it is always written under output/)"
+        )
+    return str(Path("output") / name)
 
 
 def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:

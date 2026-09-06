@@ -3,7 +3,10 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 import ecalendar
+from cli.errors import ConfigError
 from config.config import create_calendar_config
 
 
@@ -191,6 +194,18 @@ def test_run_sanitizes_atfiles_by_default(tmp_path, capsys):
 def test_to_output_dir_path_forces_output_folder():
     assert ecalendar._to_output_dir_path("calendar.svg") == "output/calendar.svg"
     assert ecalendar._to_output_dir_path("nested/path/out.svg") == "output/out.svg"
+
+
+def test_to_output_dir_path_rejects_a_pathname_with_no_basename():
+    """``-of .`` used to collapse to the bare directory name ``output``.
+
+    Callers append a suffix to build the companion details page, so that
+    yielded ``output_details.svg`` in the working directory — outside
+    ``output/`` — written before the chart save failed on the directory.
+    """
+    for pathname in (".", "..", "/", "   "):
+        with pytest.raises(ConfigError):
+            ecalendar._to_output_dir_path(pathname)
 
 
 def test_blockplan_parser_accepts_dates():
