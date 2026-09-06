@@ -32,6 +32,21 @@ class DetailEntry:
     symbol: str
     date_text: str
     text: str
+    category: str
+
+
+#: Detail sections, in the order they appear under the calendars.  The key is
+#: the DetailEntry.category tag; a section with no entries is skipped, so a
+#: calendar with only holidays prints one subheading rather than five.
+DETAIL_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("event", "Events"),
+    ("milestone", "Milestones"),
+    ("duration", "Durations"),
+    ("holiday", "Holidays"),
+    ("nonworkday", "Non-Working Days"),
+)
+
+DETAIL_HEADING = "Calendar Details"
 
 
 class TextMiniCalendarRenderer:
@@ -233,7 +248,12 @@ class TextMiniCalendarRenderer:
             else:
                 date_text = self._format_short_date(start)
                 details.append(
-                    DetailEntry(symbol, date_text, event.get("Task_Name") or "")
+                    DetailEntry(
+                        symbol,
+                        date_text,
+                        event.get("Task_Name") or "",
+                        "milestone" if event.get("Milestone") else "event",
+                    )
                 )
 
         # Apply event symbols to days
@@ -273,6 +293,7 @@ class TextMiniCalendarRenderer:
                     symbol,
                     f"{self._format_short_date(start)} - {self._format_short_date(end)}",
                     self._duration_name_for(events, start, end),
+                    "duration",
                 )
             )
 
@@ -291,6 +312,7 @@ class TextMiniCalendarRenderer:
                         symbol,
                         self._format_short_date(daykey),
                         holiday.get("displayname", "Holiday"),
+                        "holiday",
                     )
                 )
 
@@ -304,6 +326,7 @@ class TextMiniCalendarRenderer:
                             symbol,
                             self._format_short_date(daykey),
                             sd.get("name", "Nonworkday"),
+                            "nonworkday",
                         )
                     )
 
@@ -364,12 +387,12 @@ class TextMiniCalendarRenderer:
         return text.rjust(2)
 
     def _format_short_date(self, yyyymmdd: str) -> str:
+        """Format a daykey as zero-padded MM/DD so the detail dates align."""
         if not yyyymmdd or len(yyyymmdd) < 8:
             return ""
-        y = int(yyyymmdd[:4])
         m = int(yyyymmdd[4:6])
         d = int(yyyymmdd[6:8])
-        return f"{m}/{d}"
+        return f"{m:02d}/{d:02d}"
 
     def _center_text(self, text: str, width: int) -> str:
         if len(text) >= width:
@@ -387,9 +410,27 @@ class TextMiniCalendarRenderer:
         return base
 
     def _render_details(self, details: list[DetailEntry]) -> list[str]:
-        lines: list[str] = []
+        """Render the legend under the calendars, grouped by entry type.
+
+        One "Calendar Details" heading, then a subheading per type in
+        DETAIL_SECTIONS order.  Entries keep the order _build_symbol_map put
+        them in, which is ascending by date within each section.
+        """
+        by_category: dict[str, list[DetailEntry]] = {}
         for entry in details:
-            lines.append(f"  {entry.symbol} {entry.date_text} {entry.text}".rstrip())
+            by_category.setdefault(entry.category, []).append(entry)
+
+        lines = [DETAIL_HEADING, ""]
+        for category, subheading in DETAIL_SECTIONS:
+            entries = by_category.get(category)
+            if not entries:
+                continue
+            lines.append(f"  {subheading}")
+            for entry in entries:
+                lines.append(
+                    f"    {entry.symbol} {entry.date_text} {entry.text}".rstrip()
+                )
+            lines.append("")
         return lines
 
     def _iter_daykeys(self, config: CalendarConfig):

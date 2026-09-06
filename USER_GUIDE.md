@@ -559,6 +559,20 @@ In the text mini calendar, each day cell shows either a formatted day number or 
 - Special days marked `nonworkday` use symbols from `text_mini_nonworkday_symbols`.
 - Symbol precedence is enforced by priority, highest to lowest: holidays, company nonworkdays, milestone events, duration start/end markers, duration interior fill, then regular single-day events.
 - When multiple symbols compete for one day, the higher-priority symbol replaces the lower-priority one in the month grid. A details list is appended below the calendar for the assigned symbols.
+- The details list opens with a `Calendar Details` heading and is grouped under one subheading per entry type, in this order: `Events`, `Milestones`, `Durations`, `Holidays`, `Non-Working Days`. A type with no entries is skipped entirely. Within each group, entries run in ascending date order, and dates are zero-padded `MM/DD` (durations show `MM/DD - MM/DD`):
+
+```
+Calendar Details
+
+  Milestones
+    🄰 02/02 Project Kickoff
+    🄱 02/27 Requirements Sign-off
+
+  Holidays
+    🅰 01/01 New Year's Day
+    🅱 01/19 Martin Luther King Jr. Day
+```
+
 
 ### `timeline`
 

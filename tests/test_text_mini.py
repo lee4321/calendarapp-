@@ -322,3 +322,67 @@ def test_text_mini_honors_mini_calendar_show_adjacent():
     assert len(first_week_on) == 7
     assert len(first_week_off) == 1
     assert first_week_on[-1] == first_week_off[-1]  # Feb 1 either way
+
+
+def _details_block(text):
+    """The lines from the 'Calendar Details' heading to the end."""
+    lines = text.splitlines()
+    start = lines.index("Calendar Details")
+    return [ln for ln in lines[start:] if ln.strip()]
+
+
+def test_details_are_grouped_under_a_heading_and_per_type_subheadings():
+    events = [
+        {"Start": "20260106", "End": "20260106", "Task_Name": "Standup"},
+        {"Start": "20260108", "End": "20260108",
+         "Task_Name": "Kickoff", "Milestone": True},
+        {"Start": "20260112", "End": "20260116", "Task_Name": "Build Week"},
+    ]
+    db = _FakeDB(
+        events,
+        holidays={"20260101": [{"displayname": "New Year"}]},
+        specials={"20260105": [{"name": "Company Day", "nonworkday": 1}]},
+    )
+    with tempfile.TemporaryDirectory() as td:
+        config = _config_for(td, includedurations=True)
+        TextMiniCalendarVisualizer().generate(config, db)
+        block = _details_block(Path(config.outputfile).read_text(encoding="utf-8"))
+
+    assert block[0] == "Calendar Details"
+    subheadings = [ln.strip() for ln in block if not ln.startswith("    ")]
+    assert subheadings == [
+        "Calendar Details", "Events", "Milestones", "Durations",
+        "Holidays", "Non-Working Days",
+    ]
+    # Each entry sits under its own subheading.
+    assert "Standup" in block[block.index("  Events") + 1]
+    assert "Kickoff" in block[block.index("  Milestones") + 1]
+    assert "Build Week" in block[block.index("  Durations") + 1]
+    assert "New Year" in block[block.index("  Holidays") + 1]
+    assert "Company Day" in block[block.index("  Non-Working Days") + 1]
+
+
+def test_empty_detail_sections_are_skipped():
+    """A calendar with only holidays prints one subheading, not five."""
+    db = _FakeDB([], holidays={"20260101": [{"displayname": "New Year"}]})
+    with tempfile.TemporaryDirectory() as td:
+        config = _config_for(td)
+        TextMiniCalendarVisualizer().generate(config, db)
+        block = _details_block(Path(config.outputfile).read_text(encoding="utf-8"))
+
+    subheadings = [ln.strip() for ln in block if not ln.startswith("    ")]
+    assert subheadings == ["Calendar Details", "Holidays"]
+
+
+def test_detail_dates_are_zero_padded_mm_dd():
+    events = [
+        {"Start": "20260102", "End": "20260102", "Task_Name": "Single"},
+        {"Start": "20260105", "End": "20260109", "Task_Name": "Span"},
+    ]
+    with tempfile.TemporaryDirectory() as td:
+        config = _config_for(td, includedurations=True)
+        TextMiniCalendarVisualizer().generate(config, db=_FakeDB(events))
+        text = Path(config.outputfile).read_text(encoding="utf-8")
+
+    assert "01/02 Single" in text
+    assert "01/05 - 01/09 Span" in text
