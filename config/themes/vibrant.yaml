@@ -227,7 +227,7 @@ timeline:
   axis_width: 2
   tick_color: grey
   date_format: MMM D
-  tick_label_format: MMM YY
+  tick_label_format: MMM DD
   today_date: ''
   today_label_text: Today
   today_label_offset_y: 10.0
