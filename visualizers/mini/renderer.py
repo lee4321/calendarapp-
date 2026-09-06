@@ -452,6 +452,32 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 css_class="ec-day-box",
             )
 
+    def _resolve_day_number_color(
+        self, config: CalendarConfig, token_style: dict
+    ) -> str:
+        """Base day-number color, before any per-day override.
+
+        One chain for the whole mini family (mini, mini-icon, candybar), so a
+        theme colors every one of them the same way: the ``text:day_number``
+        token, then an ``ec-day-number`` element binding, then
+        ``colors.mini_calendar.day_color``, then ``mini_calendar.day_color``.
+        mini-icon used to skip the element binding and mini/candybar used to
+        skip ``colors.mini_calendar.day_color``, so the same theme could paint
+        the views differently.
+
+        Per-day overrides — adjacent month, holiday, resource group, a
+        ``style_rules`` entry — arrive as ``DayStyle.text_color`` and win over
+        whatever this returns.
+
+        Args:
+            token_style: the already-resolved ``text:day_number`` token dict
+                (the two renderers resolve tokens by different routes).
+        """
+        return token_style.get("color") or config.get_element_color(
+            "ec-day-number",
+            config.theme_mini_day_color or config.mini_day_color,
+        )
+
     def _draw_day_cell_foreground(
         self,
         config: CalendarConfig,
@@ -473,10 +499,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         tk_day = self._tk("text:day_number")
         tk_milestone = self._tk("icon:milestone")
-        default_color = (
-            tk_day.get("color")
-            or config.get_element_color("ec-day-number", config.mini_day_color)
-        )
+        default_color = self._resolve_day_number_color(config, tk_day)
 
         # The day number is always drawn. An event's icon used to stand in
         # for it, which cost the cell the one thing every cell has to say;

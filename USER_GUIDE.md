@@ -401,7 +401,7 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - Adjacent-month day cells can be shown or hidden with `mini_calendar.show_adjacent` (default: `true`) or `--mini-no-adjacent`.
 - A configurable outline can be drawn around each entire month grid (title + DOW header + day cells) using `mini_calendar.month_outline_color/width/opacity/dasharray`; the outline is disabled by default (color is `null`).
 - Day cells can also receive SVG pattern decorations from top-level `style_rules` entries with `apply_to: day_box` (the mini renderer reads the same `style_rules` list as weekly).
-- If none of those overrides apply, the day number uses the default mini-calendar day color from the active theme/config.
+- If none of those overrides apply, the day number uses the base day-number color, resolved by one chain shared with `mini-icon` and `candybar` (highest priority first): the `text:day_number` token from `style_rules`, then an `ec-day-number` entry in `element_overrides`, then `colors.mini_calendar.day_color`, then `mini_calendar.day_color` (default `black`).
 - `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
 
 ### `mini-icon`

@@ -424,3 +424,38 @@ def test_mini_day_number_glyphs_take_precedence_over_digits():
     renderer._draw_day_cell(config, 0, 0, 20, 20, 12, DayStyle())
 
     assert renderer.text_calls == ["G12"]
+
+
+def test_day_number_color_chain_is_shared_across_the_mini_family():
+    """mini, mini-icon and candybar resolve the base day-number color the same
+    way.  mini-icon used to skip the ec-day-number element binding and the
+    other two used to skip colors.mini_calendar.day_color, so one theme could
+    paint the views differently."""
+    from visualizers.candybar.renderer import CandybarRenderer
+    from visualizers.mini_icon.renderer import MiniIconRenderer
+
+    renderers = (MiniCalendarRenderer(), MiniIconRenderer(), CandybarRenderer())
+
+    # Bottom of the chain: mini_calendar.day_color.
+    config = _config()
+    config.mini_day_color = "black"
+    for r in renderers:
+        assert r._resolve_day_number_color(config, {}) == "black"
+
+    # colors.mini_calendar.day_color beats it.
+    config.theme_mini_day_color = "teal"
+    for r in renderers:
+        assert r._resolve_day_number_color(config, {}) == "teal"
+
+    # An ec-day-number element binding sits between the two.
+    class _Styles:
+        def get_element_color(self, element_class):
+            return "orchid" if element_class == "ec-day-number" else None
+
+    config.theme_styles = _Styles()
+    for r in renderers:
+        assert r._resolve_day_number_color(config, {}) == "orchid"
+
+    # The text:day_number token beats everything below it.
+    for r in renderers:
+        assert r._resolve_day_number_color(config, {"color": "crimson"}) == "crimson"
