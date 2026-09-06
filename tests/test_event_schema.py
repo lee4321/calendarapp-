@@ -130,7 +130,7 @@ def test_migrated_schema_matches_canonical_ddl(legacy_db):
     fresh_path = str(Path(legacy_db).parent / "fresh.sqlite")
     conn = sqlite3.connect(fresh_path)
     try:
-        conn.executescript((ROOT / "events.sql").read_text())
+        conn.executescript((ROOT / "db utils" / "events.sql").read_text())
     finally:
         conn.close()
 
@@ -209,7 +209,7 @@ def test_migration_of_a_read_only_database_warns_instead_of_raising(legacy_db):
 
 def test_additions_are_declared_in_events_sql():
     """Every migrated column is also in the checked-in DDL."""
-    ddl = (ROOT / "events.sql").read_text()
+    ddl = (ROOT / "db utils" / "events.sql").read_text()
     declared = set(re.findall(r'"(\w+)"\s+(?:TEXT|INTEGER|REAL|NUMERIC)', ddl))
     for column, _decl in EVENTS_SCHEMA_ADDITIONS:
         assert column in declared, f"{column} missing from events.sql"
