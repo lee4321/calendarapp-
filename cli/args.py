@@ -159,11 +159,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     view's parser (per-view audit: docs/cli_theme_overrides.html, Appendix A).
     E.g. --monthnames and --overflow are weekly-only, --shade exists only on
     the day-grid views, and pit has no --nodurations (it always drops
-    multi-day durations).
+    multi-day durations).  The mini family (mini, mini-icon, text-mini, and
+    candybar, which reuses the mini day-cell engine) drops durations by default
+    and takes --durations to opt back in, so it has no --nodurations either.
     - Header/Footer text      --headerleft, --headercenter, --headerright, …
     - Watermark Options       --watermark-text, --watermark-rotation-angle, --watermark-image
-    - Content Filtering       --noevents, --nodurations, --ignorecomplete,
-                              --milestones, --rollups, --WBS, --empty
+    - Content Filtering       --noevents, --nodurations (--durations on the
+                              mini family), --ignorecomplete, --milestones,
+                              --rollups, --WBS, --empty
     - Mini Calendar Options   --mini-columns, --mini-rows, --mini-no-adjacent, …
     - Timeline Options        --today-line-length, --today-line-direction, …
     - Fiscal Options          --fiscal, --fiscal-colors, --fiscal-year-offset,
@@ -933,6 +936,13 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     #   --weekend-days  views that classify days via config.get_weekend_days()
     #   --includenotes  views that render a notes line with event names
     _shade_views = (weekly, mini, mini_icon, candybar)
+    # Mini calendars are day-per-cell grids: a multi-day duration paints a run
+    # of cells and buries the single-day marks under it, so the mini family
+    # shows single-day events and milestones only unless --durations is given.
+    # Candybar is here for the same reason — it reuses the mini day-style
+    # engine over a year-long strip of day cells.  (text-mini registers the
+    # same opt-in in its own argument group below.)
+    _durations_optin_views = (mini, mini_icon, candybar)
     _weekend_days_views = (weekly, timeline, blockplan, gantt, compactplan)
     _includenotes_views = (weekly, timeline, pit, blockplan, gantt, compactplan)
 
@@ -1116,7 +1126,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Exclude single-day events",
         )
-        if view_parser is not pit:
+        if view_parser in _durations_optin_views:
+            content_group.add_argument(
+                "--durations",
+                "-du",
+                action="store_true",
+                help="Include multi-day durations (excluded by default)",
+            )
+        elif view_parser is not pit:
             # PIT drops multi-day durations unconditionally.
             content_group.add_argument(
                 "--nodurations",

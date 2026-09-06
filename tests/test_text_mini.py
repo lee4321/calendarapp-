@@ -132,19 +132,40 @@ def test_text_mini_takes_durations_when_asked():
     assert config.includedurations is True
 
 
-def test_text_mini_no_longer_offers_nodurations():
+def test_mini_family_no_longer_offers_nodurations():
     """The opt-out is gone: it would only restate the default."""
     parser = ecalendar._create_argument_parser("calendar.svg")
-    with pytest.raises(SystemExit):
-        parser.parse_args(
-            ["text-mini", "20260101", "20260131", "--nodurations"]
+    for command in ("text-mini", "mini", "mini-icon", "candybar"):
+        with pytest.raises(SystemExit):
+            parser.parse_args(
+                [command, "20260101", "20260131", "--nodurations"]
+            )
+
+
+def test_mini_family_defaults_to_excluding_durations():
+    """mini, mini-icon and candybar paint a duration bar across a run of day
+    cells and bury the day marks under it, so they follow text-mini: single-day
+    events and milestones only, with --durations to opt back in."""
+    parser = ecalendar._create_argument_parser("calendar.svg")
+    for command in ("mini", "mini-icon", "candybar"):
+        config = create_calendar_config()
+        args = parser.parse_args([command, "20260101", "20260131"])
+        ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
+        assert config.includedurations is False, command
+        assert config.includeevents is True, command
+
+        config = create_calendar_config()
+        args = parser.parse_args(
+            [command, "20260101", "20260131", "--durations"]
         )
+        ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
+        assert config.includedurations is True, command
 
 
 def test_other_views_still_take_durations_by_default():
-    """Only text-mini flips; the SVG views keep --nodurations as the opt-out."""
+    """Only the mini family flips; other views keep --nodurations as the opt-out."""
     parser = ecalendar._create_argument_parser("calendar.svg")
-    for command in ("weekly", "mini", "timeline"):
+    for command in ("weekly", "timeline", "blockplan"):
         config = create_calendar_config()
         args = parser.parse_args([command, "20260101", "20260131"])
         ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
