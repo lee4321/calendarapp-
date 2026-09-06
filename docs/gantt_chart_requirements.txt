@@ -1,0 +1,73 @@
+Examine the files example1.png, example2.png, and example0.jpeg which contain examples of Gantt visualizations. Develop a plan to create a new gantt visualization for ecalendar.py. 
+
+The plan should leverage existing ecalendar.py capabilities - all needed features should be evaluated against existing capabilities and only those that are completely unique should be planned. The Gantt visualization must honor all existing data filters from ecalendar.py 
+
+Respect "weekends" setting to show weekends or not.
+
+This new visualization has a task list on the vertical axis, and time intervals on the horizontal axis. The width of the horizontal bars show the duration of each task. Gantt charts show the dependency relationships between tasks. Gantt charts can be used to show current schedule status using percent-complete markings and a vertical "TODAY" line. In this visualization follow the PIT visualizer for enabling the TODAY line and at what date the TODAY line should be drawn.
+
+Important differences of this new visualization from existing code are: 
+
+1. the indication of dependencies between durations and events (predecessors column from the event table),
+2. the indication of progress against durations (percent_complete from the event table),  
+3. the inclusion of earliest_start_date, latest_start_date, earliest_end_date, and latest_end_date from the event table
+
+
+Task List Requirements
+
+The "task list" on the left of the chart is populated by data from the events table. 
+
+Themes should govern the formatting of the left part of the visualization (the data columns) using style_rules. Specifically the style_rules should be able to:
+
+a. Specify which columns and in what order from the events table to include. The default columns should be "name", "status", "priority", "wbs", "rollup", "milestone", "percent_complete",  "effort", "duration", "start_date", "end_date", "resource_names", "resource_group", "notes" and "deadline". 
+b. Specify the column widths for each of the columns, determine the text justification, word wrap within the column if the text overflows the width or if the text should be truncated.
+c. Specify the sort order of the task rows. By default sort the rows of the columns by wbs value and start_date. If wbs is empty then sort by start_date of event entries.
+d. Define the way "name" text is shown when "rollup" value equates to TRUE. Related entries can be recognized by the wbs value. Entries that are below the 'rollup' should be indented. 
+d. Define the format of the dates shown in columns based upon Arrow format strings including the addition of the 'dd' string. 
+
+
+Durations and Event Representation
+
+
+On the top and optionally bottom of the right side of the visualization is the timescale to plot the durations and events. The timeband of the visualization should leverage existing ecalendar.py timeband capabilities. 
+
+Nonworking days should be shaded  - this includes country holidays and weekends. The shading should be "behind" the duration bars and events. 
+
+Themes must govern the formatting of the visualization using the standard style_rules mechanism. 
+
+Style rules should define the size, color, opacity, stroke, etc. of the duration bars and event icons should be drawn for those rows found in the task list. Duration bars should be drawn as rectangles that start and end at the x axis that correspond to the date shown on the time scale. For durations that have start_date that are before the timescale begins the rectangle should be drawn from the timescale start_date and end at the duration's end_date. The duration bar style rules should determine if the any of the data fields like name, ID, notes should appear atop or to the right of the duration bar. By default there should be no text fields. 
+
+Style rules should define the indicator of percentage complete atop the duration bars. The indicator is a line drawn atop the duration bar equal to the percent_complete ratio beginning at the start_date. If the percentage_complete is 100% then the line should be drawn to the end_date. The style rule must define the stroke width, dash array, color, opacity, etc. Be default the color should be black. 
+
+Rollup values should be drawn as downward facing brackets similar to the text version below:
+
+
+┌───────────────────────────────────┐
+│                                   │
+│  ┌──────────────────────┐         │
+   │                      │           
+   └──────────────────────┘           
+          ┌──────────────────────┐    
+          │                      │    
+          └──────────────────────┘    
+                      ┌─────────┐     
+                      │         │     
+                      └─────────┘     
+
+
+Via theme definition style_rules the visualization should draw orthogonal single direction arrows between the end of an event to the beginning of another event based upon predecessors / successor relationships. The arrow should be drawn from the center point vertically of the duration bar or event icon to the center point vertically of the succesor event or duration bar. The arrow head should be placed pointing right with the stroke color, dash array, etc defined in the theme. See below: 
+
+┌──────────────────────┐                   
+│                      │──┐                
+└──────────────────────┘  │                
+                          │  ┌────────────┐
+                          └─▶│            │
+                             └────────────┘
+                             
+Style_rules should define how to draw the periods between earliest_start_date to start_date, between start_date to latest_start_date, between earliest_end_date to end_date, and between end_date to latest_end_date. The defaults should be different opacity of the same color as between the start_date to end_date. All the colors and percentages should be defined in themes.
+
+Style_rules should define how milestones should be drawn. The default icon if not otherwise specified should be a filled diamond. 
+
+Style_rules should define how single day events should be drawn. The default visualization should be drawn as a single day width rectangle with formatting defined in the stye rule. A style_rule can define an icon to be used instead of the rectangle.
+
+
