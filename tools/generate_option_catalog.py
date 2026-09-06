@@ -47,7 +47,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-GUIDE = ROOT / "USER_GUIDE.md"
+GUIDE = ROOT / "docs" / "USER_GUIDE.md"
 HEADING = "## Command-Line Option Catalog (All Options)"
 POSITIONAL_HEADING = "## Positional Arguments by Command"
 

@@ -53,7 +53,7 @@ before writing: **Ctrl+D** dry-runs, **Ctrl+R** imports.
 
 Global keys: **Esc** goes back, **q** / **Ctrl+Q** quits, **d** toggles
 dark/light. The UI adds the `tui/` package and the `textual` dependency; it makes
-no changes to `ecalendar.py` or the importers. See [tui/README.md](tui/README.md)
+no changes to `ecalendar.py` or the importers. See [tui/README.md](../tui/README.md)
 for the module-level architecture.
 
 ## Commands
