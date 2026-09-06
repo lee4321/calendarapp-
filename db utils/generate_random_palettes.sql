@@ -1,5 +1,5 @@
 -- Generate 30 palettes of 15 random colors from the colors table.
--- Usage: sqlite3 calendar.db < generate_random_palettes.sql
+-- Usage: sqlite3 calendar.db < "db utils/generate_random_palettes.sql"
 
 -- Remove any previous Random_XX palettes so the script is idempotent.
 DELETE FROM palettes WHERE name GLOB 'Random_[0-9][0-9]';
