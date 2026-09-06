@@ -279,3 +279,46 @@ def test_holiday_and_nonworkday_symbols_run_in_date_order():
     assert [d.text for d in details] == [
         "Earlier Holiday", "Earlier Shutdown", "Later Holiday", "Later Shutdown",
     ]
+
+
+def test_text_mini_accepts_a_theme():
+    """run() applies a theme only when args.theme exists, so without --theme on
+    the parser text-mini silently ignored every themed value it reads."""
+    parser = ecalendar._create_argument_parser("calendar.svg")
+    args = parser.parse_args(
+        ["text-mini", "20260101", "20260131", "--theme", "dark"]
+    )
+
+    assert args.theme == "dark"
+
+
+def test_text_mini_honors_mini_calendar_show_adjacent():
+    """The theme key reaches the renderer, which blanks the leading/trailing
+    cells that belong to a neighbouring month."""
+    from config.theme_engine import ThemeEngine
+
+    db = _FakeDB([])
+    texts = {}
+    for show_adjacent in (True, False):
+        with tempfile.TemporaryDirectory() as td:
+            config = _config_for(td)
+            config.userstart = config.adjustedstart = "20260201"
+            config.userend = config.adjustedend = "20260228"
+            theme = ThemeEngine()
+            theme._theme_data = {"mini_calendar": {"show_adjacent": show_adjacent}}
+            theme.apply(config)
+
+            assert config.mini_show_adjacent is show_adjacent
+            TextMiniCalendarVisualizer().generate(config, db)
+            texts[show_adjacent] = Path(config.outputfile).read_text(encoding="utf-8")
+
+    # February 2026 starts on a Sunday, so the first week row carries six days
+    # of January when adjacent days are shown and blanks them when not.  Count
+    # filled cells rather than matching text: day numbers render as configured
+    # glyphs, not ASCII digits.
+    first_week_on = texts[True].splitlines()[2].split()
+    first_week_off = texts[False].splitlines()[2].split()
+
+    assert len(first_week_on) == 7
+    assert len(first_week_off) == 1
+    assert first_week_on[-1] == first_week_off[-1]  # Feb 1 either way
