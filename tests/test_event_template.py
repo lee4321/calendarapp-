@@ -67,7 +67,7 @@ def test_example_rows_import_cleanly(tmp_path):
     db_path = str(tmp_path / "calendar.sqlite")
     conn = sqlite3.connect(db_path)
     try:
-        conn.executescript((ROOT / "events.sql").read_text())
+        conn.executescript((ROOT / "db utils" / "events.sql").read_text())
         conn.execute(
             "CREATE TABLE import_history (id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "userid TEXT, filename TEXT, date TEXT, filehash TEXT, command TEXT)"
@@ -89,7 +89,7 @@ def test_first_example_row_lands_in_the_right_columns(tmp_path):
     db_path = str(tmp_path / "calendar.sqlite")
     conn = sqlite3.connect(db_path)
     try:
-        conn.executescript((ROOT / "events.sql").read_text())
+        conn.executescript((ROOT / "db utils" / "events.sql").read_text())
         conn.execute(
             "CREATE TABLE import_history (id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "userid TEXT, filename TEXT, date TEXT, filehash TEXT, command TEXT)"
