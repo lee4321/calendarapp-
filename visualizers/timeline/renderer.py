@@ -990,6 +990,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 key=lambda e: (
                     0 if groups[id(e)] else 1,
                     wbs_sort_key(groups[id(e)]),
+                    # A group's rollups lead it, so the lane they take is
+                    # known before the parts they summarise are placed and
+                    # floored beneath it (_rollup_lane_floor). A rollup
+                    # whose own code is a prefix of its parts' already led
+                    # them; this also covers one whose code is not.
+                    0 if e.rollup else 1,
                     wbs_sort_key(e.wbs),
                     date_key(e),
                 ),
@@ -1041,6 +1047,9 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         lane_last_end: list[float] = []
+        # Lane each group's rollups reached, so the bars they summarise can
+        # be kept further from the axis than their header is.
+        rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_width * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
         title_size, notes_size, date_size, _ = self._duration_metrics(config)
@@ -1118,7 +1127,13 @@ class TimelineRenderer(BaseSVGRenderer):
             if ex - sx < min_width:
                 ex = min(axis_right, sx + min_width)
 
-            lane = self._place_span_in_lane(lane_last_end, sx, ex, min_gap)
+            group = self._rollup_group(config, event)
+            lane = self._place_span_in_lane(
+                lane_last_end, sx, ex, min_gap,
+                self._rollup_lane_floor(rollup_floors, group, event),
+            )
+            if group is not None and event.rollup:
+                rollup_floors[group] = max(rollup_floors.get(group, -1), lane)
             color = duration_colors[id(event)]
             _sr = style_engine.evaluate_event(event) if style_engine is not None else None
             if _sr is not None and _sr.fill_color:
@@ -1195,6 +1210,7 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
         lane_last_end: list[float] = []
+        rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_height * 0.01)
         _layout_notes_style = config.get_text_style("ec-event-notes")
         title_size, notes_size, date_size, _ = self._duration_metrics(config)
@@ -1271,7 +1287,13 @@ class TimelineRenderer(BaseSVGRenderer):
             if ey - sy < min_length:
                 ey = min(axis_bottom, sy + min_length)
 
-            lane = self._place_span_in_lane(lane_last_end, sy, ey, min_gap)
+            group = self._rollup_group(config, event)
+            lane = self._place_span_in_lane(
+                lane_last_end, sy, ey, min_gap,
+                self._rollup_lane_floor(rollup_floors, group, event),
+            )
+            if group is not None and event.rollup:
+                rollup_floors[group] = max(rollup_floors.get(group, -1), lane)
             color = duration_colors[id(event)]
             _sr = style_engine.evaluate_event(event) if style_engine is not None else None
             if _sr is not None and _sr.fill_color:
@@ -1302,14 +1324,60 @@ class TimelineRenderer(BaseSVGRenderer):
         start_x: float,
         end_x: float,
         min_gap: float,
+        min_lane: int = 0,
     ) -> int:
-        for lane, last_end in enumerate(lane_last_end):
-            if start_x >= (last_end + min_gap):
+        """First lane at or beyond ``min_lane`` with room for this span.
+
+        ``min_lane`` is how a group's parts are kept outside the lanes its
+        rollup claimed — see :py:meth:`_rollup_lane_floor`.  Lanes skipped
+        because of it stay open for bars from other groups, so the floor
+        costs depth only where it actually applies.
+        """
+        for lane in range(min_lane, len(lane_last_end)):
+            if start_x >= (lane_last_end[lane] + min_gap):
                 lane_last_end[lane] = end_x
                 return lane
 
+        # A floor past the end of the stack opens the lanes it skipped as
+        # empty, not as used: another group's bar may still take them.
+        while len(lane_last_end) < min_lane:
+            lane_last_end.append(float("-inf"))
         lane_last_end.append(end_x)
         return len(lane_last_end) - 1
+
+    @staticmethod
+    def _rollup_group(config: "CalendarConfig", event: Event) -> str | None:
+        """The WBS group whose rollup outranks this bar, or ``None``.
+
+        ``None`` when WBS grouping is off (``timeline_wbs_group_depth`` 0):
+        bars then run in date order with no hierarchy to express, so there
+        is no "same root WBS" for a rollup to lead.
+        """
+        depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
+        if depth <= 0:
+            return None
+        return wbs_group(event.wbs, depth)
+
+    @staticmethod
+    def _rollup_lane_floor(
+        floors: dict[str, int], group: str | None, event: Event
+    ) -> int:
+        """Lowest lane a bar may take, given its group's rollup.
+
+        A rollup summarises the bars under it, so it has to read as their
+        header: it sits nearer the axis than every other bar sharing its
+        root WBS.  Greedy first-fit alone will not do that — a child that
+        starts after the rollup's neighbours have ended happily reuses a
+        lane the rollup could not reach — so the group's parts are floored
+        one lane past whatever its rollups claimed.
+
+        Rollups themselves are unfloored, and are ordered ahead of their
+        group in :py:meth:`_order_durations`, so the floor is always known
+        by the time the parts are placed.
+        """
+        if group is None or event.rollup:
+            return 0
+        return floors.get(group, -1) + 1
 
     @staticmethod
     def _boxes_overlap(

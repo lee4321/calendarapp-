@@ -1118,8 +1118,8 @@ def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
 # They now sort by WBS group and every bar in a group takes one color.
 
 
-def _dur(name, start, end, wbs=None):
-    return Event(task_name=name, start=start, end=end, wbs=wbs)
+def _dur(name, start, end, wbs=None, rollup=False):
+    return Event(task_name=name, start=start, end=end, wbs=wbs, rollup=rollup)
 
 
 def _grouped_bars(config, events):
@@ -1263,6 +1263,113 @@ def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
 )
 def test_wbs_group_prefixes(wbs, depth, expected):
     assert wbs_group(wbs, depth) == expected
+
+
+# ── A rollup leads the bars it summarises ─────────────────────────────────
+#
+# Greedy first-fit alone put a group's rollup wherever it happened to fit and
+# then let its own parts reuse lanes nearer the axis — so the bar that
+# summarised a phase was drawn below the phase. A rollup now floors every bar
+# sharing its root WBS one lane further out.
+
+
+def _rollup_phase_events():
+    """One rollup per phase, with parts a first-fit pass would sink it under.
+
+    The NP.2 parts start after the NP.1 bars end, so without a floor they
+    would reuse NP.1's lanes and sit nearer the axis than NP.2's own rollup.
+    """
+    return [
+        _dur("phase one", "20260202", "20260227", "NP.1", rollup=True),
+        _dur("one a", "20260202", "20260213", "NP.1.1"),
+        _dur("one b", "20260209", "20260220", "NP.1.2"),
+        _dur("phase two", "20260302", "20260327", "NP.2", rollup=True),
+        _dur("two a", "20260302", "20260313", "NP.2.1"),
+        _dur("two b", "20260309", "20260320", "NP.2.2"),
+    ]
+
+
+def _lanes_by_name(bars):
+    return {b.event.task_name: b.lane for b in bars}
+
+
+def test_a_rollup_sits_nearer_the_axis_than_every_bar_it_summarises(tmp_path):
+    config = _base_config(tmp_path / "rollup_lane.svg")
+    config.timeline_wbs_group_depth = 2
+    bars = _grouped_bars(config, _rollup_phase_events())
+
+    by_group: dict[str, list] = {}
+    for bar in bars:
+        by_group.setdefault(wbs_group(bar.event.wbs, 2), []).append(bar)
+
+    assert len(by_group) == 2
+    for group, items in by_group.items():
+        rollups = [b.lane for b in items if b.event.rollup]
+        parts = [b.lane for b in items if not b.event.rollup]
+        assert rollups and parts, f"{group} needs both to be a test"
+        assert max(rollups) < min(parts), (
+            f"{group}: rollup at lane {max(rollups)} is further out than a "
+            f"part at lane {min(parts)}"
+        )
+
+
+def test_a_part_is_floored_past_its_rollup_rather_than_reusing_a_low_lane(
+    tmp_path,
+):
+    """The specific packing the floor exists to prevent."""
+    config = _base_config(tmp_path / "rollup_floor.svg")
+    config.timeline_wbs_group_depth = 2
+    lanes = _lanes_by_name(_grouped_bars(config, _rollup_phase_events()))
+
+    # NP.2's parts start well after NP.1's bars end, so first-fit alone would
+    # hand them NP.1's lanes.
+    assert lanes["two a"] > lanes["phase two"]
+    assert lanes["two b"] > lanes["phase two"]
+
+
+def test_a_lane_skipped_by_a_floor_is_still_offered_to_other_groups(tmp_path):
+    """The floor costs depth only inside the group it applies to."""
+    config = _base_config(tmp_path / "rollup_reuse.svg")
+    config.timeline_wbs_group_depth = 2
+    events = _rollup_phase_events() + [
+        # No WBS, so no rollup outranks it: it may take any free lane.
+        _dur("late loner", "20260601", "20260610"),
+    ]
+    bars = _grouped_bars(config, events)
+    lanes = _lanes_by_name(bars)
+
+    deepest_rollup = max(b.lane for b in bars if b.event.rollup)
+    assert lanes["late loner"] <= deepest_rollup
+
+
+def test_a_rollup_leads_its_group_even_when_its_code_is_not_a_prefix(tmp_path):
+    """Ordering cannot rely on the rollup's WBS sorting first.
+
+    A rollup coded NP.1.99 sorts after NP.1.1 by WBS, so only the explicit
+    rollup rank keeps its lane known before its parts are placed.
+    """
+    config = _base_config(tmp_path / "rollup_order.svg")
+    config.timeline_wbs_group_depth = 2
+    bars = _grouped_bars(config, [
+        _dur("part", "20260202", "20260213", "NP.1.1"),
+        _dur("summary", "20260202", "20260227", "NP.1.99", rollup=True),
+    ])
+    assert [b.event.task_name for b in bars] == ["summary", "part"]
+    lanes = _lanes_by_name(bars)
+    assert lanes["summary"] < lanes["part"]
+
+
+def test_grouping_off_leaves_the_rollup_rule_inert(tmp_path):
+    """Depth 0 means no hierarchy to express, so nothing is floored."""
+    config = _base_config(tmp_path / "rollup_depth0.svg")
+    config.timeline_wbs_group_depth = 0
+    bars = _grouped_bars(config, _rollup_phase_events())
+
+    renderer = _CaptureTimelineRenderer()
+    for bar in bars:
+        assert renderer._rollup_group(config, bar.event) is None
+    # Date order, and the late parts reuse the early lanes as before.
+    assert min(b.lane for b in bars if not b.event.rollup) == 0
 
 
 # ── Duration bars that run out of room ────────────────────────────────────
