@@ -8,7 +8,7 @@ and duration bars aligned to start/end dates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from datetime import date
 
@@ -28,9 +28,9 @@ from shared.icon_band import compute_icon_band_days
 from shared.timeband import build_segments as _build_band_segments
 from visualizers.timeline.labella_adapter import (
     CalloutPlacement,
-    callout_date_extent,
     layout_callouts as _labella_layout_callouts,
 )
+from visualizers.timeline.packing import pack_callouts as _pack_callouts
 from shared.orientation import Orientation, Side
 
 if TYPE_CHECKING:
@@ -85,6 +85,9 @@ class TimelineCallout:
     axis_origin: tuple[float, float] = (0.0, 0.0)
     orientation: Orientation = Orientation.HORIZONTAL
     style: StyleResult | None = None
+    #: False when packing found no room for the box. The leader is still
+    #: drawn, capped with the theme's missing-box icon; nothing else is.
+    placed: bool = True
 
     @property
     def x(self) -> float:
@@ -124,12 +127,6 @@ class TimelineDuration:
     lane_side: Side = Side.SECONDARY
 
 
-#: Air kept above the title's ink and below the notes' ink inside a callout.
-_CALLOUT_PAD_Y: float = 1.5
-
-#: Space between the title's descenders and the notes' ascenders.
-_CALLOUT_LINE_GAP: float = 1.0
-
 #: Inset from a duration bar's edge to its in-bar start / end date.
 _DURATION_DATE_PAD_X: float = 3.0
 
@@ -163,60 +160,6 @@ class TimelineRenderer(BaseSVGRenderer):
         return ascent * size, descent * size
 
     @classmethod
-    def _callout_text_geometry(
-        cls,
-        box_height: float,
-        title_size: float,
-        notes_size: float,
-        title_font_path: str | None,
-        notes_font_path: str | None,
-        has_notes: bool,
-    ) -> tuple[float, float, float]:
-        """Vertical layout of a callout box's text.
-
-        Returns ``(title_dy, notes_dy, required_height)`` — the two baselines
-        as offsets from the box top, and the height the block needs.
-
-        One function serves both the fitter and the drawing pass on purpose.
-        They used to carry separate formulas — the fitter allowed
-        ``1.2 * title + 1.2 * notes + 2``, the renderer drew the notes
-        baseline at ``1.15 * title + 1.55 * notes`` and counted no descender
-        at all — so a box the fitter called a fit still hung the notes'
-        descenders up to 1.9pt below its bottom edge.
-
-        Extents come from the glyph outlines rather than the OS/2 typo
-        metrics, which are line-spacing advice and overstate the ink badly
-        for some fonts (see :func:`renderers.glyph_cache.get_ink_extents`).
-        """
-        title_ascent, title_descent = cls._ink_extents_pt(
-            title_font_path, title_size
-        )
-        if has_notes:
-            notes_ascent, notes_descent = cls._ink_extents_pt(
-                notes_font_path, notes_size
-            )
-            gap = _CALLOUT_LINE_GAP
-        else:
-            notes_ascent = notes_descent = gap = 0.0
-
-        block_h = (
-            title_ascent + title_descent + gap + notes_ascent + notes_descent
-        )
-        # Centre the block, so a box taller than its text does not strand the
-        # lines against the top edge. The clamp keeps the title inside its
-        # padding when the box is too short for the block to fit at all.
-        top = max(_CALLOUT_PAD_Y, (box_height - block_h) / 2.0)
-        title_dy = top + title_ascent
-        # With no notes there is no second baseline; returning the title's
-        # keeps a caller that ignores ``has_notes`` from drawing below the ink.
-        notes_dy = (
-            title_dy + title_descent + gap + notes_ascent
-            if has_notes
-            else title_dy
-        )
-        return title_dy, notes_dy, block_h + (2.0 * _CALLOUT_PAD_Y)
-
-    @classmethod
     def _fit_box_text_sizes(
         cls,
         text: str,
@@ -228,7 +171,6 @@ class TimelineRenderer(BaseSVGRenderer):
         title_size: float,
         notes_size: float,
         notes_width: float | None = None,
-        height_for: "Callable[[float, float, bool], float] | None" = None,
     ) -> tuple[float, float]:
         """Shrink title/notes fonts to fit a constrained box width and height.
 
@@ -238,10 +180,6 @@ class TimelineRenderer(BaseSVGRenderer):
         Measuring both against the title's narrower budget shrank the notes
         to clear space they were never drawn near. Defaults to
         ``text_width``.
-
-        ``height_for`` supplies the height model, so the caller that draws the
-        text is the one that decides how much room it needs; the default is
-        the flat 1.2-per-line box the duration bars lay out with.
         """
         width = max(8.0, text_width)
         n_width = max(8.0, text_width if notes_width is None else notes_width)
@@ -252,13 +190,11 @@ class TimelineRenderer(BaseSVGRenderer):
             else notes_size
         )
 
-        def default_height(ts: float, ns: float, has: bool) -> float:
+        def required_h(ts: float, ns: float, has: bool) -> float:
             # ~1.2 line height per row plus a small inner padding. The earlier
             # 1.9/1.7 multipliers were generous and caused declared font sizes
             # to be shrunk well below the box's actual capacity.
             return ts * 1.2 + ((ns * 1.2) if has else 0.0) + 2.0
-
-        required_h = height_for or default_height
 
         has_notes = bool(notes)
         need = required_h(tsize, nsize, has_notes)
@@ -425,8 +361,11 @@ class TimelineRenderer(BaseSVGRenderer):
             orientation=orient,
             side=label_side,
             # Rows past the edge of the drawable area carry labels nobody
-            # can read, so the layout stops buying them there.
-            max_extent=callout_room,
+            # can read, so the layout stops buying them there. Under
+            # --shrink there is no such edge — the viewBox is grown to
+            # whatever the layout needs — so the stack goes as deep as it
+            # likes, the same licence the duration lanes get below.
+            max_extent=None if config.shrink_to_content else callout_room,
             # A box that runs off the paper is a box the reader loses the
             # end of, so placement is bounded by the page, not the axis.
             label_bounds=label_bounds,
@@ -706,14 +645,25 @@ class TimelineRenderer(BaseSVGRenderer):
         if getattr(config, "timeline_show_holiday_icons", True):
             max_y = max(max_y, axis_y + self._holiday_band_extent(config))
 
-        # Callouts extend above axis_y (box_y is the SVG top of the box)
-        for callout in callouts:
-            min_y = min(min_y, callout.box_y)
-
         # Durations extend below axis_y (horizontal) or to the left of
         # axis_x (vertical).
         min_x = axis_left
         max_x = axis_right
+
+        # Callouts extend above axis_y (box_y is the SVG top of the box), and
+        # along the axis as well: a packed box starts on its own date and runs
+        # a full box-width from there, so the last one reaches the axis end.
+        # Half the box's stroke sits outside its rect, so count that too or
+        # the final border is shaved off by the viewBox.
+        half_stroke = config.get_box_style("ec-callout-box").stroke_width / 2.0
+        for callout in callouts:
+            min_y = min(min_y, callout.box_y - half_stroke)
+            max_y = max(max_y, callout.box_y + callout.box_height + half_stroke)
+            min_x = min(min_x, callout.box_x - half_stroke)
+            max_x = max(
+                max_x, callout.box_x + callout.box_width + half_stroke
+            )
+
         if durations:
             title_size, notes_size, d_date_size, bar_h = self._duration_metrics(config)
             min_duration_offset = self._min_duration_offset(config, d_date_size)
@@ -886,7 +836,12 @@ class TimelineRenderer(BaseSVGRenderer):
             clamped = max(0, min(offset, span_days))
             return axis_length * (clamped / span_days)
 
-        placements = _labella_layout_callouts(
+        place = (
+            _pack_callouts
+            if config.timeline_event_placement == "packed"
+            else _labella_layout_callouts
+        )
+        placements = place(
             ordered,
             axis_origin=axis_origin,
             axis_length=axis_length,
@@ -934,6 +889,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     axis_origin=p.axis_origin,
                     orientation=p.orientation,
                     style=sr,
+                    placed=getattr(p, "placed", True),
                 )
             )
 
@@ -1368,27 +1324,58 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
 
+    @classmethod
+    def _cell_baseline(
+        cls,
+        cell_top: float,
+        cell_h: float,
+        font_path: str | None,
+        size: float,
+    ) -> float:
+        """Baseline that centres one line's ink in a cell.
+
+        The 2x2 grid gives each line a band of its own, so a line is
+        centred in its band rather than the four of them being centred
+        together as one block.
+        """
+        ascent, descent = cls._ink_extents_pt(font_path, size)
+        return cell_top + ((cell_h - (ascent + descent)) / 2.0) + ascent
+
+    @classmethod
+    def _cell_font_size(
+        cls, cell_h: float, font_path: str | None, size: float
+    ) -> float:
+        """``size``, capped so its ink fits the cell's height.
+
+        Width is not consulted: a callout box is never stretched to its
+        text, and over-wide text is compressed horizontally at draw time
+        (``_draw_text(max_width=...)``) rather than shrunk, which keeps
+        every box's four lines at a consistent size.
+        """
+        ascent, descent = cls._ink_extents_pt(font_path, 1.0)
+        per_point = max(1e-6, ascent + descent)
+        return max(4.0, min(size, cell_h / per_point))
+
     def _draw_callout(
         self,
         config: "CalendarConfig",
         item: TimelineCallout,
         axis_y: float,
     ) -> None:
-        """Draw one placed callout: axis dot, label box, and box content
-        (icon, name, notes, and — horizontal axes only — the event date,
-        right-aligned on the title line).  Text is shrunk to fit via
-        `_fit_box_text_sizes`; the leader path was already drawn in
-        `_render_content`'s underlay pass."""
-        title = item.event.task_name or "(untitled)"
-        notes = (item.event.notes or "").strip()
+        """Draw one placed callout: the axis dot, the label box, and the
+        box's contents.
 
-        title_font_size, notes_font_size, date_font_size = self._callout_metrics(config)
+        A callout whose box found no room (packed placement, page full)
+        draws its dot and the theme's missing-box icon at the end of its
+        leader, and nothing else — the same treatment a duration bar past
+        its limit gets in :py:meth:`_draw_duration_connectors`.
 
+        The leader path itself was drawn in ``_render_content``'s underlay
+        pass, so it runs beneath every box rather than over the ones it
+        crosses.  ``axis_y`` is retained for backwards compatibility;
+        ``item.x_dot`` / ``item.y_dot`` already account for orientation.
+        """
         # Always draw a plain circle on the axis — icons go in the label box.
-        # `item.x_dot` / `item.y_dot` already account for orientation; the
-        # `axis_y` arg is retained for backwards-compatibility but only
-        # consulted by the legacy horizontal-only date-label rendering path
-        # further down in this method.
         self._draw_timeline_marker(
             config,
             x=item.x_dot,
@@ -1397,7 +1384,16 @@ class TimelineRenderer(BaseSVGRenderer):
             icon_name=None,
         )
 
-        # Label box.
+        if not item.placed:
+            self._draw_missing_box_marker(
+                config,
+                item.box_x,
+                item.box_y,
+                max(8.0, float(config.timeline_icon_size)),
+                item.color,
+            )
+            return
+
         _callout_style = config.get_box_style("ec-callout-box")
         _sr = item.style or StyleResult()
         rect_kwargs = _sr.rect_overrides(
@@ -1416,21 +1412,40 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-callout-box",
             **rect_kwargs,
         )
+        self._draw_callout_contents(config, item, _sr)
 
-        has_icon = bool(item.event.icon and self._resolve_icon_svg(item.event.icon))
-        icon_gap = 2.0
-        icon_reserved = (title_font_size + icon_gap) if has_icon else 0.0
+    def _draw_callout_contents(
+        self,
+        config: "CalendarConfig",
+        item: TimelineCallout,
+        _sr: StyleResult,
+    ) -> None:
+        """Fill a callout box's two columns of two rows.
 
-        # The box is two columns: a narrow left one carrying the icon over
-        # the date, and the text column with the name over the notes.  The
-        # left column is as wide as the wider of its two occupants, so the
-        # date sits under the icon without running beneath the notes.
-        date_label = self._callout_date_label(config, item)
-        date_reserved = (
-            self._callout_date_width(config, date_label, date_font_size)
-            if date_label
-            else 0.0
-        )
+        The box is divided once, into a narrow leading column carrying the
+        icon over the start date and a wide one carrying the name over the
+        notes.  ``timeline_events.icon_column_ratio`` sets the split (15%
+        by default) and ``inner_pad`` keeps a border clear on all four
+        sides, so nothing is drawn on or outside the box's own stroke.
+
+        Every line is measured against its own cell and compressed to it.
+        Nothing here resizes the box: the theme's width and height are the
+        box, and the text yields.
+        """
+        pad = max(0.0, float(config.timeline_event_box_pad or 0.0))
+        inner_x = item.box_x + pad
+        inner_y = item.box_y + pad
+        inner_w = max(1.0, item.box_width - 2.0 * pad)
+        inner_h = max(1.0, item.box_height - 2.0 * pad)
+
+        ratio = min(0.9, max(0.02, float(config.timeline_event_icon_column_ratio)))
+        col1_w = inner_w * ratio
+        col2_w = inner_w - col1_w
+        row_h = inner_h / 2.0
+        col2_x = inner_x + col1_w
+        row2_y = inner_y + row_h
+
+        title_size, notes_size, date_size = self._callout_metrics(config)
 
         _name_style = config.get_text_style("ec-event-name")
         _notes_style = config.get_text_style("ec-event-notes")
@@ -1446,37 +1461,6 @@ class TimelineRenderer(BaseSVGRenderer):
             or config.timeline_notes_text_font_name
             or _notes_style.font
         )
-        title_font_path = self._safe_font_path(name_font_default)
-        notes_font_path = self._safe_font_path(notes_font_default)
-        # Both text lines start after the left column, so both are measured
-        # against the same width.
-        left_column = max(icon_reserved, date_reserved)
-        text_width = item.box_width - 12.0 - left_column
-        fitted_title, fitted_notes = self._fit_box_text_sizes(
-            title,
-            notes,
-            text_width,
-            item.box_height,
-            title_font_path,
-            notes_font_path,
-            title_font_size,
-            notes_font_size,
-            height_for=lambda ts, ns, has: self._callout_text_geometry(
-                item.box_height, ts, ns, title_font_path, notes_font_path, has
-            )[2],
-        )
-
-        text_x = item.box_x + 6.0
-        title_dy, notes_dy, _ = self._callout_text_geometry(
-            item.box_height,
-            fitted_title,
-            fitted_notes,
-            title_font_path,
-            notes_font_path,
-            bool(notes),
-        )
-        title_y = item.box_y + title_dy
-        notes_y = item.box_y + notes_dy
 
         event_text_color = (
             tk_name.get("color")
@@ -1490,29 +1474,32 @@ class TimelineRenderer(BaseSVGRenderer):
             color=event_text_color,
             opacity=_name_style.opacity,
         )
-        notes_color_base = (
-            tk_notes.get("color")
-            or config.timeline_notes_text_font_color
-            or _notes_style.color
-            or event_text_color
-        )
         notes_font, _, notes_color, notes_opacity = _sr.text_override(
             "event_notes",
             font=notes_font_default,
-            color=notes_color_base,
+            color=(
+                tk_notes.get("color")
+                or config.timeline_notes_text_font_color
+                or _notes_style.color
+                or event_text_color
+            ),
             opacity=_notes_style.opacity,
         )
-        icon_to_draw = _sr.icon if _sr.icon is not None else item.event.icon
-        icon_color = _sr.icon_color or event_text_color
+        name_path = self._safe_font_path(name_font)
+        notes_path = self._safe_font_path(notes_font)
 
-        if has_icon:
+        # Column 1, row 1: the icon, centred in its cell and sized to
+        # whichever of the cell's two dimensions is tighter.
+        icon_to_draw = _sr.icon if _sr.icon is not None else item.event.icon
+        if icon_to_draw and self._resolve_icon_svg(icon_to_draw):
+            icon_size = max(1.0, min(col1_w, row_h))
             self._draw_icon_svg(
                 icon_to_draw,
-                text_x,
-                title_y,
-                fitted_title,
-                anchor="start",
-                color=icon_color,
+                inner_x + (col1_w / 2.0),
+                self._icon_baseline(inner_y + (row_h / 2.0), icon_size),
+                icon_size,
+                anchor="middle",
+                color=_sr.icon_color or event_text_color,
                 css_class="ec-event-icon",
                 box_token=(
                     "box:milestone"
@@ -1522,68 +1509,68 @@ class TimelineRenderer(BaseSVGRenderer):
                 box_ctx=self._event_ctx(item.event),
             )
 
-        # One left edge for the name and the notes both — the notes used to
-        # start at the box edge, under the icon, which read as a hanging
-        # indent nobody asked for.
-        content_x = text_x + left_column
-        content_max_w = max(8.0, item.box_width - 12.0 - left_column)
-
+        # Column 2, row 1: the name.
+        fitted_name = self._cell_font_size(row_h, name_path, title_size)
         self._draw_text(
-            content_x,
-            title_y,
-            title,
+            col2_x,
+            self._cell_baseline(inner_y, row_h, name_path, fitted_name),
+            item.event.task_name or "(untitled)",
             name_font,
-            fitted_title,
+            fitted_name,
             fill=name_color,
             fill_opacity=name_opacity,
-            max_width=content_max_w,
+            max_width=col2_w,
             css_class="ec-event-name",
         )
 
+        # Column 2, row 2: the notes.
+        notes = (item.event.notes or "").strip()
         if notes:
+            fitted_notes = self._cell_font_size(row_h, notes_path, notes_size)
             self._draw_text(
-                content_x,
-                notes_y,
+                col2_x,
+                self._cell_baseline(row2_y, row_h, notes_path, fitted_notes),
                 notes,
                 notes_font,
                 fitted_notes,
                 fill=notes_color,
                 fill_opacity=notes_opacity,
-                max_width=content_max_w,
+                max_width=col2_w,
                 css_class="ec-event-notes",
             )
 
-        # Date, in the left column under the icon.  It sits with the event
-        # it belongs to — it used to be drawn near the axis at the event's
-        # dot, staggered by source index, which put it nowhere near its own
-        # callout and let two dates collide.
-        if date_label:
-            _event_date_style = config.get_text_style("ec-event-date")
-            tk_event_date = self._tk("text:event_date")
-            date_font, _, date_color, _ = _sr.text_override(
-                "event_date",
-                font=(
-                    _event_date_style.font
-                    or tk_event_date.get("font")
-                    or config.timeline_date_font
-                ),
-                color=(
-                    _event_date_style.color
-                    or tk_event_date.get("color")
-                    or event_text_color
-                ),
-            )
-            self._draw_text(
-                text_x,
-                notes_y,
-                date_label,
-                date_font,
-                date_font_size,
-                fill=date_color,
-                anchor="start",
-                max_width=max(8.0, left_column),
-                css_class="ec-event-date",
-            )
+        # Column 1, row 2: the start date, under the icon.
+        date_label = self._callout_date_label(config, item)
+        if not date_label:
+            return
+        _event_date_style = config.get_text_style("ec-event-date")
+        tk_event_date = self._tk("text:event_date")
+        date_font, _, date_color, _ = _sr.text_override(
+            "event_date",
+            font=(
+                _event_date_style.font
+                or tk_event_date.get("font")
+                or config.timeline_date_font
+            ),
+            color=(
+                _event_date_style.color
+                or tk_event_date.get("color")
+                or event_text_color
+            ),
+        )
+        date_path = self._safe_font_path(date_font)
+        fitted_date = self._cell_font_size(row_h, date_path, date_size)
+        self._draw_text(
+            inner_x,
+            self._cell_baseline(row2_y, row_h, date_path, fitted_date),
+            date_label,
+            date_font,
+            fitted_date,
+            fill=date_color,
+            anchor="start",
+            max_width=col1_w,
+            css_class="ec-event-date",
+        )
 
     def _duration_bar_y(
         self, config: "CalendarConfig", item: TimelineDuration, axis_y: float
@@ -3412,21 +3399,6 @@ class TimelineRenderer(BaseSVGRenderer):
         return format_arrow_date(
             self._safe_day(item.event.start, fallback=arrow.now()),
             config.timeline_date_format,
-        )
-
-    def _callout_date_width(
-        self, config: "CalendarConfig", date_label: str, font_size: float
-    ) -> float:
-        """Width the in-box date needs, including the gap before it.
-
-        Kept in step with the layout: timeline_callout_date_extent() measures
-        the same thing when sizing the box, so what is reserved here is what
-        was budgeted there.
-        """
-        if not date_label:
-            return 0.0
-        return callout_date_extent(
-            date_label, config.timeline_date_font, font_size
         )
 
     @staticmethod

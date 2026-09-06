@@ -608,6 +608,19 @@ class CalendarConfig:
     timeline_event_box_height: float | None = None
     timeline_duration_box_width: float | None = None
     timeline_duration_box_height: float | None = None
+    # How point-event callouts are placed. "packed" lays them on a grid of
+    # rows with each box's leading edge on its own start date; "labella"
+    # keeps the force-solved placement that centres a box on its date.
+    timeline_event_placement: str = "packed"
+    # Packed placement only. None follows timeline_labella_layer_gap, so a
+    # theme that tuned the labella gap does not have to restate it.
+    timeline_event_row_gap: float | None = None
+    timeline_event_box_gap: float = 2.0
+    # Inner border kept clear inside a callout box, all four sides.
+    timeline_event_box_pad: float = 2.0
+    # Share of a callout box's inner width given to the icon / date column;
+    # the name and notes get the rest.
+    timeline_event_icon_column_ratio: float = 0.15
     # How many leading WBS segments group chart items: 2 makes NP.3.S1.4 and
     # NP.3.S2.1 both "NP.3", so a phase's events, milestones and duration
     # bars share one color and its bars sort together. 0 disables grouping —
@@ -1434,6 +1447,11 @@ class CalendarConfig:
             raise ValueError(
                 f"timeline_label_side must be 'primary', 'secondary', or 'both', "
                 f"got {self.timeline_label_side!r}"
+            )
+        if self.timeline_event_placement not in ("packed", "labella"):
+            raise ValueError(
+                f"timeline_event_placement must be 'packed' or 'labella', "
+                f"got {self.timeline_event_placement!r}"
             )
         if self.pit_direction not in ("horizontal", "vertical"):
             raise ValueError(

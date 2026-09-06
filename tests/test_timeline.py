@@ -268,9 +268,27 @@ def test_timeline_layout_callouts_produces_callouts_for_each_orientation_side(
     )
     assert len(callouts) == len(events)
     for c in callouts:
+        # Packed placement runs a leader straight from the dot to the box.
         assert c.leader_path_d.startswith("M ")
-        assert " C " in c.leader_path_d
+        assert " L " in c.leader_path_d
+        assert " C " not in c.leader_path_d
         assert c.orientation is orientation
+
+    # The labella strategy is still selectable, and still curves.
+    config.timeline_event_placement = "labella"
+    curved = renderer._layout_callouts(
+        config,
+        events,
+        start,
+        end,
+        axis_origin=(50.0, 200.0),
+        axis_length=500.0,
+        orientation=orientation,
+        side=side,
+    )
+    assert len(curved) == len(events)
+    for c in curved:
+        assert " C " in c.leader_path_d
 
 
 def test_timeline_duration_dates_share_same_y_and_offset_is_configurable(tmp_path):
@@ -951,113 +969,77 @@ def test_duration_bars_clear_the_holiday_date_band(tmp_path):
     assert with_dates > without_dates
 
 
-# ── Callout box text geometry ─────────────────────────────────────────────
+# ── Callout box cell geometry ──────────────────────────────────────────────
 #
-# The fitter and the drawing pass used to carry separate formulas: the fitter
-# allowed 1.2*title + 1.2*notes + 2, the renderer drew the notes baseline at
-# 1.15*title + 1.55*notes and reserved nothing for descenders. A box the
-# fitter called a fit still hung the notes' descenders below its bottom edge.
+# A callout box is a 2x2 grid — the icon over the start date in a narrow
+# leading column, the name over the notes in a wide one. Each line is sized
+# and centred against its own cell, so a line can never reach into the cell
+# below it, and the box is never stretched to hold its text.
 
 
-def _ink_bottom(renderer, config, box_height, box_width, title, notes,
-                date_reserved=0.0):
-    """Return (box_height, lowest inked y) for one callout's text block."""
-    title_size, notes_size, _ = renderer._callout_metrics(config)
-    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
-    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
-    fitted_title, fitted_notes = renderer._fit_box_text_sizes(
-        title, notes,
-        box_width - 12.0 - date_reserved, box_height,
-        title_path, notes_path, title_size, notes_size,
-        notes_width=box_width - 12.0,
-        height_for=lambda ts, ns, has: renderer._callout_text_geometry(
-            box_height, ts, ns, title_path, notes_path, has
-        )[2],
-    )
-    _title_dy, notes_dy, _ = renderer._callout_text_geometry(
-        box_height, fitted_title, fitted_notes, title_path, notes_path, True
-    )
-    descent = get_ink_extents(notes_path)[1] * fitted_notes
-    return notes_dy + descent, fitted_notes
+def _cell_ink(renderer, config, cell_top, cell_h, font_name, size):
+    """Return (top, bottom) of the ink one line puts in its cell."""
+    path = renderer._safe_font_path(font_name)
+    fitted = renderer._cell_font_size(cell_h, path, size)
+    baseline = renderer._cell_baseline(cell_top, cell_h, path, fitted)
+    ascent, descent = renderer._ink_extents_pt(path, fitted)
+    return baseline - ascent, baseline + descent
 
 
-@pytest.mark.parametrize(
-    "notes",
-    [
-        "Public launch announcement",          # has a descender
-        "jjggppqqyy",                          # nothing but descenders
-        "ok",                                  # short enough not to shrink
-        "Retrospective and benefits handoff",  # long enough to shrink
-    ],
-)
-def test_callout_notes_descenders_stay_inside_the_box(tmp_path, notes):
-    config = _base_config(tmp_path / "callout_descender.svg")
+@pytest.mark.parametrize("cell_h", [6.0, 9.0, 20.0, 60.0])
+def test_a_line_of_text_stays_inside_its_own_cell(tmp_path, cell_h):
+    """Ink never escapes the cell, however tight or roomy the row is."""
+    config = _base_config(tmp_path / "cell_ink.svg")
     renderer = TimelineRenderer()
-    bottom, _ = _ink_bottom(renderer, config, 24.0, 170.0, "Go-Live Event", notes)
-    assert bottom <= 24.0
+    title_size, _notes_size, _date = renderer._callout_metrics(config)
+
+    top, bottom = _cell_ink(
+        renderer, config, 100.0, cell_h,
+        config.timeline_name_text_font_name, title_size,
+    )
+    assert top >= 100.0 - 0.01
+    assert bottom <= 100.0 + cell_h + 0.01
 
 
-def test_callout_text_block_is_centred_in_the_box(tmp_path):
-    """Slack is shared top and bottom, not dumped below the last line."""
-    config = _base_config(tmp_path / "callout_centre.svg")
+def test_a_line_is_centred_in_its_cell(tmp_path):
+    """Slack is shared above and below, not dumped under the baseline."""
+    config = _base_config(tmp_path / "cell_centre.svg")
     renderer = TimelineRenderer()
-    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
-    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+    title_size, _notes, _date = renderer._callout_metrics(config)
 
-    title_dy, notes_dy, required = renderer._callout_text_geometry(
-        40.0, 10.0, 8.0, title_path, notes_path, True
+    top, bottom = _cell_ink(
+        renderer, config, 100.0, 40.0,
+        config.timeline_name_text_font_name, title_size,
     )
-    above = title_dy - get_ink_extents(title_path)[0] * 10.0
-    below = 40.0 - (notes_dy + get_ink_extents(notes_path)[1] * 8.0)
-    assert above == pytest.approx(below, abs=0.01)
-    assert required < 40.0
+    assert (top - 100.0) == pytest.approx(140.0 - bottom, abs=0.01)
 
 
-def test_the_fitter_and_the_renderer_agree_on_height(tmp_path):
-    """The height the fitter checks is the height the drawn block occupies."""
-    config = _base_config(tmp_path / "callout_agree.svg")
+def test_a_short_cell_caps_the_font_size(tmp_path):
+    """The box is never stretched, so the text is what gives way."""
+    config = _base_config(tmp_path / "cell_cap.svg")
     renderer = TimelineRenderer()
-    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
-    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
+    path = renderer._safe_font_path(config.timeline_name_text_font_name)
 
-    box_height = 18.0
-    title_dy, notes_dy, required = renderer._callout_text_geometry(
-        box_height, 10.0, 8.0, title_path, notes_path, True
-    )
-    drawn_top = title_dy - get_ink_extents(title_path)[0] * 10.0
-    drawn_bottom = notes_dy + get_ink_extents(notes_path)[1] * 8.0
-    assert required == pytest.approx(drawn_bottom - drawn_top + 3.0, abs=0.01)
+    assert renderer._cell_font_size(60.0, path, 12.0) == pytest.approx(12.0)
+    assert renderer._cell_font_size(5.0, path, 12.0) < 12.0
 
 
-def test_notes_are_measured_against_the_whole_inner_box(tmp_path):
-    """The date rides the title line, so it must not shrink the notes."""
-    config = _base_config(tmp_path / "callout_notes_width.svg")
+def test_the_notes_never_reach_into_the_row_above(tmp_path):
+    """Row 2's ink starts below row 1's, whatever the two fonts are."""
+    config = _base_config(tmp_path / "cell_rows.svg")
     renderer = TimelineRenderer()
-    notes = "Retrospective and benefits handoff"
+    title_size, notes_size, _date = renderer._callout_metrics(config)
+    row_h = 12.0
 
-    # A wide date reservation on the title line...
-    _bottom, with_date = _ink_bottom(
-        renderer, config, 24.0, 170.0, "Go-Live", notes, date_reserved=40.0
+    _top, name_bottom = _cell_ink(
+        renderer, config, 100.0, row_h,
+        config.timeline_name_text_font_name, title_size,
     )
-    # ...must leave the notes at the size they get with no date at all.
-    _bottom, without_date = _ink_bottom(
-        renderer, config, 24.0, 170.0, "Go-Live", notes, date_reserved=0.0
+    notes_top, _bottom = _cell_ink(
+        renderer, config, 100.0 + row_h, row_h,
+        config.timeline_notes_text_font_name, notes_size,
     )
-    assert with_date == pytest.approx(without_date)
-
-
-def test_a_callout_without_notes_still_places_its_title(tmp_path):
-    config = _base_config(tmp_path / "callout_no_notes.svg")
-    renderer = TimelineRenderer()
-    title_path = renderer._safe_font_path(config.timeline_name_text_font_name)
-    notes_path = renderer._safe_font_path(config.timeline_notes_text_font_name)
-
-    title_dy, notes_dy, required = renderer._callout_text_geometry(
-        24.0, 10.0, 8.0, title_path, notes_path, False
-    )
-    assert title_dy == pytest.approx(notes_dy)
-    assert title_dy - get_ink_extents(title_path)[0] * 10.0 >= 0.0
-    assert required < 24.0
+    assert notes_top >= name_bottom - 0.01
 
 
 # ── Duration bar connectors ───────────────────────────────────────────────
@@ -1592,7 +1574,7 @@ def test_the_notes_share_a_left_edge_with_the_name(tmp_path):
 
 
 def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
-    _config, renderer = _drawn_callout(
+    config, renderer = _drawn_callout(
         tmp_path, "callout_date.svg",
         event=Event(
             task_name="Go-Live Event", start="20260727", end="20260727",
@@ -1604,9 +1586,20 @@ def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
     assert renderer.icon_calls, "the fixture should draw an icon"
     icon = renderer.icon_calls[0]
 
+    pad = config.timeline_event_box_pad
+    col1_right = 150.0 + pad + (200.0 - 2 * pad) * (
+        config.timeline_event_icon_column_ratio
+    )
     assert date["anchor"] == "start"
-    assert date["x"] == pytest.approx(icon["x"])   # same column as the icon
-    assert date["y"] == pytest.approx(notes["y"])  # the notes' line
+    # Both live in column 1 — the icon centred in its cell, the date on the
+    # column's left edge.
+    assert date["x"] < col1_right
+    assert icon["x"] < col1_right
+    # Same row, but each line is centred on its own ink, so the two
+    # baselines need not coincide.
+    row2_top = 230.0 + pad + (30.0 - 2 * pad) / 2.0
+    assert row2_top < date["y"] < 230.0 + 30.0
+    assert row2_top < notes["y"] < 230.0 + 30.0
     assert date["x"] < notes["x"]                  # left of the text column
 
 
@@ -1617,8 +1610,12 @@ def test_the_date_is_no_longer_on_the_title_line(tmp_path):
     assert date["y"] != pytest.approx(name["y"])
 
 
-def test_the_left_column_is_as_wide_as_its_widest_occupant(tmp_path):
-    """A date wider than the icon widens the column, not the notes' indent."""
+def test_the_column_split_follows_the_theme_ratio(tmp_path):
+    """The icon column is a fixed share of the box, not sized to its text.
+
+    A box is never widened to hold what is in it; over-wide text is
+    compressed to the column instead.
+    """
     config, renderer = _drawn_callout(
         tmp_path, "callout_col.svg",
         event=Event(
@@ -1628,11 +1625,15 @@ def test_the_left_column_is_as_wide_as_its_widest_occupant(tmp_path):
     )
     date = _by_class(renderer, "ec-event-date")[0]
     notes = _by_class(renderer, "ec-event-notes")[0]
-    column = notes["x"] - date["x"]
+    inner_w = 200.0 - 2 * config.timeline_event_box_pad
 
-    date_size = renderer._callout_metrics(config)[2]
-    needed = renderer._callout_date_width(config, date["text"], date_size)
-    assert column >= needed - 0.01
+    column = notes["x"] - date["x"]
+    assert column == pytest.approx(
+        inner_w * config.timeline_event_icon_column_ratio, abs=0.01
+    )
+    # Each line is capped at its own column's width, so nothing overruns.
+    assert date["max_width"] == pytest.approx(column, abs=0.01)
+    assert notes["max_width"] == pytest.approx(inner_w - column, abs=0.01)
 
 
 def test_a_callout_without_an_icon_still_lines_its_columns_up(tmp_path):

@@ -272,6 +272,18 @@ timeline:
     font_color: aliceblue
 timeline_events:
   box_width: 150
+  # how point-event boxes are placed: "packed" puts each box's leading
+  # edge on its own start date and stacks collisions away from the axis;
+  # "labella" keeps the force-solved placement centred on the date
+  placement: packed
+  # clear space between two rows of boxes; null follows timeline.labella.layer_gap
+  row_gap: null
+  # clear space between two boxes sharing a row
+  box_gap: 2.0
+  # inner border kept clear on all four sides of a box
+  inner_pad: 2.0
+  # share of a box's inner width given to the icon / date column
+  icon_column_ratio: 0.15
 pit:
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both
