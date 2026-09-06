@@ -1605,7 +1605,12 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_text_color` | `timeline_durations.text_color` | `str | None` | `None` | text color |
 | `timeline_event_*_font_size` | `timeline_events.size_rule` | `` | `` | Per-papersize timeline event font sizes |
 | `timeline_event_box_height` | `timeline_events.box_height` | `float | None` | `None` | box height |
-| `timeline_event_box_width` | `timeline_events.box_width` | `float | None` | `None` | box width. `None` sizes each callout from its own text, so the boxes come out ragged; every shipped theme pins a value so one timeline's boxes share a width |
+| `timeline_event_box_width` | `timeline_events.box_width` | `float | None` | `None` | box width. `None` derives one width for the whole chart from its widest event; every shipped theme pins a value instead. A box is never stretched to its contents — over-wide text is compressed to the column |
+| `timeline_event_box_gap` | `timeline_events.box_gap` | `float` | `2.0` | clear space between two packed boxes sharing a row |
+| `timeline_event_box_pad` | `timeline_events.inner_pad` | `float` | `2.0` | inner border kept clear on all four sides of a callout box |
+| `timeline_event_icon_column_ratio` | `timeline_events.icon_column_ratio` | `float` | `0.15` | share of a callout box's inner width given to the icon / date column; the name and notes get the rest |
+| `timeline_event_placement` | `timeline_events.placement` | `str` | `packed` | how point-event callouts are placed. `packed` puts each box's leading edge on its own start date and stacks collisions away from the axis, earliest nearest; `labella` keeps the force-solved placement that centres a box on its date |
+| `timeline_event_row_gap` | `timeline_events.row_gap` | `float | None` | `None` | clear space between two rows of packed boxes; `None` follows `timeline.labella.layer_gap` |
 | `timeline_event_name_font_size` | `timeline_events.name_font_size` | `float | None` | `None` | name font size |
 | `timeline_event_notes_font_size` | `timeline_events.notes_font_size` | `float | None` | `None` | notes font size |
 | `timeline_event_text_color` | `timeline_events.text_color` | `str | None` | `None` | text color |

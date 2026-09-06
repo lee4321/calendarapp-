@@ -146,6 +146,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Timeline box/date fields (not renamed)
     ("timeline_events", "box_width"): "timeline_event_box_width",
     ("timeline_events", "box_height"): "timeline_event_box_height",
+    ("timeline_events", "placement"): "timeline_event_placement",
+    ("timeline_events", "row_gap"): "timeline_event_row_gap",
+    ("timeline_events", "box_gap"): "timeline_event_box_gap",
+    ("timeline_events", "inner_pad"): "timeline_event_box_pad",
+    ("timeline_events", "icon_column_ratio"): "timeline_event_icon_column_ratio",
     ("timeline_durations", "box_width"): "timeline_duration_box_width",
     ("timeline_durations", "box_height"): "timeline_duration_box_height",
     ("timeline", "wbs_group_depth"): "timeline_wbs_group_depth",
