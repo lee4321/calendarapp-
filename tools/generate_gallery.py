@@ -69,10 +69,10 @@ SVG_VIEWS = (
     "compactplan",
 )
 
-# Views that are not themed SVG pages.  text-mini has no --theme flag (plain
-# text output, rendered once); the excel views are themed but emit .xlsx.
+# Views that are not themed SVG pages, but are still themed: text-mini emits
+# plain text and the excel views emit .xlsx, and all three take --theme.
 NONSVG_VIEWS = {
-    "text-mini": {"themed": False, "ext": ".txt"},
+    "text-mini": {"themed": True, "ext": ".txt"},
     "excelheader": {"themed": True, "ext": ".xlsx"},
     "excelblockplan": {"themed": True, "ext": ".xlsx"},
 }

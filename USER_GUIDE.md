@@ -230,7 +230,7 @@ table by hand.
 | `--shrink` |  | `blockplan`, `candybar`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | default `False` |
 | `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch box width in points (the height scales with it to keep the sheet's aspect ratio; the label/spacing gaps are unchanged). Requires --paginate; default: 110. (`fontsheet`: Sample text size in points; entry heights follow it. Requires --paginate; default: 16.) (`iconsheet`: Icon cell size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 24.) (`palettesheet`: Swatch box size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 80.) |  |
 | `--status` | `LIST` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include (active, draft, cancelled, archived, on-hold). Use 'all' for no filter. Default: active. |  |
-| `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`, `excelheader`: Theme name or path to .yaml theme file) |  |
+| `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`, `excelheader`: Theme name or path to .yaml theme file) |  |
 | `--tick-interval` | `DAYS` | `pit` | For --tick-unit interval, days between ticks (default: 1). |  |
 | `--tick-label-format` | `FMT` | `pit` | Arrow date format for tick labels (e.g. 'MMM D'). For week/interval units the timeband label is used when omitted. |  |
 | `--tick-length` | `POINTS` | `pit` | Half-length of each axis tick mark, per side (default: 5.0). |  |
@@ -544,6 +544,8 @@ The exported CSV includes every column of the `events` table that round-trips ba
 |---|---|---|---|
 | `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
 | `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
+
+`text-mini` takes `--theme` like the other views. The theme keys it reads are the whole `text_mini:` section (`cell_width`, `month_gap`, `day_number_digits`, `week_number_digits`, and the symbol lists described below) plus `mini_calendar.show_adjacent`. Its remaining inputs — `--mini-columns` / `--mini-rows`, `--weeknumbers`, `--weekends` — are CLI-only and have no theme key.
 
 #### `text-mini` symbol behavior
 

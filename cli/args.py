@@ -946,7 +946,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     _weekend_days_views = (weekly, timeline, blockplan, gantt, compactplan)
     _includenotes_views = (weekly, timeline, pit, blockplan, gantt, compactplan)
 
-    # Output options (SVG views: all options; text-mini: outputfile only)
+    # Output options (SVG views: all options; text-mini: outputfile + theme)
     for view_parser in _svg_views:
         output_group = view_parser.add_argument_group("Output Options")
         output_group.add_argument(
@@ -996,7 +996,11 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             action="store_true",
             help="Embed source event data (CSV) inside SVG metadata",
         )
-    # text-mini: output file path only (no SVG layout args)
+    # text-mini: output file path and theme only (no SVG layout args).  It
+    # needs --theme because run() applies a theme only when args.theme exists,
+    # so without it text-mini silently ignored every themed value it reads —
+    # the whole text_mini: section, mini_calendar.show_adjacent, the
+    # week-number format — and could not be styled at all.
     _tm_output = text_mini.add_argument_group("Output Options")
     _tm_output.add_argument(
         "--outputfile",
@@ -1005,6 +1009,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         default=default_output,
         metavar="PATH",
         help="Output filename (always written under output/)",
+    )
+    _tm_output.add_argument(
+        "--theme",
+        "-th",
+        type=str,
+        default=None,
+        metavar="THEME",
+        help="Theme name or path to .yaml theme file (e.g., 'corporate', 'dark')",
     )
 
     for view_parser in _svg_views:
