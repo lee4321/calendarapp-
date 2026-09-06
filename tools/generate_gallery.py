@@ -82,6 +82,12 @@ NONSVG_VIEWS = {
 # a page-furniture view with no event content, so it takes none of them.
 FILTERABLE_VIEWS = frozenset(SVG_VIEWS) | {"text-mini", "excelblockplan"}
 
+# Mini calendars are day-per-cell grids where a duration paints a run of cells
+# over the single-day marks, so they show single-day events and milestones only
+# unless --durations is passed (cli/args.py, _durations_optin_views).  Candybar
+# counts: it draws its year strip with the same day-style engine.
+MINI_FAMILY_VIEWS = frozenset({"mini", "mini-icon", "text-mini", "candybar"})
+
 
 @dataclass(frozen=True)
 class Filter:
@@ -113,11 +119,17 @@ class Filter:
 CONTENT_FILTERS = (
     Filter("--empty", FILTERABLE_VIEWS, "Render blank calendars (no events)"),
     Filter("--noevents", FILTERABLE_VIEWS, "Exclude single-day events"),
-    # pit drops multi-day durations unconditionally and has no --nodurations.
+    # pit drops multi-day durations unconditionally and has no --nodurations;
+    # the mini family drops them by default and opts back in with --durations.
     Filter(
         "--nodurations",
-        FILTERABLE_VIEWS - {"pit"},
+        FILTERABLE_VIEWS - {"pit"} - MINI_FAMILY_VIEWS,
         "Exclude multi-day durations",
+    ),
+    Filter(
+        "--durations",
+        MINI_FAMILY_VIEWS,
+        "Include multi-day durations (excluded by default)",
     ),
     Filter(
         "--ignorecomplete",

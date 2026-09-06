@@ -172,7 +172,7 @@ table by hand.
 | `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
 | `--date-placement` |  | `pit` | Where each event date is drawn: inline (a line inside the label box, with the name/notes — never collides; default), axis (opposite the axis at the marker — the ruler look, but dates collide when events cluster), or none. | choices `inline, axis, none` |
 | `--direction` |  | `pit` | Axis direction (default: horizontal). Note: --orientation remains the page-orientation flag (portrait/landscape). | choices `horizontal, vertical` |
-| `--durations`, `-du` |  | `text-mini` | Include multi-day durations (excluded by default) | default `False` |
+| `--durations`, `-du` |  | `candybar`, `mini`, `mini-icon`, `text-mini` | Include multi-day durations (excluded by default) | default `False` |
 | `--embed-data` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed source event data (CSV) inside SVG metadata | default `False` |
 | `--empty`, `-e` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) (`excelblockplan`: Create blank workbook (no events)) | default `False` |
 | `--event-icon` | `NAME` | `pit` | DB icon name drawn inside each event's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |  |
@@ -216,7 +216,7 @@ table by hand.
 | `--no-tick-labels` |  | `pit` | Draw tick marks but no tick labels. |  |
 | `--no-ticks` |  | `pit` | Suppress axis tick marks and labels. |  |
 | `--no-today-line` |  | `pit` | Suppress the today line. | default `True` |
-| `--nodurations`, `-nd` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `timeline`, `weekly` | Exclude multi-day durations | default `False` |
+| `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `timeline`, `weekly` | Exclude multi-day durations | default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Page orientation (default: landscape) | default `landscape`; choices `portrait, landscape` |
 | `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `candybar`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fontsheet`, `gantt`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Output filename (always written under output/) (`colorsheet`: Output SVG path (default: output/colorsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. colorsheet_p01.svg).) (`excelblockplan`: Output .xlsx file name (always written under output/; default: output/ExcelBlockplan.xlsx)) (`excelheader`: Output .xlsx file name (always written under output/; default: output/excelheader.xlsx)) (`exportdata`: Output CSV file name (always written under output/; default: output/exportdata_YYYYMMDD.csv)) (`fontsheet`: Output file name and path (default: output/fontsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. fontsheet_p01.svg).) (`iconsheet`: Output file name and path (default: output/iconsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. iconsheet_p01.svg).) (`palettesheet`: Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named). With --paginate, a '_pNN' suffix is appended per page (e.g. palettesheet_p01.svg).) (`patternsheet`: Output file name and path (default: output/patternsheet.svg)) | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly`: default `ecalendar.svg` |
@@ -393,6 +393,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 
 In the SVG mini calendar, day-level styling is driven by holidays, special days, and events:
 
+- Only single-day events and milestones are shown by default. A multi-day duration paints a bar across a run of day cells and buries the marks beneath it, so the whole mini family (`mini`, `mini-icon`, `text-mini`, and `candybar`, which draws its year strip with the same day-cell engine) leaves durations out unless `--durations` / `-du` is passed. There is no `--nodurations` on these views — it would only restate the default.
 - An icon replaces the day number when the resolved day style has an icon. This can come from a holiday icon, a special-day icon, or an event `Icon` value. If both milestone and non-milestone event icons exist on the same day, the milestone icon wins.
 - A day number is circled when any event on that day has `Milestone` set and `mini_calendar.circle_milestones` is enabled.
 - A day number is bold when the day contains a milestone, or when any event on that day has `Priority <= 1`.
@@ -487,7 +488,7 @@ The `corporate` theme ships with both enabled as a demonstration.
 | `--candybar-weekend-fill` | `COLOR` | Shade Sat/Sun day cells (default: no weekend shading). |
 | `--candybar-month-shading` |  | Tint day cells per month (alternating bands; theme sets colors). |
 
-Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`, `--empty`).
+Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--durations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
 
 ### `palettesheet`
 
@@ -551,7 +552,7 @@ In the text mini calendar, each day cell shows either a formatted day number or 
 - Plain day numbers are shown only when no higher-priority symbol has been assigned to that day.
 - Single-day events use symbols from `text_mini_event_symbols`.
 - Milestones use symbols from `text_mini_milestone_symbols`.
-- Multi-day durations use symbols from `text_mini_duration_symbols` on the start and end dates, and use `text_mini_duration_fill` for interior days.
+- Multi-day durations are excluded by default (as in `mini` and `mini-icon`); pass `--durations` / `-du` to include them. When included, they use symbols from `text_mini_duration_symbols` on the start and end dates, and use `text_mini_duration_fill` for interior days.
 - Holidays use symbols from `text_mini_holiday_symbols`.
 - Special days marked `nonworkday` use symbols from `text_mini_nonworkday_symbols`.
 - Symbol precedence is enforced by priority, highest to lowest: holidays, company nonworkdays, milestone events, duration start/end markers, duration interior fill, then regular single-day events.

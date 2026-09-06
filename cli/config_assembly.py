@@ -109,6 +109,15 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
     )
 
 
+# Views whose parsers register --durations (opt in) instead of --nodurations
+# (opt out): the mini family — candybar included, it reuses the mini day-style
+# engine — paints a duration across a run of day cells and buries the
+# single-day marks under it, so it defaults to single-day events and
+# milestones only.  Keep in step with _durations_optin_views in cli/args.py.
+_DURATIONS_OPTIN_COMMANDS = frozenset(
+    {"mini", "mini-icon", "text-mini", "candybar"}
+)
+
 # Simple one-to-one CLI → config assignments for the mini, candybar,
 # timeline, PIT, and fiscal option groups.  One row per option:
 # (args attribute, config attribute, kind).
@@ -308,10 +317,11 @@ def _apply_args_to_config(
     # audit during reviews; migrate to a mapping table if this list expands.
     config.shade_current_day = getattr(args, "shade", False)
     config.includeevents = not getattr(args, "noevents", False)
-    # Every view but text-mini takes durations by default and opts out with
-    # --nodurations; text-mini spreads a duration over a run of day cells and
-    # hides the single-day marks beneath it, so there durations are opt-in.
-    if getattr(args, "command", None) == "text-mini":
+    # Most views take durations by default and opt out with --nodurations.
+    # The mini family spreads a duration over a run of day cells and hides the
+    # single-day marks beneath it, so those views show single-day events and
+    # milestones only, and durations are opt-in via --durations.
+    if getattr(args, "command", None) in _DURATIONS_OPTIN_COMMANDS:
         config.includedurations = bool(getattr(args, "durations", False))
     else:
         config.includedurations = not getattr(args, "nodurations", False)
