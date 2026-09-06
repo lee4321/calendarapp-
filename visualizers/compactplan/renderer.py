@@ -34,6 +34,7 @@ _MILESTONE_BAND_CLEARANCE = 3.0
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
+from shared.holiday_labels import format_holiday_label
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
@@ -1548,6 +1549,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 )
                 if not name:
                     continue
+                # Government holidays carry their country; the roster can list
+                # several countries at once, so the code goes beside the name.
+                name = format_holiday_label(name, h.get("country"))
                 icon = (
                     h.get("icon")
                     or h.get("displayicon")

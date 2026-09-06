@@ -559,7 +559,7 @@ In the text mini calendar, each day cell shows either a formatted day number or 
 - Special days marked `nonworkday` use symbols from `text_mini_nonworkday_symbols`.
 - Symbol precedence is enforced by priority, highest to lowest: holidays, company nonworkdays, milestone events, duration start/end markers, duration interior fill, then regular single-day events.
 - When multiple symbols compete for one day, the higher-priority symbol replaces the lower-priority one in the month grid. A details list is appended below the calendar for the assigned symbols.
-- The details list opens with a `Calendar Details` heading and is grouped under one subheading per entry type, in this order: `Events`, `Milestones`, `Durations`, `Holidays`, `Non-Working Days`. A type with no entries is skipped entirely. Within each group, entries run in ascending date order, and dates are zero-padded `MM/DD` (durations show `MM/DD - MM/DD`):
+- The details list opens with a `Calendar Details` heading and is grouped under one subheading per entry type, in this order: `Events`, `Milestones`, `Durations`, `Holidays`, `Non-Working Days`. A type with no entries is skipped entirely. Within each group, entries run in ascending date order, and dates are zero-padded `MM/DD` (durations show `MM/DD - MM/DD`). Government holidays are prefixed with their two-letter country code — see [Government holiday labels](#government-holiday-labels):
 
 ```
 Calendar Details
@@ -569,8 +569,8 @@ Calendar Details
     🄱 02/27 Requirements Sign-off
 
   Holidays
-    🅰 01/01 New Year's Day
-    🅱 01/19 Martin Luther King Jr. Day
+    🅰 07/04 US - Independence Day
+    🅲 07/15 UA - Ukrainian Statehood Day
 ```
 
 
@@ -659,6 +659,26 @@ Unknown status names are rejected at the CLI; the error message lists the allowe
 The opacity applies to the event name, event icon, duration bar fill, duration name/notes/icon, and continuation arrows/dates. It is multiplied with any theme-supplied opacity so style-rule transparency still composes correctly.
 
 **Import.** The importer (`importers/import_events.py`) reads `Status` (or `State`) from the source file's columns. When the column is absent or blank, the row is stored with `status='active'`. CSV / XLSX files exported via `exportdata` round-trip cleanly: status is preserved column-for-column.
+
+## Government Holiday Labels
+
+Wherever a view lists holidays alongside their dates, the holiday name is prefixed with its ISO 3166-1 alpha-2 country code:
+
+```
+07/15 UA - Ukrainian Statehood Day
+```
+
+`--country`/`-cc` accepts several countries at once (`-cc US,CA,UA`), and countries share holiday *names* — 1 January is `New Year's Day` in both the US and Canada — so without the code a listing cannot say whose holiday a row describes. The prefix appears in:
+
+| Listing | Where |
+|---|---|
+| `text-mini` details | the `Holidays` section under the calendars |
+| `mini` / `mini-icon` / `candybar` details page | the `Federal Holiday` rows (`--mini-details`) |
+| `compactplan` holiday roster | the `date \| icon \| name` list below the timeline |
+
+The mini details page collapses a holiday that recurs across visible days into one row, and a holiday that several countries celebrate under the same name into one row listing every code (`CA, US - New Year's Day`).
+
+Company special days come from the `specialdays` table rather than a government holiday calendar, carry no country code, and are never prefixed.
 
 ## Importing Events
 

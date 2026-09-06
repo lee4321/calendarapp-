@@ -20,6 +20,7 @@ from shared.date_utils import (
     get_months_in_range,
     index_events_by_day as _index_events_by_day,
 )
+from shared.holiday_labels import format_holiday_label
 from config.config import weekend_style_starts_sunday
 
 if TYPE_CHECKING:
@@ -311,7 +312,10 @@ class TextMiniCalendarRenderer:
                     DetailEntry(
                         symbol,
                         self._format_short_date(daykey),
-                        holiday.get("displayname", "Holiday"),
+                        format_holiday_label(
+                            holiday.get("displayname", "Holiday"),
+                            holiday.get("country"),
+                        ),
                         "holiday",
                     )
                 )

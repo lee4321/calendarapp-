@@ -21,6 +21,7 @@ from shared.date_utils import (
     format_arrow_date,
     index_events_by_day as _index_events_by_day,
 )
+from shared.holiday_labels import format_holiday_label
 from shared.rule_engine import StyleEngine
 
 if TYPE_CHECKING:
@@ -1335,12 +1336,20 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 name = (h.get("displayname") or h.get("name") or "").strip()
                 if not name:
                     continue
-                entry = holidays_seen.setdefault(name, {"first": dk, "last": dk, "notes": ""})
+                entry = holidays_seen.setdefault(
+                    name, {"first": dk, "last": dk, "notes": "", "countries": ""}
+                )
                 entry["last"] = dk
+                # Countries drive the name prefix below rather than the notes
+                # column: the same holiday name recurs across countries (both
+                # the US and Canada have a New Year's Day), and this listing
+                # keys on the name, so the code has to sit beside it to tell
+                # the collapsed rows apart.
                 country = (h.get("country") or "").strip()
-                if country and country not in entry["notes"]:
-                    entry["notes"] = (
-                        f"{entry['notes']}, {country}" if entry["notes"] else country
+                if country and country not in entry["countries"].split(", "):
+                    entry["countries"] = (
+                        f"{entry['countries']}, {country}"
+                        if entry["countries"] else country
                     )
             for sd in db.get_special_days_for_date(dk):
                 name = (sd.get("name") or "").strip()
@@ -1355,7 +1364,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
             rows.append({
                 "date_label": date_label(info["first"], info["last"]),
-                "name": name,
+                "name": format_holiday_label(name, info["countries"]),
                 "kind": "Federal Holiday",
                 "notes": info["notes"],
             })
