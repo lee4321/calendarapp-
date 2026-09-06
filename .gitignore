@@ -33,3 +33,11 @@ _completeness_*.xlsx
 # Theme migration converter output (regenerate with tools/migrate_theme.py)
 config/themes/*.converted.yaml
 config/themes/*.yaml.bak
+
+# Icon staging folders. The icons the app draws live in calendar.db (loaded
+# by importers/import_icons.py); these folders only ever held the SVG files
+# on their way in, and tools/generate_capsule_numbers.py and
+# tools/generate_sf_icons.py write here by default. Ignored so regenerating
+# them does not fill the working folder again.
+capsule_numbers/
+sficons/
