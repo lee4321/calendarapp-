@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-GUIDE = ROOT / "USER_GUIDE.md"
+GUIDE = ROOT / "docs" / "USER_GUIDE.md"
 
 # Any language tag, not just the shell ones: a ```yaml block that the
 # pattern failed to recognize as an *opening* fence used to shift the

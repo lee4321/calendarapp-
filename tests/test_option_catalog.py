@@ -29,7 +29,7 @@ from tools.generate_option_catalog import (  # noqa: E402
     _subcommand_parsers,
 )
 
-GUIDE = REPO_ROOT / "USER_GUIDE.md"
+GUIDE = REPO_ROOT / "docs" / "USER_GUIDE.md"
 HEADING = "## Command-Line Option Catalog (All Options)"
 POSITIONAL_HEADING = "## Positional Arguments by Command"
 

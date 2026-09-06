@@ -13,12 +13,12 @@ Reading order for a developer new to EventCalendar:
 5. **[visualizers.md](visualizers.md)** — one section per visualizer: layout
    strategy, renderer shape, quirks.
 6. **[importers.md](importers.md)** — the CSV/XLSX import framework.
-7. **[../../ARCHITECTURE_ecalendar.md](../../ARCHITECTURE_ecalendar.md)** —
+7. **[../../ARCHITECTURE_ecalendar.md](../ARCHITECTURE_ecalendar.md)** —
    detailed CLI-layer reference (call graph, atfile grammar, subcommand
    dispatch). Written before the `cli/` split; its section-to-module map is
    at the top of the file.
 
 Vocabulary (token / ctx / rule / element / nwd / weekend styles /
-CoordinateDict / atfile) lives in [CONTRIBUTING.md](../../CONTRIBUTING.md),
+CoordinateDict / atfile) lives in [CONTRIBUTING.md](../CONTRIBUTING.md),
 along with the layering rules and the verification workflow
 (`tools/refcorpus.sh`, test suite).
