@@ -192,3 +192,90 @@ def test_durations_come_back_when_asked_for():
     text = _text_for(True)
     assert "Long Build" in text
     assert "Kickoff" in text
+
+
+def _symbol_map_for(events, config_overrides=None):
+    from visualizers.text_mini.renderer import TextMiniCalendarRenderer
+
+    with tempfile.TemporaryDirectory() as td:
+        config = _config_for(td, **(config_overrides or {}))
+    renderer = TextMiniCalendarRenderer()
+    events_by_day = renderer._index_events_by_day(events)
+    return renderer._build_symbol_map(config, events, events_by_day, _FakeDB([]))
+
+
+def test_symbols_are_assigned_in_ascending_date_order():
+    """The query can hand back rows in any order; the symbol cycles must still
+    run in calendar order so the first symbol of each list lands on the
+    earliest day it applies to."""
+    events = [
+        {"Start": "20260120", "End": "20260120", "Task_Name": "Late event"},
+        {"Start": "20260106", "End": "20260106", "Task_Name": "Early event"},
+        {"Start": "20260113", "End": "20260113", "Task_Name": "Mid event"},
+        {"Start": "20260122", "End": "20260122",
+         "Task_Name": "Late milestone", "Milestone": True},
+        {"Start": "20260108", "End": "20260108",
+         "Task_Name": "Early milestone", "Milestone": True},
+    ]
+    symbol_map, details = _symbol_map_for(events)
+
+    config = create_calendar_config()
+    first_event, second_event, third_event = config.text_mini_event_symbols[:3]
+    first_ms, second_ms = config.text_mini_milestone_symbols[:2]
+
+    assert symbol_map["20260106"] == first_event
+    assert symbol_map["20260113"] == second_event
+    assert symbol_map["20260120"] == third_event
+    assert symbol_map["20260108"] == first_ms
+    assert symbol_map["20260122"] == second_ms
+
+    # The details list follows the same order.
+    assert [d.text for d in details] == [
+        "Early event", "Early milestone", "Mid event",
+        "Late event", "Late milestone",
+    ]
+
+
+def test_symbol_order_is_stable_for_events_sharing_a_start_date():
+    """End date then name break the tie, so the same input always assigns the
+    same symbols."""
+    events = [
+        {"Start": "20260112", "End": "20260112", "Task_Name": "Beta"},
+        {"Start": "20260112", "End": "20260112", "Task_Name": "Alpha"},
+    ]
+    _, details = _symbol_map_for(events)
+
+    assert [d.text for d in details] == ["Alpha", "Beta"]
+
+
+def test_holiday_and_nonworkday_symbols_run_in_date_order():
+    """These two cycles walk the day range rather than the event list, so they
+    are ascending by construction — this pins that."""
+    from visualizers.text_mini.renderer import TextMiniCalendarRenderer
+
+    db = _FakeDB(
+        [],
+        holidays={
+            "20260119": [{"displayname": "Later Holiday"}],
+            "20260101": [{"displayname": "Earlier Holiday"}],
+        },
+        specials={
+            "20260126": [{"name": "Later Shutdown", "nonworkday": 1}],
+            "20260105": [{"name": "Earlier Shutdown", "nonworkday": 1}],
+        },
+    )
+    with tempfile.TemporaryDirectory() as td:
+        config = _config_for(td)
+    renderer = TextMiniCalendarRenderer()
+    symbol_map, details = renderer._build_symbol_map(config, [], {}, db)
+
+    first_hol, second_hol = config.text_mini_holiday_symbols[:2]
+    first_nwd, second_nwd = config.text_mini_nonworkday_symbols[:2]
+
+    assert symbol_map["20260101"] == first_hol
+    assert symbol_map["20260119"] == second_hol
+    assert symbol_map["20260105"] == first_nwd
+    assert symbol_map["20260126"] == second_nwd
+    assert [d.text for d in details] == [
+        "Earlier Holiday", "Earlier Shutdown", "Later Holiday", "Later Shutdown",
+    ]
