@@ -1,0 +1,77 @@
+The following are answers to the questions raised by the Claude review of the Gantt_Chart_Requirements.txt document. 
+
+Missing from that document is the need to create a separate file output named "gantt_details.svg". This output should follow the general format of other 'details' output. 
+
+1. Not all project managers will provide the desired data for dependency / WBS / float data. When no data is provided then the succesor arrows and float bars cannot be drawn. 
+
+When creating the plan to implement the Gantt visualization add the creation of test data. 
+
+2. predecessors and successors when existant should reference the source_id (assumed to be filled with a non-mutable value). Microsoft Project style FS, SS, FF, SF with delta time syntax should be supported. If there are only numeric values then they should be interpreted as source_id values. 
+
+3. Use the text versions of the duration and effort as they should contain the data imported by the user. The REAL columns will be used for calculation.
+
+4. Rollup and milestone columns should be rendered as an icon which should be specified by style_rules. The default icon should be the "check" icon.
+
+5. Add the source_id column to the default column list.
+
+6. Do not synthesize rows - only data imported should be placed on the visualization.
+
+7. Sort the WBS segment-wise numerically. Events without WBS values should be placed after the WBS sorted entries.
+
+8. Indent by WBS segment - with no WBS value then the indent should not be indented.
+
+9. Row heights should be fixed and uniform. Columns should have a configured maximum number of lines and if the value cannot be fit then truncate the text with an ellipsis at the end.
+
+10. Plan for Vertical pagination into multiple pages repeating the column header and timescale. 
+
+11. Plan for Horizontal pagination with repeating column header with a timescale that continues from previous pages. 
+
+12. Paginated files should have _p2, _p3, _p4 ... naming
+
+13. When weekend_style = 0 then remove the columns for those days completely. When weekend_style <> 0 then shade those non-working days. 
+
+14. When weekend days are hidden AND holidays occur on the weekend then those holidays will be hidden. When this occurs add the item to the gantt_details.svg output. 
+
+15. The timescale will be driven by the --start/--end date calendar range just like all other visualizations.
+
+16. When duration bars should be drawn after the --end date add a continuation icon on the inside of the bar on the right side. When a duration bar should be drawn before the --start date draw a continuation icon on the inside of the bar on the left side. When this occurs add the item to the gantt_details.svg output. 
+
+17. Create new gantt_top_time_band and gantt_bottom_time_band following the blockplan configuration. By default make the gantt_bottom_time_band the same as the gantt_top_time_band.
+
+18. Percent_complete should be drawn against the working-day span.
+
+19. Rollup brackets are to be drawn as brackets only with no progress or float.
+
+20. Use the rollup event row's start_date and end_date. If the values are empty then do not draw the bracket.
+
+21. Deadline should be drawn on the chart with an icon specified in the style_rule. The default icon should be "square-fill"
+
+22. Single day events that occur on a weekend that is hidden should be drawn on the next working day with a special icon - by default use the icon "arrow-left-circle". When this occurs add the item to the gantt_details.svg output. 
+
+23. Milestones should anchor on the end_date
+
+24. When the earliest_* and latest_* columns are empty do not draw float bars.
+
+25. Draw dependency arrows as FS only
+
+26. Draw simple three-segment dogleg arrows for backward links. 
+
+27. When a predecessor task is not on the visible chart draw a stub arrow to an icon indicating an off-chart dependency. The default icon named "crosssquare". When this occurs add the item to the gantt_details.svg output. 
+
+28. Dependency arrows should be drawn if the dependency data exists. Style_rules can specify the styling of the arrows.
+
+29. Theme files should have dedicated gantt.columns section similar to blockplan.swimlanes. 
+
+30. 'dd' is an extension to the existing Arrow supported format strings built earlier in the ecalendar.py codebase. 
+
+31. Support only the standard set of CLI flags at this time.
+
+32. Mirror the PIT keys as Gantt_show_today_line and Gantt_today_date with the same semantics.
+
+33. There is no need to create Excel counterparts of the Gantt chart.
+
+34. Accept the proposed additions to the ec-* classes. 
+
+35. All theme files should have gantt sections added. 
+
+36. The split described is as expected. 

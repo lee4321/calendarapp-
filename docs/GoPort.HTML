@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventCalendar — Go Port Evaluation</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1c1c1e;
+    --muted: #5c5f66;
+    --rule: #dcdfe4;
+    --accent: #0b5fa5;
+    --code-bg: #f4f5f7;
+    --warn-bg: #fff8e6;
+    --warn-bd: #e0b34d;
+    --ok-bg: #eefaf1;
+    --ok-bd: #62b37c;
+    --risk-hi: #b3261e;
+    --risk-md: #9a6a00;
+    --risk-lo: #2f7a45;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --fg: #e6e8eb;
+      --muted: #a0a4ab;
+      --rule: #33363d;
+      --accent: #6fb2f0;
+      --code-bg: #1f2229;
+      --warn-bg: #2b2415;
+      --warn-bd: #8a6d21;
+      --ok-bg: #16261b;
+      --ok-bd: #3f7a53;
+      --risk-hi: #f2867d;
+      --risk-md: #e0b04a;
+      --risk-lo: #7fc596;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 52rem; margin: 0 auto; }
+  h1 {
+    font-size: 1.9rem;
+    line-height: 1.2;
+    margin: 0 0 .35rem;
+    letter-spacing: -.02em;
+  }
+  .sub { color: var(--muted); margin: 0 0 2.5rem; font-size: .95rem; }
+  h2 {
+    font-size: 1.3rem;
+    margin: 3rem 0 .9rem;
+    padding-bottom: .4rem;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: -.01em;
+  }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+  p, li { margin: .6rem 0; }
+  ul, ol { padding-left: 1.4rem; }
+  code {
+    background: var(--code-bg);
+    padding: .12em .38em;
+    border-radius: 4px;
+    font: .87em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: .9rem 1rem;
+    overflow-x: auto;
+    font: .85rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .scroll { overflow-x: auto; margin: 1.1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hi { color: var(--risk-hi); font-weight: 600; }
+  .md { color: var(--risk-md); font-weight: 600; }
+  .lo { color: var(--risk-lo); font-weight: 600; }
+  .callout {
+    border-left: 3px solid var(--warn-bd);
+    background: var(--warn-bg);
+    padding: .8rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1.2rem 0;
+  }
+  .callout.good { border-left-color: var(--ok-bd); background: var(--ok-bg); }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .decisions { margin: 1.2rem 0 0; padding-left: 0; list-style: none; }
+  .decisions li { padding-left: 1.5rem; position: relative; }
+  .decisions li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--ok-bd);
+    font-weight: 700;
+  }
+  a { color: var(--accent); }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>EventCalendar — Go Port Evaluation</h1>
+<p class="sub">Feasibility, expected advantages, and an implementation route for porting the <code>ecalendar.py</code> CLI and the event-data importers to Go. GUI (<code>slint_ui/</code>) and TUI (<code>tui/</code>) are out of scope. Prepared 2026-08-01.</p>
+
+<div class="callout good">
+<p><strong>Settled decisions.</strong> These are assumed throughout and each one removes risk that an unconstrained port would carry:</p>
+<ul class="decisions">
+  <li><strong>Output need not be byte-identical.</strong> The Go port must be correct and visually equivalent, not a bit-for-bit reproduction.</li>
+  <li><strong>Generator scripts are dropped.</strong> Event data arrives as CSV/XLSX files through the normal import path.</li>
+  <li><strong>Holidays are imported at build time</strong> into <code>calendar.db</code>, not resolved at runtime.</li>
+</ul>
+<p style="margin-top:.8rem">With these in place there are <strong>no high-risk items left</strong> in the port. What remains is volume, not difficulty.</p>
+</div>
+
+<h2>Scope</h2>
+
+<p>Excluding TUI/GUI, tests, the maintenance scripts in <code>tools/</code>, and the dropped generator-script code, the port covers <strong>~36,600 lines of Python</strong>:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Area</th><th class="num">LOC</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code>visualizers/</code> (9 renderers + layouts)</td><td class="num">18,270</td><td>The bulk. Pure geometry + string emission.</td></tr>
+    <tr><td><code>config/</code> (<code>config.py</code>, <code>theme_engine.py</code>, <code>unified_theme.py</code>, …)</td><td class="num">5,843</td><td>521-field <code>CalendarConfig</code>, 367-entry theme→field map</td></tr>
+    <tr><td><code>shared/</code> (dates, rules, fiscal, db, classifiers)</td><td class="num">3,620</td><td></td></tr>
+    <tr><td><code>ecalendar.py</code> + <code>cli/</code></td><td class="num">3,301</td><td>24 subcommands, 146 <code>add_argument</code> calls</td></tr>
+    <tr><td><code>importers/</code> (event/specialday/icon/pattern/color import)</td><td class="num">2,260</td><td>5 CLI entry points, after removing ~430 lines of generator-script code</td></tr>
+    <tr><td><code>renderers/</code> (<code>svg_base</code>, glyph cache, text utils)</td><td class="num">2,047</td><td></td></tr>
+    <tr><td><code>vendor/labella/</code></td><td class="num">1,343</td><td>Force-directed callout placement + VPSC solver</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Expect <strong>50–65k lines of Go</strong> — Go runs 1.3–1.8× on this kind of code (explicit error handling, no dataclass/<code>getattr</code> shortcuts).</p>
+
+<p>584 tests pass in 8.5s, and <code>tools/refcorpus.sh</code> renders 9 visualizers × 3 themes. With byte-identity off the table the corpus stops being a pass/fail gate, but it remains the most valuable asset in the repo for this project: use it as a <strong>structural and visual diff</strong> — compare element counts, layer ordering, bounding boxes, and rendered PNGs rather than bytes. A mismatch still means "look here."</p>
+
+<h2>Why port at all — expected advantages</h2>
+
+<p>All figures below are measured against the current implementation on this machine (Apple silicon, Python 3.14, <code>-th default</code>), not estimated.</p>
+
+<h3>1. Distribution — the strongest case</h3>
+
+<p>The tool currently requires Python 3.13+, uv, and 13 dependencies. <strong>Pillow is the fragile one.</strong> Its text metrics depend on libraqm/HarfBuzz being compiled in, and that is an <em>optional</em> Pillow build feature. It is present here (<code>features.check('raqm') == True</code>), but that is not guaranteed elsewhere — and on a Pillow built without it, <code>getlength()</code> silently stops applying GPOS kerning. Text then measures roughly 1.7% narrower than the layout engine expects, and every downstream placement shifts. No error is raised; the calendars are just subtly wrong.</p>
+
+<p>A Go binary with shaping compiled in eliminates that entire failure class. Combined with <code>//go:embed</code> for the 18 theme YAMLs, the 138 fonts, and <code>calendar.db</code>, the result is a genuinely single-file tool at roughly 40–60 MB. For a generator people run occasionally, "download one file and run it" versus "stand up a Python environment" is a categorical difference rather than an incremental one.</p>
+
+<h3>2. Performance — real, but smaller than expected</h3>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Render</th><th class="num">Time</th><th class="num">Output</th></tr></thead>
+  <tbody>
+    <tr><td>weekly, 3 months</td><td class="num">0.41s</td><td class="num">414 KB</td></tr>
+    <tr><td>mini, 1 year</td><td class="num">0.52s</td><td class="num">497 KB</td></tr>
+    <tr><td>candybar, 1 year</td><td class="num">0.53s</td><td class="num">476 KB</td></tr>
+    <tr><td>timeline, 1 year</td><td class="num">0.47s</td><td class="num">1.1 MB</td></tr>
+    <tr><td>blockplan, 1 year</td><td class="num">0.42s</td><td class="num">1.1 MB</td></tr>
+    <tr><td>weekly, 5 years</td><td class="num">1.27s</td><td class="num">1.9 MB</td></tr>
+    <tr><td>refcorpus (27 renders)</td><td class="num">11.4s</td><td class="num">—</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>About <strong>110 ms of every invocation</strong> is Python interpreter startup and the import chain before any work begins, plus ~30 ms of <code>uv</code> overhead. Go would reduce that to roughly 5 ms.</p>
+
+<p>Profiling the 5-year render surfaced something more interesting than language overhead:</p>
+
+<pre><code>5149  0.274s  _sqlite3.connect
+5149  0.264s  sqlite3.Cursor.execute
+5149  0.064s  sqlite3.Connection.close</code></pre>
+
+<div class="callout">
+<p><strong>5,149 separate database connections — about 47% of the runtime.</strong> <code>_get_connection</code> (<code>shared/db_access.py:186</code>) opens and closes a fresh connection per query. A Go port with a pooled <code>*sql.DB</code> fixes this incidentally, but it is fixable in Python in an afternoon for a tiny fraction of the porting effort. <em>It should not be counted as a Go advantage.</em> Fix it first, then re-measure the baseline this comparison rests on.</p>
+</div>
+
+<p>The genuine language-level wins in that profile are <code>arrow</code> (0.22s cumulative in <code>arrow.range</code>, 0.11s recompiling format regexes) against Go's stdlib <code>time</code>, and interpreter overhead across 219k <code>getattr</code> and 418k <code>isinstance</code> calls. A Go version should land near <strong>40–80 ms per render</strong> — call it 6–10×. Real, but starting from 0.5s, so it changes interactive feel rather than making anything newly possible.</p>
+
+<p>One earlier concern deserves downgrading: the O(n²) shaping in <code>glyph_cache.py</code> costs only 0.064s here. Still worth fixing during the port, but it is not a hotspot at realistic calendar sizes.</p>
+
+<h3>3. Batch generation — where the speedup compounds</h3>
+
+<p>27 renders take 11.4s serially, each paying the full ~140 ms startup. Go removes the startup entirely and makes parallelism nearly free — goroutines over a work queue would bring that batch near 1s. If calendar <em>sets</em> are generated (per-team, per-quarter, all-themes), this is where the difference is felt rather than merely measured.</p>
+
+<h3>4. Type safety where the codebase is weakest</h3>
+
+<p>The 521-field config with 367 theme mappings applied via <code>setattr</code> is the most error-prone surface in the project, and it currently fails soft — <code>theme_engine.py:958</code> catches <code>TypeError</code>/<code>ValueError</code> and logs a warning. A mistyped theme key does not error; it silently does nothing. With codegen and a typed struct that becomes a build failure. Given that the CLI-beats-theme precedence bug (<code>8796123e</code>) lived in exactly this machinery, compile-time enforcement is worth something concrete.</p>
+
+<h3>5. Reproducibility</h3>
+
+<p>Two sources of run-to-run variance disappear: holiday data stops depending on the installed <code>holidays</code> version (from the build-time import decision, which is language-independent), and text metrics stop depending on how the local Pillow happened to be built (which is specific to leaving Python).</p>
+
+<h3>The cost that sits outside the port scope</h3>
+
+<div class="callout">
+<p>The GUI (<code>slint_ui/</code>) and TUI (<code>tui/</code>) are excluded from the port, but they do not stop existing — and a Go core breaks a coupling neither obviously advertises. Both invoke the calendar by subprocess, which is language-agnostic and keeps working. The problem is that both <strong>build their UIs by introspecting the live argparse parser</strong>:</p>
+<pre><code># slint_ui/ecalendar_app.py:239 and tui/spec.py:166
+import ecalendar
+parser = ecalendar._create_argument_parser("ecalendar_preview.svg")
+sub_action = next(a for a in parser._actions
+                  if isinstance(a, argparse._SubParsersAction))</code></pre>
+<p>They walk <code>parser._actions</code> so every new CLI flag appears in the UI automatically. A Go binary has no argparse to introspect, so both front-ends would fall back to hand-maintained flag lists.</p>
+<p>The fix is straightforward and arguably an improvement: have the Go binary expose a <code>spec --json</code> subcommand that dumps its flag tree, and point both UIs at that. It is more robust than reaching into argparse's private <code>_actions</code> API, which is fragile across Python versions regardless. Worth planning for rather than discovering late.</p>
+</div>
+
+<h3>Summary</h3>
+
+<p>The case for Go is <strong>distribution and deployment robustness first</strong>, type safety on the config surface second, and performance a distant third — with the caveat that the largest performance number measured here is a Python-side bug fixable without porting anything.</p>
+
+<p>If the goal is to ship a tool that runs without a Python environment and never silently mis-measures text because of how a dependency was built, that justifies 50–65k lines of Go. If the goal is primarily speed, fix the connection churn first and re-measure before committing.</p>
+
+<h2>Dependency mapping</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Python</th><th>Go</th><th>Risk</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>drawsvg</code></td>
+      <td>none needed</td>
+      <td><span class="lo">None.</span> Real API surface is tiny: <code>Drawing</code>, <code>Rectangle</code>, <code>Circle</code>, <code>Line</code>, <code>Group</code>, <code>Image</code>, <code>Path</code>, <code>append_def</code>, <code>append_css</code>, <code>save_svg</code> — and 22 of 40 call sites are <code>drawsvg.Raw</code> (hand-built strings). Write ~200 lines of Go emitters.</td>
+    </tr>
+    <tr>
+      <td><code>sqlite3</code></td>
+      <td><code>modernc.org/sqlite</code> (pure Go)</td>
+      <td><span class="lo">None.</span> ~15 simple read queries in <code>shared/db_access.py</code>; the importers add writes and a schema migration. DB is small in rows (1,373 colors, 8,284 icons, 350 patterns, 79 papersizes); the 28 MB is icon SVG blobs.</td>
+    </tr>
+    <tr>
+      <td><code>pyyaml</code></td>
+      <td><code>goccy/go-yaml</code></td>
+      <td><span class="lo">Low.</span> Themes decode to <code>map[string]any</code> either way.</td>
+    </tr>
+    <tr>
+      <td><code>openpyxl</code></td>
+      <td><code>xuri/excelize/v2</code></td>
+      <td><span class="lo">Low.</span> Write side uses only <code>Font</code>, <code>PatternFill</code>, <code>Alignment</code>, <code>Border</code>, <code>merge_cells</code>, <code>freeze_panes</code>, column/row dims. Same library also covers the importers' <code>.xlsx</code> read path.</td>
+    </tr>
+    <tr>
+      <td><code>pandas</code></td>
+      <td><code>excelize</code> + <code>encoding/csv</code></td>
+      <td><span class="lo">Low.</span> In scope via the importers, but the usage is shallow — see the importers section.</td>
+    </tr>
+    <tr>
+      <td><code>arrow</code>, <code>dateutil</code></td>
+      <td>stdlib <code>time</code> + a token formatter</td>
+      <td><span class="md">Low-medium.</span> 79 <code>arrow.get</code> calls; you must port Arrow's format tokens (<code>YYYY</code>, <code>MMM</code>, <code>ddd</code>, <code>[literal]</code>) plus the custom <code>dd</code> handling in <code>date_utils.py:44</code>. <code>dateutil</code>'s permissive parsing is still needed for date columns in imported files — see below.</td>
+    </tr>
+    <tr>
+      <td><code>intervaltree</code></td>
+      <td>small hand-rolled</td>
+      <td><span class="lo">None.</span> One call site in the labella distributor.</td>
+    </tr>
+    <tr>
+      <td><code>graph-layout</code></td>
+      <td>—</td>
+      <td><strong>Dead dependency.</strong> Only a comment references it.</td>
+    </tr>
+    <tr>
+      <td><code>fonttools</code></td>
+      <td><code>golang.org/x/image/font/sfnt</code> + custom pen</td>
+      <td><span class="lo">Low.</span> See below.</td>
+    </tr>
+    <tr>
+      <td><code>Pillow</code> (ImageFont)</td>
+      <td><code>go-text/typesetting</code></td>
+      <td><span class="md">Medium.</span> The most demanding remaining piece. See below.</td>
+    </tr>
+    <tr>
+      <td><code>holidays</code></td>
+      <td>— (build-time only)</td>
+      <td><span class="lo">Resolved.</span> Stays in Python as a build step; never linked into the Go binary.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Text and font handling</h2>
+
+<h3>Text measurement</h3>
+
+<p>Every layout decision flows through <code>string_width()</code> → <code>PIL.ImageFont.getlength()</code>. What that actually does, measured on this machine:</p>
+
+<pre><code>InstrumentSerif-Italic @ 9pt, "Wednesday 28"
+  PIL getlength (whole string): 44.46875
+  sum of per-char getlength   : 45.203125
+  raw hmtx × 9/upm            : 45.207
+</code></pre>
+
+<p>Pillow here is built <strong>with libraqm/HarfBuzz</strong> (<code>features.check('raqm') == True</code>, freetype 2.14.3), so <code>getlength</code> does full HarfBuzz shaping with GPOS kerning and quantizes to 1/64 px (26.6 fixed point). <code>44.46875 = 2846/64</code>.</p>
+
+<p>Use <strong><code>github.com/go-text/typesetting</code></strong> — a genuine Go port of HarfBuzz, pure Go, no cgo. With byte-identity dropped there is no reason to consider cgo bindings to HarfBuzz/FreeType, and no reason to replicate the 26.6 quantization; correct kerned advances are sufficient.</p>
+
+<p>The residual risk is not exactness, it's <em>magnitude</em>. Naive <code>hmtx</code> scaling (skipping shaping entirely) is off by 0.74pt on a 12-character string, which is enough to change where <code>fittext()</code> truncates and to overflow day boxes. So real shaping is required; matching it to the last 1/64 px is not.</p>
+
+<div class="callout">
+<p><strong>Fix the O(n²) shaping while you're there.</strong> <code>glyph_cache.py:152</code> computes each character's position with <code>getlength(text[:i+1])</code> — it reshapes the string once per character. In Go, do one shaping pass and read per-cluster advances. This is faster, simpler, and more correct; the only reason not to would have been byte-identity, which no longer applies.</p>
+</div>
+
+<h3>Glyph outline extraction</h3>
+
+<p><code>renderers/glyph_cache.py</code> uses fontTools <code>SVGPathPen</code> to emit path <code>d</code> attributes. <code>x/image/font/sfnt</code> gives you segments (<code>SegmentOpMoveTo/LineTo/QuadTo/CubeTo</code>), so you write a ~60-line pen.</p>
+
+<p>This would have been risky under byte-identity, since SVGPathPen's exact command letters, implicit-command elision, and number formatting would all have needed reproducing. That requirement is gone — the paths only need to describe the same curves. Verify by rasterizing a page from each implementation and comparing images, not strings. Note that <code>sfnt</code> reports quadratic segments for TrueType outlines; emit them as <code>Q</code> rather than converting to cubics, and keep the same <code>translate(x,y) scale(s,-s)</code> transform convention so the Y-flip stays in one place.</p>
+
+<h2>Holidays — build-time import</h2>
+
+<p>Python's <code>holidays</code> package has no Go equivalent worth using. It covers 150+ countries with a category model that <code>db_access.py:98</code> depends on: it probes <code>supported_categories</code>, unions <code>public</code>+<code>government</code> into the shaded non-workday pool, then layers <code>optional</code>/<code>half_day</code>/<code>unofficial</code> as title-only entries. <code>github.com/rickar/cal/v2</code> covers ~30 countries with no category concept.</p>
+
+<p>Resolved by moving holiday resolution to build time. Concretely:</p>
+
+<ul>
+  <li>A Python generator materializes a <code>holidays</code> table into <code>calendar.db</code> — <code>(daykey, displayname, country, category, nonworkday)</code> — over a generous year range, applying the union and precedence rules that <code>_load_country_holidays</code> currently applies at runtime.</li>
+  <li>The Go binary reads that table exactly like it reads <code>specialdays</code>, <code>colors</code>, and <code>patterns</code>. <code>load_python_holidays()</code> becomes an ordinary query.</li>
+  <li>Python remains a build dependency; the shipped binary has zero runtime dependencies.</li>
+</ul>
+
+<p>Two benefits beyond making the port possible. Holiday data becomes <strong>reproducible</strong> — today the same command run a year apart can produce different calendars because the installed <code>holidays</code> version changed. And it becomes <strong>inspectable</strong>, since holidays land in the same database as every other reference dataset, queryable with the existing tooling.</p>
+
+<p>Two details to settle when building it: the year range to materialize (generating well past any plausible calendar range costs almost nothing — the table is small), and whether to keep the <code>--country</code> filter dynamic. Keep it dynamic: materialize all countries you care about and let the Go side filter by the <code>country</code> column, which preserves current CLI behavior exactly.</p>
+
+<h2>Importing event data</h2>
+
+<p>Five standalone CLI entry points, sharing a framework in <code>importers/common.py</code>:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Module</th><th class="num">LOC</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>import_events.py</code></td><td class="num">~840</td><td>Events/durations from CSV or XLSX (1,069 less the generator path)</td></tr>
+    <tr><td><code>import_specialdays.py</code></td><td class="num">653</td><td>Company holidays / non-workdays</td></tr>
+    <tr><td><code>common.py</code></td><td class="num">554</td><td>Shared framework: <code>ImportDatabase</code>, hashing, dates, <code>--list</code>/<code>--remove</code></td></tr>
+    <tr><td><code>import_icons.py</code>, <code>import_patterns.py</code>, <code>import_rcairo_colors.py</code></td><td class="num">273</td><td>Reference-data loaders (SVG assets, color table)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Dropped: generator scripts</h3>
+
+<p><code>load_generator_script()</code> loaded an arbitrary user-supplied Python file via <code>importlib</code>, called its <code>generate_events()</code>, and used <code>inspect.signature</code> to decide which keyword arguments that function accepted. A compiled Go binary cannot do any of that, and it is now out of scope. Removing it takes with it:</p>
+
+<ul>
+  <li><code>load_generator_script</code> (40 lines), <code>call_generate_fn</code> (52), <code>import_generated_events</code> (137)</li>
+  <li>The <code>--script</code>, <code>--start-date</code>, <code>--end-date</code>, and <code>--param</code> CLI options and their dispatch in <code>main()</code> (~60 lines)</li>
+  <li><code>importers/generators/sample_generator.py</code> (137 lines)</li>
+</ul>
+
+<p>About 430 lines, and with them the only genuinely un-portable construct in the codebase. Anything a generator produced can be written to CSV and fed through the normal file-import path, so no capability is lost — only the convenience of doing it in-process. Worth a line in the changelog and a note in <code>USER_GUIDE.md</code>, since <code>--script</code> is currently documented.</p>
+
+<h3>What ports cleanly</h3>
+
+<p><strong>pandas is barely used.</strong> Despite being the heaviest dependency in <code>pyproject.toml</code>, the entire surface is:</p>
+
+<ul>
+  <li><code>read_excel</code> / <code>read_csv</code> in <code>common.py:269</code> — one function, <code>read_file()</code></li>
+  <li><code>notna</code> / <code>isnull</code> — null-ish checks on cell values</li>
+  <li><code>DataFrame</code> as a row container, iterated row-wise and immediately converted to dicts</li>
+</ul>
+
+<p>No joins, no groupby, no vectorized computation. In Go this becomes <code>excelize</code> for <code>.xlsx</code>, <code>encoding/csv</code> for CSV, and a <code>[]map[string]string</code> row model. Dropping the generator path also removes the one place a DataFrame crossed an API boundary, so pandas leaves the design entirely rather than being emulated.</p>
+
+<p>The null-ish checks become explicit empty-string tests, which is clearer than pandas' <code>NaN</code> semantics — and worth being deliberate about, since pandas silently coerces an all-integer column to float and turns blanks into <code>NaN</code>. The Go version will not reproduce that and should not try to.</p>
+
+<p>The rest of the framework is straightforward: SHA-256 file hashing for duplicate detection, an <code>import_history</code> / <code>import_sequence</code> bookkeeping pair, transactional inserts, and <code>--list</code>/<code>--remove</code> operations keyed by import ID. <code>COLUMN_MAPPING</code> in <code>import_events.py:89</code> (case-insensitive source-column → DB-column aliasing) is a plain map. The schema migration in <code>ImportDatabase._migrate_schema</code> is <code>ALTER TABLE</code> statements guarded by column existence checks.</p>
+
+<h3>Date parsing still needs care</h3>
+
+<p>Dropping generators does <em>not</em> remove the <code>dateutil</code> requirement. <code>convert_date()</code> (<code>common.py:190</code>) runs every date cell from every imported file through <code>dateutil_parse</code>, which accepts <code>M/D/YYYY</code>, <code>M/D/YY</code>, <code>YYYY-MM-DD</code> and much else. Go has no equivalent, so replace it with an ordered list of candidate layouts tried in turn.</p>
+
+<p>Two behaviors in that function to carry across deliberately: two-digit years rely on <code>dateutil</code>'s century inference, and a parse is rejected when the resulting year is under 1950 — a sentinel for Excel's 1899/1900 epoch leaking through. Both are load-bearing for real spreadsheets and neither is obvious from the signature. <code>process_dates()</code> just above it also swaps reversed ranges and mirrors a missing side; port it as written.</p>
+
+<h2>The theme engine needs a design decision</h2>
+
+<p><code>theme_engine.py:954</code> is <code>setattr(config, field, value)</code> over a 367-entry <code>dict[tuple[str,str], str]</code>, against a 521-field dataclass. Same pattern in <code>_CLI_CONFIG_OVERRIDES</code> in <code>cli/config_assembly.py</code>. Three ways to handle it in Go:</p>
+
+<ol>
+  <li><strong><code>reflect</code> + struct tags</strong> — closest translation, keeps the map-driven design, but you lose compile-time safety on exactly the thing that's already subtle (the CLI-beats-theme precedence fixed in commit <code>8796123e</code>).</li>
+  <li><strong>Code generation</strong> — declare fields once in YAML/TOML, generate the struct, the theme map, and the CLI override table. Best fit: the mapping is data, and codegen makes it typed data. This is what I'd do.</li>
+  <li><strong><code>map[string]any</code> config</strong> — closest to Python's dynamism, worst Go. Don't.</li>
+</ol>
+
+<p>Note the two-pass apply (theme → <code>setfontsizes</code> → theme again → re-assert CLI) in <code>ecalendar.py:672-696</code>. That ordering is load-bearing and non-obvious; port it literally and let <code>tests/test_cli_theme_precedence.py</code> guard it. Config resolution is one place where exact equivalence <em>is</em> worth enforcing even though pixel output isn't — dump the resolved config as JSON from both implementations and diff, since a divergence there is a logic bug rather than a rendering difference.</p>
+
+<h2>Other porting notes</h2>
+
+<ul>
+  <li><strong><code>vendor/labella/vpsc.py</code></strong> (428 lines) is a variable-placement-with-separation-constraints solver — float-sensitive numerics driving timeline/PIT label placement. Port mechanically and compare node positions numerically. Exact float agreement isn't required, but the solver has convergence behavior that's easy to break by "tidying" it; resist.</li>
+  <li><strong>argparse behavior gaps.</strong> <code>allow_abbrev</code> defaults to <code>True</code>, so <code>--headerl</code> currently resolves to <code>--headerleft</code>. Cobra/pflag won't. Decide whether that's a regression worth caring about. The per-view option gating (<code>_shade_views</code> etc. in <code>cli/args.py</code>) and <code>@file</code> expansion (<code>args.py:67</code>) are already hand-rolled and port directly.</li>
+  <li><strong><code>getattr(x, name, default)</code> appears 112 times in the renderers.</strong> Most are defensive reads of possibly-unset config fields and vanish against a fully-populated Go struct. Audit each anyway: a few encode real "did the theme set this?" logic, which needs an explicit pointer-or-sentinel representation.</li>
+  <li><strong>SVG attribute ordering no longer matters.</strong> drawsvg emits keyword arguments in declaration order, which the byte-exact corpus guard depended on. Without that constraint, Go map iteration order is harmless — though ordered attribute slices are still worth using to keep your own diffs readable between runs.</li>
+</ul>
+
+<h2>Suggested approach</h2>
+
+<p>Port bottom-up, comparing against the Python implementation at each layer:</p>
+
+<ol>
+  <li><strong>Text metrics spike.</strong> Measure a few thousand strings across the fonts in use with go-text/typesetting and compare against a Python dump of <code>getlength</code>. Not a go/no-go gate — the goal is to confirm agreement is within a fraction of a point so layout decisions land the same way, and to find any font in <code>fonts/</code> that shapes badly.</li>
+  <li><strong>Holiday materialization.</strong> Write the build-time generator and the <code>holidays</code> table first: it is small, it unblocks every date-aware code path, and it can land in the Python codebase immediately — the existing runtime can read the table too, which validates the data before any Go exists.</li>
+  <li><strong>Foundation:</strong> SQLite access, config struct + codegen, YAML theme loading, date/format utilities, SVG emitters. Validate the theme engine by diffing resolved-config JSON dumps.</li>
+  <li><strong>Importers.</strong> Good next target: self-contained, no font or layout dependencies, and it exercises the DB write path plus the CLI framework end-to-end.</li>
+  <li><strong>One visualizer end-to-end</strong> — <code>text-mini</code> (402 lines, no SVG, no glyph paths) to prove the data pipeline, then <code>mini</code> for the first real SVG comparison.</li>
+  <li><strong>Remaining visualizers</strong>, easiest first: candybar → weekly → compactplan → blockplan → pit/timeline (labella last).</li>
+  <li><strong>Excel subcommands</strong> and the listing/sheet subcommands.</li>
+</ol>
+
+<p>Steps 1 and 2 are independent of each other and of everything downstream, so they can run in parallel or in either order.</p>
+
+<footer>
+Source measurements taken against the working tree at commit <code>8796123e</code>, Pillow 11.1.0 / FreeType 2.14.3 / libraqm 0.11.0, 584 tests passing. Timings and profiles from the same tree on Apple silicon under Python 3.14; re-measure after the connection-churn fix, which shifts the render baseline.
+</footer>
+
+</main>
+</body>
+</html>
