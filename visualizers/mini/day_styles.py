@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from shared.fiscal_renderer import get_fiscal_period_color
 from shared.rule_engine import DayContext, StyleEngine
@@ -48,6 +48,31 @@ class HashDecoration:
     opacity: float | None = None
 
 
+#: Rank each icon source carries into the corner ordering. Higher ranks take
+#: the earlier corners (top-right first, then clockwise), so the mark a reader
+#: most needs to see is the one in the most prominent corner. The values echo
+#: the precedence text-mini already assigns its symbols, so the two views rank
+#: a day's marks the same way.
+ICON_RANK_STYLE_RULE = 110
+ICON_RANK_HOLIDAY = 100
+ICON_RANK_SPECIAL_DAY = 90
+ICON_RANK_MILESTONE = 80
+ICON_RANK_EVENT = 50
+
+
+@dataclass(frozen=True)
+class DayIcon:
+    """One icon to draw in a day cell's corner, and how it earned its place.
+
+    ``rank`` decides corner order, not whether the icon is drawn: a day with
+    a holiday, a milestone and two events shows all four.  Only the fifth and
+    beyond are dropped, lowest rank first — there are four corners.
+    """
+
+    name: str
+    rank: int = ICON_RANK_EVENT
+
+
 @dataclass
 class DayStyle:
     """Visual treatment for a single day cell in the mini calendar."""
@@ -74,9 +99,12 @@ class DayStyle:
     circle_color: str = "navy"
     circle_fill: str | None = None  # Circle fill (None = no fill)
 
-    # Icon treatment
-    icon_replace: str | None = None  # Icon replaces day number entirely
-    icon_append: str | None = None  # Icon appended after day number
+    # Icons drawn in the cell's corners. The day number / day glyph is always
+    # drawn as well — an icon never stands in for it (it used to, which lost
+    # the one thing every cell has to say). Ordered by rank when read; use
+    # add_icon() to append rather than assigning, so no source silently drops
+    # another's mark.
+    icons: list[DayIcon] = field(default_factory=list)
 
     # Color bar (for duration events spanning week rows)
     color_bar: str | None = None  # Color for duration bar
@@ -93,6 +121,30 @@ class DayStyle:
 
     # Fiscal period start label (e.g. "P1", "Q1 FY26 P1") — None if not a period start
     fiscal_period_label: str | None = None
+
+    def add_icon(self, name: str | None, rank: int = ICON_RANK_EVENT) -> None:
+        """Record one icon for this day, ignoring blanks and duplicates.
+
+        A day often draws the same glyph from two sources — a company
+        holiday that is also a nonworking special day, say — and showing it
+        twice would waste a corner on a mark the reader has already read.
+        """
+        if not name:
+            return
+        text = str(name).strip()
+        if not text or any(icon.name == text for icon in self.icons):
+            return
+        self.icons.append(DayIcon(text, rank))
+
+    def corner_icons(self, limit: int) -> list[DayIcon]:
+        """The icons to draw, highest rank first, capped at ``limit``.
+
+        Ties keep the order they were added, so a day carrying two events
+        shows them in the order the resolver saw them rather than an order
+        that shifts between runs.
+        """
+        ordered = sorted(self.icons, key=lambda i: -i.rank)
+        return ordered[:max(0, limit)]
 
 
 class DayStyleResolver:
@@ -210,9 +262,10 @@ class DayStyleResolver:
             )
             style.shade_opacity = 0.2
 
-        icon = holiday.get("icon") or holiday.get("displayiconid")
-        if icon:
-            style.icon_replace = str(icon)
+        style.add_icon(
+            holiday.get("icon") or holiday.get("displayiconid"),
+            ICON_RANK_HOLIDAY,
+        )
 
     def _apply_special_days(self, style: DayStyle, special_days: list[dict]) -> None:
         """Apply baseline company-special-day styling — fallback shade,
@@ -238,15 +291,11 @@ class DayStyleResolver:
                 except (ValueError, TypeError):
                     pass
 
-            icon = sd.get("icon")
-            if icon:
-                style.icon_replace = str(icon)
+            style.add_icon(sd.get("icon"), ICON_RANK_SPECIAL_DAY)
 
     def _apply_events(self, style: DayStyle, events: list[dict]) -> None:
         """Apply event-driven styling."""
         from config.config import Resource_Group_colors
-
-        milestone_icon: str | None = None
 
         for event in events:
             # Milestones get circled
@@ -259,11 +308,10 @@ class DayStyleResolver:
                 )
                 style.bold = True
                 style.priority = max(style.priority, 10)
-                # Capture milestone icon separately so non-milestone events
-                # cannot overwrite it.
-                icon = event.get("Icon")
-                if icon:
-                    milestone_icon = str(icon)
+                # A milestone outranks a plain event, so it takes the earlier
+                # corner — but it no longer displaces the events sharing its
+                # day, and two milestones no longer displace each other.
+                style.add_icon(event.get("Icon"), ICON_RANK_MILESTONE)
 
             # Resource group coloring
             rg = (event.get("Resource_Group") or "").upper()
@@ -274,20 +322,16 @@ class DayStyleResolver:
                 if rg in rg_colors:
                     style.text_color = rg_colors[rg]
 
-            # Icon from non-milestone event (only if no milestone icon has been set)
+            # Icon from a non-milestone event. Every event that carries one
+            # gets a corner now — a second event no longer overwrites the
+            # first, and a milestone no longer suppresses them.
             if not event.get("Milestone"):
-                icon = event.get("Icon")
-                if icon and not milestone_icon:
-                    style.icon_replace = str(icon)
+                style.add_icon(event.get("Icon"), ICON_RANK_EVENT)
 
             # Bold for high-priority events
             priority = event.get("Priority") or 0
             if priority and int(priority) <= 1:
                 style.bold = True
-
-        # Milestone icon wins over any non-milestone icon
-        if milestone_icon:
-            style.icon_replace = milestone_icon
 
     def _apply_style_rules(
         self,
@@ -303,7 +347,7 @@ class DayStyleResolver:
 
         - ``fill_color`` / ``fill_opacity`` → cell shade
         - ``pattern`` / ``pattern_color`` / ``pattern_opacity`` → hash decoration
-        - ``icon`` → ``icon_replace``
+        - ``icon`` → a corner icon at ``ICON_RANK_STYLE_RULE``
         - ``text["day_number"]`` font / color → text style fields
 
         Pass 1 consumes the parsed UnifiedTheme's ``box:day`` rules — both
@@ -357,8 +401,7 @@ class DayStyleResolver:
                 opacity=style_result.pattern_opacity,
             )]
 
-        if style_result.icon:
-            style.icon_replace = style_result.icon
+        style.add_icon(style_result.icon, ICON_RANK_STYLE_RULE)
 
         day_text = style_result.text.get("day_number")
         if day_text is not None:
@@ -412,9 +455,7 @@ class DayStyleResolver:
                     color=sty.get("pattern_color"),
                     opacity=sty.get("pattern_opacity"),
                 )]
-            icon = sty.get("icon")
-            if icon:
-                style.icon_replace = icon
+            style.add_icon(sty.get("icon"), ICON_RANK_STYLE_RULE)
 
     @staticmethod
     def _dict_to_event(d: dict):

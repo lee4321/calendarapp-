@@ -152,6 +152,11 @@ mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
   icon_set: squares
+  # event / holiday / special-day icons in a day cell's corners, drawn
+  # alongside the day number rather than in place of it: up to four, filled
+  # top-right first and then clockwise
+  event_icon_scale: 0.25      # fraction of the cell's shorter side
+  event_icon_opacity: 0.6     # keeps the day number legible underneath
 timeline:
   leader:
     # one curve per leader instead of one per row it crosses

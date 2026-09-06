@@ -119,6 +119,11 @@ mini_calendar:
   duration_bar_stroke_dasharray: null
   duration_bar_stroke_opacity: null
   day_box: null
+  # event / holiday / special-day icons in a day cell's corners, drawn
+  # alongside the day number rather than in place of it: up to four, filled
+  # top-right first and then clockwise
+  event_icon_scale: 0.25      # fraction of the cell's shorter side
+  event_icon_opacity: 0.6     # keeps the day number legible underneath
 mini_details:
   title_text: Event Details
   title_font: RobotoCondensed-Bold

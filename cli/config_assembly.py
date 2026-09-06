@@ -308,7 +308,13 @@ def _apply_args_to_config(
     # audit during reviews; migrate to a mapping table if this list expands.
     config.shade_current_day = getattr(args, "shade", False)
     config.includeevents = not getattr(args, "noevents", False)
-    config.includedurations = not getattr(args, "nodurations", False)
+    # Every view but text-mini takes durations by default and opts out with
+    # --nodurations; text-mini spreads a duration over a run of day cells and
+    # hides the single-day marks beneath it, so there durations are opt-in.
+    if getattr(args, "command", None) == "text-mini":
+        config.includedurations = bool(getattr(args, "durations", False))
+    else:
+        config.includedurations = not getattr(args, "nodurations", False)
     config.ignorecomplete = getattr(args, "ignorecomplete", False)
     config.milestones = getattr(args, "milestones", False)
     config.rollups = getattr(args, "rollups", False)

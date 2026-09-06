@@ -172,6 +172,12 @@ class CalendarConfig:
     mini_cell_font_size: float | None = None
     mini_show_adjacent: bool = True  # Show leading/trailing days
     mini_circle_milestones: bool = True
+    # Event / holiday / special-day icons drawn in a day cell's corners,
+    # alongside the day number (or day glyph in mini-icon) rather than in
+    # place of it. Scale is a fraction of the cell's shorter side; the
+    # opacity keeps the number legible where an icon overlaps it.
+    mini_event_icon_scale: float = 0.25
+    mini_event_icon_opacity: float = 0.6
     mini_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
     mini_duration_bar_stroke_opacity: float = 0.7

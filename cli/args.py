@@ -1223,11 +1223,14 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         action="store_true",
         help="Exclude single-day events",
     )
+    # text-mini is a day-per-cell text grid: a multi-day duration paints a
+    # run of fill symbols across it and buries the single-day marks it runs
+    # under, so durations are opt-in here rather than opt-out.
     _tm_content.add_argument(
-        "--nodurations",
-        "-nd",
+        "--durations",
+        "-du",
         action="store_true",
-        help="Exclude multi-day durations",
+        help="Include multi-day durations (excluded by default)",
     )
     _tm_content.add_argument(
         "--ignorecomplete",
