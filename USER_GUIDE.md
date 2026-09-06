@@ -137,15 +137,15 @@ PYTHONPATH=. uv run python ecalendar.py patterns
 PYTHONPATH=. uv run python ecalendar.py fonts
 
 # Generate sample-sheet previews
-PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 -of set2.svg
-PYTHONPATH=. uv run python ecalendar.py patternsheet -f wiggle -of wiggle.svg
-PYTHONPATH=. uv run python ecalendar.py iconsheet -f arrow -of arrows.svg
+PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 -of output/set2.svg
+PYTHONPATH=. uv run python ecalendar.py patternsheet -f wiggle -of output/wiggle.svg
+PYTHONPATH=. uv run python ecalendar.py iconsheet -f arrow -of output/arrows.svg
 PYTHONPATH=. uv run python ecalendar.py colorsheet -of output/colors.svg
-PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of roboto.svg
+PYTHONPATH=. uv run python ecalendar.py fontsheet -f roboto -of output/roboto.svg
 
 # Same sheets split into printable pages (output/colors_p01.svg, output/colors_p02.svg, ...)
 PYTHONPATH=. uv run python ecalendar.py colorsheet -f blue --paginate -cols 6 -rows 8 -of output/colors.svg
-PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 --paginate -cols 4 -rows 2 -of set2.svg
+PYTHONPATH=. uv run python ecalendar.py palettesheet Set2 --paginate -cols 4 -rows 2 -of output/set2.svg
 ```
 
 ## Command-Line Option Catalog (All Options)
