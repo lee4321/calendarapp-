@@ -184,7 +184,7 @@ blockplan:
   bottom_bands: []
 gantt:
   # ── Geometry ────────────────────────────────────────────────────────────
-  table_width_ratio: 0.38   # task table's share of the content width
+  table_width_ratio: 0.5   # task table's share of the content width
   row_height: 14.0          # fixed and uniform; cells truncate, never grow
   header_row_height: 18.0
   band_row_height: 10.0     # per-band default; a band may set its own
@@ -229,23 +229,24 @@ gantt:
   # `field` names the events table (name, start_date, …); dates accept any
   # Arrow format plus the `dd` two-letter weekday token.
   columns:
-    - { field: link_ref,        header: Ref,       width: 0.03, render: icon, align: center }
-    - { field: source_id,        header: ID,        width: 0.035, align: right }
-    - { field: name,             header: Task Name, width: 0.215, max_lines: 2, indent: true }
-    - { field: status,           header: Status,    width: 0.045 }
-    - { field: priority,         header: Pri,       width: 0.025, align: right }
     - { field: wbs,              header: WBS,       width: 0.05 }
-    - { field: rollup,           header: Roll,      width: 0.02, render: icon, align: center }
-    - { field: milestone,        header: MS,        width: 0.02, render: icon, align: center }
-    - { field: percent_complete, header: '%',       width: 0.035, align: right, format: '{:.0%}' }
-    - { field: effort_text,      header: Effort,    width: 0.045, align: right }
-    - { field: duration_text,    header: Duration,  width: 0.045, align: right }
-    - { field: start_date,       header: Start,     width: 0.08, date_format: dd MM/DD/YY }
-    - { field: end_date,         header: Finish,    width: 0.08, date_format: dd MM/DD/YY }
-    - { field: resource_names,   header: Resources, width: 0.065, max_lines: 1 }
-    - { field: resource_group,   header: Group,     width: 0.055 }
-    - { field: notes,            header: Notes,     width: 0.075, max_lines: 2 }
-    - { field: deadline,         header: Deadline,  width: 0.08, date_format: dd MM/DD/YY }
+  #  - { field: link_ref,        header: Ref,       width: 0.03, render: icon, align: center }
+  #  - { field: source_id,        header: ID,        width: 0.035, align: right }
+    - { field: name,             header: Task Name, width: 0.215, max_lines: 2, indent: true }
+  #  - { field: status,           header: Status,    width: 0.045 }
+    - { field: priority,         header: Pri,       width: 0.025, align: center }
+
+  #  - { field: rollup,           header: Roll,      width: 0.02, render: icon, align: center }
+  #  - { field: milestone,        header: MS,        width: 0.02, render: icon, align: center }
+  #  - { field: percent_complete, header: '%',       width: 0.035, align: right, format: '{:.0%}' }
+  #  - { field: effort_text,      header: Effort,    width: 0.045, align: right }
+  #  - { field: duration_text,    header: Duration,  width: 0.045, align: right }
+    - { field: start_date,       header: Start,     width: 0.06, date_format: dd MM/DD/YY }
+    - { field: end_date,         header: Finish,    width: 0.06, date_format: dd MM/DD/YY }
+  #  - { field: resource_names,   header: Resources, width: 0.065, max_lines: 1 }
+  #  - { field: resource_group,   header: Group,     width: 0.055 }
+    - { field: notes,            header: Notes,     width: 0.2, max_lines: 2 }
+  #  - { field: deadline,         header: Deadline,  width: 0.08, date_format: dd MM/DD/YY }
   # Timescale.  `top_bands` / `bottom_bands` reference entries in the
   # top-level `time_bands:` catalog, exactly as blockplan does; omit
   # `bottom_bands` and the bottom axis mirrors the top.
