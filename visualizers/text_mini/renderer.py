@@ -206,7 +206,15 @@ class TextMiniCalendarRenderer:
         event_symbol_map: dict[int, str] = {}
         duration_entries: list[tuple[str, str, str]] = []
 
-        for event in events:
+        # Symbols come off their cycles in calendar order, so the reader meets
+        # the first symbol of each list on the earliest day it applies to and
+        # the details list below reads top-to-bottom in date order.  Without
+        # this the cycles follow whatever order the query returned rows in,
+        # which scatters the symbols across the grid.  (The holiday and
+        # nonworkday cycles further down already walk _iter_daykeys(), which
+        # is ascending by construction.)  End date then name break ties so the
+        # assignment is stable for events that share a start date.
+        for event in sorted(events, key=self._symbol_order_key):
             start = (event.get("Start") or "")[:8]
             end = (event.get("End") or event.get("Finish") or "")[:8]
             if not start:
@@ -309,6 +317,13 @@ class TextMiniCalendarRenderer:
                     self._set_symbol(symbol_map, daykey, label, 20)
 
         return symbol_map, details
+
+    @staticmethod
+    def _symbol_order_key(event: dict) -> tuple[str, str, str]:
+        """Sort key placing events in ascending date order for symbol assignment."""
+        start = (event.get("Start") or "")[:8]
+        end = (event.get("End") or event.get("Finish") or "")[:8]
+        return (start, end, event.get("Task_Name") or "")
 
     def _duration_name_for(self, events: list[dict], start: str, end: str) -> str:
         for event in events:
