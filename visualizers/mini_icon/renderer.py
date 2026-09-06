@@ -140,11 +140,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
         day_text = self._resolve_token(config, "text:day_number", ctx)
         milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
 
-        default_color = (
-            day_text.get("color")
-            or config.theme_mini_day_color
-            or config.mini_day_color
-        )
+        default_color = self._resolve_day_number_color(config, day_text)
 
         text_color = style.text_color or default_color
         cx = x + w / 2
