@@ -22,6 +22,7 @@ CALENDAR_VIEWS = [
     "timeline",
     "pit",
     "blockplan",
+    "gantt",
     "compactplan",
     "excelheader",
     "excelblockplan",
