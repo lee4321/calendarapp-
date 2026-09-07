@@ -70,6 +70,7 @@ COMMANDS: list[tuple[str, str]] = [
     ("timeline", "Horizontal timeline of events and durations."),
     ("pit", "Points-in-Time timeline: single-day events + milestones."),
     ("blockplan", "Swimlane block plan of activities."),
+    ("gantt", "Gantt chart: task table + timescale with dependencies."),
     ("compactplan", "Compressed activities timeline."),
     ("palettesheet", "Preview a named color palette (or all palettes)."),
     ("iconsheet", "Grid preview of DB icons."),
@@ -93,6 +94,7 @@ OUTPUT: dict[str, tuple[str, str]] = {
     "timeline": ("timeline_preview.svg", "image"),
     "pit": ("pit_preview.svg", "image"),
     "blockplan": ("blockplan_preview.svg", "image"),
+    "gantt": ("gantt_preview.svg", "image"),
     "compactplan": ("compactplan_preview.svg", "image"),
     "palettesheet": ("palettesheet_preview.svg", "image"),
     "iconsheet": ("iconsheet_preview.svg", "image"),
@@ -224,7 +226,7 @@ SENTINELS = {"", "(default)", "(none)"}
 # we prefix "output/" ourselves to keep every preview file inside output/.
 AUTOPREFIX_COMMANDS = {
     "weekly", "mini", "mini-icon", "candybar", "text-mini",
-    "timeline", "pit", "blockplan", "compactplan",
+    "timeline", "pit", "blockplan", "gantt", "compactplan",
 }
 
 # All property names we read back from the window (spec fields + specials).
