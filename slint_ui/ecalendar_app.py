@@ -36,9 +36,11 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import re
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 # Resolve project paths relative to this file so the app works regardless of cwd.
@@ -400,6 +402,12 @@ class EcalendarApp:
         self.window.generate = self._on_generate
         self.window.command_changed = self._on_command_changed
         self.window.date_preset = self._on_date_preset
+        self.window.page_step = self._on_page_step
+
+        # Files written by the most recent run, and which one is on screen.
+        self._pages: list[Path] = []
+        self._page_index = 0
+        self._page_mode = "image"
 
         # Cross-thread handoff: worker writes _result as one atomic tuple, the
         # poll Timer (on the loop thread) reads it. Everything the poller needs
@@ -502,7 +510,7 @@ class EcalendarApp:
 
         threading.Thread(
             target=self._worker,
-            args=(argv, command, output_name, mode, bool(values.get("sheet_paginate"))),
+            args=(argv, command, output_name, mode, time.time()),
             daemon=True,
         ).start()
 
@@ -512,9 +520,9 @@ class EcalendarApp:
         )
 
     def _worker(
-        self, argv: list[str], command: str, output_name: str, mode: str, paginate: bool
+        self, argv: list[str], command: str, output_name: str, mode: str, since: float
     ) -> None:
-        meta = (command, output_name, mode, paginate)
+        meta = (command, output_name, mode, since)
         try:
             proc = subprocess.run(
                 argv,
@@ -532,7 +540,7 @@ class EcalendarApp:
     def _poll(self) -> None:
         if self._result is None:
             return
-        code, out, err, command, output_name, mode, paginate = self._result
+        code, out, err, command, output_name, mode, since = self._result
         self._result = None
         if self._poll_timer is not None:
             self._poll_timer.stop()
@@ -544,34 +552,68 @@ class EcalendarApp:
             self.window.status_text = f"Error: {last_line}"
             return
 
-        path = self._resolve_output(command, output_name, paginate)
-        if path is None:
+        pages = self._collect_outputs(output_name, since)
+        if not pages:
             self.window.status_text = (
                 f"Ran OK but no output file found for {command} ({output_name})."
             )
             return
 
-        self._show_preview(command, path, mode)
+        self._pages = pages
+        self._page_index = 0
+        self._page_mode = mode
+        self._show_page(0)
 
     # ----- preview routing ---------------------------------------------------
 
-    def _resolve_output(
-        self, command: str, output_name: str, paginate: bool
-    ) -> Path | None:
-        candidates: list[Path] = []
-        # The paginating sheets (colorsheet / iconsheet / palettesheet) write
-        # <stem>_pNN.svg whenever a run produces more than one page, so preview
-        # the first page when the un-suffixed file is absent.
-        if paginate:
-            stem = output_name[:-4] if output_name.endswith(".svg") else output_name
-            candidates += [ROOT / "output" / f"{stem}_p01.svg", ROOT / f"{stem}_p01.svg"]
-        candidates += [ROOT / "output" / output_name, ROOT / output_name]
-        for c in candidates:
-            if c.exists():
-                return c
-        return None
+    # A run's companion files (overflow page, _details sheet, paginated sheets)
+    # share the output stem but follow several different suffix conventions
+    # (_p01 for sheets, _p2 for gantt, _overflow, _details). Rather than encode
+    # each one, collect every stem-matching file this run actually wrote — mtime
+    # newer than the moment we launched the subprocess, minus a little slack for
+    # filesystem timestamp granularity.
+    MTIME_SLACK_S = 2.0
 
-    def _show_preview(self, command: str, path: Path, mode: str) -> None:
+    @staticmethod
+    def _page_sort_key(path: Path) -> tuple:
+        """Main sheet first, then its extra pages, then overflow, then details."""
+        name = path.stem
+        match = re.search(r"_p(\d+)$", name)
+        page = int(match.group(1)) if match else 1
+        return ("_details" in name, name.endswith("_overflow"), page, name)
+
+    def _collect_outputs(self, output_name: str, since: float) -> list[Path]:
+        stem = Path(output_name).stem
+        suffix = Path(output_name).suffix
+        for base in (ROOT / "output", ROOT):
+            if not base.is_dir():
+                continue
+            found = [
+                f
+                for f in base.glob(f"{stem}*{suffix}")
+                if f.is_file() and f.stat().st_mtime >= since - self.MTIME_SLACK_S
+            ]
+            if found:
+                return sorted(found, key=self._page_sort_key)
+        return []
+
+    def _on_page_step(self, delta: int) -> None:
+        """Walk the current run's files; wraps at both ends."""
+        if len(self._pages) < 2:
+            return
+        self._page_index = (self._page_index + int(delta)) % len(self._pages)
+        self._show_page(self._page_index)
+
+    def _show_page(self, index: int) -> None:
+        path = self._pages[index]
+        total = len(self._pages)
+        self.window.has_pages = total > 1
+        self.window.page_label = (
+            f"{index + 1} / {total}  ·  {path.name}" if total > 1 else ""
+        )
+        self._show_preview(path, self._page_mode)
+
+    def _show_preview(self, path: Path, mode: str) -> None:
         rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
         if mode == "image":
             self.window.preview_image = self._slint.Image.load_from_path(str(path))
