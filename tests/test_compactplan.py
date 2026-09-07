@@ -483,3 +483,98 @@ def test_renderer_empty_events_no_crash(tmp_path):
     renderer.render(config, coords, [], _DummyDB())
 
     assert output.exists()
+
+
+# ---------------------------------------------------------------------------
+# Icon time-band (unit: "icon")
+# ---------------------------------------------------------------------------
+
+
+class _IconDB(_DummyDB):
+    """DB stub that serves a single named icon so icon bands can draw."""
+
+    @staticmethod
+    def get_icon_svg_map():
+        return {
+            "diamond": '<svg viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12Z"/></svg>'
+        }
+
+
+class _IconCaptureRenderer(_CaptureCompactPlanRenderer):
+    """Adds icon-draw capture on top of the rect/line/text capture."""
+
+    def __init__(self):
+        super().__init__()
+        self.icon_calls: list[dict] = []
+
+    def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
+        self.icon_calls.append(
+            {"icon_name": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs}
+        )
+        return super()._draw_icon_svg(icon_name, x, baseline_y, size, **kwargs)
+
+
+def _icon_band_config(output: Path):
+    config = _base_config(output)
+    config.compactplan_time_bands = [
+        {
+            "label": "Events",
+            "unit": "icon",
+            "fill_color": "#eeeeee",
+            "icon_rules": [
+                {"milestone": True, "icon": "diamond", "color": "#4472c4"},
+            ],
+        }
+    ]
+    return config
+
+
+def test_renderer_icon_band_renders(tmp_path):
+    """A band with unit: "icon" must render without raising (regression).
+
+    The compactplan call site passes ``css_class`` to the shared
+    ``BaseSVGRenderer._draw_icon_band_row`` helper; a helper signature without
+    that parameter raises TypeError here.
+    """
+    output = tmp_path / "compact.svg"
+    config = _icon_band_config(output)
+    coords = CompactPlanLayout().calculate(config)
+    events = [_milestone("Launch", "20260316", group="Team1")]
+
+    renderer = _IconCaptureRenderer()
+    renderer.render(config, coords, events, _IconDB())
+
+    assert output.exists()
+    drawn = [c for c in renderer.icon_calls if c["icon_name"] == "diamond"]
+    assert drawn, "Expected the milestone's icon-band glyph to be drawn"
+    assert drawn[0]["color"] == "#4472c4"
+
+
+def test_renderer_icon_band_cells_carry_band_class(tmp_path):
+    """Icon-band cell backgrounds are classed ec-band-cell like other bands."""
+    output = tmp_path / "compact.svg"
+    config = _icon_band_config(output)
+    coords = CompactPlanLayout().calculate(config)
+
+    renderer = _IconCaptureRenderer()
+    renderer.render(config, coords, [_milestone("Launch", "20260316")], _IconDB())
+
+    band_rects = [rc for rc in renderer.rect_calls if rc.get("css_class") == "ec-band-cell"]
+    assert band_rects, "Expected classed background rects for the icon band"
+
+    # ec-band-cell is a kind: box class — the glyphs must not inherit it, or an
+    # external `.ec-band-cell { fill: ... }` rule would recolor them.
+    assert all(c.get("css_class") != "ec-band-cell" for c in renderer.icon_calls)
+
+
+def test_icon_band_row_rects_unclassed_by_default():
+    """blockplan / timeline call the helper without css_class — stays unclassed."""
+    renderer = _IconCaptureRenderer()
+    renderer._draw_rect = lambda *a, **kw: renderer.rect_calls.append(kw)  # type: ignore[method-assign]
+
+    renderer._draw_icon_band_row(
+        [(0.0, 10.0, [])], row_y=0.0, row_h=12.0, icon_h=8.0, fill_color="#cccccc"
+    )
+
+    assert renderer.rect_calls, "Expected a background rect for the filled cell"
+    assert all(rc.get("css_class") is None for rc in renderer.rect_calls)

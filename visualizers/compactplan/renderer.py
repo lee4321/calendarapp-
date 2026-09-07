@@ -697,7 +697,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     )
                     for d in visible_days
                 ]
-                self._draw_icon_band_row(day_cells, row_y, band_row_h, icon_h, fill, css_class="ec-band-cell")
+                self._draw_icon_band_row(
+                    day_cells, row_y, band_row_h, icon_h, fill,
+                    css_class="ec-band-cell",
+                )
                 self._draw_line(
                     area_x, row_y + band_row_h, area_x + area_w, row_y + band_row_h,
                     stroke=_sep_style.color,

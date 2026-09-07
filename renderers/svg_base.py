@@ -1212,6 +1212,7 @@ class BaseSVGRenderer(ABC):
         row_h: float,
         icon_h: float,
         fill_color: str = "none",
+        css_class: str | None = None,
     ) -> None:
         """
         Render one icon-band row.
@@ -1231,6 +1232,10 @@ class BaseSVGRenderer(ABC):
             Display height of each icon in points.
         fill_color:
             Background fill for every day cell (``"none"`` = transparent).
+        css_class:
+            CSS class for the per-cell background rect (``None`` = unclassed).
+            The icons themselves are never given this class — it is a
+            ``kind: box`` class in ``element_catalog.yaml``.
         """
         # Vertical centring formula (mirrors milestone / continuation icons):
         #   icon top     = baseline_y - 0.8 * icon_h
@@ -1242,7 +1247,10 @@ class BaseSVGRenderer(ABC):
 
         for cell_x, cell_w, icons in day_cells:
             if has_fill and cell_w > 0:
-                self._draw_rect(cell_x, row_y, cell_w, row_h, fill=draw_fill)
+                self._draw_rect(
+                    cell_x, row_y, cell_w, row_h,
+                    fill=draw_fill, css_class=css_class,
+                )
             n = len(icons)
             if n == 0:
                 continue
