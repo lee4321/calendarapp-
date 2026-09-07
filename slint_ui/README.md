@@ -60,7 +60,7 @@ as a matching form field exists — the GUI picks it up automatically.
 |-------|------|
 | `ecalendar_window.slint` | Declarative UI. Form fields are `in-out` properties (read by Python); `preview_image` / `console_text` / `status_text` / `generating` / `preview_mode` and all `show_*` visibility flags are `in` properties (driven by Python). Callbacks: `generate()`, `command-changed(int)`. |
 | `ecalendar_app.py` | Loads the `.slint`, introspects the parser (`FLAGS`/`POSITIONALS`), maps form fields → CLI flags (`FIELDS` spec table + `build_argv`), toggles field visibility per subcommand (`_apply_command`), runs `ecalendar.py`, and routes the result into the right preview pane. |
-| `verify_argv.py` | Headless coverage check — builds argv for all 17 subcommands via `build_argv` and asserts each runs (exit 0) and produces its output file. Needs no display. |
+| `verify_argv.py` | Headless coverage check — builds argv for all 18 subcommands via `build_argv` and asserts each runs (exit 0) and produces its output file. Needs no display. |
 
 **`build_argv` is pure and window-free** (`build_argv(command, values, output_name)`),
 so `verify_argv.py` and unit tests can exercise the whole emit table without a
@@ -79,7 +79,7 @@ state is never touched from the worker.
 ## Verify
 
 ```bash
-uv run python slint_ui/verify_argv.py     # all 17 subcommands -> exit 0 + output file
+uv run python slint_ui/verify_argv.py     # all 18 subcommands -> exit 0 + output file
 ```
 
 ## Known limitations / things to evaluate next

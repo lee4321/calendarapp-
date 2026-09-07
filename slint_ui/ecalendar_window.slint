@@ -1,7 +1,7 @@
 // Copyright (C) 2026 A. Lee Ingram, MobileLeverage LLC
 //
 // Unified Slint UI front-end for ecalendar.py. A single window drives every
-// render/export subcommand (9 SVG visualizers, 5 SVG "sheets", 3 exporters).
+// render/export subcommand (10 SVG visualizers, 5 SVG "sheets", 3 exporters).
 //
 // One superset of `in-out` form properties is declared once and shared across
 // subcommands (~90% of options are common). Which groups/fields are shown is
@@ -202,6 +202,13 @@ export component MainWindow inherits Window {
     in property <string> status_text: "Ready. Pick a visualizer and click Generate.";
     in property <bool> generating: false;
     in property <string> preview_mode: "image";   // "image" | "text" | "status"
+
+    // Multi-page output: a run can write several files (overflow pages, the
+    // gantt/mini _details sheet, paginated sheets). Python collects them and
+    // drives `page_label` / `has_pages`; `page_step(±1)` walks the list.
+    in property <string> page_label: "";
+    in property <bool> has_pages: false;
+    callback page_step(int);
 
     callback generate();
     callback command-changed(int);
@@ -667,6 +674,33 @@ export component MainWindow inherits Window {
                         wrap: word-wrap;
                         color: #555;
                         text: root.console_text;
+                    }
+                }
+
+                if root.has_pages : Rectangle {
+                    height: 34px;
+                    background: #ececec;
+                    HorizontalBox {
+                        padding: 4px;
+                        spacing: 8px;
+                        alignment: center;
+                        Button {
+                            text: "◀";
+                            enabled: root.has_pages;
+                            clicked => { root.page_step(-1); }
+                        }
+                        Text {
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                            overflow: elide;
+                            color: #333;
+                            text: root.page_label;
+                        }
+                        Button {
+                            text: "▶";
+                            enabled: root.has_pages;
+                            clicked => { root.page_step(1); }
+                        }
                     }
                 }
 
