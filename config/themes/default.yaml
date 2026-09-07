@@ -61,7 +61,7 @@ weekly:
     font_color: grey
   week_numbers:
     font_family: OfficinaSans-Book
-    font_color: yellow
+    font_color: navy
     label_format: W{num:02d}
   day_box:
     stroke_color: grey
@@ -111,8 +111,8 @@ mini_calendar:
   milestone_stroke_width: 0.5 
   milestone_stroke_opacity: 1.0
   current_day_color: lightblue
-  week_number_font: JuliaMono-Regular
-  week_number_font_size: null
+  week_number_font: OfficinaSans-Book
+  week_number_font_size: 12
   week_number_color: darkgrey
   week_number_label_format: W{num}
   grid_line_color: grey
@@ -704,14 +704,14 @@ style_rules:
     as: day_number
     style:
       font: OfficinaSans-Book
-      size: 10
-      color: white
+      size: 18
+      color: navy
   - name: define text:month_title
     define: text
     as: month_title
     style:
       font: OfficinaSans-Book
-      size: 8
+      size: 18
       color: navy
   - name: define box:default
     define: box
