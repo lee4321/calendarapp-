@@ -1051,9 +1051,9 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
 
 # ── Duration bar connectors ───────────────────────────────────────────────
 #
-# Both edges of a bar are its dates (_layout_durations pads neither), so both
-# earn a leader up to the axis. Only a bar narrow enough that the two would
-# read as one line is reduced to the single end-date leader.
+# One leader per bar, at its start date. Both edges are real dates now
+# (_layout_durations pads neither), but a second leader would cross every
+# bar stacked between the two edges on its way to the axis.
 
 
 def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
@@ -1068,22 +1068,13 @@ def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
     return laid_out[0], [c["x1"] for c in renderer.line_calls]
 
 
-def test_a_duration_bar_gets_a_connector_at_each_date(tmp_path):
+def test_a_duration_bar_gets_one_connector_at_its_start_date(tmp_path):
     config = _base_config(tmp_path / "duration_connector.svg")
     event = Event(task_name="Short", start="20260210", end="20260320")
 
     item, xs = _duration_connector_xs(config, event)
-    assert xs == [item.start_x, item.end_x]
-
-
-def test_a_one_day_bar_gets_only_the_end_connector(tmp_path):
-    """Its two edges are a hair apart; two leaders would read as one."""
-    config = _base_config(tmp_path / "duration_one_day.svg")
-    event = Event(task_name="Ship it", start="20260210", end="20260210")
-
-    item, xs = _duration_connector_xs(config, event)
-    assert item.end_x - item.start_x < 3.0
-    assert xs == [item.end_x]
+    assert xs == [item.start_x]
+    assert item.end_x not in xs
 
 
 def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
@@ -1445,7 +1436,7 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
 
     renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
 
-    assert len(renderer.line_calls) == 2   # one leader per date
+    assert len(renderer.line_calls) == 1
     end_y = renderer.line_calls[0]["y2"]
     assert end_y < bar_y                 # pulled back from the missing bar
     assert end_y <= limit                # and inside the drawable area
@@ -1453,7 +1444,7 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
     assert len(renderer.icon_calls) == 1
     icon = renderer.icon_calls[0]
     assert icon["icon"] == "missing-box"
-    assert icon["x"] == pytest.approx(deep.end_x)
+    assert icon["x"] == pytest.approx(deep.start_x)
 
 
 def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
@@ -1465,7 +1456,6 @@ def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
     renderer._draw_duration_connectors(config, shallow, 300.0, limit=bar_y + 10_000.0)
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] == pytest.approx(bar_y)
-    assert renderer.line_calls[-1]["y2"] == pytest.approx(bar_y)
 
 
 def test_no_limit_draws_every_bar(tmp_path):

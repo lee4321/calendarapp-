@@ -141,10 +141,6 @@ _DURATION_DATE_PAD_X: float = 3.0
 #: Clear space kept between an in-bar date and the bar's title.
 _DURATION_DATE_GAP_X: float = 4.0
 
-#: Narrower than this and a bar's two axis leaders would read as one line,
-#: so only the end-date leader is drawn.
-_DURATION_LEADER_MIN_GAP: float = 3.0
-
 #: Smallest drawn size for the overflow icon inside a duration bar; a bar
 #: with less room than this gets no mark rather than an illegible one.
 _OVERFLOW_ICON_MIN_SIZE: float = 3.0
@@ -1804,13 +1800,12 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_y: float,
         limit: float | None = None,
     ) -> None:
-        """Draw the vertical aligner lines from the axis to the duration bar.
+        """Draw the vertical aligner line from the axis to the duration bar.
 
-        Both edges get one: neither is padded any more (see
-        ``_layout_durations``), so each stands on the day it names and the
-        leaders are what tie a lane deep below the axis back to its two
-        dates.  A bar narrow enough that its two leaders would merge gets
-        just the one, at the end date.
+        Start edge only, as in :py:meth:`_draw_duration_connectors_vertical`.
+        Both edges stand on real dates now (see ``_layout_durations``), but
+        one leader is enough to tie a lane deep below the axis back up to it,
+        and a second would cross every bar stacked between the two edges.
 
         When the bar itself did not fit below ``limit`` the leader stops at
         the edge of the drawable area and ends in the theme's missing-box
@@ -1821,24 +1816,20 @@ class TimelineRenderer(BaseSVGRenderer):
         fits = self._duration_fits(bar_y + row_extent, limit)
         end_y = bar_y if fits else float(limit) - row_extent
         _dur_bar_style = config.get_line_style("ec-duration-bar")
-        edges = [item.end_x]
-        if item.end_x - item.start_x >= _DURATION_LEADER_MIN_GAP:
-            edges.insert(0, item.start_x)
-        for edge_x in edges:
-            self._draw_line(
-                edge_x,
-                axis_y,
-                edge_x,
-                end_y,
-                stroke=item.color,
-                stroke_width=0.9,
-                stroke_opacity=0.8,
-                stroke_dasharray=_dur_bar_style.dasharray or None,
-                css_class="ec-connector",
-            )
+        self._draw_line(
+            item.start_x,
+            axis_y,
+            item.start_x,
+            end_y,
+            stroke=item.color,
+            stroke_width=0.9,
+            stroke_opacity=0.8,
+            stroke_dasharray=_dur_bar_style.dasharray or None,
+            css_class="ec-connector",
+        )
         if not fits:
             self._draw_missing_box_marker(
-                config, item.end_x, end_y + bar_h / 2.0, bar_h, item.color
+                config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color
             )
 
     def _draw_duration(
