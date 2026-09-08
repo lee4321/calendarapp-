@@ -590,8 +590,8 @@ In timeline, single-day events and multi-day durations are rendered differently 
 - Event markers on the main axis are always plain circles; event icons, when present and found in the icon table, appear inside the event callout box next to the title instead of on the axis marker.
 - Duration items render as a horizontal bar with start and end circles on the axis and the start/end dates inside the bar's two ends.
 - **Duration bars span exactly their dates.** Each edge sits at the x of the day it names, so every bar starting on a given day shares a left edge and every bar ending on one shares a right edge — bars can be read against the axis and against each other. One vertical leader ties the bar back to the axis, drawn from the start date; a second at the end date would cross every bar stacked between the two edges.
-- **When a bar is too narrow for its text** it is *not* widened and its text is *not* squeezed. The bar shows the theme's overflow icon (`overflow.icon`, see [Overflow Indicator](#overflow-indicator-global-theme-section)) followed by the name abbreviated with an ellipsis at the full font size; the notes and the in-bar dates are dropped. A bar with room for the icon alone shows just the icon, and one under 3pt wide shows nothing. `timeline_durations.box_width`, when a theme sets it, is the width the text is considered to want — it decides when a bar overflows, and never stretches one.
-- A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date, carries the one start-date leader, and overflows its label rather than stretching. Its overflow icon sits at the bar's bottom end, drawn upright, with the abbreviated name reading bottom→top away from it.
+- **When a bar is too narrow for its text** it is *not* widened. The bar shows the theme's overflow icon (`overflow.icon`, see [Overflow Indicator](#overflow-indicator-global-theme-section)) followed by the **whole name, condensed** — squeezed horizontally at the full font size — because half a name reads as a different activity. The notes and the in-bar dates are dropped to make the room. Condensing stops at 35% of the name's natural width, past which adjacent strokes merge; a bar narrower than that carries the icon alone, and one under 3pt wide nothing at all. `timeline_durations.box_width`, when a theme sets it, is the width the text is considered to want — it decides when a bar overflows, and never stretches one.
+- A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date, carries the one start-date leader, and overflows its label rather than stretching. Its overflow icon sits at the bar's bottom end, drawn upright, with the condensed name reading bottom→top away from it.
 - Event callout boxes are lane-positioned and horizontally offset to reduce collisions. Their connector lines are routed to avoid other boxes when possible.
 - The timeline does not take a `--shade` flag. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
 
@@ -1451,11 +1451,11 @@ itself, as the bundled themes do.
   produce a single icon, and the day's holiday name is suppressed so
   the icons stay visible.
 - **`timeline`** draws it on a duration bar too narrow for the full name
-  / notes / dates block, next to the name abbreviated with an ellipsis
+  / notes / dates block, next to the name condensed to fit what is left
   (see the timeline rendering section). Horizontally it leads the name at
   the bar's left end; vertically it sits at the bar's bottom end, upright,
-  where the rotated name starts reading. A bar with room for the icon
-  alone gets just the icon, and one under 3pt gets nothing.
+  where the rotated name starts reading. A bar too narrow to condense the
+  name legibly gets just the icon, and one under 3pt gets nothing.
 
 ### Complete Theme Key Reference
 
