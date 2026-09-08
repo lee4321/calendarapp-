@@ -18,7 +18,7 @@ import drawsvg
 from config.config import get_font_path, resolve_continuation_icon
 from renderers.glyph_cache import get_ink_extents
 from renderers.svg_base import BaseSVGRenderer
-from renderers.text_utils import abbreviate, shrinktext, string_width
+from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine, StyleResult
@@ -131,7 +131,7 @@ class TimelineDuration:
     # needs.  Horizontal bars are never widened past their dates to make room
     # — both edges belong to the calendar — so the drawer answers this by
     # replacing the full name / notes / dates block with the overflow icon and
-    # an abbreviated name.
+    # the name condensed to fit.
     text_overflow: bool = False
 
 
@@ -144,6 +144,12 @@ _DURATION_DATE_GAP_X: float = 4.0
 #: Smallest drawn size for the overflow icon inside a duration bar; a bar
 #: with less room than this gets no mark rather than an illegible one.
 _OVERFLOW_ICON_MIN_SIZE: float = 3.0
+
+#: How far a too-long name may be condensed into an overflowing duration
+#: bar, as a fraction of its natural width.  Condensed type reads well down
+#: to about a third; below that adjacent strokes merge and the name stops
+#: being a name, so the bar carries only the overflow icon.
+_OVERFLOW_TEXT_MIN_SCALE: float = 0.35
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -1052,7 +1058,7 @@ class TimelineRenderer(BaseSVGRenderer):
         alignment that lets a reader compare bars against the axis and
         against each other.  A bar too narrow for its own text is flagged
         ``text_overflow`` rather than widened; `_draw_duration` answers
-        that with the overflow icon and an abbreviated name.
+        that with the overflow icon and the name condensed to fit.
 
         Chronologically sorted bars pack greedily into the first lane
         whose previous bar ends at least ``min_gap`` px earlier.  Bars
@@ -1115,7 +1121,7 @@ class TimelineRenderer(BaseSVGRenderer):
             # theme that sets `timeline_durations.box_width` names that width
             # itself.  Nothing is widened to reach it — both edges belong to
             # the dates — so this is only the threshold past which the bar
-            # falls back to the overflow icon plus an abbreviated name.
+            # falls back to the overflow icon plus a condensed name.
             configured_w = (
                 float(config.timeline_duration_box_width)
                 if config.timeline_duration_box_width is not None
@@ -1203,8 +1209,8 @@ class TimelineRenderer(BaseSVGRenderer):
         horizontal layout.  The per-bar `min_width` field carries the
         *along-axis* length the label would need; a bar shorter than that
         is flagged ``text_overflow`` rather than stretched, and
-        `_draw_duration_vertical` answers with the overflow icon and an
-        abbreviated name.
+        `_draw_duration_vertical` answers with the overflow icon and the
+        name condensed to fit.
 
         Lanes stack perpendicularly away from the axis (each new
         overlapping bar sits further out).
@@ -2181,6 +2187,27 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-duration-date",
         )
 
+    def _overflow_name_fits(
+        self,
+        title: str,
+        text_w: float,
+        font_name: str,
+        font_size: float,
+    ) -> bool:
+        """Is ``text_w`` enough to condense ``title`` into and still read it?
+
+        ``_draw_text``'s ``max_width`` scales the glyphs on X alone, which
+        stays legible a surprising way down and then stops abruptly: past
+        ``_OVERFLOW_TEXT_MIN_SCALE`` the strokes of adjacent letters merge
+        and the name becomes a smear that says less than no name at all.
+        """
+        if text_w <= 0:
+            return False
+        natural = string_width(title, self._safe_font_path(font_name), font_size)
+        if natural <= 0:
+            return False
+        return (text_w / natural) >= _OVERFLOW_TEXT_MIN_SCALE
+
     def _draw_duration_overflow_label(
         self,
         config: "CalendarConfig",
@@ -2193,17 +2220,19 @@ class TimelineRenderer(BaseSVGRenderer):
         color: str,
         opacity: float,
     ) -> None:
-        """Fill a bar too narrow for its text with the overflow icon and as
-        much of the name as fits.
+        """Fill a bar too narrow for its text with the overflow icon and the
+        whole name, condensed to fit.
 
-        The bar's width is its date span, and that is not negotiable, so the
-        choice is between squeezing the glyphs — unreadable at these widths,
-        and a lie about how the bar relates to the axis — and admitting the
-        label was cut.  The name is abbreviated with an ellipsis at the full
-        font size, and the theme's ``icon:overflow`` glyph (the one the
-        weekly view puts on a day whose events did not fit) marks why.
+        The bar's width is its date span and cannot be traded for room, so
+        the name is squeezed horizontally rather than cut: half a name reads
+        as a different activity, while a narrow one is still the activity
+        the reader is looking for.  The theme's ``icon:overflow`` glyph (the
+        one the weekly view puts on a day whose events did not fit) says
+        that the notes and the in-bar dates were dropped to make the room.
 
-        A bar with room for neither gets the icon alone, or nothing at all.
+        Past ``_OVERFLOW_TEXT_MIN_SCALE`` the glyphs collapse into each
+        other and condensing stops buying anything, so a bar that narrow
+        carries the icon alone — and one too narrow even for that, nothing.
         """
         pad = _DURATION_DATE_PAD_X
         avail = (item.end_x - item.start_x) - 2.0 * pad
@@ -2243,20 +2272,18 @@ class TimelineRenderer(BaseSVGRenderer):
 
         text_x = item.start_x + pad + ((icon_size + 2.0) if icon_drawn else 0.0)
         text_w = item.end_x - pad - text_x
-        if text_w <= 0:
-            return
-        label = abbreviate(title, text_w, self._safe_font_path(font_name), font_size)
-        if not label:
+        if not self._overflow_name_fits(title, text_w, font_name, font_size):
             return
         self._draw_text(
             text_x,
             baseline_y,
-            label,
+            title,
             font_name,
             font_size,
             fill=color,
             fill_opacity=opacity,
             anchor="start",
+            max_width=text_w,
             css_class="ec-event-name",
         )
 
@@ -2277,10 +2304,11 @@ class TimelineRenderer(BaseSVGRenderer):
         """The vertical twin of :py:meth:`_draw_duration_overflow_label`.
 
         The rotated label reads bottom→top, so the icon sits at the bar's
-        bottom end and the abbreviated name runs up away from it — the same
-        order the eye meets them in on a horizontal bar.  The icon itself is
-        drawn upright: an indicator turned on its side reads as a different
-        glyph.
+        bottom end and the condensed name runs up away from it — the same
+        order the eye meets them in on a horizontal bar.  Condensing acts
+        along the bar's own axis, which the rotation has already made the
+        text's x.  The icon itself is drawn upright: an indicator turned on
+        its side reads as a different glyph.
         """
         pad = _DURATION_DATE_PAD_X
         avail = bar_h - 2.0 * pad
@@ -2325,20 +2353,18 @@ class TimelineRenderer(BaseSVGRenderer):
             (icon_size + 2.0) if icon_drawn else 0.0
         )
         text_w = text_bottom_y - (bar_y + pad)
-        if text_w <= 0:
-            return
-        label = abbreviate(title, text_w, self._safe_font_path(font_name), font_size)
-        if not label:
+        if not self._overflow_name_fits(title, text_w, font_name, font_size):
             return
         self._draw_text(
             cx + (cy - text_bottom_y),
             cy,
-            label,
+            title,
             font_name,
             font_size,
             fill=color,
             fill_opacity=opacity,
             anchor="start",
+            max_width=text_w,
             transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
             css_class="ec-event-name",
         )

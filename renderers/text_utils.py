@@ -98,43 +98,5 @@ def shrinktext(
     return max(lo, min_fontsize)
 
 
-#: Appended to an abbreviated string in place of what was dropped.
+#: Appended to a string shortened in place, marking what was dropped.
 ELLIPSIS = "…"
-
-
-def abbreviate(
-    text: str,
-    desired_width: float,
-    font_path: str,
-    font_size: float,
-    ellipsis: str = ELLIPSIS,
-) -> str:
-    """
-    Shorten a string to fit a width, marking the cut with an ellipsis.
-
-    Unlike :func:`shrinktext` this keeps the font size — the caller has
-    already decided the text is to be read at that size — and unlike
-    :func:`fittext` the result says that something was dropped.
-
-    Args:
-        text: String to abbreviate
-        desired_width: Maximum width in points
-        font_path: Path to the TTF font file
-        font_size: Font size in points
-        ellipsis: Marker appended when characters are dropped
-
-    Returns:
-        ``text`` unchanged when it already fits, a prefix plus ``ellipsis``
-        when it does not, or ``""`` when not even the ellipsis fits.
-    """
-    if not text or string_width(text, font_path, font_size) <= desired_width:
-        return text
-    if string_width(ellipsis, font_path, font_size) > desired_width:
-        return ""
-    kept = fittext(
-        text,
-        desired_width - string_width(ellipsis, font_path, font_size),
-        font_path,
-        font_size,
-    ).rstrip()
-    return kept + ellipsis

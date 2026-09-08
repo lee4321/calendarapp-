@@ -8,6 +8,7 @@ import pytest
 
 from config.config import create_calendar_config, setfontsizes
 from renderers.glyph_cache import get_ink_extents
+from renderers.text_utils import string_width
 from shared.wbs_filter import wbs_group
 from shared.data_models import Event
 from visualizers.timeline.layout import TimelineLayout
@@ -1728,9 +1729,10 @@ def test_the_overflow_glyph_comes_from_the_setting_not_the_token(tmp_path):
     assert icons[0]["color"] == "hotpink"   # ...but the token still paints it
 
 
-def test_an_overflowing_name_is_abbreviated_not_compressed(tmp_path):
-    # Wide enough for the icon and some of the name, too narrow for all of
-    # the name plus the two in-bar dates.
+def test_an_overflowing_name_is_condensed_whole_not_abbreviated(tmp_path):
+    """Half a name reads as a different activity; a narrow one does not."""
+    # Wide enough for the icon and the name, too narrow for all of the name
+    # plus the two in-bar dates.
     event = Event(task_name="A name much wider than this bar", start="20260316",
                   end="20260410")
     config, renderer, bar = _overflow_drawn(tmp_path, "ovl_name.svg", event)
@@ -1738,13 +1740,31 @@ def test_an_overflowing_name_is_abbreviated_not_compressed(tmp_path):
     names = _names(renderer)
     assert len(names) == 1
     drawn = names[0]
-    assert drawn["text"] != event.task_name
-    assert drawn["text"].endswith("…")
-    assert event.task_name.startswith(drawn["text"][:-1])
-    # Full font size, and no max_width for _draw_text to squeeze it with.
+    assert drawn["text"] == event.task_name       # every word of it
+    assert "…" not in drawn["text"]
+    # Full font size, squeezed on X into what the bar has left.
     title_size, _n, _d, _bar_h = renderer._duration_metrics(config)
     assert drawn["size"] == pytest.approx(title_size)
-    assert drawn.get("max_width") is None
+    assert 0 < drawn["max_width"] <= bar.end_x - bar.start_x
+
+
+def test_a_name_too_long_to_condense_legibly_is_left_out(tmp_path):
+    """Past the floor the strokes merge and the name stops being a name."""
+    event = Event(task_name="A name very much longer than four days of this axis",
+                  start="20260316", end="20260320")
+    config, renderer, bar = _overflow_drawn(tmp_path, "ovl_smear.svg", event)
+
+    title_size, _n, _d, _bar_h = renderer._duration_metrics(config)
+    natural = string_width(
+        event.task_name,
+        renderer._safe_font_path(config.timeline_name_text_font_name),
+        title_size,
+    )
+    assert (bar.end_x - bar.start_x) / natural < 0.35
+    assert _names(renderer) == []
+    # The icon still says something was dropped.
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-overflow-icon"]
 
 
 def test_an_overflowing_bar_drops_the_in_bar_dates_and_notes(tmp_path):
@@ -1769,7 +1789,7 @@ def test_a_bar_with_room_keeps_its_full_name_and_dates(tmp_path):
 
 
 def test_a_hairline_bar_draws_no_label_at_all(tmp_path):
-    """One day on a six-month axis: not even the ellipsis has room."""
+    """One day on a six-month axis: no room for the icon or a name."""
     event = Event(task_name="Ship it", start="20260316", end="20260316")
     _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_hairline.svg", event)
     assert bar.end_x - bar.start_x < 3.0
@@ -1879,7 +1899,7 @@ def test_vertical_bars_sharing_a_date_share_an_edge(tmp_path):
     assert short.start_y == pytest.approx(long_.start_y)
 
 
-def test_an_overflowing_vertical_bar_gets_the_icon_and_an_abbreviated_name(tmp_path):
+def test_an_overflowing_vertical_bar_gets_the_icon_and_a_condensed_name(tmp_path):
     config, renderer, bars = _vertical_bars(
         tmp_path, "v_overflow.svg",
         [Event(task_name="A name much longer than this bar",
@@ -1899,10 +1919,10 @@ def test_an_overflowing_vertical_bar_gets_the_icon_and_an_abbreviated_name(tmp_p
 
     names = _names(renderer)
     assert len(names) == 1
-    assert names[0]["text"].endswith("…")
-    assert names[0]["text"] != "A name much longer than this bar"
+    assert names[0]["text"] == "A name much longer than this bar"
     assert "rotate(-90" in (names[0].get("transform") or "")
-    assert names[0].get("max_width") is None
+    # Condensed along the bar's own axis, which the rotation made x.
+    assert 0 < names[0]["max_width"] <= bar.end_y - bar.start_y
     # No dates or notes competing for the same run of bar.
     assert _date_texts(renderer) == []
 

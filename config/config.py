@@ -551,7 +551,7 @@ class CalendarConfig:
     # Drawn wherever a visualizer has more to say than the box it was given
     # can hold: the weekly day-number row when a day's events did not fit,
     # and a timeline duration bar too narrow for its name (there it precedes
-    # the abbreviated name). Configured under the top-level `overflow:`
+    # the condensed name). Configured under the top-level `overflow:`
     # section in theme YAMLs; themes can also paint a halo behind it with a
     # `box:overflow` rule.
     overflow_indicator_icon: str = "warningtriangle"
