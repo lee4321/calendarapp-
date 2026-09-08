@@ -37,6 +37,8 @@ watermark:
   text: ''
   rotation_angle: 45.0
   resize_mode: fit
+overflow:
+  icon: warningtriangle
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -57,8 +59,6 @@ colors:
 weekly:
   week_numbers:
     label_format: W{num:02d}
-  overflow:
-    icon: warningtriangle
 mini_calendar:
   # Glyph set the mini-icon variant draws day numbers from:
   # squares | darksquare | circles | darkcircles | squircles |
@@ -610,7 +610,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: chevron-down
+      icon: warningtriangle
       color: grey
       size: 8
   - name: federal holidays — day box tint

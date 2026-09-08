@@ -588,7 +588,10 @@ In timeline, single-day events and multi-day durations are rendered differently 
 - Single-day events become callout boxes above the axis. Durations become bars below the axis.
 - Event callout colors are assigned in sorted order from `timeline_top_colors`, cycling when there are more events than colors. Duration bar colors are assigned separately from `timeline_bottom_colors`, also cycling in sorted order.
 - Event markers on the main axis are always plain circles; event icons, when present and found in the icon table, appear inside the event callout box next to the title instead of on the axis marker.
-- Duration items render as a horizontal bar with start and end circles on the axis, plus start/end date labels below the bar.
+- Duration items render as a horizontal bar with start and end circles on the axis and the start/end dates inside the bar's two ends.
+- **Duration bars span exactly their dates.** Each edge sits at the x of the day it names, so every bar starting on a given day shares a left edge and every bar ending on one shares a right edge — bars can be read against the axis and against each other. A vertical leader runs from each edge up to the axis (a bar too narrow for two distinguishable leaders gets only the end-date one).
+- **When a bar is too narrow for its text** it is *not* widened and its text is *not* squeezed. The bar shows the theme's overflow icon (`overflow.icon`, see [Overflow Indicator](#overflow-indicator-global-theme-section)) followed by the name abbreviated with an ellipsis at the full font size; the notes and the in-bar dates are dropped. A bar with room for the icon alone shows just the icon, and one under 3pt wide shows nothing. `timeline_durations.box_width`, when a theme sets it, is the width the text is considered to want — it decides when a bar overflows, and never stretches one.
+- A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date and overflows its label rather than stretching. It draws a single leader, from the start date to the axis — a second one would cross every bar stacked between the two edges. Its overflow icon sits at the bar's bottom end, drawn upright, with the abbreviated name reading bottom→top away from it.
 - Event callout boxes are lane-positioned and horizontally offset to reduce collisions. Their connector lines are routed to avoid other boxes when possible.
 - The timeline does not take a `--shade` flag. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
 
@@ -1034,9 +1037,11 @@ footer:          # footer text content
 events:          # item_placement_order (non-styling)
 durations:       # geometry / placement
 watermark:       # watermark text and rotation
+continuation:    # icons for durations clipped by the visible range
+overflow:        # icon marking a box that could not hold its contents
 fiscal:          # label_format, year_offset
 colors:          # palette name references; holiday structural attrs
-weekly:          # weekly format strings + overflow icon name
+weekly:          # weekly format strings
 mini_calendar:   # mini title_format, layout dims, icon_set name
 mini_details:    # column widths, header text, output_suffix
 text_mini:       # glyph-set declarations
@@ -1408,6 +1413,50 @@ icon:continuation` and bind it to `ec-continuation-icon` via
 `element_overrides:`. Token values (`icon`, `size`, `color`) take
 precedence over the global `continuation.*` keys.
 
+#### Overflow Indicator (global theme section)
+
+Some boxes cannot hold what belongs in them: a weekly day with more
+events than it has rows, or a timeline duration bar whose span across
+the axis is narrower than its own name. Rather than shrink or squeeze
+the content, the visualizer draws the **overflow icon** to say that
+something was left out.
+
+The icon lived under `weekly.overflow` through v9.4; it is now a
+top-level `overflow:` block shared by every visualizer. A theme still
+carrying `weekly.overflow` is rejected with a migration message rather
+than quietly ignored — move the two keys up one level.
+
+| Theme key | Type | Default | Explanation |
+|---|---|---|---|
+| `overflow.icon` | `str` | `"warningtriangle"` | Glyph name, resolved through the `icons` table |
+| `overflow.color` | `str` | `"red"` | Icon color |
+| *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | Optional halo (fill / stroke / padding) painted behind the icon. See "Style Rules" → Box Properties. |
+
+```yaml
+overflow:
+  icon: warningtriangle
+  color: red
+```
+
+`overflow.icon` names the glyph in every visualizer; a `define
+icon:overflow` token supplies its color (and size, where the visualizer
+scales it). A token's own `icon:` value is not read for the overflow
+mark — keep it equal to `overflow.icon` so the theme does not contradict
+itself, as the bundled themes do.
+
+**Per-visualizer notes.**
+
+- **`weekly`** draws it in the day-number row of any day where an event
+  or duration could not be placed. Multiple overflows on one day
+  produce a single icon, and the day's holiday name is suppressed so
+  the icons stay visible.
+- **`timeline`** draws it on a duration bar too narrow for the full name
+  / notes / dates block, next to the name abbreviated with an ellipsis
+  (see the timeline rendering section). Horizontally it leads the name at
+  the bar's left end; vertically it sits at the bar's bottom end, upright,
+  where the rotated name starts reading. A bar with room for the icon
+  alone gets just the icon, and one under 3pt gets nothing.
+
 ### Complete Theme Key Reference
 
 > **Note:** the table below is auto-generated from `CalendarConfig`'s field
@@ -1514,9 +1563,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `day_name_font_color` | `weekly.day_names.font_color` | `str` | `'grey'` | font color |
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
-| `overflow_indicator_color` | `weekly.overflow.color` | `str` | `'red'` | color |
-| `overflow_indicator_icon` | `weekly.overflow.icon` | `str` | `'warningtriangle'` | icon |
-| *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | — | Optional halo (fill/stroke/padding) painted behind the overflow icon. See "Style Rules" → Box Properties. |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
 | `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |
@@ -1632,7 +1678,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_*_font_size` | `timeline_durations.size_rule` | `` | `` | Per-papersize timeline duration font sizes |
 | `timeline_duration_bar_stroke_dasharray` | `timeline.duration_bar_stroke_dasharray` | `str | None` | `None` | duration bar stroke dasharray |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
-| `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | box width |
+| `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | the width a duration bar's text is taken to need. A bar is never stretched to it — both bar edges belong to the event's dates — so it only decides when a bar falls back to the overflow icon plus an abbreviated name. `None` derives the width from the name, notes and dates as rendered |
 | `timeline_duration_bracket_stroke_dasharray` | `timeline.duration_bracket_stroke_dasharray` | `str | None` | `None` | duration bracket stroke dasharray |
 | `timeline_duration_date_color` | `timeline_durations.date_color` | `str | None` | `None` | date color |
 | `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
@@ -1951,7 +1997,7 @@ Matched against the data attached to the event/duration/milestone being drawn. A
 | `align` | `start` \| `center` \| `end` (placement hint for `box:vline`) |
 | `padding` | Halo inset (in points) for icon halos like `box:milestone`, `box:overflow`. Default `size * 0.1`. |
 
-Halo example for the weekly overflow icon — paint a small ring behind the indicator:
+Halo example for the overflow icon — paint a small ring behind the indicator:
 
 ```yaml
 - name: overflow halo
@@ -2329,7 +2375,7 @@ Each visualizer reads two kinds of theme content:
 
 Per-visualizer non-styling surfaces:
 
-- `weekly` — week-number format, day-name format, overflow icon name.
+- `weekly` — week-number format, day-name format.
 - `mini` — `mini_calendar.title_format`, layout dimensions; `mini_calendar.icon_set` names the glyph set the `mini-icon` variant draws day numbers from.
 - `text-mini` — symbol/glyph name registry; not an SVG renderer.
 - `timeline` — `timeline.tick_label_format`, axis/callout/lane geometry, `today_date` / `today_label_text` content references.

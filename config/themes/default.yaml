@@ -35,6 +35,9 @@ continuation:
   icon_after: arrow-right
   icon_height: 8.0
   icon_color: null
+overflow:
+  icon: warningtriangle
+  color: red
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -81,9 +84,6 @@ weekly:
   notes_text:
     font_name: OfficinaSans-Book
     font_color: darkgrey
-  overflow:
-    icon: warningtriangle
-    color: red
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
@@ -815,7 +815,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: overflow
+      icon: warningtriangle
       color: red
   - name: define line:tick
     define: line

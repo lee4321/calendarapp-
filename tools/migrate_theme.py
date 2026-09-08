@@ -181,9 +181,13 @@ SECTION_COMMENTS: dict[str, str] = {
     ),
     "header": "Header non-styling config (text content references); styling lives in style_rules.",
     "footer": "Footer non-styling config (text content references); styling lives in style_rules.",
+    "overflow": (
+        "Icon marking a box that could not hold its contents (weekly day\n"
+        "rows, narrow timeline duration bars); shared by every visualizer."
+    ),
     "weekly": (
         "Weekly visualizer non-styling config: week-number format, day-name\n"
-        "format, overflow icon name."
+        "format."
     ),
     "mini_calendar": (
         "Mini visualizer non-styling config: title format, layout dimensions,\n"
@@ -235,6 +239,7 @@ SECTION_ORDER: list[str] = [
     "events",
     "durations",
     "watermark",
+    "overflow",
     "fiscal",
     "colors",
     "weekly",
@@ -956,6 +961,15 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
             stripped = _strip_dead_keys(sec, src[sec])
             if stripped is not None:
                 out[sec] = stripped
+
+    # 7b. The overflow icon left weekly for the top level: every visualizer
+    #     draws it now.  A legacy theme still spells it `weekly.overflow`,
+    #     and the loader rejects that, so promote it here.
+    weekly_out = out.get("weekly")
+    if isinstance(weekly_out, dict) and isinstance(weekly_out.get("overflow"), dict):
+        out["overflow"] = weekly_out.pop("overflow")
+        if not weekly_out:
+            del out["weekly"]
 
     # 8. Blockplan — split swimlane visuals out, then keep the rest (sans timebands)
     blockplan_in = src.get("blockplan") if isinstance(src.get("blockplan"), dict) else None

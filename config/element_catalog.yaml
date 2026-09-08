@@ -71,7 +71,7 @@ elements:
   # ── Icon ───────────────────────────────────────────────────────────────────
   ec-event-icon:        { kind: icon, token: event,     scope: [all],                              description: "Point-event glyph" }
   ec-duration-icon:     { kind: icon, token: duration,  scope: [all],                              description: "Duration bar glyph" }
-  ec-overflow-icon:     { kind: icon, token: overflow,  scope: [weekly, mini, mini-icon],          description: "Overflow indicator" }
+  ec-overflow-icon:     { kind: icon, token: overflow,  scope: [all],                              description: "Overflow indicator" }
   ec-holiday-icon:      { kind: icon, token: event,     scope: [weekly, mini, mini-icon, timeline], description: "Holiday glyph" }
   ec-nwd-icon:          { kind: icon, token: event,     scope: [weekly, mini, mini-icon],          description: "Non-workday glyph" }
   ec-milestone-marker:  { kind: icon, token: milestone, scope: [timeline, blockplan, compactplan, gantt], description: "Milestone diamond / circle" }

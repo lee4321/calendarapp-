@@ -545,7 +545,12 @@ def test_timeline_duration_uses_configured_name_and_notes_font_sizes(tmp_path):
     assert notes and 0 < notes[0]["size"] <= 9.0
 
 
-def test_timeline_duration_uses_configured_box_height_and_min_width(tmp_path):
+def test_timeline_duration_uses_configured_box_height_and_text_width(tmp_path):
+    """`box_width` is the width the text wants, not a width bars are grown to.
+
+    Bar edges belong to the dates, so a configured width that the date span
+    cannot supply makes the bar overflow rather than stretch.
+    """
     config = _base_config(tmp_path / "timeline_duration_box.svg")
     config.timeline_duration_box_height = 34.0
     config.timeline_duration_box_width = 140.0
@@ -560,7 +565,9 @@ def test_timeline_duration_uses_configured_box_height_and_min_width(tmp_path):
         config, durations, start, end, 60.0, 730.0, 300.0
     )
     assert len(laid_out) == 1
-    assert (laid_out[0].end_x - laid_out[0].start_x) >= 140.0
+    assert laid_out[0].min_width == 140.0
+    assert (laid_out[0].end_x - laid_out[0].start_x) < 140.0
+    assert laid_out[0].text_overflow
 
     _, _, _, bar_h = renderer._duration_metrics(config)
     assert bar_h == 34.0
@@ -1044,10 +1051,9 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
 
 # ── Duration bar connectors ───────────────────────────────────────────────
 #
-# A bar is widened to whatever its name and notes need (_layout_durations),
-# so on a short event the right edge lands on a date the event does not end
-# on. Both edges used to get a leader up to the axis, and the one at the
-# right edge pointed confidently at the wrong day.
+# Both edges of a bar are its dates (_layout_durations pads neither), so both
+# earn a leader up to the axis. Only a bar narrow enough that the two would
+# read as one line is reduced to the single end-date leader.
 
 
 def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
@@ -1062,30 +1068,22 @@ def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
     return laid_out[0], [c["x1"] for c in renderer.line_calls]
 
 
-def test_a_duration_bar_gets_one_connector_at_its_start(tmp_path):
+def test_a_duration_bar_gets_a_connector_at_each_date(tmp_path):
     config = _base_config(tmp_path / "duration_connector.svg")
-    event = Event(task_name="Short", start="20260210", end="20260212")
+    event = Event(task_name="Short", start="20260210", end="20260320")
 
     item, xs = _duration_connector_xs(config, event)
-    assert xs == [item.start_x]
+    assert xs == [item.start_x, item.end_x]
 
 
-def test_no_connector_is_drawn_at_the_padded_end_of_a_bar(tmp_path):
-    """The regression: a stretched bar's right edge is not its end date."""
-    config = _base_config(tmp_path / "duration_padded.svg")
-    # One day long, but a name far too wide for one day's worth of axis.
-    event = Event(
-        task_name="A name much wider than a single day of this axis",
-        start="20260210",
-        end="20260210",
-    )
+def test_a_one_day_bar_gets_only_the_end_connector(tmp_path):
+    """Its two edges are a hair apart; two leaders would read as one."""
+    config = _base_config(tmp_path / "duration_one_day.svg")
+    event = Event(task_name="Ship it", start="20260210", end="20260210")
 
     item, xs = _duration_connector_xs(config, event)
-    # The bar really was padded, so the two edges disagree...
-    assert item.end_x > item.start_x
-    # ...and only the honest edge carries a leader.
-    assert xs == [item.start_x]
-    assert item.end_x not in xs
+    assert item.end_x - item.start_x < 3.0
+    assert xs == [item.end_x]
 
 
 def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
@@ -1447,7 +1445,7 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
 
     renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
 
-    assert len(renderer.line_calls) == 1
+    assert len(renderer.line_calls) == 2   # one leader per date
     end_y = renderer.line_calls[0]["y2"]
     assert end_y < bar_y                 # pulled back from the missing bar
     assert end_y <= limit                # and inside the drawable area
@@ -1455,7 +1453,7 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
     assert len(renderer.icon_calls) == 1
     icon = renderer.icon_calls[0]
     assert icon["icon"] == "missing-box"
-    assert icon["x"] == pytest.approx(deep.start_x)
+    assert icon["x"] == pytest.approx(deep.end_x)
 
 
 def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
@@ -1467,6 +1465,7 @@ def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
     renderer._draw_duration_connectors(config, shallow, 300.0, limit=bar_y + 10_000.0)
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] == pytest.approx(bar_y)
+    assert renderer.line_calls[-1]["y2"] == pytest.approx(bar_y)
 
 
 def test_no_limit_draws_every_bar(tmp_path):
@@ -1556,8 +1555,8 @@ def test_the_start_date_sits_at_the_left_end_and_the_end_date_at_the_right(tmp_p
     assert titles and titles[0]["y"] == pytest.approx(start_date["y"])
 
 
-def test_a_bar_is_widened_to_hold_its_dates_and_its_title(tmp_path):
-    """A one-day event still has to fit both dates plus its name."""
+def test_a_bar_too_narrow_for_its_dates_overflows_instead_of_growing(tmp_path):
+    """A one-day event cannot hold both dates plus its name — and says so."""
     config = _base_config(tmp_path / "in_bar_width.svg")
     renderer = _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
@@ -1574,7 +1573,218 @@ def test_a_bar_is_widened_to_hold_its_dates_and_its_title(tmp_path):
     _t, _n, date_size, _bar_h = renderer._duration_metrics(config)
     date_font = renderer._safe_font_path(config.timeline_date_font)
     needed = renderer._duration_dates_width("Feb 10", "Feb 10", date_font, date_size)
-    assert bar.end_x - bar.start_x >= needed
+    assert bar.end_x - bar.start_x < needed
+    assert bar.text_overflow
+
+
+# ── Bar edges line up on their dates ──────────────────────────────────────
+#
+# A bar too short for its text used to be padded — first rightward, later
+# leftward — so two bars sharing a date could still end at different x. The
+# bar now spans exactly its dates and overflows its label instead.
+
+
+class _CaptureCircleRenderer(_CaptureOverflowRenderer):
+    """Overflow capture plus the axis markers, which it otherwise swallows."""
+
+    def __init__(self):
+        super().__init__()
+        self.circle_calls: list[dict] = []
+
+    def _draw_circle(self, cx, cy, radius, **kwargs):
+        self.circle_calls.append({"cx": cx, "cy": cy, "radius": radius})
+
+
+def _aligned_bars(tmp_path, name, events, axis_left=50.0, axis_right=700.0,
+                  renderer=None, config=None):
+    config = config or _base_config(tmp_path / name)
+    renderer = renderer or _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    return config, renderer, renderer._layout_durations(
+        config, events,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        axis_left, axis_right, 300.0,
+    )
+
+
+def _day_x(renderer, daykey, axis_left=50.0, axis_right=700.0):
+    return renderer._x_for_day(
+        arrow.get(daykey, "YYYYMMDD"),
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_left, axis_right,
+    )
+
+
+def test_bars_ending_on_the_same_day_share_a_right_edge(tmp_path):
+    """A short bar and a long one, both ending 20 Mar, end at one x."""
+    events = [
+        Event(task_name="Ship it", start="20260316", end="20260320", wbs="1.1"),
+        Event(task_name="Long haul", start="20260210", end="20260320", wbs="1.2"),
+    ]
+    _config, renderer, bars = _aligned_bars(tmp_path, "aligned_end.svg", events)
+
+    short, long_ = bars
+    assert short.end_x == pytest.approx(long_.end_x)
+    assert short.end_x == pytest.approx(_day_x(renderer, "20260320"))
+
+
+def test_bars_starting_on_the_same_day_share_a_left_edge(tmp_path):
+    """The same for start dates: no padding is taken out of the left edge."""
+    events = [
+        Event(task_name="Ship it", start="20260210", end="20260213", wbs="1.1"),
+        Event(task_name="Long haul", start="20260210", end="20260501", wbs="1.2"),
+    ]
+    _config, renderer, bars = _aligned_bars(tmp_path, "aligned_start.svg", events)
+
+    short, long_ = bars
+    assert short.start_x == pytest.approx(long_.start_x)
+    assert short.start_x == pytest.approx(_day_x(renderer, "20260210"))
+
+
+def test_a_bar_spans_exactly_its_two_dates(tmp_path):
+    events = [Event(task_name="Wide name on a short event", start="20260316",
+                    end="20260320")]
+    _config, renderer, bars = _aligned_bars(tmp_path, "aligned_x.svg", events)
+    bar = bars[0]
+    assert bar.start_x == pytest.approx(_day_x(renderer, "20260316"))
+    assert bar.end_x == pytest.approx(_day_x(renderer, "20260320"))
+    # ...even though the name does not fit in that span.
+    assert bar.end_x - bar.start_x < bar.min_width
+    assert bar.text_overflow
+
+
+def test_a_bar_at_the_left_margin_is_not_pushed_right_either(tmp_path):
+    """The old fallback grew a bar rightward when the left ran out."""
+    events = [Event(task_name="A name much wider than a few days of this axis",
+                    start="20260101", end="20260103")]
+    _config, renderer, bars = _aligned_bars(tmp_path, "aligned_margin.svg", events)
+    bar = bars[0]
+    assert bar.start_x == pytest.approx(50.0)
+    assert bar.end_x == pytest.approx(_day_x(renderer, "20260103"))
+
+
+def test_axis_markers_sit_on_the_bar_edges(tmp_path):
+    config, renderer, bars = _aligned_bars(
+        tmp_path, "aligned_markers.svg",
+        [Event(task_name="Ship it", start="20260316", end="20260320")],
+        renderer=_CaptureCircleRenderer(),
+    )
+    renderer._draw_duration(config, bars[0], 300.0)
+    marker_xs = [c["cx"] for c in renderer.circle_calls]
+    assert bars[0].start_x in marker_xs
+    assert bars[0].end_x in marker_xs
+
+
+# ── Overflowing a bar's label ─────────────────────────────────────────────
+#
+# A bar that cannot be widened has to say that its label was cut, rather
+# than squeeze the glyphs into an unreadable, misleading width.
+
+
+def _overflow_drawn(tmp_path, name, event, config=None, **cfg):
+    config = config or _base_config(tmp_path / name)
+    for key, value in cfg.items():
+        setattr(config, key, value)
+    config, renderer, bars = _aligned_bars(
+        tmp_path, name, [event], config=config
+    )
+    renderer._draw_duration(config, bars[0], 300.0)
+    return config, renderer, bars[0]
+
+
+def _names(renderer):
+    return [c for c in renderer.text_calls if c.get("css_class") == "ec-event-name"]
+
+
+def test_an_overflowing_bar_draws_the_overflow_icon(tmp_path):
+    event = Event(task_name="A name much wider than this bar", start="20260316",
+                  end="20260320")
+    config, renderer, bar = _overflow_drawn(tmp_path, "ovl_icon.svg", event)
+    assert bar.text_overflow
+
+    icons = [c for c in renderer.icon_calls
+             if c.get("css_class") == "ec-overflow-icon"]
+    assert len(icons) == 1
+    assert icons[0]["icon"] == config.overflow_indicator_icon
+    assert bar.start_x <= icons[0]["x"] <= bar.end_x
+
+
+def test_the_overflow_glyph_comes_from_the_setting_not_the_token(tmp_path):
+    """`icon:overflow` paints the mark; `overflow.icon` names it.
+
+    Every bundled theme's token carries an `icon:` of its own, and reading
+    that instead drew the wrong glyph — weekly has always taken the name
+    from the setting, and the two views have to agree.
+    """
+    from config.styles import IconStyle
+
+    event = Event(task_name="A name much wider than this bar", start="20260316",
+                  end="20260320")
+    config = _base_config(tmp_path / "ovl_token.svg")
+    config.overflow_indicator_icon = "warningtriangle"
+    config.theme_styles = None
+    orig = config.get_icon_style
+    config.get_icon_style = lambda name: (       # type: ignore[method-assign]
+        IconStyle(color="hotpink", icon="some-other-glyph")
+        if name == "ec-overflow-icon" else orig(name)
+    )
+    _config, renderer, _bar = _overflow_drawn(tmp_path, "ovl_token.svg", event,
+                                              config=config)
+    icons = [c for c in renderer.icon_calls
+             if c.get("css_class") == "ec-overflow-icon"]
+    assert len(icons) == 1
+    assert icons[0]["icon"] == "warningtriangle"
+    assert icons[0]["color"] == "hotpink"   # ...but the token still paints it
+
+
+def test_an_overflowing_name_is_abbreviated_not_compressed(tmp_path):
+    # Wide enough for the icon and some of the name, too narrow for all of
+    # the name plus the two in-bar dates.
+    event = Event(task_name="A name much wider than this bar", start="20260316",
+                  end="20260410")
+    config, renderer, bar = _overflow_drawn(tmp_path, "ovl_name.svg", event)
+
+    names = _names(renderer)
+    assert len(names) == 1
+    drawn = names[0]
+    assert drawn["text"] != event.task_name
+    assert drawn["text"].endswith("…")
+    assert event.task_name.startswith(drawn["text"][:-1])
+    # Full font size, and no max_width for _draw_text to squeeze it with.
+    title_size, _n, _d, _bar_h = renderer._duration_metrics(config)
+    assert drawn["size"] == pytest.approx(title_size)
+    assert drawn.get("max_width") is None
+
+
+def test_an_overflowing_bar_drops_the_in_bar_dates_and_notes(tmp_path):
+    event = Event(task_name="A name much wider than this bar", start="20260316",
+                  end="20260320", notes="notes that will not fit either")
+    _config, renderer, _bar = _overflow_drawn(
+        tmp_path, "ovl_dates.svg", event, include_notes=True
+    )
+    assert _date_texts(renderer) == []
+    assert [c for c in renderer.text_calls
+            if c.get("css_class") == "ec-event-notes"] == []
+
+
+def test_a_bar_with_room_keeps_its_full_name_and_dates(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260501")
+    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_wide.svg", event)
+    assert not bar.text_overflow
+
+    names = _names(renderer)
+    assert names and names[0]["text"] == "Build"
+    assert len(_date_texts(renderer)) == 2
+
+
+def test_a_hairline_bar_draws_no_label_at_all(tmp_path):
+    """One day on a six-month axis: not even the ellipsis has room."""
+    event = Event(task_name="Ship it", start="20260316", end="20260316")
+    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_hairline.svg", event)
+    assert bar.end_x - bar.start_x < 3.0
+    assert _names(renderer) == []
+    assert _date_texts(renderer) == []
 
 
 def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
@@ -1627,6 +1837,96 @@ def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
         assert "rotate(-90" in (date.get("transform") or "")
     cx_values = {round(d["x"], 3) for d in dates}
     assert len(cx_values) == 2      # one toward each end, not stacked
+
+
+# ── Vertical bars align on their dates too ────────────────────────────────
+#
+# The vertical layout padded a short bar downward long after the horizontal
+# one stopped, so its far edge sat on a day the event did not end on.
+
+
+def _vertical_bars(tmp_path, name, events, config=None, renderer=None):
+    config = config or _base_config(tmp_path / name)
+    config.timeline_orientation = "vertical"
+    renderer = renderer or _CaptureOverflowRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    return config, renderer, renderer._layout_durations_vertical(
+        config, events,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
+        axis_x=200.0, axis_top=50.0, axis_bottom=700.0, side=Side.PRIMARY,
+    )
+
+
+def _day_y(renderer, daykey, axis_top=50.0, axis_bottom=700.0):
+    return renderer._y_for_day(
+        arrow.get(daykey, "YYYYMMDD"),
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_top, axis_bottom,
+    )
+
+
+def test_a_vertical_bar_spans_exactly_its_two_dates(tmp_path):
+    _config, renderer, bars = _vertical_bars(
+        tmp_path, "v_span.svg",
+        [Event(task_name="A name much longer than four days of this axis",
+               start="20260316", end="20260320")],
+    )
+    bar = bars[0]
+    assert bar.start_y == pytest.approx(_day_y(renderer, "20260316"))
+    assert bar.end_y == pytest.approx(_day_y(renderer, "20260320"))
+    assert bar.end_y - bar.start_y < bar.min_width
+    assert bar.text_overflow
+
+
+def test_vertical_bars_sharing_a_date_share_an_edge(tmp_path):
+    _config, _renderer, bars = _vertical_bars(
+        tmp_path, "v_share.svg",
+        [Event(task_name="Ship it", start="20260210", end="20260213", wbs="1.1"),
+         Event(task_name="Long haul", start="20260210", end="20260501", wbs="1.2")],
+    )
+    short, long_ = bars
+    assert short.start_y == pytest.approx(long_.start_y)
+
+
+def test_an_overflowing_vertical_bar_gets_the_icon_and_an_abbreviated_name(tmp_path):
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_overflow.svg",
+        [Event(task_name="A name much longer than this bar",
+               start="20260316", end="20260410")],
+    )
+    bar = bars[0]
+    assert bar.text_overflow
+    renderer._draw_duration_vertical(config, bar, 200.0)
+
+    icons = [c for c in renderer.icon_calls
+             if c.get("css_class") == "ec-overflow-icon"]
+    assert len(icons) == 1
+    # Upright — an indicator turned on its side reads as a different glyph.
+    assert icons[0].get("transform") is None
+    # ...at the bar's bottom end, where the rotated label starts reading.
+    assert bar.start_y < icons[0]["y"] <= bar.end_y
+
+    names = _names(renderer)
+    assert len(names) == 1
+    assert names[0]["text"].endswith("…")
+    assert names[0]["text"] != "A name much longer than this bar"
+    assert "rotate(-90" in (names[0].get("transform") or "")
+    assert names[0].get("max_width") is None
+    # No dates or notes competing for the same run of bar.
+    assert _date_texts(renderer) == []
+
+
+def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_wide.svg",
+        [Event(task_name="Build", start="20260210", end="20260501")],
+    )
+    assert not bars[0].text_overflow
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert len(_date_texts(renderer)) == 2
 
 
 # ── Callout box columns ───────────────────────────────────────────────────

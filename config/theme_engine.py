@@ -335,9 +335,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "federal_holiday_icon"): "compactplan_federal_holiday_icon",
     ("compact_plan", "company_holiday_icon"): "compactplan_company_holiday_icon",
     ("compact_plan", "weekend_icon"): "compactplan_weekend_icon",
-    # Overflow (weekly)
-    ("weekly.overflow", "icon"): "overflow_indicator_icon",
-    ("weekly.overflow", "color"): "overflow_indicator_color",
+    # Overflow indicator (global — the weekly day-number row and any
+    # visualizer whose box is too small for its text; configured under the
+    # top-level `overflow:` section in theme YAMLs)
+    ("overflow", "icon"): "overflow_indicator_icon",
+    ("overflow", "color"): "overflow_indicator_color",
     # Continuation icons (global — shared by timeline / blockplan / compact_plan)
     ("continuation", "show"): "show_continuation_icon",
     ("continuation", "icon_before"): "continuation_icon_before",
@@ -536,6 +538,7 @@ VALID_SECTIONS = frozenset(
         "timeline_durations",
         "watermark",
         "continuation",
+        "overflow",
         "colors",
         "mini_calendar",
         "fiscal",
@@ -1990,6 +1993,12 @@ class ThemeEngine:
                     )
 
         weekly = self._theme_data.get("weekly", {}) or {}
+        if isinstance(weekly, dict) and "overflow" in weekly:
+            raise ThemeError(
+                "weekly.overflow is deprecated — the overflow icon is shared by "
+                "every visualizer now, so move `icon:` / `color:` to the "
+                "top-level `overflow:` section"
+            )
         day_box = (weekly.get("day_box", {}) or {}) if isinstance(weekly, dict) else {}
         if isinstance(day_box, dict) and "hash_rules" in day_box:
             if day_box["hash_rules"]:  # non-empty list is an error; empty list is tolerated

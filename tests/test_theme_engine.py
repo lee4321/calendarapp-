@@ -1488,6 +1488,26 @@ class TestElementCatalogBindings:
         # The catalog token (text:today_label or fallback) still drives the rest.
         assert binding.text_style is not None
 
+    def test_legacy_weekly_overflow_section_raises(self):
+        """The overflow icon is global now; the old key must not be ignored."""
+        theme = self._minimal_theme()
+        theme["weekly"] = {"overflow": {"icon": "warningtriangle"}}
+        engine = ThemeEngine()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(theme, f)
+            f.flush()
+            engine.load(f.name)
+        with pytest.raises(ThemeError, match="weekly.overflow is deprecated"):
+            engine.apply(CalendarConfig())
+
+    def test_top_level_overflow_section_sets_the_icon(self):
+        theme = self._minimal_theme()
+        theme["overflow"] = {"icon": "send-backward", "color": "orange"}
+        engine = self._engine_for(theme)
+        cfg = engine.apply(CalendarConfig())
+        assert cfg.overflow_indicator_icon == "send-backward"
+        assert cfg.overflow_indicator_color == "orange"
+
     def test_stray_apply_to_element_raises(self):
         theme = self._minimal_theme(style_rules=[
             {"name": "bind ec-heading", "apply_to": "element",

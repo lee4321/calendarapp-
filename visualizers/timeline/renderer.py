@@ -18,7 +18,7 @@ import drawsvg
 from config.config import get_font_path, resolve_continuation_icon
 from renderers.glyph_cache import get_ink_extents
 from renderers.svg_base import BaseSVGRenderer
-from renderers.text_utils import shrinktext, string_width
+from renderers.text_utils import abbreviate, shrinktext, string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine, StyleResult
@@ -101,7 +101,9 @@ class TimelineDuration:
     """Duration bar placement alongside the timeline axis.
 
     For HORIZONTAL orientation: `start_x`/`end_x` are the bar endpoints
-    along the axis, and `lane` stacks downward below the axis.
+    along the axis — exactly the x of the event's start and end dates, so
+    bars sharing a date share an edge — and `lane` stacks downward below
+    the axis.
 
     For VERTICAL orientation: `start_y`/`end_y` are the bar endpoints
     along the axis, `start_x`/`end_x` both equal the axis x position,
@@ -125,6 +127,12 @@ class TimelineDuration:
     # Which side of the axis this bar sits on (vertical orientation only;
     # ignored for horizontal). PRIMARY = right, SECONDARY = left.
     lane_side: Side = Side.SECONDARY
+    # True when the bar is narrower than `min_width`, i.e. than its own text
+    # needs.  Horizontal bars are never widened past their dates to make room
+    # — both edges belong to the calendar — so the drawer answers this by
+    # replacing the full name / notes / dates block with the overflow icon and
+    # an abbreviated name.
+    text_overflow: bool = False
 
 
 #: Inset from a duration bar's edge to its in-bar start / end date.
@@ -132,6 +140,14 @@ _DURATION_DATE_PAD_X: float = 3.0
 
 #: Clear space kept between an in-bar date and the bar's title.
 _DURATION_DATE_GAP_X: float = 4.0
+
+#: Narrower than this and a bar's two axis leaders would read as one line,
+#: so only the end-date leader is drawn.
+_DURATION_LEADER_MIN_GAP: float = 3.0
+
+#: Smallest drawn size for the overflow icon inside a duration bar; a bar
+#: with less room than this gets no mark rather than an illegible one.
+_OVERFLOW_ICON_MIN_SIZE: float = 3.0
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -143,7 +159,7 @@ class TimelineRenderer(BaseSVGRenderer):
         "text:event_name", "text:event_notes", "text:event_date",
         "text:duration_date", "text:label", "text:today_label",
         "line:axis", "line:today", "line:tick", "line:duration_bar",
-        "icon:event", "icon:milestone",
+        "icon:event", "icon:milestone", "icon:overflow",
     )
 
     # NOTE: ``_callout_metrics`` is defined near the bottom of the file.
@@ -246,8 +262,10 @@ class TimelineRenderer(BaseSVGRenderer):
         lane layout for durations → draw in layers: leader paths first
         (under everything), then durations, callout boxes, the axis with
         ticks/timebands, and finally the today marker.  Returns
-        ``(0, [])`` — the timeline never overflows; density is labella's
-        problem, not pagination's.
+        ``(0, [])`` — the timeline emits no overflow *page*; density is
+        labella's problem, not pagination's.  (A duration bar too narrow
+        for its name still carries the overflow *icon* — see
+        :py:meth:`_draw_duration_overflow_label`.)
         """
         area_x, area_y, area_w, area_h = coordinates.get(
             "TimelineArea", (0.0, 0.0, config.pageX, config.pageY)
@@ -1032,6 +1050,14 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> list[TimelineDuration]:
         """Lay out duration bars in lanes below a horizontal axis.
 
+        Both edges of a bar are the x of its dates and nothing else, so
+        every bar starting on a given day shares a left edge with the
+        others and every bar ending on one shares a right edge — the
+        alignment that lets a reader compare bars against the axis and
+        against each other.  A bar too narrow for its own text is flagged
+        ``text_overflow`` rather than widened; `_draw_duration` answers
+        that with the overflow icon and an abbreviated name.
+
         Chronologically sorted bars pack greedily into the first lane
         whose previous bar ends at least ``min_gap`` px earlier.  Bars
         are clamped to the user-typed range with ``continues_left/right``
@@ -1088,6 +1114,12 @@ class TimelineRenderer(BaseSVGRenderer):
             sx = self._x_for_day(start_day, start, end, axis_left, axis_right)
             ex = self._x_for_day(end_day, start, end, axis_left, axis_right)
 
+            # Width the bar would need to carry its full text: the name (or
+            # notes, whichever is wider) between the two in-bar dates.  A
+            # theme that sets `timeline_durations.box_width` names that width
+            # itself.  Nothing is widened to reach it — both edges belong to
+            # the dates — so this is only the threshold past which the bar
+            # falls back to the overflow icon plus an abbreviated name.
             configured_w = (
                 float(config.timeline_duration_box_width)
                 if config.timeline_duration_box_width is not None
@@ -1096,17 +1128,18 @@ class TimelineRenderer(BaseSVGRenderer):
             if configured_w > 0:
                 min_width = configured_w
             else:
-                # Increase short duration bars when larger font sizes are used so
-                # the name/notes lines can fit within the bar.
                 name_w = string_width(
                     event.task_name or "", title_font_path, title_size
                 )
-                notes_w = string_width(
-                    (event.notes or "").strip(), notes_font_path, notes_size
+                notes_w = (
+                    string_width(
+                        (event.notes or "").strip(), notes_font_path, notes_size
+                    )
+                    if config.include_notes
+                    else 0.0
                 )
                 # The start/end dates sit inside the bar's ends, so a bar has
-                # to be wide enough for them plus whatever text it carries —
-                # otherwise the title is squeezed to nothing on a short event.
+                # to be wide enough for them plus whatever text it carries.
                 dates_w = self._duration_dates_width(
                     format_arrow_date(
                         self._safe_day(event.start, fallback=start),
@@ -1124,8 +1157,6 @@ class TimelineRenderer(BaseSVGRenderer):
                     name_w + 12.0 + dates_w,
                     notes_w + 12.0 + dates_w,
                 )
-            if ex - sx < min_width:
-                ex = min(axis_right, sx + min_width)
 
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
@@ -1146,6 +1177,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     end_x=ex,
                     lane=lane,
                     min_width=min_width,
+                    text_overflow=(ex - sx) < min_width,
                     continues_left=continues_left,
                     continues_right=continues_right,
                     style=_sr,
@@ -1170,11 +1202,16 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> list[TimelineDuration]:
         """Place vertical-orientation duration bars alongside the axis.
 
-        Bars run along the axis from start_y to end_y. Lanes stack
-        perpendicularly away from the axis (each new overlapping bar sits
-        further out). The per-bar `min_width` field carries the minimum
-        *along-axis* length for vertical bars so short events still have
-        room for their labels.
+        Bars run along the axis from start_y to end_y — exactly the y of
+        their two dates, so bars sharing a date share an edge, as in the
+        horizontal layout.  The per-bar `min_width` field carries the
+        *along-axis* length the label would need; a bar shorter than that
+        is flagged ``text_overflow`` rather than stretched, and
+        `_draw_duration_vertical` answers with the overflow icon and an
+        abbreviated name.
+
+        Lanes stack perpendicularly away from the axis (each new
+        overlapping bar sits further out).
 
         ``side`` selects which side(s) of the axis bars go on:
         - PRIMARY  → right side
@@ -1262,8 +1299,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 name_w = string_width(
                     event.task_name or "", title_font_path, title_size
                 )
-                notes_w = string_width(
-                    (event.notes or "").strip(), notes_font_path, notes_size
+                notes_w = (
+                    string_width(
+                        (event.notes or "").strip(), notes_font_path, notes_size
+                    )
+                    if config.include_notes
+                    else 0.0
                 )
                 # The dates ride inside the bar's two along-axis ends, so the
                 # bar has to be long enough for them and its label both.
@@ -1284,9 +1325,6 @@ class TimelineRenderer(BaseSVGRenderer):
                     name_w + 12.0 + dates_w,
                     notes_w + 12.0 + dates_w,
                 )
-            if ey - sy < min_length:
-                ey = min(axis_bottom, sy + min_length)
-
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
                 lane_last_end, sy, ey, min_gap,
@@ -1306,6 +1344,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     end_x=axis_x,
                     lane=lane,
                     min_width=min_length,
+                    text_overflow=(ey - sy) < min_length,
                     continues_left=continues_top,
                     continues_right=continues_bottom,
                     style=_sr,
@@ -1765,13 +1804,13 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_y: float,
         limit: float | None = None,
     ) -> None:
-        """Draw the vertical aligner line from the axis to the duration bar.
+        """Draw the vertical aligner lines from the axis to the duration bar.
 
-        Only the bar's left edge gets one.  A bar is widened to whatever its
-        name and notes need (see ``_layout_durations``), so on a short event
-        the right edge sits at a date the event does not end on — a leader
-        there pointed confidently at the wrong day.  The left edge is always
-        the true start date, so that one still says something.
+        Both edges get one: neither is padded any more (see
+        ``_layout_durations``), so each stands on the day it names and the
+        leaders are what tie a lane deep below the axis back to its two
+        dates.  A bar narrow enough that its two leaders would merge gets
+        just the one, at the end date.
 
         When the bar itself did not fit below ``limit`` the leader stops at
         the edge of the drawable area and ends in the theme's missing-box
@@ -1782,20 +1821,24 @@ class TimelineRenderer(BaseSVGRenderer):
         fits = self._duration_fits(bar_y + row_extent, limit)
         end_y = bar_y if fits else float(limit) - row_extent
         _dur_bar_style = config.get_line_style("ec-duration-bar")
-        self._draw_line(
-            item.start_x,
-            axis_y,
-            item.start_x,
-            end_y,
-            stroke=item.color,
-            stroke_width=0.9,
-            stroke_opacity=0.8,
-            stroke_dasharray=_dur_bar_style.dasharray or None,
-            css_class="ec-connector",
-        )
+        edges = [item.end_x]
+        if item.end_x - item.start_x >= _DURATION_LEADER_MIN_GAP:
+            edges.insert(0, item.start_x)
+        for edge_x in edges:
+            self._draw_line(
+                edge_x,
+                axis_y,
+                edge_x,
+                end_y,
+                stroke=item.color,
+                stroke_width=0.9,
+                stroke_opacity=0.8,
+                stroke_dasharray=_dur_bar_style.dasharray or None,
+                css_class="ec-connector",
+            )
         if not fits:
             self._draw_missing_box_marker(
-                config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color
+                config, item.end_x, end_y + bar_h / 2.0, bar_h, item.color
             )
 
     def _draw_duration(
@@ -1987,6 +2030,24 @@ class TimelineRenderer(BaseSVGRenderer):
         text_block_h = line1_h + line2_h
         text_top_y = bar_y + max(0.0, (bar_h - text_block_h) / 2.0)
         title_y = text_top_y + fitted_title * 0.85
+
+        if item.text_overflow:
+            # The bar spans its dates and nothing more, so there is no width
+            # to win back for the full name / notes / dates block.  Say that
+            # out loud instead of silently squeezing it.
+            self._draw_duration_overflow_label(
+                config,
+                item,
+                bar_h,
+                bar_y + bar_h / 2.0 + title_size * 0.35,
+                title,
+                title_font,
+                title_size,
+                name_color,
+                name_opacity,
+            )
+            return
+
         show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
         if show_icon:
             icon_size = fitted_title
@@ -2129,6 +2190,168 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-duration-date",
         )
 
+    def _draw_duration_overflow_label(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        bar_h: float,
+        baseline_y: float,
+        title: str,
+        font_name: str,
+        font_size: float,
+        color: str,
+        opacity: float,
+    ) -> None:
+        """Fill a bar too narrow for its text with the overflow icon and as
+        much of the name as fits.
+
+        The bar's width is its date span, and that is not negotiable, so the
+        choice is between squeezing the glyphs — unreadable at these widths,
+        and a lie about how the bar relates to the axis — and admitting the
+        label was cut.  The name is abbreviated with an ellipsis at the full
+        font size, and the theme's ``icon:overflow`` glyph (the one the
+        weekly view puts on a day whose events did not fit) marks why.
+
+        A bar with room for neither gets the icon alone, or nothing at all.
+        """
+        pad = _DURATION_DATE_PAD_X
+        avail = (item.end_x - item.start_x) - 2.0 * pad
+        if avail <= 0:
+            return
+
+        # Same resolution the weekly day-number row uses: `overflow.icon`
+        # names the glyph, the `icon:overflow` token paints it.
+        _is_of = config.get_icon_style("ec-overflow-icon")
+        tk_overflow = self._tk("icon:overflow")
+        icon_name = config.overflow_indicator_icon
+        icon_color = (
+            tk_overflow.get("color")
+            or _is_of.color
+            or config.overflow_indicator_color
+        )
+        # The icon carries more than any two surviving letters would, so it
+        # gets first call on the width and shrinks to take it.  Below
+        # `_OVERFLOW_ICON_MIN_SIZE` it is a smudge, and the bar is left bare.
+        icon_size = min(font_size, bar_h * 0.8, avail)
+        icon_drawn = False
+        if icon_size >= _OVERFLOW_ICON_MIN_SIZE:
+            icon_drawn = self._draw_icon_svg(
+                icon_name,
+                item.start_x + pad,
+                baseline_y,
+                icon_size,
+                anchor="start",
+                color=icon_color,
+                fallback_name=config.default_missing_icon,
+                fallback_size=config.default_missing_icon_size,
+                fallback_color=icon_color,
+                css_class="ec-overflow-icon",
+                box_token="box:overflow",
+                box_ctx=self._event_ctx(item.event),
+            )
+
+        text_x = item.start_x + pad + ((icon_size + 2.0) if icon_drawn else 0.0)
+        text_w = item.end_x - pad - text_x
+        if text_w <= 0:
+            return
+        label = abbreviate(title, text_w, self._safe_font_path(font_name), font_size)
+        if not label:
+            return
+        self._draw_text(
+            text_x,
+            baseline_y,
+            label,
+            font_name,
+            font_size,
+            fill=color,
+            fill_opacity=opacity,
+            anchor="start",
+            css_class="ec-event-name",
+        )
+
+    def _draw_duration_overflow_label_vertical(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        bar_x: float,
+        bar_y: float,
+        bar_thickness: float,
+        bar_h: float,
+        title: str,
+        font_name: str,
+        font_size: float,
+        color: str,
+        opacity: float,
+    ) -> None:
+        """The vertical twin of :py:meth:`_draw_duration_overflow_label`.
+
+        The rotated label reads bottom→top, so the icon sits at the bar's
+        bottom end and the abbreviated name runs up away from it — the same
+        order the eye meets them in on a horizontal bar.  The icon itself is
+        drawn upright: an indicator turned on its side reads as a different
+        glyph.
+        """
+        pad = _DURATION_DATE_PAD_X
+        avail = bar_h - 2.0 * pad
+        if avail <= 0:
+            return
+
+        # Same resolution the weekly day-number row uses: `overflow.icon`
+        # names the glyph, the `icon:overflow` token paints it.
+        _is_of = config.get_icon_style("ec-overflow-icon")
+        tk_overflow = self._tk("icon:overflow")
+        icon_name = config.overflow_indicator_icon
+        icon_color = (
+            tk_overflow.get("color")
+            or _is_of.color
+            or config.overflow_indicator_color
+        )
+        cx = bar_x + bar_thickness / 2.0
+        cy = bar_y + bar_h / 2.0
+        icon_size = min(font_size, bar_thickness * 0.8, avail)
+        icon_drawn = False
+        if icon_size >= _OVERFLOW_ICON_MIN_SIZE:
+            icon_drawn = self._draw_icon_svg(
+                icon_name,
+                cx,
+                bar_y + bar_h - pad,
+                icon_size,
+                anchor="middle",
+                color=icon_color,
+                fallback_name=config.default_missing_icon,
+                fallback_size=config.default_missing_icon_size,
+                fallback_color=icon_color,
+                css_class="ec-overflow-icon",
+                box_token="box:overflow",
+                box_ctx=self._event_ctx(item.event),
+            )
+
+        # Text runs from just above the icon to the bar's far end.  Under
+        # rotate(-90) a pre-rotation offset of +dx from the centre lands at
+        # -dx along y, so anchoring at the region's bottom and drawing
+        # "start" sends the name upward.
+        text_bottom_y = bar_y + bar_h - pad - (
+            (icon_size + 2.0) if icon_drawn else 0.0
+        )
+        text_w = text_bottom_y - (bar_y + pad)
+        if text_w <= 0:
+            return
+        label = abbreviate(title, text_w, self._safe_font_path(font_name), font_size)
+        if not label:
+            return
+        self._draw_text(
+            cx + (cy - text_bottom_y),
+            cy,
+            label,
+            font_name,
+            font_size,
+            fill=color,
+            fill_opacity=opacity,
+            anchor="start",
+            transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
+            css_class="ec-event-name",
+        )
+
     def _draw_duration_connectors_vertical(
         self,
         config: "CalendarConfig",
@@ -2138,9 +2361,10 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> None:
         """Horizontal aligner line from the vertical axis to the duration bar.
 
-        Start edge only, for the reason given in
-        :py:meth:`_draw_duration_connectors`: the far edge is padded out to fit
-        the label and does not mark the end date.
+        Start edge only.  Both edges stand on real dates now (see
+        :py:meth:`_layout_durations_vertical`), but one leader is enough to
+        tie a lane back to the axis, and a second would cross every bar
+        stacked between them on the way.
 
         ``limit`` is how far from the axis this side may reach; a lane past it
         gets a leader that stops at the edge and ends in the missing-box icon
@@ -2357,6 +2581,24 @@ class TimelineRenderer(BaseSVGRenderer):
             color=duration_text_color,
             opacity=_dur_name_style.opacity,
         )
+
+        if item.text_overflow:
+            # Same bargain as the horizontal bar: the bar's length is its
+            # date span, so the label gives way rather than the geometry.
+            self._draw_duration_overflow_label_vertical(
+                config,
+                item,
+                bar_x,
+                bar_y,
+                bar_thickness,
+                bar_h,
+                title,
+                title_font,
+                title_size,
+                name_color,
+                name_opacity,
+            )
+            return
 
         has_notes = bool(notes and config.include_notes)
         line1_h = fitted_title * 1.2
