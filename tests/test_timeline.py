@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import arrow
@@ -11,8 +12,10 @@ from renderers.glyph_cache import get_ink_extents
 from renderers.text_utils import string_width
 from shared.wbs_filter import wbs_group
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
 from visualizers.timeline.layout import TimelineLayout
 from shared.orientation import Orientation, Side
+from shared.rule_engine import StyleResult
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,
@@ -2273,6 +2276,533 @@ def test_the_built_in_ticks_read_the_theme_keys(tmp_path):
     assert labels
     tick_h = renderer._axis_tick_height(config)
     assert labels[0]["y"] == pytest.approx(300.0 - (tick_h + 20.0))
+
+
+# ── Parity between the two orientations ───────────────────────────────────
+#
+# A sweep of what one axis direction drew and the other did not. Each of
+# these was a horizontal-only behaviour that had no reason to be.
+
+
+def test_a_vertical_callout_carries_its_start_date(tmp_path):
+    """The box reserves the cell either way; it used to leave it empty."""
+    config = _base_config(tmp_path / "v_callout_date.svg")
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    item = _callout(orientation=Orientation.VERTICAL)
+    renderer._draw_callout_contents(config, item, StyleResult())
+    dates = [c for c in renderer.text_calls
+             if c.get("css_class") == "ec-event-date"]
+    assert len(dates) == 1
+    assert dates[0]["text"] == renderer._callout_date_label(config, item)
+    assert dates[0]["text"]
+
+
+def test_a_vertical_duration_bar_shows_the_event_icon(tmp_path):
+    """`timeline.duration_icon_visible` reached only horizontal bars."""
+    event = Event(task_name="Build", start="20260210", end="20260501",
+                  icon="rocket")
+    config = _base_config(tmp_path / "v_bar_icon.svg")
+    config.timeline_duration_icon_visible = True
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_bar_icon.svg", [event],
+        config=config, renderer=_CaptureOverflowRenderer(),
+    )
+    assert not bars[0].text_overflow
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+
+    icons = [c for c in renderer.icon_calls
+             if c.get("css_class") == "ec-duration-icon"]
+    assert [c["icon"] for c in icons] == ["rocket"]
+    # Upright, and below the name — where the rotated line starts reading.
+    assert icons[0].get("transform") is None
+    names = [c for c in renderer.text_calls
+             if c.get("css_class") == "ec-event-name"]
+    assert names and icons[0]["y"] > names[0]["y"]
+
+
+def test_a_vertical_duration_bar_leaves_the_icon_out_when_told_to(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260501",
+                  icon="rocket")
+    config = _base_config(tmp_path / "v_bar_noicon.svg")
+    config.timeline_duration_icon_visible = False
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_bar_noicon.svg", [event],
+        config=config, renderer=_CaptureOverflowRenderer(),
+    )
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon"] == []
+
+
+def test_a_vertical_timeband_honors_text_align(tmp_path):
+    """`left` pins a label where its rotated line starts reading."""
+    config = _base_config(tmp_path / "v_band_align.svg")
+    start = arrow.get("20260201", "YYYYMMDD")
+    end = arrow.get("20260430", "YYYYMMDD")
+
+    def _label_xs(align):
+        renderer = _CaptureTimelineRenderer()
+        renderer._page_width, renderer._page_height = config.pageX, config.pageY
+        renderer._draw_timeline_bands_vertical(
+            config,
+            [{"unit": "month", "row_height": 16.0, "text_align": align}],
+            100.0, 50.0, 700.0, start, end, _DummyDB(), sign=-1.0,
+        )
+        return [c for c in renderer.text_calls
+                if c.get("css_class") == "ec-label"]
+
+    left, centre, right = (_label_xs(a) for a in ("left", "center", "right"))
+    assert left and centre and right
+    assert [l["anchor"] for l in left] == ["start"] * len(left)
+    assert [l["anchor"] for l in centre] == ["middle"] * len(centre)
+    assert [l["anchor"] for l in right] == ["end"] * len(right)
+    # A pre-rotation +x is up the bar, so "left" (the bottom of a segment)
+    # anchors below "right" (its top).
+    assert left[0]["x"] < right[0]["x"]
+
+
+def test_the_callout_stack_is_measured_on_the_side_it_uses(tmp_path):
+    renderer = TimelineRenderer()
+    low, high = 100.0, 400.0
+    # Horizontal: primary is above, i.e. the low side.
+    assert renderer._callout_room(
+        Orientation.HORIZONTAL, Side.PRIMARY, low, high) == low
+    assert renderer._callout_room(
+        Orientation.HORIZONTAL, Side.SECONDARY, low, high) == high
+    # Vertical: primary is the right — the high side.
+    assert renderer._callout_room(
+        Orientation.VERTICAL, Side.PRIMARY, low, high) == high
+    assert renderer._callout_room(
+        Orientation.VERTICAL, Side.SECONDARY, low, high) == low
+    # A stack on each side has to fit the smaller of the two.
+    for orient in (Orientation.HORIZONTAL, Orientation.VERTICAL):
+        assert renderer._callout_room(orient, Side.BOTH, low, high) == low
+
+
+def test_a_vertical_axis_reserves_the_width_of_its_tick_dates(tmp_path):
+    """Beside the axis a date claims its width, not its line height.
+
+    Measuring the height let the first callout box start on top of the
+    tick label it was supposed to clear.
+    """
+    config = _base_config(tmp_path / "v_clearance.svg")
+    renderer = TimelineRenderer()
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260430", "YYYYMMDD")
+
+    across = renderer._axis_label_clearance(config, start, end)
+    beside = renderer._axis_label_clearance(
+        config, start, end, orientation=Orientation.VERTICAL
+    )
+    label_size = renderer._axis_tick_label_size(config)
+    widest = max(
+        string_width(
+            format_arrow_date(m, config.timeline_tick_label_format),
+            renderer._safe_font_path(config.timeline_date_font),
+            label_size,
+        )
+        for m in renderer._month_tick_arrows(start, end)
+    )
+    assert beside > across
+    assert beside - across == pytest.approx(widest - label_size * 0.8)
+
+
+def test_the_tick_clearance_covers_both_kinds_of_tick(tmp_path):
+    """--noevents pushes the axis to the edge; the dates still need room."""
+    config = _base_config(tmp_path / "tick_side_clear.svg")
+    renderer = TimelineRenderer()
+    start = arrow.get("20260101", "YYYYMMDD")
+    end = arrow.get("20260430", "YYYYMMDD")
+
+    month_only = renderer._tick_side_clearance(config, start, end)
+    assert month_only == pytest.approx(
+        renderer._axis_label_clearance(config, start, end)
+    )
+    # A band that reaches further wins.
+    config.timeline_ticks = [{"unit": "month", "tick_length": 30.0,
+                              "label_offset_y": 90.0}]
+    assert renderer._tick_side_clearance(config, start, end) > month_only
+
+
+# ── The rest of the furniture on a vertical axis ──────────────────────────
+#
+# Fiscal bands, the today marker, holiday icons and timebands were all
+# horizontal-only: the draw pass skipped them outright on a vertical axis.
+
+
+def _vertical_render_args(config, renderer):
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    return (
+        arrow.get("20260201", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+    )
+
+
+def test_the_today_line_crosses_a_vertical_axis(tmp_path):
+    config = _base_config(tmp_path / "v_today.svg")
+    config.timeline_today_date = "20260315"
+    config.timeline_today_label_text = "Reference Date"
+    config.timeline_today_line_length = 0.0
+    renderer = _CaptureTimelineRenderer()
+    start, end = _vertical_render_args(config, renderer)
+
+    renderer._draw_today_marker_vertical(
+        config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0
+    )
+    lines = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
+    assert len(lines) == 1                      # runs across, not along
+    assert lines[0]["x1"] == pytest.approx(0.0)
+    assert lines[0]["x2"] == pytest.approx(600.0)
+    assert "Reference Date" in [c["text"] for c in renderer.text_calls]
+
+
+def test_the_today_line_direction_maps_to_the_two_sides(tmp_path):
+    """`above` is the primary side of an axis, `below` the secondary."""
+    config = _base_config(tmp_path / "v_today_dir.svg")
+    config.timeline_today_date = "20260315"
+    config.timeline_today_line_length = 0.0
+
+    def _span(direction):
+        config.timeline_today_line_direction = direction
+        renderer = _CaptureTimelineRenderer()
+        start, end = _vertical_render_args(config, renderer)
+        renderer._draw_today_marker_vertical(
+            config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0
+        )
+        line = [c for c in renderer.line_calls if c["y1"] == c["y2"]][0]
+        return line["x1"], line["x2"]
+
+    assert _span("above") == (300.0, 600.0)     # right of the axis
+    assert _span("below") == (0.0, 300.0)       # left of it
+    assert _span("both") == (0.0, 600.0)
+
+
+def test_the_today_label_keeps_clear_of_the_band_columns(tmp_path):
+    config = _base_config(tmp_path / "v_today_bands.svg")
+    config.timeline_today_date = "20260315"
+    config.timeline_today_line_length = 0.0
+    renderer = _CaptureTimelineRenderer()
+    start, end = _vertical_render_args(config, renderer)
+
+    renderer._draw_today_marker_vertical(
+        config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0,
+        label_bounds=(40.0, 560.0),
+    )
+    label = [c for c in renderer.text_calls
+             if c.get("css_class") == "ec-today-label"][0]
+    assert label["x"] >= 40.0
+
+
+def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
+    config = _base_config(tmp_path / "v_holiday.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    start, end = _vertical_render_args(config, renderer)
+
+    renderer._draw_holiday_icons_vertical(
+        config, start, end, 50.0, 700.0, 300.0,
+        _HolidayDB(["20260216", "20260406"]), side=Side.SECONDARY,
+    )
+    assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
+    # Between the axis and the bars: just off the axis, on the bars' side.
+    for icon in renderer.icon_calls:
+        assert icon["x"] < 300.0
+        assert 300.0 - icon["x"] < 30.0
+    # Each icon marks its own day, so they differ along the axis.
+    assert renderer.icon_calls[0]["y"] < renderer.icon_calls[1]["y"]
+
+    dates = [c for c in renderer.text_calls
+             if c.get("css_class") == "ec-holiday-date"]
+    assert [d["text"] for d in dates] == ["Feb 16", "Apr 6"]
+    for date, icon in zip(dates, renderer.icon_calls):
+        assert date["x"] < icon["x"]            # written past the icon
+        assert date["anchor"] == "end"
+
+
+def test_holiday_marks_follow_the_bars_to_the_other_side(tmp_path):
+    config = _base_config(tmp_path / "v_holiday_side.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    start, end = _vertical_render_args(config, renderer)
+
+    renderer._draw_holiday_icons_vertical(
+        config, start, end, 50.0, 700.0, 300.0,
+        _HolidayDB(["20260216"]), side=Side.PRIMARY,
+    )
+    assert renderer.icon_calls[0]["x"] > 300.0
+    dates = [c for c in renderer.text_calls
+             if c.get("css_class") == "ec-holiday-date"]
+    assert dates[0]["anchor"] == "start"
+
+
+def test_fiscal_bands_run_as_columns_beside_a_vertical_axis(tmp_path):
+    config = _base_config(tmp_path / "v_fiscal.svg")
+    config.timeline_show_fiscal_quarters = True
+    config.fiscal_type = "nrf-454"
+    renderer = _CaptureTimelineRenderer()
+    start, end = _vertical_render_args(config, renderer)
+
+    renderer._draw_fiscal_bands_vertical(
+        config, start, end, 50.0, 700.0, 300.0, side=Side.PRIMARY
+    )
+    rects = renderer.rect_calls
+    assert rects
+    for rect in rects:
+        assert rect["x"] > 300.0                # out on the primary side
+        assert rect["h"] > rect["w"]            # a column, not a row
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert labels
+    # Too narrow to read across, so the period names are turned with the band.
+    assert all("rotate(-90" in (l.get("transform") or "") for l in labels)
+
+
+def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
+    config = _base_config(tmp_path / "v_bands.svg")
+    renderer = _CaptureTimelineRenderer()
+    start, end = _vertical_render_args(config, renderer)
+    bands = [
+        {"unit": "month", "row_height": 16.0, "fill_color": "#eeeeee"},
+        {"unit": "week", "row_height": 12.0, "fill_color": "#dddddd"},
+    ]
+
+    renderer._draw_timeline_bands_vertical(
+        config, bands, 100.0, 50.0, 700.0, start, end, _DummyDB(), sign=-1.0,
+    )
+    cells = [c for c in renderer.rect_calls]
+    assert cells
+    # First band's column is 16pt wide and abuts the given near edge; the
+    # second stacks a further 12pt out, away from the axis.
+    widths = {round(c["w"], 2) for c in cells}
+    assert widths == {16.0, 12.0}
+    assert min(c["x"] for c in cells) == pytest.approx(100.0 - 16.0 - 12.0)
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert labels and all(
+        "rotate(-90" in (l.get("transform") or "") for l in labels
+    )
+
+
+# ── Sides of a vertical axis ──────────────────────────────────────────────
+#
+# A horizontal timeline spends its two sides on callouts above and bars
+# below. The vertical port put both on whatever side `label_side` named, so
+# the bars ended up under the callout boxes.
+
+
+def test_bars_take_the_side_the_callouts_did_not(tmp_path):
+    config = _base_config(tmp_path / "sides.svg")
+    renderer = TimelineRenderer()
+
+    config.timeline_label_side = "primary"
+    assert renderer._duration_side(config, Side.PRIMARY) is Side.SECONDARY
+    config.timeline_label_side = "secondary"
+    assert renderer._duration_side(config, Side.SECONDARY) is Side.PRIMARY
+
+
+def test_callouts_on_both_sides_leave_the_bars_on_both(tmp_path):
+    """Nothing to be opposite of; the bars keep splitting as they did."""
+    config = _base_config(tmp_path / "sides_both.svg")
+    assert TimelineRenderer()._duration_side(config, Side.BOTH) is Side.BOTH
+
+
+def test_a_theme_can_pin_the_bars_to_one_side(tmp_path):
+    config = _base_config(tmp_path / "sides_pinned.svg")
+    config.timeline_duration_side = "primary"
+    renderer = TimelineRenderer()
+    # Same side as the callouts, because the theme asked for it.
+    assert renderer._duration_side(config, Side.PRIMARY) is Side.PRIMARY
+
+
+def test_an_unknown_duration_side_is_rejected(tmp_path):
+    config = _base_config(tmp_path / "sides_bad.svg")
+    config.timeline_duration_side = "sideways"
+    with pytest.raises(ValueError, match="timeline_duration_side"):
+        config.__post_init__()
+
+
+def test_a_vertical_chart_with_no_holidays_still_draws(tmp_path):
+    """The date rows measured the widest label across an empty list."""
+    config = _base_config(tmp_path / "v_no_holidays.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    renderer._draw_holiday_icons_vertical(
+        config,
+        arrow.get("20260201", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
+        50.0, 700.0, 300.0, _HolidayDB([]),
+    )
+    assert renderer.icon_calls == []
+
+
+def test_a_bare_vertical_axis_is_placed_by_where_the_bars_went(tmp_path):
+    """--noevents leaves only the bars, so they get the width.
+
+    The placement used to key off `label_side`, which is where the callouts
+    would have gone; once the bars moved to the opposite side that pushed
+    them into a tenth of the page.
+    """
+    config = _base_config(tmp_path / "v_noevents.svg")
+    config.timeline_orientation = "vertical"
+    config.includeevents = False
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+
+    coords = {"TimelineArea": (0.0, 0.0, 1000.0, 700.0)}
+    renderer._drawing = drawsvg.Drawing(config.pageX, config.pageY)
+    renderer._render_content(
+        config, coords,
+        [{"Task_Name": "Build", "Start": "20260210", "End": "20260320",
+          "WBS": "1.1"}],
+        _DummyDB(),
+    )
+    axis = [c for c in renderer.line_calls if c["x1"] == c["x2"]]
+    assert axis, "expected a vertical axis line"
+    axis_x = axis[0]["x1"]
+    bars = [c for c in renderer.rect_calls if c.get("css_class") == "ec-duration-bar"]
+    assert bars
+    # Bars stack left of the axis, so the axis is over on the right.
+    assert axis_x > 700.0
+    assert all(b["x"] < axis_x for b in bars)
+
+
+def test_the_tick_dates_stay_clear_of_the_bars(tmp_path):
+    renderer = TimelineRenderer()
+    assert renderer._tick_label_side(Side.SECONDARY) is Side.PRIMARY
+    assert renderer._tick_label_side(Side.PRIMARY) is Side.SECONDARY
+    # Bars on both sides: no clear side, so the dates take the left.
+    assert renderer._tick_label_side(Side.BOTH) is Side.SECONDARY
+
+
+def test_a_tick_date_grows_away_from_the_axis(tmp_path):
+    renderer = TimelineRenderer()
+    assert renderer._tick_label_x(300.0, 20.0, Side.SECONDARY) == (280.0, "end")
+    assert renderer._tick_label_x(300.0, 20.0, Side.PRIMARY) == (320.0, "start")
+
+
+# ── Ticks on a vertical axis ──────────────────────────────────────────────
+#
+# A vertical timeline drew no ticks at all, so none of the theme's tick and
+# tick-date styling reached it. It now draws the same marks turned on their
+# side, resolved through the same keys.
+
+
+def _vertical_ticks(config, start="20260101", end="20260430",
+                    axis_top=50.0, axis_bottom=700.0, axis_x=300.0):
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    renderer._draw_month_ticks_vertical(
+        config,
+        arrow.get(start, "YYYYMMDD"),
+        arrow.get(end, "YYYYMMDD"),
+        axis_top, axis_bottom, axis_x,
+    )
+    return renderer
+
+
+def test_a_vertical_axis_ticks_each_month_start(tmp_path):
+    config = _base_config(tmp_path / "v_ticks.svg")
+    renderer = _vertical_ticks(config, start="20260115", end="20260320")
+
+    labels = [c["text"] for c in renderer.text_calls]
+    assert "Feb 1" in labels
+    assert "Mar 1" in labels
+    assert "Jan 1" not in labels          # before the visible range
+    # The mark crosses the axis, so it runs in x at a fixed y.
+    ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
+    assert len(ticks) == len(labels)
+
+
+def test_a_vertical_tick_label_is_written_beside_the_axis(tmp_path):
+    config = _base_config(tmp_path / "v_tick_side.svg")
+    config.timeline_tick_label_gap = 20.0
+    renderer = _vertical_ticks(config)
+
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert labels
+    tick_h = renderer._axis_tick_height(config)
+    for label in labels:
+        assert label["x"] == pytest.approx(300.0 - (tick_h + 20.0))
+        assert label["anchor"] == "end"    # grows away from the axis
+        assert label.get("transform") is None   # dates are read, not followed
+
+
+def test_tick_labels_move_to_the_far_side_with_the_bars(tmp_path):
+    """Whichever side the bars take, the dates take the other one."""
+    config = _base_config(tmp_path / "v_tick_flip.svg")
+    config.timeline_tick_label_gap = 20.0
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    renderer._draw_month_ticks_vertical(
+        config,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
+        50.0, 700.0, 300.0,
+        label_side=Side.PRIMARY,
+    )
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    tick_h = renderer._axis_tick_height(config)
+    assert labels
+    for label in labels:
+        assert label["x"] == pytest.approx(300.0 + (tick_h + 20.0))
+        assert label["anchor"] == "start"
+
+
+def test_vertical_tick_labels_take_the_theme_font_and_color(tmp_path):
+    """The complaint: none of this reached a vertical timeline."""
+    config = _base_config(tmp_path / "v_tick_theme.svg")
+    config.timeline_tick_label_format = "MMMM"
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    renderer._tokens = {"text:event_date": {"font": "JuliaMono-Regular",
+                                            "color": "hotpink"}}
+    renderer._draw_month_ticks_vertical(
+        config,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
+        50.0, 700.0, 300.0,
+    )
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert [l["text"] for l in labels][:2] == ["January", "February"]
+    assert {l["font"] for l in labels} == {"JuliaMono-Regular"}
+
+
+def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
+    """`timeline.ticks` bands reach the vertical axis too, keys and all."""
+    config = _base_config(tmp_path / "v_tick_band.svg")
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    band = {
+        "unit": "month",
+        "label_format": "MMM",
+        "tick_length": 11.0,
+        "label_gap": 5.0,
+        "font": "JuliaMono-Regular",
+    }
+    renderer._draw_axis_ticks_from_band_vertical(
+        config, band,
+        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
+        50.0, 700.0, 300.0, None,
+        ticks=[(date(2026, 2, 1), "Feb"), (date(2026, 3, 1), "Mar")],
+    )
+    ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
+    assert len(ticks) == 2
+    assert ticks[0]["x1"] == pytest.approx(300.0 - 11.0)
+    assert ticks[0]["x2"] == pytest.approx(300.0 + 11.0)
+
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert [l["text"] for l in labels] == ["Feb", "Mar"]
+    assert labels[0]["x"] == pytest.approx(300.0 - (11.0 + 5.0))
+    assert {l["font"] for l in labels} == {"JuliaMono-Regular"}
+
+
+def test_a_tick_label_at_the_end_of_the_axis_stays_on_the_page(tmp_path):
+    config = _base_config(tmp_path / "v_tick_edge.svg")
+    # A range starting exactly on a month boundary ticks at the very top.
+    renderer = _vertical_ticks(config, start="20260201", end="20260430",
+                               axis_top=50.0, axis_bottom=700.0)
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    size = renderer._axis_tick_label_size(config)
+    assert labels[0]["y"] >= 50.0 + size * 0.8
+    assert all(50.0 <= l["y"] <= 700.0 for l in labels)
 
 
 def test_the_callout_clearance_follows_the_configured_gap(tmp_path):
