@@ -677,9 +677,11 @@ class CalendarConfig:
     timeline_show_fiscal_periods: bool = False
     timeline_show_fiscal_quarters: bool = False
 
-    # Timebands rendered above/below the timeline axis. Each band is a dict
-    # accepted by shared.timeband.build_segments(); see blockplan / compactplan
-    # for examples. Empty list = no bands and no reserved vertical space.
+    # Timebands rendered above/below the timeline axis — left/right of a
+    # vertical one, where a band's row_height is read as its column width.
+    # Each band is a dict accepted by shared.timeband.build_segments(); see
+    # blockplan / compactplan for examples. Empty list = no bands and no
+    # space reserved for them.
     timeline_top_time_bands: list = field(default_factory=list)
     timeline_bottom_time_bands: list = field(default_factory=list)
 
@@ -716,6 +718,12 @@ class CalendarConfig:
     # Which side(s) of the axis labels appear on. "primary" / "secondary" /
     # "both"; meaning depends on `timeline_orientation` (see above).
     timeline_label_side: str = "primary"
+    # Which side a vertical axis's duration bars stack on. "opposite" (the
+    # default) puts them across the axis from the event callouts, the way a
+    # horizontal timeline reads with callouts above and bars below; the
+    # concrete sides pin them regardless of where the callouts went.
+    # Ignored on a horizontal axis, where bars are always below.
+    timeline_duration_side: str = "opposite"
     # Vertical (or horizontal, for vertical orientation) gap between label
     # rows when labella stacks overlapping labels onto multiple layers.
     timeline_labella_layer_gap: float = 8.0
@@ -1459,6 +1467,13 @@ class CalendarConfig:
             raise ValueError(
                 f"timeline_label_side must be 'primary', 'secondary', or 'both', "
                 f"got {self.timeline_label_side!r}"
+            )
+        if self.timeline_duration_side not in (
+            "opposite", "primary", "secondary", "both"
+        ):
+            raise ValueError(
+                f"timeline_duration_side must be 'opposite', 'primary', "
+                f"'secondary', or 'both', got {self.timeline_duration_side!r}"
             )
         if self.timeline_event_placement not in ("packed", "labella"):
             raise ValueError(
