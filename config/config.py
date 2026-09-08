@@ -547,6 +547,16 @@ class CalendarConfig:
     continuation_icon_height: float = 8.0
     continuation_icon_color: str | None = None  # None = inherit from bar/line color
 
+    # ── Overflow indicator (global) ────────────────────────────────────────
+    # Drawn wherever a visualizer has more to say than the box it was given
+    # can hold: the weekly day-number row when a day's events did not fit,
+    # and a timeline duration bar too narrow for its name (there it precedes
+    # the abbreviated name). Configured under the top-level `overflow:`
+    # section in theme YAMLs; themes can also paint a halo behind it with a
+    # `box:overflow` rule.
+    overflow_indicator_icon: str = "warningtriangle"
+    overflow_indicator_color: str = "red"
+
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
     # _font_size set), weekly_name_text_alignment, and
@@ -1339,10 +1349,6 @@ class CalendarConfig:
     # populates one row per event/duration instead of leaving the body blank.
     # All fields default to None so the excelheader_* equivalents are used
     # whenever a theme has only set the shared excelheader keys.
-
-    # Overflow indicator
-    overflow_indicator_icon: str = "warningtriangle"
-    overflow_indicator_color: str = "red"
 
     # Default icon shown when an event's icon name cannot be found in the icons table
     default_missing_icon: str | None = None

@@ -111,9 +111,12 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("colors.fiscal_palette", "setting", "str (DB palette name)", _SVG),
     RequiredKey("colors.group_palette",  "setting", "str (DB palette name)", _SVG),
 
+    # ── overflow ──
+    RequiredKey("overflow.icon", "setting", "str", _SVG,
+                "Glyph marking a box that could not hold its contents"),
+
     # ── weekly ──
     RequiredKey("weekly.week_numbers.label_format", "setting", "str", frozenset({"weekly"})),
-    RequiredKey("weekly.overflow.icon",             "setting", "str", frozenset({"weekly"})),
 
     # ── mini_calendar / mini / mini-icon ──
     RequiredKey("mini_calendar.title_format", "setting", "str (Arrow format)",
@@ -244,8 +247,7 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("style_rules:icon:duration",  "token", "icon token", _SVG),
     RequiredKey("style_rules:icon:milestone", "token", "icon token",
                 frozenset({"timeline", "blockplan", "compactplan"})),
-    RequiredKey("style_rules:icon:overflow",  "token", "icon token",
-                frozenset({"weekly"})),
+    RequiredKey("style_rules:icon:overflow",  "token", "icon token", _SVG),
 )
 
 

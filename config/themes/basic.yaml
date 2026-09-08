@@ -16,6 +16,8 @@ layout:
 events:
   item_placement_order:
     - priority
+overflow:
+  icon: warningtriangle
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -31,8 +33,6 @@ colors:
 weekly:
   week_numbers:
     label_format: W{num:02d}
-  overflow:
-    icon: warningtriangle
 mini_calendar:
   title_format: MMMM YYYY
   week_number_label_format: W{num}
@@ -449,7 +449,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: overflow
+      icon: warningtriangle
       color: grey
       size: 8
   - name: route everything to Other

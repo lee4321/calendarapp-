@@ -57,7 +57,8 @@ def test_visualizer_specific_keys_not_checked_for_other_visualizers() -> None:
         "fiscal": {"label_format": "{period_short}", "end_label_format": "End"},
         "colors": {"month_palette": "Greys", "fiscal_palette": "Greys",
                    "group_palette": "Greys"},
-        "weekly": {"week_numbers": {"label_format": "W"}, "overflow": {"icon": "x"}},
+        "overflow": {"icon": "x"},
+        "weekly": {"week_numbers": {"label_format": "W"}},
         # Token definitions weekly needs
         "style_rules": [
             {"define": "text", "as": name,

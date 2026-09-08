@@ -46,6 +46,9 @@ watermark:
   resize_mode: fit
   rotation_angle: 0.0
   image_rotation_angle: 0.0
+overflow:
+  icon: send-backward
+  color: orange
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -92,9 +95,6 @@ weekly:
   notes_text:
     font_name: RobotoCondensed-Italic
     font_color: palette:Accent:6
-  overflow:
-    icon: send-backward
-    color: orange
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles

@@ -148,6 +148,10 @@ element_overrides:
 base:
   # size of the stand-in glyph; null = the size of what it replaces
   default_missing_icon_size: null
+overflow:
+  # marks a box that could not hold what it was given: a weekly day with
+  # more events than rows, a timeline bar narrower than its own name
+  icon: warningtriangle
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles

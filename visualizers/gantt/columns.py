@@ -20,14 +20,12 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import arrow
 
+from renderers.text_utils import ELLIPSIS
 from shared.date_utils import format_arrow_date
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.data_models import Event
-
-#: Appended to the last line when a value does not fit its column.
-ELLIPSIS = "…"
 
 #: Synthetic column: cross-page dependency reference icons.  It has no
 #: `events` field behind it — the renderer supplies the icons per row from

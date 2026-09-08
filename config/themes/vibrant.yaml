@@ -37,6 +37,9 @@ watermark:
   resize_mode: fit
   rotation_angle: 45.0
   image_rotation_angle: 0.0
+overflow:
+  icon: warningtriangle
+  color: crimson
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -83,9 +86,6 @@ weekly:
   notes_text:
     font_name: SairaExtraCondensed-Regular
     font_color: dimgrey
-  overflow:
-    icon: warningtriangle
-    color: crimson
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
@@ -773,7 +773,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: overflow
+      icon: warningtriangle
       color: crimson
   - name: define line:tick
     define: line

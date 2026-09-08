@@ -51,6 +51,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "durations",
     "watermark",
     "continuation",
+    "overflow",
     "fiscal",
     "colors",
     "weekly",

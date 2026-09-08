@@ -35,6 +35,9 @@ continuation:
   icon_after: move-right
   icon_height: 14.0
   icon_color: white
+overflow:
+  icon: warningtriangle
+  color: red
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -83,9 +86,6 @@ weekly:
     font_name: AlumniSansPinstripe-Italic
     font_color: grey
     font_size: 14
-  overflow:
-    icon: warningtriangle
-    color: red
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
@@ -738,7 +738,7 @@ style_rules:
     define: icon
     as: overflow
     style:
-      icon: overflow
+      icon: warningtriangle
       color: red
   - name: define line:tick
     define: line
