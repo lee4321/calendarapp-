@@ -1498,6 +1498,19 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # Timeline-specific options
     timeline_group = timeline.add_argument_group("Timeline Options")
     timeline_group.add_argument(
+        "--direction",
+        dest="timeline_direction",
+        type=str,
+        default=None,
+        choices=["horizontal", "vertical"],
+        help=(
+            "Axis direction (default: horizontal). Vertical runs the axis "
+            "top-to-bottom with labels to the right (primary) / left "
+            "(secondary). Note: --orientation remains the page-orientation "
+            "flag (portrait/landscape)."
+        ),
+    )
+    timeline_group.add_argument(
         "--today-line-length",
         "-tll",
         type=float,

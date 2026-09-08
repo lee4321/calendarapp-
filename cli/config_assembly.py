@@ -156,6 +156,7 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("candybar_weekend_fill", "candybar_weekend_fill", "value"),
     ("candybar_month_shading", "candybar_month_shading", "value"),
     # Timeline
+    ("timeline_direction", "timeline_orientation", "value"),
     ("today_line_length", "timeline_today_line_length", "value"),
     ("today_line_direction", "timeline_today_line_direction", "value"),
     ("label_fill_opacity", "timeline_label_fill_opacity", "value"),

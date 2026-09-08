@@ -13,9 +13,14 @@ Fixed defaults (all overridable):
     weekends      0 (work week only)
     countries     US,UA
 
+Views with an axis that can run either way down the page (``timeline``,
+``pit``) are rendered once per direction, so the vertical variant sits beside
+the horizontal one in the same batch.  Narrow that with ``--directions``.
+
 Output naming::
 
     <visualization>_<theme>_<YYYYMMDD-HHMMSS>.svg
+    <visualization>_<direction>_<theme>_<YYYYMMDD-HHMMSS>.svg   (axis views)
 
 The timestamp is taken once at start-up so a whole batch shares one stamp and
 sorts together.  ecalendar confines SVG output to the ``output/`` directory,
@@ -26,6 +31,7 @@ Usage::
     uv run python tools/generate_gallery.py 20260105 20260630
     uv run python tools/generate_gallery.py 20260105 20260630 --themes default,dark
     uv run python tools/generate_gallery.py 20260105 20260630 --views weekly,timeline
+    uv run python tools/generate_gallery.py 20260105 20260630 --directions vertical
     uv run python tools/generate_gallery.py 20260105 20260630 --include-nonsvg
     uv run python tools/generate_gallery.py 20260105 20260630 --milestones --status all
 
@@ -76,6 +82,18 @@ NONSVG_VIEWS = {
     "excelheader": {"themed": True, "ext": ".xlsx"},
     "excelblockplan": {"themed": True, "ext": ".xlsx"},
 }
+
+
+# Views that draw their content along an axis they can swing either way:
+# both take ``--direction`` and default to horizontal, so asking for both
+# directions puts the vertical variant next to the horizontal one.  Any view
+# not listed here has a single layout and is rendered once per theme.
+AXIS_VIEWS = {
+    "timeline": "--direction",
+    "pit": "--direction",
+}
+
+AXIS_DIRECTIONS = ("horizontal", "vertical")
 
 
 # Views that register the "Content Filtering" argument group.  excelheader is
@@ -214,6 +232,20 @@ class Job:
     theme: str | None
     filename: str
     argv: list[str]
+    # Axis direction for the views in AXIS_VIEWS; None for every other view,
+    # which has only one layout to render.
+    direction: str | None = None
+
+    @property
+    def section(self) -> str:
+        """Contact-sheet heading: one per view, or per view and direction."""
+        return f"{self.view} — {self.direction}" if self.direction else self.view
+
+    @property
+    def label(self) -> str:
+        """Short description of this run, for failure reporting."""
+        theme = self.theme or "(no theme)"
+        return f"{self.section} / {theme}"
 
 
 @dataclass
@@ -268,9 +300,12 @@ def build_jobs(args: argparse.Namespace, stamp: str) -> list[Job]:
     """Expand the requested views and themes into the full job list."""
     jobs: list[Job] = []
 
-    def add(view: str, theme: str | None, ext: str) -> None:
+    def add(
+        view: str, theme: str | None, ext: str, direction: str | None = None
+    ) -> None:
         theme_part = theme if theme else "notheme"
-        filename = f"{view}_{theme_part}_{stamp}{ext}"
+        parts = [view, direction, theme_part, stamp]
+        filename = "_".join(p for p in parts if p) + ext
         argv = [
             sys.executable,
             str(ECALENDAR),
@@ -295,13 +330,27 @@ def build_jobs(args: argparse.Namespace, stamp: str) -> list[Job]:
                 "--orientation",
                 args.orientation,
             ]
+        if direction:
+            argv += [AXIS_VIEWS[view], direction]
         argv += filter_argv(args, view)
-        jobs.append(Job(view=view, theme=theme, filename=filename, argv=argv))
+        jobs.append(
+            Job(
+                view=view,
+                theme=theme,
+                filename=filename,
+                argv=argv,
+                direction=direction,
+            )
+        )
 
     for view in args.views:
         if view in SVG_VIEWS:
-            for theme in args.themes:
-                add(view, theme, ".svg")
+            # An axis view is rendered once per requested direction; every
+            # other view has a single layout and is rendered once.
+            directions = args.directions if view in AXIS_VIEWS else [None]
+            for direction in directions:
+                for theme in args.themes:
+                    add(view, theme, ".svg", direction)
         else:
             spec = NONSVG_VIEWS[view]
             if spec["themed"]:
@@ -336,9 +385,11 @@ def run_job(job: Job) -> Result:
 def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> Path:
     """Write an HTML contact sheet linking every generated file."""
     index_path = OUTPUT_DIR / f"gallery_{stamp}.html"
-    by_view: dict[str, list[Result]] = {}
+    # Axis views get one section per direction, so the vertical variants are
+    # compared against each other rather than interleaved with horizontal.
+    by_section: dict[str, list[Result]] = {}
     for res in results:
-        by_view.setdefault(res.job.view, []).append(res)
+        by_section.setdefault(res.job.section, []).append(res)
 
     parts = [
         "<!doctype html>",
@@ -369,9 +420,9 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
             f"<code>{html.escape(' '.join(filters))}</code></p>"
         )
 
-    for view in sorted(by_view):
-        parts.append(f"<h2>{html.escape(view)}</h2><div class='grid'>")
-        for res in sorted(by_view[view], key=lambda r: r.job.theme or ""):
+    for section in sorted(by_section):
+        parts.append(f"<h2>{html.escape(section)}</h2><div class='grid'>")
+        for res in sorted(by_section[section], key=lambda r: r.job.theme or ""):
             label = html.escape(res.job.theme or "(no theme)")
             failed = res.returncode != 0
             cls = "card fail" if failed else "card"
@@ -432,6 +483,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Also run the non-SVG views: "
             f"{', '.join(sorted(NONSVG_VIEWS))} (text-mini has no theme flag "
             "and is rendered once)"
+        ),
+    )
+    parser.add_argument(
+        "--directions",
+        type=str,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Comma-separated axis directions for the views that support both "
+            f"({', '.join(sorted(AXIS_VIEWS))}); other views ignore this. "
+            f"Default: {','.join(AXIS_DIRECTIONS)}"
         ),
     )
     parser.add_argument(
@@ -528,6 +590,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         if args.include_nonsvg:
             args.views += sorted(NONSVG_VIEWS)
 
+    if args.directions:
+        requested = [d.strip() for d in args.directions.split(",") if d.strip()]
+        unknown = [d for d in requested if d not in AXIS_DIRECTIONS]
+        if unknown:
+            parser.error(
+                f"unknown direction(s): {', '.join(unknown)}. "
+                f"Available: {', '.join(AXIS_DIRECTIONS)}"
+            )
+        args.directions = requested
+        if not set(args.views) & set(AXIS_VIEWS):
+            print(
+                "warning: --directions applies to no selected view "
+                f"(accepted by: {', '.join(sorted(AXIS_VIEWS))})",
+                file=sys.stderr,
+            )
+    else:
+        args.directions = list(AXIS_DIRECTIONS)
+
     # A filter no selected view accepts is silently dropped by filter_argv;
     # say so rather than leaving the reviewer to wonder why nothing changed.
     selected = set(args.views)
@@ -550,9 +630,13 @@ def main(argv: list[str] | None = None) -> int:
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     jobs = build_jobs(args, stamp)
 
+    axis_views = sorted(set(args.views) & set(AXIS_VIEWS))
+    axis_note = ""
+    if axis_views:
+        axis_note = f" ({'/'.join(args.directions)} for {', '.join(axis_views)})"
     print(
         f"{len(jobs)} run(s): {len(args.views)} view(s) x "
-        f"{len(args.themes)} theme(s) — {args.begin}..{args.end}, "
+        f"{len(args.themes)} theme(s){axis_note} — {args.begin}..{args.end}, "
         f"{args.papersize} {args.orientation}, weekends={args.weekends}, "
         f"countries {args.country}"
     )
@@ -597,7 +681,7 @@ def main(argv: list[str] | None = None) -> int:
     if failures:
         print(f"{len(failures)} run(s) failed:")
         for res in failures:
-            print(f"  {res.job.view} / {res.job.theme}")
+            print(f"  {res.job.label}")
         return 1
     return 0
 
