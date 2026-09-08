@@ -1902,20 +1902,15 @@ class TimelineRenderer(BaseSVGRenderer):
             **rect_kwargs,
         )
 
-        # Start/end markers on the main axis.
+        # Start marker on the main axis.  The end date gets none: the bar's
+        # own right edge already stands on it, and a dot out on the axis
+        # with no leader running down to the bar belongs to no bar in
+        # particular once several lanes share the day.
         _marker_style = config.get_box_style("ec-milestone-marker")
         marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
         marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
         self._draw_circle(
             item.start_x,
-            axis_y,
-            radius=max(2.7, config.timeline_marker_radius * 0.8),
-            fill=marker_fill,
-            stroke=marker_stroke,
-            stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
-        )
-        self._draw_circle(
-            item.end_x,
             axis_y,
             radius=max(2.7, config.timeline_marker_radius * 0.8),
             fill=marker_fill,
@@ -2483,21 +2478,14 @@ class TimelineRenderer(BaseSVGRenderer):
             **rect_kwargs,
         )
 
-        # Start/end markers on the main axis at the bar's start/end y.
+        # Start marker on the main axis, at the bar's start y — the end
+        # date has none, for the reason given in :py:meth:`_draw_duration`.
         _marker_style = config.get_box_style("ec-milestone-marker")
         marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
         marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
         self._draw_circle(
             axis_x,
             item.start_y,
-            radius=max(2.7, config.timeline_marker_radius * 0.8),
-            fill=marker_fill,
-            stroke=marker_stroke,
-            stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
-        )
-        self._draw_circle(
-            axis_x,
-            item.end_y,
             radius=max(2.7, config.timeline_marker_radius * 0.8),
             fill=marker_fill,
             stroke=marker_stroke,

@@ -1655,7 +1655,12 @@ def test_a_bar_at_the_left_margin_is_not_pushed_right_either(tmp_path):
     assert bar.end_x == pytest.approx(_day_x(renderer, "20260103"))
 
 
-def test_axis_markers_sit_on_the_bar_edges(tmp_path):
+def test_the_axis_marker_sits_on_the_start_date_only(tmp_path):
+    """The end date's dot went with the end date's leader.
+
+    Nothing ran from it down to the bar, and once several lanes end on one
+    day the dot left on the axis belonged to no bar in particular.
+    """
     config, renderer, bars = _aligned_bars(
         tmp_path, "aligned_markers.svg",
         [Event(task_name="Ship it", start="20260316", end="20260320")],
@@ -1663,8 +1668,18 @@ def test_axis_markers_sit_on_the_bar_edges(tmp_path):
     )
     renderer._draw_duration(config, bars[0], 300.0)
     marker_xs = [c["cx"] for c in renderer.circle_calls]
-    assert bars[0].start_x in marker_xs
-    assert bars[0].end_x in marker_xs
+    assert marker_xs == [bars[0].start_x]
+
+
+def test_a_vertical_bar_also_marks_only_its_start_date(tmp_path):
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_markers.svg",
+        [Event(task_name="Build", start="20260210", end="20260501")],
+        renderer=_CaptureCircleRenderer(),
+    )
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    marker_ys = [c["cy"] for c in renderer.circle_calls]
+    assert marker_ys == [bars[0].start_y]
 
 
 # ── Overflowing a bar's label ─────────────────────────────────────────────
