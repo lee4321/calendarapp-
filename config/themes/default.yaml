@@ -231,7 +231,7 @@ timeline:
   today_label_color: grey
   marker_stroke_color: ''
   marker_stroke_width: 1.0
-  marker_radius: 4.2
+  marker_radius: 4.0
   icon_size: 8
   duration_offset_y: 20
   duration_lane_gap_y: 8.0
@@ -257,7 +257,7 @@ timeline:
     font_size: 8
 timeline_events:
   box_width: 115
-  box_height: 24
+  box_height: 16
   # how point-event boxes are placed: "packed" puts each box's leading
   # edge on its own start date and stacks collisions away from the axis;
   # "labella" keeps the force-solved placement centred on the date
@@ -272,7 +272,7 @@ timeline_events:
   icon_column_ratio: 0.15
 timeline_durations:
   box_width: null
-  box_height: 18
+  box_height: 14
   date_font: OfficinaSans-BookItalic
   date_font_size: 9
   date_color: black

@@ -623,6 +623,11 @@ class CalendarConfig:
     timeline_event_box_width: float | None = None
     timeline_event_box_height: float | None = None
     timeline_duration_box_width: float | None = None
+    # Share of a duration bar's width given to each of its two side columns
+    # (icon over start date, overflow mark over end date). None follows
+    # timeline_event_icon_column_ratio, so the two kinds of box line up
+    # without a theme saying so twice.
+    timeline_duration_icon_column_ratio: float | None = None
     timeline_duration_box_height: float | None = None
     # How point-event callouts are placed. "packed" lays them on a grid of
     # rows with each box's leading edge on its own start date; "labella"
