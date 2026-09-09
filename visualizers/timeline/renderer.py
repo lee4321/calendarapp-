@@ -18,7 +18,7 @@ import drawsvg
 from config.config import get_font_path, resolve_continuation_icon
 from renderers.glyph_cache import get_ink_extents
 from renderers.svg_base import BaseSVGRenderer
-from renderers.text_utils import shrinktext, string_width
+from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.rule_engine import StyleEngine, StyleResult
@@ -141,15 +141,9 @@ _DURATION_DATE_PAD_X: float = 3.0
 #: Clear space kept between an in-bar date and the bar's title.
 _DURATION_DATE_GAP_X: float = 4.0
 
-#: Smallest drawn size for the overflow icon inside a duration bar; a bar
-#: with less room than this gets no mark rather than an illegible one.
-_OVERFLOW_ICON_MIN_SIZE: float = 3.0
-
-#: How far a too-long name may be condensed into an overflowing duration
-#: bar, as a fraction of its natural width.  Condensed type reads well down
-#: to about a third; below that adjacent strokes merge and the name stops
-#: being a name, so the bar carries only the overflow icon.
-_OVERFLOW_TEXT_MIN_SCALE: float = 0.35
+#: Smallest drawn size for an icon in a duration bar's side column; a cell
+#: with less room than this is left empty rather than smudged.
+_DURATION_ICON_MIN_SIZE: float = 3.0
 
 
 class TimelineRenderer(BaseSVGRenderer):
@@ -183,63 +177,6 @@ class TimelineRenderer(BaseSVGRenderer):
             return size * 0.75, size * 0.22
         ascent, descent = get_ink_extents(font_path)
         return ascent * size, descent * size
-
-    @classmethod
-    def _fit_box_text_sizes(
-        cls,
-        text: str,
-        notes: str,
-        text_width: float,
-        box_height: float,
-        title_font_path: str | None,
-        notes_font_path: str | None,
-        title_size: float,
-        notes_size: float,
-        notes_width: float | None = None,
-    ) -> tuple[float, float]:
-        """Shrink title/notes fonts to fit a constrained box width and height.
-
-        ``notes_width`` is the width available to the notes line when it
-        differs from the title's — inside a callout the title shares its line
-        with the icon and the date, and the notes line has the box to itself.
-        Measuring both against the title's narrower budget shrank the notes
-        to clear space they were never drawn near. Defaults to
-        ``text_width``.
-        """
-        width = max(8.0, text_width)
-        n_width = max(8.0, text_width if notes_width is None else notes_width)
-        tsize = shrinktext(text, width, title_font_path, title_size)
-        nsize = (
-            shrinktext(notes, n_width, notes_font_path, notes_size)
-            if notes
-            else notes_size
-        )
-
-        def required_h(ts: float, ns: float, has: bool) -> float:
-            # ~1.2 line height per row plus a small inner padding. The earlier
-            # 1.9/1.7 multipliers were generous and caused declared font sizes
-            # to be shrunk well below the box's actual capacity.
-            return ts * 1.2 + ((ns * 1.2) if has else 0.0) + 2.0
-
-        has_notes = bool(notes)
-        need = required_h(tsize, nsize, has_notes)
-        if box_height > 0 and need > box_height:
-            # Scale down first, then tighten iteratively if still too tall.
-            factor = max(0.35, box_height / need)
-            tsize = max(6.0, tsize * factor)
-            if has_notes:
-                nsize = max(5.0, nsize * factor)
-            tsize = shrinktext(text, width, title_font_path, tsize)
-            if has_notes:
-                nsize = shrinktext(notes, n_width, notes_font_path, nsize)
-            guard = 0
-            while required_h(tsize, nsize, has_notes) > box_height and guard < 30:
-                tsize = max(6.0, tsize - 0.2)
-                if has_notes:
-                    nsize = max(5.0, nsize - 0.2)
-                guard += 1
-
-        return tsize, nsize
 
     def _create_drawing(self, config: "CalendarConfig") -> drawsvg.Drawing:
         drawing = super()._create_drawing(config)
@@ -1196,49 +1133,9 @@ class TimelineRenderer(BaseSVGRenderer):
             sx = self._x_for_day(start_day, start, end, axis_left, axis_right)
             ex = self._x_for_day(end_day, start, end, axis_left, axis_right)
 
-            # Width the bar would need to carry its full text: the name (or
-            # notes, whichever is wider) between the two in-bar dates.  A
-            # theme that sets `timeline_durations.box_width` names that width
-            # itself.  Nothing is widened to reach it — both edges belong to
-            # the dates — so this is only the threshold past which the bar
-            # falls back to the overflow icon plus a condensed name.
-            configured_w = (
-                float(config.timeline_duration_box_width)
-                if config.timeline_duration_box_width is not None
-                else 0.0
-            )
-            if configured_w > 0:
-                min_width = configured_w
-            else:
-                name_w = string_width(
-                    event.task_name or "", title_font_path, title_size
-                )
-                notes_w = (
-                    string_width(
-                        (event.notes or "").strip(), notes_font_path, notes_size
-                    )
-                    if config.include_notes
-                    else 0.0
-                )
-                # The start/end dates sit inside the bar's ends, so a bar has
-                # to be wide enough for them plus whatever text it carries.
-                dates_w = self._duration_dates_width(
-                    format_arrow_date(
-                        self._safe_day(event.start, fallback=start),
-                        config.timeline_date_format,
-                    ),
-                    format_arrow_date(
-                        self._safe_day(event.end, fallback=start),
-                        config.timeline_date_format,
-                    ),
-                    date_font_path,
-                    date_size,
-                )
-                min_width = max(
-                    max(16.0, self._page_width * 0.02),
-                    name_w + 12.0 + dates_w,
-                    notes_w + 12.0 + dates_w,
-                )
+            # What the bar's three-column grid wants; nothing is widened to
+            # reach it, so it only decides which bars carry the overflow mark.
+            min_width = self._duration_full_extent(config, event, start)
 
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
@@ -1368,45 +1265,9 @@ class TimelineRenderer(BaseSVGRenderer):
             sy = self._y_for_day(start_day, start, end, axis_top, axis_bottom)
             ey = self._y_for_day(end_day, start, end, axis_top, axis_bottom)
 
-            configured_len = (
-                float(config.timeline_duration_box_width)
-                if config.timeline_duration_box_width is not None
-                else 0.0
-            )
-            if configured_len > 0:
-                min_length = configured_len
-            else:
-                # Text reads bottom→top once rotated, so the bar's
-                # along-axis length is the available width for the label.
-                name_w = string_width(
-                    event.task_name or "", title_font_path, title_size
-                )
-                notes_w = (
-                    string_width(
-                        (event.notes or "").strip(), notes_font_path, notes_size
-                    )
-                    if config.include_notes
-                    else 0.0
-                )
-                # The dates ride inside the bar's two along-axis ends, so the
-                # bar has to be long enough for them and its label both.
-                dates_w = self._duration_dates_width(
-                    format_arrow_date(
-                        self._safe_day(event.start, fallback=start),
-                        config.timeline_date_format,
-                    ),
-                    format_arrow_date(
-                        self._safe_day(event.end, fallback=start),
-                        config.timeline_date_format,
-                    ),
-                    date_font_path,
-                    date_size,
-                )
-                min_length = max(
-                    max(16.0, self._page_height * 0.02),
-                    name_w + 12.0 + dates_w,
-                    notes_w + 12.0 + dates_w,
-                )
+            # Same grid as a horizontal bar, so the same demand — measured
+            # along this axis, where the bar's length is its text's width.
+            min_length = self._duration_full_extent(config, event, start_day)
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
                 lane_last_end, sy, ey, min_gap,
@@ -1781,32 +1642,6 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_stride = bar_h + lane_gap
         return axis_y + duration_offset + (item.lane * lane_stride), bar_h
 
-    @staticmethod
-    def _duration_dates_width(
-        start_label: str,
-        end_label: str,
-        font_path: str | None,
-        size: float,
-    ) -> float:
-        """Horizontal room the two in-bar dates claim, padding included.
-
-        Reserved before the title is fitted and matched by the layout's
-        `min_width`, so what the bar promises the dates is what they get.
-        """
-        def measure(text: str) -> float:
-            if not text:
-                return 0.0
-            if not font_path:
-                return len(text) * size * 0.5
-            return string_width(text, font_path, size)
-
-        return (
-            measure(start_label)
-            + measure(end_label)
-            + (2.0 * _DURATION_DATE_PAD_X)
-            + (2.0 * _DURATION_DATE_GAP_X)
-        )
-
     def _duration_row_extent(self, config: "CalendarConfig") -> float:
         """Vertical room one duration row needs, its date labels included.
 
@@ -2038,331 +1873,419 @@ class TimelineRenderer(BaseSVGRenderer):
                     css_class="ec-duration-icon",
                 )
 
-        _dur_name_style = config.get_text_style("ec-event-name")
-        _dur_notes_style = config.get_text_style("ec-event-notes")
-        tk_dur_name = self._tk("text:event_name")
-        tk_dur_notes = self._tk("text:event_notes")
-        dur_name_font_default = (
-            tk_dur_name.get("font")
-            or config.timeline_name_text_font_name
-            or _dur_name_style.font
-        )
-        dur_notes_font_default = (
-            tk_dur_notes.get("font")
-            or config.timeline_notes_text_font_name
-            or _dur_notes_style.font
-        )
-        title_font_path = self._safe_font_path(dur_name_font_default)
-        notes_font_path = self._safe_font_path(dur_notes_font_default)
-
-        # The start/end dates sit inside the bar's two ends, so the title and
-        # notes get what is left between them rather than the whole bar.
-        start_label = format_arrow_date(start_day, config.timeline_date_format)
-        end_label = format_arrow_date(end_day, config.timeline_date_format)
-        date_font_path = self._safe_font_path(
-            config.get_text_style("ec-duration-date").font
-            or config.timeline_duration_date_font
-            or self._tk("text:duration_date").get("font")
-            or config.timeline_date_font
-        )
-        dates_w = self._duration_dates_width(
-            start_label, end_label, date_font_path, date_size
-        )
-        bar_w = max(1.0, item.end_x - item.start_x)
-        text_w = max(10.0, bar_w - 6.0 - dates_w)
-        fitted_title, fitted_notes = self._fit_box_text_sizes(
-            title,
-            notes,
-            text_w,
+        self._draw_duration_contents(
+            config,
+            item,
+            item.start_x,
+            bar_y,
+            max(1.0, item.end_x - item.start_x),
             bar_h,
-            title_font_path,
-            notes_font_path,
-            title_size,
-            notes_size,
+            _sr,
         )
-        duration_text_color = (
-            tk_dur_name.get("color")
+
+
+    def _duration_full_extent(
+        self,
+        config: "CalendarConfig",
+        event: Event,
+        fallback: arrow.Arrow,
+    ) -> float:
+        """Along-axis extent at which a bar's grid needs no compressing.
+
+        Each side column has to hold its date and the middle one the wider
+        of the name and the notes, so the bar wants whichever of those
+        demands is larger once divided by its column's share.  A theme that
+        sets ``timeline_durations.box_width`` names this outright.  Bars are
+        never grown to it — their edges are their dates — so it only decides
+        which of them carry the overflow mark.
+        """
+        configured = (
+            float(config.timeline_duration_box_width)
+            if config.timeline_duration_box_width is not None
+            else 0.0
+        )
+        if configured > 0:
+            return configured
+
+        title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
+        fonts = self._duration_text_fonts(config, StyleResult())
+        name_w = string_width(
+            event.task_name or "", self._safe_font_path(fonts["name_font"]), title_size
+        )
+        notes_w = (
+            string_width(
+                (event.notes or "").strip(),
+                self._safe_font_path(fonts["notes_font"]),
+                notes_size,
+            )
+            if config.include_notes
+            else 0.0
+        )
+        start_w = string_width(
+            format_arrow_date(
+                self._safe_day(event.start, fallback=fallback),
+                config.timeline_date_format,
+            ),
+            self._safe_font_path(fonts["start_font"]),
+            date_size,
+        )
+        end_w = string_width(
+            format_arrow_date(
+                self._safe_day(event.end, fallback=fallback),
+                config.timeline_date_format,
+            ),
+            self._safe_font_path(fonts["end_font"]),
+            date_size,
+        )
+        ratio = min(0.45, max(0.02, self._duration_column_ratio(config)))
+        # The middle column loses a gap on each side; solving
+        # inner*(1-2r) - 2*gap >= text for inner puts the gaps back here.
+        inner = max(
+            max(start_w, end_w) / ratio,
+            (max(name_w, notes_w) + 2.0 * _DURATION_DATE_GAP_X)
+            / max(0.05, 1.0 - 2.0 * ratio),
+        )
+        return inner + 2.0 * _DURATION_DATE_PAD_X
+
+    def _duration_cell_layout(
+        self, config: "CalendarConfig", inner_w: float
+    ) -> list[tuple[float, float]]:
+        """The three columns of a duration bar, as (offset, width) pairs.
+
+        The two side columns are the same width — the callout box's icon
+        column, mirrored — so the start date at one end and the end date at
+        the other are laid out identically and the name in the middle sits
+        where the eye expects it whatever the dates say.  A gap either side
+        of the middle column keeps a compressed name off the dates it runs
+        between; without it the three read as one run of text.
+        """
+        ratio = min(0.45, max(0.02, self._duration_column_ratio(config)))
+        side = inner_w * ratio
+        gap = _DURATION_DATE_GAP_X if inner_w > 4.0 * _DURATION_DATE_GAP_X else 0.0
+        mid = max(1.0, inner_w - 2.0 * side - 2.0 * gap)
+        return [(0.0, side), (side + gap, mid), (inner_w - side, side)]
+
+    @staticmethod
+    def _duration_column_ratio(config: "CalendarConfig") -> float:
+        """Share of a duration bar given to each of its two side columns.
+
+        ``timeline_durations.icon_column_ratio`` when a theme sets one,
+        otherwise whatever the callout boxes use, so the two kinds of box
+        line up without a theme having to say so twice.
+        """
+        configured = getattr(config, "timeline_duration_icon_column_ratio", None)
+        if configured:
+            return float(configured)
+        return float(config.timeline_event_icon_column_ratio)
+
+    def _duration_text_fonts(
+        self, config: "CalendarConfig", _sr: StyleResult
+    ) -> dict:
+        """Fonts, colors and opacities for everything inside a duration bar.
+
+        One resolution shared by the horizontal and vertical layouts, which
+        drew from the same tokens through two copies of this until the
+        layouts themselves were made one.
+        """
+        _name_style = config.get_text_style("ec-event-name")
+        _notes_style = config.get_text_style("ec-event-notes")
+        _date_style = config.get_text_style("ec-duration-date")
+        tk_name = self._tk("text:event_name")
+        tk_notes = self._tk("text:event_notes")
+        tk_date = self._tk("text:duration_date")
+
+        name_font_default = (
+            tk_name.get("font")
+            or config.timeline_name_text_font_name
+            or _name_style.font
+        )
+        notes_font_default = (
+            tk_notes.get("font")
+            or config.timeline_notes_text_font_name
+            or _notes_style.font
+        )
+        text_color = (
+            tk_name.get("color")
             or config.timeline_name_text_font_color
-            or _dur_name_style.color
-            or item.color
+            or _name_style.color
         )
-        title_font_base = dur_name_font_default
-        title_font, _, name_color, name_opacity = _sr.text_override(
+        name_font, _, name_color, name_opacity = _sr.text_override(
             "duration_name",
-            font=title_font_base,
-            color=duration_text_color,
-            opacity=_dur_name_style.opacity,
+            font=name_font_default,
+            color=text_color,
+            opacity=_name_style.opacity,
         )
-        # Vertically center the title (and notes, when present) within the bar
-        # so the text sits in the lower portion of the rectangle rather than
-        # being pinned to its top edge.
-        has_notes = bool(notes and config.include_notes)
-        line1_h = fitted_title * 1.2
-        line2_h = (fitted_notes * 1.2) if has_notes else 0.0
-        text_block_h = line1_h + line2_h
-        text_top_y = bar_y + max(0.0, (bar_h - text_block_h) / 2.0)
-        title_y = text_top_y + fitted_title * 0.85
-
-        if item.text_overflow:
-            # The bar spans its dates and nothing more, so there is no width
-            # to win back for the full name / notes / dates block.  Say that
-            # out loud instead of silently squeezing it.
-            self._draw_duration_overflow_label(
-                config,
-                item,
-                bar_h,
-                bar_y + bar_h / 2.0 + title_size * 0.35,
-                title,
-                title_font,
-                title_size,
-                name_color,
-                name_opacity,
-            )
-            return
-
-        show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
-        if show_icon:
-            icon_size = fitted_title
-            try:
-                title_w = string_width(title, title_font_path, fitted_title)
-            except Exception:
-                title_w = len(title) * fitted_title * 0.55
-            gap = 2.0
-            total_w = icon_size + gap + title_w
-            available_w = max(8.0, text_w)
-            icon_scale_x = min(1.0, available_w / total_w) if total_w > available_w else 1.0
-            effective_icon_w = icon_size * icon_scale_x
-            effective_text_w = min(title_w * icon_scale_x, available_w - effective_icon_w - gap)
-            group_x0 = (item.start_x + item.end_x) / 2 - (effective_icon_w + gap + effective_text_w) / 2.0
-            draw_x = max(item.start_x, group_x0)
-            icon_transform = None
-            if icon_scale_x < 1.0:
-                icon_transform = (
-                    f"translate({draw_x:.4f} {title_y:.4f}) "
-                    f"scale({icon_scale_x:.6f} 1) "
-                    f"translate({-draw_x:.4f} {-title_y:.4f})"
-                )
-            dur_icon = _sr.icon if _sr.icon is not None else item.event.icon
-            dur_icon_color = _sr.icon_color or duration_text_color
-            icon_drawn = self._draw_icon_svg(
-                dur_icon,
-                draw_x,
-                title_y,
-                icon_size,
-                anchor="start",
-                color=dur_icon_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=dur_icon_color,
-                transform=icon_transform,
-                css_class="ec-duration-icon",
-                box_token="box:duration",
-                box_ctx=self._event_ctx(item.event),
-            )
-            text_x = draw_x + effective_icon_w + gap if icon_drawn else (item.start_x + item.end_x) / 2
-            self._draw_text(
-                text_x,
-                title_y,
-                title,
-                title_font,
-                fitted_title,
-                fill=name_color,
-                fill_opacity=name_opacity,
-                anchor="start" if icon_drawn else "middle",
-                max_width=max(8.0, item.end_x - text_x - 2),
-                css_class="ec-event-name",
-            )
-        else:
-            self._draw_text(
-                (item.start_x + item.end_x) / 2,
-                title_y,
-                title,
-                title_font,
-                fitted_title,
-                fill=name_color,
-                fill_opacity=name_opacity,
-                anchor="middle",
-                max_width=text_w,
-                css_class="ec-event-name",
-            )
-
-        if has_notes:
-            notes_color_base = (
-                tk_dur_notes.get("color")
+        notes_font, _, notes_color, notes_opacity = _sr.text_override(
+            "duration_notes",
+            font=notes_font_default,
+            color=(
+                tk_notes.get("color")
                 or config.timeline_notes_text_font_color
-                or _dur_notes_style.color
-                or duration_text_color
-            )
-            notes_font, _, notes_color, notes_opacity = _sr.text_override(
-                "duration_notes",
-                font=dur_notes_font_default,
-                color=notes_color_base,
-                opacity=_dur_notes_style.opacity,
-            )
-            notes_y = text_top_y + line1_h + fitted_notes * 0.85
-            self._draw_text(
-                (item.start_x + item.end_x) / 2,
-                notes_y,
-                notes,
-                notes_font,
-                fitted_notes,
-                fill=notes_color,
-                fill_opacity=notes_opacity,
-                anchor="middle",
-                max_width=text_w,
-                css_class="ec-event-notes",
-            )
-
-        # Keep start/end labels on the same Y baseline.
-        _dur_date_style = config.get_text_style("ec-duration-date")
-        tk_dur_date = self._tk("text:duration_date")
+                or _notes_style.color
+                or text_color
+            ),
+            opacity=_notes_style.opacity,
+        )
         date_font_base = (
-            _dur_date_style.font
+            _date_style.font
             or config.timeline_duration_date_font
-            or tk_dur_date.get("font")
+            or tk_date.get("font")
             or config.timeline_date_font
         )
         date_color_base = (
-            _dur_date_style.color
+            _date_style.color
             or config.timeline_duration_date_color
-            or tk_dur_date.get("color")
-            or duration_text_color
+            or tk_date.get("color")
+            or text_color
         )
-        start_date_font, _, start_date_color, _ = _sr.text_override(
-            "duration_start_date",
-            font=date_font_base,
-            color=date_color_base,
+        start_font, _, start_color, _ = _sr.text_override(
+            "duration_start_date", font=date_font_base, color=date_color_base
         )
-        end_date_font, _, end_date_color, _ = _sr.text_override(
-            "duration_end_date",
-            font=date_font_base,
-            color=date_color_base,
+        end_font, _, end_color, _ = _sr.text_override(
+            "duration_end_date", font=date_font_base, color=date_color_base
         )
-        # Inside the bar, one at each end, on the title's baseline — the
-        # same arrangement the event callouts use for their date.
-        date_y = title_y
-        self._draw_text(
-            item.start_x + _DURATION_DATE_PAD_X,
-            date_y,
-            start_label,
-            start_date_font,
-            date_size,
-            fill=start_date_color,
-            anchor="start",
-            css_class="ec-duration-date",
-        )
-        self._draw_text(
-            item.end_x - _DURATION_DATE_PAD_X,
-            date_y,
-            end_label,
-            end_date_font,
-            date_size,
-            fill=end_date_color,
-            anchor="end",
-            css_class="ec-duration-date",
-        )
+        return {
+            "name_font": name_font,
+            "name_color": name_color,
+            "name_opacity": name_opacity,
+            "notes_font": notes_font,
+            "notes_color": notes_color,
+            "notes_opacity": notes_opacity,
+            "start_font": start_font,
+            "start_color": start_color,
+            "end_font": end_font,
+            "end_color": end_color,
+            "text_color": text_color,
+        }
 
-    def _overflow_name_fits(
-        self,
-        title: str,
-        text_w: float,
-        font_name: str,
-        font_size: float,
-    ) -> bool:
-        """Is ``text_w`` enough to condense ``title`` into and still read it?
-
-        ``_draw_text``'s ``max_width`` scales the glyphs on X alone, which
-        stays legible a surprising way down and then stops abruptly: past
-        ``_OVERFLOW_TEXT_MIN_SCALE`` the strokes of adjacent letters merge
-        and the name becomes a smear that says less than no name at all.
-        """
-        if text_w <= 0:
-            return False
-        natural = string_width(title, self._safe_font_path(font_name), font_size)
-        if natural <= 0:
-            return False
-        return (text_w / natural) >= _OVERFLOW_TEXT_MIN_SCALE
-
-    def _draw_duration_overflow_label(
+    def _duration_cells(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
+    ) -> list[tuple[int, int, str, str]]:
+        """What goes in each cell of a duration bar, as (col, row, kind, text).
+
+        Three columns of two rows, the callout box's grid with one column
+        more: the event's icon over its start date, the name over the
+        notes, and — when the bar could not hold all of that at full size —
+        the overflow icon over the end date.  ``kind`` is "icon",
+        "overflow", "name", "notes" or "date"; the caller places them.
+        """
+        start_day = self._safe_day(item.event.start, fallback=arrow.now())
+        end_day = self._safe_day(item.event.end, fallback=start_day)
+        show_icon = bool(config.timeline_duration_icon_visible) and bool(
+            item.event.icon
+        )
+        cells: list[tuple[int, int, str, str]] = []
+        if show_icon:
+            cells.append((0, 0, "icon", str(item.event.icon)))
+        cells.append(
+            (0, 1, "date", format_arrow_date(start_day, config.timeline_date_format))
+        )
+        cells.append((1, 0, "name", item.event.task_name or "(untitled duration)"))
+        notes = (item.event.notes or "").strip()
+        if notes and config.include_notes:
+            cells.append((1, 1, "notes", notes))
+        if item.text_overflow:
+            cells.append((2, 0, "overflow", config.overflow_indicator_icon))
+        cells.append(
+            (2, 1, "date", format_arrow_date(end_day, config.timeline_date_format))
+        )
+        return cells
+
+    def _draw_duration_contents(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        bar_x: float,
+        bar_y: float,
+        bar_w: float,
         bar_h: float,
-        baseline_y: float,
-        title: str,
-        font_name: str,
-        font_size: float,
-        color: str,
-        opacity: float,
+        _sr: StyleResult,
     ) -> None:
-        """Fill a bar too narrow for its text with the overflow icon and the
-        whole name, condensed to fit.
+        """Fill a horizontal duration bar's three columns of two rows.
 
-        The bar's width is its date span and cannot be traded for room, so
-        the name is squeezed horizontally rather than cut: half a name reads
-        as a different activity, while a narrow one is still the activity
-        the reader is looking for.  The theme's ``icon:overflow`` glyph (the
-        one the weekly view puts on a day whose events did not fit) says
-        that the notes and the in-bar dates were dropped to make the room.
-
-        Past ``_OVERFLOW_TEXT_MIN_SCALE`` the glyphs collapse into each
-        other and condensing stops buying anything, so a bar that narrow
-        carries the icon alone — and one too narrow even for that, nothing.
+        The same grid a callout box uses, with a third column: icon over
+        start date, name over notes, overflow mark over end date.  Nothing
+        here resizes the bar — its edges are its dates — so text that wants
+        more than its cell is compressed into it, and the overflow mark in
+        the third column says that it was.
         """
         pad = _DURATION_DATE_PAD_X
-        avail = (item.end_x - item.start_x) - 2.0 * pad
-        if avail <= 0:
+        inner_x = bar_x + pad
+        inner_y = bar_y
+        inner_w = max(1.0, bar_w - 2.0 * pad)
+        inner_h = max(1.0, bar_h)
+        columns = self._duration_cell_layout(config, inner_w)
+        col_x = tuple(inner_x + off for off, _w in columns)
+        col_w = tuple(w for _off, w in columns)
+        side_w = col_w[0]
+        row_h = inner_h / 2.0
+
+        if side_w < _DURATION_ICON_MIN_SIZE:
+            # Too narrow for columns at all: a name compressed into a cell
+            # this small is a smear that names nothing, so the bar carries
+            # the mark alone — which is the one thing still legible.
+            self._draw_duration_bare_mark(
+                config, item, inner_x + inner_w / 2.0, inner_y + inner_h / 2.0,
+                min(inner_w, inner_h * 0.8),
+            )
             return
 
-        # Same resolution the weekly day-number row uses: `overflow.icon`
-        # names the glyph, the `icon:overflow` token paints it.
-        _is_of = config.get_icon_style("ec-overflow-icon")
-        tk_overflow = self._tk("icon:overflow")
-        icon_name = config.overflow_indicator_icon
-        icon_color = (
-            tk_overflow.get("color")
-            or _is_of.color
-            or config.overflow_indicator_color
-        )
-        # The icon carries more than any two surviving letters would, so it
-        # gets first call on the width and shrinks to take it.  Below
-        # `_OVERFLOW_ICON_MIN_SIZE` it is a smudge, and the bar is left bare.
-        icon_size = min(font_size, bar_h * 0.8, avail)
-        icon_drawn = False
-        if icon_size >= _OVERFLOW_ICON_MIN_SIZE:
-            icon_drawn = self._draw_icon_svg(
-                icon_name,
-                item.start_x + pad,
-                baseline_y,
-                icon_size,
-                anchor="start",
-                color=icon_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=icon_color,
-                css_class="ec-overflow-icon",
-                box_token="box:overflow",
-                box_ctx=self._event_ctx(item.event),
+        title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
+        size_for = {
+            "name": title_size,
+            "notes": notes_size,
+            "date": date_size,
+            "icon": title_size,
+            "overflow": title_size,
+        }
+        fonts = self._duration_text_fonts(config, _sr)
+
+        for col, row, kind, text in self._duration_cells(config, item):
+            cell_x, cell_w = col_x[col], col_w[col]
+            cell_y = inner_y + row * row_h
+            if cell_w <= 0.5 or not text:
+                continue
+            if kind in ("icon", "overflow"):
+                self._draw_duration_cell_icon(
+                    config, item, kind, text, _sr,
+                    cell_x + cell_w / 2.0,
+                    cell_y + row_h / 2.0,
+                    min(cell_w, row_h),
+                    fonts["text_color"],
+                )
+                continue
+            self._draw_duration_cell_text(
+                kind, text, fonts, size_for[kind],
+                cell_x, cell_y, cell_w, row_h, col,
+                align=("start", "middle", "end")[col],
             )
 
-        text_x = item.start_x + pad + ((icon_size + 2.0) if icon_drawn else 0.0)
-        text_w = item.end_x - pad - text_x
-        if not self._overflow_name_fits(title, text_w, font_name, font_size):
+    def _draw_duration_bare_mark(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        cx: float,
+        cy: float,
+        size: float,
+    ) -> None:
+        """The overflow mark alone, centred, for a bar with no room to grid.
+
+        Nothing else is drawn: at these widths every cell is narrower than
+        the ink it would carry, and a mark that says "there is more here" is
+        worth more than three unreadable ones.
+        """
+        if not item.text_overflow:
             return
-        self._draw_text(
-            text_x,
-            baseline_y,
-            title,
-            font_name,
-            font_size,
-            fill=color,
-            fill_opacity=opacity,
-            anchor="start",
-            max_width=text_w,
-            css_class="ec-event-name",
+        self._draw_duration_cell_icon(
+            config, item, "overflow", config.overflow_indicator_icon,
+            item.style or StyleResult(), cx, cy, size, "black",
         )
 
-    def _draw_duration_overflow_label_vertical(
+    def _draw_duration_cell_icon(
+        self,
+        config: "CalendarConfig",
+        item: TimelineDuration,
+        kind: str,
+        icon_name: str,
+        _sr: StyleResult,
+        cx: float,
+        cy: float,
+        size: float,
+        text_color: str,
+        transform: str | None = None,
+    ) -> None:
+        """Draw one of a duration bar's two icon cells, centred in it."""
+        if size < _DURATION_ICON_MIN_SIZE:
+            return
+        if kind == "overflow":
+            _is_of = config.get_icon_style("ec-overflow-icon")
+            color = (
+                self._tk("icon:overflow").get("color")
+                or _is_of.color
+                or config.overflow_indicator_color
+            )
+            css_class, box_token = "ec-overflow-icon", "box:overflow"
+        else:
+            icon_name = _sr.icon if _sr.icon is not None else icon_name
+            color = _sr.icon_color or text_color
+            css_class, box_token = "ec-duration-icon", "box:duration"
+        self._draw_icon_svg(
+            icon_name,
+            cx,
+            self._icon_baseline(cy, size),
+            size,
+            anchor="middle",
+            color=color,
+            fallback_name=config.default_missing_icon,
+            fallback_size=config.default_missing_icon_size,
+            fallback_color=color,
+            transform=transform,
+            css_class=css_class,
+            box_token=box_token,
+            box_ctx=self._event_ctx(item.event),
+        )
+
+    def _draw_duration_cell_text(
+        self,
+        kind: str,
+        text: str,
+        fonts: dict,
+        size: float,
+        cell_x: float,
+        cell_y: float,
+        cell_w: float,
+        cell_h: float,
+        col: int,
+        align: str,
+        transform: str | None = None,
+    ) -> None:
+        """Draw one of a duration bar's text cells, compressed to fit it.
+
+        The side columns hang their dates off the bar's own ends — start
+        date flush against the start, end date against the end — and the
+        middle column centres the name and notes, so a row of bars reads as
+        a column of dates with the names between them.  ``align`` says which
+        edge of the cell to hang this one from; the two layouts disagree
+        about which that is, because a rotated line runs the other way.
+        """
+        font, color, opacity, css_class = {
+            "name": (fonts["name_font"], fonts["name_color"],
+                     fonts["name_opacity"], "ec-event-name"),
+            "notes": (fonts["notes_font"], fonts["notes_color"],
+                      fonts["notes_opacity"], "ec-event-notes"),
+        }.get(
+            kind,
+            (
+                fonts["start_font"] if col == 0 else fonts["end_font"],
+                fonts["start_color"] if col == 0 else fonts["end_color"],
+                1.0,
+                "ec-duration-date",
+            ),
+        )
+        font_path = self._safe_font_path(font)
+        fitted = self._cell_font_size(cell_h, font_path, size)
+        x = {
+            "start": cell_x,
+            "end": cell_x + cell_w,
+        }.get(align, cell_x + cell_w / 2.0)
+        anchor = align if align in ("start", "end") else "middle"
+        self._draw_text(
+            x,
+            self._cell_baseline(cell_y, cell_h, font_path, fitted),
+            text,
+            font,
+            fitted,
+            fill=color,
+            fill_opacity=opacity,
+            anchor=anchor,
+            max_width=cell_w,
+            transform=transform,
+            css_class=css_class,
+        )
+
+    def _draw_duration_contents_vertical(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
@@ -2370,79 +2293,75 @@ class TimelineRenderer(BaseSVGRenderer):
         bar_y: float,
         bar_thickness: float,
         bar_h: float,
-        title: str,
-        font_name: str,
-        font_size: float,
-        color: str,
-        opacity: float,
+        _sr: StyleResult,
     ) -> None:
-        """The vertical twin of :py:meth:`_draw_duration_overflow_label`.
+        """:py:meth:`_draw_duration_contents` turned on its side.
 
-        The rotated label reads bottom→top, so the icon sits at the bar's
-        bottom end and the condensed name runs up away from it — the same
-        order the eye meets them in on a horizontal bar.  Condensing acts
-        along the bar's own axis, which the rotation has already made the
-        text's x.  The icon itself is drawn upright: an indicator turned on
-        its side reads as a different glyph.
+        The same three columns of two rows: the columns run along the axis
+        (start date at the top, end date at the bottom, name between) and
+        the rows across the bar's thickness.  Text is rotated to read
+        bottom→top with the bar; the icons stay upright, since an indicator
+        on its side reads as a different glyph.
         """
         pad = _DURATION_DATE_PAD_X
-        avail = bar_h - 2.0 * pad
-        if avail <= 0:
+        inner_len = max(1.0, bar_h - 2.0 * pad)
+        columns = self._duration_cell_layout(config, inner_len)
+        # Along the axis, measured from the bar's top edge.
+        col_start = tuple(pad + off for off, _w in columns)
+        col_len = tuple(w for _off, w in columns)
+        side_w = col_len[0]
+        row_h = max(1.0, bar_thickness) / 2.0
+
+        if side_w < _DURATION_ICON_MIN_SIZE:
+            self._draw_duration_bare_mark(
+                config, item, bar_x + bar_thickness / 2.0, bar_y + bar_h / 2.0,
+                min(inner_len, bar_thickness * 0.8),
+            )
             return
 
-        # Same resolution the weekly day-number row uses: `overflow.icon`
-        # names the glyph, the `icon:overflow` token paints it.
-        _is_of = config.get_icon_style("ec-overflow-icon")
-        tk_overflow = self._tk("icon:overflow")
-        icon_name = config.overflow_indicator_icon
-        icon_color = (
-            tk_overflow.get("color")
-            or _is_of.color
-            or config.overflow_indicator_color
-        )
+        title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
+        size_for = {
+            "name": title_size,
+            "notes": notes_size,
+            "date": date_size,
+            "icon": title_size,
+            "overflow": title_size,
+        }
+        fonts = self._duration_text_fonts(config, _sr)
+
         cx = bar_x + bar_thickness / 2.0
         cy = bar_y + bar_h / 2.0
-        icon_size = min(font_size, bar_thickness * 0.8, avail)
-        icon_drawn = False
-        if icon_size >= _OVERFLOW_ICON_MIN_SIZE:
-            icon_drawn = self._draw_icon_svg(
-                icon_name,
-                cx,
-                bar_y + bar_h - pad,
-                icon_size,
-                anchor="middle",
-                color=icon_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=icon_color,
-                css_class="ec-overflow-icon",
-                box_token="box:overflow",
-                box_ctx=self._event_ctx(item.event),
-            )
+        rot = f"rotate(-90 {cx:.4f} {cy:.4f})"
 
-        # Text runs from just above the icon to the bar's far end.  Under
-        # rotate(-90) a pre-rotation offset of +dx from the centre lands at
-        # -dx along y, so anchoring at the region's bottom and drawing
-        # "start" sends the name upward.
-        text_bottom_y = bar_y + bar_h - pad - (
-            (icon_size + 2.0) if icon_drawn else 0.0
-        )
-        text_w = text_bottom_y - (bar_y + pad)
-        if not self._overflow_name_fits(title, text_w, font_name, font_size):
-            return
-        self._draw_text(
-            cx + (cy - text_bottom_y),
-            cy,
-            title,
-            font_name,
-            font_size,
-            fill=color,
-            fill_opacity=opacity,
-            anchor="start",
-            max_width=text_w,
-            transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
-            css_class="ec-event-name",
-        )
+        for col, row, kind, text in self._duration_cells(config, item):
+            length, along0 = col_len[col], bar_y + col_start[col]
+            if length <= 0.5 or not text:
+                continue
+            # rotate(-90) maps a pre-rotation +dx onto -dx in y, so a cell
+            # that starts `along0` down the bar is laid out that far to the
+            # right of the rotation centre, and its row offsets the other way.
+            row_center = bar_x + (row + 0.5) * row_h
+            if kind in ("icon", "overflow"):
+                self._draw_duration_cell_icon(
+                    config, item, kind, text, _sr,
+                    row_center,
+                    along0 + length / 2.0,
+                    min(length, row_h),
+                    fonts["text_color"],
+                )
+                continue
+            # Pre-rotation x runs along the axis but backwards: rotate(-90)
+            # sends +x upward, so a cell's low-x edge is its *bottom*.  The
+            # start date therefore hangs from the high-x edge ("end") to sit
+            # flush against the bar's top, and the end date from the low one.
+            cell_pre_x = cx + (cy - (along0 + length))
+            cell_pre_y = cy - (cx - (row_center - row_h / 2.0))
+            self._draw_duration_cell_text(
+                kind, text, fonts, size_for[kind],
+                cell_pre_x, cell_pre_y, length, row_h, col,
+                align=("end", "middle", "start")[col],
+                transform=rot,
+            )
 
     def _draw_duration_connectors_vertical(
         self,
@@ -2613,217 +2532,8 @@ class TimelineRenderer(BaseSVGRenderer):
                     css_class="ec-duration-icon",
                 )
 
-        # Title + notes rotated -90° so they read bottom→top inside the bar.
-        _dur_name_style = config.get_text_style("ec-event-name")
-        _dur_notes_style = config.get_text_style("ec-event-notes")
-        tk_dur_name = self._tk("text:event_name")
-        tk_dur_notes = self._tk("text:event_notes")
-        dur_name_font_default = (
-            tk_dur_name.get("font")
-            or config.timeline_name_text_font_name
-            or _dur_name_style.font
-        )
-        dur_notes_font_default = (
-            tk_dur_notes.get("font")
-            or config.timeline_notes_text_font_name
-            or _dur_notes_style.font
-        )
-        title_font_path = self._safe_font_path(dur_name_font_default)
-        notes_font_path = self._safe_font_path(dur_notes_font_default)
-        # Available "width" for the rotated text is the bar's along-axis
-        # length, less the two dates that now sit inside its ends.
-        start_label = format_arrow_date(start_day, config.timeline_date_format)
-        end_label = format_arrow_date(end_day, config.timeline_date_format)
-        date_font_path = self._safe_font_path(
-            config.get_text_style("ec-duration-date").font
-            or config.timeline_duration_date_font
-            or self._tk("text:duration_date").get("font")
-            or config.timeline_date_font
-        )
-        dates_w = self._duration_dates_width(
-            start_label, end_label, date_font_path, date_size
-        )
-        text_w = max(10.0, bar_h - 6.0 - dates_w)
-        fitted_title, fitted_notes = self._fit_box_text_sizes(
-            title,
-            notes,
-            text_w,
-            bar_thickness,
-            title_font_path,
-            notes_font_path,
-            title_size,
-            notes_size,
-        )
-        duration_text_color = (
-            tk_dur_name.get("color")
-            or config.timeline_name_text_font_color
-            or _dur_name_style.color
-            or item.color
-        )
-        title_font, _, name_color, name_opacity = _sr.text_override(
-            "duration_name",
-            font=dur_name_font_default,
-            color=duration_text_color,
-            opacity=_dur_name_style.opacity,
-        )
-
-        if item.text_overflow:
-            # Same bargain as the horizontal bar: the bar's length is its
-            # date span, so the label gives way rather than the geometry.
-            self._draw_duration_overflow_label_vertical(
-                config,
-                item,
-                bar_x,
-                bar_y,
-                bar_thickness,
-                bar_h,
-                title,
-                title_font,
-                title_size,
-                name_color,
-                name_opacity,
-            )
-            return
-
-        has_notes = bool(notes and config.include_notes)
-        line1_h = fitted_title * 1.2
-        line2_h = (fitted_notes * 1.2) if has_notes else 0.0
-        text_block_h = line1_h + line2_h
-        # Anchor the rotation around the bar's center; pre-rotation the text
-        # is laid out horizontally centered at (cx, cy) and rotate(-90)
-        # turns it into a vertical run reading bottom→top.
-        cx = bar_x + bar_thickness / 2.0
-        cy = bar_y + bar_h / 2.0
-        # Title baseline (pre-rotation) sits above center by half text_block;
-        # adjust so the title line ends up on the +y side after rotation
-        # (i.e. closer to the bar's start_y / top edge).
-        title_pre_y = cy + (bar_thickness / 2.0) - max(0.0, (bar_thickness - text_block_h) / 2.0) - line2_h - (fitted_title * 0.15)
-        rot = f"rotate(-90 {cx:.4f} {cy:.4f})"
-
-        # The event's own icon leads the name, as it does on a horizontal
-        # bar — which here means below it, where the rotated line starts
-        # reading.  The icon itself stays upright.  A pre-rotation offset of
-        # +dx along x comes out as -dx along y, so shifting the name's x by
-        # half the icon's claim slides it up the bar by that much.
-        show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
-        icon_claim = 0.0
-        if show_icon:
-            icon_size = min(fitted_title, bar_thickness * 0.8)
-            title_w = string_width(title, title_font_path, fitted_title)
-            gap = 2.0
-            group_h = min(text_w, icon_size + gap + title_w)
-            icon_center_y = cy + (group_h / 2.0) - (icon_size / 2.0)
-            dur_icon = _sr.icon if _sr.icon is not None else item.event.icon
-            dur_icon_color = _sr.icon_color or duration_text_color
-            if self._draw_icon_svg(
-                dur_icon,
-                cx,
-                self._icon_baseline(icon_center_y, icon_size),
-                icon_size,
-                anchor="middle",
-                color=dur_icon_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=dur_icon_color,
-                css_class="ec-duration-icon",
-                box_token="box:duration",
-                box_ctx=self._event_ctx(item.event),
-            ):
-                icon_claim = icon_size + gap
-
-        self._draw_text(
-            cx + icon_claim / 2.0,
-            title_pre_y,
-            title,
-            title_font,
-            fitted_title,
-            fill=name_color,
-            fill_opacity=name_opacity,
-            anchor="middle",
-            max_width=max(8.0, text_w - icon_claim),
-            transform=rot,
-            css_class="ec-event-name",
-        )
-        if has_notes:
-            notes_color_base = (
-                tk_dur_notes.get("color")
-                or config.timeline_notes_text_font_color
-                or _dur_notes_style.color
-                or duration_text_color
-            )
-            notes_font, _, notes_color, notes_opacity = _sr.text_override(
-                "duration_notes",
-                font=dur_notes_font_default,
-                color=notes_color_base,
-                opacity=_dur_notes_style.opacity,
-            )
-            notes_pre_y = title_pre_y + line1_h
-            self._draw_text(
-                cx + icon_claim / 2.0,
-                notes_pre_y,
-                notes,
-                notes_font,
-                fitted_notes,
-                fill=notes_color,
-                fill_opacity=notes_opacity,
-                anchor="middle",
-                max_width=max(8.0, text_w - icon_claim),
-                transform=rot,
-                css_class="ec-event-notes",
-            )
-
-        # Date labels above the bar's start edge and below its end edge,
-        # placed at the bar's horizontal center.
-        _dur_date_style = config.get_text_style("ec-duration-date")
-        tk_dur_date = self._tk("text:duration_date")
-        date_font_base = (
-            _dur_date_style.font
-            or config.timeline_duration_date_font
-            or tk_dur_date.get("font")
-            or config.timeline_date_font
-        )
-        date_color_base = (
-            _dur_date_style.color
-            or config.timeline_duration_date_color
-            or tk_dur_date.get("color")
-            or duration_text_color
-        )
-        start_date_font, _, start_date_color, _ = _sr.text_override(
-            "duration_start_date",
-            font=date_font_base,
-            color=date_color_base,
-        )
-        end_date_font, _, end_date_color, _ = _sr.text_override(
-            "duration_end_date",
-            font=date_font_base,
-            color=date_color_base,
-        )
-        # Inside the bar's two along-axis ends, rotated with the label.
-        # rotate(-90 cx cy) maps a pre-rotation offset of +dx along x onto
-        # -dx along y, so the start date is laid out to the right of centre
-        # to come out at the bar's top.
-        half = (bar_h / 2.0) - _DURATION_DATE_PAD_X
-        self._draw_text(
-            cx + half,
-            cy,
-            start_label,
-            start_date_font,
-            date_size,
-            fill=start_date_color,
-            anchor="end",
-            transform=rot,
-            css_class="ec-duration-date",
-        )
-        self._draw_text(
-            cx - half,
-            cy,
-            end_label,
-            end_date_font,
-            date_size,
-            fill=end_date_color,
-            anchor="start",
-            transform=rot,
-            css_class="ec-duration-date",
+        self._draw_duration_contents_vertical(
+            config, item, bar_x, bar_y, bar_thickness, bar_h, _sr
         )
 
     def _draw_timeline_marker(
