@@ -130,8 +130,9 @@ class TimelineDuration:
     # True when the bar is narrower than `min_width`, i.e. than its own text
     # needs.  Horizontal bars are never widened past their dates to make room
     # — both edges belong to the calendar — so the drawer answers this by
-    # replacing the full name / notes / dates block with the overflow icon and
-    # the name condensed to fit.
+    # breaking the name across the middle column's two rows, dropping the
+    # notes that row would otherwise carry, and condensing every cell of the
+    # bar by one shared factor.
     text_overflow: bool = False
 
 
@@ -155,7 +156,7 @@ class TimelineRenderer(BaseSVGRenderer):
         "text:event_name", "text:event_notes", "text:event_date",
         "text:duration_date", "text:label", "text:today_label",
         "line:axis", "line:today", "line:tick", "line:duration_bar",
-        "icon:event", "icon:milestone", "icon:overflow",
+        "icon:event", "icon:milestone",
     )
 
     #: Outermost ink drawn beside a vertical axis — tick dates, holiday
@@ -210,8 +211,8 @@ class TimelineRenderer(BaseSVGRenderer):
         ticks/timebands, and finally the today marker.  Returns
         ``(0, [])`` — the timeline emits no overflow *page*; density is
         labella's problem, not pagination's.  (A duration bar too narrow
-        for its name still carries the overflow *icon* — see
-        :py:meth:`_draw_duration_overflow_label`.)
+        for its name breaks the name over two rows instead — see
+        :py:meth:`_duration_cells`.)
         """
         area_x, area_y, area_w, area_h = coordinates.get(
             "TimelineArea", (0.0, 0.0, config.pageX, config.pageY)
@@ -1075,7 +1076,7 @@ class TimelineRenderer(BaseSVGRenderer):
         alignment that lets a reader compare bars against the axis and
         against each other.  A bar too narrow for its own text is flagged
         ``text_overflow`` rather than widened; `_draw_duration` answers
-        that with the overflow icon and the name condensed to fit.
+        that by breaking the name over two rows and condensing the bar.
 
         Chronologically sorted bars pack greedily into the first lane
         whose previous bar ends at least ``min_gap`` px earlier.  Bars
@@ -1186,8 +1187,8 @@ class TimelineRenderer(BaseSVGRenderer):
         horizontal layout.  The per-bar `min_width` field carries the
         *along-axis* length the label would need; a bar shorter than that
         is flagged ``text_overflow`` rather than stretched, and
-        `_draw_duration_vertical` answers with the overflow icon and the
-        name condensed to fit.
+        `_draw_duration_vertical` answers by breaking the name over two
+        rows and condensing the bar.
 
         Lanes stack perpendicularly away from the axis (each new
         overlapping bar sits further out).
@@ -1897,7 +1898,7 @@ class TimelineRenderer(BaseSVGRenderer):
         demands is larger once divided by its column's share.  A theme that
         sets ``timeline_durations.box_width`` names this outright.  Bars are
         never grown to it — their edges are their dates — so it only decides
-        which of them carry the overflow mark.
+        which of them break their name over two rows and condense.
         """
         configured = (
             float(config.timeline_duration_box_width)
@@ -2058,18 +2059,49 @@ class TimelineRenderer(BaseSVGRenderer):
             "text_color": text_color,
         }
 
+    @staticmethod
+    def _split_name_two_lines(
+        name: str, font_path: str | None, size: float
+    ) -> tuple[str, str]:
+        """Break a name at the word boundary that balances the two lines.
+
+        "Balanced" means the narrower of the two widest lines, since that
+        is what the bar has to condense to fit — splitting at the middle
+        *word* leaves one line long whenever the words are uneven.  A name
+        with no boundary to break at comes back as one line; half a word on
+        each row reads as neither.
+        """
+        words = name.split()
+        if len(words) < 2:
+            return name, ""
+        best_widest, best_at = None, 1
+        for at in range(1, len(words)):
+            widest = max(
+                string_width(" ".join(words[:at]), font_path, size),
+                string_width(" ".join(words[at:]), font_path, size),
+            )
+            if best_widest is None or widest < best_widest:
+                best_widest, best_at = widest, at
+        return " ".join(words[:best_at]), " ".join(words[best_at:])
+
     def _duration_cells(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
+        fonts: dict,
+        title_size: float,
     ) -> list[tuple[int, int, str, str]]:
         """What goes in each cell of a duration bar, as (col, row, kind, text).
 
         Three columns of two rows, the callout box's grid with one column
         more: the event's icon over its start date, the name over the
-        notes, and — when the bar could not hold all of that at full size —
-        the overflow icon over the end date.  ``kind`` is "icon",
-        "overflow", "name", "notes" or "date"; the caller places them.
+        notes, and the end date under a cell left empty.  ``kind`` is
+        "icon", "name", "notes" or "date"; the caller places them.
+
+        A bar too narrow for all of that at full size (``text_overflow``)
+        spends the middle column's second row on the *rest of the name*
+        rather than the notes: two condensed lines saying what the activity
+        is beat one line of it above a description neither has room for.
         """
         start_day = self._safe_day(item.event.start, fallback=arrow.now())
         end_day = self._safe_day(item.event.end, fallback=start_day)
@@ -2082,16 +2114,98 @@ class TimelineRenderer(BaseSVGRenderer):
         cells.append(
             (0, 1, "date", format_arrow_date(start_day, config.timeline_date_format))
         )
-        cells.append((1, 0, "name", item.event.task_name or "(untitled duration)"))
-        notes = (item.event.notes or "").strip()
-        if notes and config.include_notes:
-            cells.append((1, 1, "notes", notes))
+        name = item.event.task_name or "(untitled duration)"
         if item.text_overflow:
-            cells.append((2, 0, "overflow", config.overflow_indicator_icon))
+            first, second = self._split_name_two_lines(
+                name, self._safe_font_path(fonts["name_font"]), title_size
+            )
+            cells.append((1, 0, "name", first))
+            if second:
+                cells.append((1, 1, "name", second))
+        else:
+            cells.append((1, 0, "name", name))
+            notes = (item.event.notes or "").strip()
+            if notes and config.include_notes:
+                cells.append((1, 1, "notes", notes))
         cells.append(
             (2, 1, "date", format_arrow_date(end_day, config.timeline_date_format))
         )
         return cells
+
+    @staticmethod
+    def _duration_cell_style(
+        kind: str, fonts: dict, col: int
+    ) -> tuple[str, str, float, str]:
+        """Font, color, opacity and CSS class for one duration text cell.
+
+        Both lines of a broken name are drawn in the name's own style even
+        though the second sits in the notes' row — they are one piece of
+        text, and switching font halfway down reads as two.
+        """
+        return {
+            "name": (fonts["name_font"], fonts["name_color"],
+                     fonts["name_opacity"], "ec-event-name"),
+            "notes": (fonts["notes_font"], fonts["notes_color"],
+                      fonts["notes_opacity"], "ec-event-notes"),
+        }.get(
+            kind,
+            (
+                fonts["start_font"] if col == 0 else fonts["end_font"],
+                fonts["start_color"] if col == 0 else fonts["end_color"],
+                1.0,
+                "ec-duration-date",
+            ),
+        )
+
+    def _duration_squeeze(
+        self,
+        cells: list[tuple[int, int, str, str]],
+        col_w: tuple[float, ...],
+        row_h: float,
+        fonts: dict,
+        size_for: dict,
+    ) -> float:
+        """The one horizontal condense factor every cell of a bar shares.
+
+        A bar is never widened to its text, so text wider than its cell is
+        condensed into it.  Doing that per cell squashed each line by its
+        own slack, and a name at 40% beside a date at 95% read as two
+        unrelated bits of type sharing a rectangle.  The tightest cell sets
+        the factor and everything in the bar — the other lines, the dates,
+        the icon — is drawn at it.  ``1.0`` when nothing overflows.
+        """
+        squeeze = 1.0
+        for col, _row, kind, text in cells:
+            cell_w = col_w[col]
+            # Icons are drawn at min(cell_w, row_h) and so never overflow;
+            # they take the factor without having a say in it.
+            if cell_w <= 0.5 or not text or kind == "icon":
+                continue
+            font, _color, _opacity, _css = self._duration_cell_style(kind, fonts, col)
+            font_path = self._safe_font_path(font)
+            fitted = self._cell_font_size(row_h, font_path, size_for[kind])
+            measured = string_width(text, font_path, fitted)
+            if measured > 0:
+                squeeze = min(squeeze, cell_w / measured)
+        return min(1.0, squeeze)
+
+    @staticmethod
+    def _squeeze_transform(
+        squeeze: float, cx: float, cy: float, axis: str = "x"
+    ) -> str | None:
+        """Condense about ``(cx, cy)`` along ``axis``; None at full width.
+
+        ``axis`` is the direction the bar's text runs in: "x" beside a
+        horizontal axis, "y" beside a vertical one, where the rows are
+        turned on their side with the bar.
+        """
+        if squeeze >= 1.0:
+            return None
+        sx, sy = (squeeze, 1.0) if axis == "x" else (1.0, squeeze)
+        return (
+            f"translate({cx:.4f} {cy:.4f}) scale({sx:.6f} {sy:.6f}) "
+            f"translate({-cx:.4f} {-cy:.4f})"
+        )
 
     def _draw_duration_contents(
         self,
@@ -2106,10 +2220,12 @@ class TimelineRenderer(BaseSVGRenderer):
         """Fill a horizontal duration bar's three columns of two rows.
 
         The same grid a callout box uses, with a third column: icon over
-        start date, name over notes, overflow mark over end date.  Nothing
-        here resizes the bar — its edges are its dates — so text that wants
-        more than its cell is compressed into it, and the overflow mark in
-        the third column says that it was.
+        start date, name over notes, end date at the far end.  Nothing here
+        resizes the bar — its edges are its dates — so a bar too narrow for
+        all of that breaks its name over both rows of the middle column
+        (:py:meth:`_duration_cells`) and everything in the bar is condensed
+        by the one factor the tightest cell needs
+        (:py:meth:`_duration_squeeze`).
         """
         pad = _DURATION_DATE_PAD_X
         inner_x = bar_x + pad
@@ -2123,71 +2239,41 @@ class TimelineRenderer(BaseSVGRenderer):
         row_h = inner_h / 2.0
 
         if side_w < _DURATION_ICON_MIN_SIZE:
-            # Too narrow for columns at all: a name compressed into a cell
-            # this small is a smear that names nothing, so the bar carries
-            # the mark alone — which is the one thing still legible.
-            self._draw_duration_bare_mark(
-                config, item, inner_x + inner_w / 2.0, inner_y + inner_h / 2.0,
-                min(inner_w, inner_h * 0.8),
-            )
+            # Too narrow for columns at all: every cell would be narrower
+            # than the ink it carries, and a name condensed into one that
+            # small is a smear that names nothing.  The bar rect alone.
             return
 
         title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
-        size_for = {
-            "name": title_size,
-            "notes": notes_size,
-            "date": date_size,
-            "icon": title_size,
-            "overflow": title_size,
-        }
+        size_for = {"name": title_size, "notes": notes_size, "date": date_size}
         fonts = self._duration_text_fonts(config, _sr)
+        cells = self._duration_cells(config, item, fonts, title_size)
+        squeeze = self._duration_squeeze(cells, col_w, row_h, fonts, size_for)
 
-        for col, row, kind, text in self._duration_cells(config, item):
+        for col, row, kind, text in cells:
             cell_x, cell_w = col_x[col], col_w[col]
             cell_y = inner_y + row * row_h
             if cell_w <= 0.5 or not text:
                 continue
-            if kind in ("icon", "overflow"):
+            if kind == "icon":
+                cx, cy = cell_x + cell_w / 2.0, cell_y + row_h / 2.0
                 self._draw_duration_cell_icon(
-                    config, item, kind, text, _sr,
-                    cell_x + cell_w / 2.0,
-                    cell_y + row_h / 2.0,
-                    min(cell_w, row_h),
-                    fonts["text_color"],
+                    config, item, text, _sr,
+                    cx, cy, min(cell_w, row_h), fonts["text_color"],
+                    transform=self._squeeze_transform(squeeze, cx, cy),
                 )
                 continue
             self._draw_duration_cell_text(
                 kind, text, fonts, size_for[kind],
                 cell_x, cell_y, cell_w, row_h, col,
                 align=("start", "middle", "end")[col],
+                squeeze=squeeze,
             )
-
-    def _draw_duration_bare_mark(
-        self,
-        config: "CalendarConfig",
-        item: TimelineDuration,
-        cx: float,
-        cy: float,
-        size: float,
-    ) -> None:
-        """The overflow mark alone, centred, for a bar with no room to grid.
-
-        Nothing else is drawn: at these widths every cell is narrower than
-        the ink it would carry, and a mark that says "there is more here" is
-        worth more than three unreadable ones.
-        """
-        if not item.text_overflow:
-            return
-        self._draw_duration_cell_icon(
-            config, item, "overflow", config.overflow_indicator_icon,
-            item.style or StyleResult(), cx, cy, size, "black",
-        )
 
     def _draw_duration_cell_icon(
         self,
         config: "CalendarConfig",
         item: TimelineDuration,
-        kind: str,
         icon_name: str,
         _sr: StyleResult,
         cx: float,
@@ -2196,21 +2282,16 @@ class TimelineRenderer(BaseSVGRenderer):
         text_color: str,
         transform: str | None = None,
     ) -> None:
-        """Draw one of a duration bar's two icon cells, centred in it."""
+        """Draw a duration bar's event icon, centred in its cell.
+
+        ``transform`` carries the bar's shared condense factor, so the glyph
+        narrows with the text beside it instead of standing at full width in
+        a row of squeezed type.
+        """
         if size < _DURATION_ICON_MIN_SIZE:
             return
-        if kind == "overflow":
-            _is_of = config.get_icon_style("ec-overflow-icon")
-            color = (
-                self._tk("icon:overflow").get("color")
-                or _is_of.color
-                or config.overflow_indicator_color
-            )
-            css_class, box_token = "ec-overflow-icon", "box:overflow"
-        else:
-            icon_name = _sr.icon if _sr.icon is not None else icon_name
-            color = _sr.icon_color or text_color
-            css_class, box_token = "ec-duration-icon", "box:duration"
+        icon_name = _sr.icon if _sr.icon is not None else icon_name
+        color = _sr.icon_color or text_color
         self._draw_icon_svg(
             icon_name,
             cx,
@@ -2222,8 +2303,8 @@ class TimelineRenderer(BaseSVGRenderer):
             fallback_size=config.default_missing_icon_size,
             fallback_color=color,
             transform=transform,
-            css_class=css_class,
-            box_token=box_token,
+            css_class="ec-duration-icon",
+            box_token="box:duration",
             box_ctx=self._event_ctx(item.event),
         )
 
@@ -2240,8 +2321,9 @@ class TimelineRenderer(BaseSVGRenderer):
         col: int,
         align: str,
         transform: str | None = None,
+        squeeze: float = 1.0,
     ) -> None:
-        """Draw one of a duration bar's text cells, compressed to fit it.
+        """Draw one of a duration bar's text cells, condensed to fit it.
 
         The side columns hang their dates off the bar's own ends — start
         date flush against the start, end date against the end — and the
@@ -2249,23 +2331,20 @@ class TimelineRenderer(BaseSVGRenderer):
         a column of dates with the names between them.  ``align`` says which
         edge of the cell to hang this one from; the two layouts disagree
         about which that is, because a rotated line runs the other way.
+
+        ``squeeze`` is the bar's shared condense factor
+        (:py:meth:`_duration_squeeze`): a line is drawn at that fraction of
+        its natural width rather than merely capped at its own cell, so
+        every line in the bar narrows by the same amount.
         """
-        font, color, opacity, css_class = {
-            "name": (fonts["name_font"], fonts["name_color"],
-                     fonts["name_opacity"], "ec-event-name"),
-            "notes": (fonts["notes_font"], fonts["notes_color"],
-                      fonts["notes_opacity"], "ec-event-notes"),
-        }.get(
-            kind,
-            (
-                fonts["start_font"] if col == 0 else fonts["end_font"],
-                fonts["start_color"] if col == 0 else fonts["end_color"],
-                1.0,
-                "ec-duration-date",
-            ),
-        )
+        font, color, opacity, css_class = self._duration_cell_style(kind, fonts, col)
         font_path = self._safe_font_path(font)
         fitted = self._cell_font_size(cell_h, font_path, size)
+        max_width = cell_w
+        if squeeze < 1.0:
+            measured = string_width(text, font_path, fitted)
+            if measured > 0:
+                max_width = measured * squeeze
         x = {
             "start": cell_x,
             "end": cell_x + cell_w,
@@ -2280,7 +2359,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill=color,
             fill_opacity=opacity,
             anchor=anchor,
-            max_width=cell_w,
+            max_width=max_width,
             transform=transform,
             css_class=css_class,
         )
@@ -2301,7 +2380,9 @@ class TimelineRenderer(BaseSVGRenderer):
         (start date at the top, end date at the bottom, name between) and
         the rows across the bar's thickness.  Text is rotated to read
         bottom→top with the bar; the icons stay upright, since an indicator
-        on its side reads as a different glyph.
+        on its side reads as a different glyph.  A bar too short for its
+        text breaks the name across both rows and condenses everything by
+        the one shared factor, exactly as the horizontal layout does.
         """
         pad = _DURATION_DATE_PAD_X
         inner_len = max(1.0, bar_h - 2.0 * pad)
@@ -2313,27 +2394,19 @@ class TimelineRenderer(BaseSVGRenderer):
         row_h = max(1.0, bar_thickness) / 2.0
 
         if side_w < _DURATION_ICON_MIN_SIZE:
-            self._draw_duration_bare_mark(
-                config, item, bar_x + bar_thickness / 2.0, bar_y + bar_h / 2.0,
-                min(inner_len, bar_thickness * 0.8),
-            )
             return
 
         title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
-        size_for = {
-            "name": title_size,
-            "notes": notes_size,
-            "date": date_size,
-            "icon": title_size,
-            "overflow": title_size,
-        }
+        size_for = {"name": title_size, "notes": notes_size, "date": date_size}
         fonts = self._duration_text_fonts(config, _sr)
+        cells = self._duration_cells(config, item, fonts, title_size)
+        squeeze = self._duration_squeeze(cells, col_len, row_h, fonts, size_for)
 
         cx = bar_x + bar_thickness / 2.0
         cy = bar_y + bar_h / 2.0
         rot = f"rotate(-90 {cx:.4f} {cy:.4f})"
 
-        for col, row, kind, text in self._duration_cells(config, item):
+        for col, row, kind, text in cells:
             length, along0 = col_len[col], bar_y + col_start[col]
             if length <= 0.5 or not text:
                 continue
@@ -2341,13 +2414,20 @@ class TimelineRenderer(BaseSVGRenderer):
             # that starts `along0` down the bar is laid out that far to the
             # right of the rotation centre, and its row offsets the other way.
             row_center = bar_x + (row + 0.5) * row_h
-            if kind in ("icon", "overflow"):
+            if kind == "icon":
+                icon_cy = along0 + length / 2.0
                 self._draw_duration_cell_icon(
-                    config, item, kind, text, _sr,
+                    config, item, text, _sr,
                     row_center,
-                    along0 + length / 2.0,
+                    icon_cy,
                     min(length, row_h),
                     fonts["text_color"],
+                    # The rows run down the page here, so the bar condenses
+                    # along y — the icon has to follow the text's axis, not
+                    # the screen's.
+                    transform=self._squeeze_transform(
+                        squeeze, row_center, icon_cy, axis="y"
+                    ),
                 )
                 continue
             # Pre-rotation x runs along the axis but backwards: rotate(-90)
@@ -2361,6 +2441,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 cell_pre_x, cell_pre_y, length, row_h, col,
                 align=("end", "middle", "start")[col],
                 transform=rot,
+                squeeze=squeeze,
             )
 
     def _draw_duration_connectors_vertical(
