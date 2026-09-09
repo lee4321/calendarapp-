@@ -1497,9 +1497,10 @@ def test_a_duration_row_is_just_its_bar(tmp_path):
 # ── The duration bar's three-column grid ──────────────────────────────────
 #
 # The bar carries the callout box's grid with one column more: the event's
-# icon over its start date, the name over the notes, and the overflow mark
-# over the end date. Nothing is resized to its text — a bar's edges are its
-# dates — so text is compressed into its cell and the mark says it was.
+# icon over its start date, the name over the notes, and the end date at the
+# far end. Nothing is resized to its text — a bar's edges are its dates — so
+# a bar too narrow for its text breaks the name over both rows of the middle
+# column and condenses every cell of the bar by one shared factor.
 
 
 def _drawn_duration(tmp_path, name, event, axis_y=300.0):
@@ -1551,8 +1552,11 @@ def test_the_start_date_sits_at_the_left_end_and_the_end_date_at_the_right(tmp_p
 
 
 def test_the_name_is_centred_between_the_two_date_columns(tmp_path):
-    event = Event(task_name="Build", start="20260210", end="20260320")
+    # Wide enough that nothing is condensed — a bar that overflows hands
+    # every cell the same reduced width instead (see the condensing tests).
+    event = Event(task_name="Build", start="20260210", end="20260501")
     config, renderer, bar = _drawn_duration(tmp_path, "in_bar_mid.svg", event)
+    assert not bar.text_overflow
 
     title = [c for c in renderer.text_calls
              if c.get("css_class") == "ec-event-name"][0]
@@ -1750,9 +1754,10 @@ def test_a_vertical_bar_also_marks_only_its_start_date(tmp_path):
 
 # ── Overflowing a bar's grid ──────────────────────────────────────────────
 #
-# A bar cannot be widened — its edges are its dates — so text that wants
-# more than its cell is compressed into it and the third column carries a
-# mark saying so.
+# A bar cannot be widened — its edges are its dates — so a bar too narrow
+# for its text spends the middle column's second row on the rest of the
+# name instead of the notes, and condenses every cell of the bar by the one
+# factor the tightest of them needs.
 
 
 def _overflow_drawn(tmp_path, name, event, config=None, **cfg):
@@ -1770,20 +1775,14 @@ def _names(renderer):
     return [c for c in renderer.text_calls if c.get("css_class") == "ec-event-name"]
 
 
-def test_an_overflowing_bar_marks_its_third_column(tmp_path):
+def test_an_overflowing_bar_draws_no_overflow_icon(tmp_path):
+    """The mark is gone: the two-line name says the same thing, legibly."""
     event = Event(task_name="A name much wider than this bar", start="20260316",
                   end="20260410")
-    config, renderer, bar = _overflow_drawn(tmp_path, "ovl_icon.svg", event)
+    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_icon.svg", event)
     assert bar.text_overflow
-
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-overflow-icon"]
-    assert len(icons) == 1
-    assert icons[0]["icon"] == config.overflow_indicator_icon
-    # Third column, first row: over the end date, at the bar's right end.
-    end_date = _date_texts(renderer)[1]
-    assert icons[0]["x"] > (bar.start_x + bar.end_x) / 2.0
-    assert icons[0]["y"] < end_date["y"]
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-overflow-icon"] == []
 
 
 def test_a_bar_with_room_carries_no_overflow_mark(tmp_path):
@@ -1794,64 +1793,108 @@ def test_a_bar_with_room_carries_no_overflow_mark(tmp_path):
             if c.get("css_class") == "ec-overflow-icon"] == []
 
 
-def test_the_overflow_glyph_comes_from_the_setting_not_the_token(tmp_path):
-    """`icon:overflow` paints the mark; `overflow.icon` names it.
-
-    Every bundled theme's token carries an `icon:` of its own, and reading
-    that instead drew the wrong glyph — weekly has always taken the name
-    from the setting, and the two views have to agree.
-    """
-    from config.styles import IconStyle
-
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260410")
-    config = _base_config(tmp_path / "ovl_token.svg")
-    config.overflow_indicator_icon = "warningtriangle"
-    config.theme_styles = None
-    orig = config.get_icon_style
-    config.get_icon_style = lambda name: (       # type: ignore[method-assign]
-        IconStyle(color="hotpink", icon="some-other-glyph")
-        if name == "ec-overflow-icon" else orig(name)
-    )
-    _config, renderer, _bar = _overflow_drawn(tmp_path, "ovl_token.svg", event,
-                                              config=config)
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-overflow-icon"]
-    assert len(icons) == 1
-    assert icons[0]["icon"] == "warningtriangle"
-    assert icons[0]["color"] == "hotpink"   # ...but the token still paints it
-
-
-def test_an_overflowing_name_is_condensed_whole_not_abbreviated(tmp_path):
-    """Half a name reads as a different activity; a narrow one does not."""
+def test_an_overflowing_name_breaks_over_the_middle_column_two_rows(tmp_path):
+    """Half a name reads as a different activity; two lines of it do not."""
     # Wide enough for the icon and the name, too narrow for all of the name
     # plus the two in-bar dates.
     event = Event(task_name="A name much wider than this bar", start="20260316",
                   end="20260410")
     config, renderer, bar = _overflow_drawn(tmp_path, "ovl_name.svg", event)
+    assert bar.text_overflow
 
     names = _names(renderer)
-    assert len(names) == 1
-    drawn = names[0]
-    assert drawn["text"] == event.task_name       # every word of it
-    assert "…" not in drawn["text"]
+    assert len(names) == 2
+    assert " ".join(n["text"] for n in names) == event.task_name  # every word
+    assert not any("…" in n["text"] for n in names)
+    # Both lines in the middle column, one row above the other.
+    assert names[0]["x"] == pytest.approx(names[1]["x"])
+    assert names[0]["y"] < names[1]["y"]
     # Full font size, squeezed on X into what the bar has left.
     title_size, _n, _d, _bar_h = renderer._duration_metrics(config)
-    assert drawn["size"] == pytest.approx(title_size)
-    assert 0 < drawn["max_width"] <= bar.end_x - bar.start_x
+    assert all(n["size"] == pytest.approx(title_size) for n in names)
+    assert all(0 < n["max_width"] <= bar.end_x - bar.start_x for n in names)
 
 
-def test_an_overflowing_bar_keeps_its_dates_and_notes(tmp_path):
-    """The grid holds; only the room each cell has to work in shrinks."""
+def test_the_two_lines_of_a_broken_name_are_balanced(tmp_path):
+    """Splitting at the middle word leaves one line long and one short."""
+    renderer = TimelineRenderer()
+    font_path = renderer._safe_font_path("Roboto")
+    first, second = renderer._split_name_two_lines(
+        "Integration and acceptance testing", font_path, 10.0
+    )
+    assert (first, second) == ("Integration and", "acceptance testing")
+
+
+def test_a_single_word_name_is_not_broken_in_half(tmp_path):
+    renderer = TimelineRenderer()
+    assert renderer._split_name_two_lines(
+        "Reconciliation", renderer._safe_font_path("Roboto"), 10.0
+    ) == ("Reconciliation", "")
+
+
+def test_an_overflowing_bar_drops_its_notes_for_the_name(tmp_path):
+    """The second row is the rest of the name; the description gives way."""
     event = Event(task_name="A name much wider than this bar", start="20260316",
                   end="20260410", notes="notes that will not fit either")
     _config, renderer, _bar = _overflow_drawn(
         tmp_path, "ovl_dates.svg", event, include_notes=True
     )
-    assert len(_date_texts(renderer)) == 2
+    assert len(_date_texts(renderer)) == 2      # the grid otherwise holds
+    assert [c for c in renderer.text_calls
+            if c.get("css_class") == "ec-event-notes"] == []
+    assert len(_names(renderer)) == 2
+
+
+def test_a_bar_with_room_keeps_its_notes(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260501",
+                  notes="a short note")
+    _config, renderer, bar = _overflow_drawn(
+        tmp_path, "ovl_keep_notes.svg", event, include_notes=True
+    )
+    assert not bar.text_overflow
     notes = [c for c in renderer.text_calls
              if c.get("css_class") == "ec-event-notes"]
-    assert [n["text"] for n in notes] == ["notes that will not fit either"]
+    assert [n["text"] for n in notes] == ["a short note"]
+    assert len(_names(renderer)) == 1
+
+
+def test_everything_in_a_condensed_bar_condenses_by_the_same_factor(tmp_path):
+    """One squashed line beside a full-width date read as two typefaces."""
+    event = Event(task_name="A name much wider than this bar", start="20260316",
+                  end="20260410", icon="rocket")
+    _config, renderer, bar = _overflow_drawn(
+        tmp_path, "ovl_uniform.svg", event, timeline_duration_icon_visible=True
+    )
+    assert bar.text_overflow
+
+    drawn = [c for c in renderer.text_calls
+             if c.get("css_class") in ("ec-event-name", "ec-duration-date")]
+    assert len(drawn) == 4                      # two name lines, two dates
+    factors = [
+        c["max_width"] / string_width(
+            c["text"], renderer._safe_font_path(c["font"]), c["size"]
+        )
+        for c in drawn
+    ]
+    assert max(factors) == pytest.approx(min(factors))
+    assert min(factors) < 1.0                   # it really is condensing
+
+    # ...and the icon narrows with them, on the same axis.
+    icon = [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon"][0]
+    assert f"scale({factors[0]:.6f} 1.000000)" in (icon.get("transform") or "")
+
+
+def test_a_bar_with_room_condenses_nothing(tmp_path):
+    event = Event(task_name="Build", start="20260210", end="20260501",
+                  icon="rocket")
+    _config, renderer, bar = _overflow_drawn(
+        tmp_path, "ovl_uncondensed.svg", event, timeline_duration_icon_visible=True
+    )
+    assert not bar.text_overflow
+    icon = [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon"][0]
+    assert icon.get("transform") is None
 
 
 def test_a_bar_with_room_keeps_its_full_name_and_dates(tmp_path):
@@ -1864,16 +1907,14 @@ def test_a_bar_with_room_keeps_its_full_name_and_dates(tmp_path):
     assert len(_date_texts(renderer)) == 2
 
 
-def test_a_bar_too_narrow_to_grid_carries_the_mark_alone(tmp_path):
-    """Every cell would be narrower than its ink, so only the mark is left."""
+def test_a_bar_too_narrow_to_grid_draws_nothing_inside(tmp_path):
+    """Every cell would be narrower than its ink, so the rect stands alone."""
     event = Event(task_name="A name much wider than this bar", start="20260316",
                   end="20260320")
-    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_bare.svg", event)
+    _config, renderer, _bar = _overflow_drawn(tmp_path, "ovl_bare.svg", event)
 
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-overflow-icon"]
-    assert len(icons) == 1
-    assert icons[0]["x"] == pytest.approx((bar.start_x + bar.end_x) / 2.0)
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-overflow-icon"] == []
     assert _names(renderer) == []
     assert _date_texts(renderer) == []
 
@@ -1989,7 +2030,7 @@ def test_vertical_bars_sharing_a_date_share_an_edge(tmp_path):
     assert short.start_y == pytest.approx(long_.start_y)
 
 
-def test_an_overflowing_vertical_bar_marks_its_third_column(tmp_path):
+def test_an_overflowing_vertical_bar_breaks_its_name_over_two_rows(tmp_path):
     config, renderer, bars = _vertical_bars(
         tmp_path, "v_overflow.svg",
         [Event(task_name="A name much longer than this bar",
@@ -1999,24 +2040,38 @@ def test_an_overflowing_vertical_bar_marks_its_third_column(tmp_path):
     assert bar.text_overflow
     renderer._draw_duration_vertical(config, bar, 200.0)
 
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-overflow-icon"]
-    assert len(icons) == 1
-    # Upright — an indicator turned on its side reads as a different glyph.
-    assert icons[0].get("transform") is None
-    # The third column is the bar's far end, where its end date lives.
-    assert icons[0]["y"] > (bar.start_y + bar.end_y) / 2.0
+    assert [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-overflow-icon"] == []
 
     names = _names(renderer)
-    assert len(names) == 1
-    assert names[0]["text"] == "A name much longer than this bar"
-    assert "rotate(-90" in (names[0].get("transform") or "")
-    # Compressed along the bar's own axis, which the rotation made x.
-    assert 0 < names[0]["max_width"] <= bar.end_y - bar.start_y
+    assert len(names) == 2
+    assert " ".join(n["text"] for n in names) == "A name much longer than this bar"
+    assert all("rotate(-90" in (n.get("transform") or "") for n in names)
+    # Condensed along the bar's own axis, which the rotation made x.
+    assert all(0 < n["max_width"] <= bar.end_y - bar.start_y for n in names)
+    # The two rows run across the bar's thickness, so the lines sit side by
+    # side in pre-rotation y.
+    assert names[0]["y"] != names[1]["y"]
     # The dates keep their cells: the grid holds, only the room shrinks.
     dates = _date_texts(renderer)
     assert len(dates) == 2
     assert all("rotate(-90" in (d.get("transform") or "") for d in dates)
+
+
+def test_a_condensed_vertical_bar_condenses_its_icon_along_the_axis(tmp_path):
+    """The rows run down the page here, so the squeeze is on y, not x."""
+    config, renderer, bars = _vertical_bars(
+        tmp_path, "v_squeeze.svg",
+        [Event(task_name="A name much longer than this bar", icon="rocket",
+               start="20260210", end="20260310")],
+    )
+    config.timeline_duration_icon_visible = True
+    renderer._draw_duration_vertical(config, bars[0], 200.0)
+
+    icon = [c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon"][0]
+    transform = icon.get("transform") or ""
+    assert "scale(1.000000 " in transform
 
 
 def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):

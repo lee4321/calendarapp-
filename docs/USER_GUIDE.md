@@ -589,10 +589,10 @@ In timeline, single-day events and multi-day durations are rendered differently 
 - Event callout colors are assigned in sorted order from `timeline_top_colors`, cycling when there are more events than colors. Duration bar colors are assigned separately from `timeline_bottom_colors`, also cycling in sorted order.
 - Event markers on the main axis are always plain circles; event icons, when present and found in the icon table, appear inside the event callout box next to the title instead of on the axis marker.
 - A callout box is two columns: the event's icon over its **start date** on the leading side (`timeline_events.icon_column_ratio` sets the split, 15% by default), the name over the notes on the other. Both columns are filled whichever way the axis runs.
-- **A duration bar is a three-column grid**, the callout box's two columns with one more: the event's icon over its **start date** on the leading side, the **name over the notes** in the middle, and the **overflow mark over the end date** on the trailing side. The two side columns are the same width — `timeline_durations.icon_column_ratio`, or the callout boxes' `timeline_events.icon_column_ratio` when a theme sets only that — so the dates at the two ends are laid out identically and a row of bars reads as a column of dates with the names between them. A gap either side of the middle column keeps the name and notes off those dates.
+- **A duration bar is a three-column grid**, the callout box's two columns with one more: the event's icon over its **start date** on the leading side, the **name over the notes** in the middle, and the **end date** on the trailing side. The two side columns are the same width — `timeline_durations.icon_column_ratio`, or the callout boxes' `timeline_events.icon_column_ratio` when a theme sets only that — so the dates at the two ends are laid out identically and a row of bars reads as a column of dates with the names between them. A gap either side of the middle column keeps the name and notes off those dates.
 - **Duration bars span exactly their dates.** Each edge sits at the x of the day it names, so every bar starting on a given day shares a left edge and every bar ending on one shares a right edge — bars can be read against the axis and against each other. One vertical leader ties the bar back to the axis, drawn from the start date; a second at the end date would cross every bar stacked between the two edges.
-- **When a bar is too narrow for its text** it is *not* widened — its edges are its dates. The grid holds and each cell compresses what it carries: the name and notes are squeezed horizontally at full font size, keeping every word, and the third column's first row takes the theme's overflow mark (`overflow.icon`, see [Overflow Indicator](#overflow-indicator-global-theme-section)) to say that they were. A bar too narrow to give its side columns 3pt — where every cell would be thinner than the ink it carries — shows that mark alone, centred; under 3pt it shows nothing. `timeline_durations.box_width`, when a theme sets it, is the width the grid is considered to want: it decides which bars carry the mark, and never stretches one.
-- A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date, carries the one start-date leader, and compresses its text rather than stretching. Its grid is the same one turned a quarter-turn — the columns run along the axis (start date at the top, name and notes between, end date and the overflow mark at the bottom) and the rows across the bar's thickness. Text is rotated to read bottom→top with the bar; the icons stay upright, since an indicator on its side reads as a different glyph.
+- **When a bar is too narrow for its text** it is *not* widened — its edges are its dates. The grid holds, and the bar answers in two steps. First it **breaks the name across both rows of the middle column**, at the word boundary that balances the two lines, and **drops the notes** that second row would otherwise carry: two legible lines of what the activity is beat one line of it above a description neither has room for. A single-word name stays on one line. Second, whatever text still wants more than its cell is **condensed horizontally at full font size, keeping every word** — and every cell of the bar is condensed by *the same* factor, the one the tightest of them needs, so the name, both dates and the event icon narrow together rather than each being squashed to its own cell's taste. A bar too narrow to give its side columns 3pt — where every cell would be thinner than the ink it carries — draws nothing inside; the rect alone stands. `timeline_durations.box_width`, when a theme sets it, is the width the grid is considered to want: it decides which bars break and condense, and never stretches one.
+- A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date, carries the one start-date leader, and breaks and condenses its text rather than stretching. Its grid is the same one turned a quarter-turn — the columns run along the axis (start date at the top, name and notes between, end date at the bottom) and the rows across the bar's thickness. Text is rotated to read bottom→top with the bar; the icons stay upright, since an indicator on its side reads as a different glyph, and condense along the axis with the text rather than across it.
 - **The two sides of a vertical axis are spent the way a horizontal one spends above and below**: event callouts take the side `timeline.label_side` names, and the duration bars take the other one. `timeline.duration_side` overrides that — `primary` / `secondary` / `both` pin the bars wherever you want them, including back onto the callouts' side. With `label_side: both` the bars keep splitting across both sides too.
 - Event callout boxes are lane-positioned and horizontally offset to reduce collisions. Their connector lines are routed to avoid other boxes when possible.
 - **Axis ticks and their dates** are drawn in both directions. Each tick crosses the axis at its date; the label is written above a horizontal axis and, on a vertical one, on whichever side the duration bars are not (a bar's first lane starts a few points off the axis, right where a date would land), styled from the same keys either way — `ec-axis-tick` for the mark's color and dasharray, the `text:event_date` token for the label's font and color, `timeline.tick_label_format` for the date format, and `timeline.tick_label_gap` / `tick_label_offset_y` for how far the label sits from the axis. A theme's `timeline.ticks` bands (with their own `tick_length`, `label_format`, `font`, `label_color`, `max_label_count`, …) reach a vertical axis too; without them, month-boundary ticks are the fallback, labelled until there are more than 18. Under `--shrink` the viewBox is widened to keep a vertical axis's labels.
@@ -1424,11 +1424,10 @@ precedence over the global `continuation.*` keys.
 
 #### Overflow Indicator (global theme section)
 
-Some boxes cannot hold what belongs in them: a weekly day with more
-events than it has rows, or a timeline duration bar whose span across
-the axis is narrower than its own name. Rather than shrink or squeeze
-the content, the visualizer draws the **overflow icon** to say that
-something was left out.
+Some boxes cannot hold what belongs in them — a weekly day with more
+events than it has rows, say. Rather than shrink or squeeze the content,
+the visualizer draws the **overflow icon** to say that something was
+left out.
 
 The icon lived under `weekly.overflow` through v9.4; it is now a
 top-level `overflow:` block shared by every visualizer. A theme still
@@ -1459,12 +1458,12 @@ itself, as the bundled themes do.
   or duration could not be placed. Multiple overflows on one day
   produce a single icon, and the day's holiday name is suppressed so
   the icons stay visible.
-- **`timeline`** draws it in the first row of a duration bar's third
-  column — over the end date — whenever the bar had to compress its text
-  to fit (see the timeline rendering section). It sits at the bar's
-  trailing end either way: the right end of a horizontal bar, the bottom
-  of a vertical one, always upright. A bar too narrow for the grid at all
-  carries the mark alone, centred, and one under 3pt carries nothing.
+- **`timeline`** does *not* use it. A duration bar too narrow for its
+  text keeps every word instead: it breaks the name across both rows of
+  its middle column, drops the notes, and condenses every cell of the bar
+  by one shared factor (see the timeline rendering section). The timeline
+  does draw `base.default_missing_icon` — a different glyph — at the end
+  of a leader whose bar found no room on the page at all.
 
 ### Complete Theme Key Reference
 
@@ -1687,8 +1686,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_duration_*_font_size` | `timeline_durations.size_rule` | `` | `` | Per-papersize timeline duration font sizes |
 | `timeline_duration_bar_stroke_dasharray` | `timeline.duration_bar_stroke_dasharray` | `str | None` | `None` | duration bar stroke dasharray |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
-| `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | the width a duration bar's grid is taken to need. A bar is never stretched to it — both bar edges belong to the event's dates — so it only decides which bars carry the overflow mark. `None` derives the width from what each column has to hold: a date in each side column, the wider of the name and notes in the middle |
-| `timeline_duration_icon_column_ratio` | `timeline_durations.icon_column_ratio` | `float | None` | `None` | share of a duration bar given to each of its two side columns (icon over start date; overflow mark over end date). `None` follows `timeline_events.icon_column_ratio`, so bars and callout boxes line up without a theme saying so twice |
+| `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | the width a duration bar's grid is taken to need. A bar is never stretched to it — both bar edges belong to the event's dates — so it only decides which bars break their name over two rows and condense. `None` derives the width from what each column has to hold: a date in each side column, the wider of the name and notes in the middle |
+| `timeline_duration_icon_column_ratio` | `timeline_durations.icon_column_ratio` | `float | None` | `None` | share of a duration bar given to each of its two side columns (icon over start date; end date on the other). `None` follows `timeline_events.icon_column_ratio`, so bars and callout boxes line up without a theme saying so twice |
 | `timeline_duration_bracket_stroke_dasharray` | `timeline.duration_bracket_stroke_dasharray` | `str | None` | `None` | duration bracket stroke dasharray |
 | `timeline_duration_date_color` | `timeline_durations.date_color` | `str | None` | `None` | date color |
 | `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
