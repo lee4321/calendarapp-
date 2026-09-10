@@ -37,7 +37,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import arrow
 
 from renderers.svg_base import BaseSVGRenderer
-from renderers.text_utils import string_width
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import HolidayMark, compute_holiday_band_days
@@ -1427,16 +1426,6 @@ class GanttRenderer(BaseSVGRenderer):
             float(token.get("width") or 0.5),
             float(token.get("opacity") or 0.5),
         )
-
-    def _measure(self, text: str, font: str, size: float) -> float:
-        """Width of *text*, resolving the font name to its registered path."""
-        from config.config import get_font_path
-
-        try:
-            path = get_font_path(font)
-        except KeyError:
-            return len(text) * size * 0.5
-        return string_width(text, path, size)
 
     def _draw_clipped_text(
         self,

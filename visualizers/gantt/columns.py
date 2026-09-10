@@ -9,18 +9,19 @@ come from ``config.gantt_columns`` (themes write ``gantt.columns:``);
 The value pipeline is one pass per cell:
 
     event field → :func:`cell_value` (format / date_format / icon)
-                → :func:`fit_lines`  (wrap to the column width, then
-                                      truncate with an ellipsis)
+                → :func:`renderers.text_utils.fit_lines`  (wrap to the
+                                      column width, then truncate with
+                                      an ellipsis; re-exported here)
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import arrow
 
-from renderers.text_utils import ELLIPSIS
+from renderers.text_utils import ELLIPSIS, fit_lines  # noqa: F401  (re-exported)
 from shared.date_utils import format_arrow_date
 
 if TYPE_CHECKING:
@@ -237,84 +238,3 @@ def _format_date(value: Any, fmt: str) -> str:
         return format_arrow_date(arrow.get(text, "YYYYMMDD"), fmt)
     except (ValueError, arrow.parser.ParserError):
         return text
-
-
-def fit_lines(
-    text: str,
-    width: float,
-    max_lines: int,
-    measure: Callable[[str], float],
-) -> list[str]:
-    """Wrap *text* to *width*, capped at *max_lines* with an ellipsis.
-
-    Wrapping is word-based; a single word wider than the column is broken
-    mid-word rather than allowed to overflow.  The returned list is never
-    longer than *max_lines*, so row height stays uniform (answer 9).
-
-    Args:
-        text: The already-formatted cell value.
-        width: Usable width in the same units *measure* returns.
-        max_lines: Hard cap on returned lines.
-        measure: Width of a candidate string, e.g. a bound
-            :func:`renderers.text_utils.string_width`.
-
-    Returns:
-        The lines to draw, or ``[]`` for empty input.
-    """
-    text = (text or "").strip()
-    if not text or width <= 0 or max_lines <= 0:
-        return []
-
-    lines: list[str] = []
-    remaining_words = text.split()
-
-    while remaining_words and len(lines) < max_lines:
-        is_last_line = len(lines) == max_lines - 1
-        line, remaining_words = _take_line(remaining_words, width, measure)
-
-        if is_last_line and remaining_words:
-            line = _with_ellipsis(line, width, measure)
-
-        lines.append(line)
-
-    return lines
-
-
-def _take_line(
-    words: list[str], width: float, measure: Callable[[str], float]
-) -> tuple[str, list[str]]:
-    """Pack as many words as fit; returns the line and what is left over."""
-    line = ""
-    index = 0
-    for index, word in enumerate(words):
-        candidate = f"{line} {word}".strip()
-        if measure(candidate) <= width:
-            line = candidate
-            continue
-        if not line:
-            # First word does not fit on its own — break it mid-word so a
-            # long unbroken token cannot overflow the column.
-            head, tail = _split_to_fit(word, width, measure)
-            return head, ([tail] if tail else []) + words[index + 1:]
-        return line, words[index:]
-    return line, []
-
-
-def _split_to_fit(
-    word: str, width: float, measure: Callable[[str], float]
-) -> tuple[str, str]:
-    """Split *word* at the last character that still fits."""
-    for cut in range(len(word) - 1, 0, -1):
-        if measure(word[:cut]) <= width:
-            return word[:cut], word[cut:]
-    return word[:1], word[1:]
-
-
-def _with_ellipsis(
-    line: str, width: float, measure: Callable[[str], float]
-) -> str:
-    """Append the ellipsis, dropping characters until it fits."""
-    candidate = line.rstrip()
-    while candidate and measure(candidate + ELLIPSIS) > width:
-        candidate = candidate[:-1].rstrip()
-    return (candidate + ELLIPSIS) if candidate else ELLIPSIS

@@ -629,6 +629,29 @@ In weekly, day-box cells are drawn first, events and durations are placed into t
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
 - Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
 
+#### The overflow page
+
+The icon in the day-number row says *that* something was left out; the
+overflow page says *what*. `--overflow` / `-x` writes
+`<output>_overflow.svg` beside the calendar, listing every event and
+duration that could not be placed:
+
+| Column | Holds |
+|---|---|
+| Event | The task name |
+| Start | First day of its span |
+| End | Last day of its span |
+| Overflowed on | The day box it was pushed out of — the one to go and look at |
+
+The page is only written when something actually overflowed, so its
+absence after an `-x` run means everything fitted.
+
+It shares the [gantt details page](#the-details-page)'s format — the same
+chrome, title, section heading and column rules — and, like it,
+paginates rather than truncating (`<output>_overflow_p2.svg`, …). A
+report that quietly dropped its last few lines would be reporting a
+truncation by truncating.
+
 ### `pit`
 
 | Name | Required | Description | Choices |
@@ -1438,13 +1461,22 @@ than quietly ignored — move the two keys up one level.
 |---|---|---|---|
 | `overflow.icon` | `str` | `"warningtriangle"` | Glyph name, resolved through the `icons` table |
 | `overflow.color` | `str` | `"red"` | Icon color |
+| `overflow.title_text` | `str` | `"Overflow Events"` | Title on the weekly overflow page |
+| `overflow.output_suffix` | `str` | `"_overflow"` | Filename suffix for that page |
 | *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | Optional halo (fill / stroke / padding) painted behind the icon. See "Style Rules" → Box Properties. |
 
 ```yaml
 overflow:
   icon: warningtriangle
   color: red
+  title_text: Overflow Events
+  output_suffix: _overflow
 ```
+
+The last two keys belong to the weekly overflow **page** (see
+[`weekly` → The overflow page](#the-overflow-page)) rather than to the
+icon; they sit here so everything the overflow feature owns is in one
+block.
 
 `overflow.icon` names the glyph in every visualizer; a `define
 icon:overflow` token supplies its color (and size, where the visualizer

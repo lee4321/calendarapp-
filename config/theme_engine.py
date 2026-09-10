@@ -342,6 +342,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # top-level `overflow:` section in theme YAMLs)
     ("overflow", "icon"): "overflow_indicator_icon",
     ("overflow", "color"): "overflow_indicator_color",
+    ("overflow", "title_text"): "overflow_title_text",
+    ("overflow", "output_suffix"): "overflow_output_suffix",
     # Continuation icons (global — shared by timeline / blockplan / compact_plan)
     ("continuation", "show"): "show_continuation_icon",
     ("continuation", "icon_before"): "continuation_icon_before",
