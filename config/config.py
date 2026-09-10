@@ -556,6 +556,10 @@ class CalendarConfig:
     # `box:overflow` rule.
     overflow_indicator_icon: str = "warningtriangle"
     overflow_indicator_color: str = "red"
+    # The companion overflow report, written beside the calendar through
+    # the shared details-page writer (see renderers/details_page.py).
+    overflow_title_text: str = "Overflow Events"
+    overflow_output_suffix: str = "_overflow"
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +

@@ -91,6 +91,20 @@ class BaseSVGRenderer(ABC):
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
         return self._tokens.get(token, {})
 
+    def _measure(self, text: str, font: str, size: float) -> float:
+        """Width of *text*, resolving the font name to its registered path.
+
+        An unregistered font name costs the measurement its accuracy, not
+        the render: the estimate keeps the caller laying text out.
+        """
+        from config.config import get_font_path
+
+        try:
+            path = get_font_path(font)
+        except KeyError:
+            return len(text) * size * 0.5
+        return string_width(text, path, size)
+
     def _ensure_tokens(self, config: "CalendarConfig") -> None:
         """Lazy-populate the per-render token cache when entering a draw
         method that bypasses ``_render_content`` (e.g. test fixtures that
@@ -613,11 +627,13 @@ class BaseSVGRenderer(ABC):
         # Save main SVG
         self._drawing.save_svg(config.outputfile)
 
-        # Render overflow page if requested and entries exist
+        # Render overflow page if requested and entries exist. The report
+        # paginates, so it is worth as many pages as it took.
         page_count = 1
         if config.include_overflow and overflow_entries:
-            self._render_overflow_svg(config, coordinates, overflow_entries)
-            page_count = 2
+            page_count += self._render_overflow_svg(
+                config, coordinates, overflow_entries
+            )
 
         return VisualizationResult(
             output_path=config.outputfile,
@@ -1287,6 +1303,8 @@ class BaseSVGRenderer(ABC):
         self,
         config: CalendarConfig,
         coordinates: CoordinateDict,
+        *,
+        day_names: bool = True,
     ):
         """
         Render headers, footers, and day labels.
@@ -1294,6 +1312,9 @@ class BaseSVGRenderer(ABC):
         Args:
             config: Calendar configuration
             coordinates: Layout coordinates
+            day_names: Draw the weekday label row. A companion page
+                borrows these coordinates for its header and footer but
+                is not a calendar grid, so it asks for the chrome alone.
         """
         _hdr_ts = config.get_text_style("ec-header-text")
         _ftr_ts = config.get_text_style("ec-footer-text")
@@ -1318,7 +1339,7 @@ class BaseSVGRenderer(ABC):
                     css_class=css,
                 )
 
-            elif key in self._DAY_NAME_KEYS:
+            elif day_names and key in self._DAY_NAME_KEYS:
                 self._draw_text(
                     X + width / 2,
                     Y + (height * 0.7),
@@ -1335,303 +1356,67 @@ class BaseSVGRenderer(ABC):
     # Overflow page (separate SVG)
     # =========================================================================
 
-    def _overflow_content_area(
-        self,
-        config: CalendarConfig,
-    ) -> tuple[float, float, float, float, float]:
-        """
-        Compute overflow page content area bounds.
-
-        Returns:
-            Tuple of (content_left, content_right, content_width, content_top, content_bottom)
-        """
-        from config.config import resolve_page_margins
-
-        margins = resolve_page_margins(config)
-        header_height = (
-            round(config.pageY * config.header_percent, 2)
-            if config.include_header
-            else 0.0
-        )
-        footer_height = (
-            round(config.pageY * config.footer_percent, 2)
-            if config.include_footer
-            else 0.0
-        )
-        content_left = margins["left"]
-        content_right = config.pageX - margins["right"]
-        content_width = content_right - content_left
-        content_top = margins["top"] + header_height
-        content_bottom = config.pageY - margins["bottom"] - footer_height
-        return content_left, content_right, content_width, content_top, content_bottom
-
-    def _draw_overflow_table_header(
-        self,
-        config: CalendarConfig,
-        content_left: float,
-        content_right: float,
-        content_width: float,
-        col1_x: float,
-        col2_x: float,
-        col3_x: float,
-        table_top: float,
-        row_height: float,
-        table_font: str,
-        table_font_size: float,
-        text_color: str,
-    ) -> float:
-        """
-        Draw the overflow table header row and separator line.
-
-        Returns:
-            sep_y: Y coordinate of the separator (first data row starts here)
-        """
-        header_y = table_top
-        text_baseline = header_y + row_height - 5
-
-        self._draw_rect(
-            content_left,
-            header_y,
-            content_width,
-            row_height,
-            fill="lightgrey",
-            fill_opacity=0.4,
-        )
-        self._draw_text(
-            col1_x + 4,
-            text_baseline,
-            "Start Date",
-            table_font,
-            table_font_size,
-            fill=text_color,
-        )
-        self._draw_text(
-            col2_x + 4,
-            text_baseline,
-            "End Date",
-            table_font,
-            table_font_size,
-            fill=text_color,
-        )
-        self._draw_text(
-            col3_x + 4,
-            text_baseline,
-            "Event Name",
-            table_font,
-            table_font_size,
-            fill=text_color,
-        )
-
-        sep_y = header_y + row_height
-        self._draw_line(
-            content_left,
-            sep_y,
-            content_right,
-            sep_y,
-            stroke="grey",
-            stroke_opacity=0.5,
-        )
-        return sep_y
-
-    def _draw_overflow_table_rows(
-        self,
-        config: CalendarConfig,
-        overflow_entries: list,
-        content_left: float,
-        content_right: float,
-        content_width: float,
-        content_bottom: float,
-        col1_x: float,
-        col2_x: float,
-        col3_x: float,
-        col3_width: float,
-        sep_y: float,
-        row_height: float,
-        table_font: str,
-        table_font_size: float,
-        font_path: str,
-        text_color: str,
-    ) -> None:
-        """Draw all data rows in the overflow table."""
-        from config.config import monthcolors
-
-        current_y = sep_y
-        for idx, entry in enumerate(overflow_entries):
-            row_bottom = current_y + row_height
-
-            if row_bottom > content_bottom:
-                break
-
-            if idx % 2 == 1:
-                month_key = entry.start[4:6] if len(entry.start) >= 6 else "01"
-                theme_month_colors = getattr(config, "theme_month_colors", None)
-                row_color = (theme_month_colors or monthcolors).get(
-                    month_key, "lightgrey"
-                )
-                self._draw_rect(
-                    content_left,
-                    current_y,
-                    content_width,
-                    row_height,
-                    fill=row_color,
-                    fill_opacity=0.15,
-                )
-
-            text_baseline = row_bottom - 5
-            self._draw_text(
-                col1_x + 4,
-                text_baseline,
-                self._format_date(entry.start),
-                table_font,
-                table_font_size,
-                fill=text_color,
-            )
-            self._draw_text(
-                col2_x + 4,
-                text_baseline,
-                self._format_date(entry.end),
-                table_font,
-                table_font_size,
-                fill=text_color,
-            )
-            self._draw_text(
-                col3_x + 4,
-                text_baseline,
-                entry.task_name or "",
-                table_font,
-                table_font_size,
-                fill=text_color,
-                max_width=col3_width - 8,
-            )
-            current_y = row_bottom
+    #: The overflow report's columns, as ``(heading, width fraction)``.
+    #: An entry names the item that did not fit, its span, and the day box
+    #: it was pushed out of -- which is the one to go and look at.
+    _OVERFLOW_COLUMNS: tuple[tuple[str, float], ...] = (
+        ("Event", 0.44),
+        ("Start", 0.16),
+        ("End", 0.16),
+        ("Overflowed on", 0.24),
+    )
 
     def _render_overflow_svg(
         self,
         config: CalendarConfig,
         coordinates: CoordinateDict,
         overflow_entries: list,
-    ):
-        """
-        Render a table of overflow entries as a separate SVG file.
+    ) -> int:
+        """Write the overflow report beside the calendar; returns page count.
 
-        Args:
-            config: Calendar configuration
-            coordinates: Layout coordinates
-            overflow_entries: List of OverflowEntry objects
+        Built through the same :class:`~renderers.details_page.DetailsPageWriter`
+        as the gantt details page, so the two read alike.  The page exists
+        to say what the calendar could not show, so it paginates onto
+        ``_overflow_p2.svg`` rather than dropping the rows that run past
+        the bottom.
+
+        Leaves the caller's drawing restored.
         """
-        from config.config import get_font_path
+        from renderers.details_page import (
+            DetailsPageWriter,
+            details_output_path,
+            format_datekey,
+            numbered_page_path,
+        )
 
         saved_drawing = self._drawing
-        self._drawing = self._create_drawing(config)
-        self._content_bbox_svg = None
-        self._inject_css()
-        if config.shrink_to_content:
-            self._shrink_drawing_to_content(coordinates)
-        if config.watermark_text:
-            self._render_text_watermark(config)
-        if config.watermark_image:
-            self._render_image_watermark(config)
-        self._render_decorations(config, coordinates)
 
-        content_left, content_right, content_width, content_top, content_bottom = (
-            self._overflow_content_area(config)
+        def page_path(number: int) -> str:
+            base = details_output_path(
+                config.outputfile, config.overflow_output_suffix
+            )
+            return numbered_page_path(base, number)
+
+        writer = DetailsPageWriter(
+            self, config, coordinates, page_path, config.overflow_title_text
         )
+        columns = list(self._OVERFLOW_COLUMNS)
+        writer.section("Overflow", columns)
+        for entry in overflow_entries:
+            writer.row(
+                [
+                    entry.task_name or "",
+                    format_datekey(entry.start),
+                    format_datekey(entry.end),
+                    format_datekey(entry.datekey),
+                ],
+                columns,
+            )
+        pages = writer.finish()
 
-        # Resolve unified-theme tokens once for the whole overflow page.
-        # ``text:day_number`` drives the overflow-table text color (it is the
-        # day-cell text color on the parent calendar page, kept in sync here);
-        # ``text:event_name`` drives the table body font and base size.  No
-        # visualizer ctx — this helper is shared across visualizers; per-
-        # visualizer overrides via ``select:`` aren't applied to overflow text.
-        _ctx = {"papersize": config.papersize}
-        _tk_dn = self._resolve_token(config, "text:day_number", _ctx)
-        _tk_en = self._resolve_token(config, "text:event_name", _ctx)
-        text_color = _tk_dn.get("color") or config.day_box_color
-
-        # Title
-        _hdr_ts = config.get_text_style("ec-header-text")
-        title_font_size = config.header_center_font_size
-        title_y = content_top + title_font_size + 10
-        self._draw_text(
-            content_left + content_width / 2,
-            title_y,
-            "Overflow Events",
-            _hdr_ts.font,
-            title_font_size,
-            fill=text_color,
-            anchor="middle",
-        )
-
-        # Table layout
-        table_font = _tk_en.get("font") or config.weekly_name_text_font_name
-        table_font_size = (
-            _tk_en.get("size") or config.weekly_name_text_font_size
-        ) + 1
-        row_height = table_font_size + 6
-        table_top = title_y + title_font_size + 5
-
-        col1_width = content_width * 0.15
-        col2_width = content_width * 0.15
-        col3_width = content_width * 0.70
-        col1_x = content_left
-        col2_x = content_left + col1_width
-        col3_x = content_left + col1_width + col2_width
-
-        sep_y = self._draw_overflow_table_header(
-            config,
-            content_left,
-            content_right,
-            content_width,
-            col1_x,
-            col2_x,
-            col3_x,
-            table_top,
-            row_height,
-            table_font,
-            table_font_size,
-            text_color,
-        )
-
-        font_path = get_font_path(table_font)
-        self._draw_overflow_table_rows(
-            config,
-            overflow_entries,
-            content_left,
-            content_right,
-            content_width,
-            content_bottom,
-            col1_x,
-            col2_x,
-            col3_x,
-            col3_width,
-            sep_y,
-            row_height,
-            table_font,
-            table_font_size,
-            font_path,
-            text_color,
-        )
-
-        overflow_path = config.outputfile.replace(".svg", "_overflow.svg")
-        self._drawing.save_svg(overflow_path)
-        logger.info("Overflow page saved to: %s", overflow_path)
-
+        logger.info("Overflow page saved to: %s", page_path(1))
         self._drawing = saved_drawing
-
-    @staticmethod
-    def _format_date(date_str: str) -> str:
-        """
-        Format a YYYYMMDD date string as YYYY-MM-DD.
-
-        Args:
-            date_str: Date in YYYYMMDD format
-
-        Returns:
-            Date in YYYY-MM-DD format
-        """
-        if len(date_str) == 8:
-            return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-        return date_str
+        return pages
 
     # =========================================================================
     # Abstract method for subclasses

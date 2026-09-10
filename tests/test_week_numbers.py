@@ -57,7 +57,7 @@ class _MiniDetailsRenderer(MiniCalendarRenderer):
     def _add_desc(self, config):
         return None
 
-    def _render_decorations(self, config, coordinates):
+    def _render_decorations(self, config, coordinates, **kwargs):
         return None
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
