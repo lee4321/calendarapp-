@@ -144,6 +144,7 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("mini_no_adjacent", "mini_show_adjacent", "disable"),
     ("mini_grid_lines", "mini_grid_lines", "enable"),
     ("mini_details", "include_mini_details", "enable"),
+    ("no_mini_details", "include_mini_details", "disable"),
     ("mini_icon_set", "mini_icon_set", "value"),
     # Candybar
     ("candybar_row_height", "candybar_row_height", "value"),

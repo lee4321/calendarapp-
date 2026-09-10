@@ -402,6 +402,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Mini details page — kept survivors only.  Phase 2 stripped
     # title_color/_font + header_color/_font, plus the text/name_text/notes_text
     # alignment + name fields with no readers.
+    ("mini_details", "enable"): "include_mini_details",
     ("mini_details", "title_text"): "mini_details_title_text",
     ("mini_details", "title_font_size"): "mini_details_title_font_size",
     ("mini_details.text", "font_color"): "mini_details_text_font_color",
@@ -410,6 +411,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_details.name_text", "font_size"): "mini_details_name_text_font_size",
     ("mini_details.name_text", "font_opacity"): "mini_details_name_text_font_opacity",
     ("mini_details.notes_text", "font_size"): "mini_details_notes_text_font_size",
+    ("mini_details", "events_section_text"): "mini_details_events_section_text",
+    ("mini_details", "holidays_section_text"): "mini_details_holidays_section_text",
     ("mini_details", "headers"): "mini_details_headers",
     ("mini_details", "column_widths"): "mini_details_column_widths",
     ("mini_details", "output_suffix"): "mini_details_output_suffix",

@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from renderers.details_page import (
+    DetailsColumn,
     DetailsPageWriter,
     details_output_path,
     format_datekey,
@@ -98,13 +99,13 @@ class GanttException:
         return KIND_LABELS.get(self.kind, self.kind)
 
 
-#: Columns of the exception table, as ``(heading, width fraction)``.
-_EXCEPTION_COLUMNS: tuple[tuple[str, float], ...] = (
-    ("Task", 0.26),
-    ("Date", 0.11),
-    ("Ref", 0.08),
-    ("Issue", 0.25),
-    ("Detail", 0.30),
+#: Columns of the exception table.
+_EXCEPTION_COLUMNS: tuple[DetailsColumn, ...] = (
+    DetailsColumn("Task", 0.26),
+    DetailsColumn("Date", 0.11),
+    DetailsColumn("Ref", 0.08),
+    DetailsColumn("Issue", 0.25),
+    DetailsColumn("Detail", 0.30),
 )
 
 #: Shown in the Ref column when an entry carries no cross-page number.
@@ -132,19 +133,21 @@ def _split_reference(detail: str) -> tuple[str, str]:
 
 def _details_columns(
     columns: list["GanttColumn"],
-) -> list[tuple[str, float]]:
-    """Column headings and widths for the details listing.
+) -> list[DetailsColumn]:
+    """The details listing's columns, from the chart's own column model.
 
     Chart widths are reused for proportion, but floored so a column that
     only ever holds a glyph on the chart can still hold a word here, then
-    renormalized so the row still spans the page exactly once.
+    renormalized so the row still spans the page exactly once.  A
+    column's alignment carries over as authored, so a right-aligned
+    percentage on the chart is right-aligned in the listing too.
     """
     if not columns:
         return []
     widths = [max(column.width, _MIN_COLUMN_WIDTH) for column in columns]
     total = sum(widths)
     return [
-        (column.header, width / total)
+        DetailsColumn(column.header, width / total, align=column.align)
         for column, width in zip(columns, widths)
     ]
 

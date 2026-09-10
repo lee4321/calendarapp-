@@ -8,11 +8,9 @@ events, holidays, and special days via the DayStyle system.
 from __future__ import annotations
 
 import logging
-import re
 from typing import TYPE_CHECKING
 
 import arrow
-import drawsvg
 
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from visualizers.mini.day_styles import DayStyleResolver, DayStyle
@@ -21,6 +19,7 @@ from shared.date_utils import (
     format_arrow_date,
     index_events_by_day as _index_events_by_day,
 )
+from renderers.details_page import DetailsColumn, format_datekey
 from shared.holiday_labels import format_holiday_label
 from shared.rule_engine import StyleEngine
 
@@ -28,6 +27,22 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
     from visualizers.base import CoordinateDict
+
+#: Columns of the details page when the theme names none, or names
+#: headers and widths that do not pair up.
+_DEFAULT_DETAILS_HEADERS: tuple[str, ...] = (
+    "Start Date",
+    "Name / Description",
+    "Milestone",
+    "Priority",
+    "Group",
+)
+_DEFAULT_DETAILS_WIDTHS: tuple[float, ...] = (0.16, 0.52, 0.10, 0.10, 0.12)
+
+
+def format_details_date(value: str | None) -> str:
+    """``20260403`` (or a longer timestamp) → ``2026-04-03``."""
+    return format_datekey(str(value or "")[:8])
 
 logger = logging.getLogger(__name__)
 
@@ -197,8 +212,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     ):
         result = super().render(config, coordinates, events, db)
         if config.include_mini_details:
-            self._render_details_svg(config, coordinates, events, db)
-            result.page_count += 1
+            # The listing paginates, so it is worth as many pages as it took.
+            result.page_count += self._render_details_svg(
+                config, coordinates, events, db
+            )
         return result
 
     # =========================================================================
@@ -933,139 +950,116 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         coordinates: CoordinateDict,
         events: list,
         db: "CalendarDB | None" = None,
-    ) -> None:
-        """Render the companion "details" page into its own SVG file.
+    ) -> int:
+        """Render the companion details page; returns how many were written.
 
-        Builds a second drawing (the month-grid drawing is saved and
-        restored around it) listing the range's events chronologically —
-        date, icon, name, notes — in one or more columns, with the same
-        page chrome (watermarks, decorations, header/footer) as the main
-        page.  Written next to the main output with the
-        ``mini_details_output_suffix`` filename suffix; enabled by
-        ``--mini-details`` (candybar reuses this for its details page).
+        The range's events chronologically -- date, name over notes, and
+        whatever else the theme's columns ask for -- then the holidays
+        and special days the calendar shows.  Built through the shared
+        :class:`~renderers.details_page.DetailsPageWriter`, so it is the
+        same page the gantt details and weekly overflow companions are,
+        with mini's content in it.  Written next to the main output with
+        the ``mini_details_output_suffix`` suffix; ``--no-mini-details``
+        suppresses it.  The month-grid drawing is restored afterwards.
         """
+        from renderers.details_page import (
+            DetailsPageWriter,
+            details_output_path,
+            numbered_page_path,
+        )
+
         self._ensure_tokens(config)
         saved_drawing = self._drawing
-        self._drawing = self._create_drawing(config)
-        self._content_bbox_svg = None
-        self._add_desc(config)
-        self._inject_css()
-        if config.watermark_text:
-            self._render_text_watermark(config)
-        if config.watermark_image:
-            self._render_image_watermark(config)
-        self._render_decorations(config, coordinates)
 
-        from config.config import resolve_page_margins
+        def page_path(number: int) -> str:
+            base = details_output_path(
+                config.outputfile, config.mini_details_output_suffix
+            )
+            return numbered_page_path(base, number)
 
-        margins = resolve_page_margins(config)
-        header_height = (
-            round(config.pageY * config.header_percent, 2)
-            if config.include_header
-            else 0.0
+        writer = DetailsPageWriter(
+            self, config, coordinates, page_path, config.mini_details_title_text
         )
-        footer_height = (
-            round(config.pageY * config.footer_percent, 2)
-            if config.include_footer
-            else 0.0
-        )
+        columns = self._details_columns(config)
 
-        content_left = margins["left"]
-        content_right = config.pageX - margins["right"]
-        content_width = content_right - content_left
-        content_top = margins["top"] + header_height
-        content_bottom = config.pageY - margins["bottom"] - footer_height
-
-        # Title
-        _ts_heading = config.get_text_style("ec-heading")
-        tk_heading = self._tk("text:heading")
-        title_font_size = tk_heading.get("size")
-        title_text = config.mini_details_title_text
-        title_y = content_top + title_font_size + 10
-        self._draw_text(
-            content_left + content_width / 2,
-            title_y,
-            title_text,
-            tk_heading.get("font") or _ts_heading.font,
-            title_font_size,
-            fill=tk_heading.get("color") or _ts_heading.color,
-            anchor="middle",
-            css_class="ec-heading",
-        )
-
-        # Column layout
-        headers = config.mini_details_headers
-        widths = config.mini_details_column_widths
-        if len(headers) != len(widths):
-            headers = [
-                "Start Date",
-                "Name / Description",
-                "Milestone",
-                "Priority",
-                "Group",
-            ]
-            widths = [0.16, 0.52, 0.10, 0.10, 0.12]
-
-        total = sum(widths) if widths else 0.0
-        if total <= 0:
-            widths = [0.16, 0.52, 0.10, 0.10, 0.12]
-            total = sum(widths)
-        col_widths = [content_width * (w / total) for w in widths]
-        col_x = [content_left]
-        for w in col_widths[:-1]:
-            col_x.append(col_x[-1] + w)
-
-        _ts_det_label = config.get_text_style("ec-label")
-        tk_det_label = self._tk("text:label")
-        header_font_size = tk_det_label.get("size")
-        header_y = title_y + header_font_size + 6
-        _ts_event_name = config.get_text_style("ec-event-name")
-        tk_event_name = self._tk("text:event_name")
-        row_font = tk_event_name.get("font") or _ts_event_name.font
-        row_font_size = tk_event_name.get("size")
-        _ts_event_date = config.get_text_style("ec-event-date")
-        tk_event_date = self._tk("text:event_date")
-        _ts_event_notes = config.get_text_style("ec-event-notes")
-        tk_event_notes = self._tk("text:event_notes")
-        notes_font = tk_event_notes.get("font") or _ts_event_notes.font
-        notes_font_size = tk_event_notes.get("size")
-
-        # Header row
-        for idx, head in enumerate(headers):
-            self._draw_text(
-                col_x[idx] + 4,
-                header_y,
-                head,
-                tk_det_label.get("font") or _ts_det_label.font,
-                header_font_size,
-                fill=tk_det_label.get("color") or _ts_det_label.color,
-                css_class="ec-label",
+        writer.section(config.mini_details_events_section_text, columns)
+        for event in self._details_sorted_events(events):
+            writer.row(
+                self._details_event_cells(event, len(columns)),
+                columns,
+                sub_line=(1, self._details_event_note(event)),
             )
 
-        # Separator
-        _ls_sep = config.get_line_style("ec-separator")
-        sep_y = header_y + (header_font_size * 0.6)
-        self._draw_line(
-            content_left,
-            sep_y,
-            content_right,
-            sep_y,
-            stroke="grey",
-            stroke_opacity=0.5,
-            stroke_dasharray=_ls_sep.dasharray or None,
-            css_class="ec-separator",
-        )
+        if db is not None:
+            extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
+            if extra_rows:
+                writer.section(config.mini_details_holidays_section_text, columns)
+                for row in extra_rows:
+                    cells = [""] * len(columns)
+                    cells[0] = row["date_label"]
+                    if len(cells) > 1:
+                        cells[1] = row["name"]
+                    cells[-1] = row["kind"]
+                    writer.row(cells, columns, sub_line=(1, row.get("notes") or ""))
 
-        # Rows
-        row_height = row_font_size + notes_font_size + 6
-        current_y = sep_y + 15
+        pages = writer.finish()
+        self._drawing = saved_drawing
+        return pages
 
-        def fmt_date(value: str) -> str:
-            if value and len(value) >= 8:
-                return f"{value[:4]}-{value[4:6]}-{value[6:8]}"
-            return value or ""
+    @staticmethod
+    def _details_columns(config: CalendarConfig) -> list[DetailsColumn]:
+        """The details table's columns, from ``mini_details.headers``.
 
-        events_sorted = sorted(
+        The first column carries dates and the second the event name, so
+        those two take the date and name text tokens; the rest are plain
+        body cells.  Mismatched headers and widths fall back together --
+        a half-edited theme would otherwise put the wrong heading over
+        every column.
+        """
+        headers = list(config.mini_details_headers or [])
+        widths = list(config.mini_details_column_widths or [])
+        if not headers or len(headers) != len(widths):
+            headers = _DEFAULT_DETAILS_HEADERS
+            widths = _DEFAULT_DETAILS_WIDTHS
+
+        total = sum(widths)
+        if total <= 0:
+            headers, widths = _DEFAULT_DETAILS_HEADERS, _DEFAULT_DETAILS_WIDTHS
+            total = sum(widths)
+
+        columns: list[DetailsColumn] = []
+        for index, (header, width) in enumerate(zip(headers, widths)):
+            if index == 0:
+                token, css = "text:event_date", "ec-event-date"
+                # ec-event-date binds to text:caption in the bundled
+                # themes, which is where the date column's color has
+                # always come from when text:event_date names none.
+                fallback = config.get_text_style("ec-event-date").color
+                opacity = config.get_text_style("ec-event-date").opacity
+            elif index == 1:
+                token, css = "text:event_name", "ec-event-name"
+                fallback = config.mini_details_name_text_font_color
+                opacity = config.mini_details_name_text_font_opacity
+            else:
+                token, css = "text:event_name", "ec-event-name"
+                fallback = config.mini_details_text_font_color
+                opacity = config.mini_details_text_font_opacity
+            columns.append(
+                DetailsColumn(
+                    str(header),
+                    width / total,
+                    css_class=css,
+                    token=token,
+                    fallback_color=fallback,
+                    fallback_opacity=opacity,
+                )
+            )
+        return columns
+
+    @staticmethod
+    def _details_sorted_events(events: list) -> list:
+        """Events in the order the listing reads: by span, then by name."""
+        return sorted(
             events,
             key=lambda e: (
                 e.get("Start", ""),
@@ -1074,230 +1068,37 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             ),
         )
 
-        # Hoisted out of the per-event loop so the trailing holiday/special-day
-        # section can reuse the same colors and opacities.
-        name_fill = tk_event_name.get("color") or config.mini_details_name_text_font_color
-        name_opacity = (
-            tk_event_name.get("opacity")
-            if tk_event_name.get("opacity") is not None
-            else config.mini_details_name_text_font_opacity
-        )
-        text_fill = tk_event_name.get("color") or config.mini_details_text_font_color
-        text_opacity_det = (
-            tk_event_name.get("opacity")
-            if tk_event_name.get("opacity") is not None
-            else config.mini_details_text_font_opacity
-        )
+    @staticmethod
+    def _details_event_cells(event: dict, count: int) -> list[str]:
+        """One event's cells, in the default column order.
 
-        for event in events_sorted:
-            if current_y + row_height > content_bottom:
-                break
+        A theme that asks for fewer columns gets the leading ones; one
+        that asks for more gets blanks, rather than a short row that
+        would slide the next event's values left.
+        """
+        values = [
+            format_details_date(event.get("Start")),
+            event.get("Task_Name", "") or "",
+            "True" if event.get("Milestone") else "",
+            str(event.get("Priority") or ""),
+            str(event.get("Resource_Group") or ""),
+        ]
+        return (values + [""] * count)[:count]
 
-            start = (event.get("Start") or "")[:8]
-            end = (event.get("End") or event.get("Finish") or "")[:8]
-            start_fmt = fmt_date(start)
-            end_fmt = fmt_date(end)
+    @staticmethod
+    def _details_event_note(event: dict) -> str:
+        """The sub-line under an event's name: its notes, and its end date.
 
-            name = event.get("Task_Name", "") or ""
-            milestone = "True" if event.get("Milestone") else ""
-            priority = str(event.get("Priority") or "")
-            group = str(event.get("Resource_Group") or "")
-
-            name_width = col_widths[1] - 8
-
-            self._draw_text(
-                col_x[0] + 4,
-                current_y,
-                start_fmt,
-                row_font,
-                row_font_size,
-                fill=tk_event_date.get("color") or _ts_event_date.color,
-                fill_opacity=(
-                    tk_event_date.get("opacity")
-                    if tk_event_date.get("opacity") is not None
-                    else _ts_event_date.opacity
-                ),
-                css_class="ec-event-date",
-            )
-            self._draw_text(
-                col_x[1] + 4,
-                current_y,
-                name,
-                row_font,
-                row_font_size,
-                fill=name_fill,
-                fill_opacity=name_opacity,
-                max_width=name_width,
-                css_class="ec-event-name",
-            )
-            self._draw_text(
-                col_x[2] + 4,
-                current_y,
-                milestone,
-                row_font,
-                row_font_size,
-                fill=text_fill,
-                fill_opacity=text_opacity_det,
-                css_class="ec-event-name",
-            )
-            self._draw_text(
-                col_x[3] + 4,
-                current_y,
-                priority,
-                row_font,
-                row_font_size,
-                fill=text_fill,
-                fill_opacity=text_opacity_det,
-                css_class="ec-event-name",
-            )
-            self._draw_text(
-                col_x[4] + 4,
-                current_y,
-                group,
-                row_font,
-                row_font_size,
-                fill=text_fill,
-                fill_opacity=text_opacity_det,
-                css_class="ec-event-name",
-            )
-
-            notes = event.get("Notes") or ""
-            detail_line = notes
-            if start and end and start != end:
-                end_line = f"End: {end_fmt}"
-                detail_line = (
-                    f"{detail_line} | {end_line}".strip(" |")
-                    if detail_line
-                    else end_line
-                )
-
-            if detail_line:
-                self._draw_text(
-                    col_x[1] + 4,
-                    current_y + (notes_font_size + 2),
-                    detail_line,
-                    notes_font,
-                    notes_font_size,
-                    fill=tk_event_notes.get("color") or _ts_event_notes.color,
-                    fill_opacity=(
-                        tk_event_notes.get("opacity")
-                        if tk_event_notes.get("opacity") is not None
-                        else _ts_event_notes.opacity
-                    ),
-                    max_width=name_width,
-                    css_class="ec-event-notes",
-                )
-
-            current_y += row_height
-
-        # Holidays + company special days that appear on the visualization.
-        # Collect by walking the primary cell daykeys (one row per unique
-        # name across the visible range), then render after the events.
-        if db is not None:
-            extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
-            if extra_rows and current_y + row_height <= content_bottom:
-                # Section heading, mirroring the top column-header shape:
-                # heading text first, separator line below it, rows below that.
-                section_y = current_y + header_font_size
-                self._draw_text(
-                    col_x[0] + 4,
-                    section_y,
-                    "Holidays & Special Days",
-                    tk_det_label.get("font") or _ts_det_label.font,
-                    header_font_size,
-                    fill=tk_det_label.get("color") or _ts_det_label.color,
-                    css_class="ec-label",
-                )
-                section_sep_y = section_y + header_font_size * 0.6
-                self._draw_line(
-                    content_left,
-                    section_sep_y,
-                    content_right,
-                    section_sep_y,
-                    stroke="grey",
-                    stroke_opacity=0.5,
-                    stroke_dasharray=_ls_sep.dasharray or None,
-                    css_class="ec-separator",
-                )
-                current_y = section_sep_y + 15
-
-                for row in extra_rows:
-                    if current_y + row_height > content_bottom:
-                        break
-                    self._draw_text(
-                        col_x[0] + 4,
-                        current_y,
-                        row["date_label"],
-                        row_font,
-                        row_font_size,
-                        fill=tk_event_date.get("color") or _ts_event_date.color,
-                        fill_opacity=(
-                            tk_event_date.get("opacity")
-                            if tk_event_date.get("opacity") is not None
-                            else _ts_event_date.opacity
-                        ),
-                        css_class="ec-event-date",
-                    )
-                    self._draw_text(
-                        col_x[1] + 4,
-                        current_y,
-                        row["name"],
-                        row_font,
-                        row_font_size,
-                        fill=name_fill,
-                        fill_opacity=name_opacity,
-                        max_width=col_widths[1] - 8,
-                        css_class="ec-event-name",
-                    )
-                    self._draw_text(
-                        col_x[4] + 4,
-                        current_y,
-                        row["kind"],
-                        row_font,
-                        row_font_size,
-                        fill=text_fill,
-                        fill_opacity=text_opacity_det,
-                        css_class="ec-event-name",
-                    )
-                    if row.get("notes"):
-                        self._draw_text(
-                            col_x[1] + 4,
-                            current_y + (notes_font_size + 2),
-                            row["notes"],
-                            notes_font,
-                            notes_font_size,
-                            fill=tk_event_notes.get("color") or _ts_event_notes.color,
-                            fill_opacity=(
-                                tk_event_notes.get("opacity")
-                                if tk_event_notes.get("opacity") is not None
-                                else _ts_event_notes.opacity
-                            ),
-                            max_width=col_widths[1] - 8,
-                            css_class="ec-event-notes",
-                        )
-                    current_y += row_height
-
-        if config.shrink_to_content:
-            details_bbox = {
-                "DetailsContent": (
-                    content_left,
-                    title_y - title_font_size,
-                    content_right - content_left,
-                    max(0.0, current_y - (title_y - title_font_size)),
-                ),
-            }
-            self._shrink_drawing_to_content(details_bbox)
-
-        # Save details SVG
-        if config.outputfile.endswith(".svg"):
-            details_path = config.outputfile.replace(
-                ".svg", f"{config.mini_details_output_suffix}.svg"
-            )
-        else:
-            details_path = f"{config.outputfile}{config.mini_details_output_suffix}.svg"
-        self._drawing.save_svg(details_path)
-        self._drawing = saved_drawing
-
+        The end date lives here rather than in a column of its own
+        because only a multi-day event has one worth stating.
+        """
+        start = (event.get("Start") or "")[:8]
+        end = (event.get("End") or event.get("Finish") or "")[:8]
+        note = event.get("Notes") or ""
+        if start and end and start != end:
+            end_line = f"End: {format_details_date(end)}"
+            return f"{note} | {end_line}".strip(" |") if note else end_line
+        return note
     @staticmethod
     def _collect_holiday_special_rows(
         coordinates: "CoordinateDict",
