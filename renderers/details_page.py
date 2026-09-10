@@ -204,7 +204,6 @@ class DetailsPageWriter:
         renderer._content_bbox_svg = None
         renderer._add_desc(config)
         renderer._inject_css()
-        self._paint_background()
         if config.watermark_text:
             renderer._render_text_watermark(config)
         if config.watermark_image:
@@ -337,26 +336,6 @@ class DetailsPageWriter:
             self.start_page()
         elif self._cursor + needed > self.bottom:
             self.start_page()
-
-    def _paint_background(self) -> None:
-        """Lay the theme's page ground down first.
-
-        A dark theme's listing is light text, and the banding is a tint
-        meant to sit on that ground; drawn on nothing, both land on white
-        and the page cannot be read.  Follows the same ``ec-background``
-        convention the timeline and blockplan pages already use.
-        """
-        style = self._config.get_box_style("ec-background")
-        fill = str(style.fill or "").strip().lower()
-        if fill in {"", "none", "transparent"}:
-            return
-        self._renderer._draw_rect(
-            0, 0,
-            round(self._config.pageX, 2),
-            round(self._config.pageY, 2),
-            fill=style.fill,
-            css_class="ec-background",
-        )
 
     def _band(self, height: float) -> None:
         """Tint every other row, so a wide row is read across, not down."""

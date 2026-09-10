@@ -162,28 +162,3 @@ def test_the_body_size_scales_with_the_page(tmp_path):
 
     assert large.details_body_font_size > small.details_body_font_size
 
-
-def test_the_page_lays_down_the_theme_ground(tmp_path):
-    """A dark theme's listing is light text on a tint; drawn on nothing,
-    both land on white and the page cannot be read."""
-    from config.styles import BoxStyle
-
-    cfg = _config(tmp_path)
-    ground = BoxStyle(fill="black")
-    cfg.get_box_style = lambda ec: ground if ec == "ec-background" else BoxStyle()
-    renderer, _ = _write(cfg, rows=2)
-
-    grounds = [r for r in renderer.rects if r.get("css_class") == "ec-background"]
-    assert len(grounds) == 1
-    assert grounds[0]["fill"] == "black"
-    assert grounds[0]["w"] == cfg.pageX and grounds[0]["h"] == cfg.pageY
-
-
-def test_a_transparent_ground_paints_nothing(tmp_path):
-    from config.styles import BoxStyle
-
-    cfg = _config(tmp_path)
-    cfg.get_box_style = lambda ec: BoxStyle(fill="none")
-    renderer, _ = _write(cfg, rows=2)
-
-    assert [r for r in renderer.rects if r.get("css_class") == "ec-background"] == []

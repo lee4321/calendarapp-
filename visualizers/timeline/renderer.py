@@ -179,22 +179,6 @@ class TimelineRenderer(BaseSVGRenderer):
         ascent, descent = get_ink_extents(font_path)
         return ascent * size, descent * size
 
-    def _create_drawing(self, config: "CalendarConfig") -> drawsvg.Drawing:
-        drawing = super()._create_drawing(config)
-        bg_style = config.get_box_style("ec-background")
-        bg = str(bg_style.fill or "").strip().lower()
-        if bg not in {"", "none", "transparent"}:
-            drawing.append(
-                drawsvg.Rectangle(
-                    0,
-                    0,
-                    round(config.pageX, 2),
-                    round(config.pageY, 2),
-                    fill=bg_style.fill,
-                )
-            )
-        return drawing
-
     def _render_content(
         self,
         config: "CalendarConfig",
