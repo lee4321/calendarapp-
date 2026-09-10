@@ -417,6 +417,8 @@ class CalendarConfig:
     mini_details_column_widths: list[float] = field(
         default_factory=lambda: [0.16, 0.52, 0.10, 0.10, 0.12]
     )
+    mini_details_events_section_text: str = "Events"
+    mini_details_holidays_section_text: str = "Holidays & Special Days"
 
     # Weekly week number settings
     week_number_mode: str = "iso"  # "iso" or "custom"
@@ -560,6 +562,11 @@ class CalendarConfig:
     # the shared details-page writer (see renderers/details_page.py).
     overflow_title_text: str = "Overflow Events"
     overflow_output_suffix: str = "_overflow"
+    # The companion details page, shared by every visualizer that writes
+    # one (see renderers/details_page.py).  Row text is sized here rather
+    # than taken from text:body, which the gantt chart's own 14pt-row
+    # table also reads and needs to stay small.
+    details_body_font_size: float | None = None
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
@@ -1662,6 +1669,9 @@ class CalendarConfig:
         _map = {
             "ec-cell": lambda: BoxStyle(fill=self.day_box_fill_color, fill_opacity=self.day_box_fill_opacity, stroke=self.day_box_stroke_color, stroke_width=self.day_box_stroke_width, stroke_opacity=self.day_box_stroke_opacity, stroke_dasharray=self.day_box_stroke_dasharray),
             "ec-background": lambda: BoxStyle(fill="none"),
+            # No legacy field behind this one; the literals keep a
+            # themeless run banding rather than painting it white.
+            "ec-row-band": lambda: BoxStyle(fill="lightgrey", fill_opacity=0.15),
             "ec-heading-cell": lambda: BoxStyle(fill=self.blockplan_header_heading_fill_color),
             "ec-band-cell": lambda: BoxStyle(fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity),
             "ec-callout-box": lambda: BoxStyle(fill_opacity=self.timeline_label_fill_opacity, stroke_width=self.timeline_label_stroke_width, stroke_dasharray=self.timeline_label_stroke_dasharray),
@@ -2446,6 +2456,8 @@ _HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
     ("text:event_notes", "weekly", "weekly_notes_text_font_size"),
     # Fiscal label is shared between weekly and mini — no visualizer ctx.
     ("text:fiscal_label", None, "fiscal_period_label_font_size"),
+    # Companion details page, shared by every visualizer that writes one.
+    ("text:details_body", None, "details_body_font_size"),
     # Mini.
     ("text:day_number", "mini", "mini_cell_font_size"),
     ("text:month_title", "mini", "mini_title_font_size"),
@@ -2650,6 +2662,14 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.fiscal_period_label_font_size = _size(
         "text:fiscal_label",
         config.day_box_number_font_size * 0.7,
+    )
+
+    # Companion details page. Its own size, because the token it would
+    # otherwise read -- text:body -- also sets the gantt chart's task-table
+    # text, and that table's rows are a fixed gantt_row_height.
+    config.details_body_font_size = _size(
+        "text:details_body",
+        _clamp(_clamp(h * 0.010, 7.0, 20.0) * scale, 7.0, 20.0),
     )
 
     # Weekly text sizes

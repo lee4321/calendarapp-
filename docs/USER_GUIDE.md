@@ -206,13 +206,14 @@ table by hand.
 | `--milestone-icon` | `NAME` | `pit` | DB icon name drawn inside each milestone's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |  |
 | `--milestones`, `-mo` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Show only milestones | default `False` |
 | `--mini-columns`, `-mc` | `N` | `mini`, `mini-icon`, `text-mini` | Number of months per row in mini calendar (default: 3) |  |
-| `--mini-details` |  | `mini`, `mini-icon` | Generate a second SVG with mini calendar event details | default `False` |
+| `--mini-details` |  | `candybar`, `mini`, `mini-icon` | Write the companion details page (on by default) | default `False` |
 | `--mini-grid-lines` |  | `mini`, `mini-icon` | Draw grid lines between day cells | default `False` |
 | `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (choices: squares, darksquare, darkcircles, circles, squircles, darksquircles; default: squares) | choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
 | `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
 | `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Format string for month title (default: MMM YY) |  |
 | `--monthnames`, `-mn` |  | `weekly` | Show month names on calendar | default `False` |
+| `--no-mini-details` |  | `candybar`, `mini`, `mini-icon` | Suppress the companion details page | default `False` |
 | `--no-tick-labels` |  | `pit` | Draw tick marks but no tick labels. |  |
 | `--no-ticks` |  | `pit` | Suppress axis tick marks and labels. |  |
 | `--no-today-line` |  | `pit` | Suppress the today line. | default `True` |
@@ -403,6 +404,40 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - Day cells can also receive SVG pattern decorations from top-level `style_rules` entries with `apply_to: day_box` (the mini renderer reads the same `style_rules` list as weekly).
 - If none of those overrides apply, the day number uses the base day-number color, resolved by one chain shared with `mini-icon` and `candybar` (highest priority first): the `text:day_number` token from `style_rules`, then an `ec-day-number` entry in `element_overrides`, then `colors.mini_calendar.day_color`, then `mini_calendar.day_color` (default `black`).
 - `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
+
+#### The mini details page
+
+`mini`, `mini-icon` and `candybar` write `<output>_details.svg` beside the
+calendar, in two sections: the range's events chronologically, then the
+holidays and special days the calendar shows. Each event is a two-line
+row — its name over its notes, with a multi-day event's end date appended
+to that sub-line, since only a multi-day event has one worth stating.
+
+Columns come from `mini_details.headers` and `mini_details.column_widths`,
+which are normalized to span the page once. Give the two lists different
+lengths and both fall back to the defaults together, rather than leaving
+the wrong heading over every column. The first column takes
+`text:event_date`, the second `text:event_name`; a theme asking for fewer
+columns gets the leading ones, and one asking for more gets blanks.
+
+| Theme key | Type | Default | Explanation |
+|---|---|---|---|
+| `mini_details.enable` | `bool` | `true` | Write the page |
+| `mini_details.title_text` | `str` | `"Event Details"` | Page title |
+| `mini_details.events_section_text` | `str` | `"Events"` | First section heading |
+| `mini_details.holidays_section_text` | `str` | `"Holidays & Special Days"` | Second section heading |
+| `mini_details.output_suffix` | `str` | `"_details"` | Filename suffix |
+| `mini_details.headers` | `list[str]` | five columns | Column headings |
+| `mini_details.column_widths` | `list[float]` | `[0.16, 0.52, 0.10, 0.10, 0.12]` | Relative widths |
+
+The page is on by default; `--no-mini-details` suppresses it, and
+`--mini-details` turns it back on over a theme's `enable: false`. All three
+views take both flags — they share the renderer that writes the page.
+
+It is drawn by the
+[shared details-page writer](#the-companion-details-page-shared), so it
+carries that page's banding and typography and continues onto
+`<output>_details_p2.svg` rather than truncating at the bottom.
 
 ### `mini-icon`
 
@@ -647,10 +682,12 @@ The page is only written when something actually overflowed, so its
 absence after an `-x` run means everything fitted.
 
 It shares the [gantt details page](#the-details-page)'s format — the same
-chrome, title, section heading and column rules — and, like it,
-paginates rather than truncating (`<output>_overflow_p2.svg`, …). A
+chrome, title, section heading, column rules and row banding — and, like
+it, paginates rather than truncating (`<output>_overflow_p2.svg`, …). A
 report that quietly dropped its last few lines would be reporting a
-truncation by truncating.
+truncation by truncating. See
+[Details Page](#details-page-global-theme-section) for the shared
+format's theme keys.
 
 ### `pit`
 
@@ -1496,6 +1533,47 @@ itself, as the bundled themes do.
   by one shared factor (see the timeline rendering section). The timeline
   does draw `base.default_missing_icon` — a different glyph — at the end
   of a leader whose bar found no room on the page at all.
+
+#### The companion details page (shared)
+
+Every view that writes a second document beside its chart writes the same
+page: the [gantt details page](#the-details-page), the
+[weekly overflow report](#the-overflow-page), and the
+[mini / mini-icon / candybar event listing](#the-mini-details-page). One
+writer draws all three — page chrome, a centered title, then sections of a
+heading, a column-header row, a rule, and banded rows — continued onto as
+many pages as the rows need.
+
+It has no theme block of its own. What belongs to the *format* is themed
+through the vocabulary that already existed for it:
+
+| What | Themed by | Notes |
+|---|---|---|
+| Row banding | `ec-row-band` | The element class the gantt chart's own task table bands with, so a chart and its listing stripe alike. Paint it `none` to switch banding off. Defaults to grey at 0.25 opacity |
+| Row text | `text:details_body` | Its own token, because `text:body` also sets the gantt chart's task-table text and that table's rows are a fixed `gantt.row_height`. Size scales with the paper; everything else falls through to `text:body` |
+| Title | `text:heading` | |
+| Section headings and column headers | `text:label` | |
+| The rule under a header row | `ec-separator` | Including its dash pattern |
+| An event's notes sub-line | `text:event_notes` | Only the mini listing draws one |
+| The page ground | `ec-background` | Laid down first, as the timeline and blockplan pages do. Without it a dark theme's light text and its band both land on white |
+
+What belongs to a *page* stays with the view that owns it — its title, its
+filename suffix, its columns:
+
+| | Title | Suffix | On/off |
+|---|---|---|---|
+| gantt | `gantt.details_title_text` | `gantt.details_output_suffix` | `gantt.show_details` |
+| weekly | `overflow.title_text` | `overflow.output_suffix` | `--overflow` (off by default) |
+| mini family | `mini_details.title_text` | `mini_details.output_suffix` | `mini_details.enable`, `--mini-details` / `--no-mini-details` |
+
+A band is drawn behind its own row's text — including a two-line row's
+sub-line — and every page opens on an unbanded row, so a table continued
+onto a second page does not put the stripe on the other foot.
+
+> **Known gap.** The companion pages paint `ec-background`, but the
+> `weekly`, `mini` and `gantt` **main** pages still do not — only
+> `timeline`, `blockplan` and `compactplan` do. Under a dark theme those
+> three render light text on an unpainted page.
 
 ### Complete Theme Key Reference
 
@@ -3143,6 +3221,11 @@ Every run writes `<output>_details.svg` alongside the chart; set
 
 The exception log paginates rather than truncating (`<output>_details_p2.svg`, …) — a
 report that quietly dropped its last few lines would defeat the purpose.
+
+Both tables are drawn by the shared details-page writer, so they carry the row
+banding and typography described under
+[Details Page](#details-page-global-theme-section). A column's `align` from
+`gantt.columns` applies to the listing as well as to the chart's own table.
 
 ### Inherited content-filter flags
 

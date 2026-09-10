@@ -1370,22 +1370,12 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         action="store_true",
         help="Draw grid lines between day cells",
     )
-    mini_group.add_argument(
-        "--mini-details",
-        action="store_true",
-        help="Generate a second SVG with mini calendar event details",
-    )
 
     # Mini-icon-specific options
     mini_icon_group.add_argument(
         "--mini-grid-lines",
         action="store_true",
         help="Draw grid lines between day cells",
-    )
-    mini_icon_group.add_argument(
-        "--mini-details",
-        action="store_true",
-        help="Generate a second SVG with mini calendar event details",
     )
     mini_icon_group.add_argument(
         "--mini-icon-set",
@@ -1409,6 +1399,27 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     )
 
     # Candybar-specific options (vertical year-strip)
+    # The details page is written by the mini renderer, which candybar and
+    # mini-icon both subclass, so all three take the same pair of flags.
+    # It is on by default; --mini-details is still worth having so a CLI
+    # "on" can beat a theme's `mini_details.enable: false`.
+    for _dt_group in (
+        mini_group,
+        mini_icon_group,
+        candybar.add_argument_group("Mini Calendar Options"),
+    ):
+        _dt_details = _dt_group.add_mutually_exclusive_group()
+        _dt_details.add_argument(
+            "--mini-details",
+            action="store_true",
+            help="Write the companion details page (on by default)",
+        )
+        _dt_details.add_argument(
+            "--no-mini-details",
+            action="store_true",
+            help="Suppress the companion details page",
+        )
+
     candybar_group = candybar.add_argument_group("Candybar Options")
     candybar_group.add_argument(
         "--candybar-row-height",

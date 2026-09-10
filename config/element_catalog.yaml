@@ -87,7 +87,7 @@ elements:
   # ── Gantt ──────────────────────────────────────────────────────────────────
   ec-column-header:     { kind: text, token: label,     scope: [gantt],                            description: "Task-table column header" }
   ec-task-cell:         { kind: text, token: body,      scope: [gantt],                            description: "Task-table cell text" }
-  ec-row-band:          { kind: box,  token: cell,      scope: [gantt],                            description: "Alternating task-row band" }
+  ec-row-band:          { kind: box,  token: cell,      scope: [all],                              description: "Alternating row band: the gantt task table, and every companion details page" }
   ec-progress-line:     { kind: line, token: axis,      scope: [gantt],                            description: "Percent-complete line on a duration bar" }
   ec-dependency-arrow:  { kind: line, token: grid,      scope: [gantt],                            description: "Dependency arrow" }
   ec-float-bar:         { kind: box,  token: duration,  scope: [gantt],                            description: "Earliest/latest float span" }
