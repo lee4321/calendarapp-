@@ -1534,6 +1534,30 @@ itself, as the bundled themes do.
   does draw `base.default_missing_icon` — a different glyph — at the end
   of a leader whose bar found no room on the page at all.
 
+#### Page background
+
+Every SVG page lays `ec-background` down before anything else. A dark
+theme paints light ink, which needs a dark page under it; an SVG with no
+background of its own takes whatever it is displayed on, which is white
+in most viewers.
+
+| Fill | Result |
+|---|---|
+| A color (every bundled theme: `white`, `black` under `dark`) | A full-page rectangle, drawn first, classed `ec-background` |
+| `none` / `transparent` | Nothing drawn — the page stays see-through |
+
+With no theme loaded at all the fill defaults to `none`, so a themeless
+run is byte-for-byte what it always was. Loading a light theme now paints
+an explicit white page where it used to be transparent: worth knowing if
+you embed the SVG on a colored ground, since it will no longer show
+through.
+
+Only `timeline`, `blockplan` and `compactplan` used to paint one, so
+`weekly`, `mini`, `mini-icon`, `candybar`, `gantt` and `pit` rendered
+pale text on white under a dark theme. The ground is laid when a page is
+created, so continuation pages and companion details pages get it on the
+same terms as the chart.
+
 #### The companion details page (shared)
 
 Every view that writes a second document beside its chart writes the same
@@ -1555,7 +1579,7 @@ through the vocabulary that already existed for it:
 | Section headings and column headers | `text:label` | |
 | The rule under a header row | `ec-separator` | Including its dash pattern |
 | An event's notes sub-line | `text:event_notes` | Only the mini listing draws one |
-| The page ground | `ec-background` | Laid down first, as the timeline and blockplan pages do. Without it a dark theme's light text and its band both land on white |
+| The page ground | `ec-background` | Every SVG page paints one — see [Page background](#page-background) |
 
 What belongs to a *page* stays with the view that owns it — its title, its
 filename suffix, its columns:
@@ -1570,10 +1594,6 @@ A band is drawn behind its own row's text — including a two-line row's
 sub-line — and every page opens on an unbanded row, so a table continued
 onto a second page does not put the stripe on the other foot.
 
-> **Known gap.** The companion pages paint `ec-background`, but the
-> `weekly`, `mini` and `gantt` **main** pages still do not — only
-> `timeline`, `blockplan` and `compactplan` do. Under a dark theme those
-> three render light text on an unpainted page.
 
 ### Complete Theme Key Reference
 

@@ -246,14 +246,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
         timeline_x = area_x + label_col_w
         timeline_w = max(1.0, area_w - label_col_w)
 
-        _bg_style = config.get_box_style("ec-background")
-        bg = str(_bg_style.fill or "").strip().lower()
-        if bg not in {"", "none", "transparent"}:
-            self._draw_rect(
-                area_x, area_y, area_w, area_h, fill=_bg_style.fill,
-                css_class="ec-background",
-            )
-
         # Heights — cap combined band heights so swimlane region always has positive height
         top_bands_h = max(
             0.0,

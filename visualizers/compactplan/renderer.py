@@ -396,12 +396,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         bands_y = min_content_y - header_gap - bands_h
         legend_y = max_content_y + key_gap
 
-        # Background (full area)
-        bg_style = config.get_box_style("ec-background")
-        bg = str(bg_style.fill or "").strip().lower()
-        if bg not in {"", "none", "transparent"}:
-            self._draw_rect(area_x, area_y, area_w, area_h, fill=bg_style.fill, css_class="ec-background")
-
         # Header bands at computed floating position
         self._draw_bands(
             config, time_bands, band_row_h, area_x, bands_y, area_w, start, end,

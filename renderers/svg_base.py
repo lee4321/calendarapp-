@@ -664,7 +664,35 @@ class BaseSVGRenderer(ABC):
         title = f"{config.doc_title} for dates {start_str} to {end_str}"
         drawing.append_title(title)
 
+        self._append_page_background(drawing, config)
         return drawing
+
+    @staticmethod
+    def _append_page_background(
+        drawing: drawsvg.Drawing,
+        config: CalendarConfig,
+    ) -> None:
+        """Lay the theme's page ground down before anything else.
+
+        A dark theme paints light ink, which needs a dark page under it;
+        an SVG with no background takes the viewer's, which is white
+        everywhere it matters.  Done here rather than at each call site so
+        every page a renderer opens gets it -- a chart, a continuation
+        page, a companion details page alike.
+        """
+        style = config.get_box_style("ec-background")
+        if _is_none_color(style.fill):
+            return
+        drawing.append(
+            drawsvg.Rectangle(
+                0,
+                0,
+                round(config.pageX, 2),
+                round(config.pageY, 2),
+                fill=style.fill,
+                class_="ec-background",
+            )
+        )
 
     def _inject_css(self, css_content: str | None = None) -> None:
         """Inject a <style> block into the current SVG drawing.
