@@ -162,3 +162,31 @@ def test_the_body_size_scales_with_the_page(tmp_path):
 
     assert large.details_body_font_size > small.details_body_font_size
 
+
+
+def test_a_row_mark_is_painted_inside_its_cell(tmp_path):
+    """A mark -- a key's swatch, say -- gets its cell's padded bounds and
+    the row's baseline, so it sits in the row it keys."""
+    cfg = _config(tmp_path)
+    coords = WeeklyCalendarLayout().calculate(cfg)
+    renderer = _Recording()
+    renderer._drawing = renderer._create_drawing(cfg)
+    from renderers.details_page import numbered_page_path
+
+    writer = DetailsPageWriter(
+        renderer, cfg, coords,
+        lambda n: numbered_page_path(cfg.outputfile, n),
+        "Title",
+    )
+    writer.section("Section", _COLUMNS)
+    calls: list[tuple[float, float, float, float]] = []
+    writer.row(["Row", "1"], _COLUMNS, mark=(1, lambda *args: calls.append(args)))
+    writer.finish()
+
+    (x, baseline, width, size), = calls
+    row_text = next(t for t in renderer.texts if t["text"] == "Row")
+    cell_left = writer.left + writer.width * _COLUMNS[0].width
+    assert cell_left < x < cell_left + writer.width * _COLUMNS[1].width
+    assert x + width <= writer.right
+    assert baseline == row_text["y"]
+    assert size == writer.body_size

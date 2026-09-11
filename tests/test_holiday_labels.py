@@ -110,16 +110,17 @@ def test_mini_details_page_collapses_a_shared_name_onto_one_row():
     assert [r["name"] for r in rows] == ["CA, US - New Year's Day"]
 
 
-def test_compactplan_roster_carries_the_country_code():
-    from visualizers.compactplan.renderer import CompactPlanRenderer
+def test_compactplan_key_carries_the_country_code():
+    """The compactplan key lists holidays through the shared listing."""
+    from renderers.event_listing import holiday_special_rows
 
     config = _config()
     config.country = "US,UA"
     days = [date(2026, 7, 1) + timedelta(days=i) for i in range(31)]
-    entries = CompactPlanRenderer()._collect_holiday_entries(
-        days, config, _StubDB(_HOLIDAYS, _SPECIALS)
+    rows = holiday_special_rows(
+        (d.strftime("%Y%m%d") for d in days), config, _StubDB(_HOLIDAYS, _SPECIALS)
     )
-    names = [name for _, _, name in entries]
+    names = [row["name"] for row in rows]
 
     assert "UA - Ukrainian Statehood Day" in names
     assert "US - Independence Day" in names

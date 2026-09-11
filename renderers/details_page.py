@@ -30,6 +30,9 @@ _SECTION_GAP = 8.0
 #: Horizontal padding inside a details cell, in points.
 _CELL_PAD = 3.0
 
+#: Paints a graphic into one cell of a row: ``(x, baseline, width, size)``.
+RowMark = Callable[[float, float, float, float], None]
+
 
 @dataclass(frozen=True)
 class DetailsColumn:
@@ -276,11 +279,17 @@ class DetailsPageWriter:
         self._row_index = 0
         return resolved
 
+    @property
+    def body_size(self) -> float:
+        """Font size of a data row's main line, which a mark is sized to."""
+        return self._body_size
+
     def row(
         self,
         cells: Sequence[str],
         columns: Sequence,
         sub_line: tuple[int, str] | None = None,
+        mark: tuple[int, "RowMark"] | None = None,
     ) -> None:
         """Draw one data row, breaking to a new page when out of space.
 
@@ -288,6 +297,13 @@ class DetailsPageWriter:
         drawn in the notes style beneath that column, which is how an
         event carries its notes under its name.  The row grows to hold
         it, so the band still covers the whole entry.
+
+        ``mark`` is an optional ``(column index, draw)`` graphic for that
+        cell -- a legend swatch, say, tying the row to what it keys.
+        ``draw(x, baseline, width, size)`` gets the cell's padded left
+        edge and width, the row's text baseline, and :attr:`body_size`,
+        and paints with the host renderer's helpers.  It is called after
+        the band, so the mark sits on top of it.
         """
         resolved = as_columns(columns)
         has_note = sub_line is not None and bool(sub_line[1])
@@ -295,6 +311,15 @@ class DetailsPageWriter:
         self._ensure(height)
         self._band(height)
         self._cells(resolved, cells)
+
+        if mark is not None and 0 <= mark[0] < len(resolved):
+            x, cell_w = self._cell_x(resolved, mark[0])
+            mark[1](
+                x + _CELL_PAD,
+                self._cursor,
+                max(0.0, cell_w - _CELL_PAD * 2),
+                self._body_size,
+            )
 
         if has_note:
             index, text = sub_line
