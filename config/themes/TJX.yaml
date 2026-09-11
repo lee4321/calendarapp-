@@ -328,7 +328,7 @@ compact_plan:
   company_holiday_fill_opacity: 1.0
   weekend_fill_color: '#E8E8E8'
   weekend_fill_opacity: 1.0
-  federal_holiday_icon: flag-us
+  federal_holiday_icon: us
   text:
     font_name: RobotoCondensed-Light
     font_color: black
@@ -390,7 +390,7 @@ blockplan:
   fiscal_year_start_month: 2
   week_start: 0
   duration_date_font_size: 8
-  federal_holiday_icon: flag-us
+  federal_holiday_icon: us
   federal_holiday_fill_color: tomato
   federal_holiday_fill_opacity: 1.0
   show_unmatched_lane: false
