@@ -384,6 +384,12 @@ pit:
     icon_gap: 4.0
   label_palette: Pastel1
 compact_plan:
+  # conditions that color duration bars, first match wins; a bar none
+  # matches takes its resource group's palette color below.  e.g.
+  #   - name: critical
+  #     select: {priority_min: 4}
+  #     color: firebrick
+  color_rules: []
   palette:
     - '#92d050'
     - '#6b9bc7'
