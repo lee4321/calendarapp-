@@ -1246,6 +1246,11 @@ class CalendarConfig:
             "mediumpurple",
         ]
     )
+    # Theme conditions that color duration bars: ordered {name, select, color}
+    # rules, first match wins (shared.rule_engine.ColorRuleEngine).  A bar no
+    # rule matches keeps the default: its own Color, else its resource group's
+    # palette color.  The key page lists bars in this assignment order.
+    compactplan_color_rules: list[dict[str, Any]] = field(default_factory=list)
     compactplan_milestone_icon: str | None = None
     compactplan_milestone_flag_width: float = 7.0
     compactplan_milestone_flag_height: float = 9.0

@@ -303,6 +303,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "lane_spacing"): "compactplan_lane_spacing",
     ("compact_plan", "palette"): "compactplan_palette",
     ("compact_plan", "palette_name"): "theme_compactplan_palette_name",
+    ("compact_plan", "color_rules"): "compactplan_color_rules",
     ("compact_plan", "milestone_icon"): "compactplan_milestone_icon",
     ("compact_plan", "milestone_flag_width"): "compactplan_milestone_flag_width",
     ("compact_plan", "milestone_flag_height"): "compactplan_milestone_flag_height",

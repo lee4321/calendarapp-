@@ -57,7 +57,7 @@ from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import StyleEngine, StyleResult
+from shared.rule_engine import ColorRuleEngine, StyleEngine, StyleResult
 from shared.timeband import (
     BandSegment as _BandSegment,
     build_segments as _build_band_segments,
@@ -177,6 +177,11 @@ def _resolve_icon_on_bar(
     return candidate
 
 
+def _color_key(color: str) -> str:
+    """A color as the key page groups it: ``Gold`` and ``gold`` are one."""
+    return str(color or "").strip().lower()
+
+
 def _resolve_style_rules(config: "CalendarConfig") -> list:
     """Source the raw style_rules list for StyleEngine.
 
@@ -285,6 +290,9 @@ class _ChartKey:
         milestones: ``id()`` of every milestone given a flag.
         visible_days: The days on the axis, whose holidays the key lists.
         continuations: Whether any bar was drawn continuing off the end.
+        assigned_colors: The colors the assignment hands out, in its
+            order: each color rule's, then each group's palette color in
+            slot order.  The key ranks its rows by these.
     """
 
     listing: list[tuple[Any, Event]]
@@ -292,6 +300,7 @@ class _ChartKey:
     milestones: frozenset[int]
     visible_days: list[date]
     continuations: bool
+    assigned_colors: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +381,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
         self._style_engine = StyleEngine(_resolve_style_rules(config))
+        self._color_rules = ColorRuleEngine(
+            config.compactplan_color_rules, owner="compact_plan.color_rules"
+        )
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
@@ -503,6 +515,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
             ),
             visible_days=visible_days,
             continuations=show_continuation and has_continuations,
+            assigned_colors=(
+                *self._color_rules.colors, *group_color_map.values()
+            ),
         )
 
         # ------------------------------------------------------------------
@@ -803,6 +818,21 @@ class CompactPlanRenderer(BaseSVGRenderer):
         })
         return {g: palette[i % len(palette)] for i, g in enumerate(groups)}
 
+    def _assign_bar_color(self, evt: Event, group_color_map: dict[str, str]) -> str:
+        """A bar's color.
+
+        The theme's ``compact_plan.color_rules`` are tried in order and the
+        first match colors the bar.  A bar none matches gets the default
+        assignment: its own ``Color``, else its resource group's palette
+        color.  (A style rule's ``fill_color`` still layers over either.)
+        """
+        engine = getattr(self, "_color_rules", None)
+        matched = engine.assign(evt) if engine else None
+        if matched is not None:
+            return matched[1]
+        group = (evt.resource_group or "").strip()
+        return evt.color or group_color_map.get(group, "steelblue")
+
     # ------------------------------------------------------------------
     # Greedy row placement
     # ------------------------------------------------------------------
@@ -866,8 +896,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             continues = x2_raw > timeline_x_end
             x2 = min(x2_raw, timeline_x_end)
 
-            group_key = (evt.resource_group or "").strip()
-            color = evt.color or group_color_map.get(group_key, "steelblue")
+            color = self._assign_bar_color(evt, group_color_map)
             _style_engine = getattr(self, "_style_engine", None)
             _sr = (
                 _style_engine.evaluate_event(evt)
@@ -1380,8 +1409,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """Write the chart's key beside it; returns how many pages it took.
 
         The key is the shared details listing -- the events the chart
-        drew, chronologically, then the holidays and special days on its
-        axis -- with a leading column of marks: each activity's bar in
+        drew, in color-assignment order (see :meth:`_key_row_order`), then
+        the holidays and special days on its axis -- with a leading column
+        of marks: each activity's bar in
         miniature (its color, start icon and any continuation arrow),
         each milestone's flag, each holiday's icon.  That column is what
         keeps the listing a key: every row is tied to what it explains
@@ -1425,8 +1455,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         ]
         if drawn:
             writer.section(config.mini_details_events_section_text, columns)
+            ranks = self._key_color_ranks(key)
             for row, evt in sorted(
-                drawn, key=lambda item: event_listing.sort_key(item[0])
+                drawn, key=lambda item: self._key_row_order(item, key, ranks)
             ):
                 bar = key.placed.get(id(evt))
                 writer.row(
@@ -1472,6 +1503,40 @@ class CompactPlanRenderer(BaseSVGRenderer):
         pages = writer.finish()
         self._drawing = saved_drawing
         return pages
+
+    @staticmethod
+    def _key_color_ranks(key: _ChartKey) -> dict[str, int]:
+        """Rank of each bar color on the key page, by assignment order.
+
+        The colors the assignment hands out come first, in its order --
+        each color rule's, then each resource group's palette color by
+        slot.  Any other color a bar was drawn in (its own ``Color``, a
+        style rule's ``fill_color``) follows, in order of first
+        appearance by start date.
+        """
+        ranks: dict[str, int] = {}
+        for color in key.assigned_colors:
+            ranks.setdefault(_color_key(color), len(ranks))
+        for bar in sorted(key.placed.values(), key=lambda p: (p.event.start, p.event.end)):
+            ranks.setdefault(_color_key(bar.color), len(ranks))
+        return ranks
+
+    @staticmethod
+    def _key_row_order(
+        item: tuple[dict, Event], key: _ChartKey, ranks: dict[str, int]
+    ) -> tuple:
+        """Where an event's row falls on the key page.
+
+        Bars first, sorted by color assignment -- rows of one color sit
+        together, the colors in the order :meth:`_key_color_ranks` gives
+        them -- then by start date.  Milestones, which take no part in
+        the color assignment, follow by start date.
+        """
+        row, evt = item
+        bar = key.placed.get(id(evt))
+        if bar is not None:
+            return (0, ranks[_color_key(bar.color)], *event_listing.sort_key(row))
+        return (1, 0, *event_listing.sort_key(row))
 
     def _key_column_width(self, config: "CalendarConfig", key: _ChartKey) -> float:
         """Width of the key page's mark column, in points."""

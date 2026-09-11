@@ -158,6 +158,19 @@ def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> No
                 f"Palette not found: {config.theme_compactplan_palette_name!r}"
             )
 
+    # ...and in the colors of compactplan's color_rules.  Each rule is
+    # copied rather than edited in place: the list came from the theme's
+    # parsed YAML, which a later render may read again.
+    if config.compactplan_color_rules:
+        config.compactplan_color_rules = [
+            {**rule, "color": _resolve_single_palette_ref(rule["color"], db)}
+            if isinstance(rule, dict)
+            and isinstance(rule.get("color"), str)
+            and rule["color"].startswith("palette:")
+            else rule
+            for rule in config.compactplan_color_rules
+        ]
+
     # Resolve 'palette:NAME:INDEX' references in all string config fields.
     for f in dataclasses.fields(config):
         val = getattr(config, f.name, None)

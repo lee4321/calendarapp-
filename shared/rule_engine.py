@@ -7,6 +7,7 @@ Provides:
 - StyleResult: accumulated style fields from matched rules (None = not set)
 - StyleEngine: evaluates style_rules; results layer additively in order
 - LaneEngine: evaluates swimlane_rules; first-match wins
+- ColorRuleEngine: evaluates a visualizer's color_rules; first-match wins
 """
 
 from __future__ import annotations
@@ -736,4 +737,67 @@ class LaneEngine:
             lane = rule.get("apply_to")
             return str(lane) if lane is not None else None
 
+        return None
+
+
+# ── ColorRuleEngine ───────────────────────────────────────────────────────────
+
+
+class ColorRuleEngine:
+    """
+    Evaluates a visualizer's ``color_rules``: first match wins.
+
+    Each rule is ``{name, select, color}``.  ``select`` takes the event
+    criteria style_rules and swimlane_rules use (resource_group, priority,
+    wbs, task_name, …); an empty or absent ``select`` matches every event,
+    so a final catch-all replaces the visualizer's default coloring.
+
+    Rules are checked once, up front.  One with no ``color``, or whose
+    ``select`` names a criterion the engine does not know, is skipped with
+    a warning: matching on the criteria it does know would color events
+    the author meant to exclude, and matching on none would color them all.
+    """
+
+    def __init__(self, rules: list[dict] | None, *, owner: str = "color_rules"):
+        self._rules: list[tuple[int, dict, str]] = []
+        for index, rule in enumerate(rules or []):
+            label = f"{owner}[{index}]"
+            if not isinstance(rule, dict):
+                logger.warning("%s is not a mapping; skipped", label)
+                continue
+            if rule.get("name"):
+                label = f"{label} {rule['name']!r}"
+            color = str(rule.get("color") or "").strip()
+            if not color:
+                logger.warning("%s has no color; skipped", label)
+                continue
+            select = rule.get("select") or {}
+            if not isinstance(select, dict):
+                logger.warning("%s: select must be a mapping; skipped", label)
+                continue
+            unknown = sorted(set(select) - _EVENT_CRITERIA_KEYS)
+            if unknown:
+                logger.warning(
+                    "%s: unknown select criteria %s; skipped", label, ", ".join(unknown)
+                )
+                continue
+            self._rules.append((index, select, color))
+
+    def __bool__(self) -> bool:
+        return bool(self._rules)
+
+    @property
+    def colors(self) -> list[str]:
+        """Each usable rule's color, in rule order."""
+        return [color for _, _, color in self._rules]
+
+    def assign(self, event: "Event") -> tuple[int, str] | None:
+        """``(rule index, color)`` of the first rule *event* matches, or None.
+
+        The index is the rule's position in the theme's list, so it stays
+        put when an earlier, malformed rule is skipped.
+        """
+        for index, select, color in self._rules:
+            if not select or _matches_event_fields(select, event) is not False:
+                return index, color
         return None
