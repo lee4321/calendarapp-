@@ -242,11 +242,15 @@ class DayStyleResolver:
         ``colors.federal_holiday`` (or whose theme failed to parse) still
         get *some* visible nonworkday tint; the synthesized rule then
         overrides it via ``_apply_box_day_rules``.
+
+        Every holiday on the day contributes its icon, not just the first:
+        a day that is a holiday in several of the loaded countries shows each
+        country's icon in its own corner.  ``add_icon`` drops repeats, so two
+        holidays from one country still take a single corner.
         """
         if not holidays:
             return
 
-        holiday = holidays[0]
         # Text color stays on the legacy chain — text:day_number is a
         # separate concern from box:day.
         style.text_color = (
@@ -255,17 +259,18 @@ class DayStyleResolver:
             or self._config.mini_holiday_color
         )
 
-        if holiday.get("nonworkday"):
+        if any(h.get("nonworkday") for h in holidays):
             style.shade_color = (
                 self._config.theme_mini_nonworkday_fill_color
                 or self._config.mini_nonworkday_fill_color
             )
             style.shade_opacity = 0.2
 
-        style.add_icon(
-            holiday.get("icon") or holiday.get("displayiconid"),
-            ICON_RANK_HOLIDAY,
-        )
+        for holiday in holidays:
+            style.add_icon(
+                holiday.get("icon") or holiday.get("displayiconid"),
+                ICON_RANK_HOLIDAY,
+            )
 
     def _apply_special_days(self, style: DayStyle, special_days: list[dict]) -> None:
         """Apply baseline company-special-day styling — fallback shade,

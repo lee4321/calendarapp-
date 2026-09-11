@@ -234,6 +234,49 @@ def test_a_holiday_and_an_event_on_one_day_both_get_a_corner():
     assert names == ["flag-us", "star"]     # holiday outranks the event
 
 
+def test_holidays_from_several_countries_each_get_a_corner():
+    """Only the first holiday's country icon used to be drawn."""
+    config = _config()
+    db = _StubDB(holidays=[
+        {"displayname": "Labour Day", "icon": "ca", "country": "CA"},
+        {"displayname": "Labor Day", "icon": "us", "country": "US"},
+        {"displayname": "Labour Day", "icon": "gb", "country": "GB"},
+    ])
+    style = DayStyleResolver(config, db).resolve(
+        "20260907",
+        [{"Start": "20260907", "End": "20260907", "Icon": "star"}],
+    )
+
+    names = [c["icon_name"] for c in _drawn(config, style).icon_calls]
+    assert names == ["ca", "us", "gb", "star"]  # holidays outrank the event
+
+
+def test_two_holidays_from_one_country_take_one_corner():
+    config = _config()
+    db = _StubDB(holidays=[
+        {"displayname": "Christmas Eve", "icon": "us", "country": "US"},
+        {"displayname": "Other", "icon": "us", "country": "US"},
+    ])
+    style = DayStyleResolver(config, db).resolve("20261224", [])
+
+    assert [c["icon_name"] for c in _drawn(config, style).icon_calls] == ["us"]
+
+
+def test_any_nonworking_holiday_shades_the_day():
+    """A nonworking holiday listed after an informational one still shades."""
+    config = _config()
+    db = _StubDB(holidays=[
+        {"displayname": "Observance", "icon": "ca", "nonworkday": 0},
+        {"displayname": "Holiday", "icon": "us", "nonworkday": 1},
+    ])
+    style = DayStyleResolver(config, db).resolve("20260115", [])
+
+    assert style.shade_color == (
+        config.theme_mini_nonworkday_fill_color
+        or config.mini_nonworkday_fill_color
+    )
+
+
 def test_the_same_icon_from_two_sources_takes_one_corner():
     config = _config()
     db = _StubDB(special_days=[{"name": "Company Day", "icon": "star"}])

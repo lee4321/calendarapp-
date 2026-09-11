@@ -34,6 +34,7 @@ _MILESTONE_BAND_CLEARANCE = 3.0
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
+from shared.holiday_band import compute_holiday_band_days
 from shared.holiday_labels import format_holiday_label
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine, StyleResult
@@ -672,6 +673,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
         if _day_classes and _has_nwd_icons:
             self._load_icon_svg_cache(db)
+        # A federal-holiday date/dow cell shows the flag of every country
+        # closed that day — the same one-flag-per-country marks the holiday
+        # band draws — not just the first holiday's.
+        _holiday_flags = (
+            compute_holiday_band_days(visible_days, db, config, nonworkdays_only=True)
+            if config.compactplan_federal_holiday_icon and db is not None
+            else {}
+        )
 
         for band_idx, band in enumerate(time_bands):
             row_y = area_y + band_idx * band_row_h
@@ -730,7 +739,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     unit in {"date", "dow"}
                     and (seg.end_exclusive - seg.start).days == 1
                 )
-                _nwd_icon_result: tuple[str, str] | None = None
+                _nwd_icons: list[tuple[str, str]] = []
                 if _is_single_day and _day_classes:
                     _day_cls = _day_classes.get(seg.start, frozenset())
                     _nwd_fill = _nwd_fill_for_classes(_day_cls, config)
@@ -738,26 +747,20 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         fill = _nwd_fill
                         fill_opacity = _nwd_fill_opacity_for_classes(_day_cls, config)
                     _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
-                    # Prefer the per-holiday DB icon over the static config icon.
-                    if (
-                        _nwd_icon_result
-                        and "federal_holiday" in _day_cls
-                        and db is not None
-                    ):
-                        _daykey_str = seg.start.strftime("%Y%m%d")
-                        _holidays = db.get_holidays_for_date(
-                            _daykey_str, config.country
+                    if _nwd_icon_result:
+                        # Prefer the holidays' own country flags over the
+                        # static config icon.
+                        _icon_color = _nwd_icon_result[1]
+                        _flags = (
+                            _holiday_flags.get(seg.start)
+                            if "federal_holiday" in _day_cls
+                            else None
                         )
-                        if _holidays:
-                            _raw = (
-                                _holidays[0].get("icon")
-                                or _holidays[0].get("displayiconid")
-                                or _holidays[0].get("displayicon")
-                                or ""
-                            )
-                            _db_icon = str(_raw).strip()
-                            if _db_icon:
-                                _nwd_icon_result = (_db_icon, _nwd_icon_result[1])
+                        _nwd_icons = (
+                            [(mark.icon, _icon_color) for mark in _flags]
+                            if _flags
+                            else [_nwd_icon_result]
+                        )
 
                 if not _is_none_color(fill):
                     self._draw_rect(
@@ -780,23 +783,16 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         css_class="ec-separator",
                     )
 
-                if _nwd_icon_result:
-                    _icon_name, _icon_color = _nwd_icon_result
-                    _icon_size = band_row_h * 0.65
-                    self._draw_icon_svg(
-                        _icon_name,
-                        x1 + seg_w / 2.0,
-                        row_y + band_row_h / 2.0 + _icon_size * 0.30,
-                        _icon_size,
-                        color=_icon_color,
-                        anchor="middle",
+                if _nwd_icons:
+                    self._draw_cell_icons(
+                        _nwd_icons, x1, seg_w, row_y, band_row_h, band_row_h * 0.65,
                         css_class="ec-nwd-icon",
                     )
 
                 # Label text, vertically centered in the band row.
                 # When a non-workday icon is drawn, suppress the date label so
                 # the icon isn't overprinted (matches blockplan behavior).
-                if _nwd_icon_result:
+                if _nwd_icons:
                     continue
                 label = seg.label
                 if label:

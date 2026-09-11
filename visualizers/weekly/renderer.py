@@ -936,7 +936,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         icon_size = ht_max_size
         icon_baseline_y = y1 - 0.3 * (day_num_size - icon_size)
 
+        # One icon per country: a day carrying two holidays from the same
+        # country draws its flag once, beside every other country's.
+        drawn_icons: set[str] = set()
         for _name, icon_name in holidays:
+            if icon_name and icon_name in drawn_icons:
+                continue
+            drawn_icons.add(icon_name)
             if next_x + icon_size > available_right:
                 break  # ran out of room
             self._draw_icon_svg(
