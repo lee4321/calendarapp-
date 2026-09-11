@@ -602,6 +602,15 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     Event.from_dict(e) if isinstance(e, dict) else e for e in events
                 ]
 
+        # A federal-holiday date/dow cell shows the flag of every country
+        # closed that day — the same one-flag-per-country marks the holiday
+        # band draws — not just the first holiday's.
+        _holiday_flags = (
+            compute_holiday_band_days(visible_days, db, config, nonworkdays_only=True)
+            if config.blockplan_federal_holiday_icon and db is not None
+            else {}
+        )
+
         _n_vis = len(visible_days)
         _px_per_day = timeline_w / max(1, _n_vis)
 
@@ -852,7 +861,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     and len(group) == 1
                     and (first_seg.end_exclusive - first_seg.start).days == 1
                 )
-                _nwd_icon_result: tuple[str, str] | None = None
+                _nwd_icons: list[tuple[str, str]] = []
                 _nwd_opacity: float | None = None
                 if _is_single_day:
                     _day_cls = _classify(first_seg.start)
@@ -865,21 +874,20 @@ class BlockPlanRenderer(BaseSVGRenderer):
                             _day_cls, band_fill_rules, config
                         )
                     _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
-                    # Prefer the per-holiday DB icon over the static config icon
-                    # (mirrors how the weekly calendar shows country flag icons).
-                    if _nwd_icon_result and "federal_holiday" in _day_cls and db is not None:
-                        _daykey_str = first_seg.start.strftime("%Y%m%d")
-                        _holidays = db.get_holidays_for_date(_daykey_str, config.country)
-                        if _holidays:
-                            _raw = (
-                                _holidays[0].get("icon")
-                                or _holidays[0].get("displayiconid")
-                                or _holidays[0].get("displayicon")
-                                or ""
-                            )
-                            _db_icon = str(_raw).strip()
-                            if _db_icon:
-                                _nwd_icon_result = (_db_icon, _nwd_icon_result[1])
+                    if _nwd_icon_result:
+                        # Prefer the holidays' own country flags over the
+                        # static config icon (mirrors the weekly calendar).
+                        _icon_color = _nwd_icon_result[1]
+                        _flags = (
+                            _holiday_flags.get(first_seg.start)
+                            if "federal_holiday" in _day_cls
+                            else None
+                        )
+                        _nwd_icons = (
+                            [(mark.icon, _icon_color) for mark in _flags]
+                            if _flags
+                            else [_nwd_icon_result]
+                        )
                 _band_fop = self._tk("box:band").get("fill_opacity")
                 self._draw_rect(
                     seg_x0,
@@ -902,16 +910,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke_dasharray=tb_dasharray,
                     css_class="ec-band-cell",
                 )
-                if _nwd_icon_result:
-                    _icon_name, _icon_color = _nwd_icon_result
-                    _icon_size = row_h * 0.65
-                    self._draw_icon_svg(
-                        _icon_name,
-                        seg_x0 + seg_w / 2.0,
-                        y_top + row_h / 2.0 + _icon_size * 0.30,
-                        _icon_size,
-                        color=_icon_color,
-                        anchor="middle",
+                if _nwd_icons:
+                    self._draw_cell_icons(
+                        _nwd_icons, seg_x0, seg_w, y_top, row_h, row_h * 0.65,
                         css_class="ec-nwd-icon",
                     )
                 _lv = band.get("label_values")
@@ -920,7 +921,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     display_label = first_seg.label if _raw is None else str(_raw)
                 else:
                     display_label = first_seg.label
-                if display_label and not _nwd_icon_result:
+                if display_label and not _nwd_icons:
                     self._draw_text(
                         seg_x0 + (seg_w / 2.0),
                         y_top + (row_h * 0.50) + (band_font_size * 0.30),

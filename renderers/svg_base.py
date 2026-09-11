@@ -1281,11 +1281,6 @@ class BaseSVGRenderer(ABC):
             The icons themselves are never given this class — it is a
             ``kind: box`` class in ``element_catalog.yaml``.
         """
-        # Vertical centring formula (mirrors milestone / continuation icons):
-        #   icon top     = baseline_y - 0.8 * icon_h
-        #   icon centre  = baseline_y - 0.3 * icon_h  =  row_y + row_h * 0.5
-        #   → baseline_y = row_y + row_h * 0.5 + 0.3 * icon_h
-        icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, icon_h)
         draw_fill = str(fill_color or "none").strip().lower()
         has_fill = draw_fill not in ("none", "transparent", "")
 
@@ -1295,17 +1290,39 @@ class BaseSVGRenderer(ABC):
                     cell_x, row_y, cell_w, row_h,
                     fill=draw_fill, css_class=css_class,
                 )
-            n = len(icons)
-            if n == 0:
-                continue
-            # Evenly divide the cell width into n slots; centre each icon in its slot.
-            slot_w = cell_w / n
-            for i, (icon_name, color) in enumerate(icons):
-                icon_x = cell_x + slot_w * (i + 0.5)
-                self._draw_icon_svg(
-                    icon_name, icon_x, icon_baseline_y, icon_h,
-                    anchor="middle", color=color,
-                )
+            self._draw_cell_icons(icons, cell_x, cell_w, row_y, row_h, icon_h)
+
+    def _draw_cell_icons(
+        self,
+        icons: "list[tuple[str, str | None]]",
+        cell_x: float,
+        cell_w: float,
+        row_y: float,
+        row_h: float,
+        icon_h: float,
+        *,
+        css_class: str | None = None,
+    ) -> None:
+        """Draw ``[(icon_name, color), ...]`` side by side in one band cell.
+
+        The cell width is split into one equal slot per icon and each icon is
+        centred in its slot, so a single icon sits in the middle of the cell
+        and a day that is a holiday in three countries shows three flags.
+        """
+        n = len(icons)
+        if n == 0:
+            return
+        # Vertical centring formula (mirrors milestone / continuation icons):
+        #   icon top     = baseline_y - 0.8 * icon_h
+        #   icon centre  = baseline_y - 0.3 * icon_h  =  row_y + row_h * 0.5
+        #   → baseline_y = row_y + row_h * 0.5 + 0.3 * icon_h
+        icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, icon_h)
+        slot_w = cell_w / n
+        for i, (icon_name, color) in enumerate(icons):
+            self._draw_icon_svg(
+                icon_name, cell_x + slot_w * (i + 0.5), icon_baseline_y, icon_h,
+                anchor="middle", color=color, css_class=css_class,
+            )
 
     # =========================================================================
     # Decorations (headers, footers, day labels)
