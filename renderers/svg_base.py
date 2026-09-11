@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 
 _NONE_COLORS = {"", "none", "transparent"}
 
+#: Share of its slot's width a band-cell icon may take when the slot is
+#: narrower than the icon's own size (see _draw_cell_icons).  The rest is
+#: clearance, so neighbouring icons never touch.
+_CELL_ICON_FILL = 0.9
+
 
 def _is_none_color(color: str | None) -> bool:
     """Return True if the color string means 'no color' (transparent/invisible)."""
@@ -1308,19 +1313,25 @@ class BaseSVGRenderer(ABC):
         The cell width is split into one equal slot per icon and each icon is
         centred in its slot, so a single icon sits in the middle of the cell
         and a day that is a holiday in three countries shows three flags.
+
+        ``icon_h`` is the size an icon gets when its slot is wide enough.  A
+        narrower slot — a long date range on small paper — shrinks the icon
+        to fit it, with a sliver of clearance, so icons never spill into the
+        next icon or the next day's cell.
         """
         n = len(icons)
-        if n == 0:
+        if n == 0 or cell_w <= 0:
             return
-        # Vertical centring formula (mirrors milestone / continuation icons):
-        #   icon top     = baseline_y - 0.8 * icon_h
-        #   icon centre  = baseline_y - 0.3 * icon_h  =  row_y + row_h * 0.5
-        #   → baseline_y = row_y + row_h * 0.5 + 0.3 * icon_h
-        icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, icon_h)
         slot_w = cell_w / n
+        size = min(icon_h, slot_w * _CELL_ICON_FILL)
+        # Vertical centring formula (mirrors milestone / continuation icons):
+        #   icon top     = baseline_y - 0.8 * size
+        #   icon centre  = baseline_y - 0.3 * size  =  row_y + row_h * 0.5
+        #   → baseline_y = row_y + row_h * 0.5 + 0.3 * size
+        icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, size)
         for i, (icon_name, color) in enumerate(icons):
             self._draw_icon_svg(
-                icon_name, cell_x + slot_w * (i + 0.5), icon_baseline_y, icon_h,
+                icon_name, cell_x + slot_w * (i + 0.5), icon_baseline_y, size,
                 anchor="middle", color=color, css_class=css_class,
             )
 

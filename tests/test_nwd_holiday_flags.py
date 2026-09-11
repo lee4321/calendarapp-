@@ -222,6 +222,40 @@ def test_holidays_without_flags_fall_back_to_the_config_icon(tmp_path):
     assert [c["icon_name"] for c in renderer.nwd_icons()] == ["star"]
 
 
+# ── Fitting icons to the cell ─────────────────────────────────────────────
+
+
+def _cell_icons(n: int, cell_w: float, icon_h: float = 10.0) -> list[dict]:
+    renderer = _BlockPlan()
+    renderer._draw_cell_icons(
+        [(f"i{k}", None) for k in range(n)], 100.0, cell_w, 0.0, 16.0, icon_h,
+    )
+    return renderer.icon_calls
+
+
+def test_icons_keep_their_size_in_a_wide_cell():
+    assert {c["size"] for c in _cell_icons(3, cell_w=60.0)} == {10.0}
+
+
+def test_icons_shrink_to_fit_a_narrow_cell():
+    """A long range on small paper used to spill flags over the next day."""
+    icons = _cell_icons(3, cell_w=12.0)
+
+    size = icons[0]["size"]
+    assert size < 10.0
+    left_edges = [c["x"] - size / 2 for c in icons]
+    right_edges = [c["x"] + size / 2 for c in icons]
+    assert left_edges[0] >= 100.0 and right_edges[-1] <= 112.0
+    # Each icon clears the next one.
+    assert all(r < l for r, l in zip(right_edges, left_edges[1:]))
+
+
+def test_a_lone_icon_in_a_narrow_cell_stays_inside_it():
+    [icon] = _cell_icons(1, cell_w=4.0)
+    assert icon["x"] == 102.0
+    assert icon["size"] < 4.0
+
+
 # ── Weekly top row ────────────────────────────────────────────────────────
 
 

@@ -412,9 +412,14 @@ compact_plan:
   continuation_section_gap: 4.0
   show_axis_legend: true
   legend_axis_text: timeline
+  # marks a government holiday's date/dow band cell; each closed
+  # country's own flag takes its place, so this shows only when a
+  # holiday carries no flag
+  federal_holiday_icon: flag-duotone
   bands:
     - date_range
     - week
+    - date
 blockplan:
   background_color: none
   grid_color: grey
@@ -485,6 +490,10 @@ blockplan:
   duration_show_end_date: true
   duration_date_format: M/D
   duration_date_color: dimgray
+  # marks a government holiday's date/dow band cell; each closed
+  # country's own flag takes its place, so this shows only when a
+  # holiday carries no flag
+  federal_holiday_icon: flag-duotone
   palette:
     - lightskyblue
     - gold
@@ -499,6 +508,8 @@ blockplan:
     - band: fiscal_quarter
       row_height: 24
     - band: month_2
+      row_height: 18
+    - band: date
       row_height: 18
 gantt:
   # dependency arrowhead; none to omit
