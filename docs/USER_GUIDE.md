@@ -69,7 +69,7 @@ for the module-level architecture.
 | `pit` | Generate a Points-in-Time SVG (clean axis + marker-per-event + bezier leaders). |
 | `blockplan` | Generate a blockplan SVG. |
 | `gantt` | Generate a Gantt chart SVG: task table on the left, timescale on the right, with duration bars, percent-complete lines, milestones, rollup brackets and dependency arrows. Also writes a companion `_details.svg` listing every task plus anything the chart could not show faithfully. |
-| `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
+| `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. Also writes its key as a companion `_key.svg`: the details listing, each row carrying the swatch or flag that ties it to the chart. |
 | `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
 | `excelblockplan` | Generate an `.xlsx` workbook with the same timeband header rows as `excelheader` plus one row per event/duration in the range (with style-rule decoration and holiday overlays). |
 | `themes` | List available themes. |
@@ -359,14 +359,17 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 - Duration lines are placed using a greedy row assignment that alternates above and below the axis. Row 0 is immediately above the axis, row 1 is immediately below, row 2 is further above, row 3 further below, and so on. Durations are sorted by start date before placement; the first row with no x-overlap is chosen.
 - Duration line colors are assigned per `resource_group`, cycling through `compact_plan.palette` in sorted group order. An individual event's `Color` field in the database overrides the group palette color.
 - **Duration start icons**: when `compact_plan.show_duration_icons` is `true` (the default), an icon is drawn at the start (left) end of every duration line. Icons are assigned per resource group by cycling through the named icon list (`compact_plan.duration_icon_list`, default `"darksquare"`). The icon is drawn in the same color as the line. `compact_plan.duration_icon_height` controls the icon size in points (default `8.0`). Available icon lists are `darksquare`, `squares`, `darkcircles`, `circles`, `squircles`, and `darksquircles`; all are defined in `config/config.py` as `ICON_SETS`.
-- Milestone markers are drawn on the axis at the milestone date. Marker shape priority: `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme → built-in flag shape (vertical stem + pennant). If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker.
-- Column header time bands follow the same schema as `blockplan.top_time_bands`. Supported units: `week`, `month`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon` (see [time_bands](#time_bands--shared-band-catalog) for the full reference). Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
-- The layout is content-first and always shrunk: the axis is fixed at the vertical centre of the content area, duration rows are placed around it, then the header bands float `compact_plan.header_bottom_y` pts above the topmost row and the legend floats `compact_plan.key_top_y` pts below the bottommost row. The SVG viewBox is trimmed to exactly the rendered content, producing the smallest possible output.
-- The legend and milestone roster are rendered **side by side** in a two-column layout starting at the same vertical position. The fraction of the total width given to the left column is controlled by `compact_plan.legend_column_split` (default `0.5`; a fixed 8 pt gap separates the columns).
-  - **Left column** (controlled by `compact_plan.show_legend`): one row per resource group. When `show_duration_icons` is enabled the row layout is `[icon] [swatch line] [Group Name: names…]`; otherwise `[swatch line] [Group Name: names…]`. The icon matches the one drawn on the duration line for that group. Names are **wrapped**: as many comma-separated names as fit are placed on the header row; any that overflow wrap onto continuation rows indented to align with the text start (no icon or swatch repeated).
-  - **Right column** (controlled by `compact_plan.show_milestone_list`): a date-sorted roster of every milestone marker. Each row shows the date (formatted by `compact_plan.milestone_list_date_format`, Arrow format string, default `M/D`) in a fixed-width left sub-column and the task name in the remaining sub-column width.
-- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line and a corresponding legend entry is appended below the milestone roster. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. The legend text is set by `compact_plan.continuation_legend_text` (default `"activity continues"`) and the gap above it by `continuation_section_gap` (default `4.0` pts). Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
-- All text areas (band headers, milestone labels, legend entries, milestone roster, continuation legend) support independent font name, font size, color, and opacity settings in the theme via the `compact_plan` section.
+- Milestone markers are drawn on the axis at the milestone date: a stem standing up from the axis, topped by a pennant or an icon. Icon priority: a style rule's `icon` → `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme; with none of those, or a name not in the `icons` table, the built-in pennant is drawn. An icon takes the pennant's place at the stem tip, sized to the flag height (capped at one label line), in the milestone's color — the event's `Color`, a style rule's `fill_color`, or the `ec-milestone-marker` color — unless a style rule sets `icon_color`; a theme can halo it with a `box:milestone` rule. If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker. The key page marks each milestone's row with the same icon or flag.
+- Column header time bands come from `compact_plan.bands`, a list of keys into the shared [`time_bands:` catalog](#time-bands-shared-catalog) (optionally with per-placement overrides, e.g. `- band: week` + `row_height: 30`). Supported units: `week`, `month`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon`, and `holiday` — one cell per visible day carrying each holiday's own country flag, uncolored, with `nonworkdays_only: true` hiding observances that do not close the office (the same band blockplan and gantt draw). Each band may set its own `row_height` (else `compact_plan.band_row_height`, default `22`; the label size follows the row unless `compact_plan.text.font_size` is set) and `show_every: N` to draw every N segments as one cell labelled by its first — `date`/`dow` cells never merge across a week boundary (`week_start`, default Monday), exactly as in blockplan. Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
+- The layout is content-first and always shrunk: the axis is fixed at the vertical centre of the content area, duration rows are placed around it, then the header bands float `compact_plan.header_bottom_y` pts above the topmost row. The SVG viewBox is trimmed to exactly the rendered content — from the top of the header bands to the lowest ink below the axis (the bottom row's bar or the icons riding on it) — producing the smallest possible output.
+- **The key is its own page.** Nothing but the chart is drawn on the chart page; the key is written beside it as `<output>_key.svg` (continuing onto `_key_p2.svg`, `_key_p3.svg`, … when it runs long). It is the same page as the mini calendar's companion details page — built by the shared details-page writer, with the same columns (`mini_details.headers` / `mini_details.column_widths`) and section names (`mini_details.events_section_text` / `holidays_section_text`) — plus a leading **Key** column that ties every row to the chart:
+  - **Events**: every duration and milestone the chart drew, chronologically, with its start date, name (notes and end date on a second line), milestone flag, priority and group. An activity's Key cell is its bar in miniature — a swatch in the exact color, width, dash and opacity its bar was drawn with, its start icon, and the continuation arrow if the bar runs off the end — so the color attribution the old legend gave is kept row by row. A milestone's Key cell is its flag, in its marker color.
+  - **Holidays & Special Days** (controlled by `compact_plan.show_holiday_list`, default `true`): the holidays and company special days on the axis, one row per name (a name recurring over several days is collapsed into a date range, government holidays carry their country code), each with its own icon.
+  - **Symbols**: what the continuation arrow (`compact_plan.continuation_legend_text`, default `"activity continues"`; listed only when a bar continues) and the axis (`compact_plan.legend_axis_text`, default `"timeline"`; listed when `show_axis` and `show_axis_legend` are on) mean.
+  - `compact_plan.show_legend: false` writes no key page. `key_title_text` (default `"Key"`), `key_output_suffix` (default `"_key"`) and `key_symbols_section_text` (default `"Symbols"`) name the page, its file and its last section; `legend_swatch_width` (default `18`) sets the swatch length. The key's text is styled like the other details pages (`text:heading`, `text:label`, `text:details_body`, `text:event_date`, `text:event_name`, `text:event_notes`; rows band with `ec-row-band`).
+  - The on-chart legend's layout keys — `key_top_y`, `legend_column_split`, `legend_team_columns`, `legend_row_height`, `show_milestone_list`, `milestone_list_*`, `holiday_list_*` — no longer have anything to lay out and are ignored. Milestones are always listed, as on the details page.
+- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line, beside the bar's swatch on the key page, and in the key's Symbols section. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
+- The chart's text areas (band headers, milestone labels) support independent font name, font size, color, and opacity settings in the theme via the `compact_plan` section.
 - `--shade` highlights the current day column when today falls within the date range.
 - `--weekends` controls whether weekend columns are included in the x-axis day list (same as all other commands).
 
@@ -746,9 +749,9 @@ Wherever a view lists holidays alongside their dates, the holiday name is prefix
 |---|---|
 | `text-mini` details | the `Holidays` section under the calendars |
 | `mini` / `mini-icon` / `candybar` details page | the `Federal Holiday` rows (`--mini-details`) |
-| `compactplan` holiday roster | the `date \| icon \| name` list below the timeline |
+| `compactplan` key page | the `Federal Holiday` rows of `<output>_key.svg` |
 
-The mini details page collapses a holiday that recurs across visible days into one row, and a holiday that several countries celebrate under the same name into one row listing every code (`CA, US - New Year's Day`).
+The mini details page and the compactplan key collapse a holiday that recurs across visible days into one row, and a holiday that several countries celebrate under the same name into one row listing every code (`CA, US - New Year's Day`).
 
 Company special days come from the `specialdays` table rather than a government holiday calendar, carry no country code, and are never prefixed.
 
@@ -1266,7 +1269,7 @@ style_rules:
 
 #### Time Bands: Shared Catalog
 
-Timebands across `blockplan`, `compact_plan`, and `excelheader` reference a single catalog under the top-level `time_bands:` map. Each visualizer's placement list is a list of catalog keys, optionally with inline geometry overrides.
+Timebands across `blockplan`, `compact_plan`, and `excelheader` reference a single catalog under the top-level `time_bands:` map. Each visualizer's placement list is a list of catalog keys, optionally with inline geometry overrides. Segments are built by one shared builder (`shared/timeband.py`), and `show_every` merging goes through one shared function, so a catalog entry reads the same wherever it is placed; `blockplan` and `compact_plan` both honour per-placement `row_height` and `show_every`, and both draw `icon` and `holiday` bands.
 
 ```yaml
 time_bands:
@@ -1464,9 +1467,9 @@ continuation:
 
 - **`compact_plan`** is horizontal-only and only clips its trailing
   end, so it reads `icon_after` and ignores `icon_before`. It also has
-  its own compactplan-scoped `continuation_legend_text` and
-  `continuation_section_gap` keys for the legend row it appends below
-  the milestone roster (see the `compactplan` rendering section).
+  its own compactplan-scoped `continuation_legend_text` key for the
+  row that explains the arrow in its key page's Symbols section (see the
+  `compactplan` rendering section).
 - **`blockplan`** is horizontal-only and uses both `icon_before` and
   `icon_after` to mark duration bars whose underlying event extends
   past either side of the visible range.
@@ -1562,11 +1565,14 @@ same terms as the chart.
 
 Every view that writes a second document beside its chart writes the same
 page: the [gantt details page](#the-details-page), the
-[weekly overflow report](#the-overflow-page), and the
-[mini / mini-icon / candybar event listing](#the-mini-details-page). One
-writer draws all three — page chrome, a centered title, then sections of a
-heading, a column-header row, a rule, and banded rows — continued onto as
-many pages as the rows need.
+[weekly overflow report](#the-overflow-page), the
+[mini / mini-icon / candybar event listing](#the-mini-details-page), and
+the [compactplan key](#compactplan-rendering-behavior). One writer draws
+all four — page chrome, a centered title, then sections of a heading, a
+column-header row, a rule, and banded rows — continued onto as many pages
+as the rows need. The compactplan key lists what the mini listing does,
+through the same code, and adds a column of marks (a bar's swatch, a
+milestone's flag, a holiday's icon) drawn into each row.
 
 It has no theme block of its own. What belongs to the *format* is themed
 through the vocabulary that already existed for it:
@@ -1578,7 +1584,7 @@ through the vocabulary that already existed for it:
 | Title | `text:heading` | |
 | Section headings and column headers | `text:label` | |
 | The rule under a header row | `ec-separator` | Including its dash pattern |
-| An event's notes sub-line | `text:event_notes` | Only the mini listing draws one |
+| An event's notes sub-line | `text:event_notes` | Only the mini listing and the compactplan key draw one |
 | The page ground | `ec-background` | Every SVG page paints one — see [Page background](#page-background) |
 
 What belongs to a *page* stays with the view that owns it — its title, its
@@ -1589,6 +1595,7 @@ filename suffix, its columns:
 | gantt | `gantt.details_title_text` | `gantt.details_output_suffix` | `gantt.show_details` |
 | weekly | `overflow.title_text` | `overflow.output_suffix` | `--overflow` (off by default) |
 | mini family | `mini_details.title_text` | `mini_details.output_suffix` | `mini_details.enable`, `--mini-details` / `--no-mini-details` |
+| compactplan | `compact_plan.key_title_text` | `compact_plan.key_output_suffix` | `compact_plan.show_legend` |
 
 A band is drawn behind its own row's text — including a two-line row's
 sub-line — and every page opens on an unbanded row, so a table continued

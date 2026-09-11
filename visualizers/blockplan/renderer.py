@@ -44,7 +44,11 @@ from shared.day_classifier import classify_day, day_rule_matches
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import DayContext, StyleEngine, StyleResult
-from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
+from shared.timeband import (
+    BandSegment as _BandSegment,
+    build_segments as _build_band_segments,
+    group_segments as _group_band_segments,
+)
 
 
 def _blockplan_style_rules(config: "CalendarConfig") -> list:
@@ -810,29 +814,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             segments = self._build_segments(
                 band, start, end, config, visible_days=visible_days, db=db
             )
-            show_every = max(1, int(band.get("show_every", 1)))
-            unit = str(band.get("unit", "date")).strip().lower()
-            if show_every > 1 and unit in {"date", "dow"}:
-                # Group within each calendar week so that no cell spans a week
-                # boundary — this ensures week-band borders align with date cells.
-                week_start_wd = int(band.get("week_start", config.blockplan_week_start))
-                groups: list[list[_BandSegment]] = []
-                bucket: list[_BandSegment] = []
-                for seg in segments:
-                    if bucket and (
-                        seg.start.weekday() == week_start_wd
-                        or len(bucket) >= show_every
-                    ):
-                        groups.append(bucket)
-                        bucket = []
-                    bucket.append(seg)
-                if bucket:
-                    groups.append(bucket)
-            else:
-                groups = [
-                    segments[i : i + show_every]
-                    for i in range(0, len(segments), show_every)
-                ]
+            groups = _group_band_segments(
+                segments, band, week_start_default=config.blockplan_week_start
+            )
             for gidx, group in enumerate(groups):
                 first_seg = group[0]
                 last_seg = group[-1]

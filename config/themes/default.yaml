@@ -398,19 +398,10 @@ compact_plan:
     font_color: black
   milestone_color: black
   header_bottom_y: null
-  key_top_y: null
-  legend_column_split: 0.5
-  legend_team_columns: 2
   show_duration_icons: true
   duration_icon_list: darksquare
   duration_icon_height: 8.0
   duration_icon_color: null
-  show_milestone_list: false
-  milestone_list_date_format: M/D
-  milestone_list_date_color: '#595959'
-  milestone_list_row_height: 10.0
-  milestone_list_date_col_width: 32.0
-  milestone_list_section_gap: 6.0
   continuation_legend_text: activity continues
   continuation_section_gap: 4.0
   show_axis_legend: true

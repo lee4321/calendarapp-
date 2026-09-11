@@ -1250,33 +1250,31 @@ class CalendarConfig:
     compactplan_milestone_flag_width: float = 7.0
     compactplan_milestone_flag_height: float = 9.0
     compactplan_show_milestone_labels: bool = True
-    compactplan_show_legend: bool = True
-    compactplan_legend_swatch_width: float = 18.0
-    compactplan_legend_row_height: float = 10.0
-    compactplan_legend_column_split: float = 0.5  # fraction of area_w given to the left (group) column
-    compactplan_legend_team_columns: int = 2  # sub-columns within the left legend area
     compactplan_header_bottom_y: float | None = None
-    compactplan_key_top_y: float | None = None
-    compactplan_show_milestone_list: bool = False
-    compactplan_milestone_list_date_format: str = "M/D"
-    compactplan_milestone_list_row_height: float = 10.0
-    compactplan_milestone_list_date_col_width: float = 32.0
 
-    # Holiday/special-day list column: date • icon • name, sorted by date.
-    compactplan_show_holiday_list: bool = True
-    compactplan_holiday_list_date_format: str = "M/D"
-    compactplan_holiday_list_row_height: float = 10.0
-    compactplan_holiday_list_date_col_width: float = 32.0
-    compactplan_holiday_list_icon_col_width: float = 14.0
-    compactplan_holiday_list_icon_height: float = 8.0
+    # ── Key page ──────────────────────────────────────────────────────────────
+    # The key is a companion page (<output>_key.svg) written through the
+    # shared details-page writer: the same event listing as the mini details
+    # page (its columns and section names come from mini_details.*), with a
+    # leading column of swatches, flags and icons tying each row to the chart.
+    # Phase 2-style strip (Sep 2026) — the on-chart legend's layout fields
+    # went with it: legend_row_height/_column_split/_team_columns, key_top_y,
+    # show_milestone_list + milestone_list_*, holiday_list_* (milestones are
+    # always listed now, as on the details page).
+    compactplan_show_legend: bool = True  # write the key page
+    compactplan_key_title_text: str = "Key"
+    compactplan_key_output_suffix: str = "_key"
+    compactplan_key_symbols_section_text: str = "Symbols"
+    compactplan_legend_swatch_width: float = 18.0  # length of a bar's key swatch
+    compactplan_show_holiday_list: bool = True  # list holidays & special days
 
     # ── Continuation icon ─────────────────────────────────────────────────────
     # The global continuation_icon_after / _color / _height fields drive the
     # compactplan continuation icon (the line only clips on its "after" end).
-    # Only the legend text remains compactplan-specific.
+    # Only the key's text for it remains compactplan-specific.
     compactplan_continuation_legend_text: str = "activity continues"
-    compactplan_show_axis_legend: bool = True  # show axis sample + label in the legend
-    compactplan_legend_axis_text: str = "timeline"  # label beside the axis sample
+    compactplan_show_axis_legend: bool = True  # explain the axis in the key's symbols
+    compactplan_legend_axis_text: str = "timeline"  # meaning beside the axis sample
 
     # Non-workday highlighting for date/dow timeband cells.  None → disabled.
     # Applied in priority order: federal_holiday → company_holiday → weekend.

@@ -19,30 +19,13 @@ from shared.date_utils import (
     format_arrow_date,
     index_events_by_day as _index_events_by_day,
 )
-from renderers.details_page import DetailsColumn, format_datekey
-from shared.holiday_labels import format_holiday_label
+from renderers import event_listing
 from shared.rule_engine import StyleEngine
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
     from visualizers.base import CoordinateDict
-
-#: Columns of the details page when the theme names none, or names
-#: headers and widths that do not pair up.
-_DEFAULT_DETAILS_HEADERS: tuple[str, ...] = (
-    "Start Date",
-    "Name / Description",
-    "Milestone",
-    "Priority",
-    "Group",
-)
-_DEFAULT_DETAILS_WIDTHS: tuple[float, ...] = (0.16, 0.52, 0.10, 0.10, 0.12)
-
-
-def format_details_date(value: str | None) -> str:
-    """``20260403`` (or a longer timestamp) → ``2026-04-03``."""
-    return format_datekey(str(value or "")[:8])
 
 logger = logging.getLogger(__name__)
 
@@ -995,185 +978,40 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             if extra_rows:
                 writer.section(config.mini_details_holidays_section_text, columns)
                 for row in extra_rows:
-                    cells = [""] * len(columns)
-                    cells[0] = row["date_label"]
-                    if len(cells) > 1:
-                        cells[1] = row["name"]
-                    cells[-1] = row["kind"]
-                    writer.row(cells, columns, sub_line=(1, row.get("notes") or ""))
+                    writer.row(
+                        event_listing.holiday_cells(row, len(columns)),
+                        columns,
+                        sub_line=(1, row.get("notes") or ""),
+                    )
 
         pages = writer.finish()
         self._drawing = saved_drawing
         return pages
 
-    @staticmethod
-    def _details_columns(config: CalendarConfig) -> list[DetailsColumn]:
-        """The details table's columns, from ``mini_details.headers``.
+    # The listing's content is shared with the compactplan key; these
+    # names stay so the details page reads as the renderer's own.
+    _details_columns = staticmethod(event_listing.details_columns)
+    _details_sorted_events = staticmethod(event_listing.sorted_events)
+    _details_event_cells = staticmethod(event_listing.event_cells)
+    _details_event_note = staticmethod(event_listing.event_note)
 
-        The first column carries dates and the second the event name, so
-        those two take the date and name text tokens; the rest are plain
-        body cells.  Mismatched headers and widths fall back together --
-        a half-edited theme would otherwise put the wrong heading over
-        every column.
-        """
-        headers = list(config.mini_details_headers or [])
-        widths = list(config.mini_details_column_widths or [])
-        if not headers or len(headers) != len(widths):
-            headers = _DEFAULT_DETAILS_HEADERS
-            widths = _DEFAULT_DETAILS_WIDTHS
-
-        total = sum(widths)
-        if total <= 0:
-            headers, widths = _DEFAULT_DETAILS_HEADERS, _DEFAULT_DETAILS_WIDTHS
-            total = sum(widths)
-
-        columns: list[DetailsColumn] = []
-        for index, (header, width) in enumerate(zip(headers, widths)):
-            if index == 0:
-                token, css = "text:event_date", "ec-event-date"
-                # ec-event-date binds to text:caption in the bundled
-                # themes, which is where the date column's color has
-                # always come from when text:event_date names none.
-                fallback = config.get_text_style("ec-event-date").color
-                opacity = config.get_text_style("ec-event-date").opacity
-            elif index == 1:
-                token, css = "text:event_name", "ec-event-name"
-                fallback = config.mini_details_name_text_font_color
-                opacity = config.mini_details_name_text_font_opacity
-            else:
-                token, css = "text:event_name", "ec-event-name"
-                fallback = config.mini_details_text_font_color
-                opacity = config.mini_details_text_font_opacity
-            columns.append(
-                DetailsColumn(
-                    str(header),
-                    width / total,
-                    css_class=css,
-                    token=token,
-                    fallback_color=fallback,
-                    fallback_opacity=opacity,
-                )
-            )
-        return columns
-
-    @staticmethod
-    def _details_sorted_events(events: list) -> list:
-        """Events in the order the listing reads: by span, then by name."""
-        return sorted(
-            events,
-            key=lambda e: (
-                e.get("Start", ""),
-                e.get("End", e.get("Finish", "")),
-                e.get("Task_Name", ""),
-            ),
-        )
-
-    @staticmethod
-    def _details_event_cells(event: dict, count: int) -> list[str]:
-        """One event's cells, in the default column order.
-
-        A theme that asks for fewer columns gets the leading ones; one
-        that asks for more gets blanks, rather than a short row that
-        would slide the next event's values left.
-        """
-        values = [
-            format_details_date(event.get("Start")),
-            event.get("Task_Name", "") or "",
-            "True" if event.get("Milestone") else "",
-            str(event.get("Priority") or ""),
-            str(event.get("Resource_Group") or ""),
-        ]
-        return (values + [""] * count)[:count]
-
-    @staticmethod
-    def _details_event_note(event: dict) -> str:
-        """The sub-line under an event's name: its notes, and its end date.
-
-        The end date lives here rather than in a column of its own
-        because only a multi-day event has one worth stating.
-        """
-        start = (event.get("Start") or "")[:8]
-        end = (event.get("End") or event.get("Finish") or "")[:8]
-        note = event.get("Notes") or ""
-        if start and end and start != end:
-            end_line = f"End: {format_details_date(end)}"
-            return f"{note} | {end_line}".strip(" |") if note else end_line
-        return note
     @staticmethod
     def _collect_holiday_special_rows(
         coordinates: "CoordinateDict",
         config: "CalendarConfig",
         db: "CalendarDB",
     ) -> list[dict]:
-        """Build the deduplicated holiday + special-day entries for the details page.
+        """The holiday + special-day rows for the days the grid shows.
 
         Walks the primary day-cell coordinates so the result matches what's
-        visible on the calendar.  A holiday or special day that recurs across
-        multiple visible days is collapsed into a single row labelled with the
-        date range it covers.
+        visible on the calendar; see
+        :func:`renderers.event_listing.holiday_special_rows`.
         """
         # Primary daykeys only — adjacent-month cells share dates with their
         # owning month elsewhere in the grid and should not double-count.
-        daykeys = sorted({
+        daykeys = [
             key[len("Cell_") :]
             for key in coordinates
             if key.startswith("Cell_") and not key.endswith("__adj")
-        })
-        if not daykeys:
-            return []
-
-        def fmt(d: str) -> str:
-            return f"{d[:4]}-{d[4:6]}-{d[6:8]}" if d and len(d) >= 8 else d
-
-        def date_label(first: str, last: str) -> str:
-            return fmt(first) if first == last else f"{fmt(first)} – {fmt(last)}"
-
-        # name → {"first": daykey, "last": daykey, "notes": str}
-        holidays_seen: dict[str, dict[str, str]] = {}
-        specials_seen: dict[str, dict[str, str]] = {}
-
-        for dk in daykeys:
-            for h in db.get_holidays_for_date(dk, config.country):
-                name = (h.get("displayname") or h.get("name") or "").strip()
-                if not name:
-                    continue
-                entry = holidays_seen.setdefault(
-                    name, {"first": dk, "last": dk, "notes": "", "countries": ""}
-                )
-                entry["last"] = dk
-                # Countries drive the name prefix below rather than the notes
-                # column: the same holiday name recurs across countries (both
-                # the US and Canada have a New Year's Day), and this listing
-                # keys on the name, so the code has to sit beside it to tell
-                # the collapsed rows apart.
-                country = (h.get("country") or "").strip()
-                if country and country not in entry["countries"].split(", "):
-                    entry["countries"] = (
-                        f"{entry['countries']}, {country}"
-                        if entry["countries"] else country
-                    )
-            for sd in db.get_special_days_for_date(dk):
-                name = (sd.get("name") or "").strip()
-                if not name:
-                    continue
-                entry = specials_seen.setdefault(
-                    name, {"first": dk, "last": dk, "notes": (sd.get("notes") or "").strip()}
-                )
-                entry["last"] = dk
-
-        rows: list[dict] = []
-        for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
-            rows.append({
-                "date_label": date_label(info["first"], info["last"]),
-                "name": format_holiday_label(name, info["countries"]),
-                "kind": "Federal Holiday",
-                "notes": info["notes"],
-            })
-        for name, info in sorted(specials_seen.items(), key=lambda kv: kv[1]["first"]):
-            rows.append({
-                "date_label": date_label(info["first"], info["last"]),
-                "name": name,
-                "kind": "Special Day",
-                "notes": info["notes"],
-            })
-        return rows
+        ]
+        return event_listing.holiday_special_rows(daykeys, config, db)

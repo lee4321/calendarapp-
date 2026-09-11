@@ -24,8 +24,12 @@ class _DummyDB:
         return False
 
     @staticmethod
-    def get_icon_svg(name):
-        return None
+    def get_holidays_for_date(daykey, country=None):
+        return []
+
+    @staticmethod
+    def get_special_days_for_date(daykey):
+        return []
 
 
 class _CaptureCompactPlanRenderer(CompactPlanRenderer):
@@ -578,3 +582,392 @@ def test_icon_band_row_rects_unclassed_by_default():
 
     assert renderer.rect_calls, "Expected a background rect for the filled cell"
     assert all(rc.get("css_class") is None for rc in renderer.rect_calls)
+
+
+# ---------------------------------------------------------------------------
+# Key page (<output>_key.svg)
+# ---------------------------------------------------------------------------
+
+
+class _PageCaptureRenderer(_CaptureCompactPlanRenderer):
+    """Records which drawing -- chart or key page -- each text landed on."""
+
+    def __init__(self):
+        super().__init__()
+        self.texts_by_drawing: list[tuple[int, str]] = []
+
+    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
+        self.texts_by_drawing.append((id(self._drawing), str(text)))
+        super()._draw_text(x, y, text, font_name, font_size, **kwargs)
+
+    def chart_texts(self) -> list[str]:
+        # render() leaves the chart's drawing in place once the key is done.
+        return [t for d, t in self.texts_by_drawing if d == id(self._drawing)]
+
+    def key_texts(self) -> list[str]:
+        return [t for d, t in self.texts_by_drawing if d != id(self._drawing)]
+
+
+class _HolidayDB(_DummyDB):
+    @staticmethod
+    def get_holidays_for_date(daykey, country=None):
+        if daykey == "20260316":
+            return [{"displayname": "Founders Day", "country": "US"}]
+        return []
+
+
+def _render(tmp_path, events, db=None, **overrides):
+    output = tmp_path / "compact.svg"
+    config = _base_config(output)
+    for key, value in overrides.items():
+        setattr(config, key, value)
+    renderer = _PageCaptureRenderer()
+    result = renderer.render(
+        config, CompactPlanLayout().calculate(config), events, db or _DummyDB()
+    )
+    return renderer, result, output
+
+
+def test_key_is_written_to_its_own_page(tmp_path):
+    renderer, result, output = _render(
+        tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
+    )
+
+    assert (tmp_path / "compact_key.svg").exists()
+    assert result.page_count == 2
+    assert "Sprint 1" in renderer.key_texts()
+    assert "Team1" in renderer.key_texts()
+
+
+def test_chart_page_carries_no_key(tmp_path):
+    """Nothing of the key -- group names, task names, the symbols -- is
+    drawn on the chart itself any more."""
+    renderer, _, _ = _render(
+        tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
+    )
+
+    chart = " ".join(renderer.chart_texts())
+    assert "Team1" not in chart
+    assert "Sprint 1" not in chart
+    assert "timeline" not in chart
+
+
+def test_no_key_page_when_the_legend_is_off(tmp_path):
+    _, result, _ = _render(
+        tmp_path,
+        [_dur("Sprint 1", "20260309", "20260320", group="Team1")],
+        compactplan_show_legend=False,
+    )
+
+    assert not (tmp_path / "compact_key.svg").exists()
+    assert result.page_count == 1
+
+
+def test_no_key_page_for_an_empty_chart(tmp_path):
+    """The symbols alone explain nothing, so an empty chart gets no key."""
+    _, result, _ = _render(tmp_path, [])
+
+    assert not (tmp_path / "compact_key.svg").exists()
+    assert result.page_count == 1
+
+
+def test_key_lists_the_details_page_columns(tmp_path):
+    """The key is the shared details listing: its columns, its cells."""
+    renderer, _, _ = _render(
+        tmp_path,
+        [
+            _dur("Build", "20260309", "20260320", group="Dev"),
+            _milestone("Go Live", "20260325", group="Ops"),
+        ],
+    )
+
+    texts = renderer.key_texts()
+    for heading in ("Key", "Start Date", "Name / Description", "Milestone", "Priority", "Group"):
+        assert heading in texts
+    assert "2026-03-09" in texts
+    assert "End: 2026-03-20" in texts  # a duration's end rides under its name
+    assert "True" in texts  # the milestone column
+
+
+def test_key_lists_events_in_the_details_page_order(tmp_path):
+    renderer, _, _ = _render(
+        tmp_path,
+        [
+            _dur("Later", "20260323", "20260327", group="B"),
+            _milestone("Middle", "20260318"),
+            _dur("Earlier", "20260309", "20260313", group="A"),
+        ],
+    )
+
+    names = [t for t in renderer.key_texts() if t in {"Earlier", "Middle", "Later"}]
+    assert names == ["Earlier", "Middle", "Later"]
+
+
+def test_key_swatch_carries_the_bar_color(tmp_path):
+    """Color attribution survives the move: each activity's row paints a
+    swatch in the color its bar was drawn in."""
+    _render(
+        tmp_path,
+        [
+            _dur("Alpha work", "20260309", "20260320", group="A", color="#123456"),
+            _dur("Beta work", "20260316", "20260327", group="B", color="#abcdef"),
+        ],
+    )
+
+    key_svg = (tmp_path / "compact_key.svg").read_text()
+    assert 'style="stroke:#123456;' in key_svg
+    assert 'style="stroke:#abcdef;' in key_svg
+    assert key_svg.count('class="ec-legend-swatch"') >= 2
+
+
+def test_key_swatch_takes_the_palette_color_of_its_group(tmp_path):
+    renderer, _, _ = _render(
+        tmp_path,
+        [_dur("Build", "20260309", "20260320", group="Dev")],
+        compactplan_palette=["#0a0b0c"],
+    )
+
+    assert 'style="stroke:#0a0b0c;' in (tmp_path / "compact_key.svg").read_text()
+    # ...the same color the bar was drawn in on the chart.
+    assert any(kw.get("stroke") == "#0a0b0c" for kw in renderer.line_kwargs)
+
+
+def test_key_marks_a_milestone_with_its_flag_color(tmp_path):
+    _render(tmp_path, [_milestone("Go Live", "20260316", color="#fedcba")])
+
+    key_svg = (tmp_path / "compact_key.svg").read_text()
+    assert "#fedcba" in key_svg
+
+
+def test_key_lists_the_holidays_on_the_axis(tmp_path):
+    renderer, _, _ = _render(
+        tmp_path,
+        [_dur("Build", "20260309", "20260320", group="Dev")],
+        db=_HolidayDB(),
+    )
+
+    texts = renderer.key_texts()
+    assert "US - Founders Day" in texts
+    assert "Federal Holiday" in texts
+
+
+def test_key_explains_continuation_only_when_a_bar_continues(tmp_path):
+    renderer, _, _ = _render(
+        tmp_path, [_dur("Short", "20260309", "20260313", group="A")]
+    )
+    assert "activity continues" not in renderer.key_texts()
+    assert "timeline" in renderer.key_texts()
+
+    renderer, _, _ = _render(
+        tmp_path, [_dur("Long", "20260401", "20260515", group="A")]
+    )
+    assert "activity continues" in renderer.key_texts()
+
+
+def test_a_long_key_continues_onto_further_pages(tmp_path):
+    events = [
+        _dur(f"Task {n}", "20260309", "20260313", group=f"G{n % 4}")
+        for n in range(120)
+    ]
+    _, result, _ = _render(tmp_path, events)
+
+    assert (tmp_path / "compact_key_p2.svg").exists()
+    assert result.page_count >= 3
+
+
+def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
+    """With no key beneath it the chart's viewBox ends at its own ink --
+    which, for the lowest bar, is its start icon, taller than the bar."""
+    import re
+
+    renderer, _, output = _render(
+        tmp_path,
+        [_dur(f"T{n}", "20260309", "20260320", group="A") for n in range(4)],
+        shrink_to_content=True,
+    )
+
+    view_box = re.search(r'viewBox="([^"]+)"', output.read_text()).group(1)
+    _, top, _, height = (float(v) for v in view_box.split())
+    lowest = max(p.row_y for p in renderer._chart_key.placed.values())
+    icon_h = renderer._duration_icon_height(renderer._config)
+    assert top + height >= lowest + icon_h / 2.0
+
+
+# ---------------------------------------------------------------------------
+# Milestone icons
+# ---------------------------------------------------------------------------
+
+
+class _LabelCaptureRenderer(_IconCaptureRenderer):
+    """Adds label positions to the icon capture."""
+
+    def __init__(self):
+        super().__init__()
+        self.text_calls: list[dict] = []
+
+    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
+        self.text_calls.append({"x": x, "y": y, "text": str(text), **kwargs})
+        super()._draw_text(x, y, text, font_name, font_size, **kwargs)
+
+
+def _milestone_with_icon(icon, color="#2e8b57"):
+    event = _milestone("Go Live", "20260316", color=color)
+    event["Icon"] = icon
+    return event
+
+
+def _render_milestone(tmp_path, event, **overrides):
+    output = tmp_path / "compact.svg"
+    config = _base_config(output)
+    for key, value in overrides.items():
+        setattr(config, key, value)
+    renderer = _LabelCaptureRenderer()
+    renderer.render(config, CompactPlanLayout().calculate(config), [event], _IconDB())
+    return renderer
+
+
+def _milestone_icons(renderer):
+    return [c for c in renderer.icon_calls if c.get("css_class") == "ec-milestone-marker"]
+
+
+def test_a_milestone_icon_is_drawn_in_place_of_the_pennant(tmp_path):
+    """Regression: the chart looked icons up with db.get_icon_svg, which
+    CalendarDB does not have, so every milestone drew a flag."""
+    renderer = _render_milestone(tmp_path, _milestone_with_icon("diamond"))
+
+    chart_icon = _milestone_icons(renderer)[0]
+    assert chart_icon["icon_name"] == "diamond"
+    assert chart_icon["color"] == "#2e8b57"  # the milestone's own color
+    # The stem stays, so the icon is still planted on its date.
+    assert any(abs(x1 - x2) < 0.01 and y1 != y2 for x1, y1, x2, y2 in renderer.line_calls)
+
+
+def test_the_theme_milestone_icon_applies_when_the_event_names_none(tmp_path):
+    renderer = _render_milestone(
+        tmp_path, _milestone_with_icon(""), compactplan_milestone_icon="diamond"
+    )
+
+    assert [c["icon_name"] for c in _milestone_icons(renderer)][:1] == ["diamond"]
+
+
+def test_an_unknown_milestone_icon_falls_back_to_the_flag(tmp_path):
+    renderer = _render_milestone(tmp_path, _milestone_with_icon("no-such-icon"))
+
+    assert _milestone_icons(renderer) == []
+
+
+def test_a_milestone_label_starts_past_its_icon(tmp_path):
+    renderer = _render_milestone(tmp_path, _milestone_with_icon("diamond"))
+
+    chart_icon = _milestone_icons(renderer)[0]
+    label = next(t for t in renderer.text_calls if t["text"] == "Go Live")
+    assert label["x"] > chart_icon["x"] + chart_icon["size"]
+
+
+def test_the_key_marks_a_milestone_with_the_icon_the_chart_drew(tmp_path):
+    renderer = _render_milestone(tmp_path, _milestone_with_icon("diamond"))
+
+    # One on the chart, one in the key's mark column.
+    assert [c["icon_name"] for c in _milestone_icons(renderer)] == ["diamond", "diamond"]
+
+
+# ---------------------------------------------------------------------------
+# Time bands from the shared catalog: holiday, row_height, show_every
+# ---------------------------------------------------------------------------
+
+
+class _FlagDB(_DummyDB):
+    """A public holiday on Mon 16 Mar, an observance on Wed 18 Mar."""
+
+    _ROWS = {
+        "20260316": [{"icon": "flag-us", "displayname": "Founders Day", "nonworkday": 1, "country": "US"}],
+        "20260318": [{"icon": "flag-ca", "displayname": "Heritage Day", "nonworkday": 0, "country": "CA"}],
+    }
+
+    @classmethod
+    def get_holidays_for_date(cls, daykey, country=None):
+        return cls._ROWS.get(daykey, [])
+
+    @staticmethod
+    def get_icon_svg_map():
+        square = '<svg viewBox="0 0 24 24"><rect width="24" height="24"/></svg>'
+        return {"flag-us": square, "flag-ca": square}
+
+
+def _render_bands(tmp_path, bands, db=None):
+    output = tmp_path / "compact.svg"
+    config = _base_config(output)
+    config.compactplan_time_bands = bands
+    config.compactplan_show_legend = False  # the key's holiday rows draw flags too
+    renderer = _IconCaptureRenderer()
+    renderer.render(
+        config, CompactPlanLayout().calculate(config),
+        [_dur("Build", "20260309", "20260320", group="Dev")],
+        db or _FlagDB(),
+    )
+    return renderer
+
+
+def _band_rects(renderer):
+    return [r for r in renderer.rect_calls if r.get("css_class") == "ec-band-cell"]
+
+
+def test_the_holiday_band_draws_each_holidays_own_flag(tmp_path):
+    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays"}])
+
+    flags = {c["icon_name"] for c in renderer.icon_calls}
+    assert {"flag-us", "flag-ca"} <= flags
+    # A country flag keeps its own colors.
+    assert all(c.get("color") is None for c in renderer.icon_calls if c["icon_name"].startswith("flag-"))
+
+
+def test_the_holiday_band_can_hide_observances(tmp_path):
+    renderer = _render_bands(
+        tmp_path, [{"unit": "holiday", "label": "Holidays", "nonworkdays_only": True}]
+    )
+
+    flags = {c["icon_name"] for c in renderer.icon_calls}
+    assert "flag-us" in flags
+    assert "flag-ca" not in flags
+
+
+def test_the_holiday_band_puts_the_flag_on_its_day(tmp_path):
+    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays"}])
+
+    us = next(c for c in renderer.icon_calls if c["icon_name"] == "flag-us")
+    # Mon 16 Mar is the 6th weekday of a range starting Mon 9 Mar.
+    area_x, _, area_w, _ = CompactPlanLayout().calculate(renderer._config)["CompactPlanArea"]
+    px_per_day = area_w / 35  # 7 working weeks
+    assert area_x + 5 * px_per_day <= us["x"] <= area_x + 6 * px_per_day
+
+
+def test_each_band_takes_its_own_row_height(tmp_path):
+    renderer = _render_bands(
+        tmp_path,
+        [
+            {"unit": "week", "row_height": 30, "fill_color": "#eeeeee"},
+            {"unit": "date", "fill_color": "#dddddd"},
+        ],
+    )
+
+    week = [r for r in _band_rects(renderer) if r["fill"] == "#eeeeee"]
+    day = [r for r in _band_rects(renderer) if r["fill"] == "#dddddd"]
+    assert {r["h"] for r in week} == {30.0}
+    assert {r["h"] for r in day} == {renderer._config.compactplan_band_row_height}
+    # The rows stack: the date row starts where the week row ends.
+    assert day[0]["y"] == week[0]["y"] + 30.0
+
+
+def test_show_every_merges_date_cells_within_a_week(tmp_path):
+    renderer = _render_bands(
+        tmp_path,
+        [{"unit": "date", "show_every": 2, "fill_color": "#eeeeee", "alt_fill_color": "#dddddd"}],
+    )
+
+    # Seven working weeks of Mon-Tue, Wed-Thu, Fri cells.
+    assert len(_band_rects(renderer)) == 7 * 3
+    labels = set(renderer.text_values)
+    assert {"9", "11", "13"} <= labels  # a merged cell shows its first day
+    # Thu 12 and Thu 19 Mar sit in a merged cell; neither date recurs
+    # unmerged in April (the 12th and 19th are Sundays).
+    assert "12" not in labels and "19" not in labels

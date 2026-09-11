@@ -1,14 +1,16 @@
 """
 Compact Activities Plan SVG renderer.
 
-Renders a compressed timeline with duration lines above/below a central axis,
-milestone flag markers, and an optional legend keyed by resource group color.
+Renders a compressed timeline with duration lines above/below a central axis
+and milestone flag markers.  The key is a companion page written beside the
+chart (``<output>_key.svg``): the shared details listing, with each row
+carrying the swatch, icon or flag that ties it to what the chart drew.
 """
 
 from __future__ import annotations
 
 from bisect import bisect_left
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +18,14 @@ import arrow
 import drawsvg
 
 from config.config import get_font_path, resolve_continuation_icon
+from renderers import event_listing
+from renderers.details_page import (
+    DetailsColumn,
+    DetailsPageWriter,
+    RowMark,
+    details_output_path,
+    numbered_page_path,
+)
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
 
@@ -25,20 +35,34 @@ _MILESTONE_LABEL_GAP = 6.0
 _MILESTONE_LABEL_LINE_RATIO = 1.25
 _MILESTONE_PENNANT_RATIO = 0.7
 
+# Clear space between a milestone's stem and the icon standing in for its
+# pennant, and between the topmost such icon and the header bands.
+_MILESTONE_ICON_GAP = 0.5
+_MILESTONE_ICON_HEADER_CLEARANCE = 1.0
+
 # Clear space between the ink of two adjacent duration rows.
 _DURATION_ROW_GAP = 1.5
 
 # Clear space between the top of the activity band and the lowest
 # milestone pennant, so labels never land on a duration bar.
 _MILESTONE_BAND_CLEARANCE = 3.0
+
+# The key page's mark column: its heading, the narrowest it may be (it
+# has to hold the heading), and the room the writer pads a cell with.
+_KEY_COLUMN_HEADING = "Key"
+_KEY_COLUMN_MIN_WIDTH = 20.0
+_KEY_COLUMN_PADDING = 8.0
 from shared.data_models import Event
-from shared.date_utils import format_arrow_date, visible_days
+from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import compute_holiday_band_days
-from shared.holiday_labels import format_holiday_label
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine, StyleResult
-from shared.timeband import BandSegment as _BandSegment, build_segments as _build_band_segments
+from shared.timeband import (
+    BandSegment as _BandSegment,
+    build_segments as _build_band_segments,
+    group_segments as _group_band_segments,
+)
 
 
 # ─── Color helpers (named + hex → RGB → luminance) ──────────────────────────
@@ -153,30 +177,6 @@ def _resolve_icon_on_bar(
     return candidate
 
 
-def _dominant_bar_color(group_placed: "list[_PlacedDuration]") -> str | None:
-    """Return the most common ``p.color`` across a group, or ``None`` if empty.
-
-    Used to make the legend's group-header swatch reflect the bars actually
-    drawn for that group instead of the palette-cycled color from
-    ``_assign_group_colors`` — when per-event DB colors override the group
-    palette, the two disagree and the swatch loses its labelling function.
-    Ties are broken by first-seen order so the result is deterministic.
-    """
-    if not group_placed:
-        return None
-    counts: dict[str, int] = {}
-    order: list[str] = []
-    for p in group_placed:
-        c = p.color
-        if c in counts:
-            counts[c] += 1
-        else:
-            counts[c] = 1
-            order.append(c)
-    # max() over the order list keeps ties stable on first occurrence.
-    return max(order, key=lambda c: counts[c])
-
-
 def _resolve_style_rules(config: "CalendarConfig") -> list:
     """Source the raw style_rules list for StyleEngine.
 
@@ -273,6 +273,27 @@ class _PlacedDuration:
     style: StyleResult | None = None
 
 
+@dataclass(frozen=True)
+class _ChartKey:
+    """What the chart drew, kept for the key page written after it.
+
+    Attributes:
+        listing: Every event as passed in, beside the :class:`Event` the
+            chart read it as -- the listing reads the former, the marks
+            the latter.
+        placed: Drawn duration bars, by ``id()`` of their event.
+        milestones: ``id()`` of every milestone given a flag.
+        visible_days: The days on the axis, whose holidays the key lists.
+        continuations: Whether any bar was drawn continuing off the end.
+    """
+
+    listing: list[tuple[Any, Event]]
+    placed: dict[int, _PlacedDuration]
+    milestones: frozenset[int]
+    visible_days: list[date]
+    continuations: bool
+
+
 # ---------------------------------------------------------------------------
 # Renderer
 # ---------------------------------------------------------------------------
@@ -284,6 +305,20 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     # Entry point
     # ------------------------------------------------------------------
+
+    def render(
+        self,
+        config: "CalendarConfig",
+        coordinates: "CoordinateDict",
+        events: list,
+        db: "CalendarDB",
+    ):
+        self._chart_key: _ChartKey | None = None
+        result = super().render(config, coordinates, events, db)
+        if config.compactplan_show_legend and self._chart_key is not None:
+            # The key paginates, so it is worth as many pages as it took.
+            result.page_count += self._render_key_svg(config, coordinates, db)
+        return result
 
     def _render_content(
         self,
@@ -317,16 +352,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Geometry constants
         time_bands = list(getattr(config, "compactplan_time_bands", []) or [])
-        n_bands = len(time_bands)
-        band_row_h = float(config.compactplan_band_row_height)
-        bands_h = n_bands * band_row_h
+        bands_h = sum(self._band_row_h(band, config) for band in time_bands)
 
-        # header_bottom_y / key_top_y are gaps (pts) between the header/key
-        # blocks and the nearest duration line or milestone.
+        # header_bottom_y is the gap (pts) between the header bands and the
+        # topmost duration line or milestone.
         header_gap = float(getattr(config, "compactplan_header_bottom_y", None) or 0.0)
-        key_gap = float(getattr(config, "compactplan_key_top_y", None) or 0.0)
-
-        show_legend = bool(config.compactplan_show_legend)
 
         line_w = float(config.compactplan_duration_line_width)
 
@@ -388,18 +418,30 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
             min_content_y = min(min_content_y, axis_y - tallest_flag)
             max_content_y = max(max_content_y, axis_y)
+            # An icon standing in for a pennant sits on the label's baseline
+            # and so rises above the stem tip; the header must clear it, with
+            # a point to spare so the band's rule does not sit on its edge.
+            if any(
+                self._milestone_icon_name(m, self._milestone_style(m, config)[1], config)
+                for m in milestones
+            ):
+                icon_rise = 0.8 * self._milestone_icon_size(config) - (
+                    float(config.compactplan_milestone_flag_height)
+                    * _MILESTONE_PENNANT_RATIO / 2.0
+                ) + _MILESTONE_ICON_HEADER_CLEARANCE
+                min_content_y = min(
+                    min_content_y, axis_y - tallest_flag - max(0.0, icon_rise)
+                )
 
         # ------------------------------------------------------------------
-        # PHASE 3 — Float header and key relative to content bounds.
+        # PHASE 3 — Float the header relative to content bounds.
         # Header bottom is header_gap pts above the topmost content edge.
-        # Key top is key_gap pts below the bottommost content edge.
         # ------------------------------------------------------------------
         bands_y = min_content_y - header_gap - bands_h
-        legend_y = max_content_y + key_gap
 
         # Header bands at computed floating position
         self._draw_bands(
-            config, time_bands, band_row_h, area_x, bands_y, area_w, start, end,
+            config, time_bands, area_x, bands_y, area_w, start, end,
             visible_days, px_per_day, n_vis,
             events=evt_objects,
             db=db,
@@ -418,215 +460,71 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
 
         # Duration lines
-        _dur_style = config.get_line_style("ec-duration-bar")
         for p in placed:
-            _ps = p.style or StyleResult()
-            line_stroke = _ps.stroke_color if _ps.stroke_color is not None else p.color
-            line_stroke_width = (
-                _ps.stroke_width if _ps.stroke_width is not None else line_w
-            )
-            line_stroke_dash = (
-                _ps.stroke_dasharray
-                if _ps.stroke_dasharray is not None
-                else (_dur_style.dasharray or None)
-            )
-            line_stroke_opacity = (
-                _ps.stroke_opacity
-                if _ps.stroke_opacity is not None
-                else _dur_style.opacity
-            )
             self._draw_line(
                 p.x1, p.row_y, p.x2, p.row_y,
-                stroke=line_stroke,
-                stroke_width=line_stroke_width,
-                stroke_dasharray=line_stroke_dash,
-                stroke_opacity=line_stroke_opacity,
+                **self._bar_stroke(p, config),
                 css_class="ec-duration-bar",
             )
 
         # Start icons — one unique icon at the left (start-date) end of each duration line.
         # Each duration gets its own icon by index, cycling through the configured list.
-        show_dur_icons = bool(config.compactplan_show_duration_icons)
-        _dur_icon_style = config.get_icon_style("ec-duration-icon")
-        # Theme-declared `icon:duration size:` overrides the per-visualizer
-        # default; falls back to compactplan_duration_icon_height when absent.
-        dur_icon_h = float(
-            _dur_icon_style.size
-            if _dur_icon_style.size is not None
-            else config.compactplan_duration_icon_height
-        )
-        dur_icon_color_cfg = str(_dur_icon_style.color or "").strip()
-        if show_dur_icons and dur_icon_h > 0:
+        dur_icon_h = self._duration_icon_height(config)
+        if config.compactplan_show_duration_icons and dur_icon_h > 0:
             for p in placed:
-                if p.icon_name:
-                    _ps = p.style or StyleResult()
-                    # Centre icon vertically on the duration row (same formula as
-                    # continuation icons: baseline = row_y + 0.3 * icon_h).
-                    icon_baseline = p.row_y + 0.3 * dur_icon_h
-                    icon_to_draw = _ps.icon if _ps.icon is not None else p.icon_name
-                    # Contrast-swap when the configured icon color matches the
-                    # bar color, otherwise the glyph paints invisibly against
-                    # its own bar (the user-reported navy-on-navy case).
-                    icon_color = _resolve_icon_on_bar(
-                        style_override=_ps.icon_color,
-                        configured=dur_icon_color_cfg,
-                        bar_color=p.color,
-                    )
-                    self._draw_icon_svg(
-                        icon_to_draw, p.x1, icon_baseline, dur_icon_h,
-                        anchor="start", color=icon_color,
-                        css_class="ec-duration-icon",
-                        box_token="box:duration",
-                        box_ctx=self._event_ctx(p.event),
-                    )
+                self._draw_start_icon(p, p.x1, p.row_y, dur_icon_h, config)
 
         # Continuation icons — drawn at the clamped right edge of any duration
-        # line whose event extends beyond the timeline end date. Compactplan
-        # only clips its "after" end, so it reads continuation_icon_after.
+        # line whose event extends beyond the timeline end date.
         show_continuation = bool(config.show_continuation_icon)
         has_continuations = any(p.continues for p in placed)
         if show_continuation and has_continuations:
-            # Theme `icon:continuation` (bound to ec-continuation-icon) takes
-            # precedence; each field falls back to the global continuation_*
-            # config keys when the theme is silent.
-            _cont_icon_style = config.get_icon_style("ec-continuation-icon")
-            cont_icon_name = str(
-                _cont_icon_style.icon
-                or resolve_continuation_icon(
-                    config.continuation_icon_after, "horizontal", "arrow-right"
-                )
-            )
-            cont_icon_h = float(
-                _cont_icon_style.size
-                if _cont_icon_style.size is not None
-                else (config.continuation_icon_height or 8.0)
-            )
-            cont_icon_color_cfg = (
-                _cont_icon_style.color
-                or config.continuation_icon_color
-                or ""
-            ).strip()
             for p in placed:
                 if p.continues:
-                    # Contrast-swap when the configured continuation-icon color
-                    # matches the bar color (same fix as the start icons above).
-                    icon_color = _resolve_icon_on_bar(
-                        style_override=None,
-                        configured=cont_icon_color_cfg,
-                        bar_color=p.color,
-                    )
-                    # Center icon vertically on the duration row.
-                    # _draw_icon_svg places top at baseline_y - 0.8*size, so:
-                    #   center = baseline_y - 0.8*h + h/2 = baseline_y - 0.3*h
-                    # Solving for center == row_y: baseline_y = row_y + 0.3 * h
-                    icon_baseline = p.row_y + 0.3 * cont_icon_h
-                    self._draw_icon_svg(
-                        cont_icon_name, p.x2, icon_baseline, cont_icon_h,
-                        anchor="end", color=icon_color,
-                        css_class="ec-continuation-icon",
-                    )
+                    self._draw_continuation_icon(config, p.x2, p.row_y, p.color)
 
         # Milestones
         for m in milestones:
             self._draw_milestone(
-                m, day_x, px_per_day, axis_y, config, db,
+                m, day_x, px_per_day, axis_y, config,
                 label_lane=milestone_lanes.get(id(m), 0),
                 stem_base_h=ms_stem_base,
                 max_label_x=area_x + area_w,
             )
 
-        # ------------------------------------------------------------------
-        # Multi-column section: left = group legend, then milestone roster
-        # and/or holiday list to the right.  Columns start at legend_y and
-        # render side by side.  The legend takes ``legend_column_split`` of
-        # area_w (default 0.5 = equal halves); the remaining area is split
-        # evenly between the milestone and holiday columns when both are
-        # enabled, otherwise the single enabled column fills it.
-        # ------------------------------------------------------------------
-        show_ms_list = bool(config.compactplan_show_milestone_list)
-        show_holiday_list = bool(getattr(config, "compactplan_show_holiday_list", False))
-        has_legend_content = show_legend and bool(placed)
-        has_ms_content = show_ms_list and bool(milestones)
-
-        holiday_entries: list[tuple[date, str, str]] = (
-            self._collect_holiday_entries(visible_days, config, db)
-            if show_holiday_list and db is not None
-            else []
+        # The key -- what each bar, flag and symbol stands for -- is its own
+        # page, written after the chart (see render()).  Keep what it has
+        # to explain.
+        self._chart_key = _ChartKey(
+            listing=list(zip(events, evt_objects)),
+            placed={id(p.event): p for p in placed},
+            milestones=frozenset(
+                id(m) for m in milestones if self._parse_date(m.start) is not None
+            ),
+            visible_days=visible_days,
+            continuations=show_continuation and has_continuations,
         )
-        has_holiday_content = bool(holiday_entries)
-
-        col_split = float(getattr(config, "compactplan_legend_column_split", 0.5))
-        inter_col_gap = 8.0
-        left_col_w = area_w * col_split
-        right_area_x = area_x + left_col_w + inter_col_gap
-        right_area_w = area_w - left_col_w - inter_col_gap
-
-        if has_ms_content and has_holiday_content:
-            ms_col_w = (right_area_w - inter_col_gap) / 2.0
-            hol_col_w = right_area_w - inter_col_gap - ms_col_w
-            ms_col_x = right_area_x
-            hol_col_x = right_area_x + ms_col_w + inter_col_gap
-        elif has_ms_content:
-            ms_col_x, ms_col_w = right_area_x, right_area_w
-            hol_col_x, hol_col_w = right_area_x, right_area_w
-        else:
-            ms_col_x, ms_col_w = right_area_x, right_area_w
-            hol_col_x, hol_col_w = right_area_x, right_area_w
-
-        left_bottom = legend_y
-        if has_legend_content:
-            left_bottom = self._draw_legend(
-                placed, group_color_map, area_x, legend_y, left_col_w, config
-            )
-
-        ms_bottom = legend_y
-        if has_ms_content:
-            ms_bottom = self._draw_milestone_list(
-                milestones, ms_col_x, ms_col_w, legend_y, config
-            )
-
-        holiday_bottom = legend_y
-        if has_holiday_content:
-            holiday_bottom = self._draw_holiday_list(
-                holiday_entries, hol_col_x, hol_col_w, legend_y, config, db
-            )
-
-        rendered_bottom = max(left_bottom, ms_bottom, holiday_bottom)
-
-        # Right-side legend entries — stacked below legend_y, right-aligned to the
-        # diagram edge.  Each entry advances next_right_y by one milestone row height.
-        ms_row_h = float(config.compactplan_milestone_list_row_height)
-        next_right_y = legend_y + ms_row_h  # first right-side legend slot
-
-        # Continuation legend — icon + label (only when continuations exist).
-        if show_continuation and has_continuations:
-            self._draw_continuation_legend(area_x, area_w, next_right_y, config)
-            rendered_bottom = max(rendered_bottom, next_right_y)
-            next_right_y += ms_row_h  # advance to next slot
-
-        # Axis legend — short axis-styled swatch + "timeline" label.
-        show_axis_legend = bool(config.compactplan_show_axis_legend)
-        if show_axis_legend and bool(config.compactplan_show_axis):
-            self._draw_axis_legend(area_x, area_w, next_right_y, config)
-            rendered_bottom = max(rendered_bottom, next_right_y)
 
         # ------------------------------------------------------------------
         # REFIT — override the viewBox to the actual rendered vertical extent.
         # _shrink_drawing_to_content() runs before _render_content() and uses
         # only the coordinate dict, so it sees the full CompactPlanArea box
-        # and cannot know the floating bands_y / legend_y positions computed
-        # here.  We correct the viewBox directly now that all bounds are known.
-        # rendered_bottom is the true last drawn Y (last legend or milestone row).
+        # and cannot know the floating bands_y computed here.  We correct the
+        # viewBox directly now that all bounds are known: the chart runs from
+        # the top of the header bands to the lowest ink below the axis.
         # ------------------------------------------------------------------
         if config.shrink_to_content:
+            chart_bottom = self._chart_bottom(
+                config, placed, max_content_y, axis_y, dur_icon_h
+            )
             content_w = round(area_w, 4)
-            content_h = round(max(1.0, rendered_bottom - bands_y), 4)
+            content_h = round(max(1.0, chart_bottom - bands_y), 4)
             vb_x = round(area_x, 4)
             vb_y = round(bands_y, 4)
             self._drawing.view_box = (vb_x, vb_y, content_w, content_h)
             self._drawing.width = content_w
             self._drawing.height = content_h
-            self._content_bbox_svg = (area_x, bands_y, area_x + area_w, rendered_bottom)
+            self._content_bbox_svg = (area_x, bands_y, area_x + area_w, chart_bottom)
 
         return 0, []
 
@@ -634,11 +532,18 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # Band / column header drawing
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _band_row_h(band: dict[str, Any], config: "CalendarConfig") -> float:
+        """Row height for one band: its own ``row_height``, else the
+        view-wide ``compact_plan.band_row_height``."""
+        if band.get("row_height") is not None:
+            return float(band["row_height"])
+        return float(config.compactplan_band_row_height)
+
     def _draw_bands(
         self,
         config: "CalendarConfig",
         time_bands: list[dict],
-        band_row_h: float,
         area_x: float,
         area_y: float,
         area_w: float,
@@ -650,11 +555,26 @@ class CompactPlanRenderer(BaseSVGRenderer):
         events: "list[Event] | None" = None,
         db: "CalendarDB | None" = None,
     ) -> None:
+        """Draw the header band stack from ``area_y`` down.
+
+        Each band is a ``compact_plan.bands`` entry, usually resolved from
+        the shared ``time_bands:`` catalog.  Keys read here:
+
+          unit          any unit of shared/timeband.py, plus "icon" (glyphs
+                        from ``icon_rules``) and "holiday" (each holiday's
+                        own country flag; ``nonworkdays_only`` hides
+                        observances that do not close the office).
+          row_height    this row's height; else ``compact_plan.band_row_height``.
+          show_every    draw every N segments as one cell, labelled by its
+                        first (date/dow cells never merge across a week).
+          week_start    weekday a week begins on, for week and merged
+                        date/dow cells (default Monday).
+          fill_color / alt_fill_color   alternating cell fills.
+          text_align    left | center | right label alignment.
+          icon_rules / icon_height      "icon" and "holiday" bands.
+        """
         font_name = self._resolve_font(
             getattr(config, "compactplan_text_font_name", None), config
-        )
-        font_size = float(
-            getattr(config, "compactplan_text_font_size", None) or max(7.0, band_row_h * 0.35)
         )
         _band_text_style = config.get_text_style("ec-label")
         text_color = str(_band_text_style.color or "black")
@@ -682,15 +602,50 @@ class CompactPlanRenderer(BaseSVGRenderer):
             else {}
         )
 
-        for band_idx, band in enumerate(time_bands):
-            row_y = area_y + band_idx * band_row_h
-            unit = str(band.get("unit", "week")).strip().lower()
+        def separator(x1: float, y1: float, x2: float, y2: float) -> None:
+            self._draw_line(
+                x1, y1, x2, y2,
+                stroke=_sep_style.color,
+                stroke_width=_sep_style.width,
+                stroke_opacity=_sep_style.opacity,
+                stroke_dasharray=_sep_style.dasharray,
+                css_class="ec-separator",
+            )
 
-            # ── Icon band — one cell per visible day, icons driven by rules ──
-            if unit == "icon":
-                icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days)
-                icon_h = float(band.get("icon_height") or band_row_h * 0.65)
+        row_y = area_y
+        for band_idx, band in enumerate(time_bands):
+            row_h = self._band_row_h(band, config)
+            unit = str(band.get("unit", "week")).strip().lower()
+            font_size = float(
+                getattr(config, "compactplan_text_font_size", None)
+                or max(7.0, row_h * 0.35)
+            )
+
+            # ── Per-day glyph bands — one cell per visible day ──────────────
+            # "icon" takes its glyphs from the band's icon_rules; "holiday"
+            # takes them from the holiday rows themselves, so each country
+            # brings its own flag and adding a country needs no theme edit.
+            if unit in {"icon", "holiday"}:
+                if unit == "holiday":
+                    # No color is passed with the flag: a country flag is
+                    # already multi-colored, and recoloring it would make two
+                    # countries indistinguishable.
+                    holiday_days = (
+                        compute_holiday_band_days(
+                            visible_days, db, config,
+                            nonworkdays_only=bool(band.get("nonworkdays_only", False)),
+                        )
+                        if db is not None
+                        else {}
+                    )
+                    day_icon_map = {
+                        day: [(mark.icon, None) for mark in marks]
+                        for day, marks in holiday_days.items()
+                    }
+                else:
+                    icon_rules = list(band.get("icon_rules") or [])
+                    day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days)
+                icon_h = float(band.get("icon_height") or row_h * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 day_cells = [
                     (
@@ -701,20 +656,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     for d in visible_days
                 ]
                 self._draw_icon_band_row(
-                    day_cells, row_y, band_row_h, icon_h, fill,
+                    day_cells, row_y, row_h, icon_h, fill,
                     css_class="ec-band-cell",
                 )
-                self._draw_line(
-                    area_x, row_y + band_row_h, area_x + area_w, row_y + band_row_h,
-                    stroke=_sep_style.color,
-                    stroke_width=_sep_style.width,
-                    stroke_opacity=_sep_style.opacity,
-                    stroke_dasharray=_sep_style.dasharray,
-                    css_class="ec-separator",
-                )
+                separator(area_x, row_y + row_h, area_x + area_w, row_y + row_h)
+                row_y += row_h
                 continue
 
             segments = self._build_segments(band, start, end, config, visible_days, band_idx, db=db)
+            cells = _group_band_segments(segments, band, week_start_default=0)
 
             fill_color = str(band.get("fill_color") or "none")
             alt_fill_color = str(band.get("alt_fill_color") or "none")
@@ -724,24 +674,26 @@ class CompactPlanRenderer(BaseSVGRenderer):
             if text_align not in {"left", "center", "right"}:
                 text_align = "left"
 
-            for seg_idx, seg in enumerate(segments):
-                x1 = self._seg_x(seg.start, visible_days, area_x, area_w, n_vis, px_per_day)
-                x2 = self._seg_x(seg.end_exclusive, visible_days, area_x, area_w, n_vis, px_per_day)
+            for cell_idx, cell in enumerate(cells):
+                first_seg, last_seg = cell[0], cell[-1]
+                x1 = self._seg_x(first_seg.start, visible_days, area_x, area_w, n_vis, px_per_day)
+                x2 = self._seg_x(last_seg.end_exclusive, visible_days, area_x, area_w, n_vis, px_per_day)
                 seg_w = max(0.0, x2 - x1)
                 if seg_w <= 0:
                     continue
 
-                fill = alt_fill_color if seg_idx % 2 else fill_color
+                fill = alt_fill_color if cell_idx % 2 else fill_color
                 fill_opacity: float | None = None
 
                 # Non-workday override for single-day date/dow cells.
                 _is_single_day = (
                     unit in {"date", "dow"}
-                    and (seg.end_exclusive - seg.start).days == 1
+                    and len(cell) == 1
+                    and (first_seg.end_exclusive - first_seg.start).days == 1
                 )
                 _nwd_icons: list[tuple[str, str]] = []
                 if _is_single_day and _day_classes:
-                    _day_cls = _day_classes.get(seg.start, frozenset())
+                    _day_cls = _day_classes.get(first_seg.start, frozenset())
                     _nwd_fill = _nwd_fill_for_classes(_day_cls, config)
                     if _nwd_fill:
                         fill = _nwd_fill
@@ -752,7 +704,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         # static config icon.
                         _icon_color = _nwd_icon_result[1]
                         _flags = (
-                            _holiday_flags.get(seg.start)
+                            _holiday_flags.get(first_seg.start)
                             if "federal_holiday" in _day_cls
                             else None
                         )
@@ -764,28 +716,21 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
                 if not _is_none_color(fill):
                     self._draw_rect(
-                        x1, row_y, seg_w, band_row_h,
+                        x1, row_y, seg_w, row_h,
                         fill=fill,
                         fill_opacity=fill_opacity if fill_opacity is not None else 1.0,
                         css_class="ec-band-cell",
                     )
 
-                # Vertical divider at the left edge of every segment after the
+                # Vertical divider at the left edge of every cell after the
                 # first — gives one stroke per cell boundary (N-1 dividers for
-                # N segments), inheriting the ec-separator line style.
-                if seg_idx > 0:
-                    self._draw_line(
-                        x1, row_y, x1, row_y + band_row_h,
-                        stroke=_sep_style.color,
-                        stroke_width=_sep_style.width,
-                        stroke_opacity=_sep_style.opacity,
-                        stroke_dasharray=_sep_style.dasharray,
-                        css_class="ec-separator",
-                    )
+                # N cells), inheriting the ec-separator line style.
+                if cell_idx > 0:
+                    separator(x1, row_y, x1, row_y + row_h)
 
                 if _nwd_icons:
                     self._draw_cell_icons(
-                        _nwd_icons, x1, seg_w, row_y, band_row_h, band_row_h * 0.65,
+                        _nwd_icons, x1, seg_w, row_y, row_h, row_h * 0.65,
                         css_class="ec-nwd-icon",
                     )
 
@@ -794,42 +739,32 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 # the icon isn't overprinted (matches blockplan behavior).
                 if _nwd_icons:
                     continue
-                label = seg.label
+                label = first_seg.label
                 if label:
-                    text_y = row_y + band_row_h * 0.72
+                    text_y = row_y + row_h * 0.72
                     pad = 2.0
                     if text_align == "center":
                         text_x = x1 + seg_w / 2.0
                         anchor = "middle"
-                        max_w = seg_w - pad * 2
                     elif text_align == "right":
                         text_x = x2 - pad
                         anchor = "end"
-                        max_w = seg_w - pad * 2
                     else:  # left
                         text_x = x1 + pad
                         anchor = "start"
-                        max_w = seg_w - pad * 2
                     self._draw_text(
                         text_x, text_y, label,
                         font_name, font_size,
                         fill=text_color,
                         fill_opacity=text_opacity,
                         anchor=anchor,
-                        max_width=max_w,
+                        max_width=seg_w - pad * 2,
                         css_class="ec-label",
                     )
 
             # Draw thin separator line below each band row
-            sep_y = row_y + band_row_h
-            self._draw_line(
-                area_x, sep_y, area_x + area_w, sep_y,
-                stroke=_sep_style.color,
-                stroke_width=_sep_style.width,
-                stroke_opacity=_sep_style.opacity,
-                stroke_dasharray=_sep_style.dasharray,
-                css_class="ec-separator",
-            )
+            separator(area_x, row_y + row_h, area_x + area_w, row_y + row_h)
+            row_y += row_h
 
     # ------------------------------------------------------------------
     # Segment generation (week / month / fiscal_quarter / interval / date)
@@ -1019,7 +954,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if not config.compactplan_show_milestone_labels:
             return {}
 
-        flag_w = float(config.compactplan_milestone_flag_width)
         font_name = self._resolve_font(
             getattr(config, "compactplan_name_text_font_name", None),
             config,
@@ -1039,6 +973,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             if start_d is None or not evt.task_name:
                 continue
             x = self._milestone_x(start_d, day_x, px_per_day)
+            mark_w = self._milestone_mark_width(evt, config)
             try:
                 text_w = (
                     string_width(evt.task_name, font_path, font_size)
@@ -1047,16 +982,16 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 )
             except Exception:
                 text_w = font_size * 0.5 * len(evt.task_name)
-            # The label starts past the pennant; keep a gap so adjacent
-            # labels in one lane never touch.  Near the right edge the drawing
-            # code flips the label to the left of the stem, so pack the
-            # interval it will actually occupy.
-            if max_label_x is not None and x + flag_w + 3.0 + text_w > max_label_x:
+            # The label starts past the pennant (or icon); keep a gap so
+            # adjacent labels in one lane never touch.  Near the right edge
+            # the drawing code flips the label to the left of the stem, so
+            # pack the interval it will actually occupy.
+            if max_label_x is not None and x + mark_w + 3.0 + text_w > max_label_x:
                 x1 = x - 3.0 - text_w - _MILESTONE_LABEL_GAP
                 x2 = x
             else:
                 x1 = x
-                x2 = x + flag_w + 3.0 + text_w + _MILESTONE_LABEL_GAP
+                x2 = x + mark_w + 3.0 + text_w + _MILESTONE_LABEL_GAP
             dated.append((x1, x2, id(evt)))
 
         lanes: list[list[tuple[float, float]]] = []
@@ -1081,7 +1016,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         px_per_day: float,
         axis_y: float,
         config: "CalendarConfig",
-        db: "CalendarDB",
         label_lane: int = 0,
         stem_base_h: float | None = None,
         max_label_x: float | None = None,
@@ -1092,15 +1026,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         x = self._milestone_x(start_d, day_x, px_per_day)
 
-        color = evt.color or config.get_element_color("ec-milestone-marker", "black")
-        _style_engine = getattr(self, "_style_engine", None)
-        _sr = (
-            _style_engine.evaluate_event(evt)
-            if _style_engine is not None
-            else StyleResult()
-        )
-        if _sr.fill_color:
-            color = _sr.fill_color
+        color, _sr = self._milestone_style(evt, config)
         flag_w = float(config.compactplan_milestone_flag_width)
         # A milestone in a higher label lane gets a longer stem so its name
         # clears the labels below it and still rides on its own pennant.
@@ -1109,27 +1035,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
         base_h = float(config.compactplan_milestone_flag_height)
         stem_h = self._milestone_flag_height(config, label_lane, stem_base_h)
         pennant_h = base_h * _MILESTONE_PENNANT_RATIO
+        # The label's baseline: centred on the pennant at the top of the stem.
+        label_y = axis_y - stem_h + pennant_h / 2.0
 
-        # Try icon first
-        icon_name = _sr.icon if _sr.icon is not None else (
-            evt.icon or getattr(config, "compactplan_milestone_icon", None)
-        )
-        drew_icon = False
-        if icon_name and db is not None:
-            icon_svg = db.get_icon_svg(icon_name) if hasattr(db, "get_icon_svg") else None
-            if icon_svg:
-                icon_size = base_h + 4.0
-                icon_x = x - icon_size / 2.0
-                icon_y = axis_y - stem_h - icon_size / 2.0
-                self._drawing.append(
-                    drawsvg.Raw(
-                        f'<g transform="translate({icon_x:.2f},{icon_y:.2f}) scale({icon_size/24:.4f})">'
-                        f'{icon_svg}</g>'
-                    )
-                )
-                drew_icon = True
-
-        if not drew_icon:
+        # An icon takes the pennant's place at the stem tip, on the label's
+        # baseline; the stem stays, so the icon is still planted on its date.
+        icon_name = self._milestone_icon_name(evt, _sr, config)
+        if icon_name:
+            self._draw_milestone_stem(x, axis_y, stem_h, color)
+            self._draw_icon_svg(
+                icon_name, x + _MILESTONE_ICON_GAP, label_y,
+                self._milestone_icon_size(config),
+                anchor="start", color=_sr.icon_color or color,
+                css_class="ec-milestone-marker",
+                box_token="box:milestone",
+                box_ctx=self._event_ctx(evt),
+            )
+        else:
             self._draw_flag_marker(x, axis_y, stem_h, flag_w, color, pennant_h)
 
         # Milestone label
@@ -1149,9 +1071,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 color=label_color,
                 opacity=label_opacity,
             )
-            label_x = x + flag_w + 3.0
-            # Centre the label on the pennant at the top of the stem.
-            label_y = axis_y - stem_h + pennant_h / 2.0
+            label_x = x + self._milestone_mark_width(evt, config) + 3.0
             # A milestone near the end of the range would otherwise run its
             # label off the page; flip it to the left of the stem instead.
             anchor = "start"
@@ -1198,6 +1118,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
             base = float(config.compactplan_milestone_flag_height)
         return base + max(0, label_lane) * cls._milestone_label_step(config)
 
+    def _draw_milestone_stem(
+        self, x: float, axis_y: float, stem_h: float, color: str
+    ) -> None:
+        """A milestone's stem, standing *stem_h* up from its foot on the axis."""
+        # Vertical stem
+        self._draw_line(x, axis_y, x, axis_y - stem_h, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
+        # Short horizontal foot tick at axis
+        self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
+
     def _draw_flag_marker(
         self,
         x: float,
@@ -1215,10 +1144,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         separately so a taller stem does not also inflate the pennant.
         """
         stem_top = axis_y - flag_h
-        # Vertical stem
-        self._draw_line(x, axis_y, x, stem_top, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
-        # Short horizontal foot tick at axis
-        self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
+        self._draw_milestone_stem(x, axis_y, flag_h, color)
 
         # Pennant: a parallelogram/trapezoid to the right of stem tip
         if pennant_h is None:
@@ -1243,591 +1169,458 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._drawing.append(path)
 
     # ------------------------------------------------------------------
-    # Legend drawing
+    # Mark styling — shared by the chart and its key, so a swatch on the
+    # key page is painted exactly as the bar it stands for.
     # ------------------------------------------------------------------
 
-    def _draw_legend(
-        self,
-        placed: list[_PlacedDuration],
-        group_color_map: dict[str, str],
-        area_x: float,
-        legend_y: float,
-        col_w: float,
-        config: "CalendarConfig",
-    ) -> float:
+    @staticmethod
+    def _bar_stroke(p: _PlacedDuration, config: "CalendarConfig") -> dict[str, Any]:
+        """A duration bar's stroke: style-rule overrides over the theme's."""
+        rule = p.style or StyleResult()
+        theme = config.get_line_style("ec-duration-bar")
+        return {
+            "stroke": rule.stroke_color if rule.stroke_color is not None else p.color,
+            "stroke_width": (
+                rule.stroke_width
+                if rule.stroke_width is not None
+                else float(config.compactplan_duration_line_width)
+            ),
+            "stroke_dasharray": (
+                rule.stroke_dasharray
+                if rule.stroke_dasharray is not None
+                else (theme.dasharray or None)
+            ),
+            "stroke_opacity": (
+                rule.stroke_opacity
+                if rule.stroke_opacity is not None
+                else theme.opacity
+            ),
+        }
+
+    @staticmethod
+    def _duration_icon_height(config: "CalendarConfig") -> float:
+        """Size of a bar's start icon.
+
+        Theme-declared `icon:duration size:` overrides the per-visualizer
+        default; falls back to compactplan_duration_icon_height when absent.
         """
-        Draw the left-area duration legend.
-
-        Layout has two tiers per group:
-          • Group header row: [colored swatch line] [Group Name]
-          • Per-duration rows: [unique icon] [task_name]
-
-        Groups are distributed across ``legend_team_columns`` evenly balanced
-        sub-columns (default 2).  The split is greedy by row count so neither
-        sub-column is dramatically taller than the other.
-
-        Returns the actual bottom Y of the tallest sub-column.
-        """
-        if not placed:
-            return legend_y
-
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_text_font_name", None), config, italic=True
-        )
-        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
-
-        _legend_text_style = config.get_text_style("ec-legend-text")
-        label_color = str(_legend_text_style.color or "#595959")
-        label_opacity = float(_legend_text_style.opacity)
-
-        include_notes = bool(getattr(config, "include_notes", False))
-        _legend_notes_style = config.get_text_style("ec-legend-notes")
-        notes_font_name = self._resolve_font(
-            getattr(config, "compactplan_notes_text_font_name", None)
-            or getattr(_legend_notes_style, "font", None),
-            config,
-            italic=True,
-        )
-        notes_font_size = float(
-            getattr(config, "compactplan_notes_text_font_size", None)
-            or getattr(_legend_notes_style, "size", None)
-            or font_size
-        )
-        notes_color = str(_legend_notes_style.color or label_color)
-        notes_opacity = float(_legend_notes_style.opacity)
-
-        swatch_w = float(config.compactplan_legend_swatch_width)
-        swatch_text_gap = 5.0
-        row_h = float(config.compactplan_legend_row_height)
-        line_w = float(config.compactplan_duration_line_width)
-
-        show_dur_icons = bool(config.compactplan_show_duration_icons)
-        _legend_icon_style = config.get_icon_style("ec-duration-icon")
-        dur_icon_h = float(
-            _legend_icon_style.size
-            if _legend_icon_style.size is not None
+        style = config.get_icon_style("ec-duration-icon")
+        return float(
+            style.size
+            if style.size is not None
             else config.compactplan_duration_icon_height
         )
-        dur_icon_color_cfg = str(_legend_icon_style.color or "").strip()
-        icon_text_gap = 3.0
 
-        n_cols = max(1, int(getattr(config, "compactplan_legend_team_columns", 2) or 2))
-        sub_gap = 8.0  # pts between sub-columns
-        sub_col_w = (col_w - (n_cols - 1) * sub_gap) / n_cols
-
-        # Within each sub-column the same two horizontal offsets are used:
-        #   swatch/icon start at sub_x (the sub-column's left edge)
-        #   text starts at sub_x + max(swatch_w, dur_icon_h) + text_gap
-        left_margin = max(swatch_w, dur_icon_h if show_dur_icons else 0.0) + swatch_text_gap
-        # header swatch is always drawn from sub_x; dur icon is also from sub_x
-        # text column follows left_margin from sub_x
-        text_offset = left_margin
-        text_max_w = sub_col_w - left_margin
-
-        # ── Build ordered group → [_PlacedDuration] ─────────────────────────
-        seen_groups: dict[str, list[_PlacedDuration]] = {}
-        for p in placed:
-            group = (p.event.resource_group or "").strip()
-            seen_groups.setdefault(group, []).append(p)
-
-        # Row count per group: 1 header + number of named durations.
-        group_items = [
-            (group, gp, 1 + sum(1 for p in gp if p.event.task_name))
-            for group, gp in seen_groups.items()
-        ]
-        total_rows = sum(rc for _, _, rc in group_items)
-
-        # Greedy balanced split: fill sub-columns sequentially, moving to the
-        # next when cumulative rows exceed the per-column target.
-        target = total_rows / n_cols
-        sub_columns: list[list[tuple[str, list[_PlacedDuration]]]] = [[] for _ in range(n_cols)]
-        col_idx, col_rows = 0, 0
-        for group, gp, rc in group_items:
-            if col_idx < n_cols - 1 and col_rows >= target:
-                col_idx += 1
-                col_rows = 0
-            sub_columns[col_idx].append((group, gp))
-            col_rows += rc
-
-        # ── Render each sub-column ───────────────────────────────────────────
-        bottom_y = legend_y
-        for ci, groups_in_col in enumerate(sub_columns):
-            if not groups_in_col:
-                continue
-            sub_x = area_x + ci * (sub_col_w + sub_gap)
-            cur_y = legend_y + row_h
-
-            for group, group_placed in groups_in_col:
-                # Derive the swatch color from the durations actually drawn
-                # for this group so the legend matches the bars on the
-                # timeline.  Picks the most common p.color in the group
-                # (ties broken by first occurrence); falls back to the
-                # palette-cycle color when the group is empty.
-                group_color = _dominant_bar_color(group_placed) or group_color_map.get(
-                    group, "steelblue"
-                )
-                display_group = group if group else "(unassigned)"
-
-                # ── Group header: colored swatch + group name ──────────────
-                # Emit the swatch as a raw <line> with inline style="..." so
-                # the per-group color survives any .ec-legend-swatch CSS rule
-                # in the SVG <style> block (themes that bind
-                # ec-legend-swatch -> line:axis would otherwise override the
-                # presentation attribute with the axis color via CSS class
-                # specificity, hiding the per-group swatch color entirely).
-                swatch_y = cur_y - font_size * 0.3
-                _swatch_dur_style = config.get_line_style("ec-duration-bar")
-                swatch_opacity = _swatch_dur_style.opacity
-                swatch_style = (
-                    f"stroke:{group_color};stroke-width:{line_w};"
-                    f"stroke-opacity:{swatch_opacity}"
-                )
-                self._drawing.append(drawsvg.Raw(
-                    f'<line x1="{sub_x:.2f}" y1="{swatch_y:.2f}" '
-                    f'x2="{(sub_x + swatch_w):.2f}" y2="{swatch_y:.2f}" '
-                    f'style="{swatch_style}" class="ec-legend-swatch" />'
-                ))
-                self._draw_text(
-                    sub_x + text_offset, cur_y, display_group,
-                    font_name, font_size,
-                    fill=label_color, fill_opacity=label_opacity,
-                    max_width=text_max_w,
-                    css_class="ec-heading",
-                )
-                cur_y += row_h
-
-                # ── Per-duration rows: unique icon + task name ─────────────
-                for p in group_placed:
-                    task_name = p.event.task_name or ""
-                    if not task_name:
-                        continue
-
-                    if show_dur_icons and p.icon_name:
-                        icon_baseline = cur_y - font_size * 0.35 + dur_icon_h * 0.3
-                        icon_color = dur_icon_color_cfg if dur_icon_color_cfg else p.color
-                        self._draw_icon_svg(
-                            p.icon_name, sub_x, icon_baseline, dur_icon_h,
-                            anchor="start", color=icon_color,
-                            css_class="ec-legend-icon",
-                            box_token="box:duration",
-                            box_ctx=self._event_ctx(p.event),
-                        )
-
-                    note_str = ""
-                    if include_notes:
-                        raw_note = str(getattr(p.event, "notes", "") or "").strip()
-                        if raw_note:
-                            note_str = raw_note
-
-                    if note_str:
-                        try:
-                            name_font_path = get_font_path(font_name)
-                            name_w = string_width(task_name + " ", name_font_path, font_size)
-                        except Exception:
-                            name_w = 0.0
-                        self._draw_text(
-                            sub_x + text_offset, cur_y, task_name,
-                            font_name, font_size,
-                            fill=label_color, fill_opacity=label_opacity,
-                            css_class="ec-legend-text",
-                        )
-                        notes_max_w = max(0.0, text_max_w - name_w)
-                        self._draw_text(
-                            sub_x + text_offset + name_w, cur_y, note_str,
-                            notes_font_name, notes_font_size,
-                            fill=notes_color, fill_opacity=notes_opacity,
-                            max_width=notes_max_w,
-                            css_class="ec-legend-notes",
-                        )
-                    else:
-                        self._draw_text(
-                            sub_x + text_offset, cur_y, task_name,
-                            font_name, font_size,
-                            fill=label_color, fill_opacity=label_opacity,
-                            max_width=text_max_w,
-                            css_class="ec-legend-text",
-                        )
-                    cur_y += row_h
-
-            bottom_y = max(bottom_y, cur_y)
-
-        return bottom_y
-
-    def _draw_milestone_list(
+    def _draw_start_icon(
         self,
-        milestones: list,
-        area_x: float,
-        area_w: float,
-        list_y: float,
-        config: "CalendarConfig",
-    ) -> float:
-        """Draw a date-sorted milestone roster; return the actual bottom Y of the last row."""
-        # Collect milestones that have both a parseable date and a name
-        entries: list[tuple[date, str]] = []
-        for m in milestones:
-            d = self._parse_date(m.start)
-            name = (m.task_name or "").strip()
-            if d is not None and name:
-                entries.append((d, name))
-
-        if not entries:
-            return list_y
-
-        entries.sort(key=lambda e: e[0])
-
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_name_text_font_name", None), config
-        )
-        font_size = float(
-            getattr(config, "compactplan_name_text_font_size", None) or 8.0
-        )
-        _date_style = config.get_text_style("ec-event-date")
-        date_color = str(_date_style.color or "#595959")
-        _ms_name_style = config.get_text_style("ec-event-name")
-        name_color = str(_ms_name_style.color or "#595959")
-        opacity = float(_ms_name_style.opacity)
-        row_h = float(config.compactplan_milestone_list_row_height)
-        date_col_w = float(config.compactplan_milestone_list_date_col_width)
-        date_fmt = str(config.compactplan_milestone_list_date_format or "M/D")
-
-        cur_y = list_y + row_h
-        for d, name in entries:
-            date_str = format_arrow_date(arrow.get(d), date_fmt)
-            self._draw_text(
-                area_x, cur_y, date_str,
-                font_name, font_size,
-                fill=date_color, fill_opacity=opacity,
-                css_class="ec-event-date",
-            )
-            self._draw_text(
-                area_x + date_col_w, cur_y, name,
-                font_name, font_size,
-                fill=name_color, fill_opacity=opacity,
-                max_width=area_w - date_col_w,
-                css_class="ec-event-name",
-            )
-            cur_y += row_h
-
-        return cur_y
-
-    def _collect_holiday_entries(
-        self,
-        visible_days: list[date],
-        config: "CalendarConfig",
-        db: "CalendarDB",
-    ) -> list[tuple[date, str, str]]:
-        """Collect (date, icon_name, display_name) for federal holidays and
-        company special days that fall on *visible_days*.
-
-        Days excluded by the active ``weekend_style`` (e.g. weekends in
-        workweek-only mode) are skipped so the legend never lists a holiday
-        that isn't actually rendered on the timeline.
-
-        Sorted by date, then name for stable ordering when multiple events fall
-        on the same day.
-        """
-        country = getattr(config, "country", None)
-        entries: list[tuple[date, str, str]] = []
-        for cursor in visible_days:
-            daykey = cursor.strftime("%Y%m%d")
-            try:
-                hols = db.get_holidays_for_date(daykey, country) or []
-            except Exception:
-                hols = []
-            for h in hols:
-                name = (
-                    h.get("displayname")
-                    or h.get("name")
-                    or ""
-                )
-                if not name:
-                    continue
-                # Government holidays carry their country; the roster can list
-                # several countries at once, so the code goes beside the name.
-                name = format_holiday_label(name, h.get("country"))
-                icon = (
-                    h.get("icon")
-                    or h.get("displayicon")
-                    or h.get("displayiconid")
-                    or ""
-                )
-                entries.append((cursor, str(icon).strip(), str(name).strip()))
-
-            try:
-                specials = db.get_special_days_for_date(daykey) or []
-            except Exception:
-                specials = []
-            for s in specials:
-                name = (s.get("name") or s.get("displayname") or "").strip()
-                if not name:
-                    continue
-                icon = str(s.get("icon") or "").strip()
-                entries.append((cursor, icon, name))
-
-        entries.sort(key=lambda e: (e[0], e[2].lower()))
-        return entries
-
-    def _draw_holiday_list(
-        self,
-        entries: list[tuple[date, str, str]],
-        area_x: float,
-        area_w: float,
-        list_y: float,
-        config: "CalendarConfig",
-        db: "CalendarDB",
-    ) -> float:
-        """Draw the date-sorted holiday / special-day roster.
-
-        Columns: ``date | icon | name``.  Returns the actual bottom Y of the
-        last drawn row so the surrounding layout can compute the rendered
-        extent.
-        """
-        if not entries:
-            return list_y
-
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_name_text_font_name", None), config
-        )
-        font_size = float(
-            getattr(config, "compactplan_name_text_font_size", None) or 8.0
-        )
-        _date_style = config.get_text_style("ec-event-date")
-        date_color = str(_date_style.color or "#595959")
-        _name_style = config.get_text_style("ec-event-name")
-        name_color = str(_name_style.color or "#595959")
-        opacity = float(_name_style.opacity)
-
-        row_h = float(config.compactplan_holiday_list_row_height)
-        date_col_w = float(config.compactplan_holiday_list_date_col_width)
-        icon_col_w = float(config.compactplan_holiday_list_icon_col_width)
-        icon_h = float(config.compactplan_holiday_list_icon_height)
-        date_fmt = str(config.compactplan_holiday_list_date_format or "M/D")
-
-        cur_y = list_y + row_h
-        for d, icon_name, name in entries:
-            date_str = format_arrow_date(arrow.get(d), date_fmt)
-            self._draw_text(
-                area_x, cur_y, date_str,
-                font_name, font_size,
-                fill=date_color, fill_opacity=opacity,
-                css_class="ec-event-date",
-            )
-
-            if icon_name:
-                icon_baseline = cur_y - font_size * 0.35 + icon_h * 0.3
-                self._draw_icon_svg(
-                    icon_name,
-                    area_x + date_col_w + icon_col_w / 2.0,
-                    icon_baseline,
-                    icon_h,
-                    anchor="middle",
-                    color=name_color,
-                    css_class="ec-legend-icon",
-                )
-
-            name_x = area_x + date_col_w + icon_col_w
-            name_max_w = max(0.0, area_w - date_col_w - icon_col_w)
-            self._draw_text(
-                name_x, cur_y, name,
-                font_name, font_size,
-                fill=name_color, fill_opacity=opacity,
-                max_width=name_max_w,
-                css_class="ec-event-name",
-            )
-            cur_y += row_h
-
-        return cur_y
-
-    def _draw_continuation_legend(
-        self,
-        area_x: float,
-        area_w: float,
-        entry_y: float,
+        p: _PlacedDuration,
+        x: float,
+        center_y: float,
+        size: float,
         config: "CalendarConfig",
     ) -> None:
-        """
-        Draw the continuation icon + label at *entry_y* (text baseline), right-aligned
-        to the diagram's right edge (area_x + area_w).
-
-        The label's right edge sits exactly at the diagram right edge; the icon is
-        placed immediately to its left with a small gap.  This entry is overlaid at
-        the same vertical position as the first milestone-roster row so it uses the
-        visual space that already exists rather than extending the diagram height.
-        """
-        from config.config import get_font_path
-
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_text_font_name", None), config, italic=True
+        """Draw a bar's start icon from *x*, centred on *center_y*."""
+        if not p.icon_name:
+            return
+        rule = p.style or StyleResult()
+        # Contrast-swap when the configured icon color matches the bar
+        # color, otherwise the glyph paints invisibly against its own bar
+        # (the user-reported navy-on-navy case).
+        color = _resolve_icon_on_bar(
+            style_override=rule.icon_color,
+            configured=str(config.get_icon_style("ec-duration-icon").color or "").strip(),
+            bar_color=p.color,
         )
-        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
-        _cont_legend_style = config.get_text_style("ec-legend-text")
-        label_color = str(_cont_legend_style.color or "#595959")
-        label_opacity = float(_cont_legend_style.opacity)
+        self._draw_icon_svg(
+            rule.icon if rule.icon is not None else p.icon_name,
+            x, self._icon_baseline(center_y, size), size,
+            anchor="start", color=color,
+            css_class="ec-duration-icon",
+            box_token="box:duration",
+            box_ctx=self._event_ctx(p.event),
+        )
 
-        _cont_icon_style = config.get_icon_style("ec-continuation-icon")
-        icon_name = str(
-            _cont_icon_style.icon
+    @staticmethod
+    def _continuation_icon_style(config: "CalendarConfig") -> tuple[str, float, str]:
+        """``(icon, size, configured color)`` of the continuation icon.
+
+        Theme `icon:continuation` (bound to ec-continuation-icon) takes
+        precedence; each field falls back to the global continuation_*
+        config keys when the theme is silent.  Compactplan only clips its
+        "after" end, so it reads continuation_icon_after.
+        """
+        style = config.get_icon_style("ec-continuation-icon")
+        name = str(
+            style.icon
             or resolve_continuation_icon(
                 config.continuation_icon_after, "horizontal", "arrow-right"
             )
         )
-        icon_h = float(
-            _cont_icon_style.size
-            if _cont_icon_style.size is not None
+        size = float(
+            style.size
+            if style.size is not None
             else (config.continuation_icon_height or 8.0)
         )
-        icon_color_cfg = (
-            _cont_icon_style.color
-            or config.continuation_icon_color
-            or ""
-        ).strip()
-        icon_color = icon_color_cfg if icon_color_cfg else label_color
-        legend_text = str(config.compactplan_continuation_legend_text or "activity continues")
+        color = (style.color or config.continuation_icon_color or "").strip()
+        return name, size, color
 
-        right_x = area_x + area_w
-        icon_text_gap = 3.0  # pts between icon right edge and text left edge
-
-        # Measure text so the icon can be placed flush to its left.
-        try:
-            font_path = get_font_path(font_name)
-            text_w = string_width(legend_text, font_path, font_size)
-        except Exception:
-            text_w = 0.0
-
-        # Icon: right edge at (right_x - text_w - icon_text_gap).
-        # _draw_icon_svg with anchor="end" places the icon's right edge at x.
-        # Vertically centre the icon on the text's optical mid-line.
-        # _draw_icon_svg places icon top at  baseline_y - 0.8 * size,
-        #   so icon centre = baseline_y - 0.3 * size.
-        # Text optical centre sits ~0.35 * font_size above the text baseline.
-        # Solving icon_centre == text_optical_centre:
-        #   baseline_y - 0.3 * icon_h  =  entry_y - 0.35 * font_size
-        #   baseline_y = entry_y - 0.35 * font_size + 0.3 * icon_h
-        icon_x = right_x - text_w - icon_text_gap
-        icon_baseline = entry_y - font_size * 0.35 + icon_h * 0.3
-        self._draw_icon_svg(
-            icon_name, icon_x, icon_baseline, icon_h,
-            anchor="end", color=icon_color,
-            css_class="ec-legend-icon",
-        )
-
-        # Text: right edge at diagram right edge.
-        self._draw_text(
-            right_x, entry_y, legend_text,
-            font_name, font_size,
-            fill=label_color, fill_opacity=label_opacity,
-            anchor="end",
-            css_class="ec-legend-text",
-        )
-
-    def _draw_axis_legend(
+    def _draw_continuation_icon(
         self,
-        area_x: float,
-        area_w: float,
-        entry_y: float,
         config: "CalendarConfig",
+        right_x: float,
+        center_y: float,
+        bar_color: str | None,
+        max_size: float | None = None,
     ) -> None:
-        """
-        Draw an axis sample swatch + label at *entry_y* (text baseline),
-        right-aligned to the diagram's right edge.
+        """Draw the continuation icon ending at *right_x*, centred on *center_y*.
 
-        The swatch is a short line segment styled identically to the timeline
-        axis (same color, width, dasharray and opacity).  Its length equals
-        ``compactplan_legend_swatch_width`` — the same as the team-color swatches
-        — so it visually matches the rest of the legend.  The label text
-        (default "timeline") appears immediately to the right of the swatch.
+        On a bar it contrast-swaps against *bar_color* like the start
+        icons do; standing alone (``bar_color`` None) it takes the
+        configured color, else the legend text's.
         """
-        from config.config import get_font_path
-
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_text_font_name", None), config, italic=True
+        name, size, configured = self._continuation_icon_style(config)
+        if max_size is not None:
+            size = min(size, max_size)
+        if bar_color is None:
+            color = configured or str(
+                config.get_text_style("ec-legend-text").color or "#595959"
+            )
+        else:
+            color = _resolve_icon_on_bar(
+                style_override=None, configured=configured, bar_color=bar_color
+            )
+        self._draw_icon_svg(
+            name, right_x, self._icon_baseline(center_y, size), size,
+            anchor="end", color=color,
+            css_class="ec-continuation-icon",
         )
-        font_size = float(getattr(config, "compactplan_text_font_size", None) or 8.0)
-        _axis_legend_style = config.get_text_style("ec-legend-text")
-        label_color = str(_axis_legend_style.color or "#595959")
-        label_opacity = float(_axis_legend_style.opacity)
 
-        legend_text = str(config.compactplan_legend_axis_text or "timeline")
+    def _milestone_style(
+        self, evt: Event, config: "CalendarConfig"
+    ) -> tuple[str, StyleResult]:
+        """A milestone's marker color, and the style rules it matched."""
+        engine = getattr(self, "_style_engine", None)
+        rule = engine.evaluate_event(evt) if engine is not None else StyleResult()
+        color = (
+            rule.fill_color
+            or evt.color
+            or config.get_element_color("ec-milestone-marker", "black")
+        )
+        return color, rule
+
+    def _milestone_icon_name(
+        self, evt: Event, rule: StyleResult, config: "CalendarConfig"
+    ) -> str | None:
+        """The icon a milestone is marked with instead of a pennant, if any.
+
+        A style rule's icon, then the event's own, then the theme's
+        ``compact_plan.milestone_icon``.  ``None`` -- a flag -- when none is
+        named or the name is not in the icons table.  The chart and its key
+        both ask here, so the key never shows a mark the chart did not.
+        """
+        name = rule.icon if rule.icon is not None else (
+            evt.icon or getattr(config, "compactplan_milestone_icon", None)
+        )
+        return name if self._resolve_icon_svg(name) else None
+
+    @classmethod
+    def _milestone_icon_size(cls, config: "CalendarConfig") -> float:
+        """Size of a milestone icon: the flag's height, but never taller than
+        a label lane, so icons in neighbouring lanes cannot touch."""
+        return min(
+            float(config.compactplan_milestone_flag_height),
+            cls._milestone_label_step(config),
+        )
+
+    def _milestone_mark_width(self, evt: Event, config: "CalendarConfig") -> float:
+        """How far right of the stem a milestone's pennant or icon reaches."""
+        _, rule = self._milestone_style(evt, config)
+        if self._milestone_icon_name(evt, rule, config):
+            return _MILESTONE_ICON_GAP + self._milestone_icon_size(config)
+        return float(config.compactplan_milestone_flag_width)
+
+    def _chart_bottom(
+        self,
+        config: "CalendarConfig",
+        placed: list[_PlacedDuration],
+        content_bottom: float,
+        axis_y: float,
+        dur_icon_h: float,
+    ) -> float:
+        """Lowest ink the chart drew: its bars, their icons, the axis.
+
+        Start and continuation icons are taller than the bar they ride
+        and centred on it, so the bottom row's icons reach past the
+        bar's own edge; a viewBox ending at the bar would clip them.
+        """
+        bottom = content_bottom
+        if placed:
+            half = float(config.compactplan_duration_line_width) / 2.0
+            if config.compactplan_show_duration_icons and any(
+                p.icon_name for p in placed
+            ):
+                half = max(half, dur_icon_h / 2.0)
+            if config.show_continuation_icon and any(p.continues for p in placed):
+                half = max(half, self._continuation_icon_style(config)[1] / 2.0)
+            bottom = max(bottom, max(p.row_y for p in placed) + half)
+        if config.compactplan_show_axis:
+            bottom = max(bottom, axis_y + float(config.compactplan_axis_width) / 2.0)
+        return bottom
+
+    # ------------------------------------------------------------------
+    # Key page (second SVG)
+    # ------------------------------------------------------------------
+
+    def _render_key_svg(
+        self,
+        config: "CalendarConfig",
+        coordinates: "CoordinateDict",
+        db: "CalendarDB | None",
+    ) -> int:
+        """Write the chart's key beside it; returns how many pages it took.
+
+        The key is the shared details listing -- the events the chart
+        drew, chronologically, then the holidays and special days on its
+        axis -- with a leading column of marks: each activity's bar in
+        miniature (its color, start icon and any continuation arrow),
+        each milestone's flag, each holiday's icon.  That column is what
+        keeps the listing a key: every row is tied to what it explains
+        on the chart.  A closing section explains the chart's symbols.
+
+        Built through the shared
+        :class:`~renderers.details_page.DetailsPageWriter`, so it is the
+        same page the other companions are; it paginates onto
+        ``_key_p2.svg`` rather than dropping rows.  The chart's drawing
+        is restored afterwards.
+        """
+        key = self._chart_key
+        saved_drawing = self._drawing
+
+        def page_path(number: int) -> str:
+            base = details_output_path(
+                config.outputfile, config.compactplan_key_output_suffix
+            )
+            return numbered_page_path(base, number)
+
+        writer = DetailsPageWriter(
+            self, config, coordinates, page_path, config.compactplan_key_title_text
+        )
+        mark_share = min(
+            0.5, self._key_column_width(config, key) / max(1.0, writer.width)
+        )
+        mark_column = DetailsColumn(_KEY_COLUMN_HEADING, mark_share)
+        columns = [mark_column] + [
+            replace(column, width=column.width * (1.0 - mark_share))
+            for column in event_listing.details_columns(config)
+        ]
+        count = len(columns) - 1
+        name_column = 1 + event_listing.NAME_COLUMN
+
+        # Only what the chart drew: an event it had no mark for is not
+        # something its key can explain.
+        drawn = [
+            (event_listing.listing_dict(raw), evt)
+            for raw, evt in key.listing
+            if id(evt) in key.placed or id(evt) in key.milestones
+        ]
+        if drawn:
+            writer.section(config.mini_details_events_section_text, columns)
+            for row, evt in sorted(
+                drawn, key=lambda item: event_listing.sort_key(item[0])
+            ):
+                bar = key.placed.get(id(evt))
+                writer.row(
+                    [""] + event_listing.event_cells(row, count),
+                    columns,
+                    sub_line=(name_column, event_listing.event_note(row)),
+                    mark=(
+                        0,
+                        self._bar_mark(bar, config)
+                        if bar is not None
+                        else self._milestone_mark(evt, config),
+                    ),
+                )
+
+        holidays: list[dict] = []
+        if config.compactplan_show_holiday_list and db is not None:
+            holidays = event_listing.holiday_special_rows(
+                (d.strftime("%Y%m%d") for d in key.visible_days), config, db
+            )
+        if holidays:
+            writer.section(config.mini_details_holidays_section_text, columns)
+            for row in holidays:
+                writer.row(
+                    [""] + event_listing.holiday_cells(row, count),
+                    columns,
+                    sub_line=(name_column, row.get("notes") or ""),
+                    mark=(
+                        (0, self._holiday_mark(row["icon"], config))
+                        if row["icon"]
+                        else None
+                    ),
+                )
+
+        # The symbols explain marks on rows above; with no rows there is
+        # nothing for them to explain, and no key worth writing.
+        symbols = self._key_symbols(config, key)
+        if symbols and (drawn or holidays):
+            symbol_columns = [mark_column, DetailsColumn("Meaning", 1.0 - mark_share)]
+            writer.section(config.compactplan_key_symbols_section_text, symbol_columns)
+            for draw, text in symbols:
+                writer.row(["", text], symbol_columns, mark=(0, draw))
+
+        pages = writer.finish()
+        self._drawing = saved_drawing
+        return pages
+
+    def _key_column_width(self, config: "CalendarConfig", key: _ChartKey) -> float:
+        """Width of the key page's mark column, in points."""
+        swatch = float(config.compactplan_legend_swatch_width)
+        if key.continuations:
+            # A continuing bar's arrow is drawn past the swatch's end.
+            swatch += 1.0 + self._continuation_icon_style(config)[1]
+        widths = [
+            swatch,
+            float(config.compactplan_milestone_flag_width) + 2.0,
+            _KEY_COLUMN_MIN_WIDTH,
+        ]
+        if config.compactplan_show_duration_icons:
+            widths.append(self._duration_icon_height(config))
+        return max(widths) + _KEY_COLUMN_PADDING
+
+    def _draw_swatch(
+        self, x: float, y: float, length: float, stroke: dict[str, Any]
+    ) -> None:
+        """A key swatch: a short run of *stroke* from *x*, centred on *y*.
+
+        Emitted as a raw <line> with inline style="..." so the color
+        survives any .ec-legend-swatch CSS rule in the SVG <style> block
+        (themes that bind ec-legend-swatch -> line:axis would otherwise
+        override the presentation attribute with the axis color via CSS
+        class specificity, hiding the per-bar color entirely).
+        """
+        parts = [
+            f"stroke:{stroke['stroke']}",
+            f"stroke-width:{stroke['stroke_width']}",
+        ]
+        if stroke.get("stroke_opacity") is not None:
+            parts.append(f"stroke-opacity:{stroke['stroke_opacity']}")
+        if stroke.get("stroke_dasharray"):
+            parts.append(f"stroke-dasharray:{stroke['stroke_dasharray']}")
+        self._drawing.append(drawsvg.Raw(
+            f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{(x + length):.2f}" y2="{y:.2f}" '
+            f'style="{";".join(parts)}" class="ec-legend-swatch" />'
+        ))
+
+    def _key_arrow_end(
+        self, config: "CalendarConfig", x: float, width: float, size: float
+    ) -> float:
+        """Right edge of a continuation arrow on the key: just past the
+        swatch's end, so the arrow never covers the color it continues."""
+        swatch = min(width, float(config.compactplan_legend_swatch_width))
+        arrow = min(self._continuation_icon_style(config)[1], size * 1.25)
+        return min(x + width, x + swatch + 1.0 + arrow)
+
+    def _bar_mark(self, p: _PlacedDuration, config: "CalendarConfig") -> RowMark:
+        """An activity's bar in miniature: its stroke, start icon and any
+        continuation arrow, painted as the chart painted them."""
+
+        def draw(x: float, baseline: float, width: float, size: float) -> None:
+            length = min(width, float(config.compactplan_legend_swatch_width))
+            center_y = baseline - size * 0.3
+            stroke = self._bar_stroke(p, config)
+            # A bar never outgrows the row it keys.
+            stroke["stroke_width"] = min(float(stroke["stroke_width"]), size)
+            self._draw_swatch(x, center_y, length, stroke)
+            icon_h = min(self._duration_icon_height(config), size * 1.25)
+            if config.compactplan_show_duration_icons and icon_h > 0:
+                self._draw_start_icon(p, x, center_y, icon_h, config)
+            if p.continues and config.show_continuation_icon:
+                self._draw_continuation_icon(
+                    config, self._key_arrow_end(config, x, width, size),
+                    center_y, p.color, max_size=size * 1.25,
+                )
+
+        return draw
+
+    def _milestone_mark(self, evt: Event, config: "CalendarConfig") -> RowMark:
+        """A milestone's flag in its color, or the icon the chart drew for it."""
+
+        def draw(x: float, baseline: float, width: float, size: float) -> None:
+            color, rule = self._milestone_style(evt, config)
+            icon_name = self._milestone_icon_name(evt, rule, config)
+            if icon_name:
+                self._draw_icon_svg(
+                    icon_name, x, baseline, min(size, width),
+                    anchor="start", color=rule.icon_color or color,
+                    css_class="ec-milestone-marker",
+                    box_token="box:milestone",
+                    box_ctx=self._event_ctx(evt),
+                )
+                return
+            flag_w = min(float(config.compactplan_milestone_flag_width), width - 1.0)
+            # The stem stands from just below the baseline to cap height,
+            # one point in so its foot tick stays inside the cell.
+            self._draw_flag_marker(
+                x + 1.0, baseline + size * 0.15, size, max(1.0, flag_w),
+                color, size * 0.6,
+            )
+
+        return draw
+
+    def _holiday_mark(self, icon: str, config: "CalendarConfig") -> RowMark:
+        """A holiday or special day's own icon."""
+        color = str(config.get_text_style("ec-event-name").color or "#595959")
+
+        def draw(x: float, baseline: float, width: float, size: float) -> None:
+            self._draw_icon_svg(
+                icon, x, self._icon_baseline(baseline - size * 0.3, size),
+                min(size, width), anchor="start", color=color,
+                css_class="ec-legend-icon",
+            )
+
+        return draw
+
+    def _key_symbols(
+        self, config: "CalendarConfig", key: _ChartKey
+    ) -> list[tuple[RowMark, str]]:
+        """The chart's symbols the key explains, as ``(mark, meaning)``."""
         swatch_w = float(config.compactplan_legend_swatch_width)
+        symbols: list[tuple[RowMark, str]] = []
 
-        right_x = area_x + area_w
-        swatch_text_gap = 3.0  # pts between swatch right edge and text left edge
+        if key.continuations:
+            def continuation(x: float, baseline: float, width: float, size: float) -> None:
+                # Where the arrow sits beside an activity's swatch above.
+                self._draw_continuation_icon(
+                    config, self._key_arrow_end(config, x, width, size),
+                    baseline - size * 0.3, None, max_size=size * 1.25,
+                )
 
-        # Measure text width so we can position the swatch flush to its left.
-        try:
-            font_path = get_font_path(font_name)
-            text_w = string_width(legend_text, font_path, font_size)
-        except Exception:
-            text_w = 0.0
+            symbols.append((
+                continuation,
+                str(config.compactplan_continuation_legend_text or "activity continues"),
+            ))
 
-        # Swatch: right edge at (right_x - text_w - swatch_text_gap),
-        # left edge swatch_w further to the left.
-        # Y sits at the text optical mid-line (~0.3 * font_size above baseline),
-        # matching the team-color swatch formula used in _draw_legend.
-        swatch_x2 = right_x - text_w - swatch_text_gap
-        swatch_x1 = swatch_x2 - swatch_w
-        swatch_y = entry_y - font_size * 0.3
+        if config.compactplan_show_axis_legend and config.compactplan_show_axis:
+            def axis(x: float, baseline: float, width: float, size: float) -> None:
+                style = config.get_line_style("ec-axis-line")
+                self._draw_swatch(
+                    x, baseline - size * 0.3, min(width, swatch_w),
+                    {
+                        "stroke": style.color,
+                        "stroke_width": min(float(config.compactplan_axis_width), size),
+                        "stroke_dasharray": style.dasharray or None,
+                        "stroke_opacity": style.opacity,
+                    },
+                )
 
-        _axis_swatch_style = config.get_line_style("ec-axis-line")
-        self._draw_line(
-            swatch_x1, swatch_y, swatch_x2, swatch_y,
-            stroke=_axis_swatch_style.color,
-            stroke_width=float(config.compactplan_axis_width),
-            stroke_dasharray=_axis_swatch_style.dasharray or None,
-            stroke_opacity=_axis_swatch_style.opacity,
-            css_class="ec-legend-swatch",
-        )
+            symbols.append((axis, str(config.compactplan_legend_axis_text or "timeline")))
 
-        # Label: right edge at diagram right edge.
-        self._draw_text(
-            right_x, entry_y, legend_text,
-            font_name, font_size,
-            fill=label_color, fill_opacity=label_opacity,
-            anchor="end",
-            css_class="ec-legend-text",
-        )
+        return symbols
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _wrap_names_to_lines(
-        prefix: str,
-        names: list[str],
-        font_path: str,
-        font_size: float,
-        max_width: float,
-    ) -> list[str]:
-        """
-        Pack *names* greedily as comma-separated text that fits within *max_width*.
-
-        The first returned line begins with *prefix* (e.g. ``"Engineering: "``).
-        Subsequent lines contain only names (no prefix), indented visually by the
-        caller.  At least one name is placed on each line even if it overflows, so
-        the list is always non-empty and never causes an infinite loop.
-
-        *font_path* must be a resolved TTF file path (not a font name string).
-
-        If *names* is empty the prefix is returned as a single-element list with
-        any trailing ``": "`` stripped.
-        """
-        if not names:
-            return [prefix.rstrip(": ").rstrip()]
-
-        lines: list[str] = []
-        current = prefix + names[0]  # first line always has prefix + first name
-
-        for name in names[1:]:
-            trial = current + ", " + name
-            if string_width(trial, font_path, font_size) <= max_width:
-                current = trial
-            else:
-                lines.append(current)
-                current = name  # new continuation line; always accept first name
-
-        lines.append(current)
-        return lines
 
     # Day-axis visibility lives in shared/date_utils.visible_days().
     _visible_days = staticmethod(visible_days)

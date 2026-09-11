@@ -321,7 +321,6 @@ compact_plan:
   axis_dasharray: 4.0,1.0
   milestone_color: black
   header_bottom_y: 8
-  key_top_y: 8
   band_row_height: 10.0
   federal_holiday_fill_color: tomato
   federal_holiday_fill_opacity: 1.0
@@ -355,16 +354,8 @@ compact_plan:
     font_name: RobotoCondensed-Light
     font_color: '#595959'
     font_opacity: 1.0
-  legend_column_split: 0.5
   show_legend: true
-  legend_row_height: 10.0
   legend_swatch_width: 10.0
-  show_milestone_list: true
-  milestone_list_date_format: M/D
-  milestone_list_date_color: '#333333'
-  milestone_list_row_height: 10.0
-  milestone_list_date_col_width: 32.0
-  milestone_list_section_gap: 6.0
   continuation_legend_text: activity continues
   continuation_section_gap: 4.0
   bands:

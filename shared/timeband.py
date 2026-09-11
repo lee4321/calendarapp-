@@ -24,6 +24,9 @@ Supported ``unit`` values:
     themselves.  Like ``icon`` it has no labeled segments (returns an empty
     list); handled by the visualizer via
     :func:`shared.holiday_band.compute_holiday_band_days`.
+
+:func:`group_segments` then merges segments into cells per the band's
+``show_every``, so every visualizer merges alike.
 """
 
 from __future__ import annotations
@@ -270,3 +273,36 @@ def build_segments(
         return segments
 
     return [BandSegment(start=start, end_exclusive=end + one_day, label="")]
+
+
+def group_segments(
+    segments: list[BandSegment],
+    band: dict[str, Any],
+    *,
+    week_start_default: int = 0,
+) -> list[list[BandSegment]]:
+    """Merge a band's segments into the cells ``show_every`` asks for.
+
+    ``show_every: N`` draws every N consecutive segments as one cell,
+    labelled by its first.  ``date`` / ``dow`` cells never merge across a
+    week boundary (``week_start``, else *week_start_default*), so a merged
+    date row's borders still line up with the week row above it.  With
+    ``show_every`` absent or 1, each segment is its own cell.
+    """
+    show_every = max(1, int(band.get("show_every", 1) or 1))
+    unit = str(band.get("unit", "date")).strip().lower()
+    if show_every > 1 and unit in {"date", "dow"}:
+        week_start = int(band.get("week_start", week_start_default))
+        groups: list[list[BandSegment]] = []
+        bucket: list[BandSegment] = []
+        for seg in segments:
+            if bucket and (
+                seg.start.weekday() == week_start or len(bucket) >= show_every
+            ):
+                groups.append(bucket)
+                bucket = []
+            bucket.append(seg)
+        if bucket:
+            groups.append(bucket)
+        return groups
+    return [segments[i : i + show_every] for i in range(0, len(segments), show_every)]
