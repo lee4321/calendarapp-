@@ -209,10 +209,7 @@ def holiday_special_rows(
             # the collapsed rows apart.
             country = (h.get("country") or "").strip()
             if country and country not in entry["countries"].split(", "):
-                entry["countries"] = (
-                    f"{entry['countries']}, {country}"
-                    if entry["countries"] else country
-                )
+                entry["countries"] = f"{entry['countries']}, {country}" if entry["countries"] else country
         for sd in db.get_special_days_for_date(dk) or []:
             name = (sd.get("name") or "").strip()
             if not name:
@@ -230,29 +227,28 @@ def holiday_special_rows(
 
     rows: list[dict] = []
     for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
-        rows.append({
-            "date_label": date_label(info["first"], info["last"]),
-            "name": format_holiday_label(name, info["countries"]),
-            "kind": "Federal Holiday",
-            "notes": info["notes"],
-            "icon": info["icon"],
-        })
+        rows.append(
+            {
+                "date_label": date_label(info["first"], info["last"]),
+                "name": format_holiday_label(name, info["countries"]),
+                "kind": "Federal Holiday",
+                "notes": info["notes"],
+                "icon": info["icon"],
+            }
+        )
     for name, info in sorted(specials_seen.items(), key=lambda kv: kv[1]["first"]):
-        rows.append({
-            "date_label": date_label(info["first"], info["last"]),
-            "name": name,
-            "kind": "Special Day",
-            "notes": info["notes"],
-            "icon": info["icon"],
-        })
+        rows.append(
+            {
+                "date_label": date_label(info["first"], info["last"]),
+                "name": name,
+                "kind": "Special Day",
+                "notes": info["notes"],
+                "icon": info["icon"],
+            }
+        )
     return rows
 
 
 def _holiday_icon(holiday: dict) -> str:
     """The icon a holiday row names, under whichever column carries it."""
-    return str(
-        holiday.get("icon")
-        or holiday.get("displayicon")
-        or holiday.get("displayiconid")
-        or ""
-    ).strip()
+    return str(holiday.get("icon") or holiday.get("displayicon") or holiday.get("displayiconid") or "").strip()

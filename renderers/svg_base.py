@@ -97,9 +97,7 @@ class BaseSVGRenderer(ABC):
     def drawing(self) -> drawsvg.Drawing:
         """The page being drawn.  Only valid during a render pass."""
         if self._drawing is None:
-            raise RuntimeError(
-                f"{type(self).__name__} has no drawing; render() creates it"
-            )
+            raise RuntimeError(f"{type(self).__name__} has no drawing; render() creates it")
         return self._drawing
 
     # =========================================================================
@@ -113,9 +111,7 @@ class BaseSVGRenderer(ABC):
         walks per cell.  Call at the top of ``_render_content``.
         """
         ctx = {"visualizer": self.TOKEN_VISUALIZER, "papersize": config.papersize}
-        self._tokens = {
-            name: self._resolve_token(config, name, ctx) for name in self.TOKENS
-        }
+        self._tokens = {name: self._resolve_token(config, name, ctx) for name in self.TOKENS}
 
     def _tk(self, token: str) -> TokenStyle:
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
@@ -358,14 +354,8 @@ class BaseSVGRenderer(ABC):
             measured = string_width(text, font_path, font_size)
             if measured > max_width and measured > 0:
                 scale_x = max_width / measured
-                fit_transform = (
-                    f"translate({_r(x)} {_r(y)}) scale({scale_x:.6f} 1) translate({_r(-x)} {_r(-y)})"
-                )
-                combined_transform = (
-                    f"{transform} {fit_transform}".strip()
-                    if transform
-                    else fit_transform
-                )
+                fit_transform = f"translate({_r(x)} {_r(y)}) scale({scale_x:.6f} 1) translate({_r(-x)} {_r(-y)})"
+                combined_transform = f"{transform} {fit_transform}".strip() if transform else fit_transform
         svg_markup = text_to_svg_group(
             text,
             font_path,
@@ -649,9 +639,7 @@ class BaseSVGRenderer(ABC):
         self._render_decorations(config, coordinates)
 
         # Render visualization-specific content
-        overflow_count, overflow_entries = self._render_content(
-            config, coordinates, events, db
-        )
+        overflow_count, overflow_entries = self._render_content(config, coordinates, events, db)
 
         # Embed event data if requested
         self._add_embedded_data(config, events)
@@ -663,9 +651,7 @@ class BaseSVGRenderer(ABC):
         # paginates, so it is worth as many pages as it took.
         page_count = 1
         if config.include_overflow and overflow_entries:
-            page_count += self._render_overflow_svg(
-                config, coordinates, overflow_entries
-            )
+            page_count += self._render_overflow_svg(config, coordinates, overflow_entries)
 
         return VisualizationResult(
             output_path=config.outputfile,
@@ -814,9 +800,7 @@ class BaseSVGRenderer(ABC):
         from ecalendar import _events_to_csv_string
 
         csv_text = _events_to_csv_string(events)
-        compressed = base64.b64encode(
-            zlib.compress(csv_text.encode("utf-8"))
-        ).decode("ascii")
+        compressed = base64.b64encode(zlib.compress(csv_text.encode("utf-8"))).decode("ascii")
         row_count = len(events)
         metadata = (
             "<metadata>"
@@ -832,9 +816,7 @@ class BaseSVGRenderer(ABC):
     # Watermarks
     # =========================================================================
 
-    def _watermark_bounds(
-        self, config: CalendarConfig
-    ) -> tuple[float, float, float, float]:
+    def _watermark_bounds(self, config: CalendarConfig) -> tuple[float, float, float, float]:
         """Return (left, top, width, height) in SVG coordinates for watermark layout."""
         if config.shrink_to_content and self._content_bbox_svg is not None:
             min_x, min_y, max_x, max_y = self._content_bbox_svg
@@ -857,11 +839,7 @@ class BaseSVGRenderer(ABC):
 
         from renderers.glyph_cache import get_font_metrics
 
-        resize_mode = (
-            str(getattr(config, "watermark_resize_mode", "fit") or "fit")
-            .strip()
-            .lower()
-        )
+        resize_mode = str(getattr(config, "watermark_resize_mode", "fit") or "fit").strip().lower()
 
         # Use paper-size-scaled setfontsizes value unless explicitly overridden.
         base_size = float(config.watermark_font_size or 256)
@@ -1069,9 +1047,16 @@ class BaseSVGRenderer(ABC):
             return {}
         ctx: dict = {}
         for attr in (
-            "milestone", "rollup", "priority", "percent_complete",
-            "task_name", "notes", "resource_group", "resource_names",
-            "wbs", "icon",
+            "milestone",
+            "rollup",
+            "priority",
+            "percent_complete",
+            "task_name",
+            "notes",
+            "resource_group",
+            "resource_names",
+            "wbs",
+            "icon",
         ):
             v = getattr(event, attr, None)
             if v is not None:
@@ -1208,12 +1193,7 @@ class BaseSVGRenderer(ABC):
             True if an icon was drawn, else False.
         """
         svg_markup = self._resolve_icon_svg(icon_name)
-        if (
-            svg_markup is None
-            and icon_name
-            and str(icon_name).strip()
-            and fallback_name
-        ):
+        if svg_markup is None and icon_name and str(icon_name).strip() and fallback_name:
             svg_markup = self._resolve_icon_svg(fallback_name)
             color = fallback_color
             if fallback_size is not None and fallback_size > 0:
@@ -1247,15 +1227,11 @@ class BaseSVGRenderer(ABC):
             svg_markup,
             re.IGNORECASE,
         )
-        viewbox = (
-            f"0 0 {vb_match.group(1)} {vb_match.group(2)}" if vb_match else "0 0 24 24"
-        )
+        viewbox = f"0 0 {vb_match.group(1)} {vb_match.group(2)}" if vb_match else "0 0 24 24"
 
         inner = self._strip_svg_wrapper(svg_markup)
 
-        style_attr = (
-            f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
-        )
+        style_attr = f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
         class_attr = f' class="{css_class}"' if css_class else ""
         opacity_attr = f' opacity="{opacity:.3f}"' if opacity < 1.0 else ""
         nested_svg = (
@@ -1319,8 +1295,12 @@ class BaseSVGRenderer(ABC):
         for cell_x, cell_w, icons in day_cells:
             if has_fill and cell_w > 0:
                 self._draw_rect(
-                    cell_x, row_y, cell_w, row_h,
-                    fill=draw_fill, css_class=css_class,
+                    cell_x,
+                    row_y,
+                    cell_w,
+                    row_h,
+                    fill=draw_fill,
+                    css_class=css_class,
                 )
             self._draw_cell_icons(icons, cell_x, cell_w, row_y, row_h, icon_h)
 
@@ -1358,8 +1338,13 @@ class BaseSVGRenderer(ABC):
         icon_baseline_y = self._icon_baseline(row_y + row_h * 0.5, size)
         for i, (icon_name, color) in enumerate(icons):
             self._draw_icon_svg(
-                icon_name, cell_x + slot_w * (i + 0.5), icon_baseline_y, size,
-                anchor="middle", color=color, css_class=css_class,
+                icon_name,
+                cell_x + slot_w * (i + 0.5),
+                icon_baseline_y,
+                size,
+                anchor="middle",
+                color=color,
+                css_class=css_class,
             )
 
     # =========================================================================
@@ -1475,14 +1460,10 @@ class BaseSVGRenderer(ABC):
         saved_drawing = self._drawing
 
         def page_path(number: int) -> str:
-            base = details_output_path(
-                config.outputfile, config.overflow_output_suffix
-            )
+            base = details_output_path(config.outputfile, config.overflow_output_suffix)
             return numbered_page_path(base, number)
 
-        writer = DetailsPageWriter(
-            self, config, coordinates, page_path, config.overflow_title_text
-        )
+        writer = DetailsPageWriter(self, config, coordinates, page_path, config.overflow_title_text)
         columns = list(self._OVERFLOW_COLUMNS)
         writer.section("Overflow", columns)
         for entry in overflow_entries:

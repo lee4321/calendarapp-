@@ -87,25 +87,21 @@ def build_segments(
         return segments
 
     if unit == "fiscal_quarter":
-        fiscal_start = int(
-            band.get("fiscal_year_start_month", fiscal_year_start_month_default)
-        )
+        fiscal_start = int(band.get("fiscal_year_start_month", fiscal_year_start_month_default))
         lbl_fmt = str(band.get("label_format", "FY{fy} Q{q}"))
         for seg in build_fiscal_quarter_segments(
-            start, end, config,
+            start,
+            end,
+            config,
             fiscal_start_month=fiscal_start,
             label_format=lbl_fmt,
         ):
-            segments.append(
-                BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
-            )
+            segments.append(BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label))
         return segments
 
     if unit == "fiscal_period":
         for seg in build_fiscal_period_segments(start, end, config):
-            segments.append(
-                BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label)
-            )
+            segments.append(BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label))
         return segments
 
     if unit == "month":
@@ -194,11 +190,7 @@ def build_segments(
         return segments
 
     if unit in {"date", "dow"}:
-        fmt = str(
-            band.get("date_format")
-            or band.get("label_format")
-            or ("D" if unit == "date" else "ddd")
-        )
+        fmt = str(band.get("date_format") or band.get("label_format") or ("D" if unit == "date" else "ddd"))
         if visible_days is not None:
             iter_days = [d for d in visible_days if start <= d <= end]
         else:
@@ -259,10 +251,7 @@ def build_segments(
                 c += timedelta(days=1)
 
         for d in iter_days:
-            if unit == "countdown":
-                n = _count_days(d, ref_date)
-            else:
-                n = _count_days(ref_date, d)
+            n = _count_days(d, ref_date) if unit == "countdown" else _count_days(ref_date, d)
             segments.append(
                 BandSegment(
                     start=d,
@@ -296,9 +285,7 @@ def group_segments(
         groups: list[list[BandSegment]] = []
         bucket: list[BandSegment] = []
         for seg in segments:
-            if bucket and (
-                seg.start.weekday() == week_start or len(bucket) >= show_every
-            ):
+            if bucket and (seg.start.weekday() == week_start or len(bucket) >= show_every):
                 groups.append(bucket)
                 bucket = []
             bucket.append(seg)

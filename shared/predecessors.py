@@ -162,9 +162,7 @@ def parse_links_with_rejects(text) -> tuple[list[Link], list[str]]:
         lag_elapsed = False
 
         if lag_text is not None:
-            lag_days, lag_percent, lag_elapsed, understood = _parse_lag(
-                lag_text[0], lag_text[1:]
-            )
+            lag_days, lag_percent, lag_elapsed, understood = _parse_lag(lag_text[0], lag_text[1:])
             if not understood:
                 rejected.append(raw_token.strip())
 

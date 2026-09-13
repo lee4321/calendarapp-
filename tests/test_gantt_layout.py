@@ -78,9 +78,7 @@ def test_the_bottom_stack_mirrors_the_top_when_unset(config):
         {"label": "Month", "unit": "month", "row_height": 20},
     ]
     coords = regions(config)
-    assert coords["GanttBottomBands"][3] == pytest.approx(
-        coords["GanttTopBands"][3], abs=0.01
-    )
+    assert coords["GanttBottomBands"][3] == pytest.approx(coords["GanttTopBands"][3], abs=0.01)
 
 
 def test_explicit_bottom_bands_size_independently(config):

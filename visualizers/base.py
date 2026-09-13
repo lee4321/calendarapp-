@@ -161,9 +161,7 @@ class BaseLayout(ABC):
         """
         pass
 
-    def _to_svg_coords(
-        self, coords: CoordinateDict, page_height: float
-    ) -> CoordinateDict:
+    def _to_svg_coords(self, coords: CoordinateDict, page_height: float) -> CoordinateDict:
         """
         Convert CoordinateDict from PDF space (y=bottom edge, Y-up) to SVG space
         (y=top edge, Y-down).
@@ -171,9 +169,7 @@ class BaseLayout(ABC):
         Apply once at the end of calculate() after all internal layout math is done
         in the familiar PDF coordinate system.
         """
-        return {
-            key: (x, page_height - y - h, w, h) for key, (x, y, w, h) in coords.items()
-        }
+        return {key: (x, page_height - y - h, w, h) for key, (x, y, w, h) in coords.items()}
 
     def _calculate_margins(self, config: CalendarConfig) -> dict:
         """

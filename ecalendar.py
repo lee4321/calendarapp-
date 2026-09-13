@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.8"
+__version__ = "26.09.13.9"
 
 import logging
 import sys
@@ -113,9 +113,7 @@ def _validate_pagination_args(args) -> int:
     Returns:
         0 when the arguments are valid, 1 after printing an error to stderr.
     """
-    if not args.paginate and (
-        args.columns is not None or args.rows is not None or args.sized is not None
-    ):
+    if not args.paginate and (args.columns is not None or args.rows is not None or args.sized is not None):
         print(
             "Error: --columns/--rows/--sized require --paginate.",
             file=sys.stderr,
@@ -244,17 +242,11 @@ def run(argv: list[str] | None = None) -> int:
         "gantt",
         "compactplan",
     }
-    if (
-        getattr(args, "outputfile", None) == default_output
-        and args.command in _svg_visualizer_commands
-    ):
+    if getattr(args, "outputfile", None) == default_output and args.command in _svg_visualizer_commands:
         args.outputfile = f"{args.command}{_timestamp}.svg"
 
     # Default output extension for text-mini
-    if (
-        args.command == "text-mini"
-        and getattr(args, "outputfile", default_output) == default_output
-    ):
+    if args.command == "text-mini" and getattr(args, "outputfile", default_output) == default_output:
         args.outputfile = f"text-mini{_timestamp}.txt"
 
     # Dispatch subcommands.
@@ -294,11 +286,7 @@ def run(argv: list[str] | None = None) -> int:
         rc = _validate_pagination_args(args)
         if rc:
             return rc
-        out_path = (
-            Path(args.outputfile)
-            if args.outputfile
-            else Path("output") / "fontsheet.svg"
-        )
+        out_path = Path(args.outputfile) if args.outputfile else Path("output") / "fontsheet.svg"
         sheet_title = "Fonts" if not args.filter else f"Fonts: {args.filter}"
         written = _generate_fontsheet_svg(
             registry,
@@ -369,9 +357,7 @@ def run(argv: list[str] | None = None) -> int:
         filtered = all_icons
         if args.filter:
             flt = args.filter.lower()
-            filtered = [
-                row for row in all_icons if flt in str(row.get("name") or "").lower()
-            ]
+            filtered = [row for row in all_icons if flt in str(row.get("name") or "").lower()]
         if not filtered:
             print(f"Error: no icons match filter '{args.filter}'.", file=sys.stderr)
             print(
@@ -382,10 +368,7 @@ def run(argv: list[str] | None = None) -> int:
         rc = _validate_pagination_args(args)
         if rc:
             return rc
-        if args.outputfile:
-            out_path = Path(args.outputfile)
-        else:
-            out_path = Path("output") / "iconsheet.svg"
+        out_path = Path(args.outputfile) if args.outputfile else Path("output") / "iconsheet.svg"
         sheet_title = "Icons" if not args.filter else f"Icons: {args.filter}"
         written = _generate_iconsheet_svg(
             filtered,
@@ -416,10 +399,7 @@ def run(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        if args.outputfile:
-            out_path = Path(args.outputfile)
-        else:
-            out_path = Path("output") / "patternsheet.svg"
+        out_path = Path(args.outputfile) if args.outputfile else Path("output") / "patternsheet.svg"
         sheet_title = "Patterns" if not args.filter else f"Patterns: {args.filter}"
         _generate_patternsheet_svg(items, out_path, color=args.color, title=sheet_title)
         if not args.quiet:
@@ -445,9 +425,7 @@ def run(argv: list[str] | None = None) -> int:
         filtered = all_colors
         if args.filter:
             flt = args.filter.lower()
-            filtered = [
-                row for row in all_colors if flt in str(row.get("EN") or "").lower()
-            ]
+            filtered = [row for row in all_colors if flt in str(row.get("EN") or "").lower()]
         import colorsys
 
         def _hsv_sort_key(r: dict) -> tuple:
@@ -473,10 +451,7 @@ def run(argv: list[str] | None = None) -> int:
         rc = _validate_pagination_args(args)
         if rc:
             return rc
-        if args.outputfile:
-            out_path = Path(args.outputfile)
-        else:
-            out_path = Path("output") / "colorsheet.svg"
+        out_path = Path(args.outputfile) if args.outputfile else Path("output") / "colorsheet.svg"
         sheet_title = "Colors" if not args.filter else f"Colors: {args.filter}"
         written = _generate_colorsheet_svg(
             filtered,
@@ -520,14 +495,14 @@ def run(argv: list[str] | None = None) -> int:
             if not all_palettes:
                 print("Error: no palettes found in database.", file=sys.stderr)
                 return 1
-            out_path = (
-                Path(args.outputfile)
-                if args.outputfile
-                else Path("output") / "palettesheet.svg"
-            )
+            out_path = Path(args.outputfile) if args.outputfile else Path("output") / "palettesheet.svg"
             written = _generate_all_palettes_svg(
-                all_palettes, out_path, name_lookup,
-                paginate=paginate, columns=page_columns, rows=page_rows,
+                all_palettes,
+                out_path,
+                name_lookup,
+                paginate=paginate,
+                columns=page_columns,
+                rows=page_rows,
                 cell_size=cell_size,
             )
             if not args.quiet:
@@ -551,8 +526,13 @@ def run(argv: list[str] | None = None) -> int:
             safe_name = args.palette_name.replace("/", "_").replace("\\", "_")
             out_path = Path("output") / f"{safe_name}.svg"
         written = _generate_palette_svg(
-            args.palette_name, colors, out_path, name_lookup,
-            paginate=paginate, columns=page_columns, rows=page_rows,
+            args.palette_name,
+            colors,
+            out_path,
+            name_lookup,
+            paginate=paginate,
+            columns=page_columns,
+            rows=page_rows,
             cell_size=cell_size,
         )
         if not args.quiet:
@@ -586,9 +566,7 @@ def run(argv: list[str] | None = None) -> int:
         _ebp_config.userend = args.end
         _apply_content_filters(args, _ebp_config)
         calc_calendar_range(_ebp_config, args.begin, args.end)
-        _ebp_db.load_python_holidays(
-            _ebp_config.country, _ebp_config.adjustedstart, _ebp_config.adjustedend
-        )
+        _ebp_db.load_python_holidays(_ebp_config.country, _ebp_config.adjustedstart, _ebp_config.adjustedend)
         if getattr(args, "theme", None):
             from config.theme_engine import ThemeEngine
 
@@ -597,9 +575,7 @@ def run(argv: list[str] | None = None) -> int:
             _ebp_te.apply(_ebp_config)
             _resolve_palette_overrides(_ebp_config, _ebp_db)
         out_path = (
-            Path(_to_output_dir_path(args.outputfile))
-            if args.outputfile
-            else Path("output") / "ExcelBlockplan.xlsx"
+            Path(_to_output_dir_path(args.outputfile)) if args.outputfile else Path("output") / "ExcelBlockplan.xlsx"
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         generate_excel_blockplan(_ebp_config, _ebp_db, out_path)
@@ -613,15 +589,11 @@ def run(argv: list[str] | None = None) -> int:
         _ed_config = create_calendar_config()
         _apply_content_filters(args, _ed_config)
         calc_calendar_range(_ed_config, args.begin, args.end)
-        _ed_db.load_python_holidays(
-            _ed_config.country, _ed_config.adjustedstart, _ed_config.adjustedend
-        )
+        _ed_db.load_python_holidays(_ed_config.country, _ed_config.adjustedstart, _ed_config.adjustedend)
 
         from visualizers.base import filter_events
 
-        raw_events = _ed_db.get_all_events_in_range(
-            _ed_config.adjustedstart, _ed_config.adjustedend
-        )
+        raw_events = _ed_db.get_all_events_in_range(_ed_config.adjustedstart, _ed_config.adjustedend)
         exported = filter_events(raw_events, _ed_config)
 
         out_path = (
@@ -655,9 +627,7 @@ def run(argv: list[str] | None = None) -> int:
 
         # Load government holidays from the 'holidays' Python package so all
         # renderers transparently use live package data.
-        db.load_python_holidays(
-            config.country, config.adjustedstart, config.adjustedend
-        )
+        db.load_python_holidays(config.country, config.adjustedstart, config.adjustedend)
 
         # Build fiscal calendar lookup if fiscal calendar is enabled
         if config.fiscal_calendar_type:
@@ -760,16 +730,13 @@ def run(argv: list[str] | None = None) -> int:
         ]
         for opt_name, was_set, flag in _svg_layout_checks:
             if was_set and opt_name not in visualizer.supported_options:
-                logger.warning(
-                    f"{flag} is not supported for '{view_type}' visualization and will be ignored"
-                )
+                logger.warning(f"{flag} is not supported for '{view_type}' visualization and will be ignored")
 
         # Generate the visualization
         result = visualizer.generate(config, db)
 
         logger.info(
-            f"Calendar generated: {result.output_path} "
-            f"({result.event_count} events, {result.overflow_count} overflow)"
+            f"Calendar generated: {result.output_path} ({result.event_count} events, {result.overflow_count} overflow)"
         )
         return 0
 

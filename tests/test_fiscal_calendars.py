@@ -56,9 +56,7 @@ class TestNRF454FiscalYearStart(unittest.TestCase):
         """Every fiscal year must start on a Sunday."""
         for year in range(2020, 2035):
             start = self.cal.fiscal_year_start(year)
-            self.assertEqual(
-                start.weekday(), 6, f"FY{year} starts on {start} which is not Sunday"
-            )
+            self.assertEqual(start.weekday(), 6, f"FY{year} starts on {start} which is not Sunday")
 
     def test_start_within_jan29_feb4_range(self):
         """Fiscal year start must fall in the Jan 29 - Feb 4 window."""
@@ -124,9 +122,7 @@ class TestNRF454PeriodBoundaries(unittest.TestCase):
         for q in range(4):
             q_periods = boundaries[q * 3 : (q + 1) * 3]
             total_days = sum((end - start).days + 1 for start, end, _ in q_periods)
-            self.assertEqual(
-                total_days, 91, f"Q{q + 1} has {total_days} days, expected 91"
-            )
+            self.assertEqual(total_days, 91, f"Q{q + 1} has {total_days} days, expected 91")
 
 
 class TestNRF454_53WeekYear(unittest.TestCase):
@@ -152,9 +148,7 @@ class TestNRF454_53WeekYear(unittest.TestCase):
                 boundaries = self.cal.get_period_boundaries(year)
                 last_start, last_end, _ = boundaries[-1]
                 last_weeks = ((last_end - last_start).days + 1) // 7
-                self.assertEqual(
-                    last_weeks, 5, f"FY{year} period 12 should be 5 weeks (53-wk year)"
-                )
+                self.assertEqual(last_weeks, 5, f"FY{year} period 12 should be 5 weeks (53-wk year)")
                 break
 
     def test_52_week_year_total(self):
@@ -249,9 +243,7 @@ class TestNRF445Variant(unittest.TestCase):
     def test_same_fy_start_as_454(self):
         cal454 = NRF454Calendar()
         for year in range(2020, 2030):
-            self.assertEqual(
-                self.cal.fiscal_year_start(year), cal454.fiscal_year_start(year)
-            )
+            self.assertEqual(self.cal.fiscal_year_start(year), cal454.fiscal_year_start(year))
 
 
 class TestNRF544Variant(unittest.TestCase):
@@ -284,9 +276,7 @@ class TestThirteenPeriodCalendar(unittest.TestCase):
                 boundaries = self.cal.get_period_boundaries(year)
                 for start, end, num in boundaries:
                     weeks = ((end - start).days + 1) // 7
-                    self.assertEqual(
-                        weeks, 4, f"FY{year} P{num}: expected 4 weeks, got {weeks}"
-                    )
+                    self.assertEqual(weeks, 4, f"FY{year} P{num}: expected 4 weeks, got {weeks}")
                 break
 
     def test_period_13_gets_5_weeks_in_53_week_year(self):

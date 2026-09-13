@@ -42,9 +42,11 @@ FONT_SIZE = 24  # px height target
 # Glyph extraction helpers
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class GlyphData:
     """Pre-extracted glyph: SVG path + advance/bounds in font units."""
+
     path_d: str
     advance_width: int  # in font units
     # Bounding box in font units (Y-up): (xMin, yMin, xMax, yMax)
@@ -87,6 +89,7 @@ def preload_glyphs(font: TTFont, gid_lists: list[list[int]]) -> dict[int, GlyphD
 # ---------------------------------------------------------------------------
 # SVG composition
 # ---------------------------------------------------------------------------
+
 
 def compose_svg(
     glyphs: list[GlyphData],
@@ -158,8 +161,7 @@ def compose_svg(
             tx = x_fu * scale - svg_xmin
             ty = -svg_ymin  # baseline offset so content starts at top of viewBox
             paths.append(
-                f'<path d="{g.path_d}" '
-                f'transform="translate({tx:.4f},{ty:.4f}) scale({scale:.6f},{-scale:.6f})"/>'
+                f'<path d="{g.path_d}" transform="translate({tx:.4f},{ty:.4f}) scale({scale:.6f},{-scale:.6f})"/>'
             )
 
     inner = "\n    ".join(paths)
@@ -168,15 +170,16 @@ def compose_svg(
         f'viewBox="0 0 {vb_w:.4f} {vb_h:.4f}" '
         f'width="{final_w:.4f}" height="{final_h:.4f}">\n'
         f'  <g fill="black" stroke="black" stroke-width="0.5">\n'
-        f'    {inner}\n'
-        f'  </g>\n'
-        f'</svg>\n'
+        f"    {inner}\n"
+        f"  </g>\n"
+        f"</svg>\n"
     )
 
 
 # ---------------------------------------------------------------------------
 # Main generation loop
 # ---------------------------------------------------------------------------
+
 
 def generate_icons(
     font_path: str,
@@ -284,9 +287,7 @@ def generate_icons(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate capsule number SVG icons from font glyphs."
-    )
+    parser = argparse.ArgumentParser(description="Generate capsule number SVG icons from font glyphs.")
     parser.add_argument(
         "--font-path",
         default=DEFAULT_FONT,

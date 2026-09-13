@@ -266,10 +266,7 @@ def calc_calendar_range(config: CalendarConfig, start: str, end: str) -> None:
     config.adjustedstart = adjusted_start.format("YYYYMMDD")
     config.adjustedend = adjusted_end.format("YYYYMMDD")
 
-    logger.debug(
-        f"Date range adjusted: {config.adjustedstart} to {config.adjustedend} "
-        f"({config.numberofweeks} weeks)"
-    )
+    logger.debug(f"Date range adjusted: {config.adjustedstart} to {config.adjustedend} ({config.numberofweeks} weeks)")
 
 
 def get_months_in_range(start: str, end: str) -> list[tuple[int, int]]:

@@ -76,13 +76,15 @@ def _base_config():
     return config
 
 
-def _draw_extras(renderer, config, oneday, X=0, Y=0, W=100, H=100,
-                 has_overflow=False, holidays=None):
+def _draw_extras(renderer, config, oneday, X=0, Y=0, W=100, H=100, has_overflow=False, holidays=None):
     renderer._draw_day_top_row_extras(
         config,
         oneday,
         oneday.format("YYYYMMDD"),
-        X, Y, W, H,
+        X,
+        Y,
+        W,
+        H,
         has_overflow=has_overflow,
         holidays=holidays or [],
         day_num_width=0.0,
@@ -121,9 +123,7 @@ def test_week_number_drawn_in_left_margin_when_present():
     oneday = arrow.get("20250105", "YYYYMMDD")  # Sunday
     _draw_extras(renderer, config, oneday, X=100)
 
-    week_calls = [
-        c for c in renderer.text_detail_calls if str(c.get("text", "")).startswith("W")
-    ]
+    week_calls = [c for c in renderer.text_detail_calls if str(c.get("text", "")).startswith("W")]
     assert week_calls
     week = week_calls[0]
     assert week["x"] == 98.0

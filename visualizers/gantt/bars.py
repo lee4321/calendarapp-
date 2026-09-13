@@ -182,8 +182,4 @@ def float_spans(
         ("earliest_end", event.earliest_end_date, event.end),
         ("latest_end", event.end, event.latest_end_date),
     )
-    return [
-        (name, str(begin), str(finish))
-        for name, begin, finish in windows
-        if begin and finish
-    ]
+    return [(name, str(begin), str(finish)) for name, begin, finish in windows if begin and finish]

@@ -30,14 +30,19 @@ def test_sample_yaml_passes() -> None:
 
 
 def test_legacy_theme_without_convert_fails_with_hint(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Synthesize a legacy theme; the parser should reject it with a converter hint."""
     legacy = tmp_path / "legacy.yaml"
-    legacy.write_text(yaml.safe_dump({
-        "theme": {"name": "legacy", "version": "2.0"},
-        "text_styles": {"heading": {"font": "Roboto", "size": 10, "color": "black"}},
-    }))
+    legacy.write_text(
+        yaml.safe_dump(
+            {
+                "theme": {"name": "legacy", "version": "2.0"},
+                "text_styles": {"heading": {"font": "Roboto", "size": 10, "color": "black"}},
+            }
+        )
+    )
     rc = main([str(legacy)])
     captured = capsys.readouterr()
     assert rc == 2
@@ -50,20 +55,28 @@ def test_legacy_theme_without_convert_fails_with_hint(
 def test_legacy_theme_with_convert_passes(tmp_path: Path) -> None:
     """The same synthetic legacy theme should pass with --convert."""
     legacy = tmp_path / "legacy.yaml"
-    legacy.write_text(yaml.safe_dump({
-        "theme": {"name": "legacy", "version": "2.0"},
-        "text_styles": {"heading": {"font": "Roboto-Regular", "size": 10, "color": "black"}},
-    }))
+    legacy.write_text(
+        yaml.safe_dump(
+            {
+                "theme": {"name": "legacy", "version": "2.0"},
+                "text_styles": {"heading": {"font": "Roboto-Regular", "size": 10, "color": "black"}},
+            }
+        )
+    )
     rc = main([str(legacy), "--convert", "--quiet"])
     assert rc == 0
 
 
 def test_missing_keys_exit_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     broken = tmp_path / "broken.yaml"
-    broken.write_text(yaml.safe_dump({
-        "theme": {"name": "broken", "version": "3.0"},
-        "style_rules": [],
-    }))
+    broken.write_text(
+        yaml.safe_dump(
+            {
+                "theme": {"name": "broken", "version": "3.0"},
+                "style_rules": [],
+            }
+        )
+    )
     rc = main([str(broken), "--visualizer", "mini"])
     captured = capsys.readouterr()
     assert rc == 1
@@ -72,9 +85,7 @@ def test_missing_keys_exit_1(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert "add to your theme:" in captured.out
 
 
-def test_unknown_visualizer_exit_2(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_unknown_visualizer_exit_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     theme = tmp_path / "x.yaml"
     theme.write_text(yaml.safe_dump({"theme": {"name": "x", "version": "3.0"}}))
     rc = main([str(theme), "--visualizer", "not-a-real-viz"])
@@ -90,20 +101,24 @@ def test_nonexistent_file_exit_2(capsys: pytest.CaptureFixture[str]) -> None:
     assert "theme file not found" in captured.err
 
 
-def test_legacy_apply_to_element_is_rejected(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_legacy_apply_to_element_is_rejected(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """`apply_to: element` rules are no longer valid in themes (post-catalog)."""
     legacy = tmp_path / "stray.yaml"
-    legacy.write_text(yaml.safe_dump({
-        "theme": {"name": "stray", "version": "3.0"},
-        "style_rules": [{
-            "name": "bind ec-heading",
-            "apply_to": "element",
-            "select": {"element": "ec-heading"},
-            "style": {"use": "text:heading"},
-        }],
-    }))
+    legacy.write_text(
+        yaml.safe_dump(
+            {
+                "theme": {"name": "stray", "version": "3.0"},
+                "style_rules": [
+                    {
+                        "name": "bind ec-heading",
+                        "apply_to": "element",
+                        "select": {"element": "ec-heading"},
+                        "style": {"use": "text:heading"},
+                    }
+                ],
+            }
+        )
+    )
     rc = main([str(legacy)])
     captured = capsys.readouterr()
     assert rc == 2
@@ -124,33 +139,31 @@ def test_no_bundled_theme_contains_stray_element_bindings() -> None:
             if not isinstance(rule, dict):
                 continue
             apply_to = rule.get("apply_to")
-            targets = (
-                [apply_to] if isinstance(apply_to, str)
-                else list(apply_to) if isinstance(apply_to, list)
-                else []
-            )
+            targets = [apply_to] if isinstance(apply_to, str) else list(apply_to) if isinstance(apply_to, list) else []
             if "element" in targets:
                 failures.append(f"{theme_path.name}: style_rules[{i}] is `apply_to: element`")
     assert not failures, "Stray element bindings still in shipped themes:\n" + "\n".join(failures)
 
 
-def test_unregistered_font_exit_1(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_unregistered_font_exit_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """A font name outside FONT_REGISTRY fails the validator, not the renderer."""
     theme = tmp_path / "badfont.yaml"
-    theme.write_text(yaml.safe_dump({
-        "theme": {"name": "badfont", "version": "3.0"},
-        "base": {"font_family": "NotoSans-Condensed"},
-        "style_rules": [
+    theme.write_text(
+        yaml.safe_dump(
             {
-                "name": "define text:body",
-                "define": "text",
-                "as": "body",
-                "style": {"font": "NotoSans-Condensed", "size": 8},
-            },
-        ],
-    }))
+                "theme": {"name": "badfont", "version": "3.0"},
+                "base": {"font_family": "NotoSans-Condensed"},
+                "style_rules": [
+                    {
+                        "name": "define text:body",
+                        "define": "text",
+                        "as": "body",
+                        "style": {"font": "NotoSans-Condensed", "size": 8},
+                    },
+                ],
+            }
+        )
+    )
     rc = main([str(theme), "--visualizer", "weekly"])
     captured = capsys.readouterr()
     assert rc == 1
@@ -172,7 +185,4 @@ def test_no_bundled_theme_references_unregistered_fonts() -> None:
         raw = yaml.safe_load(theme_path.read_text()) or {}
         for font_path, font in find_unregistered_fonts(raw):
             failures.append(f"{theme_path.name}: {font!r} at {font_path}")
-    assert not failures, (
-        "Shipped themes reference fonts missing from FONT_REGISTRY:\n"
-        + "\n".join(failures)
-    )
+    assert not failures, "Shipped themes reference fonts missing from FONT_REGISTRY:\n" + "\n".join(failures)

@@ -19,8 +19,7 @@ def test_theme_engine_load_apply_populates_config_theme(theme_name: str) -> None
     config = CalendarConfig()
     engine.apply(config)
     assert isinstance(config.theme, UnifiedTheme), (
-        f"theme {theme_name!r}: config.theme should be a UnifiedTheme, "
-        f"got {type(config.theme).__name__}"
+        f"theme {theme_name!r}: config.theme should be a UnifiedTheme, got {type(config.theme).__name__}"
     )
 
 

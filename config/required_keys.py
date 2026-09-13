@@ -37,24 +37,24 @@ import yaml
 from config.unified_theme import UnifiedTheme
 
 # Path to the bundled minimum-viable theme that supplies example values.
-BASIC_YAML_PATH: Path = (
-    Path(__file__).resolve().parent / "themes" / "basic.yaml"
-)
+BASIC_YAML_PATH: Path = Path(__file__).resolve().parent / "themes" / "basic.yaml"
 
 
 # Visualizer identifiers as accepted by the CLI subcommand and by
 # ``select.visualizer`` in style_rules.
-VISUALIZERS: frozenset[str] = frozenset({
-    "weekly",
-    "mini",
-    "mini-icon",
-    "text-mini",
-    "timeline",
-    "blockplan",
-    "gantt",
-    "compactplan",
-    "excelblockplan",
-})
+VISUALIZERS: frozenset[str] = frozenset(
+    {
+        "weekly",
+        "mini",
+        "mini-icon",
+        "text-mini",
+        "timeline",
+        "blockplan",
+        "gantt",
+        "compactplan",
+        "excelblockplan",
+    }
+)
 
 
 # All-visualizer used_by set (every renderer needs the key).
@@ -67,7 +67,7 @@ _SVG: frozenset[str] = frozenset(VISUALIZERS - {"excelblockplan", "text-mini"})
 @dataclass(frozen=True)
 class RequiredKey:
     path: str
-    kind: str               # "setting" | "token"
+    kind: str  # "setting" | "token"
     type_hint: str
     used_by: frozenset[str]
     description: str = ""
@@ -82,174 +82,135 @@ class RequiredKey:
 
 REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     # ── Theme metadata ──
-    RequiredKey("theme.name",        "setting", "str", _ALL,
-                "Theme display name shown in --theme listings"),
-    RequiredKey("theme.version",     "setting", "str", _ALL,
-                "Theme schema version (use \"3.0\" for the unified schema)"),
-
+    RequiredKey("theme.name", "setting", "str", _ALL, "Theme display name shown in --theme listings"),
+    RequiredKey("theme.version", "setting", "str", _ALL, 'Theme schema version (use "3.0" for the unified schema)'),
     # ── base ──
-    RequiredKey("base.font_family",  "setting", "str", _SVG,
-                "Default font name; resolved against the registry in fonts/"),
-    RequiredKey("base.default_missing_icon", "setting", "str", _SVG,
-                "Fallback icon name when an event references an unknown icon"),
-
+    RequiredKey(
+        "base.font_family", "setting", "str", _SVG, "Default font name; resolved against the registry in fonts/"
+    ),
+    RequiredKey(
+        "base.default_missing_icon",
+        "setting",
+        "str",
+        _SVG,
+        "Fallback icon name when an event references an unknown icon",
+    ),
     # ── layout ──
-    RequiredKey("layout.margin.top",    "setting", "str | float", _ALL),
-    RequiredKey("layout.margin.right",  "setting", "str | float", _ALL),
+    RequiredKey("layout.margin.top", "setting", "str | float", _ALL),
+    RequiredKey("layout.margin.right", "setting", "str | float", _ALL),
     RequiredKey("layout.margin.bottom", "setting", "str | float", _ALL),
-    RequiredKey("layout.margin.left",   "setting", "str | float", _ALL),
-
+    RequiredKey("layout.margin.left", "setting", "str | float", _ALL),
     # ── events / durations ──
     RequiredKey("events.item_placement_order", "setting", "list[str]", _SVG),
-
     # ── fiscal ──
-    RequiredKey("fiscal.label_format",     "setting", "str", _SVG),
+    RequiredKey("fiscal.label_format", "setting", "str", _SVG),
     RequiredKey("fiscal.end_label_format", "setting", "str", _SVG),
-
     # ── colors ──
-    RequiredKey("colors.month_palette",  "setting", "str (DB palette name)", _SVG),
+    RequiredKey("colors.month_palette", "setting", "str (DB palette name)", _SVG),
     RequiredKey("colors.fiscal_palette", "setting", "str (DB palette name)", _SVG),
-    RequiredKey("colors.group_palette",  "setting", "str (DB palette name)", _SVG),
-
+    RequiredKey("colors.group_palette", "setting", "str (DB palette name)", _SVG),
     # ── overflow ──
-    RequiredKey("overflow.icon", "setting", "str", _SVG,
-                "Glyph marking a box that could not hold its contents"),
-
+    RequiredKey("overflow.icon", "setting", "str", _SVG, "Glyph marking a box that could not hold its contents"),
     # ── weekly ──
     RequiredKey("weekly.week_numbers.label_format", "setting", "str", frozenset({"weekly"})),
-
     # ── mini_calendar / mini / mini-icon ──
-    RequiredKey("mini_calendar.title_format", "setting", "str (Arrow format)",
-                frozenset({"mini", "mini-icon"})),
-    RequiredKey("mini_calendar.week_number_label_format", "setting", "str",
-                frozenset({"mini", "mini-icon"})),
-    RequiredKey("mini_calendar.icon_set", "setting", "str",
-                frozenset({"mini-icon"})),
-
+    RequiredKey("mini_calendar.title_format", "setting", "str (Arrow format)", frozenset({"mini", "mini-icon"})),
+    RequiredKey("mini_calendar.week_number_label_format", "setting", "str", frozenset({"mini", "mini-icon"})),
+    RequiredKey("mini_calendar.icon_set", "setting", "str", frozenset({"mini-icon"})),
     # ── mini_details ──
     RequiredKey("mini_details.output_suffix", "setting", "str", frozenset({"mini"})),
-    RequiredKey("mini_details.title_text",    "setting", "str", frozenset({"mini"})),
-    RequiredKey("mini_details.headers",       "setting", "list[str]", frozenset({"mini"})),
+    RequiredKey("mini_details.title_text", "setting", "str", frozenset({"mini"})),
+    RequiredKey("mini_details.headers", "setting", "list[str]", frozenset({"mini"})),
     RequiredKey("mini_details.column_widths", "setting", "list[float]", frozenset({"mini"})),
-
     # ── text_mini ──
-    RequiredKey("text_mini.cell_width",        "setting", "int", frozenset({"text-mini"})),
-    RequiredKey("text_mini.month_gap",         "setting", "int", frozenset({"text-mini"})),
-    RequiredKey("text_mini.event_symbols",     "setting", "list[str]", frozenset({"text-mini"})),
+    RequiredKey("text_mini.cell_width", "setting", "int", frozenset({"text-mini"})),
+    RequiredKey("text_mini.month_gap", "setting", "int", frozenset({"text-mini"})),
+    RequiredKey("text_mini.event_symbols", "setting", "list[str]", frozenset({"text-mini"})),
     RequiredKey("text_mini.milestone_symbols", "setting", "list[str]", frozenset({"text-mini"})),
-    RequiredKey("text_mini.holiday_symbols",   "setting", "list[str]", frozenset({"text-mini"})),
+    RequiredKey("text_mini.holiday_symbols", "setting", "list[str]", frozenset({"text-mini"})),
     RequiredKey("text_mini.nonworkday_symbols", "setting", "list[str]", frozenset({"text-mini"})),
-
     # ── timeline ──
-    RequiredKey("timeline.tick_label_format",   "setting", "str", frozenset({"timeline"})),
-    RequiredKey("timeline.today_label_text",    "setting", "str", frozenset({"timeline"})),
-    RequiredKey("timeline.marker_radius",       "setting", "float", frozenset({"timeline"})),
-    RequiredKey("timeline.icon_size",           "setting", "float", frozenset({"timeline"})),
-    RequiredKey("timeline.duration_offset_y",   "setting", "float", frozenset({"timeline"})),
+    RequiredKey("timeline.tick_label_format", "setting", "str", frozenset({"timeline"})),
+    RequiredKey("timeline.today_label_text", "setting", "str", frozenset({"timeline"})),
+    RequiredKey("timeline.marker_radius", "setting", "float", frozenset({"timeline"})),
+    RequiredKey("timeline.icon_size", "setting", "float", frozenset({"timeline"})),
+    RequiredKey("timeline.duration_offset_y", "setting", "float", frozenset({"timeline"})),
     RequiredKey("timeline.duration_lane_gap_y", "setting", "float", frozenset({"timeline"})),
-
     # ── blockplan ──
     RequiredKey("blockplan.fiscal_year_start_month", "setting", "int", frozenset({"blockplan"})),
-    RequiredKey("blockplan.week_start",              "setting", "int", frozenset({"blockplan"})),
-    RequiredKey("blockplan.label_column_ratio",      "setting", "float", frozenset({"blockplan"})),
-    RequiredKey("blockplan.band_row_height",         "setting", "float", frozenset({"blockplan"})),
-    RequiredKey("blockplan.lane_match_mode",         "setting", "first | all",
-                frozenset({"blockplan"})),
-    RequiredKey("blockplan.show_unmatched_lane",     "setting", "bool", frozenset({"blockplan"})),
-    RequiredKey("blockplan.unmatched_lane_name",     "setting", "str", frozenset({"blockplan"})),
-    RequiredKey("blockplan.swimlanes",               "setting", "list[{name}]",
-                frozenset({"blockplan"})),
-
+    RequiredKey("blockplan.week_start", "setting", "int", frozenset({"blockplan"})),
+    RequiredKey("blockplan.label_column_ratio", "setting", "float", frozenset({"blockplan"})),
+    RequiredKey("blockplan.band_row_height", "setting", "float", frozenset({"blockplan"})),
+    RequiredKey("blockplan.lane_match_mode", "setting", "first | all", frozenset({"blockplan"})),
+    RequiredKey("blockplan.show_unmatched_lane", "setting", "bool", frozenset({"blockplan"})),
+    RequiredKey("blockplan.unmatched_lane_name", "setting", "str", frozenset({"blockplan"})),
+    RequiredKey("blockplan.swimlanes", "setting", "list[{name}]", frozenset({"blockplan"})),
     # ── gantt ──
     # Geometry a theme should state outright; everything else (columns,
     # icons, colors) has a working default in CalendarConfig, so requiring
     # it would only duplicate the dataclass across every theme file.
-    RequiredKey("gantt.table_width_ratio",  "setting", "float (0-1)",
-                frozenset({"gantt"})),
-    RequiredKey("gantt.row_height",         "setting", "float", frozenset({"gantt"})),
-    RequiredKey("gantt.header_row_height",  "setting", "float", frozenset({"gantt"})),
-    RequiredKey("gantt.band_row_height",    "setting", "float", frozenset({"gantt"})),
-
+    RequiredKey("gantt.table_width_ratio", "setting", "float (0-1)", frozenset({"gantt"})),
+    RequiredKey("gantt.row_height", "setting", "float", frozenset({"gantt"})),
+    RequiredKey("gantt.header_row_height", "setting", "float", frozenset({"gantt"})),
+    RequiredKey("gantt.band_row_height", "setting", "float", frozenset({"gantt"})),
     # ── compact_plan ──
-    RequiredKey("compact_plan.legend_area_ratio", "setting", "float (0-1)",
-                frozenset({"compactplan"})),
-
+    RequiredKey("compact_plan.legend_area_ratio", "setting", "float (0-1)", frozenset({"compactplan"})),
     # ── excelblockplan ──
-    RequiredKey("excelblockplan.font_name",       "setting", "str (system font name)",
-                frozenset({"excelblockplan"})),
-    RequiredKey("excelblockplan.font_size",       "setting", "int",
-                frozenset({"excelblockplan"})),
-    RequiredKey("excelblockplan.band_row_height", "setting", "float",
-                frozenset({"excelblockplan"})),
-
+    RequiredKey("excelblockplan.font_name", "setting", "str (system font name)", frozenset({"excelblockplan"})),
+    RequiredKey("excelblockplan.font_size", "setting", "int", frozenset({"excelblockplan"})),
+    RequiredKey("excelblockplan.band_row_height", "setting", "float", frozenset({"excelblockplan"})),
     # ── time_bands (catalog must exist; may be empty if no placements reference it) ──
     # (No required keys — time_bands is required only insofar as placement lists
     # reference it.  Placement references are validated by the parser.)
-
     # ── style_rules tokens ──
     # Text tokens required by SVG renderers
-    RequiredKey("style_rules:text:base",            "token", "text token", _SVG),
-    RequiredKey("style_rules:text:heading",         "token", "text token", _SVG),
-    RequiredKey("style_rules:text:body",            "token", "text token", _SVG),
-    RequiredKey("style_rules:text:caption",         "token", "text token", _SVG),
-    RequiredKey("style_rules:text:label",           "token", "text token", _SVG),
-    RequiredKey("style_rules:text:day_number",      "token", "text token",
-                frozenset({"weekly", "mini", "mini-icon"})),
-    RequiredKey("style_rules:text:month_title",     "token", "text token",
-                frozenset({"weekly", "mini", "mini-icon"})),
-    RequiredKey("style_rules:text:week_number",     "token", "text token",
-                frozenset({"weekly", "mini", "mini-icon"})),
-    RequiredKey("style_rules:text:event_name",      "token", "text token", _SVG),
-    RequiredKey("style_rules:text:event_notes",     "token", "text token", _SVG),
-    RequiredKey("style_rules:text:event_date",      "token", "text token", _SVG),
-    RequiredKey("style_rules:text:duration_date",   "token", "text token", _SVG),
-    RequiredKey("style_rules:text:holiday_title",   "token", "text token", _SVG),
-    RequiredKey("style_rules:text:today_label",     "token", "text token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
-    RequiredKey("style_rules:text:fiscal_label",    "token", "text token",
-                frozenset({"weekly", "blockplan"})),
-    RequiredKey("style_rules:text:swimlane_label",  "token", "text token",
-                frozenset({"blockplan"})),
-    RequiredKey("style_rules:text:band_label",      "token", "text token",
-                frozenset({"blockplan", "compactplan"})),
-    RequiredKey("style_rules:text:milestone_label", "token", "text token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
-
+    RequiredKey("style_rules:text:base", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:heading", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:body", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:caption", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:label", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:day_number", "token", "text token", frozenset({"weekly", "mini", "mini-icon"})),
+    RequiredKey("style_rules:text:month_title", "token", "text token", frozenset({"weekly", "mini", "mini-icon"})),
+    RequiredKey("style_rules:text:week_number", "token", "text token", frozenset({"weekly", "mini", "mini-icon"})),
+    RequiredKey("style_rules:text:event_name", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:event_notes", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:event_date", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:duration_date", "token", "text token", _SVG),
+    RequiredKey("style_rules:text:holiday_title", "token", "text token", _SVG),
+    RequiredKey(
+        "style_rules:text:today_label", "token", "text token", frozenset({"timeline", "blockplan", "compactplan"})
+    ),
+    RequiredKey("style_rules:text:fiscal_label", "token", "text token", frozenset({"weekly", "blockplan"})),
+    RequiredKey("style_rules:text:swimlane_label", "token", "text token", frozenset({"blockplan"})),
+    RequiredKey("style_rules:text:band_label", "token", "text token", frozenset({"blockplan", "compactplan"})),
+    RequiredKey(
+        "style_rules:text:milestone_label", "token", "text token", frozenset({"timeline", "blockplan", "compactplan"})
+    ),
     # Box tokens
-    RequiredKey("style_rules:box:default",          "token", "box token", _SVG),
-    RequiredKey("style_rules:box:cell",             "token", "box token", _SVG),
-    RequiredKey("style_rules:box:header",           "token", "box token", _SVG),
-    RequiredKey("style_rules:box:callout",          "token", "box token",
-                frozenset({"timeline"})),
-    RequiredKey("style_rules:box:day",              "token", "box token",
-                frozenset({"weekly", "mini", "mini-icon"})),
-    RequiredKey("style_rules:box:event",            "token", "box token", _SVG),
-    RequiredKey("style_rules:box:duration",         "token", "box token", _SVG),
-    RequiredKey("style_rules:box:milestone",        "token", "box token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
-    RequiredKey("style_rules:box:vline",            "token", "box token",
-                frozenset({"blockplan"})),
-    RequiredKey("style_rules:box:swimlane_heading", "token", "box token",
-                frozenset({"blockplan"})),
-    RequiredKey("style_rules:box:swimlane_content", "token", "box token",
-                frozenset({"blockplan"})),
-    RequiredKey("style_rules:box:band",             "token", "box token",
-                frozenset({"blockplan", "compactplan"})),
-
+    RequiredKey("style_rules:box:default", "token", "box token", _SVG),
+    RequiredKey("style_rules:box:cell", "token", "box token", _SVG),
+    RequiredKey("style_rules:box:header", "token", "box token", _SVG),
+    RequiredKey("style_rules:box:callout", "token", "box token", frozenset({"timeline"})),
+    RequiredKey("style_rules:box:day", "token", "box token", frozenset({"weekly", "mini", "mini-icon"})),
+    RequiredKey("style_rules:box:event", "token", "box token", _SVG),
+    RequiredKey("style_rules:box:duration", "token", "box token", _SVG),
+    RequiredKey("style_rules:box:milestone", "token", "box token", frozenset({"timeline", "blockplan", "compactplan"})),
+    RequiredKey("style_rules:box:vline", "token", "box token", frozenset({"blockplan"})),
+    RequiredKey("style_rules:box:swimlane_heading", "token", "box token", frozenset({"blockplan"})),
+    RequiredKey("style_rules:box:swimlane_content", "token", "box token", frozenset({"blockplan"})),
+    RequiredKey("style_rules:box:band", "token", "box token", frozenset({"blockplan", "compactplan"})),
     # Line tokens
-    RequiredKey("style_rules:line:grid",      "token", "line token", _SVG),
-    RequiredKey("style_rules:line:axis",      "token", "line token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
-    RequiredKey("style_rules:line:today",     "token", "line token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
+    RequiredKey("style_rules:line:grid", "token", "line token", _SVG),
+    RequiredKey("style_rules:line:axis", "token", "line token", frozenset({"timeline", "blockplan", "compactplan"})),
+    RequiredKey("style_rules:line:today", "token", "line token", frozenset({"timeline", "blockplan", "compactplan"})),
     RequiredKey("style_rules:line:separator", "token", "line token", _SVG),
-
     # Icon tokens
-    RequiredKey("style_rules:icon:event",     "token", "icon token", _SVG),
-    RequiredKey("style_rules:icon:duration",  "token", "icon token", _SVG),
-    RequiredKey("style_rules:icon:milestone", "token", "icon token",
-                frozenset({"timeline", "blockplan", "compactplan"})),
-    RequiredKey("style_rules:icon:overflow",  "token", "icon token", _SVG),
+    RequiredKey("style_rules:icon:event", "token", "icon token", _SVG),
+    RequiredKey("style_rules:icon:duration", "token", "icon token", _SVG),
+    RequiredKey(
+        "style_rules:icon:milestone", "token", "icon token", frozenset({"timeline", "blockplan", "compactplan"})
+    ),
+    RequiredKey("style_rules:icon:overflow", "token", "icon token", _SVG),
 )
 
 
@@ -279,7 +240,8 @@ def _token_defined(theme: UnifiedTheme, token_path: str) -> bool:
 
 
 def check_required_keys(
-    theme: UnifiedTheme, visualizer: str,
+    theme: UnifiedTheme,
+    visualizer: str,
 ) -> list[RequiredKey]:
     """Return registry entries whose value is missing for ``visualizer``.
 
@@ -319,6 +281,7 @@ def _basic_theme() -> UnifiedTheme:
     global _BASIC_THEME
     if _BASIC_THEME is None:
         from config.unified_theme import load_theme_file
+
         _BASIC_THEME = load_theme_file(BASIC_YAML_PATH)
     return _BASIC_THEME
 
@@ -345,12 +308,14 @@ def _example_for(req: RequiredKey) -> str:
         kind, _, name = token.partition(":")
         style = basic.resolve_token(token)
         snippet = {
-            "style_rules": [{
-                "name": f"define {token}",
-                "define": kind,
-                "as": name,
-                "style": style or {"# add a style bag matching": basic.resolve_token(token)},
-            }]
+            "style_rules": [
+                {
+                    "name": f"define {token}",
+                    "define": kind,
+                    "as": name,
+                    "style": style or {"# add a style bag matching": basic.resolve_token(token)},
+                }
+            ]
         }
         return yaml.safe_dump(snippet, sort_keys=False, default_flow_style=False).strip()
     return "# (unknown registry entry kind)"

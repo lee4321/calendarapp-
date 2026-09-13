@@ -144,59 +144,231 @@ FIXED_COLUMNS: list[tuple[str, float]] = [
     ("custom4", 14),
     ("custom5", 14),
 ]
-LABEL_COL_END = len(FIXED_COLUMNS)              # 45 = column AS
-CONTINUATION_COL = LABEL_COL_END + 1            # 46 = column AT
-FIRST_DATE_COL = LABEL_COL_END + 2              # 47 = column AU
+LABEL_COL_END = len(FIXED_COLUMNS)  # 45 = column AS
+CONTINUATION_COL = LABEL_COL_END + 1  # 46 = column AT
+FIRST_DATE_COL = LABEL_COL_END + 2  # 47 = column AU
 DAY_COL_WIDTH = 3.0  # Excel character-width units
 
 # ISO 3166-1 alpha-2 → flag emoji
 _COUNTRY_FLAGS: dict[str, str] = {
-    "ad": "🇦🇩", "ae": "🇦🇪", "af": "🇦🇫", "ag": "🇦🇬", "ai": "🇦🇮",
-    "al": "🇦🇱", "am": "🇦🇲", "ao": "🇦🇴", "ar": "🇦🇷", "as": "🇦🇸",
-    "at": "🇦🇹", "au": "🇦🇺", "aw": "🇦🇼", "az": "🇦🇿", "ba": "🇧🇦",
-    "bb": "🇧🇧", "bd": "🇧🇩", "be": "🇧🇪", "bf": "🇧🇫", "bg": "🇧🇬",
-    "bh": "🇧🇭", "bi": "🇧🇮", "bj": "🇧🇯", "bl": "🇧🇱", "bm": "🇧🇲",
-    "bn": "🇧🇳", "bo": "🇧🇴", "br": "🇧🇷", "bs": "🇧🇸", "bt": "🇧🇹",
-    "bw": "🇧🇼", "by": "🇧🇾", "bz": "🇧🇿", "ca": "🇨🇦", "cc": "🇨🇨",
-    "cd": "🇨🇩", "cf": "🇨🇫", "cg": "🇨🇬", "ch": "🇨🇭", "ci": "🇨🇮",
-    "ck": "🇨🇰", "cl": "🇨🇱", "cm": "🇨🇲", "cn": "🇨🇳", "co": "🇨🇴",
-    "cr": "🇨🇷", "cu": "🇨🇺", "cv": "🇨🇻", "cy": "🇨🇾", "cz": "🇨🇿",
-    "de": "🇩🇪", "dj": "🇩🇯", "dk": "🇩🇰", "dm": "🇩🇲", "do": "🇩🇴",
-    "dz": "🇩🇿", "ec": "🇪🇨", "ee": "🇪🇪", "eg": "🇪🇬", "es": "🇪🇸",
-    "et": "🇪🇹", "fi": "🇫🇮", "fj": "🇫🇯", "fr": "🇫🇷", "ga": "🇬🇦",
-    "gb": "🇬🇧", "gd": "🇬🇩", "ge": "🇬🇪", "gh": "🇬🇭", "gm": "🇬🇲",
-    "gn": "🇬🇳", "gq": "🇬🇶", "gr": "🇬🇷", "gt": "🇬🇹", "gu": "🇬🇺",
-    "gw": "🇬🇼", "gy": "🇬🇾", "hk": "🇭🇰", "hn": "🇭🇳", "hr": "🇭🇷",
-    "ht": "🇭🇹", "hu": "🇭🇺", "id": "🇮🇩", "ie": "🇮🇪", "il": "🇮🇱",
-    "in": "🇮🇳", "iq": "🇮🇶", "ir": "🇮🇷", "is": "🇮🇸", "it": "🇮🇹",
-    "jm": "🇯🇲", "jo": "🇯🇴", "jp": "🇯🇵", "ke": "🇰🇪", "kg": "🇰🇬",
-    "kh": "🇰🇭", "ki": "🇰🇮", "km": "🇰🇲", "kn": "🇰🇳", "kp": "🇰🇵",
-    "kr": "🇰🇷", "kw": "🇰🇼", "ky": "🇰🇾", "kz": "🇰🇿", "la": "🇱🇦",
-    "lb": "🇱🇧", "lc": "🇱🇨", "li": "🇱🇮", "lk": "🇱🇰", "lr": "🇱🇷",
-    "ls": "🇱🇸", "lt": "🇱🇹", "lu": "🇱🇺", "lv": "🇱🇻", "ly": "🇱🇾",
-    "ma": "🇲🇦", "mc": "🇲🇨", "md": "🇲🇩", "me": "🇲🇪", "mg": "🇲🇬",
-    "mh": "🇲🇭", "mk": "🇲🇰", "ml": "🇲🇱", "mm": "🇲🇲", "mn": "🇲🇳",
-    "mo": "🇲🇴", "mp": "🇲🇵", "mr": "🇲🇷", "ms": "🇲🇸", "mt": "🇲🇹",
-    "mu": "🇲🇺", "mv": "🇲🇻", "mw": "🇲🇼", "mx": "🇲🇽", "my": "🇲🇾",
-    "mz": "🇲🇿", "na": "🇳🇦", "ne": "🇳🇪", "ng": "🇳🇬", "ni": "🇳🇮",
-    "nl": "🇳🇱", "no": "🇳🇴", "np": "🇳🇵", "nr": "🇳🇷", "nu": "🇳🇺",
-    "nz": "🇳🇿", "om": "🇴🇲", "pa": "🇵🇦", "pe": "🇵🇪", "pf": "🇵🇫",
-    "pg": "🇵🇬", "ph": "🇵🇭", "pk": "🇵🇰", "pl": "🇵🇱", "pr": "🇵🇷",
-    "ps": "🇵🇸", "pt": "🇵🇹", "pw": "🇵🇼", "py": "🇵🇾", "qa": "🇶🇦",
-    "ro": "🇷🇴", "rs": "🇷🇸", "ru": "🇷🇺", "rw": "🇷🇼", "sa": "🇸🇦",
-    "sb": "🇸🇧", "sc": "🇸🇨", "sd": "🇸🇩", "se": "🇸🇪", "sg": "🇸🇬",
-    "sh": "🇸🇭", "si": "🇸🇮", "sk": "🇸🇰", "sl": "🇸🇱", "sm": "🇸🇲",
-    "sn": "🇸🇳", "so": "🇸🇴", "sr": "🇸🇷", "ss": "🇸🇸", "st": "🇸🇹",
-    "sv": "🇸🇻", "sy": "🇸🇾", "sz": "🇸🇿", "tc": "🇹🇨", "td": "🇹🇩",
-    "tg": "🇹🇬", "th": "🇹🇭", "tj": "🇹🇯", "tk": "🇹🇰", "tl": "🇹🇱",
-    "tm": "🇹🇲", "tn": "🇹🇳", "to": "🇹🇴", "tr": "🇹🇷", "tt": "🇹🇹",
-    "tv": "🇹🇻", "tz": "🇹🇿", "ua": "🇺🇦", "ug": "🇺🇬", "us": "🇺🇸",
-    "uy": "🇺🇾", "uz": "🇺🇿", "va": "🇻🇦", "vc": "🇻🇨", "ve": "🇻🇪",
-    "vg": "🇻🇬", "vi": "🇻🇮", "vn": "🇻🇳", "vu": "🇻🇺", "ws": "🇼🇸",
-    "ye": "🇾🇪", "za": "🇿🇦", "zm": "🇿🇲", "zw": "🇿🇼",
+    "ad": "🇦🇩",
+    "ae": "🇦🇪",
+    "af": "🇦🇫",
+    "ag": "🇦🇬",
+    "ai": "🇦🇮",
+    "al": "🇦🇱",
+    "am": "🇦🇲",
+    "ao": "🇦🇴",
+    "ar": "🇦🇷",
+    "as": "🇦🇸",
+    "at": "🇦🇹",
+    "au": "🇦🇺",
+    "aw": "🇦🇼",
+    "az": "🇦🇿",
+    "ba": "🇧🇦",
+    "bb": "🇧🇧",
+    "bd": "🇧🇩",
+    "be": "🇧🇪",
+    "bf": "🇧🇫",
+    "bg": "🇧🇬",
+    "bh": "🇧🇭",
+    "bi": "🇧🇮",
+    "bj": "🇧🇯",
+    "bl": "🇧🇱",
+    "bm": "🇧🇲",
+    "bn": "🇧🇳",
+    "bo": "🇧🇴",
+    "br": "🇧🇷",
+    "bs": "🇧🇸",
+    "bt": "🇧🇹",
+    "bw": "🇧🇼",
+    "by": "🇧🇾",
+    "bz": "🇧🇿",
+    "ca": "🇨🇦",
+    "cc": "🇨🇨",
+    "cd": "🇨🇩",
+    "cf": "🇨🇫",
+    "cg": "🇨🇬",
+    "ch": "🇨🇭",
+    "ci": "🇨🇮",
+    "ck": "🇨🇰",
+    "cl": "🇨🇱",
+    "cm": "🇨🇲",
+    "cn": "🇨🇳",
+    "co": "🇨🇴",
+    "cr": "🇨🇷",
+    "cu": "🇨🇺",
+    "cv": "🇨🇻",
+    "cy": "🇨🇾",
+    "cz": "🇨🇿",
+    "de": "🇩🇪",
+    "dj": "🇩🇯",
+    "dk": "🇩🇰",
+    "dm": "🇩🇲",
+    "do": "🇩🇴",
+    "dz": "🇩🇿",
+    "ec": "🇪🇨",
+    "ee": "🇪🇪",
+    "eg": "🇪🇬",
+    "es": "🇪🇸",
+    "et": "🇪🇹",
+    "fi": "🇫🇮",
+    "fj": "🇫🇯",
+    "fr": "🇫🇷",
+    "ga": "🇬🇦",
+    "gb": "🇬🇧",
+    "gd": "🇬🇩",
+    "ge": "🇬🇪",
+    "gh": "🇬🇭",
+    "gm": "🇬🇲",
+    "gn": "🇬🇳",
+    "gq": "🇬🇶",
+    "gr": "🇬🇷",
+    "gt": "🇬🇹",
+    "gu": "🇬🇺",
+    "gw": "🇬🇼",
+    "gy": "🇬🇾",
+    "hk": "🇭🇰",
+    "hn": "🇭🇳",
+    "hr": "🇭🇷",
+    "ht": "🇭🇹",
+    "hu": "🇭🇺",
+    "id": "🇮🇩",
+    "ie": "🇮🇪",
+    "il": "🇮🇱",
+    "in": "🇮🇳",
+    "iq": "🇮🇶",
+    "ir": "🇮🇷",
+    "is": "🇮🇸",
+    "it": "🇮🇹",
+    "jm": "🇯🇲",
+    "jo": "🇯🇴",
+    "jp": "🇯🇵",
+    "ke": "🇰🇪",
+    "kg": "🇰🇬",
+    "kh": "🇰🇭",
+    "ki": "🇰🇮",
+    "km": "🇰🇲",
+    "kn": "🇰🇳",
+    "kp": "🇰🇵",
+    "kr": "🇰🇷",
+    "kw": "🇰🇼",
+    "ky": "🇰🇾",
+    "kz": "🇰🇿",
+    "la": "🇱🇦",
+    "lb": "🇱🇧",
+    "lc": "🇱🇨",
+    "li": "🇱🇮",
+    "lk": "🇱🇰",
+    "lr": "🇱🇷",
+    "ls": "🇱🇸",
+    "lt": "🇱🇹",
+    "lu": "🇱🇺",
+    "lv": "🇱🇻",
+    "ly": "🇱🇾",
+    "ma": "🇲🇦",
+    "mc": "🇲🇨",
+    "md": "🇲🇩",
+    "me": "🇲🇪",
+    "mg": "🇲🇬",
+    "mh": "🇲🇭",
+    "mk": "🇲🇰",
+    "ml": "🇲🇱",
+    "mm": "🇲🇲",
+    "mn": "🇲🇳",
+    "mo": "🇲🇴",
+    "mp": "🇲🇵",
+    "mr": "🇲🇷",
+    "ms": "🇲🇸",
+    "mt": "🇲🇹",
+    "mu": "🇲🇺",
+    "mv": "🇲🇻",
+    "mw": "🇲🇼",
+    "mx": "🇲🇽",
+    "my": "🇲🇾",
+    "mz": "🇲🇿",
+    "na": "🇳🇦",
+    "ne": "🇳🇪",
+    "ng": "🇳🇬",
+    "ni": "🇳🇮",
+    "nl": "🇳🇱",
+    "no": "🇳🇴",
+    "np": "🇳🇵",
+    "nr": "🇳🇷",
+    "nu": "🇳🇺",
+    "nz": "🇳🇿",
+    "om": "🇴🇲",
+    "pa": "🇵🇦",
+    "pe": "🇵🇪",
+    "pf": "🇵🇫",
+    "pg": "🇵🇬",
+    "ph": "🇵🇭",
+    "pk": "🇵🇰",
+    "pl": "🇵🇱",
+    "pr": "🇵🇷",
+    "ps": "🇵🇸",
+    "pt": "🇵🇹",
+    "pw": "🇵🇼",
+    "py": "🇵🇾",
+    "qa": "🇶🇦",
+    "ro": "🇷🇴",
+    "rs": "🇷🇸",
+    "ru": "🇷🇺",
+    "rw": "🇷🇼",
+    "sa": "🇸🇦",
+    "sb": "🇸🇧",
+    "sc": "🇸🇨",
+    "sd": "🇸🇩",
+    "se": "🇸🇪",
+    "sg": "🇸🇬",
+    "sh": "🇸🇭",
+    "si": "🇸🇮",
+    "sk": "🇸🇰",
+    "sl": "🇸🇱",
+    "sm": "🇸🇲",
+    "sn": "🇸🇳",
+    "so": "🇸🇴",
+    "sr": "🇸🇷",
+    "ss": "🇸🇸",
+    "st": "🇸🇹",
+    "sv": "🇸🇻",
+    "sy": "🇸🇾",
+    "sz": "🇸🇿",
+    "tc": "🇹🇨",
+    "td": "🇹🇩",
+    "tg": "🇹🇬",
+    "th": "🇹🇭",
+    "tj": "🇹🇯",
+    "tk": "🇹🇰",
+    "tl": "🇹🇱",
+    "tm": "🇹🇲",
+    "tn": "🇹🇳",
+    "to": "🇹🇴",
+    "tr": "🇹🇷",
+    "tt": "🇹🇹",
+    "tv": "🇹🇻",
+    "tz": "🇹🇿",
+    "ua": "🇺🇦",
+    "ug": "🇺🇬",
+    "us": "🇺🇸",
+    "uy": "🇺🇾",
+    "uz": "🇺🇿",
+    "va": "🇻🇦",
+    "vc": "🇻🇨",
+    "ve": "🇻🇪",
+    "vg": "🇻🇬",
+    "vi": "🇻🇮",
+    "vn": "🇻🇳",
+    "vu": "🇻🇺",
+    "ws": "🇼🇸",
+    "ye": "🇾🇪",
+    "za": "🇿🇦",
+    "zm": "🇿🇲",
+    "zw": "🇿🇼",
 }
 
 # ── Colour helpers ────────────────────────────────────────────────────────────
+
 
 def _to_argb(color: str | None) -> str | None:
     """Convert any CSS color string → openpyxl ARGB hex (e.g. ``'FF4472C4'``).
@@ -237,9 +409,8 @@ def _font_color_argb(color: str | None) -> str:
 
 # ── Segment helpers ───────────────────────────────────────────────────────────
 
-def _group_segments(
-    segments: list[_BandSegment], show_every: int
-) -> list[list[_BandSegment]]:
+
+def _group_segments(segments: list[_BandSegment], show_every: int) -> list[list[_BandSegment]]:
     """Partition *segments* into consecutive groups of size *show_every*."""
     n = max(1, show_every)
     groups: list[list[_BandSegment]] = []
@@ -254,9 +425,7 @@ def _group_segments(
     return groups
 
 
-def _col_for_day(
-    day: date, visible_days: list[date], *, end: bool = False
-) -> int:
+def _col_for_day(day: date, visible_days: list[date], *, end: bool = False) -> int:
     """Return the 1-based Excel column index for *day*.
 
     When ``end=True`` the column corresponds to the *end_exclusive* boundary
@@ -269,6 +438,7 @@ def _col_for_day(
 
 
 # ── Visible-day helper ────────────────────────────────────────────────────────
+
 
 def compute_visible_days(config: CalendarConfig) -> list[date]:
     """Return the ordered list of calendar dates that get a day column.
@@ -297,6 +467,7 @@ def compute_visible_days(config: CalendarConfig) -> list[date]:
 
 # ── Holiday pre-fetch ─────────────────────────────────────────────────────────
 
+
 def _build_holiday_map(
     visible_days: list[date],
     db: CalendarDB,
@@ -321,10 +492,7 @@ def _build_holiday_map(
             continue
         daykey = d.strftime("%Y%m%d")
         if "federal_holiday" in classes:
-            gov = [
-                h for h in db.get_holidays_for_date(daykey, country)
-                if h.get("nonworkday")
-            ]
+            gov = [h for h in db.get_holidays_for_date(daykey, country) if h.get("nonworkday")]
             icon_key = str((gov[0].get("icon") if gov else "") or "").lower()
             emoji = _COUNTRY_FLAGS.get(icon_key, "🏛")
             hmap[d] = {
@@ -336,14 +504,8 @@ def _build_holiday_map(
             }
             continue
         if "company_holiday" in classes:
-            special = [
-                s for s in db.get_special_days_for_date(daykey)
-                if s.get("nonworkday")
-            ]
-            day_color = (
-                str((special[0].get("daycolor") if special else "") or "").strip()
-                or company_color
-            )
+            special = [s for s in db.get_special_days_for_date(daykey) if s.get("nonworkday")]
+            day_color = str((special[0].get("daycolor") if special else "") or "").strip() or company_color
             icon_key = str((special[0].get("icon") if special else "") or "").lower()
             emoji = _COUNTRY_FLAGS.get(icon_key, "🏢")
             hmap[d] = {
@@ -367,6 +529,7 @@ def _build_holiday_map(
 
 # ── Vertical-line → right-border mapping ─────────────────────────────────────
 
+
 def _build_right_border_cols(
     vertical_lines: list[dict],
     band_segments: dict[str, list[_BandSegment]],
@@ -388,16 +551,8 @@ def _build_right_border_cols(
         value = str(line.get("value") or "").strip()
         repeat = bool(line.get("repeat", False))
         align = str(line.get("align", "end")).strip().lower()
-        line_color = str(
-            line.get("color")
-            or tk_vline.get("stroke")
-            or fallback_color
-        )
-        line_width = float(
-            line.get("width")
-            or tk_vline.get("stroke_width")
-            or fallback_width
-        )
+        line_color = str(line.get("color") or tk_vline.get("stroke") or fallback_color)
+        line_width = float(line.get("width") or tk_vline.get("stroke_width") or fallback_width)
         if not band_name:
             continue
         segs = band_segments.get(band_name, [])
@@ -453,12 +608,11 @@ def _apply_overlay_fill(cell: Any, base_argb: str, overlay_color: str | None) ->
         )
         return
     if overlay_argb is not None:
-        cell.fill = PatternFill(
-            start_color=overlay_argb, end_color=overlay_argb, fill_type="solid"
-        )
+        cell.fill = PatternFill(start_color=overlay_argb, end_color=overlay_argb, fill_type="solid")
 
 
 # ── Shared sheet-builder helpers ──────────────────────────────────────────────
+
 
 def _read_band_settings(config: CalendarConfig) -> dict:
     """Return the workbook font, colours and band defaults (``excelblockplan_*``).
@@ -466,6 +620,7 @@ def _read_band_settings(config: CalendarConfig) -> dict:
     Holiday fills fall back to the global ``theme_federal_holiday_color`` /
     ``theme_company_holiday_color`` when the theme sets no Excel-specific colour.
     """
+
     def _cfg(*names: str, default: Any = None) -> Any:
         for n in names:
             v = getattr(config, n, None)
@@ -476,27 +631,13 @@ def _read_band_settings(config: CalendarConfig) -> dict:
     return {
         "font_name": str(_cfg("excelblockplan_font", default="Calibri")),
         "font_size": int(_cfg("excelblockplan_font_size", default=9)),
-        "band_row_height": float(
-            _cfg("excelblockplan_band_row_height", default=18.0)
-        ),
-        "header_heading_fill": str(
-            _cfg("excelblockplan_header_heading_fill_color", default="none")
-        ),
-        "header_label_color": str(
-            _cfg("excelblockplan_header_label_color", default="black")
-        ),
-        "header_label_align_h": str(
-            _cfg("excelblockplan_header_label_align_h", default="right")
-        ).lower(),
-        "timeband_fill_color": _cfg(
-            "excelblockplan_timeband_fill_color", default="none"
-        ),
-        "timeband_fill_palette": _cfg(
-            "excelblockplan_timeband_fill_palette", default=[]
-        ) or [],
-        "timeband_label_color": str(
-            _cfg("excelblockplan_timeband_label_color", default="black")
-        ),
+        "band_row_height": float(_cfg("excelblockplan_band_row_height", default=18.0)),
+        "header_heading_fill": str(_cfg("excelblockplan_header_heading_fill_color", default="none")),
+        "header_label_color": str(_cfg("excelblockplan_header_label_color", default="black")),
+        "header_label_align_h": str(_cfg("excelblockplan_header_label_align_h", default="right")).lower(),
+        "timeband_fill_color": _cfg("excelblockplan_timeband_fill_color", default="none"),
+        "timeband_fill_palette": _cfg("excelblockplan_timeband_fill_palette", default=[]) or [],
+        "timeband_label_color": str(_cfg("excelblockplan_timeband_label_color", default="black")),
         "federal_color": str(
             _cfg(
                 "excelblockplan_federal_holiday_fill_color",
@@ -523,9 +664,7 @@ def _setup_column_widths(ws: Any, visible_days: list[date]) -> None:
         ws.column_dimensions[get_column_letter(col_idx)].width = width
     ws.column_dimensions[get_column_letter(CONTINUATION_COL)].width = DAY_COL_WIDTH
     for i in range(len(visible_days)):
-        ws.column_dimensions[
-            get_column_letter(FIRST_DATE_COL + i)
-        ].width = DAY_COL_WIDTH
+        ws.column_dimensions[get_column_letter(FIRST_DATE_COL + i)].width = DAY_COL_WIDTH
 
 
 def _write_timebands(
@@ -561,32 +700,20 @@ def _write_timebands(
         band_font_name: str = str(band.get("excel_font_name") or settings["font_name"])
         band_font_size: int = int(band.get("excel_font_size") or settings["font_size"])
 
-        row_h_pts = float(
-            band.get("row_height") or settings["band_row_height"]
-        )
+        row_h_pts = float(band.get("row_height") or settings["band_row_height"])
         ws.row_dimensions[current_row].height = max(12.0, row_h_pts * 0.75)
 
         label_text = str(band.get("label", ""))
-        heading_fill_color = str(
-            band.get("label_fill_color") or settings["header_heading_fill"] or ""
-        )
-        heading_label_color = str(
-            band.get("label_color")
-            or tk_heading.get("color")
-            or settings["header_label_color"]
-        )
-        heading_align_h = str(
-            band.get("label_align_h") or settings["header_label_align_h"]
-        ).lower()
-        excel_h_align = (
-            "right" if heading_align_h == "right"
-            else "center" if heading_align_h == "center"
-            else "left"
-        )
+        heading_fill_color = str(band.get("label_fill_color") or settings["header_heading_fill"] or "")
+        heading_label_color = str(band.get("label_color") or tk_heading.get("color") or settings["header_label_color"])
+        heading_align_h = str(band.get("label_align_h") or settings["header_label_align_h"]).lower()
+        excel_h_align = "right" if heading_align_h == "right" else "center" if heading_align_h == "center" else "left"
 
         ws.merge_cells(
-            start_row=current_row, start_column=1,
-            end_row=current_row, end_column=LABEL_COL_END,
+            start_row=current_row,
+            start_column=1,
+            end_row=current_row,
+            end_column=LABEL_COL_END,
         )
         heading_cell = ws.cell(row=current_row, column=1, value=label_text)
         heading_cell.font = Font(
@@ -595,17 +722,13 @@ def _write_timebands(
             bold=True,
             color=_font_color_argb(heading_label_color),
         )
-        heading_cell.alignment = Alignment(
-            horizontal=excel_h_align, vertical="center", wrap_text=False
-        )
+        heading_cell.alignment = Alignment(horizontal=excel_h_align, vertical="center", wrap_text=False)
         _apply_fill(heading_cell, heading_fill_color)
 
         # ── Icon band — one cell per visible day ─────────────────────────
         if str(band.get("unit", "")).strip().lower() == "icon":
             icon_rules = list(band.get("icon_rules") or [])
-            day_icon_map = compute_icon_band_days(
-                band_events, icon_rules, visible_days, classify_fn=_classify
-            )
+            day_icon_map = compute_icon_band_days(band_events, icon_rules, visible_days, classify_fn=_classify)
             icon_fill = str(band.get("fill_color") or "none")
             for i, d in enumerate(visible_days):
                 col = FIRST_DATE_COL + i
@@ -635,32 +758,20 @@ def _write_timebands(
             tk_box_band.get("fill") or settings["timeband_fill_color"],
         )
         band_palette_raw = band.get("fill_palette", settings["timeband_fill_palette"])
-        color_list = BlockPlanRenderer._resolve_color_list(
-            band_fill_raw, band_palette_raw, db
-        )
+        color_list = BlockPlanRenderer._resolve_color_list(band_fill_raw, band_palette_raw, db)
 
-        seg_label_color = str(
-            band.get("font_color")
-            or tk_band_label.get("color")
-            or settings["timeband_label_color"]
-        )
+        seg_label_color = str(band.get("font_color") or tk_band_label.get("color") or settings["timeband_label_color"])
         show_every = max(1, int(band.get("show_every", 1)))
         label_values: list | None = band.get("label_values")
         band_fill_rules_raw = band.get("fill_rules")
-        band_fill_rules: list[dict] | None = (
-            band_fill_rules_raw if isinstance(band_fill_rules_raw, list) else None
-        )
+        band_fill_rules: list[dict] | None = band_fill_rules_raw if isinstance(band_fill_rules_raw, list) else None
         groups = _group_segments(segs, show_every)
 
         for gidx, group in enumerate(groups):
             seg_start = group[0].start
             seg_end_excl = group[-1].end_exclusive
 
-            if (
-                not visible_days
-                or seg_start > visible_days[-1]
-                or seg_end_excl <= visible_days[0]
-            ):
+            if not visible_days or seg_start > visible_days[-1] or seg_end_excl <= visible_days[0]:
                 continue
 
             col_s = _col_for_day(seg_start, visible_days)
@@ -674,10 +785,8 @@ def _write_timebands(
             else:
                 cell_text = group[0].label
 
-            is_single_day = (col_s == col_e)
-            cell_fill_color: str | None = (
-                color_list[gidx % len(color_list)] if color_list else None
-            )
+            is_single_day = col_s == col_e
+            cell_fill_color: str | None = color_list[gidx % len(color_list)] if color_list else None
             if is_single_day:
                 day_idx = col_s - FIRST_DATE_COL
                 if 0 <= day_idx < len(visible_days):
@@ -688,9 +797,7 @@ def _write_timebands(
                             if not isinstance(rule, dict):
                                 continue
                             match = rule.get("match") or {}
-                            if isinstance(match, dict) and day_rule_matches(
-                                _classify(d), match
-                            ):
+                            if isinstance(match, dict) and day_rule_matches(_classify(d), match):
                                 color = rule.get("color")
                                 if color:
                                     cell_fill_color = str(color)
@@ -707,8 +814,10 @@ def _write_timebands(
 
             if col_e > col_s:
                 ws.merge_cells(
-                    start_row=current_row, start_column=col_s,
-                    end_row=current_row, end_column=col_e,
+                    start_row=current_row,
+                    start_column=col_s,
+                    end_row=current_row,
+                    end_column=col_e,
                 )
             seg_cell = ws.cell(row=current_row, column=col_s, value=cell_text)
             seg_cell.font = Font(
@@ -716,9 +825,7 @@ def _write_timebands(
                 size=band_font_size,
                 color=_font_color_argb(seg_label_color),
             )
-            seg_cell.alignment = Alignment(
-                horizontal="center", vertical="center", wrap_text=True
-            )
+            seg_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             _apply_fill(seg_cell, cell_fill_color)
 
         current_row += 1
@@ -737,9 +844,7 @@ def _write_column_header_row(
     settings: dict,
 ) -> None:
     """Write the label row, then apply holiday shading / vertical-line borders."""
-    header_font = Font(
-        name=settings["font_name"], size=settings["font_size"], bold=True
-    )
+    header_font = Font(name=settings["font_name"], size=settings["font_size"], bold=True)
     header_align_center = Alignment(horizontal="center", vertical="center")
 
     ws.row_dimensions[header_row].height = 18
@@ -791,8 +896,12 @@ def _prepare_sheet(
     vertical_lines: list[dict] = list(config.excelblockplan_vertical_lines or [])
 
     holiday_map = _build_holiday_map(
-        visible_days, db, config,
-        settings["federal_color"], settings["company_color"], settings["weekend_color"],
+        visible_days,
+        db,
+        config,
+        settings["federal_color"],
+        settings["company_color"],
+        settings["weekend_color"],
     )
     day_classes = classify_days(visible_days, db, config)
 
@@ -801,9 +910,7 @@ def _prepare_sheet(
     range_start_str = str(config.userstart or config.adjustedstart)
     range_end_str = str(config.userend or config.adjustedend)
     raw_events = db.get_all_events_in_range(range_start_str, range_end_str)
-    band_events: list[Event] = [
-        Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events
-    ]
+    band_events: list[Event] = [Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events]
 
     # Segments cached for both heading rendering and vertical-line lookup.
     _renderer = BlockPlanRenderer()
@@ -817,12 +924,13 @@ def _prepare_sheet(
     for band in top_bands:
         bname = str(band.get("label", "")).strip().lower()
         if bname and str(band.get("unit", "")).strip().lower() != "icon":
-            band_segments[bname] = _renderer._build_segments(
-                band, start, end, config, visible_days=visible_days, db=db
-            )
+            band_segments[bname] = _renderer._build_segments(band, start, end, config, visible_days=visible_days, db=db)
 
     right_border_cols = _build_right_border_cols(
-        vertical_lines, band_segments, visible_days, config,
+        vertical_lines,
+        band_segments,
+        visible_days,
+        config,
         default_color=settings["vline_color"],
         default_width=settings["vline_width"],
     )
@@ -835,7 +943,8 @@ def _prepare_sheet(
 
     header_row = _write_timebands(
         ws,
-        config=config, db=db,
+        config=config,
+        db=db,
         top_bands=top_bands,
         visible_days=visible_days,
         band_events=band_events,
@@ -914,9 +1023,7 @@ _EVENT_FIELD_MAP: dict[str, str] = {
 }
 
 #: Fields written as Excel numbers rather than passed through as-is.
-_NUMERIC_FIELDS: frozenset[str] = frozenset(
-    {"percent_complete", "percent_work_complete", "cost", "fixed_cost"}
-)
+_NUMERIC_FIELDS: frozenset[str] = frozenset({"percent_complete", "percent_work_complete", "cost", "fixed_cost"})
 
 
 def _format_cell_value(field_name: str, raw: Any) -> Any:
@@ -951,9 +1058,7 @@ def _event_day_context(event: Event) -> DayContext:
     return DayContext(date=event.start or "")
 
 
-def _resolve_event_style(
-    engine: StyleEngine | None, event: Event
-) -> tuple[str | None, str | None]:
+def _resolve_event_style(engine: StyleEngine | None, event: Event) -> tuple[str | None, str | None]:
     """Return ``(fill_color, icon_color)`` from style_rules for *event*.
 
     Falls back to the event's own ``color`` field when no rule supplies a fill.
@@ -996,9 +1101,7 @@ def _column_for_day(visible_days: list[date], d: date) -> int | None:
     return None
 
 
-def _continuation_glyph(
-    *, continues_left: bool, continues_right: bool
-) -> str:
+def _continuation_glyph(*, continues_left: bool, continues_right: bool) -> str:
     if continues_left and continues_right:
         return "◀▶"
     if continues_left:
@@ -1043,8 +1146,8 @@ def generate_excel_blockplan(
     if not visible_days:
         return
 
-    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, _all_events, settings = (
-        _prepare_sheet(config, db)
+    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, _all_events, settings = _prepare_sheet(
+        config, db
     )
 
     # Filter events / durations using the same predicate the other
@@ -1056,9 +1159,7 @@ def generate_excel_blockplan(
     filtered_raw = filter_events(raw_dicts, config)
     # Sort the (dict, Event) pairs together so the row index used to look up
     # field values stays aligned with the sort order.
-    paired: list[tuple[dict, Event]] = [
-        (d, Event.from_dict(d)) for d in filtered_raw
-    ]
+    paired: list[tuple[dict, Event]] = [(d, Event.from_dict(d)) for d in filtered_raw]
     paired.sort(key=lambda p: (p[1].start or "", p[1].task_name or ""))
     filtered = [p[0] for p in paired]
     events = [p[1] for p in paired]

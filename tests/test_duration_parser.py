@@ -139,9 +139,7 @@ def test_numeric_input_passes_through_as_days():
     assert parse_duration(2.5) == 2.5
 
 
-@pytest.mark.parametrize(
-    "text", [None, "", "   ", "n/a", "abc", "4hr of prep", "TBD", "-"]
-)
+@pytest.mark.parametrize("text", [None, "", "   ", "n/a", "abc", "4hr of prep", "TBD", "-"])
 def test_unparseable_returns_none(text):
     """A bad cell costs one field, not the row -- so None, never a raise."""
     assert parse_duration(text) is None

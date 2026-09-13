@@ -33,9 +33,7 @@ def _title_header_heights(config: CalendarConfig) -> tuple[float, float]:
     setfontsizes() sets both font sizes before layout runs.
     """
     title, header = config.mini_title_font_size, config.mini_header_font_size
-    assert title is not None and header is not None, (
-        "setfontsizes() must run before mini layout"
-    )
+    assert title is not None and header is not None, "setfontsizes() must run before mini layout"
     return title * 1.8, header * 1.8
 
 
@@ -80,9 +78,7 @@ class MiniCalendarLayout(BaseLayout):
 
         # Grid dimensions
         cols = config.mini_columns
-        rows = (
-            config.mini_rows if config.mini_rows > 0 else math.ceil(num_months / cols)
-        )
+        rows = config.mini_rows if config.mini_rows > 0 else math.ceil(num_months / cols)
 
         # Margins and header/footer
         margins = self._calculate_margins(config)
@@ -96,9 +92,7 @@ class MiniCalendarLayout(BaseLayout):
         content_width = margins["usable_width"]
         # PDF coordinates: Y increases upward, bottom is y=0
         content_bottom = margins["bottom"] + hf["footer_height"]
-        content_height = (
-            margins["usable_height"] - hf["header_height"] - hf["footer_height"]
-        )
+        content_height = margins["usable_height"] - hf["header_height"] - hf["footer_height"]
 
         # Per-month grid width
         gap = config.mini_month_gap
@@ -124,18 +118,13 @@ class MiniCalendarLayout(BaseLayout):
         # The binding constraint is whichever produces the smaller cell.
         days_per_week = 5 if weekend_style_is_workweek(config.weekend_style) else 7
         show_wn = config.mini_show_week_numbers
-        if show_wn:
-            day_col_width = month_width / (days_per_week + 0.6)
-        else:
-            day_col_width = month_width / days_per_week
+        day_col_width = month_width / (days_per_week + 0.6) if show_wn else month_width / days_per_week
 
         title_height, header_height = _title_header_heights(config)
 
         # Height available per row of months (after subtracting inter-row gaps)
         available_per_row = (content_height - (rows - 1) * gap) / max(rows, 1)
-        max_cell_from_height = (
-            available_per_row - title_height - header_height
-        ) / max(max_week_rows, 1)
+        max_cell_from_height = (available_per_row - title_height - header_height) / max(max_week_rows, 1)
 
         # Use the smaller of the two constraints so every row fits on the page.
         cell_height = min(day_col_width, max(1.0, max_cell_from_height))
@@ -147,9 +136,7 @@ class MiniCalendarLayout(BaseLayout):
         if config.mini_show_week_numbers and config.mini_week_number_mode == "custom":
             if config.mini_week1_start:
                 try:
-                    wn_anchor = datetime.strptime(
-                        config.mini_week1_start, "%Y%m%d"
-                    ).date()
+                    wn_anchor = datetime.strptime(config.mini_week1_start, "%Y%m%d").date()
                 except ValueError:
                     logger.warning(
                         "Invalid mini_week1_start: %s, falling back to ISO",
@@ -282,9 +269,7 @@ class MiniCalendarLayout(BaseLayout):
                 self.week_numbers[wn_key] = wn_value
 
             # Day cells — in workweek mode, skip Sat/Sun and reflow columns
-            visible_days = (
-                [d for d in week if d.weekday() < 5] if is_workweek else list(week)
-            )
+            visible_days = [d for d in week if d.weekday() < 5] if is_workweek else list(week)
             for col_idx, d in enumerate(visible_days):
                 cell_x = day_area_x + col_idx * day_col_width
                 is_adj = d.month != month

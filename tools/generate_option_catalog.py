@@ -51,9 +51,7 @@ GUIDE = ROOT / "docs" / "USER_GUIDE.md"
 HEADING = "## Command-Line Option Catalog (All Options)"
 POSITIONAL_HEADING = "## Positional Arguments by Command"
 
-POSITIONAL_HEADER = (
-    "| Name | Required | Description | Choices |\n|---|---|---|---|"
-)
+POSITIONAL_HEADER = "| Name | Required | Description | Choices |\n|---|---|---|---|"
 
 PREAMBLE = (
     "Generated from the argument parser by `tools/generate_option_catalog.py`.\n"
@@ -101,9 +99,7 @@ def _options_cell(key: tuple[str, ...], actions: dict[str, argparse.Action]) -> 
     longs = ", ".join(_md(opt) for opt in key)
 
     shorts_by_command: dict[str, tuple[str, ...]] = {
-        command: tuple(
-            o for o in action.option_strings if not o.startswith("--")
-        )
+        command: tuple(o for o in action.option_strings if not o.startswith("--"))
         for command, action in actions.items()
     }
     distinct = set(shorts_by_command.values())
@@ -115,15 +111,10 @@ def _options_cell(key: tuple[str, ...], actions: dict[str, argparse.Action]) -> 
     if common:
         cell += ", " + ", ".join(_md(s) for s in common)
 
-    exceptions = sorted(
-        command
-        for command, shorts in shorts_by_command.items()
-        if shorts != common and shorts
-    )
+    exceptions = sorted(command for command, shorts in shorts_by_command.items() if shorts != common and shorts)
     if exceptions:
         notes = "; ".join(
-            f"{', '.join(_md(s) for s in shorts_by_command[command])} for {_md(command)}"
-            for command in exceptions
+            f"{', '.join(_md(s) for s in shorts_by_command[command])} for {_md(command)}" for command in exceptions
         )
         cell += f" ({notes})"
     return cell
@@ -179,17 +170,11 @@ def _defaults_cell(actions: dict[str, argparse.Action]) -> str:
             value, _commands = next(iter(defaults.values()))
             parts.append(f"default {_md(value)}")
         else:
-            for value, commands in sorted(
-                defaults.values(), key=lambda pair: sorted(pair[1])
-            ):
+            for value, commands in sorted(defaults.values(), key=lambda pair: sorted(pair[1])):
                 tags = ", ".join(_md(c) for c in sorted(commands))
                 parts.append(f"{tags}: default {_md(value)}")
 
-    choices = {
-        tuple(str(c) for c in a.choices)
-        for a in actions.values()
-        if a.choices is not None
-    }
+    choices = {tuple(str(c) for c in a.choices) for a in actions.values() if a.choices is not None}
     for choice_set in sorted(choices):
         parts.append("choices " + _md(", ".join(choice_set)))
 
@@ -198,8 +183,7 @@ def _defaults_cell(actions: dict[str, argparse.Action]) -> str:
 
 def build_table() -> str:
     """The full section body: preamble, header row, and one row per option."""
-    rows = ["| Option(s) | Metavar | Commands | Description | Defaults/Choices |",
-            "|---|---|---|---|---|"]
+    rows = ["| Option(s) | Metavar | Commands | Description | Defaults/Choices |", "|---|---|---|---|---|"]
 
     collected = _collect()
     for key in sorted(collected, key=lambda k: k[0]):
@@ -254,9 +238,7 @@ def _replace_table(block: str, table: str) -> str:
     its heading -- which is where every existing block keeps it.
     """
     lines = block.splitlines()
-    start = next(
-        (i for i, line in enumerate(lines) if line.startswith("|")), None
-    )
+    start = next((i for i, line in enumerate(lines) if line.startswith("|")), None)
     if start is None:
         if not table:
             return block
@@ -294,10 +276,7 @@ def sync_positionals(section: str) -> str:
         sub = subcommands.get(name)
         out.append(block if sub is None else _replace_table(block, positional_table(sub)))
 
-    missing = [
-        name for name, sub in subcommands.items()
-        if name not in seen and _positionals(sub)
-    ]
+    missing = [name for name, sub in subcommands.items() if name not in seen and _positionals(sub)]
     for name in missing:
         table = positional_table(subcommands[name])
         out.append(f"### `{name}`\n\n{table}\n\n")
@@ -308,7 +287,7 @@ def sync_positionals(section: str) -> str:
 def _split_guide(text: str, heading: str = HEADING) -> tuple[str, str, str]:
     """Guide text as ``(before, that section, after)``."""
     start = text.index(heading)
-    match = re.search(r"^## ", text[start + len(heading):], re.M)
+    match = re.search(r"^## ", text[start + len(heading) :], re.M)
     end = start + len(heading) + match.start() if match else len(text)
     return text[:start], text[start:end], text[end:]
 
@@ -335,8 +314,7 @@ def main() -> int:
             print("CLI tables are up to date.")
             return 0
         print(
-            "CLI tables are stale — regenerate with:\n"
-            "  uv run python tools/generate_option_catalog.py",
+            "CLI tables are stale — regenerate with:\n  uv run python tools/generate_option_catalog.py",
             file=sys.stderr,
         )
         return 1
@@ -344,10 +322,7 @@ def main() -> int:
     GUIDE.write_text(updated)
     options = len(build_table().splitlines()) - 6
     commands = sum(1 for s in _subcommand_parsers().values() if _positionals(s))
-    print(
-        f"Rewrote the CLI tables: {options} options, "
-        f"positionals for {commands} commands."
-    )
+    print(f"Rewrote the CLI tables: {options} options, positionals for {commands} commands.")
     return 0
 
 

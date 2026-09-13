@@ -88,9 +88,7 @@ class CalloutPlacement:
 _PATH_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 
 
-def append_perp_stub(
-    path_d: str, direction: Orientation, stub: float
-) -> str:
+def append_perp_stub(path_d: str, direction: Orientation, stub: float) -> str:
     """Make a leader's final segment a straight perpendicular stub.
 
     labella ends each leader with a cubic Bézier whose *endpoint tangent*
@@ -122,7 +120,7 @@ def append_perp_stub(
     if i < 0:
         return path_d
     head = path_d[:i]
-    nums = _PATH_NUM_RE.findall(path_d[i + 1:])
+    nums = _PATH_NUM_RE.findall(path_d[i + 1 :])
     if len(nums) < 6:
         return path_d
     c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in nums[-6:])
@@ -142,15 +140,10 @@ def append_perp_stub(
         s = min(stub, 0.85 * abs(span))
         qx, qy = ex - s * (1.0 if span > 0 else -1.0), ey
 
-    return (
-        f"{head}C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} "
-        f"{qx:.8f} {qy:.8f} L {ex:.8f} {ey:.8f}"
-    )
+    return f"{head}C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} {qx:.8f} {qy:.8f} L {ex:.8f} {ey:.8f}"
 
 
-def prepend_perp_stub(
-    path_d: str, direction: Orientation, stub: float
-) -> str:
+def prepend_perp_stub(path_d: str, direction: Orientation, stub: float) -> str:
     """Make a leader's first segment a straight perpendicular stub.
 
     Mirror of :func:`append_perp_stub` on the axis side. labella's first
@@ -198,7 +191,7 @@ def prepend_perp_stub(
             break
     if found < 6 or tail_start < 0:
         return path_d
-    cubic_nums = _PATH_NUM_RE.findall(path_d[c_idx + 1:tail_start])
+    cubic_nums = _PATH_NUM_RE.findall(path_d[c_idx + 1 : tail_start])
     c1x, c1y, c2x, c2y, ex, ey = (float(v) for v in cubic_nums[:6])
     tail = path_d[tail_start:]
 
@@ -217,11 +210,7 @@ def prepend_perp_stub(
         s = min(stub, 0.85 * abs(span))
         qx, qy = sx + s * (1.0 if span > 0 else -1.0), sy
 
-    return (
-        f"M {sx:.8f} {sy:.8f} L {qx:.8f} {qy:.8f} "
-        f"C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} {ex:.8f} {ey:.8f}"
-        f"{tail}"
-    )
+    return f"M {sx:.8f} {sy:.8f} L {qx:.8f} {qy:.8f} C {c1x:.8f} {c1y:.8f} {c2x:.8f} {c2y:.8f} {ex:.8f} {ey:.8f}{tail}"
 
 
 def resolve_font_path(font_name: str | None) -> str:
@@ -269,9 +258,7 @@ _PERPENDICULAR: dict[str, tuple[int, float]] = {
 }
 
 
-def _leader_path(
-    renderer: Renderer, node: Node, direction: str, direct: bool
-) -> str:
+def _leader_path(renderer: Renderer, node: Node, direction: str, direct: bool) -> str:
     """The leader for one node, routed directly or through its ancestors.
 
     labella threads a leader through the solved position of every ancestor
@@ -419,9 +406,7 @@ def _run_labella(
         }
     )
     renderer.layout(nodes)
-    _clamp_labels_to_bounds(
-        nodes, orientation, axis_origin, label_bounds, label_anchor
-    )
+    _clamp_labels_to_bounds(nodes, orientation, axis_origin, label_bounds, label_anchor)
 
     placements: list[CalloutPlacement] = []
     ox, oy = axis_origin
@@ -444,13 +429,9 @@ def _run_labella(
                 x_dot=x_dot,
                 y_dot=y_dot,
                 x_label=(
-                    ox + n.x + shift_x
-                    - (n.dx / 2.0 if centred and orientation is Orientation.HORIZONTAL else 0.0)
+                    ox + n.x + shift_x - (n.dx / 2.0 if centred and orientation is Orientation.HORIZONTAL else 0.0)
                 ),
-                y_label=(
-                    oy + n.y + shift_y
-                    - (n.dy / 2.0 if centred and orientation is Orientation.VERTICAL else 0.0)
-                ),
+                y_label=(oy + n.y + shift_y - (n.dy / 2.0 if centred and orientation is Orientation.VERTICAL else 0.0)),
                 label_w=n.dx,
                 label_h=n.dy,
                 layer=n.getLayerIndex(),
@@ -496,9 +477,7 @@ def _clamp_labels_to_bounds(
     if high <= low:
         return
     # Axis-local: position p sits at origin + p along the axis.
-    origin = (
-        axis_origin[0] if orientation is Orientation.HORIZONTAL else axis_origin[1]
-    )
+    origin = axis_origin[0] if orientation is Orientation.HORIZONTAL else axis_origin[1]
     lo = low - origin
     hi = high - origin
     # Where the box sits relative to the solved position — its leading edge,
@@ -545,16 +524,8 @@ def _spans_by_row(
     """Group label extents by the row they are drawn on."""
     rows: dict[tuple[float, float], list[tuple[float, float]]] = {}
     for p in placements:
-        key = (
-            (round(p.y_label, 3), 0.0)
-            if p.orientation is Orientation.HORIZONTAL
-            else (0.0, round(p.x_label, 3))
-        )
-        span = (
-            (p.x_label, p.label_w)
-            if p.orientation is Orientation.HORIZONTAL
-            else (p.y_label, p.label_h)
-        )
+        key = (round(p.y_label, 3), 0.0) if p.orientation is Orientation.HORIZONTAL else (0.0, round(p.x_label, 3))
+        span = (p.x_label, p.label_w) if p.orientation is Orientation.HORIZONTAL else (p.y_label, p.label_h)
         rows.setdefault(key, []).append(span)
     return rows
 
@@ -629,11 +600,7 @@ def _layout_one_side(
         if density < _MIN_DENSITY:
             break
         attempt = _run_labella(events, density=density, **kwargs)
-        if (
-            max_extent is not None
-            and max_extent > 0
-            and _stack_extent(attempt) > max_extent
-        ):
+        if max_extent is not None and max_extent > 0 and _stack_extent(attempt) > max_extent:
             break
         overlaps = _row_overlap_count(attempt)
         if overlaps == 0:
@@ -733,9 +700,7 @@ def layout_callouts(
     if side is Side.BOTH:
         primary_events, secondary_events = partition_for_both(events)
         primary = _layout_one_side(primary_events, side=Side.PRIMARY, **common)
-        secondary = _layout_one_side(
-            secondary_events, side=opposite(Side.PRIMARY), **common
-        )
+        secondary = _layout_one_side(secondary_events, side=opposite(Side.PRIMARY), **common)
         return primary + secondary
 
     return _layout_one_side(events, side=side, **common)

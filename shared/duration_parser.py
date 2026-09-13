@@ -56,9 +56,7 @@ _UNIT_DAYS: dict[str, float] = {
 
 # Longest-first so "mo"/"min" are preferred over the bare "m", and
 # "hrs" over "hr" over "h".
-_UNIT_ALTERNATION = "|".join(
-    sorted((re.escape(u) for u in _UNIT_DAYS), key=len, reverse=True)
-)
+_UNIT_ALTERNATION = "|".join(sorted((re.escape(u) for u in _UNIT_DAYS), key=len, reverse=True))
 
 #: One "<number><unit>" term.  The unit is optional so a bare number
 #: parses as days.  The trailing lookahead forbids a longer unit word

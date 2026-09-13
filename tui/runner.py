@@ -78,9 +78,7 @@ class RunResult:
         return self.returncode == 0
 
 
-def run_blocking(
-    argv: list[str], *, cwd: str, python_entry: str = "ecalendar.py"
-) -> RunResult:
+def run_blocking(argv: list[str], *, cwd: str, python_entry: str = "ecalendar.py") -> RunResult:
     """Run synchronously (call from a worker thread). Captures combined output."""
     cmd = full_command(argv, python_entry=python_entry)
     proc = subprocess.run(

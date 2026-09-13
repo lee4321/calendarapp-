@@ -93,9 +93,7 @@ class PackedPlacement:
     placed: bool = True
 
 
-def resolve_box_size(
-    events: Sequence[Event], config: CalendarConfig
-) -> tuple[float, float]:
+def resolve_box_size(events: Sequence[Event], config: CalendarConfig) -> tuple[float, float]:
     """``(box_width, box_height)`` in SVG units, one size for every box.
 
     The theme's ``timeline_events.box_width`` / ``box_height`` win outright
@@ -104,11 +102,7 @@ def resolve_box_size(
     width is derived for the whole chart from the widest event, so the
     fixed-width invariant still holds.
     """
-    height = float(
-        config.timeline_event_box_height
-        or config.timeline_labella_node_height
-        or 24.0
-    )
+    height = float(config.timeline_event_box_height or config.timeline_labella_node_height or 24.0)
 
     configured = config.timeline_event_box_width
     if configured is not None and configured > 0:
@@ -122,11 +116,7 @@ def resolve_box_size(
     def measure(text: str, path: str, size: float) -> float:
         if not text:
             return 0.0
-        return (
-            string_width(text, path, size)
-            if path
-            else len(text) * size * 0.5
-        )
+        return string_width(text, path, size) if path else len(text) * size * 0.5
 
     # The text column is what has to hold the name and the notes; the icon
     # column is a fraction of the whole box, so the box is the text column
@@ -182,11 +172,7 @@ def _marker_allowance(config: CalendarConfig) -> float:
     is what has to know something sits at the end of it — the same reason
     ``_duration_row_extent`` lives beside the bar layout.
     """
-    size = (
-        getattr(config, "default_missing_icon_size", None)
-        or getattr(config, "timeline_icon_size", None)
-        or 8.0
-    )
+    size = getattr(config, "default_missing_icon_size", None) or getattr(config, "timeline_icon_size", None) or 8.0
     return max(8.0, float(size)) / 2.0
 
 
@@ -350,9 +336,7 @@ def pack_callouts(
         u_left = min(u_date, clamp_edge - extent_u)
         u_left = max(u_left, u_min)
 
-        row, u_final = _find_slot(
-            rows, u_left, extent_u, box_gap, min(clamp_edge, u_max)
-        )
+        row, u_final = _find_slot(rows, u_left, extent_u, box_gap, min(clamp_edge, u_max))
 
         if row is None:
             logger.warning(
@@ -444,9 +428,7 @@ def _placed(
 ) -> PackedPlacement:
     """Build the placement for a box that found a slot."""
     near_corner = _to_svg(u_left, v_near, orientation, side, axis_origin)
-    far_corner = _to_svg(
-        u_left + extent_u, v_near + extent_v, orientation, side, axis_origin
-    )
+    far_corner = _to_svg(u_left + extent_u, v_near + extent_v, orientation, side, axis_origin)
     x_label = min(near_corner[0], far_corner[0])
     y_label = min(near_corner[1], far_corner[1])
 

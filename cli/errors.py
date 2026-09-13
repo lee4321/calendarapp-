@@ -17,4 +17,3 @@ class ConfigError(CalendarError):
     """Raised when configuration is invalid."""
 
     pass
-

@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 class DayContext:
     """Per-day attributes for evaluating style and swimlane rules."""
 
-    date: str = ""              # YYYYMMDD — the calendar day being rendered
+    date: str = ""  # YYYYMMDD — the calendar day being rendered
     federal_holiday: bool = False
     company_holiday: bool = False
-    nonworkday: bool = False    # True if any of: federal_holiday, company_holiday, weekend
+    nonworkday: bool = False  # True if any of: federal_holiday, company_holiday, weekend
     workday: bool = True
     weekend: bool = False
 
@@ -98,17 +98,30 @@ class StyleResult:
     label_override: dict | None = None
 
     def is_empty(self) -> bool:
-        return all(
-            v is None
-            for v in (
-                self.fill_color, self.fill_colors, self.fill_opacity,
-                self.pattern, self.pattern_color, self.pattern_opacity,
-                self.stroke_color, self.stroke_width, self.stroke_opacity,
-                self.stroke_dasharray, self.icon, self.icon_color,
-                self.align, self.marker_icon, self.leader_override,
-                self.label_override,
+        return (
+            all(
+                v is None
+                for v in (
+                    self.fill_color,
+                    self.fill_colors,
+                    self.fill_opacity,
+                    self.pattern,
+                    self.pattern_color,
+                    self.pattern_opacity,
+                    self.stroke_color,
+                    self.stroke_width,
+                    self.stroke_opacity,
+                    self.stroke_dasharray,
+                    self.icon,
+                    self.icon_color,
+                    self.align,
+                    self.marker_icon,
+                    self.leader_override,
+                    self.label_override,
+                )
             )
-        ) and not self.text
+            and not self.text
+        )
 
     def rect_overrides(
         self,
@@ -137,23 +150,42 @@ class StyleResult:
     # caller that passes a str font/color (or float size/opacity) gets one back.
     @overload
     def text_override(
-        self, key: str, *, font: str, font_size: float, color: str,
+        self,
+        key: str,
+        *,
+        font: str,
+        font_size: float,
+        color: str,
         opacity: None = None,
     ) -> tuple[str, float, str, float | None]: ...
     @overload
     def text_override(
-        self, key: str, *, font: str, font_size: None = None, color: str,
+        self,
+        key: str,
+        *,
+        font: str,
+        font_size: None = None,
+        color: str,
         opacity: float,
     ) -> tuple[str, float | None, str, float]: ...
     @overload
     def text_override(
-        self, key: str, *, font: str, font_size: None = None, color: str,
+        self,
+        key: str,
+        *,
+        font: str,
+        font_size: None = None,
+        color: str,
         opacity: None = None,
     ) -> tuple[str, float | None, str, float | None]: ...
     @overload
     def text_override(
-        self, key: str, *, font: str | None = None,
-        font_size: float | None = None, color: str | None = None,
+        self,
+        key: str,
+        *,
+        font: str | None = None,
+        font_size: float | None = None,
+        color: str | None = None,
         opacity: float | None = None,
     ) -> tuple[str | None, float | None, str | None, float | None]: ...
     def text_override(
@@ -231,11 +263,21 @@ class StyleResult:
 
 # ── Known text-element keys ───────────────────────────────────────────────────
 
-_ALL_TEXT_KEYS: frozenset[str] = frozenset({
-    "event_name", "event_notes", "event_date",
-    "duration_name", "duration_notes", "duration_start_date", "duration_end_date",
-    "day_number", "week_number", "month_indicator", "holiday_title",
-})
+_ALL_TEXT_KEYS: frozenset[str] = frozenset(
+    {
+        "event_name",
+        "event_notes",
+        "event_date",
+        "duration_name",
+        "duration_notes",
+        "duration_start_date",
+        "duration_end_date",
+        "day_number",
+        "week_number",
+        "month_indicator",
+        "holiday_title",
+    }
+)
 
 
 # ── Shared criterion matchers ─────────────────────────────────────────────────
@@ -303,12 +345,24 @@ def _matches_date(criterion: Any, datekey: str) -> bool:
     return False
 
 
-_EVENT_CRITERIA_KEYS: frozenset[str] = frozenset({
-    "task_name", "notes", "resource_group", "resource_names",
-    "wbs", "priority", "priority_min", "priority_max",
-    "percent_complete", "milestone", "rollup", "event_type",
-    "color", "icon",
-})
+_EVENT_CRITERIA_KEYS: frozenset[str] = frozenset(
+    {
+        "task_name",
+        "notes",
+        "resource_group",
+        "resource_names",
+        "wbs",
+        "priority",
+        "priority_min",
+        "priority_max",
+        "percent_complete",
+        "milestone",
+        "rollup",
+        "event_type",
+        "color",
+        "icon",
+    }
+)
 
 
 def _matches_event_fields(select: dict, event: Event) -> bool | None:
@@ -356,6 +410,7 @@ def _matches_event_fields(select: dict, event: Event) -> bool | None:
 
     if "wbs" in select:
         from shared.wbs_filter import WBSFilter
+
         flt = WBSFilter.parse(str(select["wbs"]))
         if flt and not flt.matches(event.wbs):
             return False
@@ -439,7 +494,9 @@ def _build_style_result(rule_style: dict) -> StyleResult:
         sr.stroke_width = float(rule_style["stroke_width"])
     if "stroke_opacity" in rule_style:
         sr.stroke_opacity = float(rule_style["stroke_opacity"])
-    dash_key = "dasharray" if "dasharray" in rule_style else ("stroke_dasharray" if "stroke_dasharray" in rule_style else None)
+    dash_key = (
+        "dasharray" if "dasharray" in rule_style else ("stroke_dasharray" if "stroke_dasharray" in rule_style else None)
+    )
     if dash_key is not None:
         v = rule_style[dash_key]
         sr.stroke_dasharray = str(v) if v is not None else None
@@ -602,9 +659,7 @@ class StyleEngine:
         Layer all event/duration rules that match the given event.
         Returns a StyleResult with accumulated overrides.
         """
-        return self.evaluate_target(
-            "duration" if event.is_duration else "event", event, ctx
-        )
+        return self.evaluate_target("duration" if event.is_duration else "event", event, ctx)
 
     def evaluate_target(
         self,
@@ -645,7 +700,6 @@ class StyleEngine:
 
         return result
 
-
     def evaluate_band_segment(
         self,
         band_name: str,
@@ -683,11 +737,7 @@ class StyleEngine:
                 targets = {str(x).lower() for x in raw}
             else:
                 continue
-            if (
-                "vertical_line" not in targets
-                and "box:vline" not in targets
-                and "all" not in targets
-            ):
+            if "vertical_line" not in targets and "box:vline" not in targets and "all" not in targets:
                 continue
 
             select = rule.get("select", {})
@@ -807,9 +857,7 @@ class ColorRuleEngine:
                 continue
             unknown = sorted(set(select) - _EVENT_CRITERIA_KEYS)
             if unknown:
-                logger.warning(
-                    "%s: unknown select criteria %s; skipped", label, ", ".join(unknown)
-                )
+                logger.warning("%s: unknown select criteria %s; skipped", label, ", ".join(unknown))
                 continue
             self._rules.append((index, select, color))
 

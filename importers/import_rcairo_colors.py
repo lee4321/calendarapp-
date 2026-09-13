@@ -53,14 +53,10 @@ def import_colors(db_path: Path, csv_path: Path, replace: bool) -> None:
     try:
         if replace:
             sql = (
-                "INSERT OR REPLACE INTO colors (EN, ES, DE, FR, hex, red, green, blue) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT OR REPLACE INTO colors (EN, ES, DE, FR, hex, red, green, blue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             )
         else:
-            sql = (
-                "INSERT OR IGNORE INTO colors (EN, ES, DE, FR, hex, red, green, blue) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            )
+            sql = "INSERT OR IGNORE INTO colors (EN, ES, DE, FR, hex, red, green, blue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
         cur = con.executemany(sql, rows)
         con.commit()

@@ -57,7 +57,9 @@ def test_holiday_bands_have_no_labelled_segments(config):
     """Like an icon band, the marks come from the visualizer, not here."""
     segments = build_segments(
         {"unit": "holiday", "label": "Holidays"},
-        date(2026, 1, 1), date(2026, 3, 1), config,
+        date(2026, 1, 1),
+        date(2026, 3, 1),
+        config,
     )
     assert segments == []
 
@@ -76,8 +78,7 @@ def test_flag_comes_from_the_holiday_row(config):
     db = _HolidayDB({"20260119": [_row("us", "Martin Luther King Jr. Day")]})
     marks = compute_holiday_band_days(DAYS, db, config)
     assert marks[date(2026, 1, 19)] == [
-        HolidayMark(icon="us", title="Martin Luther King Jr. Day",
-                    nonworkday=True, country="US")
+        HolidayMark(icon="us", title="Martin Luther King Jr. Day", nonworkday=True, country="US")
     ]
     assert marks[date(2026, 1, 20)] == []
 
@@ -97,24 +98,28 @@ def test_nonworkdays_only_drops_observances(config):
 
 
 def test_each_country_brings_its_own_flag(config):
-    db = _HolidayDB({
-        "20260119": [
-            _row("us", "Martin Luther King Jr. Day"),
-            _row("ua", "День праці", country="UA"),
-        ]
-    })
+    db = _HolidayDB(
+        {
+            "20260119": [
+                _row("us", "Martin Luther King Jr. Day"),
+                _row("ua", "День праці", country="UA"),
+            ]
+        }
+    )
     marks = compute_holiday_band_days(DAYS, db, config)
     assert [m.icon for m in marks[date(2026, 1, 19)]] == ["us", "ua"]
 
 
 def test_one_flag_per_country_and_the_closing_holiday_wins(config):
     """Two US holidays on one day must not draw the same flag twice."""
-    db = _HolidayDB({
-        "20260119": [
-            _row("us", "An Observance", nonworkday=0),
-            _row("us", "A Public Holiday", nonworkday=1),
-        ]
-    })
+    db = _HolidayDB(
+        {
+            "20260119": [
+                _row("us", "An Observance", nonworkday=0),
+                _row("us", "A Public Holiday", nonworkday=1),
+            ]
+        }
+    )
     marks = compute_holiday_band_days(DAYS, db, config)
     assert len(marks[date(2026, 1, 19)]) == 1
     assert marks[date(2026, 1, 19)][0].title == "A Public Holiday"
@@ -173,7 +178,8 @@ def _holiday_band(**overrides):
 def test_the_gantt_draws_a_flag_in_the_holiday_band():
     db = _FlagDB({"20260204": [_row("us", "A Holiday")]})
     renderer = render(
-        [task()], db=db,
+        [task()],
+        db=db,
         gantt_top_time_bands=_holiday_band(),
         gantt_bottom_time_bands=[],
     )
@@ -182,11 +188,10 @@ def test_the_gantt_draws_a_flag_in_the_holiday_band():
 
 
 def test_two_countries_on_one_day_draw_two_flags():
-    db = _FlagDB(
-        {"20260204": [_row("us", "US Day"), _row("ua", "UA Day", country="UA")]}
-    )
+    db = _FlagDB({"20260204": [_row("us", "US Day"), _row("ua", "UA Day", country="UA")]})
     renderer = render(
-        [task()], db=db,
+        [task()],
+        db=db,
         gantt_top_time_bands=_holiday_band(),
         gantt_bottom_time_bands=[],
     )
@@ -199,7 +204,8 @@ def test_two_countries_on_one_day_draw_two_flags():
 def test_the_band_draws_no_flag_on_an_ordinary_day():
     db = _FlagDB()
     renderer = render(
-        [task()], db=db,
+        [task()],
+        db=db,
         gantt_top_time_bands=_holiday_band(),
         gantt_bottom_time_bands=[],
     )
@@ -209,7 +215,8 @@ def test_the_band_draws_no_flag_on_an_ordinary_day():
 def test_nonworkdays_only_hides_an_observance_in_the_gantt():
     db = _FlagDB({"20260204": [_row("us", "An Observance", nonworkday=0)]})
     renderer = render(
-        [task()], db=db,
+        [task()],
+        db=db,
         gantt_top_time_bands=_holiday_band(nonworkdays_only=True),
         gantt_bottom_time_bands=[],
     )
@@ -220,7 +227,8 @@ def test_the_holiday_row_still_draws_its_cells():
     """The grid stays continuous with the bands above it."""
     db = _FlagDB()
     renderer = render(
-        [task()], db=db,
+        [task()],
+        db=db,
         gantt_top_time_bands=_holiday_band(),
         gantt_bottom_time_bands=[],
     )

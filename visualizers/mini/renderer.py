@@ -62,14 +62,25 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     # Candybar inherits these (it reuses the mini decoration engine).
     TOKEN_VISUALIZER = "mini"
     TOKENS = (
-        "text:day_number", "text:month_title", "text:week_number",
-        "text:label", "text:fiscal_label", "text:event_name",
-        "text:event_notes", "text:event_date", "text:heading",
+        "text:day_number",
+        "text:month_title",
+        "text:week_number",
+        "text:label",
+        "text:fiscal_label",
+        "text:event_name",
+        "text:event_notes",
+        "text:event_date",
+        "text:heading",
         "text:holiday_title",
-        "box:day", "box:cell",
-        "line:grid", "line:hash", "line:strikethrough", "line:separator",
+        "box:day",
+        "box:cell",
+        "line:grid",
+        "line:hash",
+        "line:strikethrough",
+        "line:separator",
         "line:duration_bar",
-        "icon:milestone", "icon:event",
+        "icon:milestone",
+        "icon:event",
     )
 
     def __init__(self):
@@ -114,8 +125,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # Determine week start for DOW header rendering
         week_start_sunday = config.mini_week_start == 0 or (
-            config.mini_week_start == -1
-            and weekend_style_starts_sunday(config.weekend_style)
+            config.mini_week_start == -1 and weekend_style_starts_sunday(config.weekend_style)
         )
 
         # First pass: month outlines (drawn behind titles, headers, cells).
@@ -129,7 +139,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     continue
                 x, y, w, h = coordinates[key]
                 self._draw_rect(
-                    x, y, w, h,
+                    x,
+                    y,
+                    w,
+                    h,
                     fill="none",
                     stroke=outline_color,
                     stroke_width=config.mini_month_outline_width,
@@ -202,9 +215,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         result = super().render(config, coordinates, events, db)
         if config.include_mini_details:
             # The listing paginates, so it is worth as many pages as it took.
-            result.page_count += self._render_details_svg(
-                config, coordinates, events, db
-            )
+            result.page_count += self._render_details_svg(config, coordinates, events, db)
         return result
 
     # =========================================================================
@@ -303,9 +314,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             )
 
     @staticmethod
-    def _ordered_day_labels(
-        week_start_sunday: bool, workweek_only: bool = False
-    ) -> list[str]:
+    def _ordered_day_labels(week_start_sunday: bool, workweek_only: bool = False) -> list[str]:
         """
         Return weekday labels derived from shared global config values.
 
@@ -438,10 +447,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # 4. Grid lines
         if config.mini_grid_lines:
             _ls_grid = config.get_line_style("ec-grid-line")
-            grid_stroke_width = float(
-                tk_grid.get("width") if tk_grid.get("width") is not None
-                else _ls_grid.width
-            )
+            grid_stroke_width = float(tk_grid.get("width") if tk_grid.get("width") is not None else _ls_grid.width)
             inset = grid_stroke_width / 2
             self._draw_rect(
                 x + inset,
@@ -452,16 +458,13 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 stroke=tk_grid.get("color") or _ls_grid.color,
                 stroke_width=grid_stroke_width,
                 stroke_opacity=float(
-                    tk_grid.get("opacity") if tk_grid.get("opacity") is not None
-                    else _ls_grid.opacity
+                    tk_grid.get("opacity") if tk_grid.get("opacity") is not None else _ls_grid.opacity
                 ),
                 stroke_dasharray=tk_grid.get("dasharray") or _ls_grid.dasharray or None,
                 css_class="ec-day-box",
             )
 
-    def _resolve_day_number_color(
-        self, config: CalendarConfig, token_style: TokenStyle
-    ) -> str:
+    def _resolve_day_number_color(self, config: CalendarConfig, token_style: TokenStyle) -> str:
         """Base day-number color, before any per-day override.
 
         One chain for the whole mini family (mini, mini-icon, candybar), so a
@@ -619,9 +622,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if style.fiscal_period_label:
             _ts_fiscal = config.get_text_style("ec-fiscal-label")
             tk_fiscal = self._tk("text:fiscal_label")
-            label_font_size = max(
-                4.0, tk_fiscal.get("size") or font_size * 0.6
-            )
+            label_font_size = max(4.0, tk_fiscal.get("size") or font_size * 0.6)
             label_y = y + h - label_font_size * 0.3
             self._draw_text(
                 cx,
@@ -781,9 +782,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             logger.warning("SVG pattern '%s' not found in database", pattern_name)
             return
 
-        effective_opacity = (
-            opacity if opacity is not None else config.hash_pattern_opacity
-        )
+        effective_opacity = opacity if opacity is not None else config.hash_pattern_opacity
         self._draw_rect(
             x,
             y,
@@ -831,6 +830,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         style_engine = StyleEngine(_mini_style_rules(config))
         from shared.rule_engine import StyleResult
         from visualizers.mini.day_styles import DayStyleResolver
+
         event_styles: dict[int, tuple[str, StyleResult]] = {}
         for idx, event in enumerate(duration_events):
             color = palette[idx % len(palette)]
@@ -895,19 +895,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                         break
                     line_y = (cy + ch) - idx * (stroke_w + gap) - stroke_w / 2
                     bar_stroke = sr.stroke_color if sr.stroke_color is not None else color
-                    bar_stroke_width = (
-                        sr.stroke_width if sr.stroke_width is not None else stroke_w
-                    )
-                    bar_stroke_opacity = (
-                        sr.stroke_opacity
-                        if sr.stroke_opacity is not None
-                        else _ls_dur.opacity
-                    )
-                    bar_dash = (
-                        sr.stroke_dasharray
-                        if sr.stroke_dasharray is not None
-                        else (_ls_dur.dasharray or None)
-                    )
+                    bar_stroke_width = sr.stroke_width if sr.stroke_width is not None else stroke_w
+                    bar_stroke_opacity = sr.stroke_opacity if sr.stroke_opacity is not None else _ls_dur.opacity
+                    bar_dash = sr.stroke_dasharray if sr.stroke_dasharray is not None else (_ls_dur.dasharray or None)
                     self._draw_line(
                         cx,
                         line_y,
@@ -961,14 +951,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         saved_drawing = self._drawing
 
         def page_path(number: int) -> str:
-            base = details_output_path(
-                config.outputfile, config.mini_details_output_suffix
-            )
+            base = details_output_path(config.outputfile, config.mini_details_output_suffix)
             return numbered_page_path(base, number)
 
-        writer = DetailsPageWriter(
-            self, config, coordinates, page_path, config.mini_details_title_text
-        )
+        writer = DetailsPageWriter(self, config, coordinates, page_path, config.mini_details_title_text)
         columns = self._details_columns(config)
 
         writer.section(config.mini_details_events_section_text, columns)
@@ -1015,9 +1001,5 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         """
         # Primary daykeys only — adjacent-month cells share dates with their
         # owning month elsewhere in the grid and should not double-count.
-        daykeys = [
-            key[len("Cell_") :]
-            for key in coordinates
-            if key.startswith("Cell_") and not key.endswith("__adj")
-        ]
+        daykeys = [key[len("Cell_") :] for key in coordinates if key.startswith("Cell_") and not key.endswith("__adj")]
         return event_listing.holiday_special_rows(daykeys, config, db)

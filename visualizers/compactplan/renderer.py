@@ -75,30 +75,52 @@ _KEY_COLUMN_PADDING = 8.0
 # the icon color alone, which preserves backward behaviour for exotic names.
 
 _NAMED_COLORS: dict[str, tuple[int, int, int] | None] = {
-    "black": (0, 0, 0),                "white": (255, 255, 255),
-    "grey": (128, 128, 128),           "gray": (128, 128, 128),
-    "lightgrey": (211, 211, 211),      "lightgray": (211, 211, 211),
-    "darkgrey": (169, 169, 169),       "darkgray": (169, 169, 169),
-    "dimgrey": (105, 105, 105),        "dimgray": (105, 105, 105),
-    "slategrey": (112, 128, 144),      "slategray": (112, 128, 144),
-    "navy": (0, 0, 128),               "midnightblue": (25, 25, 112),
-    "blue": (0, 0, 255),               "darkblue": (0, 0, 139),
-    "steelblue": (70, 130, 180),       "lightsteelblue": (176, 196, 222),
-    "dodgerblue": (30, 144, 255),      "deepskyblue": (0, 191, 255),
-    "lightblue": (173, 216, 230),      "powderblue": (176, 224, 230),
-    "red": (255, 0, 0),                "darkred": (139, 0, 0),
-    "firebrick": (178, 34, 34),        "tomato": (255, 99, 71),
-    "coral": (255, 127, 80),           "salmon": (250, 128, 114),
+    "black": (0, 0, 0),
+    "white": (255, 255, 255),
+    "grey": (128, 128, 128),
+    "gray": (128, 128, 128),
+    "lightgrey": (211, 211, 211),
+    "lightgray": (211, 211, 211),
+    "darkgrey": (169, 169, 169),
+    "darkgray": (169, 169, 169),
+    "dimgrey": (105, 105, 105),
+    "dimgray": (105, 105, 105),
+    "slategrey": (112, 128, 144),
+    "slategray": (112, 128, 144),
+    "navy": (0, 0, 128),
+    "midnightblue": (25, 25, 112),
+    "blue": (0, 0, 255),
+    "darkblue": (0, 0, 139),
+    "steelblue": (70, 130, 180),
+    "lightsteelblue": (176, 196, 222),
+    "dodgerblue": (30, 144, 255),
+    "deepskyblue": (0, 191, 255),
+    "lightblue": (173, 216, 230),
+    "powderblue": (176, 224, 230),
+    "red": (255, 0, 0),
+    "darkred": (139, 0, 0),
+    "firebrick": (178, 34, 34),
+    "tomato": (255, 99, 71),
+    "coral": (255, 127, 80),
+    "salmon": (250, 128, 114),
     "pink": (255, 192, 203),
-    "gold": (255, 215, 0),             "goldenrod": (218, 165, 32),
+    "gold": (255, 215, 0),
+    "goldenrod": (218, 165, 32),
     "yellow": (255, 255, 0),
-    "orange": (255, 165, 0),           "darkorange": (255, 140, 0),
-    "green": (0, 128, 0),              "darkgreen": (0, 100, 0),
-    "limegreen": (50, 205, 50),        "mediumseagreen": (60, 179, 113),
-    "springgreen": (0, 255, 127),      "bisque": (255, 228, 196),
-    "purple": (128, 0, 128),           "darkmagenta": (139, 0, 139),
-    "deeppink": (255, 20, 147),        "mediumpurple": (147, 112, 219),
-    "none": None,                       "transparent": None,
+    "orange": (255, 165, 0),
+    "darkorange": (255, 140, 0),
+    "green": (0, 128, 0),
+    "darkgreen": (0, 100, 0),
+    "limegreen": (50, 205, 50),
+    "mediumseagreen": (60, 179, 113),
+    "springgreen": (0, 255, 127),
+    "bisque": (255, 228, 196),
+    "purple": (128, 0, 128),
+    "darkmagenta": (139, 0, 139),
+    "deeppink": (255, 20, 147),
+    "mediumpurple": (147, 112, 219),
+    "none": None,
+    "transparent": None,
 }
 
 
@@ -234,9 +256,7 @@ def _nwd_fill_opacity_for_classes(
     return None
 
 
-def _nwd_icon_for_classes(
-    classes: frozenset[str], config: CalendarConfig
-) -> tuple[str, str] | None:
+def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tuple[str, str] | None:
     if not classes:
         return None
     if "federal_holiday" in classes and config.compactplan_federal_holiday_icon:
@@ -255,6 +275,7 @@ def _nwd_icon_for_classes(
             config.compactplan_weekend_fill_color or "#333333",
         )
     return None
+
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -339,9 +360,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         events: list,
         db: CalendarDB,
     ) -> tuple[int, list]:
-        area_x, area_y, area_w, area_h = coordinates.get(
-            "CompactPlanArea", (0.0, 0.0, config.pageX, config.pageY)
-        )
+        area_x, area_y, area_w, area_h = coordinates.get("CompactPlanArea", (0.0, 0.0, config.pageX, config.pageY))
 
         range_start = str(config.userstart or config.adjustedstart)
         range_end = str(config.userend or config.adjustedend)
@@ -358,9 +377,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         px_per_day = area_w / n_vis
 
         # Build fast date → x lookup (left edge of day's slot)
-        day_x: dict[date, float] = {
-            d: area_x + i * px_per_day for i, d in enumerate(visible_days)
-        }
+        day_x: dict[date, float] = {d: area_x + i * px_per_day for i, d in enumerate(visible_days)}
 
         # Geometry constants
         time_bands = list(getattr(config, "compactplan_time_bands", []) or [])
@@ -384,20 +401,22 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
         self._style_engine = StyleEngine(_resolve_style_rules(config))
-        self._color_rules = ColorRuleEngine(
-            config.compactplan_color_rules, owner="compact_plan.color_rules"
-        )
+        self._color_rules = ColorRuleEngine(config.compactplan_color_rules, owner="compact_plan.color_rules")
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
 
         placed = self._place_durations(
-            durations, group_color_map, day_x, area_x, area_x + area_w,
-            px_per_day, config, axis_y,
+            durations,
+            group_color_map,
+            day_x,
+            area_x,
+            area_x + area_w,
+            px_per_day,
+            config,
+            axis_y,
         )
-        milestone_lanes = self._place_milestone_labels(
-            milestones, day_x, px_per_day, config, area_x + area_w
-        )
+        milestone_lanes = self._place_milestone_labels(milestones, day_x, px_per_day, config, area_x + area_w)
         # Duration rows sit both above and below the axis, and milestone
         # labels ride at the stem tip — so a stem only as tall as the
         # configured flag height plants its label in the middle of the bars.
@@ -405,12 +424,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # stack above that.
         ms_stem_base = float(config.compactplan_milestone_flag_height)
         if placed:
-            band_top_offset = axis_y - (
-                min(p.row_y for p in placed) - line_w / 2.0
-            )
-            ms_stem_base = max(
-                ms_stem_base, band_top_offset + _MILESTONE_BAND_CLEARANCE
-            )
+            band_top_offset = axis_y - (min(p.row_y for p in placed) - line_w / 2.0)
+            ms_stem_base = max(ms_stem_base, band_top_offset + _MILESTONE_BAND_CLEARANCE)
 
         # ------------------------------------------------------------------
         # PHASE 2 — Compute actual content bounds from placed rows and flags.
@@ -428,25 +443,19 @@ class CompactPlanRenderer(BaseSVGRenderer):
             # Staggered labels ride on taller stems, so the tallest lane in
             # use — not the configured flag height — sets the top edge.
             top_lane = max(milestone_lanes.values(), default=0)
-            tallest_flag = self._milestone_flag_height(
-                config, top_lane, ms_stem_base
-            )
+            tallest_flag = self._milestone_flag_height(config, top_lane, ms_stem_base)
             min_content_y = min(min_content_y, axis_y - tallest_flag)
             max_content_y = max(max_content_y, axis_y)
             # An icon standing in for a pennant sits on the label's baseline
             # and so rises above the stem tip; the header must clear it, with
             # a point to spare so the band's rule does not sit on its edge.
-            if any(
-                self._milestone_icon_name(m, self._milestone_style(m, config)[1], config)
-                for m in milestones
-            ):
-                icon_rise = 0.8 * self._milestone_icon_size(config) - (
-                    float(config.compactplan_milestone_flag_height)
-                    * _MILESTONE_PENNANT_RATIO / 2.0
-                ) + _MILESTONE_ICON_HEADER_CLEARANCE
-                min_content_y = min(
-                    min_content_y, axis_y - tallest_flag - max(0.0, icon_rise)
+            if any(self._milestone_icon_name(m, self._milestone_style(m, config)[1], config) for m in milestones):
+                icon_rise = (
+                    0.8 * self._milestone_icon_size(config)
+                    - (float(config.compactplan_milestone_flag_height) * _MILESTONE_PENNANT_RATIO / 2.0)
+                    + _MILESTONE_ICON_HEADER_CLEARANCE
                 )
+                min_content_y = min(min_content_y, axis_y - tallest_flag - max(0.0, icon_rise))
 
         # ------------------------------------------------------------------
         # PHASE 3 — Float the header relative to content bounds.
@@ -456,8 +465,16 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Header bands at computed floating position
         self._draw_bands(
-            config, time_bands, area_x, bands_y, area_w, start, end,
-            visible_days, px_per_day, n_vis,
+            config,
+            time_bands,
+            area_x,
+            bands_y,
+            area_w,
+            start,
+            end,
+            visible_days,
+            px_per_day,
+            n_vis,
             events=evt_objects,
             db=db,
         )
@@ -466,7 +483,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if bool(config.compactplan_show_axis):
             _axis_style = config.get_line_style("ec-axis-line")
             self._draw_line(
-                area_x, axis_y, area_x + area_w, axis_y,
+                area_x,
+                axis_y,
+                area_x + area_w,
+                axis_y,
                 stroke=_axis_style.color,
                 stroke_width=config.compactplan_axis_width,
                 stroke_dasharray=_axis_style.dasharray or None,
@@ -477,7 +497,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Duration lines
         for p in placed:
             self._draw_line(
-                p.x1, p.row_y, p.x2, p.row_y,
+                p.x1,
+                p.row_y,
+                p.x2,
+                p.row_y,
                 **self._bar_stroke(p, config),
                 css_class="ec-duration-bar",
             )
@@ -501,7 +524,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # Milestones
         for m in milestones:
             self._draw_milestone(
-                m, day_x, px_per_day, axis_y, config,
+                m,
+                day_x,
+                px_per_day,
+                axis_y,
+                config,
                 label_lane=milestone_lanes.get(id(m), 0),
                 stem_base_h=ms_stem_base,
                 max_label_x=area_x + area_w,
@@ -513,14 +540,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._chart_key = _ChartKey(
             listing=list(zip(events, evt_objects, strict=False)),
             placed={id(p.event): p for p in placed},
-            milestones=frozenset(
-                id(m) for m in milestones if self._parse_date(m.start) is not None
-            ),
+            milestones=frozenset(id(m) for m in milestones if self._parse_date(m.start) is not None),
             visible_days=visible_days,
             continuations=show_continuation and has_continuations,
-            assigned_colors=(
-                *self._color_rules.colors, *group_color_map.values()
-            ),
+            assigned_colors=(*self._color_rules.colors, *group_color_map.values()),
         )
 
         # ------------------------------------------------------------------
@@ -532,9 +555,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # the top of the header bands to the lowest ink below the axis.
         # ------------------------------------------------------------------
         if config.shrink_to_content:
-            chart_bottom = self._chart_bottom(
-                config, placed, max_content_y, axis_y, dur_icon_h
-            )
+            chart_bottom = self._chart_bottom(config, placed, max_content_y, axis_y, dur_icon_h)
             content_w = round(area_w, 4)
             content_h = round(max(1.0, chart_bottom - bands_y), 4)
             vb_x = round(area_x, 4)
@@ -591,9 +612,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
           text_align    left | center | right label alignment.
           icon_rules / icon_height      "icon" and "holiday" bands.
         """
-        font_name = self._resolve_font(
-            getattr(config, "compactplan_text_font_name", None), config
-        )
+        font_name = self._resolve_font(getattr(config, "compactplan_text_font_name", None), config)
         _band_text_style = config.get_text_style("ec-label")
         text_color = str(_band_text_style.color or "black")
         text_opacity = float(_band_text_style.opacity)
@@ -622,7 +641,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         def separator(x1: float, y1: float, x2: float, y2: float) -> None:
             self._draw_line(
-                x1, y1, x2, y2,
+                x1,
+                y1,
+                x2,
+                y2,
                 stroke=_sep_style.color,
                 stroke_width=_sep_style.width,
                 stroke_opacity=_sep_style.opacity,
@@ -634,10 +656,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         for band_idx, band in enumerate(time_bands):
             row_h = self._band_row_h(band, config)
             unit = str(band.get("unit", "week")).strip().lower()
-            font_size = float(
-                getattr(config, "compactplan_text_font_size", None)
-                or max(7.0, row_h * 0.35)
-            )
+            font_size = float(getattr(config, "compactplan_text_font_size", None) or max(7.0, row_h * 0.35))
 
             # ── Per-day glyph bands — one cell per visible day ──────────────
             # "icon" takes its glyphs from the band's icon_rules; "holiday"
@@ -650,16 +669,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     # countries indistinguishable.
                     holiday_days = (
                         compute_holiday_band_days(
-                            visible_days, db, config,
+                            visible_days,
+                            db,
+                            config,
                             nonworkdays_only=bool(band.get("nonworkdays_only", False)),
                         )
                         if db is not None
                         else {}
                     )
-                    day_icon_map = {
-                        day: [(mark.icon, None) for mark in marks]
-                        for day, marks in holiday_days.items()
-                    }
+                    day_icon_map = {day: [(mark.icon, None) for mark in marks] for day, marks in holiday_days.items()}
                 else:
                     icon_rules = list(band.get("icon_rules") or [])
                     day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days)
@@ -674,7 +692,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     for d in visible_days
                 ]
                 self._draw_icon_band_row(
-                    day_cells, row_y, row_h, icon_h, fill,
+                    day_cells,
+                    row_y,
+                    row_h,
+                    icon_h,
+                    fill,
                     css_class="ec-band-cell",
                 )
                 separator(area_x, row_y + row_h, area_x + area_w, row_y + row_h)
@@ -705,9 +727,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
                 # Non-workday override for single-day date/dow cells.
                 _is_single_day = (
-                    unit in {"date", "dow"}
-                    and len(cell) == 1
-                    and (first_seg.end_exclusive - first_seg.start).days == 1
+                    unit in {"date", "dow"} and len(cell) == 1 and (first_seg.end_exclusive - first_seg.start).days == 1
                 )
                 _nwd_icons: list[tuple[str, str]] = []
                 if _is_single_day and _day_classes:
@@ -721,20 +741,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         # Prefer the holidays' own country flags over the
                         # static config icon.
                         _icon_color = _nwd_icon_result[1]
-                        _flags = (
-                            _holiday_flags.get(first_seg.start)
-                            if "federal_holiday" in _day_cls
-                            else None
-                        )
-                        _nwd_icons = (
-                            [(mark.icon, _icon_color) for mark in _flags]
-                            if _flags
-                            else [_nwd_icon_result]
-                        )
+                        _flags = _holiday_flags.get(first_seg.start) if "federal_holiday" in _day_cls else None
+                        _nwd_icons = [(mark.icon, _icon_color) for mark in _flags] if _flags else [_nwd_icon_result]
 
                 if not _is_none_color(fill):
                     self._draw_rect(
-                        x1, row_y, seg_w, row_h,
+                        x1,
+                        row_y,
+                        seg_w,
+                        row_h,
                         fill=fill,
                         fill_opacity=fill_opacity if fill_opacity is not None else 1.0,
                         css_class="ec-band-cell",
@@ -748,7 +763,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
                 if _nwd_icons:
                     self._draw_cell_icons(
-                        _nwd_icons, x1, seg_w, row_y, row_h, row_h * 0.65,
+                        _nwd_icons,
+                        x1,
+                        seg_w,
+                        row_y,
+                        row_h,
+                        row_h * 0.65,
                         css_class="ec-nwd-icon",
                     )
 
@@ -771,8 +791,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
                         text_x = x1 + pad
                         anchor = "start"
                     self._draw_text(
-                        text_x, text_y, label,
-                        font_name, font_size,
+                        text_x,
+                        text_y,
+                        label,
+                        font_name,
+                        font_size,
                         fill=text_color,
                         fill_opacity=text_opacity,
                         anchor=anchor,
@@ -799,26 +822,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
         db: CalendarDB | None = None,
     ) -> list[_BandSegment]:
         return _build_band_segments(
-            band, start, end, config,
+            band,
+            start,
+            end,
+            config,
             visible_days=visible_days,
             db=db,
             week_start_default=0,
-            fiscal_year_start_month_default=int(
-                getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
-            ),
+            fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
         )
 
     # ------------------------------------------------------------------
     # Group color / icon assignment
     # ------------------------------------------------------------------
 
-    def _assign_group_colors(
-        self, events: list[Event], config: CalendarConfig
-    ) -> dict[str, str]:
+    def _assign_group_colors(self, events: list[Event], config: CalendarConfig) -> dict[str, str]:
         palette: list[str] = list(config.compactplan_palette) or ["steelblue"]
-        groups = sorted({
-            (e.resource_group or "").strip() for e in events if e.is_duration and not e.milestone
-        })
+        groups = sorted({(e.resource_group or "").strip() for e in events if e.is_duration and not e.milestone})
         return {g: palette[i % len(palette)] for i, g in enumerate(groups)}
 
     def _assign_bar_color(self, evt: Event, group_color_map: dict[str, str]) -> str:
@@ -858,9 +878,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         # Build per-duration icon list (one unique icon per line, cycling by index).
         show_dur_icons = bool(getattr(config, "compactplan_show_duration_icons", True))
-        list_name = str(
-            getattr(config, "compactplan_duration_icon_list", "darksquare") or "darksquare"
-        )
+        list_name = str(getattr(config, "compactplan_duration_icon_list", "darksquare") or "darksquare")
         icon_list: list[str] = ICON_SETS.get(list_name, []) if show_dur_icons else []
 
         # Rows must clear whatever is actually drawn on them.  The configured
@@ -871,14 +889,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if icon_list:
             ink_h = max(
                 ink_h,
-                float(
-                    config.get_icon_style("ec-duration-icon").size
-                    or config.compactplan_duration_icon_height
-                ),
+                float(config.get_icon_style("ec-duration-icon").size or config.compactplan_duration_icon_height),
             )
-        lane_spacing = max(
-            float(config.compactplan_lane_spacing), ink_h + _DURATION_ROW_GAP
-        )
+        lane_spacing = max(float(config.compactplan_lane_spacing), ink_h + _DURATION_ROW_GAP)
 
         # Sort by start date for deterministic placement and stable icon assignment.
         sorted_durations = sorted(durations, key=lambda e: e.start)
@@ -901,11 +914,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
             color = self._assign_bar_color(evt, group_color_map)
             _style_engine = getattr(self, "_style_engine", None)
-            _sr = (
-                _style_engine.evaluate_event(evt)
-                if _style_engine is not None
-                else None
-            )
+            _sr = _style_engine.evaluate_event(evt) if _style_engine is not None else None
             if _sr is not None and _sr.fill_color:
                 color = _sr.fill_color
 
@@ -940,8 +949,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
             row_y = self._row_y(target_row, axis_y, axis_padding, lane_spacing)
             placed.append(
                 _PlacedDuration(
-                    event=evt, color=color, x1=x1, x2=x2, row_y=row_y,
-                    continues=continues, icon_name=icon_name, style=_sr,
+                    event=evt,
+                    color=color,
+                    x1=x1,
+                    x2=x2,
+                    row_y=row_y,
+                    continues=continues,
+                    icon_name=icon_name,
+                    style=_sr,
                 )
             )
 
@@ -951,16 +966,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # Milestone drawing
     # ------------------------------------------------------------------
 
-    def _milestone_x(
-        self, start_d: date, day_x: dict[date, float], px_per_day: float
-    ) -> float:
+    def _milestone_x(self, start_d: date, day_x: dict[date, float], px_per_day: float) -> float:
         """Centre x of the day column a milestone falls in."""
         if start_d in day_x:
             return day_x[start_d] + px_per_day / 2.0
-        return (
-            self._date_to_x(start_d, day_x, day_x.get(start_d, 0.0), px_per_day)
-            + px_per_day / 2.0
-        )
+        return self._date_to_x(start_d, day_x, day_x.get(start_d, 0.0), px_per_day) + px_per_day / 2.0
 
     def _place_milestone_labels(
         self,
@@ -991,9 +1001,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             config,
             italic=True,
         )
-        font_size = float(
-            getattr(config, "compactplan_name_text_font_size", None) or 8.0
-        )
+        font_size = float(getattr(config, "compactplan_name_text_font_size", None) or 8.0)
         try:
             font_path = get_font_path(font_name)
         except Exception:
@@ -1076,9 +1084,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if icon_name:
             self._draw_milestone_stem(x, axis_y, stem_h, color)
             self._draw_icon_svg(
-                icon_name, x + _MILESTONE_ICON_GAP, label_y,
+                icon_name,
+                x + _MILESTONE_ICON_GAP,
+                label_y,
                 self._milestone_icon_size(config),
-                anchor="start", color=_sr.icon_color or color,
+                anchor="start",
+                color=_sr.icon_color or color,
                 css_class="ec-milestone-marker",
                 box_token="box:milestone",
                 box_ctx=self._event_ctx(evt),
@@ -1092,9 +1103,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             font_name = self._resolve_font(
                 getattr(config, "compactplan_name_text_font_name", None), config, italic=True
             )
-            font_size = float(
-                getattr(config, "compactplan_name_text_font_size", None) or 8.0
-            )
+            font_size = float(getattr(config, "compactplan_name_text_font_size", None) or 8.0)
             label_color = str(_name_style.color or "#595959")
             label_opacity = float(_name_style.opacity)
             label_font, _, label_color, label_opacity = _sr.text_override(
@@ -1109,18 +1118,20 @@ class CompactPlanRenderer(BaseSVGRenderer):
             anchor = "start"
             if max_label_x is not None:
                 try:
-                    text_w = string_width(
-                        evt.task_name, get_font_path(label_font), font_size
-                    )
+                    text_w = string_width(evt.task_name, get_font_path(label_font), font_size)
                 except Exception:
                     text_w = 0.0
                 if text_w and label_x + text_w > max_label_x:
                     label_x = x - 3.0
                     anchor = "end"
             self._draw_text(
-                label_x, label_y, evt.task_name,
-                label_font, font_size,
-                fill=label_color, fill_opacity=label_opacity,
+                label_x,
+                label_y,
+                evt.task_name,
+                label_font,
+                font_size,
+                fill=label_color,
+                fill_opacity=label_opacity,
                 anchor=anchor,
                 css_class="ec-event-name",
             )
@@ -1128,9 +1139,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     @staticmethod
     def _milestone_label_step(config: CalendarConfig) -> float:
         """Vertical distance between milestone label lanes (one text line)."""
-        font_size = float(
-            getattr(config, "compactplan_name_text_font_size", None) or 8.0
-        )
+        font_size = float(getattr(config, "compactplan_name_text_font_size", None) or 8.0)
         return font_size * _MILESTONE_LABEL_LINE_RATIO
 
     @classmethod
@@ -1150,14 +1159,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
             base = float(config.compactplan_milestone_flag_height)
         return base + max(0, label_lane) * cls._milestone_label_step(config)
 
-    def _draw_milestone_stem(
-        self, x: float, axis_y: float, stem_h: float, color: str
-    ) -> None:
+    def _draw_milestone_stem(self, x: float, axis_y: float, stem_h: float, color: str) -> None:
         """A milestone's stem, standing *stem_h* up from its foot on the axis."""
         # Vertical stem
         self._draw_line(x, axis_y, x, axis_y - stem_h, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
         # Short horizontal foot tick at axis
-        self._draw_line(x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker")
+        self._draw_line(
+            x - 1.0, axis_y, x + 1.0, axis_y, stroke=color, stroke_width=1.0, css_class="ec-milestone-marker"
+        )
 
     def _draw_flag_marker(
         self,
@@ -1213,20 +1222,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return {
             "stroke": rule.stroke_color if rule.stroke_color is not None else p.color,
             "stroke_width": (
-                rule.stroke_width
-                if rule.stroke_width is not None
-                else float(config.compactplan_duration_line_width)
+                rule.stroke_width if rule.stroke_width is not None else float(config.compactplan_duration_line_width)
             ),
             "stroke_dasharray": (
-                rule.stroke_dasharray
-                if rule.stroke_dasharray is not None
-                else (theme.dasharray or None)
+                rule.stroke_dasharray if rule.stroke_dasharray is not None else (theme.dasharray or None)
             ),
-            "stroke_opacity": (
-                rule.stroke_opacity
-                if rule.stroke_opacity is not None
-                else theme.opacity
-            ),
+            "stroke_opacity": (rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity),
         }
 
     @staticmethod
@@ -1237,11 +1238,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         default; falls back to compactplan_duration_icon_height when absent.
         """
         style = config.get_icon_style("ec-duration-icon")
-        return float(
-            style.size
-            if style.size is not None
-            else config.compactplan_duration_icon_height
-        )
+        return float(style.size if style.size is not None else config.compactplan_duration_icon_height)
 
     def _draw_start_icon(
         self,
@@ -1265,8 +1262,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
         self._draw_icon_svg(
             rule.icon if rule.icon is not None else p.icon_name,
-            x, self._icon_baseline(center_y, size), size,
-            anchor="start", color=color,
+            x,
+            self._icon_baseline(center_y, size),
+            size,
+            anchor="start",
+            color=color,
             css_class="ec-duration-icon",
             box_token="box:duration",
             box_ctx=self._event_ctx(p.event),
@@ -1282,17 +1282,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         "after" end, so it reads continuation_icon_after.
         """
         style = config.get_icon_style("ec-continuation-icon")
-        name = str(
-            style.icon
-            or resolve_continuation_icon(
-                config.continuation_icon_after, "horizontal", "arrow-right"
-            )
-        )
-        size = float(
-            style.size
-            if style.size is not None
-            else (config.continuation_icon_height or 8.0)
-        )
+        name = str(style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right"))
+        size = float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))
         color = (style.color or config.continuation_icon_color or "").strip()
         return name, size, color
 
@@ -1314,35 +1305,27 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if max_size is not None:
             size = min(size, max_size)
         if bar_color is None:
-            color = configured or str(
-                config.get_text_style("ec-legend-text").color or "#595959"
-            )
+            color = configured or str(config.get_text_style("ec-legend-text").color or "#595959")
         else:
-            color = _resolve_icon_on_bar(
-                style_override=None, configured=configured, bar_color=bar_color
-            )
+            color = _resolve_icon_on_bar(style_override=None, configured=configured, bar_color=bar_color)
         self._draw_icon_svg(
-            name, right_x, self._icon_baseline(center_y, size), size,
-            anchor="end", color=color,
+            name,
+            right_x,
+            self._icon_baseline(center_y, size),
+            size,
+            anchor="end",
+            color=color,
             css_class="ec-continuation-icon",
         )
 
-    def _milestone_style(
-        self, evt: Event, config: CalendarConfig
-    ) -> tuple[str, StyleResult]:
+    def _milestone_style(self, evt: Event, config: CalendarConfig) -> tuple[str, StyleResult]:
         """A milestone's marker color, and the style rules it matched."""
         engine = getattr(self, "_style_engine", None)
         rule = engine.evaluate_event(evt) if engine is not None else StyleResult()
-        color = (
-            rule.fill_color
-            or evt.color
-            or config.get_element_color("ec-milestone-marker", "black")
-        )
+        color = rule.fill_color or evt.color or config.get_element_color("ec-milestone-marker", "black")
         return color, rule
 
-    def _milestone_icon_name(
-        self, evt: Event, rule: StyleResult, config: CalendarConfig
-    ) -> str | None:
+    def _milestone_icon_name(self, evt: Event, rule: StyleResult, config: CalendarConfig) -> str | None:
         """The icon a milestone is marked with instead of a pennant, if any.
 
         A style rule's icon, then the event's own, then the theme's
@@ -1350,9 +1333,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         named or the name is not in the icons table.  The chart and its key
         both ask here, so the key never shows a mark the chart did not.
         """
-        name = rule.icon if rule.icon is not None else (
-            evt.icon or getattr(config, "compactplan_milestone_icon", None)
-        )
+        name = rule.icon if rule.icon is not None else (evt.icon or getattr(config, "compactplan_milestone_icon", None))
         return name if self._resolve_icon_svg(name) else None
 
     @classmethod
@@ -1388,9 +1369,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         bottom = content_bottom
         if placed:
             half = float(config.compactplan_duration_line_width) / 2.0
-            if config.compactplan_show_duration_icons and any(
-                p.icon_name for p in placed
-            ):
+            if config.compactplan_show_duration_icons and any(p.icon_name for p in placed):
                 half = max(half, dur_icon_h / 2.0)
             if config.show_continuation_icon and any(p.continues for p in placed):
                 half = max(half, self._continuation_icon_style(config)[1] / 2.0)
@@ -1432,21 +1411,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
         saved_drawing = self._drawing
 
         def page_path(number: int) -> str:
-            base = details_output_path(
-                config.outputfile, config.compactplan_key_output_suffix
-            )
+            base = details_output_path(config.outputfile, config.compactplan_key_output_suffix)
             return numbered_page_path(base, number)
 
-        writer = DetailsPageWriter(
-            self, config, coordinates, page_path, config.compactplan_key_title_text
-        )
-        mark_share = min(
-            0.5, self._key_column_width(config, key) / max(1.0, writer.width)
-        )
+        writer = DetailsPageWriter(self, config, coordinates, page_path, config.compactplan_key_title_text)
+        mark_share = min(0.5, self._key_column_width(config, key) / max(1.0, writer.width))
         mark_column = DetailsColumn(_KEY_COLUMN_HEADING, mark_share)
         columns = [mark_column] + [
-            replace(column, width=column.width * (1.0 - mark_share))
-            for column in event_listing.details_columns(config)
+            replace(column, width=column.width * (1.0 - mark_share)) for column in event_listing.details_columns(config)
         ]
         count = len(columns) - 1
         name_column = 1 + event_listing.NAME_COLUMN
@@ -1461,9 +1433,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if drawn:
             writer.section(config.mini_details_events_section_text, columns)
             ranks = self._key_color_ranks(key)
-            for row, evt in sorted(
-                drawn, key=lambda item: self._key_row_order(item, key, ranks)
-            ):
+            for row, evt in sorted(drawn, key=lambda item: self._key_row_order(item, key, ranks)):
                 bar = key.placed.get(id(evt))
                 writer.row(
                     [""] + event_listing.event_cells(row, count),
@@ -1471,17 +1441,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     sub_line=(name_column, event_listing.event_note(row)),
                     mark=(
                         0,
-                        self._bar_mark(bar, config)
-                        if bar is not None
-                        else self._milestone_mark(evt, config),
+                        self._bar_mark(bar, config) if bar is not None else self._milestone_mark(evt, config),
                     ),
                 )
 
         holidays: list[dict] = []
         if config.compactplan_show_holiday_list and db is not None:
-            holidays = event_listing.holiday_special_rows(
-                (d.strftime("%Y%m%d") for d in key.visible_days), config, db
-            )
+            holidays = event_listing.holiday_special_rows((d.strftime("%Y%m%d") for d in key.visible_days), config, db)
         if holidays:
             writer.section(config.mini_details_holidays_section_text, columns)
             for row in holidays:
@@ -1489,11 +1455,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     [""] + event_listing.holiday_cells(row, count),
                     columns,
                     sub_line=(name_column, row.get("notes") or ""),
-                    mark=(
-                        (0, self._holiday_mark(row["icon"], config))
-                        if row["icon"]
-                        else None
-                    ),
+                    mark=((0, self._holiday_mark(row["icon"], config)) if row["icon"] else None),
                 )
 
         # The symbols explain marks on rows above; with no rows there is
@@ -1527,9 +1489,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return ranks
 
     @staticmethod
-    def _key_row_order(
-        item: tuple[dict, Event], key: _ChartKey, ranks: dict[str, int]
-    ) -> tuple:
+    def _key_row_order(item: tuple[dict, Event], key: _ChartKey, ranks: dict[str, int]) -> tuple:
         """Where an event's row falls on the key page.
 
         Bars first, sorted by color assignment -- rows of one color sit
@@ -1558,9 +1518,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             widths.append(self._duration_icon_height(config))
         return max(widths) + _KEY_COLUMN_PADDING
 
-    def _draw_swatch(
-        self, x: float, y: float, length: float, stroke: dict[str, Any]
-    ) -> None:
+    def _draw_swatch(self, x: float, y: float, length: float, stroke: dict[str, Any]) -> None:
         """A key swatch: a short run of *stroke* from *x*, centred on *y*.
 
         Emitted as a raw <line> with inline style="..." so the color
@@ -1577,14 +1535,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
             parts.append(f"stroke-opacity:{stroke['stroke_opacity']}")
         if stroke.get("stroke_dasharray"):
             parts.append(f"stroke-dasharray:{stroke['stroke_dasharray']}")
-        self.drawing.append(drawsvg.Raw(
-            f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{(x + length):.2f}" y2="{y:.2f}" '
-            f'style="{";".join(parts)}" class="ec-legend-swatch" />'
-        ))
+        self.drawing.append(
+            drawsvg.Raw(
+                f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{(x + length):.2f}" y2="{y:.2f}" '
+                f'style="{";".join(parts)}" class="ec-legend-swatch" />'
+            )
+        )
 
-    def _key_arrow_end(
-        self, config: CalendarConfig, x: float, width: float, size: float
-    ) -> float:
+    def _key_arrow_end(self, config: CalendarConfig, x: float, width: float, size: float) -> float:
         """Right edge of a continuation arrow on the key: just past the
         swatch's end, so the arrow never covers the color it continues."""
         swatch = min(width, float(config.compactplan_legend_swatch_width))
@@ -1607,8 +1565,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 self._draw_start_icon(p, x, center_y, icon_h, config)
             if p.continues and config.show_continuation_icon:
                 self._draw_continuation_icon(
-                    config, self._key_arrow_end(config, x, width, size),
-                    center_y, p.color, max_size=size * 1.25,
+                    config,
+                    self._key_arrow_end(config, x, width, size),
+                    center_y,
+                    p.color,
+                    max_size=size * 1.25,
                 )
 
         return draw
@@ -1621,8 +1582,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
             icon_name = self._milestone_icon_name(evt, rule, config)
             if icon_name:
                 self._draw_icon_svg(
-                    icon_name, x, baseline, min(size, width),
-                    anchor="start", color=rule.icon_color or color,
+                    icon_name,
+                    x,
+                    baseline,
+                    min(size, width),
+                    anchor="start",
+                    color=rule.icon_color or color,
                     css_class="ec-milestone-marker",
                     box_token="box:milestone",
                     box_ctx=self._event_ctx(evt),
@@ -1632,8 +1597,12 @@ class CompactPlanRenderer(BaseSVGRenderer):
             # The stem stands from just below the baseline to cap height,
             # one point in so its foot tick stays inside the cell.
             self._draw_flag_marker(
-                x + 1.0, baseline + size * 0.15, size, max(1.0, flag_w),
-                color, size * 0.6,
+                x + 1.0,
+                baseline + size * 0.15,
+                size,
+                max(1.0, flag_w),
+                color,
+                size * 0.6,
             )
 
         return draw
@@ -1644,38 +1613,49 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         def draw(x: float, baseline: float, width: float, size: float) -> None:
             self._draw_icon_svg(
-                icon, x, self._icon_baseline(baseline - size * 0.3, size),
-                min(size, width), anchor="start", color=color,
+                icon,
+                x,
+                self._icon_baseline(baseline - size * 0.3, size),
+                min(size, width),
+                anchor="start",
+                color=color,
                 css_class="ec-legend-icon",
             )
 
         return draw
 
-    def _key_symbols(
-        self, config: CalendarConfig, key: _ChartKey
-    ) -> list[tuple[RowMark, str]]:
+    def _key_symbols(self, config: CalendarConfig, key: _ChartKey) -> list[tuple[RowMark, str]]:
         """The chart's symbols the key explains, as ``(mark, meaning)``."""
         swatch_w = float(config.compactplan_legend_swatch_width)
         symbols: list[tuple[RowMark, str]] = []
 
         if key.continuations:
+
             def continuation(x: float, baseline: float, width: float, size: float) -> None:
                 # Where the arrow sits beside an activity's swatch above.
                 self._draw_continuation_icon(
-                    config, self._key_arrow_end(config, x, width, size),
-                    baseline - size * 0.3, None, max_size=size * 1.25,
+                    config,
+                    self._key_arrow_end(config, x, width, size),
+                    baseline - size * 0.3,
+                    None,
+                    max_size=size * 1.25,
                 )
 
-            symbols.append((
-                continuation,
-                str(config.compactplan_continuation_legend_text or "activity continues"),
-            ))
+            symbols.append(
+                (
+                    continuation,
+                    str(config.compactplan_continuation_legend_text or "activity continues"),
+                )
+            )
 
         if config.compactplan_show_axis_legend and config.compactplan_show_axis:
+
             def axis(x: float, baseline: float, width: float, size: float) -> None:
                 style = config.get_line_style("ec-axis-line")
                 self._draw_swatch(
-                    x, baseline - size * 0.3, min(width, swatch_w),
+                    x,
+                    baseline - size * 0.3,
+                    min(width, swatch_w),
                     {
                         "stroke": style.color,
                         "stroke_width": min(float(config.compactplan_axis_width), size),
@@ -1745,9 +1725,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return any(x1 < ox2 and x2 > ox1 for ox1, ox2 in occupied)
 
     @staticmethod
-    def _row_y(
-        row_idx: int, axis_y: float, axis_padding: float, lane_spacing: float
-    ) -> float:
+    def _row_y(row_idx: int, axis_y: float, axis_padding: float, lane_spacing: float) -> float:
         """Y coordinate for row index: even=above axis, odd=below."""
         half = row_idx // 2
         if row_idx % 2 == 0:
@@ -1756,9 +1734,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             return axis_y + axis_padding + half * lane_spacing
 
     @staticmethod
-    def _resolve_font(
-        font_setting: str | None, config: CalendarConfig, italic: bool = False
-    ) -> str:
+    def _resolve_font(font_setting: str | None, config: CalendarConfig, italic: bool = False) -> str:
         """Resolve a font name: explicit setting → base config font → safe fallback."""
         from config.config import FONT_REGISTRY, Fonts
 

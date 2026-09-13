@@ -1,4 +1,5 @@
 """Tests for day-based icon rules in compute_icon_band_days()."""
+
 from datetime import date
 
 from shared.data_models import Event
@@ -15,7 +16,9 @@ def test_day_based_icon_rule_fires_on_weekend():
     visible = [date(2026, 5, 1), date(2026, 5, 2), date(2026, 5, 3)]  # Fri, Sat, Sun
     rules = [{"icon": "beach", "color": "#ccc", "weekend": True}]
     out = compute_icon_band_days(
-        events=[], rules=rules, visible_days=visible,
+        events=[],
+        rules=rules,
+        visible_days=visible,
         classify_fn=_classify_weekend_only,
     )
     assert out[date(2026, 5, 1)] == []
@@ -39,11 +42,16 @@ def test_event_and_day_rules_coexist():
         {"icon": "flag", "color": "#f00", "milestone": True},
     ]
     ev = Event(
-        task_name="Launch", start="20260501", end="20260501",
-        milestone=True, datekey="20260501",
+        task_name="Launch",
+        start="20260501",
+        end="20260501",
+        milestone=True,
+        datekey="20260501",
     )
     out = compute_icon_band_days(
-        events=[ev], rules=rules, visible_days=visible,
+        events=[ev],
+        rules=rules,
+        visible_days=visible,
         classify_fn=_classify_weekend_only,
     )
     # Fri: milestone only
@@ -60,7 +68,10 @@ def test_nonworkday_key_matches_any_class():
 
     rules = [{"icon": "x", "nonworkday": True}]
     out = compute_icon_band_days(
-        events=[], rules=rules, visible_days=visible, classify_fn=classify,
+        events=[],
+        rules=rules,
+        visible_days=visible,
+        classify_fn=classify,
     )
     assert out[date(2026, 5, 1)] == []
     assert out[date(2026, 5, 2)] == [("x", "#333333")]

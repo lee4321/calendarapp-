@@ -30,10 +30,7 @@ def _items(names: list[str]) -> tuple[ListView, list[str]]:
             help_text = command(name).help
         except KeyError:
             help_text = ""
-        rows.append(
-            ListItem(Vertical(Label(name, classes="hub-name"),
-                              Static(help_text, classes="hub-sub")))
-        )
+        rows.append(ListItem(Vertical(Label(name, classes="hub-name"), Static(help_text, classes="hub-sub"))))
     return ListView(*rows), keys
 
 
@@ -64,14 +61,15 @@ class HomeScreen(Screen):
             with Vertical(classes="home-col"):
                 yield Label("DATA", classes="col-head")
                 yield ListView(
-                    ListItem(Vertical(
-                        Label("Import Hub", classes="hub-name"),
-                        Static("events · special days · holidays · content",
-                               classes="hub-sub"))),
+                    ListItem(
+                        Vertical(
+                            Label("Import Hub", classes="hub-name"),
+                            Static("events · special days · holidays · content", classes="hub-sub"),
+                        )
+                    ),
                     id="list-data",
                 )
-        yield Static("[b]Enter[/b] configure · [b]i[/b] import · [b]q[/b] quit",
-                     classes="arghelp")
+        yield Static("[b]Enter[/b] configure · [b]i[/b] import · [b]q[/b] quit", classes="arghelp")
         yield Footer()
 
     @on(ListView.Selected, "#list-views")

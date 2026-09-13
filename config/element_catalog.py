@@ -35,10 +35,10 @@ _VALID_KINDS: frozenset[str] = frozenset({"text", "box", "line", "icon"})
 class CatalogEntry:
     """One row of element_catalog.yaml."""
 
-    class_name: str                # "ec-heading"
-    kind: str                      # "text" | "box" | "line" | "icon"
-    token: str                     # token name within the kind ("heading")
-    scope: tuple[str, ...]         # visualizers that emit this class
+    class_name: str  # "ec-heading"
+    kind: str  # "text" | "box" | "line" | "icon"
+    token: str  # token name within the kind ("heading")
+    scope: tuple[str, ...]  # visualizers that emit this class
     description: str = ""
 
     @property
@@ -66,32 +66,21 @@ def load_catalog() -> dict[str, CatalogEntry]:
     raw = yaml.safe_load(_CATALOG_PATH.read_text()) or {}
     elements = raw.get("elements") or {}
     if not isinstance(elements, dict):
-        raise ValueError(
-            f"{_CATALOG_PATH}: top-level 'elements' must be a mapping"
-        )
+        raise ValueError(f"{_CATALOG_PATH}: top-level 'elements' must be a mapping")
 
     defaults = load_default_tokens()
     catalog: dict[str, CatalogEntry] = {}
     for class_name, body in elements.items():
         if not isinstance(class_name, str) or not class_name.startswith("ec-"):
-            raise ValueError(
-                f"{_CATALOG_PATH}: element key {class_name!r} must start with 'ec-'"
-            )
+            raise ValueError(f"{_CATALOG_PATH}: element key {class_name!r} must start with 'ec-'")
         if not isinstance(body, dict):
-            raise ValueError(
-                f"{_CATALOG_PATH}: {class_name}: entry must be a mapping"
-            )
+            raise ValueError(f"{_CATALOG_PATH}: {class_name}: entry must be a mapping")
         kind = body.get("kind")
         token = body.get("token")
         if kind not in _VALID_KINDS:
-            raise ValueError(
-                f"{_CATALOG_PATH}: {class_name}: kind must be one of {sorted(_VALID_KINDS)}, "
-                f"got {kind!r}"
-            )
+            raise ValueError(f"{_CATALOG_PATH}: {class_name}: kind must be one of {sorted(_VALID_KINDS)}, got {kind!r}")
         if not isinstance(token, str) or not token:
-            raise ValueError(
-                f"{_CATALOG_PATH}: {class_name}: token must be a non-empty string"
-            )
+            raise ValueError(f"{_CATALOG_PATH}: {class_name}: token must be a non-empty string")
         if token not in defaults.get(kind, {}):
             raise ValueError(
                 f"{_CATALOG_PATH}: {class_name} references {kind}:{token} but no "
@@ -103,9 +92,7 @@ def load_catalog() -> dict[str, CatalogEntry]:
         elif isinstance(scope, list):
             scope_t = tuple(str(s) for s in scope)
         else:
-            raise ValueError(
-                f"{_CATALOG_PATH}: {class_name}: scope must be a string or list"
-            )
+            raise ValueError(f"{_CATALOG_PATH}: {class_name}: scope must be a string or list")
         description = str(body.get("description") or "")
         catalog[class_name] = CatalogEntry(
             class_name=class_name,
@@ -132,15 +119,11 @@ def load_default_tokens() -> dict[str, dict[str, dict]]:
     for kind in _VALID_KINDS:
         section = raw.get(kind) or {}
         if not isinstance(section, dict):
-            raise ValueError(
-                f"{_DEFAULTS_PATH}: section {kind!r} must be a mapping"
-            )
+            raise ValueError(f"{_DEFAULTS_PATH}: section {kind!r} must be a mapping")
         kind_tokens: dict[str, dict] = {}
         for name, body in section.items():
             if not isinstance(body, dict):
-                raise ValueError(
-                    f"{_DEFAULTS_PATH}: {kind}:{name}: style body must be a mapping"
-                )
+                raise ValueError(f"{_DEFAULTS_PATH}: {kind}:{name}: style body must be a mapping")
             kind_tokens[str(name)] = dict(body)
         result[kind] = kind_tokens
     _defaults_cache = result
@@ -173,10 +156,7 @@ def entries_for_visualizer(visualizer: str | None = None) -> list[CatalogEntry]:
     catalog = load_catalog()
     if visualizer is None:
         return list(catalog.values())
-    return [
-        e for e in catalog.values()
-        if "all" in e.scope or visualizer in e.scope
-    ]
+    return [e for e in catalog.values() if "all" in e.scope or visualizer in e.scope]
 
 
 def _reset_caches_for_testing() -> None:

@@ -67,9 +67,7 @@ def test_unified_parser_names_the_replacement_section():
 
 
 def test_migration_renames_the_section():
-    converted = convert_theme(
-        {**_META, "excelheader": {"font_name": "Calibri", "font_size": 9}}
-    )
+    converted = convert_theme({**_META, "excelheader": {"font_name": "Calibri", "font_size": 9}})
     assert "excelheader" not in converted
     assert converted["excelblockplan"]["font_name"] == "Calibri"
 

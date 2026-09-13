@@ -142,9 +142,7 @@ def test_duration_no_notes_single_height_when_include_notes_enabled():
 
     height, textrowheight = _get_duration_rect_height(config, event, days)
 
-    assert abs(height - textrowheight) < 0.01, (
-        f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
-    )
+    assert abs(height - textrowheight) < 0.01, f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
 
 
 def test_duration_empty_notes_single_height_when_include_notes_enabled():
@@ -155,9 +153,7 @@ def test_duration_empty_notes_single_height_when_include_notes_enabled():
 
     height, textrowheight = _get_duration_rect_height(config, event, days)
 
-    assert abs(height - textrowheight) < 0.01, (
-        f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
-    )
+    assert abs(height - textrowheight) < 0.01, f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
 
 
 def test_duration_whitespace_notes_single_height():
@@ -168,9 +164,7 @@ def test_duration_whitespace_notes_single_height():
 
     height, textrowheight = _get_duration_rect_height(config, event, days)
 
-    assert abs(height - textrowheight) < 0.01, (
-        f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
-    )
+    assert abs(height - textrowheight) < 0.01, f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
 
 
 def test_duration_with_notes_double_height():
@@ -194,9 +188,7 @@ def test_duration_with_notes_include_notes_disabled_single_height():
 
     height, textrowheight = _get_duration_rect_height(config, event, days)
 
-    assert abs(height - textrowheight) < 0.01, (
-        f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
-    )
+    assert abs(height - textrowheight) < 0.01, f"Expected single-row height {textrowheight:.2f}, got {height:.2f}"
 
 
 def test_place_duration_no_notes_marks_one_row():
@@ -208,9 +200,7 @@ def test_place_duration_no_notes_marks_one_row():
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
 
-    rowcoords, had_overflow = renderer._place_duration(
-        config, days, rowcoords, event, days[0]
-    )
+    rowcoords, had_overflow = renderer._place_duration(config, days, rowcoords, event, days[0])
 
     assert not had_overflow
     # Only row 0 should be used; row 1 should remain free on all days
@@ -230,9 +220,7 @@ def test_place_duration_with_notes_marks_two_rows():
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
 
-    rowcoords, had_overflow = renderer._place_duration(
-        config, days, rowcoords, event, days[0]
-    )
+    rowcoords, had_overflow = renderer._place_duration(config, days, rowcoords, event, days[0])
 
     assert not had_overflow
     # Both rows 0 and 1 should be used on all days
@@ -252,9 +240,7 @@ def test_duration_with_notes_renders_notes_text_on_bar():
     rendered, leaving the lower half of the bar empty.
     """
     config = _base_config(include_notes=True)
-    event = _make_event(
-        "Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module"
-    )
+    event = _make_event("Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module")
     days = ["20260302", "20260303", "20260304"]
 
     renderer = _CaptureDurationRenderer()
@@ -286,9 +272,7 @@ def test_duration_with_notes_task_name_above_notes_text():
     making notes appear above the event name.
     """
     config = _base_config(include_notes=True)
-    event = _make_event(
-        "Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module"
-    )
+    event = _make_event("Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module")
     days = ["20260302", "20260303", "20260304"]
 
     renderer = _CaptureDurationRenderer()
@@ -299,12 +283,8 @@ def test_duration_with_notes_task_name_above_notes_text():
     renderer._place_duration_rect(config, event, days, rowcoords, [0, 1])
 
     # Find the Y positions of the task name call and the notes call
-    name_events = [
-        (y, fs) for _, y, txt, fs in renderer.text_events if "Sprint 10" in txt
-    ]
-    notes_events = [
-        (y, fs) for _, y, txt, fs in renderer.text_events if "Sprint goal" in txt
-    ]
+    name_events = [(y, fs) for _, y, txt, fs in renderer.text_events if "Sprint 10" in txt]
+    notes_events = [(y, fs) for _, y, txt, fs in renderer.text_events if "Sprint goal" in txt]
 
     assert name_events, "Task name text was not rendered"
     assert notes_events, "Notes text was not rendered"
@@ -334,8 +314,7 @@ def test_duration_without_notes_does_not_render_notes_text():
 
     # Only the task name; no second text call for notes
     assert len(renderer.text_calls) == 1, (
-        f"Expected exactly 1 text call (task name), got {len(renderer.text_calls)}: "
-        f"{renderer.text_calls}"
+        f"Expected exactly 1 text call (task name), got {len(renderer.text_calls)}: {renderer.text_calls}"
     )
 
 
@@ -346,9 +325,7 @@ def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
     config.weekly_name_text_font_color = "darkgreen"
     config.weekly_notes_text_font_name = "JuliaMono-RegularItalic"
     config.weekly_notes_text_font_color = "red"
-    event = _make_event(
-        "Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module"
-    )
+    event = _make_event("Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module")
     days = ["20260302", "20260303", "20260304"]
 
     renderer = _CaptureDurationRenderer()
@@ -356,9 +333,7 @@ def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
     renderer._place_duration_rect(config, event, days, rowcoords, [0, 1])
 
     name_draw = next((d for d in renderer.text_draws if "Sprint 10" in d["text"]), None)
-    notes_draw = next(
-        (d for d in renderer.text_draws if "Sprint goal" in d["text"]), None
-    )
+    notes_draw = next((d for d in renderer.text_draws if "Sprint goal" in d["text"]), None)
 
     assert name_draw is not None, "Duration name text was not rendered"
     assert notes_draw is not None, "Duration notes text was not rendered"
@@ -380,16 +355,12 @@ def test_event_notes_use_event_notes_font_and_color():
 
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, [day])
-    rowcoords, had_overflow = renderer._place_event_and_notes(
-        config, rowcoords, event, day
-    )
+    rowcoords, had_overflow = renderer._place_event_and_notes(config, rowcoords, event, day)
 
     assert not had_overflow
 
     name_draw = next((d for d in renderer.text_draws if "Build API" in d["text"]), None)
-    notes_draw = next(
-        (d for d in renderer.text_draws if "Owner: platform team" in d["text"]), None
-    )
+    notes_draw = next((d for d in renderer.text_draws if "Owner: platform team" in d["text"]), None)
 
     assert name_draw is not None, "Event name text was not rendered"
     assert notes_draw is not None, "Event notes text was not rendered"
@@ -412,9 +383,7 @@ def test_place_duration_with_notes_skips_pair_when_upper_row_occupied():
     Cycle).  The event-with-notes should land at rows [1, 2], not [0, 1].
     """
     config = _base_config(include_notes=True)
-    event = _make_event(
-        "API Design Phase", "20260304", "20260306", notes="Design notes"
-    )
+    event = _make_event("API Design Phase", "20260304", "20260306", notes="Design notes")
     days = ["20260304", "20260305", "20260306"]
 
     renderer = _CaptureDurationRenderer()
@@ -423,9 +392,7 @@ def test_place_duration_with_notes_skips_pair_when_upper_row_occupied():
     # Simulate a previously placed bar occupying row 0 on all days (PI-7 Release Cycle)
     rowcoords = _mark_row_used(rowcoords, days, 0)
 
-    rowcoords, had_overflow = renderer._place_duration(
-        config, days, rowcoords, event, days[0]
-    )
+    rowcoords, had_overflow = renderer._place_duration(config, days, rowcoords, event, days[0])
 
     assert not had_overflow, "Should place without overflow when rows 1 & 2 are free"
 
@@ -479,13 +446,10 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
 
     # The rect must start strictly below row 0 (larger Y in SVG space)
     assert drawn_y > row0_y + 0.01, (
-        f"Bar started at or above row 0's Y ({drawn_y:.2f} vs {row0_y:.2f}), "
-        f"overlapping the pre-occupied row"
+        f"Bar started at or above row 0's Y ({drawn_y:.2f} vs {row0_y:.2f}), overlapping the pre-occupied row"
     )
     # The rect should anchor at row 1's Y (top of the [1,2] pair)
-    assert abs(drawn_y - row1_y) < 0.01, (
-        f"Bar should anchor at row 1's Y ({row1_y:.2f}), got {drawn_y:.2f}"
-    )
+    assert abs(drawn_y - row1_y) < 0.01, f"Bar should anchor at row 1's Y ({row1_y:.2f}), got {drawn_y:.2f}"
     # Height should be exactly 2× textrowheight
     assert abs(drawn_h - textrowheight * 2) < 0.01, (
         f"Bar height should be 2× textrowheight ({textrowheight * 2:.2f}), got {drawn_h:.2f}"

@@ -92,8 +92,7 @@ class BuilderScreen(Screen):
         return build_view_argv(self.cmd, self._collect())
 
     def _refresh_command(self) -> None:
-        self.query_one("#builder-cmd", Static).update(
-            preview_string(self._argv()))
+        self.query_one("#builder-cmd", Static).update(preview_string(self._argv()))
 
     # ----- actions ------------------------------------------------------ #
 
@@ -109,9 +108,12 @@ class BuilderScreen(Screen):
     def action_run(self) -> None:
         argv = self._argv()
         self.app.push_screen(
-            ResultScreen(argv, cwd=str(cast("CalendarTUI", self.app).project_root),
-                         entry="ecalendar.py",
-                         title=f"Run · ecalendar {self.cmd.name}")
+            ResultScreen(
+                argv,
+                cwd=str(cast("CalendarTUI", self.app).project_root),
+                entry="ecalendar.py",
+                title=f"Run · ecalendar {self.cmd.name}",
+            )
         )
 
     def action_copy(self) -> None:

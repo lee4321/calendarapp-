@@ -77,11 +77,7 @@ def _find_element_bindings(raw: dict) -> list[tuple[int, str | None]]:
         if not isinstance(rule, dict):
             continue
         apply_to = rule.get("apply_to")
-        targets = (
-            [apply_to] if isinstance(apply_to, str)
-            else list(apply_to) if isinstance(apply_to, list)
-            else []
-        )
+        targets = [apply_to] if isinstance(apply_to, str) else list(apply_to) if isinstance(apply_to, list) else []
         if "element" in targets:
             select = rule.get("select") or {}
             ec = select.get("element") if isinstance(select, dict) else None
@@ -109,21 +105,21 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("theme", help="Path to a theme YAML file.")
     parser.add_argument(
-        "-v", "--visualizer",
-        help=(
-            "Visualizer(s) to validate against (comma-separated). "
-            f"Default: all of {sorted(VISUALIZERS)}."
-        ),
+        "-v",
+        "--visualizer",
+        help=(f"Visualizer(s) to validate against (comma-separated). Default: all of {sorted(VISUALIZERS)}."),
     )
     parser.add_argument(
-        "--convert", action="store_true",
+        "--convert",
+        action="store_true",
         help=(
             "Run the theme through tools/migrate_theme.py first.  Use this on "
             "legacy themes that haven't been migrated yet."
         ),
     )
     parser.add_argument(
-        "--quiet", action="store_true",
+        "--quiet",
+        action="store_true",
         help="Suppress the success line on a clean pass.",
     )
     args = parser.parse_args(argv)
@@ -139,8 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         unknown = set(requested) - VISUALIZERS
         if unknown:
             print(
-                f"error: unknown visualizer(s) {sorted(unknown)}. "
-                f"Known: {sorted(VISUALIZERS)}",
+                f"error: unknown visualizer(s) {sorted(unknown)}. Known: {sorted(VISUALIZERS)}",
                 file=sys.stderr,
             )
             return 2
@@ -151,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     raw = yaml.safe_load(theme_path.read_text()) or {}
     if args.convert:
         from tools.migrate_theme import convert_theme
+
         raw = _deep_to_dict(convert_theme(raw, fname=theme_path.name))
 
     # Pre-parse check: reject leftover `apply_to: element` rules with a
@@ -162,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
             "rule(s); element-to-token bindings now live in "
             "config/element_catalog.yaml.  Move per-theme tweaks to the "
             "top-level `element_overrides:` map (see USER_GUIDE.md "
-            "\"Element Bindings: built-in catalog\"), or run\n"
+            '"Element Bindings: built-in catalog"), or run\n'
             f"    uv run python tools/strip_element_bindings.py {theme_path}",
             file=sys.stderr,
         )

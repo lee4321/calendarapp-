@@ -80,16 +80,22 @@ def _config_for(tmp_dir, **overrides):
 
 _MIXED_EVENTS = [
     {
-        "Start": "20260115", "End": "20260115",
-        "Task_Name": "Kickoff", "Milestone": True,
+        "Start": "20260115",
+        "End": "20260115",
+        "Task_Name": "Kickoff",
+        "Milestone": True,
     },
     {
-        "Start": "20260119", "End": "20260119",
-        "Task_Name": "Review", "Milestone": False,
+        "Start": "20260119",
+        "End": "20260119",
+        "Task_Name": "Review",
+        "Milestone": False,
     },
     {
-        "Start": "20260105", "End": "20260123",
-        "Task_Name": "Long Build", "Milestone": False,
+        "Start": "20260105",
+        "End": "20260123",
+        "Task_Name": "Long Build",
+        "Milestone": False,
     },
 ]
 
@@ -121,9 +127,7 @@ def test_text_mini_defaults_to_excluding_durations():
 
 def test_text_mini_takes_durations_when_asked():
     parser = ecalendar._create_argument_parser("calendar.svg")
-    args = parser.parse_args(
-        ["text-mini", "20260101", "20260131", "--durations"]
-    )
+    args = parser.parse_args(["text-mini", "20260101", "20260131", "--durations"])
     config = create_calendar_config()
     ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
 
@@ -135,9 +139,7 @@ def test_mini_family_no_longer_offers_nodurations():
     parser = ecalendar._create_argument_parser("calendar.svg")
     for command in ("text-mini", "mini", "mini-icon", "candybar"):
         with pytest.raises(SystemExit):
-            parser.parse_args(
-                [command, "20260101", "20260131", "--nodurations"]
-            )
+            parser.parse_args([command, "20260101", "20260131", "--nodurations"])
 
 
 def test_mini_family_defaults_to_excluding_durations():
@@ -153,9 +155,7 @@ def test_mini_family_defaults_to_excluding_durations():
         assert config.includeevents is True, command
 
         config = create_calendar_config()
-        args = parser.parse_args(
-            [command, "20260101", "20260131", "--durations"]
-        )
+        args = parser.parse_args([command, "20260101", "20260131", "--durations"])
         ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
         assert config.includedurations is True, command
 
@@ -170,20 +170,18 @@ def test_other_views_still_take_durations_by_default():
         assert config.includedurations is True, command
 
         config = create_calendar_config()
-        args = parser.parse_args(
-            [command, "20260101", "20260131", "--nodurations"]
-        )
+        args = parser.parse_args([command, "20260101", "20260131", "--nodurations"])
         ecalendar._apply_args_to_config(args, config, _PAPER_SIZES)
         assert config.includedurations is False, command
 
 
 def test_the_kept_content_is_events_milestones_holidays_and_specials():
     text = _text_for(False)
-    assert "Kickoff" in text          # milestone
-    assert "Review" in text           # single-day event
-    assert "New Year" in text         # government holiday
-    assert "Company Day" in text      # special day
-    assert "Long Build" not in text   # multi-day duration
+    assert "Kickoff" in text  # milestone
+    assert "Review" in text  # single-day event
+    assert "New Year" in text  # government holiday
+    assert "Company Day" in text  # special day
+    assert "Long Build" not in text  # multi-day duration
 
 
 def test_durations_come_back_when_asked_for():
@@ -210,10 +208,8 @@ def test_symbols_are_assigned_in_ascending_date_order():
         {"Start": "20260120", "End": "20260120", "Task_Name": "Late event"},
         {"Start": "20260106", "End": "20260106", "Task_Name": "Early event"},
         {"Start": "20260113", "End": "20260113", "Task_Name": "Mid event"},
-        {"Start": "20260122", "End": "20260122",
-         "Task_Name": "Late milestone", "Milestone": True},
-        {"Start": "20260108", "End": "20260108",
-         "Task_Name": "Early milestone", "Milestone": True},
+        {"Start": "20260122", "End": "20260122", "Task_Name": "Late milestone", "Milestone": True},
+        {"Start": "20260108", "End": "20260108", "Task_Name": "Early milestone", "Milestone": True},
     ]
     symbol_map, details = _symbol_map_for(events)
 
@@ -229,8 +225,11 @@ def test_symbols_are_assigned_in_ascending_date_order():
 
     # The details list follows the same order.
     assert [d.text for d in details] == [
-        "Early event", "Early milestone", "Mid event",
-        "Late event", "Late milestone",
+        "Early event",
+        "Early milestone",
+        "Mid event",
+        "Late event",
+        "Late milestone",
     ]
 
 
@@ -275,7 +274,10 @@ def test_holiday_and_nonworkday_symbols_run_in_date_order():
     assert symbol_map["20260105"] == first_nwd
     assert symbol_map["20260126"] == second_nwd
     assert [d.text for d in details] == [
-        "Earlier Holiday", "Earlier Shutdown", "Later Holiday", "Later Shutdown",
+        "Earlier Holiday",
+        "Earlier Shutdown",
+        "Later Holiday",
+        "Later Shutdown",
     ]
 
 
@@ -283,9 +285,7 @@ def test_text_mini_accepts_a_theme():
     """run() applies a theme only when args.theme exists, so without --theme on
     the parser text-mini silently ignored every themed value it reads."""
     parser = ecalendar._create_argument_parser("calendar.svg")
-    args = parser.parse_args(
-        ["text-mini", "20260101", "20260131", "--theme", "dark"]
-    )
+    args = parser.parse_args(["text-mini", "20260101", "20260131", "--theme", "dark"])
 
     assert args.theme == "dark"
 
@@ -332,8 +332,7 @@ def _details_block(text):
 def test_details_are_grouped_under_a_heading_and_per_type_subheadings():
     events = [
         {"Start": "20260106", "End": "20260106", "Task_Name": "Standup"},
-        {"Start": "20260108", "End": "20260108",
-         "Task_Name": "Kickoff", "Milestone": True},
+        {"Start": "20260108", "End": "20260108", "Task_Name": "Kickoff", "Milestone": True},
         {"Start": "20260112", "End": "20260116", "Task_Name": "Build Week"},
     ]
     db = _FakeDB(
@@ -349,8 +348,12 @@ def test_details_are_grouped_under_a_heading_and_per_type_subheadings():
     assert block[0] == "Calendar Details"
     subheadings = [ln.strip() for ln in block if not ln.startswith("    ")]
     assert subheadings == [
-        "Calendar Details", "Events", "Milestones", "Durations",
-        "Holidays", "Non-Working Days",
+        "Calendar Details",
+        "Events",
+        "Milestones",
+        "Durations",
+        "Holidays",
+        "Non-Working Days",
     ]
     # Each entry sits under its own subheading.
     assert "Standup" in block[block.index("  Events") + 1]

@@ -105,7 +105,7 @@ class ArrowRoute:
 
     path_d: str
     points: list[tuple[float, float]]
-    head_dir: int          # +1 when the head points right, -1 when left
+    head_dir: int  # +1 when the head points right, -1 when left
 
     @property
     def tip(self) -> tuple[float, float]:
@@ -153,9 +153,7 @@ class CrossPageReference:
     target_indexes: tuple[int, ...]
 
 
-def resolve_dependencies(
-    rows: list, drawn_indices: set[int]
-) -> tuple[list[Dependency], list[GanttException]]:
+def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Dependency], list[GanttException]]:
     """Turn every row's predecessor cell into drawable dependencies.
 
     Args:
@@ -194,9 +192,7 @@ def resolve_dependencies(
             )
 
         for link in links:
-            dependency, exception = _resolve_one(
-                link, row, by_source_id, drawn_indices
-            )
+            dependency, exception = _resolve_one(link, row, by_source_id, drawn_indices)
             if dependency is not None:
                 dependencies.append(dependency)
             if exception is not None:
@@ -337,9 +333,7 @@ def route_arrow(
     a forward link runs out-across-in and a backward link folds the same
     three segments into a dogleg.
     """
-    exit_side, exit_dir, entry_side, entry_dir = _ANCHORS.get(
-        link_type.upper(), _ANCHORS["FS"]
-    )
+    exit_side, exit_dir, entry_side, entry_dir = _ANCHORS.get(link_type.upper(), _ANCHORS["FS"])
 
     exit_x = predecessor.edge(exit_side)
     entry_x = successor.edge(entry_side)
@@ -351,9 +345,7 @@ def route_arrow(
     entry_stub = (entry_x + entry_dir * stub, successor.y)
 
     return ArrowRoute(
-        path_d=curved_path(
-            (exit_x, predecessor.y), exit_stub, entry_stub, (entry_x, successor.y)
-        ),
+        path_d=curved_path((exit_x, predecessor.y), exit_stub, entry_stub, (entry_x, successor.y)),
         points=[
             (exit_x, predecessor.y),
             exit_stub,
@@ -389,9 +381,7 @@ def curved_path(
     )
 
 
-def stub_route(
-    successor: RowAnchor, length: float, stub: float = DEFAULT_STUB
-) -> ArrowRoute:
+def stub_route(successor: RowAnchor, length: float, stub: float = DEFAULT_STUB) -> ArrowRoute:
     """A short arrow into *successor* standing in for an off-chart predecessor.
 
     The renderer caps the far end with the off-chart icon (answer 27).

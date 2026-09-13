@@ -18,9 +18,7 @@ class _StubDB(FakeCalendarDB):
         return list(self._special_days)
 
     def get_all_patterns(self):
-        return {
-            "brick-wall": '<svg viewBox="0 0 10 10"><rect width="10" height="10" fill="black"/></svg>'
-        }
+        return {"brick-wall": '<svg viewBox="0 0 10 10"><rect width="10" height="10" fill="black"/></svg>'}
 
 
 def _config():
@@ -141,10 +139,7 @@ class _IconCapture(MiniCalendarRenderer):
         self.text_calls.append(text)
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icon_calls.append(
-            {"icon_name": icon_name, "x": x, "baseline_y": baseline_y,
-             "size": size, **kwargs}
-        )
+        self.icon_calls.append({"icon_name": icon_name, "x": x, "baseline_y": baseline_y, "size": size, **kwargs})
         return True
 
     def _resolve_icon_svg(self, icon_name):
@@ -186,15 +181,12 @@ def test_icons_fill_the_corners_clockwise_from_the_top_right():
     pad = config.mini_grid_line_width
     lo = pad + size / 2.0
     hi = 20.0 - pad - size / 2.0
-    placed = [
-        (round(c["x"], 4), round(_corner_cy(c, size), 4))
-        for c in renderer.icon_calls
-    ]
+    placed = [(round(c["x"], 4), round(_corner_cy(c, size), 4)) for c in renderer.icon_calls]
     assert placed == [
-        (round(hi, 4), round(lo, 4)),   # top-right
-        (round(hi, 4), round(hi, 4)),   # bottom-right
-        (round(lo, 4), round(hi, 4)),   # bottom-left
-        (round(lo, 4), round(lo, 4)),   # top-left
+        (round(hi, 4), round(lo, 4)),  # top-right
+        (round(hi, 4), round(hi, 4)),  # bottom-right
+        (round(lo, 4), round(hi, 4)),  # bottom-left
+        (round(lo, 4), round(lo, 4)),  # top-left
     ]
 
 
@@ -232,17 +224,19 @@ def test_a_holiday_and_an_event_on_one_day_both_get_a_corner():
     )
 
     names = [c["icon_name"] for c in _drawn(config, style).icon_calls]
-    assert names == ["flag-us", "star"]     # holiday outranks the event
+    assert names == ["flag-us", "star"]  # holiday outranks the event
 
 
 def test_holidays_from_several_countries_each_get_a_corner():
     """Only the first holiday's country icon used to be drawn."""
     config = _config()
-    db = _StubDB(holidays=[
-        {"displayname": "Labour Day", "icon": "ca", "country": "CA"},
-        {"displayname": "Labor Day", "icon": "us", "country": "US"},
-        {"displayname": "Labour Day", "icon": "gb", "country": "GB"},
-    ])
+    db = _StubDB(
+        holidays=[
+            {"displayname": "Labour Day", "icon": "ca", "country": "CA"},
+            {"displayname": "Labor Day", "icon": "us", "country": "US"},
+            {"displayname": "Labour Day", "icon": "gb", "country": "GB"},
+        ]
+    )
     style = DayStyleResolver(config, db).resolve(
         "20260907",
         [{"Start": "20260907", "End": "20260907", "Icon": "star"}],
@@ -254,10 +248,12 @@ def test_holidays_from_several_countries_each_get_a_corner():
 
 def test_two_holidays_from_one_country_take_one_corner():
     config = _config()
-    db = _StubDB(holidays=[
-        {"displayname": "Christmas Eve", "icon": "us", "country": "US"},
-        {"displayname": "Other", "icon": "us", "country": "US"},
-    ])
+    db = _StubDB(
+        holidays=[
+            {"displayname": "Christmas Eve", "icon": "us", "country": "US"},
+            {"displayname": "Other", "icon": "us", "country": "US"},
+        ]
+    )
     style = DayStyleResolver(config, db).resolve("20261224", [])
 
     assert [c["icon_name"] for c in _drawn(config, style).icon_calls] == ["us"]
@@ -266,16 +262,15 @@ def test_two_holidays_from_one_country_take_one_corner():
 def test_any_nonworking_holiday_shades_the_day():
     """A nonworking holiday listed after an informational one still shades."""
     config = _config()
-    db = _StubDB(holidays=[
-        {"displayname": "Observance", "icon": "ca", "nonworkday": 0},
-        {"displayname": "Holiday", "icon": "us", "nonworkday": 1},
-    ])
+    db = _StubDB(
+        holidays=[
+            {"displayname": "Observance", "icon": "ca", "nonworkday": 0},
+            {"displayname": "Holiday", "icon": "us", "nonworkday": 1},
+        ]
+    )
     style = DayStyleResolver(config, db).resolve("20260115", [])
 
-    assert style.shade_color == (
-        config.theme_mini_nonworkday_fill_color
-        or config.mini_nonworkday_fill_color
-    )
+    assert style.shade_color == (config.theme_mini_nonworkday_fill_color or config.mini_nonworkday_fill_color)
 
 
 def test_the_same_icon_from_two_sources_takes_one_corner():
@@ -507,8 +502,6 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
 
 def test_a_fill_list_on_a_day_rule_shades_with_its_first_color():
     config = _config()
-    config.theme_style_rules = [
-        {"apply_to": "day_box", "select": {}, "style": {"fill": ["red", "blue"]}}
-    ]
+    config.theme_style_rules = [{"apply_to": "day_box", "select": {}, "style": {"fill": ["red", "blue"]}}]
     style = DayStyleResolver(config, _StubDB()).resolve("20260914", [])
     assert style.shade_color == "red"

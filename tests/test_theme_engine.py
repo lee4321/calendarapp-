@@ -638,9 +638,7 @@ class TestStrokeDasharray:
         renderer._page_height = 100
         renderer._page_width = 100
         renderer._drawing = drawsvg.Drawing(100, 100)
-        renderer._draw_rect(
-            10, 10, 50, 30, fill="red", stroke="blue", stroke_dasharray="6,3"
-        )
+        renderer._draw_rect(10, 10, 50, 30, fill="red", stroke="blue", stroke_dasharray="6,3")
         svg_text = renderer._drawing.as_svg()
         assert "stroke-dasharray" in svg_text
         assert "6,3" in svg_text
@@ -678,9 +676,7 @@ class TestStrokeDasharray:
         renderer._page_height = 100
         renderer._page_width = 100
         renderer._drawing = drawsvg.Drawing(100, 100)
-        renderer._draw_lines(
-            [(10, 10, 90, 10), (10, 20, 90, 20)], stroke="black", stroke_dasharray="3,3"
-        )
+        renderer._draw_lines([(10, 10, 90, 10), (10, 20, 90, 20)], stroke="black", stroke_dasharray="3,3")
         svg_text = renderer._drawing.as_svg()
         assert "stroke-dasharray" in svg_text
         assert "3,3" in svg_text
@@ -699,9 +695,7 @@ class TestStrokeDasharray:
         renderer._page_height = 100
         renderer._page_width = 100
         renderer._drawing = drawsvg.Drawing(100, 100)
-        renderer._draw_rect(
-            10, 10, 50, 30, fill="red", stroke="blue", stroke_dasharray=None
-        )
+        renderer._draw_rect(10, 10, 50, 30, fill="red", stroke="blue", stroke_dasharray=None)
         svg_text = renderer._drawing.as_svg()
         assert "stroke-dasharray" not in svg_text
 
@@ -724,9 +718,7 @@ class TestStrokeDasharray:
 
         with (
             patch("config.config.get_font_path", return_value="fake.ttf"),
-            patch(
-                "renderers.svg_base.text_to_svg_group", return_value='<g id="glyphs"/>'
-            ),
+            patch("renderers.svg_base.text_to_svg_group", return_value='<g id="glyphs"/>'),
         ):
             renderer._draw_text(
                 50,
@@ -804,9 +796,7 @@ class TestStrokeDasharray:
         with (
             patch("config.config.get_font_path", return_value="fake.ttf"),
             patch("renderers.svg_base.string_width", return_value=100.0),
-            patch(
-                "renderers.glyph_cache.get_font_metrics", return_value=(1000, 800, -200)
-            ),
+            patch("renderers.glyph_cache.get_font_metrics", return_value=(1000, 800, -200)),
             patch.object(renderer, "_draw_text") as mock_draw_text,
         ):
             renderer._render_text_watermark(config)
@@ -835,9 +825,7 @@ class TestStrokeDasharray:
         with (
             patch("config.config.get_font_path", return_value="fake.ttf"),
             patch("renderers.svg_base.string_width", return_value=200.0),
-            patch(
-                "renderers.svg_base.text_to_svg_group", return_value='<g id="glyphs"/>'
-            ),
+            patch("renderers.svg_base.text_to_svg_group", return_value='<g id="glyphs"/>'),
         ):
             renderer._draw_text(
                 10,
@@ -925,6 +913,7 @@ class TestStrokeDasharray:
         back to the legacy field.
         """
         from config.config import _inject_heuristic_size_tokens
+
         config = create_calendar_config()
         config.weekly_name_text_font_size = 9.0
         config.event_icon_size = 9.0
@@ -1290,9 +1279,7 @@ def test_blockplan_theme_applied():
             "event_date_format": "MMM D",
             "timeband_fill_palette": ["#111111", "#222222"],
             "swimlanes": [{"name": "Infra"}],
-            "top_time_bands": [
-                {"label": "PI", "unit": "interval", "interval_days": 70}
-            ],
+            "top_time_bands": [{"label": "PI", "unit": "interval", "interval_days": 70}],
         },
     }
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -1321,9 +1308,7 @@ def test_blockplan_theme_applied():
     assert config.blockplan_event_date_format == "MMM D"
     assert config.blockplan_timeband_fill_palette == ["#111111", "#222222"]
     assert config.blockplan_swimlanes == [{"name": "Infra"}]
-    assert config.blockplan_top_time_bands == [
-        {"label": "PI", "unit": "interval", "interval_days": 70}
-    ]
+    assert config.blockplan_top_time_bands == [{"label": "PI", "unit": "interval", "interval_days": 70}]
 
 
 class TestThemeEngineValidation:
@@ -1389,14 +1374,16 @@ class TestFontReferenceScanner:
     def test_finds_fonts_in_nested_lists_and_dicts(self):
         found = dict(
             (path, font)
-            for path, font in iter_font_references({
-                "base": {"font_family": "Roboto-Bold"},
-                "style_rules": [
-                    {"style": {"font": "Roboto-Regular"}},
-                    {"style": {"font": "Roboto-Light"}},
-                ],
-                "mini_calendar": {"cell_font": "JuliaMono-Regular"},
-            })
+            for path, font in iter_font_references(
+                {
+                    "base": {"font_family": "Roboto-Bold"},
+                    "style_rules": [
+                        {"style": {"font": "Roboto-Regular"}},
+                        {"style": {"font": "Roboto-Light"}},
+                    ],
+                    "mini_calendar": {"cell_font": "JuliaMono-Regular"},
+                }
+            )
         )
         assert found == {
             "base.font_family": "Roboto-Bold",
@@ -1439,12 +1426,19 @@ class TestElementCatalogBindings:
         data = {
             "theme": {"name": "Cat", "version": "3.0"},
             "style_rules": [
-                {"name": "def text:base", "define": "text", "as": "base",
-                 "style": {"font": "Roboto-Light", "size": 9, "color": "#111"}},
-                {"name": "def text:event_name", "define": "text", "as": "event_name",
-                 "style": {"font": "Roboto-Bold", "size": 11, "color": "blue"}},
-                {"name": "def box:day", "define": "box", "as": "day",
-                 "style": {"fill": "white"}},
+                {
+                    "name": "def text:base",
+                    "define": "text",
+                    "as": "base",
+                    "style": {"font": "Roboto-Light", "size": 9, "color": "#111"},
+                },
+                {
+                    "name": "def text:event_name",
+                    "define": "text",
+                    "as": "event_name",
+                    "style": {"font": "Roboto-Bold", "size": 11, "color": "blue"},
+                },
+                {"name": "def box:day", "define": "box", "as": "day", "style": {"fill": "white"}},
             ],
         }
         data.update(extra)
@@ -1460,6 +1454,7 @@ class TestElementCatalogBindings:
 
     def test_catalog_binds_every_ec_class(self):
         from config.element_catalog import load_catalog
+
         engine = self._engine_for(self._minimal_theme())
         cfg = engine.apply(CalendarConfig())
         ts = cfg.theme_styles
@@ -1528,11 +1523,16 @@ class TestElementCatalogBindings:
         assert cfg.overflow_indicator_color == "orange"
 
     def test_stray_apply_to_element_raises(self):
-        theme = self._minimal_theme(style_rules=[
-            {"name": "bind ec-heading", "apply_to": "element",
-             "select": {"element": "ec-heading"},
-             "style": {"use": "text:event_name"}},
-        ])
+        theme = self._minimal_theme(
+            style_rules=[
+                {
+                    "name": "bind ec-heading",
+                    "apply_to": "element",
+                    "select": {"element": "ec-heading"},
+                    "style": {"use": "text:event_name"},
+                },
+            ]
+        )
         # Note: this replaces the default style_rules from _minimal_theme,
         # but the only thing that matters here is the engine reject.
         engine = ThemeEngine()

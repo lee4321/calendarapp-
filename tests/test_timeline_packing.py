@@ -50,8 +50,7 @@ def _pos_for_day(day: arrow.Arrow) -> float:
     return AXIS_LENGTH * (max(0, min(offset, span)) / span)
 
 
-def _pack(events, *, config=None, orientation=Orientation.HORIZONTAL,
-          side=Side.PRIMARY, **kwargs):
+def _pack(events, *, config=None, orientation=Orientation.HORIZONTAL, side=Side.PRIMARY, **kwargs):
     return pack_callouts(
         events,
         axis_origin=AXIS_ORIGIN,
@@ -86,7 +85,7 @@ def test_a_box_starts_on_its_own_date():
 
 def test_boxes_sharing_a_date_share_a_column():
     placed = _pack([_event("20260115", f"E{i}") for i in range(4)])
-    assert len({round(p.x_label, 6) for p in placed} ) == 1
+    assert len({round(p.x_label, 6) for p in placed}) == 1
     assert sorted(p.layer for p in placed) == [0, 1, 2, 3]
 
 
@@ -101,12 +100,11 @@ def test_the_earliest_event_in_a_stack_sits_closest_to_the_axis():
 
 def test_a_row_is_reused_once_the_boxes_no_longer_collide():
     """Density is the point: a later date drops back to row 0."""
-    events = [_event("20260105", "a"), _event("20260106", "b"),
-              _event("20260220", "c")]
+    events = [_event("20260105", "a"), _event("20260106", "b"), _event("20260220", "c")]
     by_name = {p.event.task_name: p for p in _pack(events)}
     assert by_name["a"].layer == 0
-    assert by_name["b"].layer == 1     # overlaps a
-    assert by_name["c"].layer == 0     # clear of both
+    assert by_name["b"].layer == 1  # overlaps a
+    assert by_name["c"].layer == 0  # clear of both
 
 
 # ── The leader ─────────────────────────────────────────────────────────────
@@ -115,13 +113,11 @@ def test_a_row_is_reused_once_the_boxes_no_longer_collide():
 def test_the_leader_is_a_straight_perpendicular_run_to_the_near_corner():
     placed = _pack([_event("20260115")])[0]
     (x0, y0), (x1, y1) = _leader_points(placed.leader_path_d)
-    assert y0 == pytest.approx(0.0)          # starts on the axis
-    assert x0 == pytest.approx(x1)           # perpendicular
-    assert y1 < 0                            # runs up, on the primary side
+    assert y0 == pytest.approx(0.0)  # starts on the axis
+    assert x0 == pytest.approx(x1)  # perpendicular
+    assert y1 < 0  # runs up, on the primary side
     # It lands on the box's axis-facing edge, at the leading corner.
-    assert AXIS_ORIGIN[1] + y1 == pytest.approx(
-        placed.y_label + placed.label_h
-    )
+    assert AXIS_ORIGIN[1] + y1 == pytest.approx(placed.y_label + placed.label_h)
     assert AXIS_ORIGIN[0] + x1 == pytest.approx(placed.x_label)
 
 
@@ -142,9 +138,7 @@ def test_a_leader_below_the_axis_mirrors_the_one_above():
 def test_a_box_near_the_end_is_pushed_back_to_finish_flush_with_it():
     """It cannot be drawn on its date without leaving the timeline."""
     placed = _pack([_event("20260301")])[0]
-    assert placed.x_label + placed.label_w == pytest.approx(
-        AXIS_ORIGIN[0] + AXIS_LENGTH
-    )
+    assert placed.x_label + placed.label_w == pytest.approx(AXIS_ORIGIN[0] + AXIS_LENGTH)
     assert placed.x_label < placed.x_dot
 
 
@@ -182,8 +176,7 @@ def test_a_full_column_slides_the_box_along_the_axis():
 
 def test_an_event_with_nowhere_to_go_is_marked_unplaced(caplog):
     config = _config()
-    events = [_event("20260220", f"E{i}", notes="detail", wbs="NP.3")
-              for i in range(3)]
+    events = [_event("20260220", f"E{i}", notes="detail", wbs="NP.3") for i in range(3)]
     # Room for a single row, and the axis ends too soon to slide sideways.
     with caplog.at_level(logging.WARNING):
         placed = _pack(events, config=config, max_extent=BOX_H + 4.0)
@@ -243,15 +236,13 @@ def test_a_vertical_axis_packs_along_y_and_stacks_along_x(side):
     assert placed[0].y_label < placed[1].y_label
 
     (x0, _y0), (x1, y1) = _leader_points(placed[0].leader_path_d)
-    assert x0 == pytest.approx(0.0)          # starts on the axis
-    assert y1 == pytest.approx(_y0)          # perpendicular is horizontal now
+    assert x0 == pytest.approx(0.0)  # starts on the axis
+    assert y1 == pytest.approx(_y0)  # perpendicular is horizontal now
     assert (x1 > 0) is (side is Side.PRIMARY)
 
 
 def test_a_vertical_box_starts_on_its_own_date():
-    placed = _pack(
-        [_event("20260115")], orientation=Orientation.VERTICAL
-    )[0]
+    placed = _pack([_event("20260115")], orientation=Orientation.VERTICAL)[0]
     expected = AXIS_ORIGIN[1] + _pos_for_day(arrow.get("20260115", "YYYYMMDD"))
     assert placed.y_label == pytest.approx(expected)
 
@@ -261,15 +252,12 @@ def test_a_vertical_box_starts_on_its_own_date():
 
 def test_the_theme_width_and_height_are_used_verbatim():
     config = _config()
-    assert resolve_box_size([_event("20260115", "x" * 200)], config) == (
-        BOX_W, BOX_H
-    )
+    assert resolve_box_size([_event("20260115", "x" * 200)], config) == (BOX_W, BOX_H)
 
 
 def test_an_unset_width_derives_one_width_for_the_whole_chart():
     config = _config(timeline_event_box_width=None)
-    events = [_event("20260115", "short"),
-              _event("20260116", "a considerably longer event name")]
+    events = [_event("20260115", "short"), _event("20260116", "a considerably longer event name")]
     width, _height = resolve_box_size(events, config)
 
     # One width, sized to the widest event — every box still gets it.
@@ -280,11 +268,7 @@ def test_an_unset_width_derives_one_width_for_the_whole_chart():
 
 def test_no_two_boxes_on_a_row_ever_overlap():
     """The invariant the whole packer exists to hold."""
-    events = [
-        _event(f"202601{d:02d}", f"E{d}-{i}")
-        for d in range(1, 29)
-        for i in range(3)
-    ]
+    events = [_event(f"202601{d:02d}", f"E{d}-{i}") for d in range(1, 29) for i in range(3)]
     placed = [p for p in _pack(events, max_extent=None) if p.placed]
     by_row: dict[int, list[tuple[float, float]]] = {}
     for p in placed:
@@ -322,20 +306,29 @@ def test_shrink_bounds_contain_every_callout_box():
     renderer = TimelineRenderer()
     callouts = [
         TimelineCallout(
-            event=p.event, color="grey", x_dot=p.x_dot, y_dot=p.y_dot,
-            lane=p.layer, box_x=p.x_label, box_y=p.y_label,
-            box_width=p.label_w, box_height=p.label_h,
+            event=p.event,
+            color="grey",
+            x_dot=p.x_dot,
+            y_dot=p.y_dot,
+            lane=p.layer,
+            box_x=p.x_label,
+            box_y=p.y_label,
+            box_width=p.label_w,
+            box_height=p.label_h,
         )
-        for p in _pack(
-            [_event("20260105", "a"), _event("20260301", "z")], config=config
-        )
+        for p in _pack([_event("20260105", "a"), _event("20260301", "z")], config=config)
     ]
     x, y, w, h = renderer._actual_content_bounds(
-        config, callouts, [],
+        config,
+        callouts,
+        [],
         axis_left=AXIS_ORIGIN[0],
         axis_right=AXIS_ORIGIN[0] + AXIS_LENGTH,
         axis_y=AXIS_ORIGIN[1],
-        area_x=0.0, area_y=0.0, area_w=792.0, area_h=612.0,
+        area_x=0.0,
+        area_y=0.0,
+        area_w=792.0,
+        area_h=612.0,
     )
     stroke = config.get_box_style("ec-callout-box").stroke_width
     for c in callouts:

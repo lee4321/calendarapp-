@@ -49,9 +49,15 @@ if TYPE_CHECKING:
 
 
 # Built-in shapes recognized by draw_marker.
-BUILTIN_SHAPES: frozenset[str] = frozenset({
-    "circle", "diamond", "square", "triangle", "star",
-})
+BUILTIN_SHAPES: frozenset[str] = frozenset(
+    {
+        "circle",
+        "diamond",
+        "square",
+        "triangle",
+        "star",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -64,9 +70,9 @@ class MarkerSpec:
     shape stable for downstream consumers.
     """
 
-    kind: str = "shape"   # always "shape" — retained for API stability
-    shape: str = ""       # one of BUILTIN_SHAPES
-    css_class: str = ""   # ec-pit-event-marker / ec-milestone-marker
+    kind: str = "shape"  # always "shape" — retained for API stability
+    shape: str = ""  # one of BUILTIN_SHAPES
+    css_class: str = ""  # ec-pit-event-marker / ec-milestone-marker
 
     @property
     def is_icon(self) -> bool:
@@ -77,16 +83,14 @@ class MarkerSpec:
 
 # Pattern used to colorize a DB icon glyph. Mirrors the SVG-pattern
 # colorization path used by the weekly day-box decoration code.
-_FILL_REPLACE_RE = re.compile(
-    r'fill\s*=\s*"(?:#000000|#000|black)"', re.IGNORECASE
-)
+_FILL_REPLACE_RE = re.compile(r'fill\s*=\s*"(?:#000000|#000|black)"', re.IGNORECASE)
 
 
 def resolve_marker(
     event: Event,
     *,
-    config: CalendarConfig | None = None,    # kept for signature stability
-    icon_svg_map: dict[str, str] | None = None, # ignored — axis uses shapes
+    config: CalendarConfig | None = None,  # kept for signature stability
+    icon_svg_map: dict[str, str] | None = None,  # ignored — axis uses shapes
     style_result: StyleResult | None = None,  # ignored — axis uses shapes
 ) -> MarkerSpec:
     """Pick the axis marker for one event.
@@ -147,10 +151,7 @@ def resolve_label_icon(
 
     # 3) Config default for this event type.
     is_milestone = bool(event.milestone)
-    default_name = (
-        config.pit_default_milestone_icon if is_milestone
-        else config.pit_default_event_icon
-    )
+    default_name = config.pit_default_milestone_icon if is_milestone else config.pit_default_event_icon
     svg = _lookup(default_name or "")
     if svg:
         return svg
@@ -167,7 +168,7 @@ def draw_marker(
     *,
     size: float,
     color: str,
-    strip_svg_wrapper=None,   # kept for signature stability; unused
+    strip_svg_wrapper=None,  # kept for signature stability; unused
 ) -> None:
     """Draw the axis marker (always a built-in shape) centered on (x, y)."""
     _draw_shape_marker(drawing, spec.shape, x, y, size, color, spec.css_class)
@@ -185,61 +186,75 @@ def _draw_shape_marker(
     """Draw a built-in shape centered on (cx, cy)."""
     r = size / 2.0
     if shape == "circle":
-        drawing.append(drawsvg.Circle(
-            round(cx, 2), round(cy, 2), round(r, 2),
-            fill=color, stroke="none", class_=css_class,
-        ))
+        drawing.append(
+            drawsvg.Circle(
+                round(cx, 2),
+                round(cy, 2),
+                round(r, 2),
+                fill=color,
+                stroke="none",
+                class_=css_class,
+            )
+        )
         return
     if shape == "square":
-        drawing.append(drawsvg.Rectangle(
-            round(cx - r, 2), round(cy - r, 2), round(size, 2), round(size, 2),
-            fill=color, stroke="none", class_=css_class,
-        ))
+        drawing.append(
+            drawsvg.Rectangle(
+                round(cx - r, 2),
+                round(cy - r, 2),
+                round(size, 2),
+                round(size, 2),
+                fill=color,
+                stroke="none",
+                class_=css_class,
+            )
+        )
         return
     if shape == "diamond":
         # Rotated square — same area as the equivalent circle.
         pts = [
-            (cx,     cy - r),
+            (cx, cy - r),
             (cx + r, cy),
-            (cx,     cy + r),
+            (cx, cy + r),
             (cx - r, cy),
         ]
         d = "M " + " L ".join(f"{px:.2f},{py:.2f}" for px, py in pts) + " Z"
-        drawing.append(drawsvg.Raw(
-            f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'
-        ))
+        drawing.append(drawsvg.Raw(f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'))
         return
     if shape == "triangle":
         # Upward-pointing equilateral.
         pts = [
-            (cx,           cy - r),
+            (cx, cy - r),
             (cx + r * 0.866, cy + r * 0.5),
             (cx - r * 0.866, cy + r * 0.5),
         ]
         d = "M " + " L ".join(f"{px:.2f},{py:.2f}" for px, py in pts) + " Z"
-        drawing.append(drawsvg.Raw(
-            f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'
-        ))
+        drawing.append(drawsvg.Raw(f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'))
         return
     if shape == "star":
         # 5-point star.
         import math
+
         pts: list[tuple[float, float]] = []
         for i in range(10):
             angle = -math.pi / 2 + i * math.pi / 5
             radius = r if i % 2 == 0 else r * 0.4
             pts.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
         d = "M " + " L ".join(f"{px:.2f},{py:.2f}" for px, py in pts) + " Z"
-        drawing.append(drawsvg.Raw(
-            f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'
-        ))
+        drawing.append(drawsvg.Raw(f'<path d="{d}" fill="{color}" stroke="none" class="{css_class}"/>'))
         return
 
     # Unknown shape: degrade to circle.
-    drawing.append(drawsvg.Circle(
-        round(cx, 2), round(cy, 2), round(r, 2),
-        fill=color, stroke="none", class_=css_class,
-    ))
+    drawing.append(
+        drawsvg.Circle(
+            round(cx, 2),
+            round(cy, 2),
+            round(r, 2),
+            fill=color,
+            stroke="none",
+            class_=css_class,
+        )
+    )
 
 
 # Extract a viewBox attribute value (returns (w, h)) from raw SVG markup.
@@ -271,7 +286,14 @@ def draw_label_icon(
     cx = x_left + size / 2.0
     cy = y_center
     _draw_icon_at_center(
-        drawing, icon_svg, cx, cy, size, color, strip_svg_wrapper, css_class,
+        drawing,
+        icon_svg,
+        cx,
+        cy,
+        size,
+        color,
+        strip_svg_wrapper,
+        css_class,
     )
 
 
@@ -305,10 +327,9 @@ def _draw_icon_at_center(
     inner = strip_svg_wrapper(raw)
     colored = _FILL_REPLACE_RE.sub(f'fill="{color}"', inner)
 
-    drawing.append(drawsvg.Raw(
-        f'<g transform="translate({tx:.2f},{ty:.2f}) scale({scale:.4f})" '
-        f'class="{css_class}">{colored}</g>'
-    ))
+    drawing.append(
+        drawsvg.Raw(f'<g transform="translate({tx:.2f},{ty:.2f}) scale({scale:.4f})" class="{css_class}">{colored}</g>')
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +350,12 @@ def _draw_icon_marker(
     """Deprecated — kept so older tests still import successfully."""
     icon_svg = getattr(spec, "icon_svg", "") or ""
     _draw_icon_at_center(
-        drawing, icon_svg, cx, cy, size, color,
-        strip_svg_wrapper, "ec-pit-label-icon",
+        drawing,
+        icon_svg,
+        cx,
+        cy,
+        size,
+        color,
+        strip_svg_wrapper,
+        "ec-pit-label-icon",
     )

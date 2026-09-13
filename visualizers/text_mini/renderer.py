@@ -76,24 +76,17 @@ class TextMiniCalendarRenderer:
         db: CalendarDB,
     ) -> str:
         week_start_sunday = config.mini_week_start == 0 or (
-            config.mini_week_start == -1
-            and weekend_style_starts_sunday(config.weekend_style)
+            config.mini_week_start == -1 and weekend_style_starts_sunday(config.weekend_style)
         )
         cal = calendar.Calendar(firstweekday=6 if week_start_sunday else 0)
 
         months = get_months_in_range(config.adjustedstart, config.adjustedend)
         cols = config.mini_columns
-        rows = (
-            config.mini_rows
-            if config.mini_rows > 0
-            else (len(months) + cols - 1) // cols
-        )
+        rows = config.mini_rows if config.mini_rows > 0 else (len(months) + cols - 1) // cols
 
         effective_events = events if config.includeevents else []
         events_by_day = self._index_events_by_day(effective_events)
-        symbol_map, detail_entries = self._build_symbol_map(
-            config, effective_events, events_by_day, db
-        )
+        symbol_map, detail_entries = self._build_symbol_map(config, effective_events, events_by_day, db)
 
         lines: list[str] = []
         for row_idx in range(rows):
@@ -131,9 +124,7 @@ class TextMiniCalendarRenderer:
         month_blocks: list[list[str]] = []
         max_rows = 0
         for year, month in months:
-            block = self._render_single_month(
-                config, cal, year, month, events_by_day, symbol_map, week_start_sunday
-            )
+            block = self._render_single_month(config, cal, year, month, events_by_day, symbol_map, week_start_sunday)
             max_rows = max(max_rows, len(block))
             month_blocks.append(block)
 
@@ -336,6 +327,7 @@ class TextMiniCalendarRenderer:
         # Fiscal period start indicators (lower priority than events/holidays)
         if config.fiscal_show_period_labels and config.fiscal_lookup:
             from shared.fiscal_renderer import format_fiscal_period_label
+
             for daykey in self._iter_daykeys(config):
                 fiscal_info = config.fiscal_lookup.get(daykey)
                 if fiscal_info and fiscal_info.is_period_start:
@@ -359,9 +351,7 @@ class TextMiniCalendarRenderer:
                 return event.get("Task_Name") or ""
         return ""
 
-    def _set_symbol(
-        self, symbol_map: dict[str, str], daykey: str, symbol: str, priority: int
-    ):
+    def _set_symbol(self, symbol_map: dict[str, str], daykey: str, symbol: str, priority: int):
         existing = symbol_map.get(daykey)
         if not existing:
             symbol_map[daykey] = symbol
@@ -430,9 +420,7 @@ class TextMiniCalendarRenderer:
                 continue
             lines.append(f"  {subheading}")
             for entry in entries:
-                lines.append(
-                    f"    {entry.symbol} {entry.date_text} {entry.text}".rstrip()
-                )
+                lines.append(f"    {entry.symbol} {entry.date_text} {entry.text}".rstrip())
             lines.append("")
         return lines
 

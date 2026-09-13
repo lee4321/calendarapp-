@@ -65,18 +65,18 @@ def resolve_field(name: str) -> str:
 class GanttColumn:
     """One resolved task-table column."""
 
-    field: str                      # as authored in the theme
-    attr: str                       # resolved Event attribute holding the value
+    field: str  # as authored in the theme
+    attr: str  # resolved Event attribute holding the value
     header: str
-    width: float                    # fraction of the table width; sums to 1.0
-    align: str = "left"             # left | center | right
+    width: float  # fraction of the table width; sums to 1.0
+    align: str = "left"  # left | center | right
     max_lines: int = 1
     truncate: bool = True
-    render: str = "text"            # text | icon
+    render: str = "text"  # text | icon
     icon: str | None = None
     value_format: str | None = None  # str.format spec, e.g. "{:.0%}"
-    date_format: str | None = None   # Arrow format, `dd` supported
-    indent: bool = False             # WBS depth shifts this column's text
+    date_format: str | None = None  # Arrow format, `dd` supported
+    indent: bool = False  # WBS depth shifts this column's text
 
 
 def resolve_columns(config: CalendarConfig) -> list[GanttColumn]:
@@ -173,9 +173,7 @@ def _with_width(column: GanttColumn, width: float) -> GanttColumn:
     )
 
 
-def column_x_positions(
-    columns: list[GanttColumn], table_x: float, table_w: float
-) -> list[tuple[float, float]]:
+def column_x_positions(columns: list[GanttColumn], table_x: float, table_w: float) -> list[tuple[float, float]]:
     """Return ``(x, width)`` in page units for each column, left to right."""
     positions: list[tuple[float, float]] = []
     cursor = table_x

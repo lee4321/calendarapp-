@@ -62,14 +62,9 @@ class MiniCalendarVisualizer(BaseVisualizer):
         if config.mini_rows < 0:
             warnings.append(f"mini_rows={config.mini_rows} must be non-negative")
 
-        if (
-            config.mini_week_number_mode == "custom"
-            and config.mini_show_week_numbers
-            and not config.mini_week1_start
-        ):
+        if config.mini_week_number_mode == "custom" and config.mini_show_week_numbers and not config.mini_week1_start:
             warnings.append(
-                "mini_week_number_mode='custom' but mini_week1_start not set; "
-                "falling back to ISO week numbers"
+                "mini_week_number_mode='custom' but mini_week1_start not set; falling back to ISO week numbers"
             )
 
         return warnings

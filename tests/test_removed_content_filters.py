@@ -16,8 +16,18 @@ from visualizers.base import filter_events
 
 # Every command that used to accept the two flags.
 _FILTER_VIEWS = (
-    "blockplan", "candybar", "compactplan", "excelblockplan", "exportdata",
-    "gantt", "mini", "mini-icon", "pit", "text-mini", "timeline", "weekly",
+    "blockplan",
+    "candybar",
+    "compactplan",
+    "excelblockplan",
+    "exportdata",
+    "gantt",
+    "mini",
+    "mini-icon",
+    "pit",
+    "text-mini",
+    "timeline",
+    "weekly",
 )
 
 
@@ -39,10 +49,8 @@ def test_config_has_no_fields_for_the_removed_filters():
 
 def test_filter_keeps_complete_and_non_rollup_items():
     events = [
-        {"Task_Name": "Done", "Start": "20260105", "End": "20260105",
-         "Percent_Complete": 1},
-        {"Task_Name": "Summary", "Start": "20260105", "End": "20260109",
-         "Rollup": 1},
+        {"Task_Name": "Done", "Start": "20260105", "End": "20260105", "Percent_Complete": 1},
+        {"Task_Name": "Summary", "Start": "20260105", "End": "20260109", "Rollup": 1},
         {"Task_Name": "Plain", "Start": "20260106", "End": "20260106"},
     ]
     kept = filter_events(events, CalendarConfig())

@@ -1,4 +1,5 @@
 """Tests for the compactplan visualizer."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -234,8 +235,8 @@ class TestResolveFont:
 
 class TestVisibleDays:
     def test_workweek_excludes_weekends(self):
-        start = date(2026, 3, 9)   # Monday
-        end = date(2026, 3, 15)    # Sunday
+        start = date(2026, 3, 9)  # Monday
+        end = date(2026, 3, 15)  # Sunday
         days = CompactPlanRenderer._visible_days(start, end, weekend_style=0)
         assert all(d.weekday() < 5 for d in days)
         assert len(days) == 5
@@ -307,9 +308,7 @@ def test_overlapping_durations_go_to_different_rows(tmp_path):
     day_x = {d: i * px for i, d in enumerate(visible)}
     color_map = {"Team1": "#92d050"}
 
-    placed = renderer._place_durations(
-        [d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0
-    )
+    placed = renderer._place_durations([d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0)
 
     assert len(placed) == 2
     assert placed[0].row_y != placed[1].row_y
@@ -331,9 +330,7 @@ def test_non_overlapping_durations_share_row(tmp_path):
     day_x = {d: i * px for i, d in enumerate(visible)}
     color_map = {"Team1": "#92d050"}
 
-    placed = renderer._place_durations(
-        [d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0
-    )
+    placed = renderer._place_durations([d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0)
 
     assert len(placed) == 2
     assert placed[0].row_y == placed[1].row_y
@@ -390,10 +387,7 @@ def test_renderer_draws_duration_lines(tmp_path):
 
     # At least one line must not be the full axis width (i.e. a duration line)
     _area_x, _, area_w, _ = coords["CompactPlanArea"]
-    non_axis = [
-        c for c in renderer.line_calls
-        if abs(c[1] - c[3]) < 0.01 and abs(c[2] - c[0] - area_w) > 5.0
-    ]
+    non_axis = [c for c in renderer.line_calls if abs(c[1] - c[3]) < 0.01 and abs(c[2] - c[0] - area_w) > 5.0]
     assert non_axis, "Expected duration line(s)"
 
 
@@ -496,9 +490,7 @@ class _IconDB(_DummyDB):
     """DB stub that serves a single named icon so icon bands can draw."""
 
     def get_icon_svg_map(self):
-        return {
-            "diamond": '<svg viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12Z"/></svg>'
-        }
+        return {"diamond": '<svg viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12Z"/></svg>'}
 
 
 class _IconCaptureRenderer(_CaptureCompactPlanRenderer):
@@ -509,9 +501,7 @@ class _IconCaptureRenderer(_CaptureCompactPlanRenderer):
         self.icon_calls: list[dict] = []
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icon_calls.append(
-            {"icon_name": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs}
-        )
+        self.icon_calls.append({"icon_name": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs})
         return super()._draw_icon_svg(icon_name, x, baseline_y, size, **kwargs)
 
 
@@ -573,9 +563,7 @@ def test_icon_band_row_rects_unclassed_by_default():
     renderer = _IconCaptureRenderer()
     renderer._draw_rect = lambda *a, **kw: renderer.rect_calls.append(kw)  # ty: ignore[invalid-assignment]
 
-    renderer._draw_icon_band_row(
-        [(0.0, 10.0, [])], row_y=0.0, row_h=12.0, icon_h=8.0, fill_color="#cccccc"
-    )
+    renderer._draw_icon_band_row([(0.0, 10.0, [])], row_y=0.0, row_h=12.0, icon_h=8.0, fill_color="#cccccc")
 
     assert renderer.rect_calls, "Expected a background rect for the filled cell"
     assert all(rc.get("css_class") is None for rc in renderer.rect_calls)
@@ -618,16 +606,12 @@ def _render(tmp_path, events, db=None, **overrides):
     for key, value in overrides.items():
         setattr(config, key, value)
     renderer = _PageCaptureRenderer()
-    result = renderer.render(
-        config, CompactPlanLayout().calculate(config), events, db or _DummyDB()
-    )
+    result = renderer.render(config, CompactPlanLayout().calculate(config), events, db or _DummyDB())
     return renderer, result, output
 
 
 def test_key_is_written_to_its_own_page(tmp_path):
-    renderer, result, _output = _render(
-        tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
-    )
+    renderer, result, _output = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
 
     assert (tmp_path / "compact_key.svg").exists()
     assert result.page_count == 2
@@ -638,9 +622,7 @@ def test_key_is_written_to_its_own_page(tmp_path):
 def test_chart_page_carries_no_key(tmp_path):
     """Nothing of the key -- group names, task names, the symbols -- is
     drawn on the chart itself any more."""
-    renderer, _, _ = _render(
-        tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
-    )
+    renderer, _, _ = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
 
     chart = " ".join(renderer.chart_texts())
     assert "Team1" not in chart
@@ -704,7 +686,10 @@ def test_key_lists_bars_by_group_assignment_then_start_date(tmp_path):
     )
 
     assert _key_names(renderer, {"A early", "A late", "B early", "Launch"}) == [
-        "A early", "A late", "B early", "Launch",
+        "A early",
+        "A late",
+        "B early",
+        "Launch",
     ]
 
 
@@ -724,9 +709,10 @@ def test_key_lists_color_rule_matches_first_in_rule_order(tmp_path):
     )
 
     assert _key_names(renderer, {"Plain", "Blue team", "Urgent", "Urgent early"}) == [
-        "Urgent early", "Urgent",  # rule 0, by start date
-        "Blue team",               # rule 1
-        "Plain",                   # the default, resource-group assignment
+        "Urgent early",
+        "Urgent",  # rule 0, by start date
+        "Blue team",  # rule 1
+        "Plain",  # the default, resource-group assignment
     ]
 
 
@@ -748,9 +734,11 @@ def test_key_clusters_rows_by_the_color_each_bar_was_drawn_in(tmp_path):
 
     names = {"Own early", "Beta own", "Alpha plain", "Looks Beta", "Beta plain"}
     assert _key_names(renderer, names) == [
-        "Alpha plain",               # Alpha's palette color
-        "Looks Beta", "Beta plain",  # Beta's palette color, by start date
-        "Own early", "Beta own",     # a color only events carry
+        "Alpha plain",  # Alpha's palette color
+        "Looks Beta",
+        "Beta plain",  # Beta's palette color, by start date
+        "Own early",
+        "Beta own",  # a color only events carry
     ]
 
 
@@ -803,23 +791,16 @@ def test_key_lists_the_holidays_on_the_axis(tmp_path):
 
 
 def test_key_explains_continuation_only_when_a_bar_continues(tmp_path):
-    renderer, _, _ = _render(
-        tmp_path, [_dur("Short", "20260309", "20260313", group="A")]
-    )
+    renderer, _, _ = _render(tmp_path, [_dur("Short", "20260309", "20260313", group="A")])
     assert "activity continues" not in renderer.key_texts()
     assert "timeline" in renderer.key_texts()
 
-    renderer, _, _ = _render(
-        tmp_path, [_dur("Long", "20260401", "20260515", group="A")]
-    )
+    renderer, _, _ = _render(tmp_path, [_dur("Long", "20260401", "20260515", group="A")])
     assert "activity continues" in renderer.key_texts()
 
 
 def test_a_long_key_continues_onto_further_pages(tmp_path):
-    events = [
-        _dur(f"Task {n}", "20260309", "20260313", group=f"G{n % 4}")
-        for n in range(120)
-    ]
+    events = [_dur(f"Task {n}", "20260309", "20260313", group=f"G{n % 4}") for n in range(120)]
     _, result, _ = _render(tmp_path, events)
 
     assert (tmp_path / "compact_key_p2.svg").exists()
@@ -896,9 +877,7 @@ def test_a_milestone_icon_is_drawn_in_place_of_the_pennant(tmp_path):
 
 
 def test_the_theme_milestone_icon_applies_when_the_event_names_none(tmp_path):
-    renderer = _render_milestone(
-        tmp_path, _milestone_with_icon(""), compactplan_milestone_icon="diamond"
-    )
+    renderer = _render_milestone(tmp_path, _milestone_with_icon(""), compactplan_milestone_icon="diamond")
 
     assert [c["icon_name"] for c in _milestone_icons(renderer)][:1] == ["diamond"]
 
@@ -953,7 +932,8 @@ def _render_bands(tmp_path, bands, db=None):
     config.compactplan_show_legend = False  # the key's holiday rows draw flags too
     renderer = _IconCaptureRenderer()
     renderer.render(
-        config, CompactPlanLayout().calculate(config),
+        config,
+        CompactPlanLayout().calculate(config),
         [_dur("Build", "20260309", "20260320", group="Dev")],
         db or _FlagDB(),
     )
@@ -974,9 +954,7 @@ def test_the_holiday_band_draws_each_holidays_own_flag(tmp_path):
 
 
 def test_the_holiday_band_can_hide_observances(tmp_path):
-    renderer = _render_bands(
-        tmp_path, [{"unit": "holiday", "label": "Holidays", "nonworkdays_only": True}]
-    )
+    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays", "nonworkdays_only": True}])
 
     flags = {c["icon_name"] for c in renderer.icon_calls}
     assert "flag-us" in flags
@@ -1025,16 +1003,13 @@ def test_show_every_merges_date_cells_within_a_week(tmp_path):
     assert "12" not in labels and "19" not in labels
 
 
-
 # ---------------------------------------------------------------------------
 # Theme color rules (compact_plan.color_rules)
 # ---------------------------------------------------------------------------
 
 
 def _bar_strokes(renderer):
-    return {
-        kw["stroke"] for kw in renderer.line_kwargs if kw.get("css_class") == "ec-duration-bar"
-    }
+    return {kw["stroke"] for kw in renderer.line_kwargs if kw.get("css_class") == "ec-duration-bar"}
 
 
 def _render_colored(tmp_path, events, rules):
@@ -1130,20 +1105,14 @@ def test_color_rules_load_from_a_theme(tmp_path):
 
     theme = tmp_path / "rules.yaml"
     theme.write_text(
-        "compact_plan:\n"
-        "  color_rules:\n"
-        "    - name: urgent\n"
-        "      select: {priority_min: 4}\n"
-        "      color: firebrick\n"
+        "compact_plan:\n  color_rules:\n    - name: urgent\n      select: {priority_min: 4}\n      color: firebrick\n"
     )
     config = CalendarConfig()
     engine = ThemeEngine()
     engine.load(str(theme))
     engine.apply(config)
 
-    assert config.compactplan_color_rules == [
-        {"name": "urgent", "select": {"priority_min": 4}, "color": "firebrick"}
-    ]
+    assert config.compactplan_color_rules == [{"name": "urgent", "select": {"priority_min": 4}, "color": "firebrick"}]
 
 
 def test_a_rule_color_may_reference_a_palette():
@@ -1175,10 +1144,12 @@ class TestColorRuleEngine:
     def test_returns_the_rule_index_and_color(self):
         from shared.rule_engine import ColorRuleEngine
 
-        engine = ColorRuleEngine([
-            {"select": {"priority": 9}, "color": "red"},
-            {"select": {"resource_group": "dev"}, "color": "blue"},
-        ])
+        engine = ColorRuleEngine(
+            [
+                {"select": {"priority": 9}, "color": "red"},
+                {"select": {"resource_group": "dev"}, "color": "blue"},
+            ]
+        )
 
         assert engine.assign(self._event(Resource_Group="Dev")) == (1, "blue")
         assert engine.assign(self._event(Resource_Group="Ops")) is None
@@ -1186,10 +1157,12 @@ class TestColorRuleEngine:
     def test_an_unknown_criterion_skips_the_rule_rather_than_matching_all(self, caplog):
         from shared.rule_engine import ColorRuleEngine
 
-        engine = ColorRuleEngine([
-            {"name": "typo", "select": {"resouce_group": "Dev"}, "color": "red"},
-            {"select": {"resource_group": "Dev"}, "color": "blue"},
-        ])
+        engine = ColorRuleEngine(
+            [
+                {"name": "typo", "select": {"resouce_group": "Dev"}, "color": "red"},
+                {"select": {"resource_group": "Dev"}, "color": "blue"},
+            ]
+        )
 
         assert engine.assign(self._event(Resource_Group="Dev")) == (1, "blue")
         assert "resouce_group" in caplog.text

@@ -167,9 +167,7 @@ class _EventCalendarParser(argparse.ArgumentParser):
         except argparse.ArgumentError as exc:
             listed = ", ".join(map(str, action.choices))
             ordered = ", ".join(sorted(map(str, action.choices)))
-            raise argparse.ArgumentError(
-                action, exc.message.replace(listed, ordered)
-            ) from None
+            raise argparse.ArgumentError(action, exc.message.replace(listed, ordered)) from None
 
 
 class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
@@ -181,9 +179,7 @@ class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
     and tools/generate_option_catalog.py walk.
     """
 
-    def _iter_indented_subactions(
-        self, action: argparse.Action
-    ) -> Generator[argparse.Action]:
+    def _iter_indented_subactions(self, action: argparse.Action) -> Generator[argparse.Action]:
         if not isinstance(action, argparse._SubParsersAction):
             yield from super()._iter_indented_subactions(action)
             return
@@ -191,9 +187,7 @@ class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
         yield from sorted(action._get_subactions(), key=lambda a: a.dest)
         self._dedent()
 
-    def _metavar_formatter(
-        self, action: argparse.Action, default_metavar: str
-    ) -> Callable[[int], tuple[str, ...]]:
+    def _metavar_formatter(self, action: argparse.Action, default_metavar: str) -> Callable[[int], tuple[str, ...]]:
         if action.metavar is None and isinstance(action, argparse._SubParsersAction):
             names = "{" + ",".join(sorted(action.choices)) + "}"
             return lambda tuple_size: (names,) * tuple_size
@@ -389,12 +383,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     weekly = sub.add_parser("weekly", help="Generate a SVG containing weekly calendar")
     mini = sub.add_parser("mini", help="Generate a SVG mini calendar")
-    mini_icon = sub.add_parser(
-        "mini-icon", help="Generate a mini calendar with icons for day numbers"
-    )
-    candybar = sub.add_parser(
-        "candybar", help="Generate a SVG vertical year-strip (one row per ISO week)"
-    )
+    mini_icon = sub.add_parser("mini-icon", help="Generate a mini calendar with icons for day numbers")
+    candybar = sub.add_parser("candybar", help="Generate a SVG vertical year-strip (one row per ISO week)")
     text_mini = sub.add_parser("text-mini", help="Generate a text only mini calendar")
     timeline = sub.add_parser("timeline", help="Generate a SVG timeline")
     pit = sub.add_parser(
@@ -422,36 +412,21 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     patterns = sub.add_parser("patterns", help="List available day-box patterns")
     icons = sub.add_parser("icons", help="List available icons from database")
     colors = sub.add_parser("colors", help="List available colors from database")
-    palettes = sub.add_parser(
-        "palettes", help="List available color palettes from database"
-    )
-    palettesheet = sub.add_parser(
-        "palettesheet", help="Generate a SVG preview of a named palette"
-    )
-    iconsheet = sub.add_parser(
-        "iconsheet", help="Generate a SVG grid preview of icons from database"
-    )
+    palettes = sub.add_parser("palettes", help="List available color palettes from database")
+    palettesheet = sub.add_parser("palettesheet", help="Generate a SVG preview of a named palette")
+    iconsheet = sub.add_parser("iconsheet", help="Generate a SVG grid preview of icons from database")
     patternsheet = sub.add_parser(
         "patternsheet",
         help="Generate a SVG grid preview of day-box patterns from database",
     )
-    colorsheet = sub.add_parser(
-        "colorsheet", help="Generate a SVG grid preview of named colors from database"
-    )
+    colorsheet = sub.add_parser("colorsheet", help="Generate a SVG grid preview of named colors from database")
     fonts = sub.add_parser("fonts", help="List available registered fonts")
-    fontsheet = sub.add_parser(
-        "fontsheet", help="Generate a SVG sample sheet for all registered fonts"
-    )
+    fontsheet = sub.add_parser("fontsheet", help="Generate a SVG sample sheet for all registered fonts")
     exportdata = sub.add_parser(
         "exportdata",
-        help=(
-            "Export filtered event/duration data as a CSV file "
-            "compatible with importers/import_events.py"
-        ),
+        help=("Export filtered event/duration data as a CSV file compatible with importers/import_events.py"),
     )
-    help_cmd = sub.add_parser(
-        "help", help="Show valid configurable values for a subcommand"
-    )
+    help_cmd = sub.add_parser("help", help="Show valid configurable values for a subcommand")
     help_cmd.add_argument(
         "subcommand",
         type=str,
@@ -744,10 +719,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help=(
-            "Output .xlsx file name (always written under output/; "
-            "default: output/ExcelBlockplan.xlsx)"
-        ),
+        help=("Output .xlsx file name (always written under output/; default: output/ExcelBlockplan.xlsx)"),
     )
     excelblockplan.add_argument(
         "--theme",
@@ -782,9 +754,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "non-working days for holiday/weekend classification."
         ),
     )
-    _add_content_filter_args(
-        excelblockplan, empty_help="Create blank workbook (no events)"
-    )
+    _add_content_filter_args(excelblockplan, empty_help="Create blank workbook (no events)")
 
     # exportdata subcommand arguments
     exportdata.add_argument(
@@ -793,10 +763,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="PATH",
-        help=(
-            "Output CSV file name (always written under output/; "
-            "default: output/exportdata_YYYYMMDD.csv)"
-        ),
+        help=("Output CSV file name (always written under output/; default: output/exportdata_YYYYMMDD.csv)"),
     )
     _add_content_filter_args(exportdata, empty_help=None)
 
@@ -850,10 +817,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=int,
         default=None,
         metavar="N",
-        help=(
-            "Sample text size in points; entry heights follow it. "
-            "Requires --paginate; default: 16."
-        ),
+        help=("Sample text size in points; entry heights follow it. Requires --paginate; default: 16."),
     )
     fontsheet.add_argument(
         "--outputfile",
@@ -1069,30 +1033,16 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             )
         # Header/Footer text
         text_group = view_parser.add_argument_group("Header/Footer Text")
-        text_group.add_argument(
-            "--headerleft", "-hl", type=str, default="", help="Left header text"
-        )
-        text_group.add_argument(
-            "--headercenter", "-hc", type=str, default="", help="Center header text"
-        )
-        text_group.add_argument(
-            "--headerright", "-hr", type=str, default="", help="Right header text"
-        )
-        text_group.add_argument(
-            "--footerleft", "-fl", type=str, default="", help="Left footer text"
-        )
-        text_group.add_argument(
-            "--footercenter", "-fc", type=str, default="", help="Center footer text"
-        )
-        text_group.add_argument(
-            "--footerright", "-fr", type=str, default="", help="Right footer text"
-        )
+        text_group.add_argument("--headerleft", "-hl", type=str, default="", help="Left header text")
+        text_group.add_argument("--headercenter", "-hc", type=str, default="", help="Center header text")
+        text_group.add_argument("--headerright", "-hr", type=str, default="", help="Right header text")
+        text_group.add_argument("--footerleft", "-fl", type=str, default="", help="Left footer text")
+        text_group.add_argument("--footercenter", "-fc", type=str, default="", help="Center footer text")
+        text_group.add_argument("--footerright", "-fr", type=str, default="", help="Right footer text")
 
         # Watermark options
         watermark_group = view_parser.add_argument_group("Watermark Options")
-        watermark_group.add_argument(
-            "--watermark-text", "-wt", type=str, default="", help="Watermark text"
-        )
+        watermark_group.add_argument("--watermark-text", "-wt", type=str, default="", help="Watermark text")
         watermark_group.add_argument(
             "--watermark-rotation-angle",
             type=float,
@@ -1517,10 +1467,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=float,
         default=None,
         metavar="POINTS",
-        help=(
-            "Bounding-box size of the axis marker (built-in circle / "
-            "diamond) in points (default: 7.0)."
-        ),
+        help=("Bounding-box size of the axis marker (built-in circle / diamond) in points (default: 7.0)."),
     )
     pit_group.add_argument(
         "--label-icon-size",
@@ -1538,10 +1485,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=float,
         default=None,
         metavar="POINTS",
-        help=(
-            "Horizontal gap (points) between the label-box icon and the "
-            "start of the event name (default: 4.0)."
-        ),
+        help=("Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0)."),
     )
     pit_group.add_argument(
         "--leader-dash",
@@ -1629,12 +1573,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     # --fiscal-colors: day-box period fill (weekly and mini)
     for _vp in (weekly, mini, mini_icon, candybar):
-        _vp._option_string_actions.get(
-            "--fiscal"
-        ) and None  # guard: group already added above
-        _fiscal_color_group = next(
-            g for g in _vp._action_groups if g.title == "Fiscal Calendar Options"
-        )
+        _vp._option_string_actions.get("--fiscal") and None  # guard: group already added above
+        _fiscal_color_group = next(g for g in _vp._action_groups if g.title == "Fiscal Calendar Options")
         _fiscal_color_group.add_argument(
             "--fiscal-colors",
             action="store_true",
@@ -1642,9 +1582,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         )
 
     # --fiscal-show-periods / --fiscal-show-quarters: timeline band rows
-    _timeline_fiscal_group = next(
-        g for g in timeline._action_groups if g.title == "Fiscal Calendar Options"
-    )
+    _timeline_fiscal_group = next(g for g in timeline._action_groups if g.title == "Fiscal Calendar Options")
     _timeline_fiscal_group.add_argument(
         "--fiscal-show-periods",
         action="store_true",
@@ -1820,9 +1758,7 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     if subcommand in weekly_only:
         print("\nSVG day-box patterns (day_box.hash_pattern / hash_rules[].pattern):")
         print("  (Use 'ecalendar.py patterns' for a full list from the database.)")
-        print(
-            "  Example names: diagonal-stripes, polka-dots, brick-wall, circuit-board"
-        )
+        print("  Example names: diagonal-stripes, polka-dots, brick-wall, circuit-board")
 
     # --- Fiscal calendar types (all views) ---
     if subcommand in calendar_subcommands:
@@ -1832,23 +1768,13 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  nrf-544    NRF 5-4-4 retail calendar")
         print("  13-period  13 equal 4-week periods")
         print("\nFiscal features by visualizer:")
-        print(
-            "  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds"
-        )
-        print(
-            "  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds"
-        )
-        print(
-            "  text-mini   Period short name (e.g. P1) as day symbol on period-start days"
-        )
+        print("  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds")
+        print("  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds")
+        print("  text-mini   Period short name (e.g. P1) as day symbol on period-start days")
         print("  timeline    --fiscal-show-periods: period band row above axis")
         print("              --fiscal-show-quarters: quarter band row above axis")
-        print(
-            "  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set"
-        )
-        print(
-            "  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available"
-        )
+        print("  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set")
+        print("  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available")
 
     # --- Week number modes (weekly, mini, mini-icon, text-mini) ---
     if subcommand in week_number_views:
@@ -1893,4 +1819,3 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("\nAvailable colors (for theme/config color fields):")
         print("  (Use 'ecalendar.py colors' for a full list.)")
         print("  Example names: DarkSlateGrey, Tomato, LightSteelBlue")
-

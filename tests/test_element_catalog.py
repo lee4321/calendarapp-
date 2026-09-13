@@ -77,8 +77,7 @@ def test_every_ec_class_in_renderers_appears_in_catalog() -> None:
     missing = code_classes - set(catalog) - modifiers - _KNOWN_NON_ELEMENT_CLASSES
     assert not missing, (
         "These ec-* classes are used in code but not declared in "
-        "config/element_catalog.yaml (or modifiers / known-non-element):\n  "
-        + "\n  ".join(sorted(missing))
+        "config/element_catalog.yaml (or modifiers / known-non-element):\n  " + "\n  ".join(sorted(missing))
     )
 
 

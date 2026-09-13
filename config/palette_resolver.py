@@ -110,18 +110,14 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
     if config.theme_month_palette:
         colors = db.sample_palette_n(config.theme_month_palette, 12)
         if colors:
-            config.theme_month_colors = {
-                f"{i + 1:02d}": c for i, c in enumerate(colors)
-            }
+            config.theme_month_colors = {f"{i + 1:02d}": c for i, c in enumerate(colors)}
         else:
             logger.warning(f"Palette not found: {config.theme_month_palette!r}")
 
     if config.theme_fiscal_palette:
         colors = db.sample_palette_n(config.theme_fiscal_palette, 13)
         if colors:
-            config.theme_fiscal_period_colors = {
-                f"{i + 1:02d}": c for i, c in enumerate(colors)
-            }
+            config.theme_fiscal_period_colors = {f"{i + 1:02d}": c for i, c in enumerate(colors)}
         else:
             logger.warning(f"Palette not found: {config.theme_fiscal_palette!r}")
 
@@ -145,18 +141,14 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
         if colors:
             config.blockplan_palette = colors
         else:
-            logger.warning(
-                f"Palette not found: {config.theme_blockplan_palette_name!r}"
-            )
+            logger.warning(f"Palette not found: {config.theme_blockplan_palette_name!r}")
 
     if config.theme_compactplan_palette_name:
         colors = db.get_palette(config.theme_compactplan_palette_name)
         if colors:
             config.compactplan_palette = colors
         else:
-            logger.warning(
-                f"Palette not found: {config.theme_compactplan_palette_name!r}"
-            )
+            logger.warning(f"Palette not found: {config.theme_compactplan_palette_name!r}")
 
     # ...and in the colors of compactplan's color_rules.  Each rule is
     # copied rather than edited in place: the list came from the theme's
@@ -164,9 +156,7 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
     if config.compactplan_color_rules:
         config.compactplan_color_rules = [
             {**rule, "color": _resolve_single_palette_ref(rule["color"], db)}
-            if isinstance(rule, dict)
-            and isinstance(rule.get("color"), str)
-            and rule["color"].startswith("palette:")
+            if isinstance(rule, dict) and isinstance(rule.get("color"), str) and rule["color"].startswith("palette:")
             else rule
             for rule in config.compactplan_color_rules
         ]
@@ -176,4 +166,3 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
         val = getattr(config, f.name, None)
         if isinstance(val, str) and val.startswith("palette:"):
             setattr(config, f.name, _resolve_single_palette_ref(val, db))
-

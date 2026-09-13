@@ -234,8 +234,7 @@ def text_to_svg_group(
         tx = char_x
         ty = y
         paths.append(
-            f'<path d="{glyph.path_d}" '
-            f'transform="translate({tx:.2f},{ty:.2f}) scale({scale:.6f},{-scale:.6f})"/>'
+            f'<path d="{glyph.path_d}" transform="translate({tx:.2f},{ty:.2f}) scale({scale:.6f},{-scale:.6f})"/>'
         )
 
     if not paths:
@@ -246,7 +245,4 @@ def text_to_svg_group(
     inner = "".join(paths)
     # Use inline style for fill so per-call color overrides beat any CSS class rule
     # (e.g. element_styles token defaults) — presentation attributes lose to CSS.
-    return (
-        f'<g style="fill:{fill}" fill="{fill}"'
-        f'{opacity_attr}{class_attr}>{inner}</g>'
-    )
+    return f'<g style="fill:{fill}" fill="{fill}"{opacity_attr}{class_attr}>{inner}</g>'

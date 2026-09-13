@@ -21,9 +21,7 @@ from visualizers.mini_icon.renderer import ICON_SETS
 def _themed(icon_set: str | None) -> CalendarConfig:
     config = CalendarConfig()
     engine = ThemeEngine()
-    engine._theme_data = (
-        {"mini_calendar": {"icon_set": icon_set}} if icon_set else {}
-    )
+    engine._theme_data = {"mini_calendar": {"icon_set": icon_set}} if icon_set else {}
     engine.apply(config)
     return config
 
@@ -49,9 +47,7 @@ def test_the_renderer_resolves_what_the_theme_asked_for():
 def test_an_explicit_flag_still_beats_the_theme():
     """CLI precedence is the engine's contract; the theme is the default."""
     config = _themed("squircles")
-    _reapply_post_theme_cli_overrides(
-        Namespace(mini_icon_set="darksquare"), config
-    )
+    _reapply_post_theme_cli_overrides(Namespace(mini_icon_set="darksquare"), config)
     assert config.mini_icon_set == "darksquare"
 
 

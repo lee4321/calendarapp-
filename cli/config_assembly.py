@@ -102,9 +102,7 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
 
     logging.basicConfig(
         level=level,
-        format="%(levelname)s: %(message)s"
-        if verbose < 2
-        else "%(levelname)s: %(name)s: %(message)s",
+        format="%(levelname)s: %(message)s" if verbose < 2 else "%(levelname)s: %(name)s: %(message)s",
     )
 
 
@@ -113,9 +111,7 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
 # engine — paints a duration across a run of day cells and buries the
 # single-day marks under it, so it defaults to single-day events and
 # milestones only.  Keep in step with _durations_optin_views in cli/args.py.
-_DURATIONS_OPTIN_COMMANDS = frozenset(
-    {"mini", "mini-icon", "text-mini", "candybar"}
-)
+_DURATIONS_OPTIN_COMMANDS = frozenset({"mini", "mini-icon", "text-mini", "candybar"})
 
 # Simple one-to-one CLI → config assignments for the mini, candybar,
 # timeline, PIT, and fiscal option groups.  One row per option:
@@ -340,9 +336,7 @@ def _apply_args_to_config(
             paper_name = name_map[lower_name]
         else:
             available = ", ".join(sorted(paper_sizes.keys()))
-            raise ConfigError(
-                f"Unknown paper size: '{args.papersize}'. Available sizes: {available}"
-            )
+            raise ConfigError(f"Unknown paper size: '{args.papersize}'. Available sizes: {available}")
 
     dims = paper_sizes[paper_name]
     if getattr(args, "orientation", "portrait") == "portrait":
@@ -472,10 +466,7 @@ def _parse_status_filter(raw: str | None) -> frozenset[str] | None:
         return None
     bad = [p for p in parts if p not in ALLOWED_STATUSES]
     if bad:
-        raise SystemExit(
-            f"--status: unknown value(s) {bad!r}. "
-            f"Allowed: {sorted(ALLOWED_STATUSES)} or 'all'."
-        )
+        raise SystemExit(f"--status: unknown value(s) {bad!r}. Allowed: {sorted(ALLOWED_STATUSES)} or 'all'.")
     return frozenset(parts)
 
 
@@ -488,14 +479,10 @@ def _parse_weekend_days(raw: str) -> list[int]:
         parts = [p.strip() for p in str(raw).split(",") if p.strip()]
         days = [int(p) for p in parts]
     except ValueError as exc:
-        raise SystemExit(
-            f"--weekend-days: expected comma-separated ints, got {raw!r}"
-        ) from exc
+        raise SystemExit(f"--weekend-days: expected comma-separated ints, got {raw!r}") from exc
     for d in days:
         if d < 0 or d > 6:
-            raise SystemExit(
-                f"--weekend-days: each value must be 0–6 (ISO weekday), got {d}"
-            )
+            raise SystemExit(f"--weekend-days: each value must be 0–6 (ISO weekday), got {d}")
     if len(set(days)) != len(days):
         raise SystemExit(f"--weekend-days: duplicate values in {raw!r}")
     return days
@@ -553,4 +540,3 @@ def _open_calendar_db(db_path: str) -> CalendarDB:
     """
     _validate_database(db_path)
     return CalendarDB(db_path)
-

@@ -199,10 +199,7 @@ class CandybarLayout(BaseLayout):
         # e.g. when the range starts/ends on a suppressed weekend, the first
         # week's only in-range days are Sat/Sun, which would render as a blank
         # row.
-        weeks = [
-            w for w in weeks
-            if self._week_has_visible_day(w, weekday_order, start, end)
-        ]
+        weeks = [w for w in weeks if self._week_has_visible_day(w, weekday_order, start, end)]
         if not weeks:
             return coord
 
@@ -214,9 +211,7 @@ class CandybarLayout(BaseLayout):
         content_x = margins["left"]
         content_width = margins["usable_width"]
         content_bottom = margins["bottom"] + hf["footer_height"]
-        content_height = (
-            margins["usable_height"] - hf["header_height"] - hf["footer_height"]
-        )
+        content_height = margins["usable_height"] - hf["header_height"] - hf["footer_height"]
         content_top = content_bottom + content_height
 
         # Split weeks into chunks (side-by-side strips).
@@ -248,16 +243,22 @@ class CandybarLayout(BaseLayout):
             strip_x = start_x + c * (strip_width + gap)
             cols = compute_columns(config, strip_x, day_col_w)
             self._layout_chunk(
-                coord, config, c, chunk, cols,
-                content_top, header_h, row_h,
-                start, end, suppress_weekends,
+                coord,
+                config,
+                c,
+                chunk,
+                cols,
+                content_top,
+                header_h,
+                row_h,
+                start,
+                end,
+                suppress_weekends,
             )
 
         return self._to_svg_coords(coord, config.pageY)
 
-    def _enumerate_weeks(
-        self, start: date, end: date, week_start_sunday: bool
-    ) -> list[date]:
+    def _enumerate_weeks(self, start: date, end: date, week_start_sunday: bool) -> list[date]:
         """Return the first-day-of-week date for every week overlapping the range."""
         # Days since the most recent Sunday (or Monday).
         offset = (start.weekday() + 1) % 7 if week_start_sunday else start.weekday()
@@ -301,14 +302,10 @@ class CandybarLayout(BaseLayout):
         # Header row (top of the strip)
         header_y = content_top - header_h
         if cols.show_wn:
-            coord[f"WeekNumHeader_C{chunk_idx}"] = (
-                cols.wn_x, header_y, cols.wn_w, header_h
-            )
+            coord[f"WeekNumHeader_C{chunk_idx}"] = (cols.wn_x, header_y, cols.wn_w, header_h)
         for i in range(cols.days_per_week):
             cell_x = cols.day_x0 + i * cols.day_col_w
-            coord[f"DayHeader_C{chunk_idx}_{i:02d}"] = (
-                cell_x, header_y, cols.day_col_w, header_h
-            )
+            coord[f"DayHeader_C{chunk_idx}_{i:02d}"] = (cell_x, header_y, cols.day_col_w, header_h)
 
         # Track month -> list of row indices (within this chunk) for box spans.
         month_rows: list[tuple[tuple[int, int], int]] = []
@@ -327,18 +324,14 @@ class CandybarLayout(BaseLayout):
                     continue  # suppress out-of-range days at the ends
                 in_range_visible.append(d)
                 cell_x = cols.day_x0 + col_idx * cols.day_col_w
-                coord[f"Cell_{d.strftime('%Y%m%d')}"] = (
-                    cell_x, row_y, cols.day_col_w, row_h
-                )
+                coord[f"Cell_{d.strftime('%Y%m%d')}"] = (cell_x, row_y, cols.day_col_w, row_h)
 
             # Week-number cell
             if cols.show_wn:
                 wn_key = f"WeekNum_C{chunk_idx}_R{r:03d}"
                 coord[wn_key] = (cols.wn_x, row_y, cols.wn_w, row_h)
                 anchor = self._wn_anchor(config)
-                self.week_numbers[wn_key] = get_week_number(
-                    week_start, config.mini_week_number_mode, anchor
-                )
+                self.week_numbers[wn_key] = get_week_number(week_start, config.mini_week_number_mode, anchor)
 
             # Attribute the row to a month by its last visible in-range day.
             if in_range_visible:
@@ -346,9 +339,7 @@ class CandybarLayout(BaseLayout):
                 month_rows.append(((last.year, last.month), r))
 
         # Build merged month boxes from consecutive same-month rows.
-        self._emit_month_boxes(
-            coord, chunk_idx, month_rows, cols, content_top, header_h, row_h
-        )
+        self._emit_month_boxes(coord, chunk_idx, month_rows, cols, content_top, header_h, row_h)
 
     def _emit_month_boxes(
         self,
@@ -407,15 +398,23 @@ class CandybarLayout(BaseLayout):
             h_height = hf["header_height"]
             coord.update(
                 self._generate_three_column_coords(
-                    left, config.pageX, top - h_height, h_height,
-                    "Header", margins["right"],
+                    left,
+                    config.pageX,
+                    top - h_height,
+                    h_height,
+                    "Header",
+                    margins["right"],
                 )
             )
         if config.include_footer and hf["footer_height"] > 0:
             f_height = hf["footer_height"]
             coord.update(
                 self._generate_three_column_coords(
-                    left, config.pageX, margins["bottom"], f_height,
-                    "Footer", margins["right"],
+                    left,
+                    config.pageX,
+                    margins["bottom"],
+                    f_height,
+                    "Footer",
+                    margins["right"],
                 )
             )

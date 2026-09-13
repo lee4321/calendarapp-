@@ -634,11 +634,7 @@ def find_unregistered_fonts(
         from config.config import FONT_REGISTRY
 
         registry = FONT_REGISTRY
-    return [
-        (path, font)
-        for path, font in iter_font_references(data)
-        if font not in registry
-    ]
+    return [(path, font) for path, font in iter_font_references(data) if font not in registry]
 
 
 class ThemeError(Exception):
@@ -708,10 +704,7 @@ class ThemeEngine:
                 path = builtin
             else:
                 available = ", ".join(self.list_available_themes())
-                raise ThemeError(
-                    f"Theme not found: '{theme_path_or_name}'. "
-                    f"Available built-in themes: {available}"
-                )
+                raise ThemeError(f"Theme not found: '{theme_path_or_name}'. Available built-in themes: {available}")
 
         try:
             with open(path) as f:
@@ -720,9 +713,7 @@ class ThemeEngine:
             raise ThemeError(f"Invalid YAML in theme file '{path}': {e}") from e
 
         meta = self._theme_data.get("theme", {})
-        self._theme_name = (
-            meta.get("name", path.stem) if isinstance(meta, dict) else path.stem
-        )
+        self._theme_name = meta.get("name", path.stem) if isinstance(meta, dict) else path.stem
         self._validate()
         logger.info("Loaded theme: %s", self._theme_name)
 
@@ -738,8 +729,7 @@ class ThemeEngine:
 
         for font_path, font in find_unregistered_fonts(self._theme_data):
             logger.warning(
-                "Theme '%s' font '%s' at '%s' is not in FONT_REGISTRY; "
-                "rendering will fail when this style is used",
+                "Theme '%s' font '%s' at '%s' is not in FONT_REGISTRY; rendering will fail when this style is used",
                 self._theme_name,
                 font,
                 font_path,
@@ -829,9 +819,7 @@ class ThemeEngine:
                 continue
             when = rule.get("when", {})
             if not isinstance(when, dict):
-                logger.warning(
-                    "Theme: %s.size_rule[%d].when must be an object", section_name, idx
-                )
+                logger.warning("Theme: %s.size_rule[%d].when must be an object", section_name, idx)
                 continue
             paper_values = when.get("papersize")
             if not isinstance(paper_values, list):
@@ -858,9 +846,7 @@ class ThemeEngine:
             try:
                 desired = float(base_font_size)
             except (TypeError, ValueError):
-                logger.warning(
-                    "Theme: base.font_size must be numeric; got %r", base_font_size
-                )
+                logger.warning("Theme: base.font_size must be numeric; got %r", base_font_size)
 
         base_node = self._theme_data.get("base", {})
         if not isinstance(base_node, dict):
@@ -871,17 +857,13 @@ class ThemeEngine:
 
         # Iterate manually so we can skip rules missing font_size before checking papersize
         if not isinstance(rules, list):
-            logger.warning(
-                "Theme: base.size_rule must be a list; got %r", type(rules).__name__
-            )
+            logger.warning("Theme: base.size_rule must be a list; got %r", type(rules).__name__)
             return desired
 
         p = self._normalize_papersize(papersize)
         for idx, rule in enumerate(rules):
             if not isinstance(rule, dict):
-                logger.warning(
-                    "Theme: base.size_rule[%d] must be an object; got %r", idx, rule
-                )
+                logger.warning("Theme: base.size_rule[%d] must be an object; got %r", idx, rule)
                 continue
             if "font_size" not in rule:
                 logger.warning("Theme: base.size_rule[%d] missing font_size", idx)
@@ -892,9 +874,7 @@ class ThemeEngine:
                 continue
             paper_values = when.get("papersize")
             if not isinstance(paper_values, list):
-                logger.warning(
-                    "Theme: base.size_rule[%d].when.papersize must be a list", idx
-                )
+                logger.warning("Theme: base.size_rule[%d].when.papersize must be a list", idx)
                 continue
             if p in {self._normalize_papersize(v) for v in paper_values}:
                 try:
@@ -908,9 +888,7 @@ class ThemeEngine:
                     return desired
         return desired
 
-    def _resolve_size_rule_match(
-        self, section_path: str, papersize: str | None
-    ) -> dict[str, Any] | None:
+    def _resolve_size_rule_match(self, section_path: str, papersize: str | None) -> dict[str, Any] | None:
         """
         Return the first matching size_rule entry for a section path.
 
@@ -1023,9 +1001,7 @@ class ThemeEngine:
                 logger.warning("Theme: layout.margin.%s invalid: %s", side, e)
                 continue
             if points < 0:
-                logger.warning(
-                    "Theme: layout.margin.%s must be >= 0; got %r", side, raw
-                )
+                logger.warning("Theme: layout.margin.%s must be >= 0; got %r", side, raw)
                 continue
             setattr(config, field, points)
             any_side = True
@@ -1049,9 +1025,7 @@ class ThemeEngine:
         if not self._theme_data:
             return config
 
-        desired_font_size = self._resolve_desired_font_size(
-            getattr(config, "papersize", "")
-        )
+        desired_font_size = self._resolve_desired_font_size(getattr(config, "papersize", ""))
         if desired_font_size is not None:
             config.desired_font_size = desired_font_size
 
@@ -1111,12 +1085,13 @@ class ThemeEngine:
         # _build_theme_styles, post-Phase-3-path-b).
         try:
             from config.unified_theme import parse_theme  # local import to avoid cycles
+
             config.theme = parse_theme(self._theme_data)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Theme '%s' could not be parsed as a unified theme: %s. "
-                "ThemeStyles will be empty.",
-                self._theme_name, exc,
+                "Theme '%s' could not be parsed as a unified theme: %s. ThemeStyles will be empty.",
+                self._theme_name,
+                exc,
             )
             config.theme = None
 
@@ -1131,6 +1106,7 @@ class ThemeEngine:
         # their dataclass defaults), takes effect on the second apply (after
         # setfontsizes ran).  See config.config._inject_heuristic_size_tokens.
         from config.config import _inject_heuristic_size_tokens
+
         _inject_heuristic_size_tokens(config)
 
         return config
@@ -1176,20 +1152,24 @@ class ThemeEngine:
         synthesized: list[dict] = []
         fed = colors.get("federal_holiday")
         if isinstance(fed, dict) and fed.get("color"):
-            synthesized.append({
-                "name": "synthesized: colors.federal_holiday → box:day fill",
-                "apply_to": "box:day",
-                "select": {"federal_holiday": True, "nonworkday": True},
-                "style": {"fill": fed["color"], "fill_opacity": 0.2},
-            })
+            synthesized.append(
+                {
+                    "name": "synthesized: colors.federal_holiday → box:day fill",
+                    "apply_to": "box:day",
+                    "select": {"federal_holiday": True, "nonworkday": True},
+                    "style": {"fill": fed["color"], "fill_opacity": 0.2},
+                }
+            )
         comp = colors.get("company_holiday")
         if isinstance(comp, dict) and comp.get("color"):
-            synthesized.append({
-                "name": "synthesized: colors.company_holiday → box:day fill",
-                "apply_to": "box:day",
-                "select": {"company_holiday": True, "nonworkday": True},
-                "style": {"fill": comp["color"], "fill_opacity": 0.25},
-            })
+            synthesized.append(
+                {
+                    "name": "synthesized: colors.company_holiday → box:day fill",
+                    "apply_to": "box:day",
+                    "select": {"company_holiday": True, "nonworkday": True},
+                    "style": {"fill": comp["color"], "fill_opacity": 0.25},
+                }
+            )
         if not synthesized:
             return
 
@@ -1203,14 +1183,14 @@ class ThemeEngine:
     # (catalog name) or a dict with ``band: <name>`` plus per-placement
     # overrides.
     _BAND_PLACEMENTS: tuple[tuple[str, str, str], ...] = (
-        ("compact_plan", "bands",         "compactplan_time_bands"),
-        ("blockplan",    "top_bands",     "blockplan_top_time_bands"),
-        ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
-        ("gantt",        "top_bands",     "gantt_top_time_bands"),
-        ("gantt",        "bottom_bands",  "gantt_bottom_time_bands"),
-        ("excelblockplan", "top_bands",   "excelblockplan_top_time_bands"),
-        ("timeline",     "top_bands",     "timeline_top_time_bands"),
-        ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
+        ("compact_plan", "bands", "compactplan_time_bands"),
+        ("blockplan", "top_bands", "blockplan_top_time_bands"),
+        ("blockplan", "bottom_bands", "blockplan_bottom_time_bands"),
+        ("gantt", "top_bands", "gantt_top_time_bands"),
+        ("gantt", "bottom_bands", "gantt_bottom_time_bands"),
+        ("excelblockplan", "top_bands", "excelblockplan_top_time_bands"),
+        ("timeline", "top_bands", "timeline_top_time_bands"),
+        ("timeline", "bottom_bands", "timeline_bottom_time_bands"),
     )
 
     def _apply_pit_blocks(self, config: CalendarConfig) -> None:
@@ -1446,7 +1426,10 @@ class ThemeEngine:
             resolved: list[dict] = []
             for entry in placements:
                 resolved_entry = self._resolve_band_placement(
-                    entry, catalog, section=section, key=key,
+                    entry,
+                    catalog,
+                    section=section,
+                    key=key,
                 )
                 if resolved_entry is not None:
                     resolved.append(resolved_entry)
@@ -1457,7 +1440,9 @@ class ThemeEngine:
                 except (TypeError, ValueError) as exc:
                     logger.warning(
                         "Theme: could not set %s=%r: %s",
-                        config_field, resolved, exc,
+                        config_field,
+                        resolved,
+                        exc,
                     )
 
     def _resolve_band_placement(
@@ -1474,7 +1459,9 @@ class ThemeEngine:
             if not isinstance(cat, dict):
                 logger.warning(
                     "Theme: %s.%s references unknown time_band '%s'",
-                    section, key, entry,
+                    section,
+                    key,
+                    entry,
                 )
                 return None
             return dict(cat)
@@ -1486,7 +1473,9 @@ class ThemeEngine:
                 if not isinstance(cat, dict):
                     logger.warning(
                         "Theme: %s.%s references unknown time_band '%s'",
-                        section, key, name,
+                        section,
+                        key,
+                        name,
                     )
                     return None
                 merged = dict(cat)
@@ -1500,7 +1489,9 @@ class ThemeEngine:
 
         logger.warning(
             "Theme: %s.%s contains a non-string/non-dict entry %r — skipped",
-            section, key, entry,
+            section,
+            key,
+            entry,
         )
         return None
 
@@ -1512,23 +1503,17 @@ class ThemeEngine:
 
         if "months" in colors and isinstance(colors["months"], dict):
             # Ensure keys are strings (YAML may parse "01" as int 1)
-            config.theme_month_colors = {
-                str(k).zfill(2): v for k, v in colors["months"].items()
-            }
+            config.theme_month_colors = {str(k).zfill(2): v for k, v in colors["months"].items()}
 
         if "fiscal_periods" in colors and isinstance(colors["fiscal_periods"], dict):
             # Ensure keys are strings (YAML may parse "01" as int 1)
-            config.theme_fiscal_period_colors = {
-                str(k).zfill(2): v for k, v in colors["fiscal_periods"].items()
-            }
+            config.theme_fiscal_period_colors = {str(k).zfill(2): v for k, v in colors["fiscal_periods"].items()}
 
         if "hash_lines" in colors:
             config.theme_hash_line_color = colors["hash_lines"]
 
         if "resource_groups" in colors and isinstance(colors["resource_groups"], dict):
-            config.theme_resource_group_colors = {
-                str(k).lower(): v for k, v in colors["resource_groups"].items()
-            }
+            config.theme_resource_group_colors = {str(k).lower(): v for k, v in colors["resource_groups"].items()}
 
         if "group_colors" in colors and isinstance(colors["group_colors"], list):
             config.group_colors = colors["group_colors"]
@@ -1613,10 +1598,16 @@ class ThemeEngine:
         line_styles = self._parse_line_styles_unified(theme)
         icon_styles = self._parse_icon_styles_unified(theme)
         self._apply_catalog_defaults(
-            text_styles, box_styles, line_styles, icon_styles,
+            text_styles,
+            box_styles,
+            line_styles,
+            icon_styles,
         )
         element_bindings = self._build_element_bindings_from_catalog(
-            text_styles, box_styles, line_styles, icon_styles,
+            text_styles,
+            box_styles,
+            line_styles,
+            icon_styles,
             element_overrides=self._theme_data.get("element_overrides") or {},
         )
 
@@ -1809,7 +1800,8 @@ class ThemeEngine:
                 cls._FALLBACK_TOKENS_WARNED.add((kind, token))
                 logger.info(
                     "Theme: %s:%s not defined; using catalog fallback",
-                    kind, token,
+                    kind,
+                    token,
                 )
 
     @staticmethod
@@ -1817,6 +1809,7 @@ class ThemeEngine:
         """Build a TextStyle from an element_overrides body dict;
         malformed numbers fall back to defaults rather than raising."""
         from config.styles import TextStyle
+
         try:
             size = float(body.get("size", 8.0))
         except (TypeError, ValueError):
@@ -1839,6 +1832,7 @@ class ThemeEngine:
         """Build a BoxStyle from an element_overrides body dict;
         malformed numbers fall back to defaults rather than raising."""
         from config.styles import BoxStyle
+
         try:
             fill_opacity = float(body.get("fill_opacity", 1.0))
         except (TypeError, ValueError):
@@ -1865,6 +1859,7 @@ class ThemeEngine:
         """Build a LineStyle from an element_overrides body dict;
         malformed numbers fall back to defaults rather than raising."""
         from config.styles import LineStyle
+
         try:
             width = float(body.get("width", 0.5))
         except (TypeError, ValueError):
@@ -1883,6 +1878,7 @@ class ThemeEngine:
     @staticmethod
     def _iconstyle_from_dict(body: dict):
         from config.styles import IconStyle
+
         size: float | None = None
         if "size" in body:
             try:
@@ -1945,7 +1941,9 @@ class ThemeEngine:
             if style_obj is None:
                 logger.warning(
                     "Theme: element %s references unknown token %s:%s",
-                    class_name, kind, token_name,
+                    class_name,
+                    kind,
+                    token_name,
                 )
                 continue
             binding = ElementBinding()
@@ -1970,9 +1968,7 @@ class ThemeEngine:
                     continue
                 apply_to = raw.get("apply_to")
                 targets = (
-                    [apply_to] if isinstance(apply_to, str)
-                    else list(apply_to) if isinstance(apply_to, list)
-                    else []
+                    [apply_to] if isinstance(apply_to, str) else list(apply_to) if isinstance(apply_to, list) else []
                 )
                 if "element" in targets:
                     name = raw.get("name", f"rule_{i}")
@@ -2002,8 +1998,7 @@ class ThemeEngine:
         if isinstance(day_box, dict) and "hash_rules" in day_box:
             if day_box["hash_rules"]:  # non-empty list is an error; empty list is tolerated
                 raise ThemeError(
-                    "weekly.day_box.hash_rules is deprecated — run tools/migrate_theme.py "
-                    "to convert to style_rules"
+                    "weekly.day_box.hash_rules is deprecated — run tools/migrate_theme.py to convert to style_rules"
                 )
 
         mini = self._theme_data.get("mini_calendar", {}) or {}
@@ -2017,7 +2012,7 @@ class ThemeEngine:
 
         blockplan = self._theme_data.get("blockplan", {}) or {}
         swimlanes = (blockplan.get("swimlanes", []) or []) if isinstance(blockplan, dict) else []
-        for lane in (swimlanes if isinstance(swimlanes, list) else []):
+        for lane in swimlanes if isinstance(swimlanes, list) else []:
             if isinstance(lane, dict) and "match" in lane:
                 raise ThemeError(
                     f"blockplan.swimlanes[{lane.get('name', '?')!r}].match is deprecated — "

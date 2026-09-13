@@ -30,8 +30,7 @@ class ArgField(Vertical):
             yield Switch(value=bool(spec.default), id=self._control_id)
 
         elif spec.kind == "count":
-            yield Input(value="0", type="integer", id=self._control_id,
-                        classes="narrow")
+            yield Input(value="0", type="integer", id=self._control_id, classes="narrow")
 
         elif spec.kind in ("choice", "picker"):
             options = self._select_options()
@@ -45,24 +44,23 @@ class ArgField(Vertical):
                 prompt = f"(default: {self._default_str() or 'none'})"
                 default = str(spec.default) if spec.default is not None else None
                 if default is not None and any(default == v for _, v in options):
-                    yield Select(options, allow_blank=True, prompt=prompt,
-                                 id=self._control_id, value=default)
+                    yield Select(options, allow_blank=True, prompt=prompt, id=self._control_id, value=default)
                 else:
-                    yield Select(options, allow_blank=True, prompt=prompt,
-                                 id=self._control_id)
+                    yield Select(options, allow_blank=True, prompt=prompt, id=self._control_id)
 
         elif spec.kind in ("int", "float"):
-            yield Input(value=self._default_str(),
-                        type="integer" if spec.kind == "int" else "number",
-                        id=self._control_id, classes="narrow")
+            yield Input(
+                value=self._default_str(),
+                type="integer" if spec.kind == "int" else "number",
+                id=self._control_id,
+                classes="narrow",
+            )
 
         elif spec.kind == "append":
-            yield Input(value="", placeholder="KEY=VALUE (one per line via re-add)",
-                        id=self._control_id)
+            yield Input(value="", placeholder="KEY=VALUE (one per line via re-add)", id=self._control_id)
 
         else:  # text / date positional
-            yield Input(value=self._default_str(),
-                        placeholder=spec.metavar or "", id=self._control_id)
+            yield Input(value=self._default_str(), placeholder=spec.metavar or "", id=self._control_id)
 
         if spec.help:
             yield Static(spec.help, classes="arghelp")

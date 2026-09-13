@@ -62,9 +62,12 @@ def test_every_theme_lays_out_callouts_at_one_width(theme_path: Path, tmp_path):
         config,
         [
             Event(task_name="A", start="20260105", end="20260105"),
-            Event(task_name="A considerably longer milestone name",
-                  start="20260220", end="20260220",
-                  notes="with a notes line trailing after it"),
+            Event(
+                task_name="A considerably longer milestone name",
+                start="20260220",
+                end="20260220",
+                notes="with a notes line trailing after it",
+            ),
             Event(task_name="C", start="20260410", end="20260410"),
         ],
         arrow.get("20260101", "YYYYMMDD"),

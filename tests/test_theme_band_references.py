@@ -43,14 +43,9 @@ def test_every_band_reference_resolves(theme_path: Path, caplog):
         engine.load(theme_path.stem)
         engine.apply(config)
 
-    unknown = [
-        record.getMessage()
-        for record in caplog.records
-        if _UNKNOWN in record.getMessage()
-    ]
-    assert not unknown, (
-        f"{theme_path.name} references bands its time_bands catalog does not "
-        "define:\n  " + "\n  ".join(sorted(set(unknown)))
+    unknown = [record.getMessage() for record in caplog.records if _UNKNOWN in record.getMessage()]
+    assert not unknown, f"{theme_path.name} references bands its time_bands catalog does not define:\n  " + "\n  ".join(
+        sorted(set(unknown))
     )
 
 
@@ -72,10 +67,7 @@ def test_a_theme_that_names_bands_ships_a_catalog(theme_path: Path):
                 named.append(entry["band"])
 
     if named:
-        assert catalog, (
-            f"{theme_path.name} names bands {sorted(set(named))} but has no "
-            "time_bands catalog"
-        )
+        assert catalog, f"{theme_path.name} names bands {sorted(set(named))} but has no time_bands catalog"
         missing = sorted({name for name in named if name not in catalog})
         assert not missing, f"{theme_path.name}: {missing} not in its catalog"
 

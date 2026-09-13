@@ -37,8 +37,10 @@ def test_days_split_horizontally():
 def test_pages_run_row_major_so_one_task_reads_across_consecutive_pages():
     pages = plan_pages(row_count=4, day_count=8, rows_per_page=2, days_per_page=4)
     assert [(p.row_start, p.day_start) for p in pages] == [
-        (0, 0), (0, 4),   # first rows, both halves of the range
-        (2, 0), (2, 4),   # then the next rows
+        (0, 0),
+        (0, 4),  # first rows, both halves of the range
+        (2, 0),
+        (2, 4),  # then the next rows
     ]
 
 
@@ -62,9 +64,7 @@ def test_a_chart_with_no_rows_still_renders_one_page():
 
 @pytest.mark.parametrize("per_page", [0, -3])
 def test_degenerate_page_sizes_cannot_produce_endless_pages(per_page):
-    pages = plan_pages(
-        row_count=3, day_count=3, rows_per_page=per_page, days_per_page=per_page
-    )
+    pages = plan_pages(row_count=3, day_count=3, rows_per_page=per_page, days_per_page=per_page)
     assert len(pages) == 9  # one row × one day each
 
 
@@ -116,9 +116,7 @@ def test_a_later_page_keeps_the_running_label():
     weeks = segments[("top", 1)]
 
     def label_for(day):
-        return next(
-            (s.label for s in weeks if s.start <= day < s.end_exclusive), None
-        )
+        return next((s.label for s in weeks if s.start <= day < s.end_exclusive), None)
 
     # Whatever the page break, the label depends only on the date.
     assert label_for(days[0]) == "W1"
@@ -136,10 +134,7 @@ def test_every_configured_band_gets_its_own_segment_list():
 
 
 def many_tasks(count: int) -> list[dict]:
-    return [
-        task(Task_Name=f"task {n}", Source_ID=str(n), WBS=f"1.{n}")
-        for n in range(count)
-    ]
+    return [task(Task_Name=f"task {n}", Source_ID=str(n), WBS=f"1.{n}") for n in range(count)]
 
 
 def test_extra_pages_are_written_and_counted(tmp_path):
@@ -148,7 +143,7 @@ def test_extra_pages_are_written_and_counted(tmp_path):
     renderer = render(
         many_tasks(30),
         outputfile=str(output),
-        gantt_row_height=40.0,     # forces only a few rows per page
+        gantt_row_height=40.0,  # forces only a few rows per page
         include_gantt_details=False,
     )
     extra = renderer._extra_page_count
@@ -159,9 +154,7 @@ def test_extra_pages_are_written_and_counted(tmp_path):
 
 def test_a_chart_that_fits_writes_no_continuation_files(tmp_path):
     output = tmp_path / "chart.svg"
-    renderer = render(
-        [task()], outputfile=str(output), include_gantt_details=False
-    )
+    renderer = render([task()], outputfile=str(output), include_gantt_details=False)
     assert renderer._extra_page_count == 0
     assert not (tmp_path / "chart_p2.svg").exists()
 
@@ -171,7 +164,8 @@ def test_horizontal_splitting_honors_the_minimum_day_width(tmp_path):
     output = tmp_path / "chart.svg"
     renderer = render(
         [task()],
-        start="20260202", end="20260731",
+        start="20260202",
+        end="20260731",
         outputfile=str(output),
         gantt_min_day_width=40.0,
         include_gantt_details=False,
@@ -183,7 +177,8 @@ def test_a_zero_minimum_day_width_never_splits_horizontally(tmp_path):
     output = tmp_path / "chart.svg"
     renderer = render(
         [task()],
-        start="20260202", end="20261231",
+        start="20260202",
+        end="20261231",
         outputfile=str(output),
         gantt_min_day_width=0.0,
         include_gantt_details=False,
@@ -195,7 +190,9 @@ def test_each_page_repeats_the_column_headers(tmp_path):
     """Answer 10/11: headers and timescale repeat on every page."""
     output = tmp_path / "chart.svg"
     renderer = render(
-        many_tasks(30), outputfile=str(output), gantt_row_height=40.0,
+        many_tasks(30),
+        outputfile=str(output),
+        gantt_row_height=40.0,
         include_gantt_details=False,
     )
     pages = renderer._extra_page_count + 1
@@ -207,7 +204,9 @@ def test_rows_on_a_later_page_start_at_the_top_of_the_body(tmp_path):
     """The page's first row draws at the body's top edge, not its global offset."""
     output = tmp_path / "chart.svg"
     renderer = render(
-        many_tasks(30), outputfile=str(output), gantt_row_height=40.0,
+        many_tasks(30),
+        outputfile=str(output),
+        gantt_row_height=40.0,
         include_gantt_details=False,
     )
     config = create_calendar_config()

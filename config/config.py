@@ -68,9 +68,7 @@ class CalendarConfig:
     """
 
     # Document Metadata
-    doc_title: str = field(
-        default_factory=lambda: f"Calendar created {get_creation_date()}"
-    )
+    doc_title: str = field(default_factory=lambda: f"Calendar created {get_creation_date()}")
     doc_author: str = "A. Lee Ingram"
     command_line: str = ""
     embed_data: bool = False
@@ -128,9 +126,7 @@ class CalendarConfig:
     country: str | None = None
 
     # Fiscal calendar settings
-    fiscal_calendar_type: str | None = (
-        None  # "nrf-454", "nrf-445", "nrf-544", "13-period"
-    )
+    fiscal_calendar_type: str | None = None  # "nrf-454", "nrf-445", "nrf-544", "13-period"
     fiscal_show_period_labels: bool = True
     fiscal_show_quarter_labels: bool = True
     fiscal_use_period_colors: bool = False
@@ -414,9 +410,7 @@ class CalendarConfig:
             "Group",
         ]
     )
-    mini_details_column_widths: list[float] = field(
-        default_factory=lambda: [0.16, 0.52, 0.10, 0.10, 0.12]
-    )
+    mini_details_column_widths: list[float] = field(default_factory=lambda: [0.16, 0.52, 0.10, 0.10, 0.12])
     mini_details_events_section_text: str = "Events"
     mini_details_holidays_section_text: str = "Holidays & Special Days"
 
@@ -443,9 +437,7 @@ class CalendarConfig:
     # Status filter: events whose status is in this set are included.
     # None means "all statuses". Default keeps the historic behaviour of
     # showing only events with status='active'.
-    status_filter: frozenset[str] | None = field(
-        default_factory=lambda: frozenset({"active"})
-    )
+    status_filter: frozenset[str] | None = field(default_factory=lambda: frozenset({"active"}))
 
     # Display options
     shade_current_day: bool = True
@@ -496,9 +488,7 @@ class CalendarConfig:
     header_center_text: str = ""
     header_center_font: str = Fonts.R_BOLD_ITALIC
     header_center_font_color: str = "grey"
-    header_right_text: str = field(
-        default_factory=lambda: f"as of {get_creation_date()}"
-    )
+    header_right_text: str = field(default_factory=lambda: f"as of {get_creation_date()}")
 
     # Footer text and styling
     footer_left_text: str = ""
@@ -770,15 +760,15 @@ class CalendarConfig:
     # =========================================================================
     # Axis direction. Renamed from --orientation (which is page orientation)
     # to --direction to avoid collision.
-    pit_direction: str = "horizontal"            # "horizontal" | "vertical"
-    pit_label_side: str = "both"                 # "primary" | "secondary" | "both"
+    pit_direction: str = "horizontal"  # "horizontal" | "vertical"
+    pit_label_side: str = "both"  # "primary" | "secondary" | "both"
     # Tick granularity uses the project-wide timeband units.
-    pit_tick_unit: str = "month"                 # month|week|fiscal_quarter|fiscal_period|interval|date|year
-    pit_tick_interval: int = 1                   # for unit == "interval"
+    pit_tick_unit: str = "month"  # month|week|fiscal_quarter|fiscal_period|interval|date|year
+    pit_tick_interval: int = 1  # for unit == "interval"
     pit_tick_label_format: str | None = None
-    pit_show_ticks: bool = True                  # draw axis ticks at all
-    pit_tick_length: float = 5.0                 # half-length of each tick mark (each side of axis)
-    pit_show_tick_labels: bool = True            # draw the per-segment tick label
+    pit_show_ticks: bool = True  # draw axis ticks at all
+    pit_tick_length: float = 5.0  # half-length of each tick mark (each side of axis)
+    pit_show_tick_labels: bool = True  # draw the per-segment tick label
     # Multiple tick bands (mirrors ``timeline_ticks``). When set, this
     # overrides the single-band scalar fields above and draws one row of
     # ticks per band. Accepts a dict (one band) or a list of dicts. Per-band
@@ -791,8 +781,8 @@ class CalendarConfig:
     pit_ticks: dict | list | None = None
 
     pit_show_today_line: bool = True
-    pit_today_date: str | None = None            # YYYYMMDD; None → real today
-    pit_today_line_label: str = "today"          # "" suppresses the label
+    pit_today_date: str | None = None  # YYYYMMDD; None → real today
+    pit_today_line_label: str = "today"  # "" suppresses the label
 
     pit_marker_size: float = 7.0
     pit_dot_radius: float = 4.0
@@ -844,7 +834,7 @@ class CalendarConfig:
 
     # Label box defaults
     pit_label_stroke_width: float = 0.5
-    pit_label_fill_opacity: float = 0.0          # 0 = no fill (transparent box)
+    pit_label_fill_opacity: float = 0.0  # 0 = no fill (transparent box)
     pit_label_corner_radius: float = 2.0
     pit_label_padding_x: float = 6.0
     pit_label_padding_y: float = 3.0
@@ -1041,10 +1031,10 @@ class CalendarConfig:
     blockplan_lane_label_font_size: float | None = None
     blockplan_lane_label_align_h: str = "left"  # left | center | right
     blockplan_lane_label_align_v: str = "middle"  # top | middle | bottom
-    blockplan_lane_label_rotation: float = (
-        0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
+    blockplan_lane_label_rotation: float = 0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
+    blockplan_lane_split_ratio: float = (
+        0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
     )
-    blockplan_lane_split_ratio: float = 0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
     # ── Blockplan text styling — kept survivors only (font_size + name fields).
     blockplan_name_text_font_size: float | None = None
     blockplan_notes_text_font_name: str | None = None
@@ -1073,9 +1063,7 @@ class CalendarConfig:
     blockplan_vertical_line_width: float = 1.5
     blockplan_vertical_line_dasharray: str | None = None
     blockplan_vertical_line_opacity: float = 0.9
-    blockplan_vertical_line_fill_color: str = (
-        "none"  # default no fill; set to color, list, or palette
-    )
+    blockplan_vertical_line_fill_color: str = "none"  # default no fill; set to color, list, or palette
     blockplan_vertical_line_fill_opacity: float = 0.2
 
     # ── Gantt ─────────────────────────────────────────────────────────────────
@@ -1084,34 +1072,23 @@ class CalendarConfig:
     # `gantt.columns:` section; style_rules govern only the visuals.
     gantt_columns: list[dict[str, Any]] = field(
         default_factory=lambda: [
-            {"field": "link_ref", "header": "Ref", "width": 0.03,
-             "render": "icon", "align": "center"},
+            {"field": "link_ref", "header": "Ref", "width": 0.03, "render": "icon", "align": "center"},
             {"field": "source_id", "header": "ID", "width": 0.035, "align": "right"},
-            {"field": "name", "header": "Task Name", "width": 0.215,
-             "max_lines": 2, "indent": True},
+            {"field": "name", "header": "Task Name", "width": 0.215, "max_lines": 2, "indent": True},
             {"field": "status", "header": "Status", "width": 0.045},
             {"field": "priority", "header": "Pri", "width": 0.025, "align": "right"},
             {"field": "wbs", "header": "WBS", "width": 0.05},
-            {"field": "rollup", "header": "Roll", "width": 0.02,
-             "render": "icon", "align": "center"},
-            {"field": "milestone", "header": "MS", "width": 0.02,
-             "render": "icon", "align": "center"},
-            {"field": "percent_complete", "header": "%", "width": 0.035,
-             "align": "right", "format": "{:.0%}"},
-            {"field": "effort_text", "header": "Effort", "width": 0.045,
-             "align": "right"},
-            {"field": "duration_text", "header": "Duration", "width": 0.045,
-             "align": "right"},
-            {"field": "start_date", "header": "Start", "width": 0.08,
-             "date_format": "dd MM/DD/YY"},
-            {"field": "end_date", "header": "Finish", "width": 0.08,
-             "date_format": "dd MM/DD/YY"},
-            {"field": "resource_names", "header": "Resources", "width": 0.065,
-             "max_lines": 1},
+            {"field": "rollup", "header": "Roll", "width": 0.02, "render": "icon", "align": "center"},
+            {"field": "milestone", "header": "MS", "width": 0.02, "render": "icon", "align": "center"},
+            {"field": "percent_complete", "header": "%", "width": 0.035, "align": "right", "format": "{:.0%}"},
+            {"field": "effort_text", "header": "Effort", "width": 0.045, "align": "right"},
+            {"field": "duration_text", "header": "Duration", "width": 0.045, "align": "right"},
+            {"field": "start_date", "header": "Start", "width": 0.08, "date_format": "dd MM/DD/YY"},
+            {"field": "end_date", "header": "Finish", "width": 0.08, "date_format": "dd MM/DD/YY"},
+            {"field": "resource_names", "header": "Resources", "width": 0.065, "max_lines": 1},
             {"field": "resource_group", "header": "Group", "width": 0.055},
             {"field": "notes", "header": "Notes", "width": 0.075, "max_lines": 2},
-            {"field": "deadline", "header": "Deadline", "width": 0.08,
-             "date_format": "dd MM/DD/YY"},
+            {"field": "deadline", "header": "Deadline", "width": 0.08, "date_format": "dd MM/DD/YY"},
         ]
     )
     gantt_table_width_ratio: float = 0.38
@@ -1166,9 +1143,7 @@ class CalendarConfig:
     # Cross-page dependency references.  Families are consumed in order, so
     # numbering survives 300 breaks before falling back to the unnumbered
     # marker above.
-    gantt_link_ref_icon_families: list[str] = field(
-        default_factory=lambda: ["circle-", "darkcircle-", "square-"]
-    )
+    gantt_link_ref_icon_families: list[str] = field(default_factory=lambda: ["circle-", "darkcircle-", "square-"])
     gantt_link_ref_family_size: int = 100
     gantt_link_ref_max_icons: int = 2
     gantt_continuation_icon: str = "arrow-bar-right"
@@ -1471,81 +1446,55 @@ class CalendarConfig:
             raise ValueError(f"mini_columns must be >= 1, got {self.mini_columns}")
         if self.timeline_orientation not in ("horizontal", "vertical"):
             raise ValueError(
-                f"timeline_orientation must be 'horizontal' or 'vertical', "
-                f"got {self.timeline_orientation!r}"
+                f"timeline_orientation must be 'horizontal' or 'vertical', got {self.timeline_orientation!r}"
             )
         if self.timeline_label_side not in ("primary", "secondary", "both"):
             raise ValueError(
-                f"timeline_label_side must be 'primary', 'secondary', or 'both', "
-                f"got {self.timeline_label_side!r}"
+                f"timeline_label_side must be 'primary', 'secondary', or 'both', got {self.timeline_label_side!r}"
             )
-        if self.timeline_duration_side not in (
-            "opposite", "primary", "secondary", "both"
-        ):
+        if self.timeline_duration_side not in ("opposite", "primary", "secondary", "both"):
             raise ValueError(
                 f"timeline_duration_side must be 'opposite', 'primary', "
                 f"'secondary', or 'both', got {self.timeline_duration_side!r}"
             )
         if self.timeline_event_placement not in ("packed", "labella"):
             raise ValueError(
-                f"timeline_event_placement must be 'packed' or 'labella', "
-                f"got {self.timeline_event_placement!r}"
+                f"timeline_event_placement must be 'packed' or 'labella', got {self.timeline_event_placement!r}"
             )
         if self.pit_direction not in ("horizontal", "vertical"):
-            raise ValueError(
-                f"pit_direction must be 'horizontal' or 'vertical', "
-                f"got {self.pit_direction!r}"
-            )
+            raise ValueError(f"pit_direction must be 'horizontal' or 'vertical', got {self.pit_direction!r}")
         if self.pit_label_side not in ("primary", "secondary", "both"):
-            raise ValueError(
-                f"pit_label_side must be 'primary', 'secondary', or 'both', "
-                f"got {self.pit_label_side!r}"
-            )
+            raise ValueError(f"pit_label_side must be 'primary', 'secondary', or 'both', got {self.pit_label_side!r}")
         if self.pit_leader_label_anchor not in ("start", "center", "end"):
             raise ValueError(
-                f"pit_leader_label_anchor must be 'start', 'center', or "
-                f"'end', got {self.pit_leader_label_anchor!r}"
+                f"pit_leader_label_anchor must be 'start', 'center', or 'end', got {self.pit_leader_label_anchor!r}"
             )
         if self.pit_date_placement not in ("inline", "axis", "none"):
-            raise ValueError(
-                f"pit_date_placement must be 'inline', 'axis', or 'none', "
-                f"got {self.pit_date_placement!r}"
-            )
+            raise ValueError(f"pit_date_placement must be 'inline', 'axis', or 'none', got {self.pit_date_placement!r}")
         _pit_tick_units = {
-            "month", "week", "fiscal_quarter", "fiscal_period",
-            "interval", "date", "year",
+            "month",
+            "week",
+            "fiscal_quarter",
+            "fiscal_period",
+            "interval",
+            "date",
+            "year",
         }
         if self.pit_tick_unit not in _pit_tick_units:
-            raise ValueError(
-                f"pit_tick_unit must be one of {sorted(_pit_tick_units)}, "
-                f"got {self.pit_tick_unit!r}"
-            )
+            raise ValueError(f"pit_tick_unit must be one of {sorted(_pit_tick_units)}, got {self.pit_tick_unit!r}")
         if self.weekend_days is not None:
             if not isinstance(self.weekend_days, list) or not all(
                 isinstance(d, int) and 0 <= d <= 6 for d in self.weekend_days
             ):
-                raise ValueError(
-                    "weekend_days must be a list of ints 0–6 (ISO weekday), "
-                    f"got {self.weekend_days!r}"
-                )
+                raise ValueError(f"weekend_days must be a list of ints 0–6 (ISO weekday), got {self.weekend_days!r}")
             if len(set(self.weekend_days)) != len(self.weekend_days):
-                raise ValueError(
-                    f"weekend_days must not contain duplicates, got {self.weekend_days!r}"
-                )
-        _valid_placement_tokens = frozenset(
-            {"priority", "milestones", "events", "durations", "alphabetical"}
-        )
-        if (
-            not isinstance(self.item_placement_order, list)
-            or not self.item_placement_order
-        ):
+                raise ValueError(f"weekend_days must not contain duplicates, got {self.weekend_days!r}")
+        _valid_placement_tokens = frozenset({"priority", "milestones", "events", "durations", "alphabetical"})
+        if not isinstance(self.item_placement_order, list) or not self.item_placement_order:
             raise ValueError(
-                "item_placement_order must be a non-empty list of placement tokens, "
-                f"got {self.item_placement_order!r}"
+                f"item_placement_order must be a non-empty list of placement tokens, got {self.item_placement_order!r}"
             )
-        _invalid_tokens = [
-            t for t in self.item_placement_order if t not in _valid_placement_tokens
-        ]
+        _invalid_tokens = [t for t in self.item_placement_order if t not in _valid_placement_tokens]
         if _invalid_tokens:
             raise ValueError(
                 f"item_placement_order contains invalid tokens {_invalid_tokens!r}; "
@@ -1553,8 +1502,7 @@ class CalendarConfig:
             )
         if self.blockplan_lane_match_mode not in {"first", "all"}:
             raise ValueError(
-                "blockplan_lane_match_mode must be 'first' or 'all', "
-                f"got {self.blockplan_lane_match_mode!r}"
+                f"blockplan_lane_match_mode must be 'first' or 'all', got {self.blockplan_lane_match_mode!r}"
             )
         if self.blockplan_lane_label_align_h not in {"left", "center", "right"}:
             raise ValueError(
@@ -1572,7 +1520,6 @@ class CalendarConfig:
                 f"got {self.blockplan_header_label_align_h!r}"
             )
 
-
     def get_weekend_days(self) -> frozenset[int]:
         """Resolve weekend days (ISO weekday 0=Mon..6=Sun).
 
@@ -1585,7 +1532,6 @@ class CalendarConfig:
         if self.weekend_style == 0:
             return frozenset()
         return frozenset({5, 6})
-
 
     # ── Style accessor methods ──────────────────────────────────────────────
     # These delegate to theme_styles when available, falling back to style
@@ -1637,65 +1583,128 @@ class CalendarConfig:
 
     def _fallback_text_style(self, ec: str) -> Any:
         from config.styles import TextStyle
+
         _map = {
             "ec-heading": lambda: TextStyle(font=self.header_left_font, color=self.header_left_font_color),
             "ec-label": lambda: TextStyle(font=self.day_name_font, color=self.day_name_font_color),
             "ec-day-number": lambda: TextStyle(font=self.day_box_number_font, color=self.day_box_number_color),
             "ec-month-title": lambda: TextStyle(font=self.mini_title_font, color=self.mini_title_color),
             "ec-week-number": lambda: TextStyle(font=self.week_number_font, color=self.week_number_font_color),
-            "ec-fiscal-label": lambda: TextStyle(font=self.fiscal_period_label_font, color=self.fiscal_period_label_color),
-            "ec-event-name": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color, opacity=self.weekly_name_text_font_opacity),
-            "ec-event-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
+            "ec-fiscal-label": lambda: TextStyle(
+                font=self.fiscal_period_label_font, color=self.fiscal_period_label_color
+            ),
+            "ec-event-name": lambda: TextStyle(
+                font=self.weekly_name_text_font_name,
+                color=self.weekly_name_text_font_color,
+                opacity=self.weekly_name_text_font_opacity,
+            ),
+            "ec-event-notes": lambda: TextStyle(
+                font=self.weekly_notes_text_font_name,
+                color=self.weekly_notes_text_font_color,
+                opacity=self.weekly_notes_text_font_opacity,
+            ),
             "ec-event-date": lambda: TextStyle(font=self.timeline_date_font, color=self.timeline_date_color),
-            "ec-duration-date": lambda: TextStyle(font=self.timeline_duration_date_font or self.timeline_date_font, color=self.timeline_duration_date_color or self.timeline_date_color),
+            "ec-duration-date": lambda: TextStyle(
+                font=self.timeline_duration_date_font or self.timeline_date_font,
+                color=self.timeline_duration_date_color or self.timeline_date_color,
+            ),
             "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_color),
             "ec-today-label": lambda: TextStyle(color=self.timeline_today_label_color),
             "ec-header-text": lambda: TextStyle(font=self.header_center_font, color=self.header_center_font_color),
             "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
             "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
-            "ec-legend-text": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color),
-            "ec-legend-notes": lambda: TextStyle(font=self.weekly_notes_text_font_name, color=self.weekly_notes_text_font_color, opacity=self.weekly_notes_text_font_opacity),
+            "ec-legend-text": lambda: TextStyle(
+                font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color
+            ),
+            "ec-legend-notes": lambda: TextStyle(
+                font=self.weekly_notes_text_font_name,
+                color=self.weekly_notes_text_font_color,
+                opacity=self.weekly_notes_text_font_opacity,
+            ),
         }
         builder = _map.get(ec)
         return builder() if builder else TextStyle()
 
     def _fallback_box_style(self, ec: str) -> Any:
         from config.styles import BoxStyle
+
         _map = {
-            "ec-cell": lambda: BoxStyle(fill=self.day_box_fill_color, fill_opacity=self.day_box_fill_opacity, stroke=self.day_box_stroke_color, stroke_width=self.day_box_stroke_width, stroke_opacity=self.day_box_stroke_opacity, stroke_dasharray=self.day_box_stroke_dasharray),
+            "ec-cell": lambda: BoxStyle(
+                fill=self.day_box_fill_color,
+                fill_opacity=self.day_box_fill_opacity,
+                stroke=self.day_box_stroke_color,
+                stroke_width=self.day_box_stroke_width,
+                stroke_opacity=self.day_box_stroke_opacity,
+                stroke_dasharray=self.day_box_stroke_dasharray,
+            ),
             "ec-background": lambda: BoxStyle(fill="none"),
             # No legacy field behind this one; the literals keep a
             # themeless run banding rather than painting it white.
             "ec-row-band": lambda: BoxStyle(fill="lightgrey", fill_opacity=0.15),
             "ec-heading-cell": lambda: BoxStyle(fill=self.blockplan_header_heading_fill_color),
-            "ec-band-cell": lambda: BoxStyle(fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity),
-            "ec-callout-box": lambda: BoxStyle(fill_opacity=self.timeline_label_fill_opacity, stroke_width=self.timeline_label_stroke_width, stroke_dasharray=self.timeline_label_stroke_dasharray),
-            "ec-vline-fill": lambda: BoxStyle(fill=self.blockplan_vertical_line_fill_color, fill_opacity=self.blockplan_vertical_line_fill_opacity),
-            "ec-milestone-marker": lambda: BoxStyle(stroke=self.timeline_marker_stroke_color, stroke_width=self.timeline_marker_stroke_width),
+            "ec-band-cell": lambda: BoxStyle(
+                fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity
+            ),
+            "ec-callout-box": lambda: BoxStyle(
+                fill_opacity=self.timeline_label_fill_opacity,
+                stroke_width=self.timeline_label_stroke_width,
+                stroke_dasharray=self.timeline_label_stroke_dasharray,
+            ),
+            "ec-vline-fill": lambda: BoxStyle(
+                fill=self.blockplan_vertical_line_fill_color, fill_opacity=self.blockplan_vertical_line_fill_opacity
+            ),
+            "ec-milestone-marker": lambda: BoxStyle(
+                stroke=self.timeline_marker_stroke_color, stroke_width=self.timeline_marker_stroke_width
+            ),
         }
         builder = _map.get(ec)
         return builder() if builder else BoxStyle()
 
     def _fallback_line_style(self, ec: str) -> Any:
         from config.styles import LineStyle
+
         _map = {
-            "ec-grid-line": lambda: LineStyle(color=self.mini_grid_line_color, width=self.mini_grid_line_width, opacity=self.mini_grid_line_opacity, dasharray=self.mini_grid_line_dasharray),
-            "ec-axis-line": lambda: LineStyle(color=self.timeline_axis_color, width=self.timeline_axis_width, opacity=self.timeline_axis_opacity, dasharray=self.timeline_axis_stroke_dasharray),
-            "ec-axis-tick": lambda: LineStyle(color=self.timeline_tick_color, dasharray=self.timeline_tick_stroke_dasharray),
-            "ec-today-line": lambda: LineStyle(color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray),
+            "ec-grid-line": lambda: LineStyle(
+                color=self.mini_grid_line_color,
+                width=self.mini_grid_line_width,
+                opacity=self.mini_grid_line_opacity,
+                dasharray=self.mini_grid_line_dasharray,
+            ),
+            "ec-axis-line": lambda: LineStyle(
+                color=self.timeline_axis_color,
+                width=self.timeline_axis_width,
+                opacity=self.timeline_axis_opacity,
+                dasharray=self.timeline_axis_stroke_dasharray,
+            ),
+            "ec-axis-tick": lambda: LineStyle(
+                color=self.timeline_tick_color, dasharray=self.timeline_tick_stroke_dasharray
+            ),
+            "ec-today-line": lambda: LineStyle(
+                color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray
+            ),
             "ec-separator": lambda: LineStyle(dasharray=self.mini_details_separator_stroke_dasharray),
             "ec-connector": lambda: LineStyle(dasharray=self.timeline_connector_stroke_dasharray),
-            "ec-vline": lambda: LineStyle(color=self.blockplan_vertical_line_color, width=self.blockplan_vertical_line_width, opacity=self.blockplan_vertical_line_opacity, dasharray=self.blockplan_vertical_line_dasharray),
-            "ec-duration-bar": lambda: LineStyle(dasharray=self.duration_stroke_dasharray, opacity=self.mini_duration_bar_stroke_opacity),
+            "ec-vline": lambda: LineStyle(
+                color=self.blockplan_vertical_line_color,
+                width=self.blockplan_vertical_line_width,
+                opacity=self.blockplan_vertical_line_opacity,
+                dasharray=self.blockplan_vertical_line_dasharray,
+            ),
+            "ec-duration-bar": lambda: LineStyle(
+                dasharray=self.duration_stroke_dasharray, opacity=self.mini_duration_bar_stroke_opacity
+            ),
             "ec-hash-line": lambda: LineStyle(dasharray=self.mini_hash_line_dasharray),
             "ec-strikethrough": lambda: LineStyle(dasharray=self.mini_strikethrough_stroke_dasharray),
-            "ec-milestone-marker": lambda: LineStyle(width=self.mini_milestone_stroke_width, opacity=self.mini_milestone_stroke_opacity),
+            "ec-milestone-marker": lambda: LineStyle(
+                width=self.mini_milestone_stroke_width, opacity=self.mini_milestone_stroke_opacity
+            ),
         }
         builder = _map.get(ec)
         return builder() if builder else LineStyle()
 
     def _fallback_icon_style(self, ec: str) -> Any:
         from config.styles import IconStyle
+
         _map = {
             "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
             "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
@@ -1703,11 +1712,11 @@ class CalendarConfig:
                 color=(self.continuation_icon_color or self.duration_icon_color),
                 # Compactplan (the consumer of this fallback) is horizontal,
                 # so resolve here rather than handing a list to IconStyle.
-                icon=resolve_continuation_icon(
-                    self.continuation_icon_after, "horizontal", "arrow-right"
-                ),
+                icon=resolve_continuation_icon(self.continuation_icon_after, "horizontal", "arrow-right"),
             ),
-            "ec-overflow-icon": lambda: IconStyle(color=self.overflow_indicator_color, icon=self.overflow_indicator_icon),
+            "ec-overflow-icon": lambda: IconStyle(
+                color=self.overflow_indicator_color, icon=self.overflow_indicator_icon
+            ),
         }
         builder = _map.get(ec)
         return builder() if builder else IconStyle()
@@ -2170,10 +2179,7 @@ def get_font_path(font_name: str) -> str:
         return ""
     path = FONT_REGISTRY.get(font_name)
     if path is None:
-        raise KeyError(
-            f"Font '{font_name}' not found in FONT_REGISTRY. "
-            f"Available fonts: {sorted(FONT_REGISTRY)}"
-        )
+        raise KeyError(f"Font '{font_name}' not found in FONT_REGISTRY. Available fonts: {sorted(FONT_REGISTRY)}")
     return path
 
 
@@ -2401,17 +2407,11 @@ def resolve_page_margins(config: CalendarConfig) -> dict[str, float]:
     - Explicit side margins override defaults when present.
     - If include_margin is False and no side overrides are provided, margins are 0.
     """
-    base_margin = (
-        round(config.pageX * config.margin_percent, 2) if config.include_margin else 0.0
-    )
+    base_margin = round(config.pageX * config.margin_percent, 2) if config.include_margin else 0.0
     left = float(config.margin_left) if config.margin_left is not None else base_margin
-    right = (
-        float(config.margin_right) if config.margin_right is not None else base_margin
-    )
+    right = float(config.margin_right) if config.margin_right is not None else base_margin
     top = float(config.margin_top) if config.margin_top is not None else base_margin
-    bottom = (
-        float(config.margin_bottom) if config.margin_bottom is not None else base_margin
-    )
+    bottom = float(config.margin_bottom) if config.margin_bottom is not None else base_margin
 
     left = max(0.0, left)
     right = max(0.0, right)
@@ -2530,8 +2530,7 @@ def _inject_heuristic_size_tokens(config: CalendarConfig) -> None:
             select["visualizer"] = visualizer
         new_rules.append(
             Rule(
-                name=f"setfontsizes heuristic: {token}"
-                + (f" (visualizer={visualizer})" if visualizer else ""),
+                name=f"setfontsizes heuristic: {token}" + (f" (visualizer={visualizer})" if visualizer else ""),
                 define=None,
                 as_name=None,
                 apply_to=(token,),
@@ -2634,15 +2633,11 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     )
 
     # Header / footer are page chrome — no token analogue, heuristic only.
-    config.header_left_font_size = _clamp(
-        _clamp(h * 0.013, 6.0, 32.0) * scale, 6.0, 32.0
-    )
+    config.header_left_font_size = _clamp(_clamp(h * 0.013, 6.0, 32.0) * scale, 6.0, 32.0)
     config.header_center_font_size = config.header_left_font_size
     config.header_right_font_size = config.header_left_font_size
 
-    config.footer_left_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0
-    )
+    config.footer_left_font_size = _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0)
     config.footer_center_font_size = config.footer_left_font_size
     config.footer_right_font_size = config.footer_left_font_size
 
@@ -2733,9 +2728,7 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     )
 
     # Blockplan font sizes — header is page chrome (no token).
-    config.blockplan_header_font_size = _clamp(
-        _clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0
-    )
+    config.blockplan_header_font_size = _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0)
     config.blockplan_band_font_size = _size(
         "text:band_label",
         _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),

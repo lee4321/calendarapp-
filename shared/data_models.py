@@ -10,9 +10,7 @@ from dataclasses import dataclass
 
 # Allowed values for events.status. Unknown values are accepted by the
 # importer (stored as-is) but render as if 'active'.
-ALLOWED_STATUSES: frozenset[str] = frozenset(
-    {"active", "draft", "cancelled", "archived", "on-hold"}
-)
+ALLOWED_STATUSES: frozenset[str] = frozenset({"active", "draft", "cancelled", "archived", "on-hold"})
 
 
 @dataclass(frozen=True)

@@ -17,9 +17,7 @@ _WEEKDAYS = [date(2026, 5, d) for d in (4, 5, 6, 7, 8, 11, 12, 13, 14, 15)]
 
 
 def _date_cells(band: dict, **kwargs) -> list[list[int]]:
-    segments = build_segments(
-        band, _WEEKDAYS[0], _WEEKDAYS[-1], CalendarConfig(), visible_days=_WEEKDAYS
-    )
+    segments = build_segments(band, _WEEKDAYS[0], _WEEKDAYS[-1], CalendarConfig(), visible_days=_WEEKDAYS)
     return [[seg.start.day for seg in cell] for cell in group_segments(segments, band, **kwargs)]
 
 
@@ -29,7 +27,12 @@ def test_without_show_every_each_segment_is_its_own_cell():
 
 def test_show_every_merges_that_many_date_cells():
     assert _date_cells({"unit": "date", "show_every": 2}) == [
-        [4, 5], [6, 7], [8], [11, 12], [13, 14], [15],
+        [4, 5],
+        [6, 7],
+        [8],
+        [11, 12],
+        [13, 14],
+        [15],
     ]
 
 
@@ -56,9 +59,7 @@ def test_the_caller_supplies_the_default_week_start():
 
 def test_other_units_merge_straight_through():
     band = {"unit": "week", "show_every": 2}
-    segments = build_segments(
-        band, date(2026, 5, 4), date(2026, 6, 26), CalendarConfig()
-    )
+    segments = build_segments(band, date(2026, 5, 4), date(2026, 6, 26), CalendarConfig())
     cells = group_segments(segments, band)
 
     assert [len(cell) for cell in cells] == [2, 2, 2, 2]

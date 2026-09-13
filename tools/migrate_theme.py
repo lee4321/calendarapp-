@@ -91,6 +91,7 @@ import yaml.resolver
 
 # ─── PyYAML dict-order preservation ─────────────────────────────────────────
 
+
 class _OrderedDumper(yaml.SafeDumper):
     """SafeDumper that keeps insertion order and indents lists nicely."""
 
@@ -116,9 +117,7 @@ def _construct_mapping(loader, node):
     return dict(loader.construct_pairs(node))
 
 
-_OrderedLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping
-)
+_OrderedLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
 
 
 # ─── Property and target rename tables ──────────────────────────────────────
@@ -155,74 +154,40 @@ TEXT_ROLE_TARGETS: dict[str, str] = {
 
 # Section-purpose comments emitted per design §11.5
 SECTION_COMMENTS: dict[str, str] = {
-    "theme": (
-        "Theme metadata: name, version, description; surfaced by --theme lookup\n"
-        "and the SVG <desc> element."
-    ),
-    "base": (
-        "Theme-wide defaults: default font family and default missing-icon name."
-    ),
-    "events": (
-        "Event placement policy (item_placement_order); no styling."
-    ),
-    "durations": (
-        "Duration placement / geometry; no styling."
-    ),
-    "fiscal": (
-        "Fiscal calendar semantics: label format and year offset."
-    ),
+    "theme": ("Theme metadata: name, version, description; surfaced by --theme lookup\nand the SVG <desc> element."),
+    "base": ("Theme-wide defaults: default font family and default missing-icon name."),
+    "events": ("Event placement policy (item_placement_order); no styling."),
+    "durations": ("Duration placement / geometry; no styling."),
+    "fiscal": ("Fiscal calendar semantics: label format and year offset."),
     "colors": (
-        "Palette name references (month_palette, fiscal_palette, group_palette)\n"
-        "and structural holiday attributes."
+        "Palette name references (month_palette, fiscal_palette, group_palette)\nand structural holiday attributes."
     ),
-    "layout": (
-        "Page margins (numeric points or unit-suffixed values like 0.5in)."
-    ),
-    "watermark": (
-        "Watermark text content and rotation; styling lives in style_rules."
-    ),
+    "layout": ("Page margins (numeric points or unit-suffixed values like 0.5in)."),
+    "watermark": ("Watermark text content and rotation; styling lives in style_rules."),
     "header": "Header non-styling config (text content references); styling lives in style_rules.",
     "footer": "Footer non-styling config (text content references); styling lives in style_rules.",
     "overflow": (
         "Icon marking a box that could not hold its contents (weekly day\n"
         "rows, narrow timeline duration bars); shared by every visualizer."
     ),
-    "weekly": (
-        "Weekly visualizer non-styling config: week-number format, day-name\n"
-        "format."
-    ),
-    "mini_calendar": (
-        "Mini visualizer non-styling config: title format, layout dimensions,\n"
-        "icon-set name."
-    ),
-    "mini_details": (
-        "Mini-details non-styling config: column widths, header text,\n"
-        "output suffix."
-    ),
-    "text_mini": (
-        "text-mini glyph-set declarations; not an SVG renderer."
-    ),
-    "timeline": (
-        "Timeline non-styling config: tick-label format, axis/callout/lane\n"
-        "geometry, today-line content."
-    ),
+    "weekly": ("Weekly visualizer non-styling config: week-number format, day-name\nformat."),
+    "mini_calendar": ("Mini visualizer non-styling config: title format, layout dimensions,\nicon-set name."),
+    "mini_details": ("Mini-details non-styling config: column widths, header text,\noutput suffix."),
+    "text_mini": ("text-mini glyph-set declarations; not an SVG renderer."),
+    "timeline": ("Timeline non-styling config: tick-label format, axis/callout/lane\ngeometry, today-line content."),
     "timeline_events": "Timeline event geometry (box width/height).",
     "timeline_durations": "Timeline duration geometry (box width/height, lane gap).",
     "blockplan": (
-        "Blockplan non-styling config: swimlane name list, label-column ratio,\n"
-        "lane match policy, fiscal-year start."
+        "Blockplan non-styling config: swimlane name list, label-column ratio,\nlane match policy, fiscal-year start."
     ),
-    "compact_plan": (
-        "compactplan non-styling config: axis-relative duration/legend geometry."
-    ),
+    "compact_plan": ("compactplan non-styling config: axis-relative duration/legend geometry."),
     "excelblockplan": (
         "XLSX-only config: band-row geometry, system-font names per band\n"
         "(deliberate exception, not style_rules), and Excel cell-border\n"
         "vertical lines."
     ),
     "time_bands": (
-        "Shared band catalog referenced by blockplan / compactplan / excelblockplan\n"
-        "placement lists. See design §10."
+        "Shared band catalog referenced by blockplan / compactplan / excelblockplan\nplacement lists. See design §10."
     ),
     "style_rules": (
         "All visual styling.  Each rule has a select + apply_to + style triple.\n"
@@ -290,30 +255,38 @@ _DEAD_LEGACY_KEYS: dict[str, frozenset[str]] = {
     # No SECTION_MAPPINGS entry under theme_engine — only header.left.* /
     # center.* / right.* (and the footer equivalents) are mapped.  Top-level
     # font_family / font_color on header/footer were always inert.
-    "header":       frozenset({"font_family", "font_color"}),
-    "footer":       frozenset({"font_family", "font_color"}),
+    "header": frozenset({"font_family", "font_color"}),
+    "footer": frozenset({"font_family", "font_color"}),
     # Superseded by element bindings in style_rules.
-    "events":       frozenset({"icon_color"}),
-    "durations":    frozenset({"icon_color", "stroke_dasharray"}),
-    "watermark":    frozenset({"color"}),
-    "compact_plan": frozenset({
-        # → line:axis bound to ec-axis-line
-        "axis_color", "axis_dasharray", "axis_opacity",
-        # → icon:milestone bound to ec-milestone-marker / ec-milestone-flag
-        "milestone_color",
-        # → line:axis bound to ec-duration-bar
-        "duration_opacity", "duration_stroke_dasharray",
-        # → icon:duration bound to ec-duration-icon
-        "duration_icon_color",
-        # → text:label bound to ec-label
-        "text.font_color", "text.font_opacity",
-        # → text:body_secondary bound to ec-event-name
-        "name_text.font_color", "name_text.font_opacity",
-        # Unread by the renderer.
-        "palette_name",
-        "milestone_list_date_color",
-        "milestone_list_section_gap", "continuation_section_gap",
-    }),
+    "events": frozenset({"icon_color"}),
+    "durations": frozenset({"icon_color", "stroke_dasharray"}),
+    "watermark": frozenset({"color"}),
+    "compact_plan": frozenset(
+        {
+            # → line:axis bound to ec-axis-line
+            "axis_color",
+            "axis_dasharray",
+            "axis_opacity",
+            # → icon:milestone bound to ec-milestone-marker / ec-milestone-flag
+            "milestone_color",
+            # → line:axis bound to ec-duration-bar
+            "duration_opacity",
+            "duration_stroke_dasharray",
+            # → icon:duration bound to ec-duration-icon
+            "duration_icon_color",
+            # → text:label bound to ec-label
+            "text.font_color",
+            "text.font_opacity",
+            # → text:body_secondary bound to ec-event-name
+            "name_text.font_color",
+            "name_text.font_opacity",
+            # Unread by the renderer.
+            "palette_name",
+            "milestone_list_date_color",
+            "milestone_list_section_gap",
+            "continuation_section_gap",
+        }
+    ),
 }
 
 
@@ -381,9 +354,20 @@ def _slug(s: str) -> str:
 def _canonical_band_signature(band: dict[str, Any]) -> tuple:
     """Structural fingerprint of a timeband for deduplication across visualizers."""
     keep = (
-        "unit", "label", "label_format", "date_format", "interval_days",
-        "prefix", "start_index", "max_index", "anchor_date", "target_date",
-        "start_date", "skip_weekends", "skip_nonworkdays", "show_every",
+        "unit",
+        "label",
+        "label_format",
+        "date_format",
+        "interval_days",
+        "prefix",
+        "start_index",
+        "max_index",
+        "anchor_date",
+        "target_date",
+        "start_date",
+        "skip_weekends",
+        "skip_nonworkdays",
+        "show_every",
     )
     return tuple((k, _hashable(band.get(k))) for k in keep)
 
@@ -408,14 +392,16 @@ def _convert_text_styles(src: dict[str, Any]) -> list[dict[str, Any]]:
         body = {k: v for k, v in props.items() if k != "size_rules"}
         # Property renames inside a text style
         body = {("size" if k == "font_size" else k): v for k, v in body.items()}
-        rules.append({
-            "name": f"define text:{name}",
-            "define": "text",
-            "as": name,
-            "style": body,
-        })
+        rules.append(
+            {
+                "name": f"define text:{name}",
+                "define": "text",
+                "as": name,
+                "style": body,
+            }
+        )
         for sr in props.get("size_rules", []) or []:
-            when = (sr.get("when") or {})
+            when = sr.get("when") or {}
             new_style: dict[str, Any] = {}
             for k, v in sr.items():
                 if k == "when":
@@ -424,12 +410,14 @@ def _convert_text_styles(src: dict[str, Any]) -> list[dict[str, Any]]:
                     new_style["size"] = v
                 else:
                     new_style[k] = v
-            rules.append({
-                "name": f"text:{name} — papersize override",
-                "apply_to": f"text:{name}",
-                "select": when,
-                "style": new_style,
-            })
+            rules.append(
+                {
+                    "name": f"text:{name} — papersize override",
+                    "apply_to": f"text:{name}",
+                    "select": when,
+                    "style": new_style,
+                }
+            )
     return rules
 
 
@@ -440,12 +428,14 @@ def _convert_token_section(src: dict[str, Any], kind: str) -> list[dict[str, Any
         if not isinstance(props, dict):
             continue
         body = _rename_props(props)
-        rules.append({
-            "name": f"define {kind}:{name}",
-            "define": kind,
-            "as": name,
-            "style": body,
-        })
+        rules.append(
+            {
+                "name": f"define {kind}:{name}",
+                "define": kind,
+                "as": name,
+                "style": body,
+            }
+        )
     return rules
 
 
@@ -487,12 +477,14 @@ def _convert_element_styles(src: dict[str, Any], *, fname: str) -> list[dict[str
 
         style: dict[str, Any] = {"use": target_token}
         style.update(extra_style)
-        rules.append({
-            "name": f"bind {ec_name} -> {target_token}",
-            "apply_to": "element",
-            "select": {"element": ec_name},
-            "style": style,
-        })
+        rules.append(
+            {
+                "name": f"bind {ec_name} -> {target_token}",
+                "apply_to": "element",
+                "select": {"element": ec_name},
+                "style": style,
+            }
+        )
     return rules
 
 
@@ -508,41 +500,48 @@ def _convert_axis_stanza(
     rules: list[dict[str, Any]] = []
 
     if axis.get("line_style"):
-        rules.append({
-            "name": "bind ec-axis-line",
-            "apply_to": "element",
-            "select": {"element": "ec-axis-line"},
-            "style": {"use": f"line:{axis['line_style']}"},
-        })
+        rules.append(
+            {
+                "name": "bind ec-axis-line",
+                "apply_to": "element",
+                "select": {"element": "ec-axis-line"},
+                "style": {"use": f"line:{axis['line_style']}"},
+            }
+        )
 
     tick = axis.get("tick") or {}
     if isinstance(tick, dict):
         if tick.get("color"):
-            rules.append({
-                "name": "define line:tick",
-                "define": "line",
-                "as": "tick",
-                "style": {"color": tick["color"], "width": 0.5, "opacity": 1.0},
-            })
-            rules.append({
-                "name": "bind ec-axis-tick",
-                "apply_to": "element",
-                "select": {"element": "ec-axis-tick"},
-                "style": {"use": "line:tick"},
-            })
+            rules.append(
+                {
+                    "name": "define line:tick",
+                    "define": "line",
+                    "as": "tick",
+                    "style": {"color": tick["color"], "width": 0.5, "opacity": 1.0},
+                }
+            )
+            rules.append(
+                {
+                    "name": "bind ec-axis-tick",
+                    "apply_to": "element",
+                    "select": {"element": "ec-axis-tick"},
+                    "style": {"use": "line:tick"},
+                }
+            )
         if tick.get("label_style"):
-            rules.append({
-                "name": "bind ec-tick-label",
-                "apply_to": "element",
-                "select": {"element": "ec-tick-label"},
-                "style": {"use": f"text:{tick['label_style']}"},
-            })
+            rules.append(
+                {
+                    "name": "bind ec-tick-label",
+                    "apply_to": "element",
+                    "select": {"element": "ec-tick-label"},
+                    "style": {"use": f"text:{tick['label_style']}"},
+                }
+            )
         if "date_format" in tick:
             tl = (timeline or {}).get("tick_label_format")
             if tl is not None and tl != tick["date_format"]:
                 _warn(
-                    "axis.tick.date_format disagrees with timeline.tick_label_format; "
-                    "keeping the timeline value",
+                    "axis.tick.date_format disagrees with timeline.tick_label_format; keeping the timeline value",
                     fname=fname,
                 )
             _drop("axis.tick.date_format (kept under timeline.tick_label_format)", fname=fname)
@@ -550,24 +549,27 @@ def _convert_axis_stanza(
     today = axis.get("today") or {}
     if isinstance(today, dict):
         if today.get("line_style"):
-            rules.append({
-                "name": "bind ec-today-line",
-                "apply_to": "element",
-                "select": {"element": "ec-today-line"},
-                "style": {"use": f"line:{today['line_style']}"},
-            })
+            rules.append(
+                {
+                    "name": "bind ec-today-line",
+                    "apply_to": "element",
+                    "select": {"element": "ec-today-line"},
+                    "style": {"use": f"line:{today['line_style']}"},
+                }
+            )
         if today.get("label_color"):
-            rules.append({
-                "name": "today label color",
-                "apply_to": "text:today_label",
-                "style": {"color": today["label_color"]},
-            })
+            rules.append(
+                {
+                    "name": "today label color",
+                    "apply_to": "text:today_label",
+                    "style": {"color": today["label_color"]},
+                }
+            )
         if "label_text" in today:
             tl = (timeline or {}).get("today_label_text")
             if tl is not None and tl != today["label_text"]:
                 _warn(
-                    "axis.today.label_text disagrees with timeline.today_label_text; "
-                    "keeping the timeline value",
+                    "axis.today.label_text disagrees with timeline.today_label_text; keeping the timeline value",
                     fname=fname,
                 )
             _drop("axis.today.label_text (kept under timeline.today_label_text)", fname=fname)
@@ -583,12 +585,14 @@ def _convert_base_size_rule(base: dict[str, Any]) -> list[dict[str, Any]]:
     for sr in sr_list:
         when = sr.get("when", {})
         body = {("size" if k == "font_size" else k): v for k, v in sr.items() if k != "when"}
-        rules.append({
-            "name": "base font — papersize override",
-            "apply_to": "text:base",
-            "select": when,
-            "style": body,
-        })
+        rules.append(
+            {
+                "name": "base font — papersize override",
+                "apply_to": "text:base",
+                "select": when,
+                "style": body,
+            }
+        )
     return rules
 
 
@@ -603,13 +607,9 @@ def _flatten_text_subbag(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         # Copy the rule without the text block (and without the flat text
         # shorthand keys; they expand into peer rules too).
-        flat_text_shorthand = {
-            k: style[k] for k in ("font", "font_size", "font_color", "font_opacity")
-            if k in style
-        }
+        flat_text_shorthand = {k: style[k] for k in ("font", "font_size", "font_color", "font_opacity") if k in style}
         base_style = {
-            k: v for k, v in style.items()
-            if k not in ("text", "font", "font_size", "font_color", "font_opacity")
+            k: v for k, v in style.items() if k not in ("text", "font", "font_size", "font_color", "font_opacity")
         }
         if base_style:
             base_rule = dict(rule)
@@ -672,12 +672,14 @@ def _convert_swimlane_rules(rules: list[Any]) -> list[dict[str, Any]]:
     for r in rules or []:
         if not isinstance(r, dict):
             continue
-        out.append({
-            "name": r.get("name", "route swimlane"),
-            "apply_to": "lane",
-            "select": r.get("select", {}),
-            "style": {"swimlane": r.get("apply_to", "")},
-        })
+        out.append(
+            {
+                "name": r.get("name", "route swimlane"),
+                "apply_to": "lane",
+                "select": r.get("select", {}),
+                "style": {"swimlane": r.get("apply_to", "")},
+            }
+        )
     return out
 
 
@@ -692,19 +694,23 @@ def _convert_swimlane_visuals(swimlanes: list[Any], *, fname: str) -> list[dict[
             continue
         select = {"swimlane": lane_name}
         if lane.get("fill_color") not in (None, "none"):
-            out.append({
-                "name": f"swimlane {lane_name} — heading",
-                "apply_to": "box:swimlane_heading",
-                "select": select,
-                "style": {"fill": lane["fill_color"]},
-            })
+            out.append(
+                {
+                    "name": f"swimlane {lane_name} — heading",
+                    "apply_to": "box:swimlane_heading",
+                    "select": select,
+                    "style": {"fill": lane["fill_color"]},
+                }
+            )
         if lane.get("timeline_fill_color") not in (None, "none"):
-            out.append({
-                "name": f"swimlane {lane_name} — content",
-                "apply_to": "box:swimlane_content",
-                "select": select,
-                "style": {"fill": lane["timeline_fill_color"]},
-            })
+            out.append(
+                {
+                    "name": f"swimlane {lane_name} — content",
+                    "apply_to": "box:swimlane_content",
+                    "select": select,
+                    "style": {"fill": lane["timeline_fill_color"]},
+                }
+            )
         label_style: dict[str, Any] = {}
         if lane.get("label_color") is not None:
             label_style["color"] = lane["label_color"]
@@ -715,19 +721,23 @@ def _convert_swimlane_visuals(swimlanes: list[Any], *, fname: str) -> list[dict[
         if lane.get("label_rotation") is not None:
             label_style["rotation"] = lane["label_rotation"]
         if label_style:
-            out.append({
-                "name": f"swimlane {lane_name} — label",
-                "apply_to": "text:swimlane_label",
-                "select": select,
-                "style": label_style,
-            })
+            out.append(
+                {
+                    "name": f"swimlane {lane_name} — label",
+                    "apply_to": "text:swimlane_label",
+                    "select": select,
+                    "style": label_style,
+                }
+            )
         if isinstance(lane.get("match"), dict):
-            out.append({
-                "name": f"route to swimlane {lane_name}",
-                "apply_to": "lane",
-                "select": dict(lane["match"]),
-                "style": {"swimlane": lane_name},
-            })
+            out.append(
+                {
+                    "name": f"route to swimlane {lane_name}",
+                    "apply_to": "lane",
+                    "select": dict(lane["match"]),
+                    "style": {"swimlane": lane_name},
+                }
+            )
     return out
 
 
@@ -749,17 +759,37 @@ def _strip_swimlane_visuals(swimlanes: list[Any]) -> list[dict[str, Any]]:
 
 
 _BAND_STRUCTURAL_KEYS: tuple[str, ...] = (
-    "unit", "label", "label_format", "date_format", "interval_days",
-    "prefix", "start_index", "max_index", "anchor_date", "target_date",
-    "start_date", "skip_weekends", "skip_nonworkdays", "show_every",
+    "unit",
+    "label",
+    "label_format",
+    "date_format",
+    "interval_days",
+    "prefix",
+    "start_index",
+    "max_index",
+    "anchor_date",
+    "target_date",
+    "start_date",
+    "skip_weekends",
+    "skip_nonworkdays",
+    "show_every",
     "label_values",
 )
 _BAND_GEOMETRY_KEYS: tuple[str, ...] = ("row_height",)
 _BAND_STYLE_KEYS: tuple[str, ...] = (
-    "fill_color", "alt_fill_color", "font_color", "font_size",
-    "label_color", "label_fill_color", "label_align_h",
-    "font", "font_opacity", "label_font", "label_font_size",
-    "label_opacity", "stroke_color",
+    "fill_color",
+    "alt_fill_color",
+    "font_color",
+    "font_size",
+    "label_color",
+    "label_fill_color",
+    "label_align_h",
+    "font",
+    "font_opacity",
+    "label_font",
+    "label_font_size",
+    "label_opacity",
+    "stroke_color",
 )
 _BAND_XLSX_KEYS: tuple[str, ...] = ("excel_font_name", "excel_font_size")
 
@@ -820,10 +850,10 @@ def _convert_timebands(
     catalog: _TimebandCatalog,
 ) -> tuple[
     dict[str, list[dict[str, Any] | str]],  # blockplan placements
-    list[dict[str, Any] | str] | None,        # compact_plan.bands
-    list[dict[str, Any] | str] | None,        # excelblockplan.top_bands
-    dict[str, dict[str, Any]],                  # excelblockplan.band_fonts
-    list[dict[str, Any]],                       # style_rules entries for band styling
+    list[dict[str, Any] | str] | None,  # compact_plan.bands
+    list[dict[str, Any] | str] | None,  # excelblockplan.top_bands
+    dict[str, dict[str, Any]],  # excelblockplan.band_fonts
+    list[dict[str, Any]],  # style_rules entries for band styling
 ]:
     """Walk every legacy band list, deduplicate into the catalog, return refs."""
     style_rules: list[dict[str, Any]] = []
@@ -861,24 +891,32 @@ def _convert_timebands(
                 if "font" in b:
                     text_style["font"] = b["font"]
                 if box_style:
-                    style_rules.append({
-                        "name": f"band {key} — segment",
-                        "apply_to": "box:band",
-                        "select": {"band": key},
-                        "style": box_style,
-                    })
+                    style_rules.append(
+                        {
+                            "name": f"band {key} — segment",
+                            "apply_to": "box:band",
+                            "select": {"band": key},
+                            "style": box_style,
+                        }
+                    )
                 if text_style:
-                    style_rules.append({
-                        "name": f"band {key} — label",
-                        "apply_to": "text:band_label",
-                        "select": {"band": key},
-                        "style": text_style,
-                    })
+                    style_rules.append(
+                        {
+                            "name": f"band {key} — label",
+                            "apply_to": "text:band_label",
+                            "select": {"band": key},
+                            "style": text_style,
+                        }
+                    )
         return refs
 
     blockplan_placements: dict[str, list[dict[str, Any] | str]] = {}
     if isinstance(blockplan, dict):
-        for src_key, dst_key in (("top_time_bands", "top_bands"), ("bottom_time_bands", "bottom_bands"), ("time_bands", "bands")):
+        for src_key, dst_key in (
+            ("top_time_bands", "top_bands"),
+            ("bottom_time_bands", "bottom_bands"),
+            ("time_bands", "bands"),
+        ):
             placements = _process_list(blockplan.get(src_key), "blockplan")
             if placements:
                 blockplan_placements[dst_key] = placements
@@ -956,9 +994,16 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     #    _strip_dead_keys removes unified-runtime-superseded keys (see
     #    _DEAD_LEGACY_KEYS); compact_plan gets a second strip pass below
     #    after band-placement assembly, because its loop also drops time_bands.
-    for sec in ("weekly", "mini_calendar", "mini_details", "text_mini",
-                "timeline", "timeline_events", "timeline_durations",
-                "compact_plan"):
+    for sec in (
+        "weekly",
+        "mini_calendar",
+        "mini_details",
+        "text_mini",
+        "timeline",
+        "timeline_events",
+        "timeline_durations",
+        "compact_plan",
+    ):
         if sec in src and src[sec] is not None:
             stripped = _strip_dead_keys(sec, src[sec])
             if stripped is not None:
@@ -983,7 +1028,10 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     # 9. Timeband catalog consolidation (design §10)
     catalog = _TimebandCatalog()
     bp_placements, cp_placements, ex_placements, ex_band_fonts, band_style_rules = _convert_timebands(
-        blockplan=blockplan_in, compact_plan=compact_in, excelblockplan=excel_in, catalog=catalog,
+        blockplan=blockplan_in,
+        compact_plan=compact_in,
+        excelblockplan=excel_in,
+        catalog=catalog,
     )
     style_rules.extend(band_style_rules)
 
@@ -1081,7 +1129,7 @@ def _basic_theme_data() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         # Build a token map: "<kind>:<name>" -> style bag (last-write-wins; basic.yaml
         # only has unconditional definitions so this is fine).
         tokens: dict[str, dict[str, Any]] = {}
-        for rule in (raw.get("style_rules") or []):
+        for rule in raw.get("style_rules") or []:
             if not isinstance(rule, dict):
                 continue
             kind = rule.get("define")
@@ -1166,11 +1214,7 @@ def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> OrderedDict[str
             kept.append(rule)
             continue
         apply_to = rule.get("apply_to")
-        targets = (
-            [apply_to] if isinstance(apply_to, str)
-            else list(apply_to) if isinstance(apply_to, list)
-            else []
-        )
+        targets = [apply_to] if isinstance(apply_to, str) else list(apply_to) if isinstance(apply_to, list) else []
         if "element" not in targets:
             kept.append(rule)
             continue
@@ -1185,10 +1229,7 @@ def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> OrderedDict[str
             ec_names = []
         style = rule.get("style") or {}
         use = style.get("use") if isinstance(style, dict) else None
-        extra = {
-            k: v for k, v in (style or {}).items()
-            if k != "use" and k in {"color"}
-        }
+        extra = {k: v for k, v in (style or {}).items() if k != "use" and k in {"color"}}
 
         for ec in ec_names:
             entry = catalog.get(ec)
@@ -1253,12 +1294,14 @@ def _backfill_from_basic(out: OrderedDict, *, fname: str) -> None:
             if style is None:
                 continue
             kind, _, name = token.partition(":")
-            style_rules.append({
-                "name": f"define {token}  # backfilled from basic.yaml",
-                "define": kind,
-                "as": name,
-                "style": dict(style),
-            })
+            style_rules.append(
+                {
+                    "name": f"define {token}  # backfilled from basic.yaml",
+                    "define": kind,
+                    "as": name,
+                    "style": dict(style),
+                }
+            )
             defined_tokens.add(token)
             backfilled_tokens.append(token)
 
@@ -1285,10 +1328,7 @@ def _emit_section(section: str, value: Any) -> str:
     """Render one top-level section as YAML, preceded by its purpose comment."""
     header_line = f"# ─── {section} " + "─" * max(0, 70 - len(section)) + "\n"
     purpose = SECTION_COMMENTS.get(section)
-    if purpose:
-        purpose_block = "\n".join(f"# {line}" for line in purpose.split("\n")) + "\n"
-    else:
-        purpose_block = ""
+    purpose_block = "\n".join(f"# {line}" for line in purpose.split("\n")) + "\n" if purpose else ""
     body = yaml.dump(
         {section: value},
         Dumper=_OrderedDumper,
@@ -1345,8 +1385,7 @@ def main(argv: list[str] | None = None) -> int:
         paths = [Path(f) for f in args.files]
     else:
         paths = sorted(
-            p for p in (repo_root / "config" / "themes").glob("*.yaml")
-            if not p.name.endswith(".converted.yaml")
+            p for p in (repo_root / "config" / "themes").glob("*.yaml") if not p.name.endswith(".converted.yaml")
         )
 
     exit_code = 0

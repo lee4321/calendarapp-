@@ -28,6 +28,7 @@ event — see :mod:`shared.day_classifier`):
     nonworkday      : bool  — any of the three
 A rule that contains any day-based key is treated as a day rule.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -142,9 +143,7 @@ def compute_icon_band_days(
         return day_icons
 
     for event in events:
-        date_str = (
-            (event.datekey or event.start) if event.milestone else event.start
-        )
+        date_str = (event.datekey or event.start) if event.milestone else event.start
         try:
             evt_date = date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
         except (ValueError, TypeError, IndexError, AttributeError):

@@ -81,23 +81,21 @@ class ImportWizardScreen(Screen):
         with VerticalScroll(id="wizard-fields"):
             for f in self.spec.fields:
                 with Vertical(classes="argfield"):
-                    yield Label(f.label + ("  (generator only)" if f.generator_only
-                                           else ""), classes="arglabel")
+                    yield Label(f.label + ("  (generator only)" if f.generator_only else ""), classes="arglabel")
                     cid = f"imp-{f.dest}"
                     if f.kind == "flag":
                         yield Switch(value=bool(f.default), id=cid)
                     elif f.kind == "choice":
                         opts = [(c, c) for c in (f.choices or [])]
-                        yield Select(opts, value=str(f.default), id=cid,
-                                     allow_blank=False)
+                        yield Select(opts, value=str(f.default), id=cid, allow_blank=False)
                     elif f.kind == "int":
-                        yield Input(value=str(f.default or ""), type="integer",
-                                    id=cid, classes="narrow")
+                        yield Input(value=str(f.default or ""), type="integer", id=cid, classes="narrow")
                     else:
-                        yield Input(value=str(f.default or ""),
-                                    placeholder=("path/to/file or folder"
-                                                 if f.kind in ("path", "dir") else ""),
-                                    id=cid)
+                        yield Input(
+                            value=str(f.default or ""),
+                            placeholder=("path/to/file or folder" if f.kind in ("path", "dir") else ""),
+                            id=cid,
+                        )
                     if f.help:
                         yield Static(f.help, classes="arghelp")
         with Horizontal(id="wizard-actions"):
@@ -125,9 +123,12 @@ class ImportWizardScreen(Screen):
         argv = build_import_argv(self.spec, values)
         verb = "Dry run" if force_dry else "Import"
         self.app.push_screen(
-            ResultScreen(argv, cwd=str(cast("CalendarTUI", self.app).project_root),
-                         entry=self.spec.script,
-                         title=f"{verb} · {self.spec.title}")
+            ResultScreen(
+                argv,
+                cwd=str(cast("CalendarTUI", self.app).project_root),
+                entry=self.spec.script,
+                title=f"{verb} · {self.spec.title}",
+            )
         )
 
     def action_dry_run(self) -> None:

@@ -37,10 +37,23 @@ def themed_config() -> CalendarConfig:
 def test_default_columns_match_the_documented_set():
     fields = [col["field"] for col in CalendarConfig().gantt_columns]
     assert fields == [
-        "link_ref", "source_id", "name", "status", "priority", "wbs", "rollup",
+        "link_ref",
+        "source_id",
+        "name",
+        "status",
+        "priority",
+        "wbs",
+        "rollup",
         "milestone",
-        "percent_complete", "effort_text", "duration_text", "start_date",
-        "end_date", "resource_names", "resource_group", "notes", "deadline",
+        "percent_complete",
+        "effort_text",
+        "duration_text",
+        "start_date",
+        "end_date",
+        "resource_names",
+        "resource_group",
+        "notes",
+        "deadline",
     ]
 
 
@@ -99,9 +112,7 @@ def test_mirror_follows_the_theme_not_the_dataclass_default(themed_config):
 def test_explicit_bottom_bands_win_over_the_mirror():
     config = CalendarConfig()
     config.gantt_bottom_time_bands = [{"label": "Quarter", "unit": "fiscal_quarter"}]
-    assert config.get_gantt_bottom_bands() == [
-        {"label": "Quarter", "unit": "fiscal_quarter"}
-    ]
+    assert config.get_gantt_bottom_bands() == [{"label": "Quarter", "unit": "fiscal_quarter"}]
 
 
 def test_mirror_edits_cannot_leak_between_axes():
@@ -166,8 +177,7 @@ def test_gantt_accepts_the_shared_content_filters():
 
     parser = _create_argument_parser("out.svg")
     args = parser.parse_args(
-        ["gantt", "20260907", "20261231", "--milestones", "--status", "all",
-         "--weekends", "1", "--includenotes"]
+        ["gantt", "20260907", "20261231", "--milestones", "--status", "all", "--weekends", "1", "--includenotes"]
     )
     assert args.milestones is True
     assert args.weekends == 1
