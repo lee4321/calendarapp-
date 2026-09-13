@@ -17,8 +17,8 @@ supplies the PIT-specific parts:
 from __future__ import annotations
 
 import logging
-from dataclasses import replace
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 
 import arrow
 

@@ -12,8 +12,8 @@ dependency.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 
 import arrow
 

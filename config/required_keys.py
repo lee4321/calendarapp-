@@ -28,9 +28,9 @@ never drift apart (§11.4).
 from __future__ import annotations
 
 import io
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Iterable
 
 import yaml
 

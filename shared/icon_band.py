@@ -30,9 +30,9 @@ A rule that contains any day-based key is treated as a day rule.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
 
 from shared.day_classifier import day_rule_matches, rule_has_day_keys
 

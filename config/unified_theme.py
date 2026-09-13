@@ -30,10 +30,10 @@ What's NOT in here (yet)
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
 
 import yaml
 

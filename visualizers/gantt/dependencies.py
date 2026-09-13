@@ -44,8 +44,8 @@ avoidance is attempted, so arrows may cross other bars.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from shared.predecessors import Link, parse_links_with_rejects
 from vendor.labella.renderer import lineTo as _lineTo

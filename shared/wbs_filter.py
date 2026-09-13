@@ -14,8 +14,8 @@ implicitly appending "**".
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 
 def _normalize_segments(value: str) -> list[str]:

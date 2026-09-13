@@ -24,9 +24,9 @@ The adapters inject their measurements as callables (`node_width`,
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
-from collections.abc import Callable, Sequence
 
 import arrow
 

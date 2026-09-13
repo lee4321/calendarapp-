@@ -7,10 +7,10 @@ and duration bars aligned to start/end dates.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING
-from collections.abc import Callable, Sequence
 
 import arrow
 import drawsvg

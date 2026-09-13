@@ -15,9 +15,9 @@ there before -- ``finish()`` leaves the last details page in it.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from collections.abc import Callable, Sequence
 
 from renderers.text_utils import fit_lines
 
