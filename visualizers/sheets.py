@@ -877,7 +877,7 @@ def _render_fontsheet_page(
         lines = _sheet_header_lines(PAGE_W, svg_h, header, subtitle, title_dy=40)
 
         y = MARGIN + TITLE_H
-        for font_name, font_path, path_elems, content_h in pre:
+        for font_name, _font_path, path_elems, content_h in pre:
             entry_content_h = max(content_h, ROW_H)
             lines.append(
                 f'  <line x1="{MARGIN}" y1="{y}" x2="{PAGE_W - MARGIN}" y2="{y}"'

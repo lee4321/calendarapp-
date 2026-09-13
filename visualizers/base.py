@@ -54,8 +54,8 @@ def filter_events(events: list[dict], config: CalendarConfig) -> list[dict]:
     wbs_compiled = None
     if config.WBS:
         if getattr(config, "_wbs_filter_raw", None) != config.WBS:
-            setattr(config, "_wbs_filter", WBSFilter.parse(config.WBS))
-            setattr(config, "_wbs_filter_raw", config.WBS)
+            setattr(config, "_wbs_filter", WBSFilter.parse(config.WBS))  # noqa: B010 - not a declared field
+            setattr(config, "_wbs_filter_raw", config.WBS)  # noqa: B010 - not a declared field
         wbs_compiled = getattr(config, "_wbs_filter", None)
 
     status_filter = getattr(config, "status_filter", None)

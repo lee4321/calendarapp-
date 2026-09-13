@@ -570,7 +570,7 @@ def test_the_first_row_gap_does_not_inflate_the_row_stride(config):
 
     # Every row moved by the same amount — the stride is untouched.
     shifts = {
-        round(b - a, 2) for a, b in zip(sorted(rows_plain), sorted(rows_offset))
+        round(b - a, 2) for a, b in zip(sorted(rows_plain), sorted(rows_offset), strict=True)
     }
     assert len(shifts) == 1
     assert next(iter(shifts)) != 0.0

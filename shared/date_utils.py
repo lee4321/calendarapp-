@@ -110,7 +110,7 @@ def parse_date(date_str: str, label: str = "date") -> arrow.Arrow:
     try:
         return arrow.get(date_str, "YYYYMMDD")
     except (ValueError, arrow.parser.ParserError) as e:
-        raise InvalidDateError(f"Invalid {label} date '{date_str}': {e}")
+        raise InvalidDateError(f"Invalid {label} date '{date_str}': {e}") from e
 
 
 def adjust_start_for_workweek(startdate: arrow.Arrow) -> arrow.Arrow:

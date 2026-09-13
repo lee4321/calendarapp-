@@ -179,7 +179,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             cell_render_state.append((x, y, w, h, day_num, style))
 
         # Pass 3a: day-cell backgrounds (shade, SVG patterns, hash, grid lines)
-        for x, y, w, h, day_num, style in cell_render_state:
+        for x, y, w, h, _day_num, style in cell_render_state:
             self._draw_day_cell_background(config, x, y, w, h, style)
 
         # Pass 3b: duration bars (drawn over backgrounds, under foregrounds)
@@ -323,7 +323,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             # rather than position to stay correct under both orderings.
             mon_to_sun = labels  # canonical Mon..Sun
             wd = [mon_to_sun.index(lbl) for lbl in ordered]
-            return [lbl for lbl, w in zip(ordered, wd) if w < 5]
+            return [lbl for lbl, w in zip(ordered, wd, strict=False) if w < 5]
         return ordered
 
     # =========================================================================
@@ -700,7 +700,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # sit on; the cell's own inset is already applied by the caller.
         pad = config.mini_grid_line_width
 
-        for icon, (fx, fy) in zip(icons, self._ICON_CORNERS):
+        for icon, (fx, fy) in zip(icons, self._ICON_CORNERS, strict=False):
             cx = x + pad + (size / 2.0) if fx == 0 else x + w - pad - (size / 2.0)
             cy = y + pad + (size / 2.0) if fy == 0 else y + h - pad - (size / 2.0)
             self._draw_icon_svg(

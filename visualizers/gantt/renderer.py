@@ -471,7 +471,7 @@ class GanttRenderer(BaseSVGRenderer):
         scale = region_h / total if total > region_h else 1.0
 
         cursor_y = region_y
-        for index, (band, height) in enumerate(zip(bands, heights)):
+        for index, (band, height) in enumerate(zip(bands, heights, strict=False)):
             row_h = height * scale
             self._draw_band_row(
                 config, band, segments.get((stack, index), []), days,
@@ -625,7 +625,7 @@ class GanttRenderer(BaseSVGRenderer):
             )
 
         for column, (col_x, col_w) in zip(
-            columns, column_x_positions(columns, head_x, head_w)
+            columns, column_x_positions(columns, head_x, head_w), strict=False
         ):
             usable = col_w - _CELL_PAD * 2
             # Truncate rather than let _draw_text squeeze the glyphs: a
@@ -727,7 +727,7 @@ class GanttRenderer(BaseSVGRenderer):
         """Draw one row's cells across every column."""
         indent = float(config.gantt_indent_per_level) * row.depth
 
-        for column, (col_x, col_w) in zip(columns, positions):
+        for column, (col_x, col_w) in zip(columns, positions, strict=False):
             left = col_x + _CELL_PAD + (indent if column.indent else 0.0)
             usable = col_w - _CELL_PAD * 2 - (indent if column.indent else 0.0)
             if usable <= 0:

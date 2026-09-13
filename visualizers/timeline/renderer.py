@@ -3488,7 +3488,7 @@ class TimelineRenderer(BaseSVGRenderer):
         rows = self._assign_holiday_date_rows(
             [(x, string_width(label, font_path, date_size)) for x, label in labelled]
         )
-        for (x, label), row in zip(labelled, rows):
+        for (x, label), row in zip(labelled, rows, strict=False):
             if row < 0:
                 continue
             self._draw_text(
@@ -4041,7 +4041,7 @@ class TimelineRenderer(BaseSVGRenderer):
         rows = self._assign_holiday_date_rows(
             [(y, date_size * 1.2) for y, _label in labelled]
         )
-        for (y, label), row in zip(labelled, rows):
+        for (y, label), row in zip(labelled, rows, strict=False):
             if row < 0:
                 continue
             x = first_x + (row * row_stride)

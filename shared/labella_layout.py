@@ -343,7 +343,7 @@ def _offset_leader_path(path_d: str, direction: str, offset: float) -> str:
             # Pair 0 is the dot on the axis; it must not move.
             if pair:
                 point[index] += shift
-            out.extend("%.8f" % v for v in point)
+            out.extend(f"{v:.8f}" for v in point)
             pair += 1
             i += 2
     except (IndexError, ValueError):

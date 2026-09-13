@@ -265,9 +265,7 @@ def _select_matches(select: dict[str, Any], context: dict[str, Any]) -> bool:
     for key, want in select.items():
         if key in context:
             have = context[key]
-        elif key.endswith("_min") and key[:-4] in context:
-            have = context[key[:-4]]
-        elif key.endswith("_max") and key[:-4] in context:
+        elif key.endswith(("_min", "_max")) and key[:-4] in context:
             have = context[key[:-4]]
         else:
             # Constraint not satisfied — context hasn't bound this key

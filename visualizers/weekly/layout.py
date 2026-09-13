@@ -186,7 +186,7 @@ class WeeklyCalendarLayout(BaseLayout):
         """
         coords = {}
         current_x = base_x
-        for day, width in zip(day_order, widths):
+        for day, width in zip(day_order, widths, strict=False):
             coords[day] = (round(current_x, 2), y, width, height)
             current_x += width
         return coords
