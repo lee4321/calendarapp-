@@ -89,7 +89,14 @@ class OverflowEntry:
     start: str  # YYYYMMDD
     end: str  # YYYYMMDD
     task_name: str
-    datekey: str  # The daykey where overflow was detected
+    datekey: str | None  # The daykey where overflow was detected
+
+
+def _event_icon_size(config: CalendarConfig) -> float:
+    """Default event and duration icon size; setfontsizes() sets it."""
+    size = config.event_icon_size
+    assert size is not None, "setfontsizes() must run before the weekly view renders"
+    return size
 
 
 class WeeklyCalendarRenderer(BaseSVGRenderer):
@@ -1205,7 +1212,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             )
 
             ev_icon_size = (
-                _is_ei.size if _is_ei.size is not None else config.event_icon_size
+                _is_ei.size if _is_ei.size is not None else _event_icon_size(config)
             )
             self._draw_icon_svg(
                 icon_to_draw,
@@ -1529,7 +1536,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # Theme-declared `icon:duration` size wins; fall back to the global
         # event/duration size when the theme is silent.
         icon_size = (
-            _is_di.size if _is_di.size is not None else config.event_icon_size
+            _is_di.size if _is_di.size is not None else _event_icon_size(config)
         )
         icon_gap = icon_size * 0.4
 
@@ -1706,7 +1713,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         days_to_print: list,
         rowcoords: dict,
         t: Event,
-        daykey: str,
+        daykey: str | None,
     ) -> tuple[dict, bool]:
         """
         Place multi-day duration on calendar.
