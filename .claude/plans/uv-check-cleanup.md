@@ -174,6 +174,48 @@ these are in Phase 2's scope.
   cast to the app's own `App` subclass in `tui/screens`, and put narrow
   `# ty: ignore[unresolved-attribute]` comments on the fonttools lines.
 
+**Done 2026-09-13.** App code has zero ty errors (292 → 0). `uv check` went
+from 832 to 540, and all 540 remaining diagnostics are in `tests/` (Phase 4).
+Every step passed the full test suite, `tools/refcorpus.sh check` (40 files
+identical), and an import of all app modules.
+
+Shared fixes, where most errors came from:
+
+- `TokenStyle` Protocol (`renderers/svg_base.py`) for `_tk()` and
+  `_resolve_token()`. Token reads are typed `Any` and are still plain dicts
+  at runtime. A `dict` subclass overriding `get` failed ty's override check;
+  a Protocol needs no subclass. It includes `keys()` so `**token` works.
+- `BaseSVGRenderer.drawing` property raises when there is no page; the 37
+  `self._drawing.` attribute uses go through it.
+- `StyleResult.text_override` overloads: a `str` font/color or a `float`
+  size/opacity passed in comes back as the same type. ty rejects type
+  parameters that default to `None`, so these are overloads.
+- `StyleResult.fill_color` is always `str | None`. A list `fill` also sets
+  `fill_colors`, which blockplan's band cycling reads. This replaced Phase
+  1's `keep_fill_list` flag.
+- `DayAxis.first/last -> date` (callers check for an empty axis), and
+  `Sequence` parameters on `_draw_icon_band_row` and `_draw_cell_icons`.
+
+Per-file fixes:
+
+- **Sizes set by `setfontsizes()`** (`weekly_name_text_font_size`,
+  `event_icon_size`, mini title/header/cell sizes) are read through small
+  helpers that assert non-`None`. This fails exactly where the old code
+  would have raised `TypeError`; no fallback values were invented.
+- **`x.get(k) if x.get(k) is not None else d`** became a walrus, because ty
+  can't narrow a repeated call.
+- **Annotations corrected to match runtime:**
+  - gantt `_draw_page` segments are keyed `(stack, index)`;
+  - `OverflowEntry.datekey` and `format_datekey` accept `None` (duration
+    overflow has no datekey);
+  - `_draw_rect(stroke=None)`, which `_is_none_color` already handled;
+  - pit `resolve_marker(config=None)`;
+  - candybar's cell state holds `DayStyle`;
+  - the tui `metavar` can be an argparse tuple, now joined.
+- **Untyped third-party code:** fontTools tables and vendored labella
+  nodes are read as `Any`; tui screens `cast` `self.app` to `CalendarTUI`;
+  `import yaml.resolver` is explicit.
+
 ## Phase 4 — Test typing
 
 - Add a `CalendarDataSource` `Protocol` in `shared/db_access.py` covering the
