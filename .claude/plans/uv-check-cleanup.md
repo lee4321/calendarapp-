@@ -227,6 +227,42 @@ Per-file fixes:
 - Remove the 18 unused test imports, and rename the loop variable `date` in
   `tests/test_timeline.py` (F402, it shadows `datetime.date`).
 
+**Done 2026-09-13.** `uv check` passes with 0 diagnostics (540 in tests → 0).
+The full test suite passes, and the reference corpus is identical.
+
+The planned `CalendarDataSource` Protocol didn't fit. The fakes deliberately
+implement only the few methods each test needs, so none of them would
+satisfy a Protocol listing everything renderers call. Instead:
+
+- **`tests/fakes.py`** defines `FakeCalendarDB`. Under `TYPE_CHECKING` it
+  subclasses `CalendarDB`; at runtime it's a plain class, so a method a fake
+  omits still raises `AttributeError` rather than reaching a real DB. The 20
+  root fakes inherit it. Fakes that used `@staticmethod` for DB methods (plus
+  a few subclass overrides) became instance methods to match `CalendarDB`.
+  Every fake is instantiated, which I checked before converting.
+- **Config helpers:** they were annotated `-> object`, and one returned
+  `create_calendar_config.__class__`, which is the function type. They now
+  return `CalendarConfig`, which cleared about 200 diagnostics.
+- **App code:** gantt `_build_all_segments`, pit `_pit_tick_segments`, and
+  timeline `_compute_band_ticks` / `_draw_axis_ticks_from_band` now accept
+  `db: CalendarDB | None`. They only forward it to `build_segments`, which
+  already did.
+- **Other test fixes:**
+  - `dict[str, Any]` on mixed keyword dicts;
+  - `is not None` asserts before comparing optional sizes;
+  - capture overrides renamed to the base parameters (`font_name`,
+    `line_list`, `_draw_circle`'s real order);
+  - scoped `# ty: ignore[...]` only on deliberate monkeypatches and on
+    deliberately invalid inputs.
+- **Test setup that did nothing:** `test_theme_engine` set `config.start` /
+  `config.end`, and the pit filter test set `config.noevents` /
+  `config.empty`. None of these are config fields or read anywhere, so the
+  lines are removed. That test's `config.WBS = None` is now `""`, which the
+  `str` field's truthiness check treats the same.
+- F402: `date` loop variables in `test_timeline.py` renamed to `date_call`.
+
+ruff: 311 findings (was 316).
+
 ## Phase 5 — Keep it clean
 
 Add `uv check --locked && uv run ruff check . && uv run python -m pytest tests/ -q`
