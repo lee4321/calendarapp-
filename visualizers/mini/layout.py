@@ -17,7 +17,6 @@ import math
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-import arrow
 
 from config.config import weekend_style_is_workweek, weekend_style_starts_sunday
 from shared.date_utils import get_months_in_range, get_week_number

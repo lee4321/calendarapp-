@@ -38,7 +38,6 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 from openpyxl.styles import Alignment, Font
-from openpyxl.utils import get_column_letter
 
 from shared.data_models import Event
 from shared.rule_engine import DayContext, StyleEngine
@@ -47,7 +46,6 @@ from visualizers.excelheader import (
     CONTINUATION_COL,
     FIRST_DATE_COL,
     FIXED_COLUMNS,
-    LABEL_COL_END,
     _apply_fill,
     _apply_overlay_fill,
     _apply_right_border,

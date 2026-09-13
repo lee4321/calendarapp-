@@ -1787,7 +1787,6 @@ class ThemeEngine:
         Logs a one-time INFO so theme authors can see what they inherited.
         """
         from config.element_catalog import iter_required_tokens, load_default_tokens
-        from config.styles import BoxStyle, IconStyle, LineStyle, TextStyle
 
         defaults = load_default_tokens()
         kind_to_dict = {

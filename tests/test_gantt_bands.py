@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from test_gantt_marks import _DummyDB, render, task
+from test_gantt_marks import render, task
 
 from config.config import CalendarConfig
 from shared.date_utils import visible_days

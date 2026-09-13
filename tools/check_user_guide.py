@@ -17,7 +17,6 @@ Exit status: number of failing commands (0 = guide is honest).
 from __future__ import annotations
 
 import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path

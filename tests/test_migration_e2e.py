@@ -15,13 +15,11 @@ for themes that only target one visualizer (e.g. TJXweekly.yaml).
 from __future__ import annotations
 
 import sys
-from io import StringIO
 from pathlib import Path
 
 import pytest
 
 from config.required_keys import (
-    REQUIRED_KEYS,
     VISUALIZERS,
     check_required_keys,
 )

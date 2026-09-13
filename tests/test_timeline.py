@@ -8,7 +8,6 @@ import drawsvg
 import pytest
 
 from config.config import create_calendar_config, setfontsizes
-from renderers.glyph_cache import get_ink_extents
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
 import pytest
 import yaml
@@ -1210,7 +1209,6 @@ class TestStrokeDasharrayTimelineMini:
         import os
         import tempfile
 
-        from shared.db_access import CalendarDB
         from visualizers.timeline.renderer import TimelineRenderer
 
         config = create_calendar_config()

@@ -7,7 +7,6 @@ Provides normalized data structures used across all visualization types.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 # Allowed values for events.status. Unknown values are accepted by the
 # importer (stored as-is) but render as if 'active'.
