@@ -8,6 +8,7 @@ in the TUI automatically and its ``help`` text becomes the field description.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 
@@ -97,7 +98,14 @@ class CommandSpec:
         return [a for a in self.options if a.group == group]
 
 
-def _canonical_option(option_strings: list[str]) -> str:
+def _metavar_text(metavar: str | tuple[str, ...] | None) -> str | None:
+    """argparse allows a tuple metavar, one name per nargs slot; join it."""
+    if isinstance(metavar, tuple):
+        return " ".join(metavar)
+    return metavar
+
+
+def _canonical_option(option_strings: Sequence[str]) -> str:
     for o in option_strings:
         if o.startswith("--"):
             return o
@@ -137,7 +145,7 @@ def _build_arg(action: argparse.Action, group_title: str) -> ArgSpec | None:
             option=None,
             help=help_text,
             default=action.default,
-            metavar=action.metavar,
+            metavar=_metavar_text(action.metavar),
             group="Dates" if kind == "date" else "Arguments",
         )
 
@@ -155,7 +163,7 @@ def _build_arg(action: argparse.Action, group_title: str) -> ArgSpec | None:
         help=help_text,
         default=action.default,
         choices=choices,
-        metavar=action.metavar,
+        metavar=_metavar_text(action.metavar),
         group=group_title or "Options",
         picker_source=picker,
     )
@@ -185,7 +193,7 @@ def all_commands() -> dict[str, CommandSpec]:
     for name, subparser in sub_action.choices.items():
         if name in specs:
             continue
-        cmd = CommandSpec(name=name, help=help_by_name.get(name, ""))
+        cmd = CommandSpec(name=name, help=help_by_name.get(name) or "")
         for arg_group in subparser._action_groups:
             title = arg_group.title or "Options"
             # argparse's two default groups carry positionals/optionals.

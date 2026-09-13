@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -32,6 +34,10 @@ def _items(names: list[str]) -> tuple[ListView, list[str]]:
                               Static(help_text, classes="hub-sub")))
         )
     return ListView(*rows), keys
+
+
+if TYPE_CHECKING:
+    from tui.app import CalendarTUI
 
 
 class HomeScreen(Screen):
@@ -70,12 +76,12 @@ class HomeScreen(Screen):
     @on(ListView.Selected, "#list-views")
     def _open_view(self, event: ListView.Selected) -> None:
         name = self._view_keys[event.list_view.index or 0]
-        self.app.push_screen(BuilderScreen(name, db_path=self.app.db_path))
+        self.app.push_screen(BuilderScreen(name, db_path=cast("CalendarTUI", self.app).db_path))
 
     @on(ListView.Selected, "#list-sheets")
     def _open_sheet(self, event: ListView.Selected) -> None:
         name = self._sheet_keys[event.list_view.index or 0]
-        self.app.push_screen(BuilderScreen(name, db_path=self.app.db_path))
+        self.app.push_screen(BuilderScreen(name, db_path=cast("CalendarTUI", self.app).db_path))
 
     @on(ListView.Selected, "#list-data")
     def _open_data(self, event: ListView.Selected) -> None:

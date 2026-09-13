@@ -15,18 +15,21 @@ from tui.spec import ArgSpec, CommandSpec
 
 def _emit_value(spec: ArgSpec, value) -> list[str]:
     """Tokens for one option given its current widget value (or [] to omit)."""
+    option = spec.option
+    if option is None:  # positionals are emitted by build_view_argv
+        return []
     if spec.kind == "flag":
-        return [spec.option] if value else []
+        return [option] if value else []
     if spec.kind == "count":
         n = int(value or 0)
-        return [spec.option] * n
+        return [option] * n
     if spec.kind == "append":
         # value is a list of "KEY=VALUE" lines.
         out: list[str] = []
         for item in value or []:
             item = item.strip()
             if item:
-                out += [spec.option, item]
+                out += [option, item]
         return out
     # text / int / float / choice / picker
     if value is None:
@@ -34,7 +37,7 @@ def _emit_value(spec: ArgSpec, value) -> list[str]:
     text = str(value).strip()
     if text == "" or text == str(spec.default):
         return []
-    return [spec.option, text]
+    return [option, text]
 
 
 def build_view_argv(cmd: CommandSpec, values: dict[str, object]) -> list[str]:

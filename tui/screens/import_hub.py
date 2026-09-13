@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -21,6 +23,9 @@ from textual.widgets import (
 
 from tui.importers_spec import ImporterSpec, all_importers, build_import_argv
 from tui.screens.result import ResultScreen
+
+if TYPE_CHECKING:
+    from tui.app import CalendarTUI
 
 
 class ImportHubScreen(Screen):
@@ -108,7 +113,7 @@ class ImportWizardScreen(Screen):
                 values[f.dest] = ctl.value
             elif isinstance(ctl, Select):
                 values[f.dest] = None if ctl.is_blank() else ctl.value
-            else:
+            elif isinstance(ctl, Input):
                 values[f.dest] = ctl.value
         return values
 
@@ -119,7 +124,7 @@ class ImportWizardScreen(Screen):
         argv = build_import_argv(self.spec, values)
         verb = "Dry run" if force_dry else "Import"
         self.app.push_screen(
-            ResultScreen(argv, cwd=str(self.app.project_root),
+            ResultScreen(argv, cwd=str(cast("CalendarTUI", self.app).project_root),
                          entry=self.spec.script,
                          title=f"{verb} · {self.spec.title}")
         )
