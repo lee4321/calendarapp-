@@ -16,14 +16,10 @@ from visualizers.gantt.bars import (
 )
 
 #: Mon 2 Feb 2026 through Fri 13 Feb 2026, workweek only: 10 columns of 10pt.
-WORKWEEK = DayAxis(
-    days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 0), x=100.0, width=100.0
-)
+WORKWEEK = DayAxis(days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 0), x=100.0, width=100.0)
 
 #: The same fortnight with every day shown: 14 columns.
-ALL_DAYS = DayAxis(
-    days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 1), x=0.0, width=140.0
-)
+ALL_DAYS = DayAxis(days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 1), x=0.0, width=140.0)
 
 
 # ── The axis ──────────────────────────────────────────────────────────────
@@ -116,8 +112,8 @@ def test_a_span_covering_everything_is_clipped_at_both_ends():
 @pytest.mark.parametrize(
     "start,end",
     [
-        (date(2025, 1, 1), date(2025, 12, 31)),   # entirely before
-        (date(2026, 3, 1), date(2026, 3, 31)),    # entirely after
+        (date(2025, 1, 1), date(2025, 12, 31)),  # entirely before
+        (date(2026, 3, 1), date(2026, 3, 31)),  # entirely after
     ],
 )
 def test_a_span_outside_the_range_is_invisible(start, end):
@@ -192,9 +188,13 @@ def test_an_invisible_bar_has_no_progress():
 
 def test_all_four_float_windows_are_emitted_when_present():
     event = Event(
-        task_name="t", start="20260210", end="20260213",
-        earliest_start_date="20260205", latest_start_date="20260212",
-        earliest_end_date="20260211", latest_end_date="20260220",
+        task_name="t",
+        start="20260210",
+        end="20260213",
+        earliest_start_date="20260205",
+        latest_start_date="20260212",
+        earliest_end_date="20260211",
+        latest_end_date="20260220",
     )
     assert float_spans(event) == [
         ("earliest_start", "20260205", "20260210"),
@@ -212,7 +212,9 @@ def test_no_float_windows_without_the_dates():
 
 def test_partial_float_data_emits_only_what_is_present():
     event = Event(
-        task_name="t", start="20260210", end="20260213",
+        task_name="t",
+        start="20260210",
+        end="20260213",
         latest_end_date="20260220",
     )
     assert [name for name, _b, _f in float_spans(event)] == ["latest_end"]

@@ -61,7 +61,7 @@ class CandybarRenderer(MiniCalendarRenderer):
             if not key.startswith("Cell_"):
                 continue
             x, y, w, h = coordinates[key]
-            daykey = key[len("Cell_"):]
+            daykey = key[len("Cell_") :]
             day_events = events_by_day.get(daykey, [])
             style = resolver.resolve(daykey, day_events, is_adjacent=False)
             cell_state.append((x, y, w, h, daykey, style))
@@ -124,7 +124,10 @@ class CandybarRenderer(MiniCalendarRenderer):
                 color = month_colors[(year * 12 + month) % len(month_colors)]
                 if color and not _is_none_color(color):
                     self._draw_rect(
-                        x, y, w, h,
+                        x,
+                        y,
+                        w,
+                        h,
                         fill=color,
                         fill_opacity=config.candybar_month_shade_opacity,
                         css_class="ec-month-band",
@@ -133,9 +136,13 @@ class CandybarRenderer(MiniCalendarRenderer):
             # Weekend column tint (Sat=5, Sun=6); only present when shown.
             if weekend_on:
                 from datetime import date
+
                 if date(year, month, day).weekday() >= 5:
                     self._draw_rect(
-                        x, y, w, h,
+                        x,
+                        y,
+                        w,
+                        h,
                         fill=weekend_fill,
                         fill_opacity=config.candybar_weekend_opacity,
                         css_class="ec-weekend",
@@ -163,12 +170,22 @@ class CandybarRenderer(MiniCalendarRenderer):
         if _is_none_color(color):
             return
         for key, (x, y, w, h) in coordinates.items():
-            if key.startswith((
-                "Cell_", "WeekNum_", "WeekNumHeader_", "DayHeader_",
-            )):
+            if key.startswith(
+                (
+                    "Cell_",
+                    "WeekNum_",
+                    "WeekNumHeader_",
+                    "DayHeader_",
+                )
+            ):
                 self._draw_rect(
-                    x, y, w, h,
-                    fill="none", stroke=color, stroke_width=0.5,
+                    x,
+                    y,
+                    w,
+                    h,
+                    fill="none",
+                    stroke=color,
+                    stroke_width=0.5,
                     css_class="ec-grid-line",
                 )
 
@@ -194,19 +211,28 @@ class CandybarRenderer(MiniCalendarRenderer):
             if key.startswith("WeekNumHeader_"):
                 x, y, w, h = coordinates[key]
                 self._draw_text(
-                    x + w / 2, y + h * 0.7, "W#",
-                    tk_wn.get("font") or _ts_wn.font, label_size,
+                    x + w / 2,
+                    y + h * 0.7,
+                    "W#",
+                    tk_wn.get("font") or _ts_wn.font,
+                    label_size,
                     fill=tk_wn.get("color") or _ts_wn.color,
-                    anchor="middle", css_class="ec-label",
+                    anchor="middle",
+                    css_class="ec-label",
                 )
             elif key.startswith("DayHeader_"):
                 x, y, w, h = coordinates[key]
                 idx = int(key.rsplit("_", 1)[1])
                 if 0 <= idx < len(cols.day_labels):
                     self._draw_text(
-                        x + w / 2, y + h * 0.7, cols.day_labels[idx],
-                        label_font, label_size, fill=label_color,
-                        anchor="middle", css_class="ec-label",
+                        x + w / 2,
+                        y + h * 0.7,
+                        cols.day_labels[idx],
+                        label_font,
+                        label_size,
+                        fill=label_color,
+                        anchor="middle",
+                        css_class="ec-label",
                     )
 
     # ------------------------------------------------------------------
@@ -230,11 +256,12 @@ class CandybarRenderer(MiniCalendarRenderer):
             if fills_only:
                 fill = config.candybar_month_box_fill
                 stroke = config.candybar_month_box_stroke
-                if (fill and not _is_none_color(fill)) or (
-                    stroke and not _is_none_color(stroke)
-                ):
+                if (fill and not _is_none_color(fill)) or (stroke and not _is_none_color(stroke)):
                     self._draw_rect(
-                        x, y, w, h,
+                        x,
+                        y,
+                        w,
+                        h,
                         fill=fill if (fill and not _is_none_color(fill)) else "none",
                         fill_opacity=config.candybar_month_box_opacity,
                         stroke=stroke if (stroke and not _is_none_color(stroke)) else None,
@@ -246,18 +273,18 @@ class CandybarRenderer(MiniCalendarRenderer):
             # Label text
             label = format_arrow_date(arrow.Arrow(year, month, 1), config.candybar_month_format)
             font = config.candybar_month_font
-            font_size = config.candybar_month_font_size or max(
-                6.0, min(w * 0.55, 12.0)
-            )
+            font_size = config.candybar_month_font_size or max(6.0, min(w * 0.55, 12.0))
             cx = x + w / 2
             cy = y + h / 2
             text_y = cy + font_size / 3
             rotation = config.candybar_month_rotation or 0.0
-            transform = (
-                f"rotate({rotation} {cx:.3f} {cy:.3f})" if rotation else None
-            )
+            transform = f"rotate({rotation} {cx:.3f} {cy:.3f})" if rotation else None
             self._draw_text(
-                cx, text_y, label, font, font_size,
+                cx,
+                text_y,
+                label,
+                font,
+                font_size,
                 fill=config.candybar_month_color,
                 fill_opacity=config.candybar_month_opacity,
                 anchor=config.candybar_month_anchor,

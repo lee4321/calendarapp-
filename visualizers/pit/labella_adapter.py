@@ -62,6 +62,7 @@ PIT_MAX_EVENTS_PER_SIDE: int = 80
 
 _LABEL_PAD_X: float = 6.0
 
+
 def _name_size(config: CalendarConfig) -> float:
     return float(config.pit_name_text_font_size or 11.0)
 
@@ -71,10 +72,7 @@ def _notes_size(config: CalendarConfig) -> float:
 
 
 def _date_size(config: CalendarConfig) -> float:
-    return float(
-        getattr(config, "theme_pit_date_text_font_size", None)
-        or _name_size(config) * 0.85
-    )
+    return float(getattr(config, "theme_pit_date_text_font_size", None) or _name_size(config) * 0.85)
 
 
 def _inline_date(config: CalendarConfig) -> bool:
@@ -130,23 +128,16 @@ def _measured_text_width(
     notes_w = 0.0
     if event.notes and config.include_notes:
         notes_w = (
-            string_width(event.notes, notes_path, notes_size)
-            if notes_path
-            else len(event.notes) * notes_size * 0.5
+            string_width(event.notes, notes_path, notes_size) if notes_path else len(event.notes) * notes_size * 0.5
         )
     date_w = 0.0
     if _inline_date(config):
         date_text = _date_string(event, config)
         date_path = _resolve_font_path(
-            getattr(config, "theme_pit_date_text_font_name", None)
-            or config.pit_name_text_font_name
+            getattr(config, "theme_pit_date_text_font_name", None) or config.pit_name_text_font_name
         )
         date_size = _date_size(config)
-        date_w = (
-            string_width(date_text, date_path, date_size)
-            if date_path
-            else len(date_text) * date_size * 0.5
-        )
+        date_w = string_width(date_text, date_path, date_size) if date_path else len(date_text) * date_size * 0.5
     return max(name_w, notes_w, date_w)
 
 
@@ -181,10 +172,7 @@ def _node_along_axis_extent(
     Vertical   → label vertical height.
     """
     if direction is Orientation.HORIZONTAL:
-        measured = (
-            _measured_text_width(event, config, extra_name_width=extra_name_width)
-            + 2.0 * _LABEL_PAD_X
-        )
+        measured = _measured_text_width(event, config, extra_name_width=extra_name_width) + 2.0 * _LABEL_PAD_X
         return max(measured, 24.0)
     return _line_height_extent(config)
 
@@ -222,10 +210,7 @@ def _renderer_node_height(
 
     extra = _extra_width_fn(extra_width_for_event)
     widest = max(
-        (
-            _measured_text_width(e, config, extra_name_width=extra(e))
-            for e in events
-        ),
+        (_measured_text_width(e, config, extra_name_width=extra(e)) for e in events),
         default=0.0,
     )
     return max(widest + 2.0 * _LABEL_PAD_X, 40.0)
@@ -267,9 +252,7 @@ def _re_anchor_and_stub(
         leader = append_perp_stub(p.leader_path_d, direction, end_stub)
         leader = prepend_perp_stub(leader, direction, start_stub)
 
-        out.append(
-            replace(p, x_label=x_label, y_label=y_label, leader_path_d=leader)
-        )
+        out.append(replace(p, x_label=x_label, y_label=y_label, leader_path_d=leader))
     return out
 
 
@@ -310,9 +293,10 @@ def layout_pit_callouts(
     def _warn_over_cap(side_events: Sequence[Event], concrete_side: Side) -> None:
         if len(side_events) > PIT_MAX_EVENTS_PER_SIDE:
             logger.warning(
-                "PIT: %d events on %s side exceeds soft cap of %d; "
-                "labella may not converge cleanly.",
-                len(side_events), concrete_side.value, PIT_MAX_EVENTS_PER_SIDE,
+                "PIT: %d events on %s side exceeds soft cap of %d; labella may not converge cleanly.",
+                len(side_events),
+                concrete_side.value,
+                PIT_MAX_EVENTS_PER_SIDE,
             )
 
     placements = _layout_callouts_shared(
@@ -322,11 +306,11 @@ def layout_pit_callouts(
         orientation=direction,
         side=side,
         pos_for_day=pos_for_day,
-        node_width=lambda ev: _node_along_axis_extent(
-            ev, config, direction, extra_name_width=extra(ev)
-        ),
+        node_width=lambda ev: _node_along_axis_extent(ev, config, direction, extra_name_width=extra(ev)),
         node_height=lambda evs: _renderer_node_height(
-            evs, config, direction,
+            evs,
+            config,
+            direction,
             extra_width_for_event=extra_width_for_event,
         ),
         density=float(config.pit_labella_density),

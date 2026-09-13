@@ -19,8 +19,15 @@ from visualizers.factory import VisualizerFactory
 
 #: Every visualizer whose renderer opens an SVG page.
 _SVG_VIEWS = (
-    "weekly", "mini", "mini-icon", "candybar",
-    "gantt", "timeline", "blockplan", "compactplan", "pit",
+    "weekly",
+    "mini",
+    "mini-icon",
+    "candybar",
+    "gantt",
+    "timeline",
+    "blockplan",
+    "compactplan",
+    "pit",
 )
 
 

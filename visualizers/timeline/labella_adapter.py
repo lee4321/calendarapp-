@@ -46,9 +46,7 @@ _LABEL_PAD_X: float = 6.0
 _DATE_GAP_X: float = 8.0
 
 
-def callout_date_extent(
-    date_label: str, font_name: str | None, font_size: float
-) -> float:
+def callout_date_extent(date_label: str, font_name: str | None, font_size: float) -> float:
     """Width the in-box date claims on the title line, gap included.
 
     The renderer reserves exactly this much when it fits the title, so the
@@ -57,11 +55,7 @@ def callout_date_extent(
     if not date_label:
         return 0.0
     font_path = _resolve_font_path(font_name)
-    width = (
-        string_width(date_label, font_path, font_size)
-        if font_path
-        else len(date_label) * font_size * 0.5
-    )
+    width = string_width(date_label, font_path, font_size) if font_path else len(date_label) * font_size * 0.5
     return width + _DATE_GAP_X
 
 
@@ -80,13 +74,15 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
 
     name_w = (
         string_width(event.task_name, name_font_path, name_size)
-        if name_font_path else len(event.task_name or "") * name_size * 0.5
+        if name_font_path
+        else len(event.task_name or "") * name_size * 0.5
     )
     notes_w = 0.0
     if event.notes:
         notes_w = (
             string_width(event.notes, notes_font_path, notes_size)
-            if notes_font_path else len(event.notes) * notes_size * 0.5
+            if notes_font_path
+            else len(event.notes) * notes_size * 0.5
         )
     return max(name_w, notes_w) + _date_extent_for(event, config)
 
@@ -104,11 +100,7 @@ def _date_extent_for(event: Event, config: CalendarConfig) -> float:
     # slightly rather than the date colliding with it.
     # weekly_name_text_font_size is None until setfontsizes() runs, and the
     # layout is exercised without it in tests.
-    base = (
-        config.weekly_name_text_font_size
-        or config.timeline_name_text_font_size
-        or 12.0
-    )
+    base = config.weekly_name_text_font_size or config.timeline_name_text_font_size or 12.0
     size = max(8.0, float(base) * 0.95)
     return callout_date_extent(label, config.timeline_date_font, size)
 
@@ -131,9 +123,7 @@ def _line_height_extent(config: CalendarConfig) -> float:
     return line_h + notes_size * 1.2 + 4.0
 
 
-def _node_along_axis_extent(
-    event: Event, config: CalendarConfig, orientation: Orientation
-) -> float:
+def _node_along_axis_extent(event: Event, config: CalendarConfig, orientation: Orientation) -> float:
     """Return the size passed as `Node.width` to labella.
 
     Labella interprets `Node.width` as the extent **along** the axis

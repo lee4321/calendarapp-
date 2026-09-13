@@ -266,11 +266,7 @@ def discover_themes() -> list[str]:
             cwd=REPO_ROOT,
             check=True,
         )
-        names = [
-            line.strip()
-            for line in proc.stdout.splitlines()
-            if line.startswith("  ") and line.strip()
-        ]
+        names = [line.strip() for line in proc.stdout.splitlines() if line.startswith("  ") and line.strip()]
         if names:
             return names
     except (subprocess.CalledProcessError, OSError):
@@ -283,9 +279,7 @@ def validate_date(value: str) -> str:
     try:
         _dt.datetime.strptime(value, "%Y%m%d")
     except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            f"{value!r} is not a valid YYYYMMDD date"
-        ) from exc
+        raise argparse.ArgumentTypeError(f"{value!r} is not a valid YYYYMMDD date") from exc
     return value
 
 
@@ -293,9 +287,7 @@ def build_jobs(args: argparse.Namespace, stamp: str) -> list[Job]:
     """Expand the requested views and themes into the full job list."""
     jobs: list[Job] = []
 
-    def add(
-        view: str, theme: str | None, ext: str, direction: str | None = None
-    ) -> None:
+    def add(view: str, theme: str | None, ext: str, direction: str | None = None) -> None:
         theme_part = theme if theme else "notheme"
         parts = [view, direction, theme_part, stamp]
         filename = "_".join(p for p in parts if p) + ext
@@ -391,8 +383,7 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
         "<style>",
         "body{font-family:system-ui,sans-serif;margin:2rem;background:#fafafa}",
         "h1{font-size:1.4rem} h2{margin-top:2rem;border-bottom:1px solid #ccc}",
-        ".grid{display:grid;gap:1rem;"
-        "grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}",
+        ".grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}",
         ".card{background:#fff;border:1px solid #ddd;border-radius:6px;padding:.5rem}",
         ".card img{width:100%;height:180px;object-fit:contain;background:#fff}",
         ".card .name{font-size:.8rem;font-family:monospace;word-break:break-all}",
@@ -408,10 +399,7 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
     ]
     filters = active_filters(args)
     if filters:
-        parts.append(
-            "<p class='meta'>filters: "
-            f"<code>{html.escape(' '.join(filters))}</code></p>"
-        )
+        parts.append(f"<p class='meta'>filters: <code>{html.escape(' '.join(filters))}</code></p>")
 
     for section in sorted(by_section):
         parts.append(f"<h2>{html.escape(section)}</h2><div class='grid'>")
@@ -422,17 +410,13 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
             parts.append(f"<div class='{cls}'>")
             if failed:
                 parts.append(f"<div><b>{label}</b> — FAILED</div>")
-                parts.append(
-                    f"<pre class='meta'>{html.escape(res.output[-500:])}</pre>"
-                )
+                parts.append(f"<pre class='meta'>{html.escape(res.output[-500:])}</pre>")
             else:
                 for path in res.files:
                     href = html.escape(path.name)
                     if path.suffix == ".svg":
                         parts.append(f"<a href='{href}'><img src='{href}'></a>")
-                    parts.append(
-                        f"<div class='name'><a href='{href}'>{href}</a></div>"
-                    )
+                    parts.append(f"<div class='name'><a href='{href}'>{href}</a></div>")
                 parts.append(f"<div><b>{label}</b></div>")
             parts.append("</div>")
         parts.append("</div>")
@@ -444,8 +428,7 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate every visualization in every theme over one date range, "
-            "for human side-by-side evaluation."
+            "Generate every visualization in every theme over one date range, for human side-by-side evaluation."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -489,9 +472,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             f"Default: {','.join(AXIS_DIRECTIONS)}"
         ),
     )
-    parser.add_argument(
-        "--papersize", type=str, default="Tabloid", help="Paper size (default: Tabloid)"
-    )
+    parser.add_argument("--papersize", type=str, default="Tabloid", help="Paper size (default: Tabloid)")
     parser.add_argument(
         "--orientation",
         type=str,
@@ -514,8 +495,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     filter_group = parser.add_argument_group(
         "Content Filtering",
-        "Forwarded to every ecalendar run, so a batch renders one slice of "
-        "the data across all themes.",
+        "Forwarded to every ecalendar run, so a batch renders one slice of the data across all themes.",
     )
     for filt in CONTENT_FILTERS:
         help_text = filt.help + filter_scope_note(filt)
@@ -560,10 +540,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         requested = [t.strip() for t in args.themes.split(",") if t.strip()]
         unknown = [t for t in requested if t not in available]
         if unknown:
-            parser.error(
-                f"unknown theme(s): {', '.join(unknown)}. "
-                f"Available: {', '.join(available)}"
-            )
+            parser.error(f"unknown theme(s): {', '.join(unknown)}. Available: {', '.join(available)}")
         args.themes = requested
     else:
         args.themes = available
@@ -573,10 +550,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         requested = [v.strip() for v in args.views.split(",") if v.strip()]
         unknown = [v for v in requested if v not in valid_views]
         if unknown:
-            parser.error(
-                f"unknown view(s): {', '.join(unknown)}. "
-                f"Available: {', '.join(valid_views)}"
-            )
+            parser.error(f"unknown view(s): {', '.join(unknown)}. Available: {', '.join(valid_views)}")
         args.views = requested
     else:
         args.views = list(SVG_VIEWS)
@@ -587,15 +561,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         requested = [d.strip() for d in args.directions.split(",") if d.strip()]
         unknown = [d for d in requested if d not in AXIS_DIRECTIONS]
         if unknown:
-            parser.error(
-                f"unknown direction(s): {', '.join(unknown)}. "
-                f"Available: {', '.join(AXIS_DIRECTIONS)}"
-            )
+            parser.error(f"unknown direction(s): {', '.join(unknown)}. Available: {', '.join(AXIS_DIRECTIONS)}")
         args.directions = requested
         if not set(args.views) & set(AXIS_VIEWS):
             print(
-                "warning: --directions applies to no selected view "
-                f"(accepted by: {', '.join(sorted(AXIS_VIEWS))})",
+                f"warning: --directions applies to no selected view (accepted by: {', '.join(sorted(AXIS_VIEWS))})",
                 file=sys.stderr,
             )
     else:
@@ -606,12 +576,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     selected = set(args.views)
     for filt in CONTENT_FILTERS:
         value = getattr(args, filt.dest)
-        if (value is not None if filt.takes_value else value) and not (
-            filt.views & selected
-        ):
+        if (value is not None if filt.takes_value else value) and not (filt.views & selected):
             print(
-                f"warning: {filt.flag} applies to no selected view "
-                f"(accepted by: {', '.join(sorted(filt.views))})",
+                f"warning: {filt.flag} applies to no selected view (accepted by: {', '.join(sorted(filt.views))})",
                 file=sys.stderr,
             )
 

@@ -44,8 +44,12 @@ class _Probe(BaseSVGRenderer):
 def test_a_resolvable_icon_ignores_the_fallback_size():
     probe = _Probe()
     probe._draw_icon_svg(
-        "real", 10.0, 20.0, size=6.0,
-        fallback_name="stand-in", fallback_size=18.0,
+        "real",
+        10.0,
+        20.0,
+        size=6.0,
+        fallback_name="stand-in",
+        fallback_size=18.0,
     )
     assert probe.last_icon_size() == pytest.approx(6.0)
 
@@ -53,7 +57,11 @@ def test_a_resolvable_icon_ignores_the_fallback_size():
 def test_the_fallback_keeps_the_requested_size_when_none_is_configured():
     probe = _Probe()
     probe._draw_icon_svg(
-        "no-such-icon", 10.0, 20.0, size=6.0, fallback_name="stand-in",
+        "no-such-icon",
+        10.0,
+        20.0,
+        size=6.0,
+        fallback_name="stand-in",
     )
     assert probe.last_icon_size() == pytest.approx(6.0)
 
@@ -61,8 +69,12 @@ def test_the_fallback_keeps_the_requested_size_when_none_is_configured():
 def test_a_configured_size_wins_for_the_fallback():
     probe = _Probe()
     probe._draw_icon_svg(
-        "no-such-icon", 10.0, 20.0, size=6.0,
-        fallback_name="stand-in", fallback_size=18.0,
+        "no-such-icon",
+        10.0,
+        20.0,
+        size=6.0,
+        fallback_name="stand-in",
+        fallback_size=18.0,
     )
     assert probe.last_icon_size() == pytest.approx(18.0)
 
@@ -72,8 +84,12 @@ def test_a_nonpositive_configured_size_is_ignored(bad):
     """A theme typo costs the override, not the glyph."""
     probe = _Probe()
     probe._draw_icon_svg(
-        "no-such-icon", 10.0, 20.0, size=6.0,
-        fallback_name="stand-in", fallback_size=bad,
+        "no-such-icon",
+        10.0,
+        20.0,
+        size=6.0,
+        fallback_name="stand-in",
+        fallback_size=bad,
     )
     assert probe.last_icon_size() == pytest.approx(6.0)
 

@@ -1233,6 +1233,7 @@ class StyleResult:
 
 class StyleEngine:
     """Evaluates style_rules; results layer additively in declaration order."""
+
     def __init__(self, rules: list[dict]): ...
 
     def evaluate_day(self, day_context: DayContext) -> StyleResult:
@@ -1244,6 +1245,7 @@ class StyleEngine:
 
 class LaneEngine:
     """Evaluates swimlane_rules; first-match wins."""
+
     def __init__(self, rules: list[dict]): ...
 
     def assign(self, event: Event, day_context: DayContext | None = None) -> str | None:

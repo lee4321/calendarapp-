@@ -174,6 +174,4 @@ def test_good_tokens_survive_a_bad_neighbour():
 
 
 def test_parse_links_drops_what_the_verbose_form_reports():
-    assert parse_links("3,FS,9") == [
-        link for link in parse_links_with_rejects("3,FS,9")[0]
-    ]
+    assert parse_links("3,FS,9") == [link for link in parse_links_with_rejects("3,FS,9")[0]]

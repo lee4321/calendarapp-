@@ -69,9 +69,7 @@ def test_every_documented_column_maps(source_name, db_column):
     assert lookup_column(source_name) == db_column
 
 
-@pytest.mark.parametrize(
-    "spelling", ["EarlyStart", "early_start", "Early Start", "earlystart", "EARLY-START"]
-)
+@pytest.mark.parametrize("spelling", ["EarlyStart", "early_start", "Early Start", "earlystart", "EARLY-START"])
 def test_spelling_variants_collapse(spelling):
     """Case, spaces, underscores and hyphens are all ignored."""
     assert lookup_column(spelling) == "earliest_start_date"
@@ -164,16 +162,12 @@ def test_missing_one_date_copies_the_other():
 
 
 def test_row_without_any_date_fails():
-    _event, error = transform_row(
-        {"Name": "Ditch"}, user_id=1, import_id=1, event_id=1
-    )
+    _event, error = transform_row({"Name": "Ditch"}, user_id=1, import_id=1, event_id=1)
     assert error == "Invalid or missing dates"
 
 
 def test_row_without_name_fails():
-    _event, error = transform_row(
-        {"Start": "20260602"}, user_id=1, import_id=1, event_id=1
-    )
+    _event, error = transform_row({"Start": "20260602"}, user_id=1, import_id=1, event_id=1)
     assert error == "Task_Name is required"
 
 
@@ -278,15 +272,11 @@ def test_status_defaults_to_active():
     assert _transform(Status="draft")["status"] == "draft"
 
 
-def test_generator_script_that_cannot_be_loaded_raises_a_clear_error(
-    tmp_path, monkeypatch
-):
+def test_generator_script_that_cannot_be_loaded_raises_a_clear_error(tmp_path, monkeypatch):
     from importers import import_events
 
     script = tmp_path / "gen.py"
     script.write_text("def generate_events():\n    return []\n")
-    monkeypatch.setattr(
-        "importlib.util.spec_from_file_location", lambda *args, **kwargs: None
-    )
+    monkeypatch.setattr("importlib.util.spec_from_file_location", lambda *args, **kwargs: None)
     with pytest.raises(ValueError, match="Cannot load generator script"):
         import_events.load_generator_script(str(script))

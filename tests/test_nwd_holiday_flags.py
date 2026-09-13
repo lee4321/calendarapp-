@@ -6,6 +6,7 @@ now lay each closed country's flag side by side in the cell, as the holiday
 band does.  The weekly calendar already drew every flag in its top row; it
 now draws a country's flag once when that country has two holidays that day.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -73,9 +74,7 @@ class _IconCapture:
         self.text_values: list[str] = []
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icon_calls.append(
-            {"icon_name": icon_name, "x": x, "size": size, **kwargs}
-        )
+        self.icon_calls.append({"icon_name": icon_name, "x": x, "size": size, **kwargs})
         return True
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
@@ -103,8 +102,8 @@ class _Weekly(_IconCapture, WeeklyCalendarRenderer):
     pass
 
 
-_BP_HOLIDAY = "20260216"      # a Monday inside the blockplan range
-_CP_HOLIDAY = "20260316"      # a Monday inside the compactplan range
+_BP_HOLIDAY = "20260216"  # a Monday inside the blockplan range
+_CP_HOLIDAY = "20260316"  # a Monday inside the compactplan range
 
 _THREE_COUNTRIES = [
     _row("ca", "Holiday CA"),
@@ -121,15 +120,15 @@ def _blockplan(tmp_path: Path, rows: list[dict]) -> _BlockPlan:
     config.userstart = config.adjustedstart = "20260209"
     config.userend = config.adjustedend = "20260220"
     config.outputfile = str(tmp_path / "bp.svg")
-    config.blockplan_top_time_bands = [
-        {"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}
-    ]
+    config.blockplan_top_time_bands = [{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}]
     config.blockplan_bottom_time_bands = []
     config.blockplan_swimlanes = [{"name": "Lane", "match": {}}]
     config.blockplan_federal_holiday_icon = "star"
     renderer = _BlockPlan()
     renderer.render(
-        config, BlockPlanLayout().calculate(config), events=[],
+        config,
+        BlockPlanLayout().calculate(config),
+        events=[],
         db=_HolidayDB({_BP_HOLIDAY: rows}),
     )
     return renderer
@@ -145,13 +144,13 @@ def _compactplan(tmp_path: Path, rows: list[dict]) -> _CompactPlan:
     config.outputfile = str(tmp_path / "cp.svg")
     config.include_header = False
     config.include_footer = False
-    config.compactplan_time_bands = [
-        {"label": "Date", "unit": "date", "date_format": "D", "show_every": 1}
-    ]
+    config.compactplan_time_bands = [{"label": "Date", "unit": "date", "date_format": "D", "show_every": 1}]
     config.compactplan_federal_holiday_icon = "star"
     renderer = _CompactPlan()
     renderer.render(
-        config, CompactPlanLayout().calculate(config), [],
+        config,
+        CompactPlanLayout().calculate(config),
+        [],
         _HolidayDB({_CP_HOLIDAY: rows}),
     )
     return renderer
@@ -194,27 +193,36 @@ def test_a_single_flag_stays_centred_in_its_cell(tmp_path):
 
 def test_only_countries_that_close_get_a_flag(tmp_path):
     """An observance listed first no longer lends its flag to the closure."""
-    renderer = _blockplan(tmp_path, [
-        _row("ca", "Observance CA", nonworkday=0),
-        _row("us", "Holiday US"),
-    ])
+    renderer = _blockplan(
+        tmp_path,
+        [
+            _row("ca", "Observance CA", nonworkday=0),
+            _row("us", "Holiday US"),
+        ],
+    )
 
     assert [c["icon_name"] for c in renderer.nwd_icons()] == ["us"]
 
 
 def test_two_holidays_from_one_country_draw_one_flag(tmp_path):
-    renderer = _compactplan(tmp_path, [
-        _row("in", "Holiday A"),
-        _row("in", "Holiday B"),
-    ])
+    renderer = _compactplan(
+        tmp_path,
+        [
+            _row("in", "Holiday A"),
+            _row("in", "Holiday B"),
+        ],
+    )
 
     assert [c["icon_name"] for c in renderer.nwd_icons()] == ["in"]
 
 
 def test_holidays_without_flags_fall_back_to_the_config_icon(tmp_path):
-    renderer = _blockplan(tmp_path, [
-        {"icon": "", "displayname": "Holiday", "nonworkday": 1, "country": "US"},
-    ])
+    renderer = _blockplan(
+        tmp_path,
+        [
+            {"icon": "", "displayname": "Holiday", "nonworkday": 1, "country": "US"},
+        ],
+    )
 
     assert [c["icon_name"] for c in renderer.nwd_icons()] == ["star"]
 
@@ -225,7 +233,12 @@ def test_holidays_without_flags_fall_back_to_the_config_icon(tmp_path):
 def _cell_icons(n: int, cell_w: float, icon_h: float = 10.0) -> list[dict]:
     renderer = _BlockPlan()
     renderer._draw_cell_icons(
-        [(f"i{k}", None) for k in range(n)], 100.0, cell_w, 0.0, 16.0, icon_h,
+        [(f"i{k}", None) for k in range(n)],
+        100.0,
+        cell_w,
+        0.0,
+        16.0,
+        icon_h,
     )
     return renderer.icon_calls
 
@@ -244,9 +257,7 @@ def test_icons_shrink_to_fit_a_narrow_cell():
     right_edges = [c["x"] + size / 2 for c in icons]
     assert left_edges[0] >= 100.0 and right_edges[-1] <= 112.0
     # Each icon clears the next one.
-    assert all(
-        right < left for right, left in zip(right_edges, left_edges[1:], strict=False)
-    )
+    assert all(right < left for right, left in zip(right_edges, left_edges[1:], strict=False))
 
 
 def test_a_lone_icon_in_a_narrow_cell_stays_inside_it():
@@ -263,19 +274,23 @@ def _weekly_icons(holidays: list[tuple[str, str]]) -> list[str]:
     oneday = arrow.get("20260501", "YYYYMMDD")
     renderer = _Weekly()
     renderer._draw_day_top_row_extras(
-        config, oneday, oneday.format("YYYYMMDD"), 0, 0, 400, 100,
-        has_overflow=False, holidays=holidays, day_num_width=0.0,
+        config,
+        oneday,
+        oneday.format("YYYYMMDD"),
+        0,
+        0,
+        400,
+        100,
+        has_overflow=False,
+        holidays=holidays,
+        day_num_width=0.0,
     )
     return [c["icon_name"] for c in renderer.icon_calls]
 
 
 def test_weekly_draws_every_countrys_flag():
-    assert _weekly_icons(
-        [("Holiday CA", "ca"), ("Holiday GB", "gb"), ("Holiday US", "us")]
-    ) == ["ca", "gb", "us"]
+    assert _weekly_icons([("Holiday CA", "ca"), ("Holiday GB", "gb"), ("Holiday US", "us")]) == ["ca", "gb", "us"]
 
 
 def test_weekly_draws_a_countrys_flag_once():
-    assert _weekly_icons(
-        [("Buddha Purnima", "in"), ("Labour Day", "in"), ("May Day", "us")]
-    ) == ["in", "us"]
+    assert _weekly_icons([("Buddha Purnima", "in"), ("Labour Day", "in"), ("May Day", "us")]) == ["in", "us"]

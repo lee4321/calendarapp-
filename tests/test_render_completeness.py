@@ -40,15 +40,15 @@ THEMES_DIR = REPO_ROOT / "config" / "themes"
 #                  which strips any directory component and forces output to
 #                  ``output/<basename>`` — the excel workbooks included.
 SUBCOMMAND_META: dict[str, dict[str, object]] = {
-    "weekly":      {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "mini":        {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "mini-icon":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "candybar":    {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "text-mini":   {"ext": ".txt",  "accepts_theme": False, "output_dir": "output"},
-    "timeline":    {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "blockplan":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "gantt":       {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "compactplan": {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
+    "weekly": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "mini": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "mini-icon": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "candybar": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "text-mini": {"ext": ".txt", "accepts_theme": False, "output_dir": "output"},
+    "timeline": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "blockplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "gantt": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "compactplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
     "excelblockplan": {"ext": ".xlsx", "accepts_theme": True, "output_dir": "output"},
 }
 
@@ -75,7 +75,9 @@ def _parametrize_cases() -> list[tuple[str, str]]:
 
 
 @pytest.mark.parametrize(
-    "subcommand,theme", _parametrize_cases(), ids=lambda x: x or "default",
+    "subcommand,theme",
+    _parametrize_cases(),
+    ids=lambda x: x or "default",
 )
 def test_subcommand_renders(
     subcommand: str,
@@ -104,7 +106,8 @@ def test_subcommand_renders(
         subcommand,
         start,
         end,
-        "--outputfile", outputfile_arg,
+        "--outputfile",
+        outputfile_arg,
         "--quiet",
     ]
     if theme:
@@ -113,17 +116,16 @@ def test_subcommand_renders(
     env["PYTHONPATH"] = str(REPO_ROOT)
     try:
         result = subprocess.run(
-            cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+            cmd,
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         label = f"{subcommand}" + (f" on theme {theme!r}" if theme else "")
-        assert result.returncode == 0, (
-            f"{label} exited {result.returncode}.\nstderr:\n{result.stderr}"
-        )
-        assert actual_output.exists(), (
-            f"{label} produced no output file at {actual_output}"
-        )
-        assert actual_output.stat().st_size > 0, (
-            f"{label} produced an empty output file"
-        )
+        assert result.returncode == 0, f"{label} exited {result.returncode}.\nstderr:\n{result.stderr}"
+        assert actual_output.exists(), f"{label} produced no output file at {actual_output}"
+        assert actual_output.stat().st_size > 0, f"{label} produced an empty output file"
     finally:
         actual_output.unlink(missing_ok=True)

@@ -174,13 +174,14 @@ def render_details_pages(
         return cell_value(column, event)
 
     def page_path(number: int) -> str:
-        base = details_output_path(
-            config.outputfile, config.gantt_details_output_suffix
-        )
+        base = details_output_path(config.outputfile, config.gantt_details_output_suffix)
         return numbered_page_path(base, number)
 
     writer = DetailsPageWriter(
-        renderer, config, coordinates, page_path,
+        renderer,
+        config,
+        coordinates,
+        page_path,
         config.gantt_details_title_text,
     )
 
@@ -189,7 +190,8 @@ def render_details_pages(
         writer.section("Tasks", task_columns)
         for row in rows:
             writer.row(
-                [text_for(column, row.event) for column in columns], task_columns,
+                [text_for(column, row.event) for column in columns],
+                task_columns,
             )
 
     writer.section("Exceptions", list(_EXCEPTION_COLUMNS))

@@ -152,9 +152,7 @@ def _nwd_fill_opacity_for_classes(
     return None
 
 
-def _nwd_icon_for_classes(
-    classes: frozenset[str], config: CalendarConfig
-) -> tuple[str, str] | None:
+def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tuple[str, str] | None:
     """Resolve a global non-workday icon for a single-day cell.
 
     Returns ``(icon_name, color)`` or ``None``.  Priority:
@@ -180,6 +178,7 @@ def _nwd_icon_for_classes(
         )
     return None
 
+
 if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
@@ -200,12 +199,21 @@ class BlockPlanRenderer(BaseSVGRenderer):
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "blockplan"
     TOKENS = (
-        "text:event_name", "text:event_notes", "text:event_date",
-        "text:duration_date", "text:band_label", "text:swimlane_label",
-        "text:label", "text:heading",
-        "box:band", "box:duration", "box:event", "box:milestone",
+        "text:event_name",
+        "text:event_notes",
+        "text:event_date",
+        "text:duration_date",
+        "text:band_label",
+        "text:swimlane_label",
+        "text:label",
+        "text:heading",
+        "box:band",
+        "box:duration",
+        "box:event",
+        "box:milestone",
         "line:grid",
-        "icon:event", "icon:milestone",
+        "icon:event",
+        "icon:milestone",
     )
 
     def _render_content(
@@ -223,9 +231,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         (frames, labels, durations, events) → bottom separator →
         bottom bands.  Returns ``(0, [])``: blockplan never overflows.
         """
-        area_x, area_y, area_w, area_h = coordinates.get(
-            "BlockPlanArea", (0.0, 0.0, config.pageX, config.pageY)
-        )
+        area_x, area_y, area_w, area_h = coordinates.get("BlockPlanArea", (0.0, 0.0, config.pageX, config.pageY))
 
         range_start = str(config.userstart or config.adjustedstart)
         range_end = str(config.userend or config.adjustedend)
@@ -258,18 +264,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top_bands_h = max(
             0.0,
             min(
-                sum(self._band_row_h(b, config) for b in top_bands)
-                if top_bands
-                else 0.0,
+                sum(self._band_row_h(b, config) for b in top_bands) if top_bands else 0.0,
                 area_h,
             ),
         )
         bottom_bands_h = max(
             0.0,
             min(
-                sum(self._band_row_h(b, config) for b in bottom_bands)
-                if bottom_bands
-                else 0.0,
+                sum(self._band_row_h(b, config) for b in bottom_bands) if bottom_bands else 0.0,
                 area_h - top_bands_h,
             ),
         )
@@ -381,11 +383,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         version with the unified-theme token slotted in front.
         """
         tk_band = self._tk("box:band")
-        color = (
-            tk_band.get("stroke")
-            or config.blockplan_timeband_line_color
-            or config.blockplan_grid_color
-        )
+        color = tk_band.get("stroke") or config.blockplan_timeband_line_color or config.blockplan_grid_color
         width = tk_band.get("stroke_width")
         if width is None:
             width = config.blockplan_timeband_line_width
@@ -397,9 +395,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if opacity is None:
             opacity = config.blockplan_grid_opacity
         dasharray = (
-            tk_band.get("dasharray")
-            or config.blockplan_timeband_line_dasharray
-            or config.blockplan_grid_dasharray
+            tk_band.get("dasharray") or config.blockplan_timeband_line_dasharray or config.blockplan_grid_dasharray
         )
         return color, float(width), float(opacity), dasharray
 
@@ -413,16 +409,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         tk_grid = self._tk("line:grid")
         color = tk_grid.get("color") or config.blockplan_grid_color
-        width = (
-            tk_grid.get("width")
-            if tk_grid.get("width") is not None
-            else config.blockplan_grid_line_width
-        )
-        opacity = (
-            tk_grid.get("opacity")
-            if tk_grid.get("opacity") is not None
-            else config.blockplan_grid_opacity
-        )
+        width = tk_grid.get("width") if tk_grid.get("width") is not None else config.blockplan_grid_line_width
+        opacity = tk_grid.get("opacity") if tk_grid.get("opacity") is not None else config.blockplan_grid_opacity
         dasharray = tk_grid.get("dasharray") or config.blockplan_grid_dasharray
         return color, float(width), float(opacity), dasharray
 
@@ -438,11 +426,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         if "row_height" in band:
             return float(band["row_height"])
-        font_size = float(
-            band.get("font_size")
-            or self._tk("text:band_label").get("size")
-           
-        )
+        font_size = float(band.get("font_size") or self._tk("text:band_label").get("size"))
         return font_size * 1.01
 
     def _resolve_box_band_fill(self, band: dict[str, Any]) -> Any:
@@ -528,7 +512,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
         db: CalendarDB | None = None,
     ) -> list[_BandSegment]:
         return _build_band_segments(
-            band, start, end, config,
+            band,
+            start,
+            end,
+            config,
             visible_days=visible_days,
             db=db,
             week_start_default=config.blockplan_week_start,
@@ -583,9 +570,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         # Any band may want non-workday fills or day-based icon rules; build a
         # classifier cache once for every visible day and reuse across bands.
-        _day_classes: dict[date, frozenset[str]] = {
-            d: classify_day(d, db, config) for d in visible_days
-        }
+        _day_classes: dict[date, frozenset[str]] = {d: classify_day(d, db, config) for d in visible_days}
 
         def _classify(d: date) -> frozenset[str]:
             return _day_classes.get(d, frozenset())
@@ -593,10 +578,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         # Load icon cache once if any icon bands are present (event- or
         # day-driven icon rules both need rendered icons), or if non-workday
         # icons are configured for date/dow cells.
-        _has_icon_band = any(
-            str(b.get("unit", "")).strip().lower() in {"icon", "holiday"}
-            for b in bands
-        )
+        _has_icon_band = any(str(b.get("unit", "")).strip().lower() in {"icon", "holiday"} for b in bands)
         _has_nwd_icons = bool(
             config.blockplan_federal_holiday_icon
             or config.blockplan_company_holiday_icon
@@ -606,9 +588,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if _has_icon_band or _has_nwd_icons:
             self._load_icon_svg_cache(db)
             if events:
-                _band_events = [
-                    Event.from_dict(e) if isinstance(e, dict) else e for e in events
-                ]
+                _band_events = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
 
         # A federal-holiday date/dow cell shows the flag of every country
         # closed that day — the same one-flag-per-country marks the holiday
@@ -638,26 +618,26 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if unit in {"icon", "holiday"}:
                 # Heading cell (left column — same as regular bands).
                 _heading_cell_style = config.get_box_style("ec-heading-cell")
-                heading_fill = band.get(
-                    "label_fill_color", _heading_cell_style.fill
-                )
+                heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
                 tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
                 stroke = band.get("stroke_color", tb_color)
                 self._draw_rect(
-                    left_x, y_top, timeline_x - left_x, row_h,
+                    left_x,
+                    y_top,
+                    timeline_x - left_x,
+                    row_h,
                     fill=heading_fill,
-                    stroke=stroke, stroke_width=tb_width,
-                    stroke_opacity=tb_opacity, stroke_dasharray=tb_dasharray,
+                    stroke=stroke,
+                    stroke_width=tb_width,
+                    stroke_opacity=tb_opacity,
+                    stroke_dasharray=tb_dasharray,
                     css_class="ec-heading-cell",
                 )
                 _heading_text_style = config.get_text_style("ec-heading")
                 tk_heading = self._tk("text:heading")
                 heading_font = band.get("label_font") or tk_heading.get("font") or _heading_text_style.font
                 heading_font_size = float(
-                    band.get("label_font_size")
-                    or (row_h * 0.65 if has_explicit_row_h else (
-                        tk_heading.get("size")
-                    ))
+                    band.get("label_font_size") or (row_h * 0.65 if has_explicit_row_h else (tk_heading.get("size")))
                 )
                 heading_color = band.get("label_color") or tk_heading.get("color") or _heading_text_style.color
                 heading_opacity = float(
@@ -669,15 +649,15 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         else _heading_text_style.opacity
                     )
                 )
-                heading_x, heading_anchor = self._band_heading_text_pos(
-                    config, band, left_x, timeline_x
-                )
+                heading_x, heading_anchor = self._band_heading_text_pos(config, band, left_x, timeline_x)
                 self._draw_text(
                     heading_x,
                     y_top + (row_h * 0.50) + (heading_font_size * 0.30),
                     str(band.get("label", "")),
-                    heading_font, heading_font_size,
-                    fill=heading_color, fill_opacity=heading_opacity,
+                    heading_font,
+                    heading_font_size,
+                    fill=heading_color,
+                    fill_opacity=heading_opacity,
                     anchor=heading_anchor,
                     max_width=max(8.0, timeline_x - left_x - 10),
                     css_class="ec-heading",
@@ -693,15 +673,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         config,
                         nonworkdays_only=bool(band.get("nonworkdays_only", False)),
                     )
-                    day_icon_map = {
-                        day: [(mark.icon, None) for mark in marks]
-                        for day, marks in holiday_days.items()
-                    }
+                    day_icon_map = {day: [(mark.icon, None) for mark in marks] for day, marks in holiday_days.items()}
                 else:
                     icon_rules = list(band.get("icon_rules") or [])
-                    day_icon_map = compute_icon_band_days(
-                        _band_events, icon_rules, visible_days, classify_fn=_classify
-                    )
+                    day_icon_map = compute_icon_band_days(_band_events, icon_rules, visible_days, classify_fn=_classify)
                 icon_h = float(band.get("icon_height") or row_h * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 day_cells = [
@@ -715,9 +690,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 self._draw_icon_band_row(day_cells, y_top, row_h, icon_h, fill)
                 # Bottom border for the row.
                 self._draw_line(
-                    timeline_x, y_top + row_h, timeline_x + timeline_w, y_top + row_h,
-                    stroke=stroke, stroke_width=tb_width,
-                    stroke_opacity=tb_opacity, stroke_dasharray=tb_dasharray,
+                    timeline_x,
+                    y_top + row_h,
+                    timeline_x + timeline_w,
+                    y_top + row_h,
+                    stroke=stroke,
+                    stroke_width=tb_width,
+                    stroke_opacity=tb_opacity,
+                    stroke_dasharray=tb_dasharray,
                     css_class="ec-grid-line",
                 )
                 continue
@@ -729,16 +709,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_band_label = self._tk("text:band_label")
             tk_heading = self._tk("text:heading")
             band_fill = band.get("fill_color", _band_cell_style.fill)
-            band_palette = band.get(
-                "fill_palette", config.blockplan_timeband_fill_palette
-            )
+            band_palette = band.get("fill_palette", config.blockplan_timeband_fill_palette)
             _box_band_fill = self._resolve_box_band_fill(band)
             if _box_band_fill is not None:
                 band_fill = _box_band_fill
             color_list = self._resolve_color_list(band_fill, band_palette, db)
-            band_label_color = band.get(
-                "font_color"
-            ) or tk_band_label.get("color") or _label_text_style.color
+            band_label_color = band.get("font_color") or tk_band_label.get("color") or _label_text_style.color
             band_label_opacity = float(
                 font_opacity_value
                 if (font_opacity_value := band.get("font_opacity")) is not None
@@ -754,18 +730,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
             elif has_explicit_row_h:
                 band_font_size = row_h * 0.65
             else:
-                band_font_size = float(
-                    tk_band_label.get("size")
-                )
+                band_font_size = float(tk_band_label.get("size"))
             heading_font = band.get("label_font") or tk_heading.get("font") or _heading_text_style.font
             if band.get("label_font_size"):
                 heading_font_size = float(band["label_font_size"])
             elif has_explicit_row_h:
                 heading_font_size = row_h * 0.65
             else:
-                heading_font_size = float(
-                    tk_heading.get("size")
-                )
+                heading_font_size = float(tk_heading.get("size"))
             heading_color = band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color
             heading_opacity = float(
                 label_opacity_value
@@ -776,9 +748,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     else config.blockplan_header_label_opacity
                 )
             )
-            heading_fill = band.get(
-                "label_fill_color", _heading_cell_style.fill
-            )
+            heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
             tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
             stroke = band.get("stroke_color", tb_color)
 
@@ -795,9 +765,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 stroke_dasharray=tb_dasharray,
                 css_class="ec-heading-cell",
             )
-            heading_x, heading_anchor = self._band_heading_text_pos(
-                config, band, left_x, timeline_x
-            )
+            heading_x, heading_anchor = self._band_heading_text_pos(config, band, left_x, timeline_x)
             self._draw_text(
                 heading_x,
                 y_top + (row_h * 0.50) + (heading_font_size * 0.30),
@@ -814,21 +782,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
             band_fill_rules = band.get("fill_rules")
             if band_fill_rules is not None and not isinstance(band_fill_rules, list):
                 band_fill_rules = None
-            segments = self._build_segments(
-                band, start, end, config, visible_days=visible_days, db=db
-            )
-            groups = _group_band_segments(
-                segments, band, week_start_default=config.blockplan_week_start
-            )
+            segments = self._build_segments(band, start, end, config, visible_days=visible_days, db=db)
+            groups = _group_band_segments(segments, band, week_start_default=config.blockplan_week_start)
             for gidx, group in enumerate(groups):
                 first_seg = group[0]
                 last_seg = group[-1]
-                seg_x0 = self._boundary_x(
-                    first_seg.start, visible_days, timeline_x, timeline_w
-                )
-                seg_x1 = self._boundary_x(
-                    last_seg.end_exclusive, visible_days, timeline_x, timeline_w
-                )
+                seg_x0 = self._boundary_x(first_seg.start, visible_days, timeline_x, timeline_w)
+                seg_x1 = self._boundary_x(last_seg.end_exclusive, visible_days, timeline_x, timeline_w)
                 raw_w = seg_x1 - seg_x0
                 if raw_w <= 0:
                     # Group has no rendered dates on the visible-day axis.
@@ -852,29 +812,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _nwd_opacity: float | None = None
                 if _is_single_day:
                     _day_cls = _classify(first_seg.start)
-                    _nwd_fill = _nwd_fill_for_classes(
-                        _day_cls, band_fill_rules, config
-                    )
+                    _nwd_fill = _nwd_fill_for_classes(_day_cls, band_fill_rules, config)
                     if _nwd_fill:
                         seg_fill = _nwd_fill
-                        _nwd_opacity = _nwd_fill_opacity_for_classes(
-                            _day_cls, band_fill_rules, config
-                        )
+                        _nwd_opacity = _nwd_fill_opacity_for_classes(_day_cls, band_fill_rules, config)
                     _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
                     if _nwd_icon_result:
                         # Prefer the holidays' own country flags over the
                         # static config icon (mirrors the weekly calendar).
                         _icon_color = _nwd_icon_result[1]
-                        _flags = (
-                            _holiday_flags.get(first_seg.start)
-                            if "federal_holiday" in _day_cls
-                            else None
-                        )
-                        _nwd_icons = (
-                            [(mark.icon, _icon_color) for mark in _flags]
-                            if _flags
-                            else [_nwd_icon_result]
-                        )
+                        _flags = _holiday_flags.get(first_seg.start) if "federal_holiday" in _day_cls else None
+                        _nwd_icons = [(mark.icon, _icon_color) for mark in _flags] if _flags else [_nwd_icon_result]
                 _band_fop = self._tk("box:band").get("fill_opacity")
                 self._draw_rect(
                     seg_x0,
@@ -885,11 +833,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     fill_opacity=(
                         _nwd_opacity
                         if _nwd_opacity is not None
-                        else (
-                            _band_fop
-                            if _band_fop is not None
-                            else config.blockplan_timeband_fill_opacity
-                        )
+                        else (_band_fop if _band_fop is not None else config.blockplan_timeband_fill_opacity)
                     ),
                     stroke=stroke,
                     stroke_width=tb_width,
@@ -899,7 +843,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 if _nwd_icons:
                     self._draw_cell_icons(
-                        _nwd_icons, seg_x0, seg_w, y_top, row_h, row_h * 0.65,
+                        _nwd_icons,
+                        seg_x0,
+                        seg_w,
+                        y_top,
+                        row_h,
+                        row_h * 0.65,
                         css_class="ec-nwd-icon",
                     )
                 _lv = band.get("label_values")
@@ -965,9 +914,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             band_name = str(band.get("label", "")).strip().lower()
             if not band_name:
                 continue
-            band_segments[band_name] = self._build_segments(
-                band, start, end, config, visible_days=visible_days, db=db
-            )
+            band_segments[band_name] = self._build_segments(band, start, end, config, visible_days=visible_days, db=db)
 
         _vline_fill_style = config.get_box_style("ec-vline-fill")
         _vline_style = config.get_line_style("ec-vline")
@@ -986,15 +933,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
         # Group matches by rule_index (stable across segments) so per-rule
         # fill_color cycling works correctly.
         from collections import defaultdict
-        per_rule_matches: dict[int, list[tuple[_BandSegment, StyleResult]]] = (
-            defaultdict(list)
-        )
+
+        per_rule_matches: dict[int, list[tuple[_BandSegment, StyleResult]]] = defaultdict(list)
         for band_name, segments in band_segments.items():
             for seg in segments:
                 ctx = _ctx_for(seg)
-                for rule_index, sr in engine.evaluate_band_segment(
-                    band_name, str(seg.label), ctx
-                ):
+                for rule_index, sr in engine.evaluate_band_segment(band_name, str(seg.label), ctx):
                     per_rule_matches[rule_index].append((seg, sr))
 
         if not per_rule_matches:
@@ -1018,19 +962,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 else _vline_fill_style.fill
             )
             fill_opacity = (
-                sample_sr.fill_opacity
-                if sample_sr.fill_opacity is not None
-                else float(_vline_fill_style.fill_opacity)
+                sample_sr.fill_opacity if sample_sr.fill_opacity is not None else float(_vline_fill_style.fill_opacity)
             )
             color_list = self._resolve_color_list(fill_color_raw, None, db)
 
             for matched_idx, (seg, _sr) in enumerate(items):
-                seg_x0 = self._boundary_x(
-                    seg.start, visible_days, timeline_x, timeline_w
-                )
-                seg_x1 = self._boundary_x(
-                    seg.end_exclusive, visible_days, timeline_x, timeline_w
-                )
+                seg_x0 = self._boundary_x(seg.start, visible_days, timeline_x, timeline_w)
+                seg_x1 = self._boundary_x(seg.end_exclusive, visible_days, timeline_x, timeline_w)
                 seg_w = seg_x1 - seg_x0
                 if seg_w <= 0:
                     continue
@@ -1058,29 +996,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
             for seg, sr in items:
                 align = (sr.align or "start").lower()
                 if align == "center":
-                    x0 = self._boundary_x(
-                        seg.start, visible_days, timeline_x, timeline_w
-                    )
-                    x1 = self._boundary_x(
-                        seg.end_exclusive, visible_days, timeline_x, timeline_w
-                    )
+                    x0 = self._boundary_x(seg.start, visible_days, timeline_x, timeline_w)
+                    x1 = self._boundary_x(seg.end_exclusive, visible_days, timeline_x, timeline_w)
                     x = (x0 + x1) / 2.0
                 elif align == "end":
-                    x = self._boundary_x(
-                        seg.end_exclusive, visible_days, timeline_x, timeline_w
-                    )
+                    x = self._boundary_x(seg.end_exclusive, visible_days, timeline_x, timeline_w)
                 else:
-                    x = self._boundary_x(
-                        seg.start, visible_days, timeline_x, timeline_w
-                    )
+                    x = self._boundary_x(seg.start, visible_days, timeline_x, timeline_w)
 
                 stroke = sr.stroke_color if sr.stroke_color is not None else _vline_style.color
-                width = float(
-                    sr.stroke_width if sr.stroke_width is not None else _vline_style.width
-                )
-                opacity = float(
-                    sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity
-                )
+                width = float(sr.stroke_width if sr.stroke_width is not None else _vline_style.width)
+                opacity = float(sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity)
                 dash = sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray
                 dash_value = str(dash) if dash is not None else None
                 if _is_none_color(stroke):
@@ -1154,9 +1080,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if not any(term in notes for term in note_terms):
                 return False
 
-        if "milestone" in match and bool(match.get("milestone")) != bool(
-            event.milestone
-        ):
+        if "milestone" in match and bool(match.get("milestone")) != bool(event.milestone):
             return False
         if "rollup" in match and bool(match.get("rollup")) != bool(event.rollup):
             return False
@@ -1170,11 +1094,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         # Priority filtering: exact list, exact int, or min/max range.
         priority_filter = match.get("priority")
         if priority_filter is not None:
-            allowed = (
-                [int(p) for p in priority_filter]
-                if isinstance(priority_filter, list)
-                else [int(priority_filter)]
-            )
+            allowed = [int(p) for p in priority_filter] if isinstance(priority_filter, list) else [int(priority_filter)]
             if event.priority not in allowed:
                 return False
         priority_min = match.get("priority_min")
@@ -1212,15 +1132,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 }
             )
 
-        mode = str(
-            getattr(config, "blockplan_lane_match_mode", "first") or "first"
-        ).lower()
+        mode = str(getattr(config, "blockplan_lane_match_mode", "first") or "first").lower()
         unmatched_events: list[Event] = []
         lanes_by_name = {lane["name"]: lane for lane in result}
 
         _swimlane_rules = _blockplan_swimlane_rules(config)
         if _swimlane_rules:
             from shared.rule_engine import LaneEngine
+
             lane_engine = LaneEngine(_swimlane_rules)
             for event in events:
                 lane_name = lane_engine.assign(event)
@@ -1251,34 +1170,22 @@ class BlockPlanRenderer(BaseSVGRenderer):
             unmatched = {
                 "name": config.blockplan_unmatched_lane_name,
                 "lane": {"name": config.blockplan_unmatched_lane_name},
-                "events": [
-                    e
-                    for e in unmatched_events
-                    if (not e.is_duration and config.includeevents)
-                ],
-                "durations": [
-                    e
-                    for e in unmatched_events
-                    if (e.is_duration and config.includedurations)
-                ],
+                "events": [e for e in unmatched_events if (not e.is_duration and config.includeevents)],
+                "durations": [e for e in unmatched_events if (e.is_duration and config.includedurations)],
             }
             result.append(unmatched)
 
         return result
 
     @staticmethod
-    def _duration_rows(
-        events: list[Event], lane_top: float, lane_bottom: float
-    ) -> list[tuple[Event, int]]:
+    def _duration_rows(events: list[Event], lane_top: float, lane_bottom: float) -> list[tuple[Event, int]]:
         """Greedy row packing for duration bars: first row whose last
         bar ended before this one starts (dates compare as YYYYMMDD
         strings).  Returns (event, row_index) pairs; row count drives
         the per-row height in `_draw_lane_durations`."""
         if not events:
             return []
-        ordered = sorted(
-            events, key=lambda e: (e.start, e.end, e.priority, e.task_name.lower())
-        )
+        ordered = sorted(events, key=lambda e: (e.start, e.end, e.priority, e.task_name.lower()))
         last_end: list[str] = []
         placed: list[tuple[Event, int]] = []
         for event in ordered:
@@ -1295,17 +1202,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
         return placed
 
     @staticmethod
-    def _event_rows(
-        events: list[Event], min_separation_days: int = 2
-    ) -> list[tuple[Event, int]]:
+    def _event_rows(events: list[Event], min_separation_days: int = 2) -> list[tuple[Event, int]]:
         """Row packing for point events (markers + labels): an event
         joins a row only when it starts ``min_separation_days`` after
         the row's previous event, so labels don't collide."""
         if not events:
             return []
-        ordered = sorted(
-            events, key=lambda e: (e.start, e.priority, e.task_name.lower())
-        )
+        ordered = sorted(events, key=lambda e: (e.start, e.priority, e.task_name.lower()))
         last_start: list[str] = []
         placed: list[tuple[Event, int]] = []
         for event in ordered:
@@ -1386,9 +1289,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             # Per-lane visual style overrides (fall back to global config values).
             _lane_heading_cell_style = config.get_box_style("ec-heading-cell")
             _lg_color, _lg_w, _lg_op, _lg_dash = self._grid_stroke(config)
-            heading_fill = (
-                lane_cfg.get("fill_color") or _lane_heading_cell_style.fill
-            )
+            heading_fill = lane_cfg.get("fill_color") or _lane_heading_cell_style.fill
             timeline_fill = lane_cfg.get("timeline_fill_color") or "none"
 
             # Lane framing
@@ -1450,9 +1351,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if durations and events:
                     dur_placed = self._duration_rows(durations, lane_top, lane_bottom)
                     dur_row_count = max((r for _, r in dur_placed), default=0) + 1
-                    evt_row_count = (
-                        max((r for _, r in self._event_rows(events)), default=0) + 1
-                    )
+                    evt_row_count = max((r for _, r in self._event_rows(events)), default=0) + 1
                     shared_row_h = lane_h / (dur_row_count + evt_row_count)
                     if durations_upper:
                         dur_sect_top = lane_top
@@ -1595,9 +1494,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             draw_start = max(ev_start, start)
             draw_end = min(ev_end, end)
             x0 = self._boundary_x(draw_start, visible_days, timeline_x, timeline_w)
-            x1 = self._boundary_x(
-                draw_end + timedelta(days=1), visible_days, timeline_x, timeline_w
-            )
+            x1 = self._boundary_x(draw_end + timedelta(days=1), visible_days, timeline_x, timeline_w)
             w = max(2.0, x1 - x0)
             if x1 <= x0:
                 continue
@@ -1609,24 +1506,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_event_notes = self._tk("text:event_notes")
             tk_dur_box = self._tk("box:duration")
             if weekly_style_with_notes:
-                notes_font_size = float(
-                    tk_event_notes.get("size")
-                )
+                notes_font_size = float(tk_event_notes.get("size"))
             y = top + (row * row_h) + ((row_h - bar_h) / 2.0)
 
             _dur_bar_style = config.get_line_style("ec-duration-bar")
             _event_name_style = config.get_text_style("ec-event-name")
             _event_notes_style = config.get_text_style("ec-event-notes")
             _palette = config.blockplan_palette or [_event_name_style.color]
-            color = (
-                event.color if event.color else _palette[event.priority % len(_palette)]
-            )
+            color = event.color if event.color else _palette[event.priority % len(_palette)]
             _style_engine = getattr(self, "_style_engine", None)
-            _sr = (
-                _style_engine.evaluate_event(event)
-                if _style_engine is not None
-                else StyleResult()
-            )
+            _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
                 color = _sr.fill_color
             _dur_stroke_color = (
@@ -1673,9 +1562,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
             continues_left = ev_start < start
             continues_right = ev_end > end
-            if (continues_left or continues_right) and bool(
-                getattr(config, "show_continuation_icon", True)
-            ):
+            if (continues_left or continues_right) and bool(getattr(config, "show_continuation_icon", True)):
                 cont_h = min(
                     float(getattr(config, "continuation_icon_height", 8.0)),
                     bar_h,
@@ -1711,16 +1598,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         color=cont_color,
                         css_class="ec-duration-icon",
                     )
-            has_dates = bool(
-                config.blockplan_duration_show_start_date
-                or config.blockplan_duration_show_end_date
-            )
+            has_dates = bool(config.blockplan_duration_show_start_date or config.blockplan_duration_show_end_date)
             _dur_date_style = config.get_text_style("ec-duration-date")
             tk_dur_date = self._tk("text:duration_date")
             if has_dates:
-                date_font_size = float(
-                    tk_dur_date.get("size")
-                )
+                date_font_size = float(tk_dur_date.get("size"))
                 date_baseline_y = y + bar_h - float(config.blockplan_duration_date_inset)
                 date_color = (
                     config.blockplan_duration_date_color
@@ -1728,11 +1610,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     else (tk_dur_date.get("color") or _dur_date_style.color)
                 )
                 date_fmt = config.blockplan_duration_date_format
-                date_font = (
-                    config.blockplan_duration_date_font
-                    or tk_dur_date.get("font")
-                    or _dur_date_style.font
-                )
+                date_font = config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font
                 date_font, _, date_color, _ = _sr.text_override(
                     "duration_start_date",
                     font=date_font,
@@ -1749,9 +1627,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 else (tk_event_notes.get("color") or _event_notes_style.color)
             )
             _dur_notes_font_name = (
-                config.blockplan_notes_text_font_name
-                or tk_event_notes.get("font")
-                or _event_notes_style.font
+                config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font
             )
             _dur_name_font, _, dur_text_color, _ = _sr.text_override(
                 "duration_name",
@@ -1763,9 +1639,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 font=_dur_notes_font_name,
                 color=dur_notes_color,
             )
-            show_icon = bool(config.blockplan_duration_icon_visible) and bool(
-                event.icon
-            )
+            show_icon = bool(config.blockplan_duration_icon_visible) and bool(event.icon)
             event_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
             event_icon_color = _sr.icon_color or dur_text_color
 
@@ -1798,11 +1672,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     gap = 2.0
                     total_w = icon_size + gap + text_w
                     available_w = max(8.0, max_w)
-                    icon_scale_x = (
-                        min(1.0, available_w / total_w)
-                        if total_w > available_w
-                        else 1.0
-                    )
+                    icon_scale_x = min(1.0, available_w / total_w) if total_w > available_w else 1.0
                     effective_icon_w = icon_size * icon_scale_x
                     group_x0 = (
                         x0
@@ -1842,11 +1712,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         box_token="box:duration",
                         box_ctx=self._event_ctx(event),
                     )
-                    text_x = (
-                        draw_x + effective_icon_w + gap
-                        if icon_drawn
-                        else x0 + (w / 2.0)
-                    )
+                    text_x = draw_x + effective_icon_w + gap if icon_drawn else x0 + (w / 2.0)
                     self._draw_text(
                         text_x,
                         baseline_y,
@@ -1878,9 +1744,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     y + (bar_h * 0.80),
                     str(event.notes),
                     _dur_notes_font_name,
-                    float(
-                        tk_event_notes.get("size")
-                    ),
+                    float(tk_event_notes.get("size")),
                     fill=dur_notes_color,
                     anchor="middle",
                     max_width=max(8.0, w - 4),
@@ -1889,12 +1753,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             else:
                 _draw_icon_and_text(
                     y + (bar_h * 0.80),
-                    float(
-                        tk_event_name.get("size")
-                    ),
+                    float(tk_event_name.get("size")),
                     w - 4,
                 )
-
 
             # --- Date row (outside bar, below rectangle) — shared for both layout modes ---
             if has_dates:
@@ -1918,16 +1779,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 # Compute a shared scale so both dates squish uniformly.
                 shared_scale = 1.0
                 if both and _dur_date_font_path:
-                    s_w = (
-                        string_width(start_label, _dur_date_font_path, date_font_size)
-                        if start_label
-                        else 0.0
-                    )
-                    e_w = (
-                        string_width(end_label, _dur_date_font_path, date_font_size)
-                        if end_label
-                        else 0.0
-                    )
+                    s_w = string_width(start_label, _dur_date_font_path, date_font_size) if start_label else 0.0
+                    e_w = string_width(end_label, _dur_date_font_path, date_font_size) if end_label else 0.0
                     scale_s = min(1.0, half_w / s_w) if s_w > half_w else 1.0
                     scale_e = min(1.0, half_w / e_w) if e_w > half_w else 1.0
                     shared_scale = min(scale_s, scale_e)
@@ -1994,26 +1847,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if not events or self._drawing is None:
             return
 
-        ordered = sorted(
-            events, key=lambda e: (e.start, e.priority, e.task_name.lower())
-        )
+        ordered = sorted(events, key=lambda e: (e.start, e.priority, e.task_name.lower()))
         _evt_name_style = config.get_text_style("ec-event-name")
         _evt_notes_style = config.get_text_style("ec-event-notes")
         _evt_date_style = config.get_text_style("ec-event-date")
         tk_event_name = self._tk("text:event_name")
         tk_event_notes = self._tk("text:event_notes")
         tk_event_date = self._tk("text:event_date")
-        event_size = float(
-            tk_event_name.get("size")
-        )
-        notes_size = float(
-            tk_event_notes.get("size")
-        )
-        date_size = float(
-            tk_event_date.get("size")
-           
-            or max(6.0, event_size * 0.9)
-        )
+        event_size = float(tk_event_name.get("size"))
+        notes_size = float(tk_event_notes.get("size"))
+        date_size = float(tk_event_date.get("size") or max(6.0, event_size * 0.9))
         show_date = bool(getattr(config, "blockplan_event_show_date", False))
         icon_r = max(1.5, float(config.blockplan_marker_radius))
         _evt_name_font = tk_event_name.get("font") or _evt_name_style.font
@@ -2022,9 +1865,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         except Exception:
             event_font_path = ""
         _event_notes_font_name = (
-            config.blockplan_notes_text_font_name
-            or tk_event_notes.get("font")
-            or _evt_notes_style.font
+            config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _evt_notes_style.font
         )
         _event_notes_color = (
             config.blockplan_notes_text_font_color
@@ -2056,9 +1897,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if ev_day not in visible_set:
                 continue
             x = self._boundary_x(ev_day, visible_days, timeline_x, timeline_w)
-            has_notes = bool(
-                config.include_notes and event.notes and str(event.notes).strip()
-            )
+            has_notes = bool(config.include_notes and event.notes and str(event.notes).strip())
             has_date = show_date
             date_text = ""
             if has_date:
@@ -2084,9 +1923,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 if (has_date and date_font_path)
                 else (len(date_text) * date_size * 0.52)
             )
-            label_w = max(
-                name_w, notes_w if has_notes else 0.0, date_w if has_date else 0.0
-            )
+            label_w = max(name_w, notes_w if has_notes else 0.0, date_w if has_date else 0.0)
             span_x0 = x - icon_r - 2.0
             span_x1 = x + icon_r + 4.0 + label_w
             pad = 4.0
@@ -2095,15 +1932,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
             while True:
                 if target_row >= len(row_spans):
                     row_spans.append([])
-                overlaps = any(
-                    not ((span_x1 + pad) <= x0 or span_x0 >= (x1 + pad))
-                    for x0, x1 in row_spans[target_row]
-                )
+                overlaps = any(not ((span_x1 + pad) <= x0 or span_x0 >= (x1 + pad)) for x0, x1 in row_spans[target_row])
                 if not overlaps:
                     row_spans[target_row].append((span_x0, span_x1))
-                    placements.append(
-                        (event, target_row, x, has_notes, has_date, date_text)
-                    )
+                    placements.append((event, target_row, x, has_notes, has_date, date_text))
                     break
                 target_row += 1
 
@@ -2117,11 +1949,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             icon_size = max(6.0, event_size * 1.1)
 
             event_color = tk_event_name.get("color") or _evt_name_style.color
-            _sr = (
-                _style_engine.evaluate_event(event)
-                if _style_engine is not None
-                else StyleResult()
-            )
+            _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
                 event_color = _sr.fill_color
             ev_name_font, _, ev_name_color, _ev_name_opacity = _sr.text_override(
@@ -2141,9 +1969,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             )
             ev_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
             ev_icon_color = _sr.icon_color or event_color
-            ev_marker_stroke = (
-                _sr.stroke_color if _sr.stroke_color is not None else event_color
-            )
+            ev_marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else event_color
             if has_notes and has_date:
                 name_baseline = y_center - (event_size * 0.70)
                 notes_baseline = y_center + (notes_size * 0.15)
@@ -2216,9 +2042,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 self._draw_text(
                     label_x,
-                    notes_baseline
-                    if notes_baseline is not None
-                    else y_center - (notes_size * 0.85),
+                    notes_baseline if notes_baseline is not None else y_center - (notes_size * 0.85),
                     str(event.notes),
                     ev_notes_font,
                     notes_size,
@@ -2289,11 +2113,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
         tk_swimlane_label = self._tk("text:swimlane_label")
         tk_event_name = self._tk("text:event_name")
-        fs = float(
-            tk_swimlane_label.get("size")
-            or tk_event_name.get("size")
-            or 9.0
-        )
+        fs = float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)
         line_gap = fs * 1.20
         total_baseline_span = (len(lines) - 1) * line_gap
 
@@ -2304,9 +2124,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         rotation = float(raw_rot or 0.0)
         cell_cx = (left_x + right_x) / 2.0
         cell_cy = (lane_top + lane_bottom) / 2.0
-        xform = (
-            f"rotate({rotation:.6g},{cell_cx:.4f},{cell_cy:.4f})" if rotation else None
-        )
+        xform = f"rotate({rotation:.6g},{cell_cx:.4f},{cell_cy:.4f})" if rotation else None
         # For ±90° rotations the text runs along the lane height, so clamp
         # max_width to the lane height rather than the narrow column width.
         cross_axis = 45.0 < abs(rotation % 180.0) < 135.0
@@ -2352,17 +2170,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             first_baseline = lane_mid - (total_baseline_span * 0.5)
 
         _lane_label_style = config.get_text_style("ec-heading")
-        label_color = (
-            lane_cfg.get("label_color")
-            or tk_swimlane_label.get("color")
-            or _lane_label_style.color
-        )
+        label_color = lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color
         label_font = tk_swimlane_label.get("font") or _lane_label_style.font
-        max_width = (
-            max(8.0, lane_bottom - lane_top - 10.0)
-            if cross_axis
-            else max(8.0, right_x - left_x - 10.0)
-        )
+        max_width = max(8.0, lane_bottom - lane_top - 10.0) if cross_axis else max(8.0, right_x - left_x - 10.0)
         for i, line in enumerate(lines):
             y = first_baseline + (i * line_gap)
             self._draw_text(

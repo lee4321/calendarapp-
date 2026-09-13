@@ -126,16 +126,8 @@ class DetailsPageWriter:
         from config.config import resolve_page_margins
 
         margins = resolve_page_margins(config)
-        header_h = (
-            round(config.pageY * config.header_percent, 2)
-            if config.include_header
-            else 0.0
-        )
-        footer_h = (
-            round(config.pageY * config.footer_percent, 2)
-            if config.include_footer
-            else 0.0
-        )
+        header_h = round(config.pageY * config.header_percent, 2) if config.include_header else 0.0
+        footer_h = round(config.pageY * config.footer_percent, 2) if config.include_footer else 0.0
         self.left = margins["left"]
         self.right = config.pageX - margins["right"]
         self.width = self.right - self.left
@@ -158,9 +150,7 @@ class DetailsPageWriter:
         # scales it with the paper); everything else comes from text:body,
         # so a theme that restyles body text restyles the listing too.
         body = {**self._token("text:body"), **self._token("text:details_body")}
-        self._title_font = heading.get("font") or config.get_text_style(
-            "ec-heading"
-        ).font
+        self._title_font = heading.get("font") or config.get_text_style("ec-heading").font
         self._title_size = float(heading.get("size") or 12.0)
         self._title_color = heading.get("color") or "black"
         self._label_font = label.get("font") or self._title_font
@@ -185,11 +175,11 @@ class DetailsPageWriter:
         # stripe alike.  A theme turns it off by painting it none.
         band = config.get_box_style("ec-row-band")
         self._band_color = band.fill or "none"
-        self._band_opacity = float(
-            band.fill_opacity if band.fill_opacity is not None else 0.15
-        )
+        self._band_opacity = float(band.fill_opacity if band.fill_opacity is not None else 0.15)
         self._band_on = str(self._band_color).strip().lower() not in {
-            "", "none", "transparent",
+            "",
+            "none",
+            "transparent",
         }
 
     def _token(self, name: str) -> TokenStyle:
@@ -334,9 +324,7 @@ class DetailsPageWriter:
                     self._note_font,
                     self._note_size,
                     fill=self._note_color,
-                    fill_opacity=(
-                        1.0 if self._note_opacity is None else self._note_opacity
-                    ),
+                    fill_opacity=(1.0 if self._note_opacity is None else self._note_opacity),
                     max_width=cell_w - _CELL_PAD * 2,
                     css_class="ec-event-notes",
                 )
@@ -348,9 +336,13 @@ class DetailsPageWriter:
         """A single free-standing line, e.g. "No exceptions"."""
         self._ensure(self._row_height)
         self._renderer._draw_text(
-            self.left + _CELL_PAD, self._cursor, text,
-            self._body_font, self._body_size,
-            fill=self._body_color, css_class="ec-task-cell",
+            self.left + _CELL_PAD,
+            self._cursor,
+            text,
+            self._body_font,
+            self._body_size,
+            fill=self._body_color,
+            css_class="ec-task-cell",
         )
         self._cursor += self._row_height
         self._row_index += 1
@@ -378,8 +370,12 @@ class DetailsPageWriter:
 
     def _heading(self, title: str) -> None:
         self._renderer._draw_text(
-            self.left, self._cursor, title, self._label_font,
-            self._label_size * 1.2, fill=self._title_color,
+            self.left,
+            self._cursor,
+            title,
+            self._label_font,
+            self._label_size * 1.2,
+            fill=self._title_color,
             css_class="ec-heading",
         )
         self._cursor += self._label_size * 1.2 + 2.0
@@ -395,8 +391,12 @@ class DetailsPageWriter:
         )
         self._cursor += self._label_size + 2.0
         self._renderer._draw_line(
-            self.left, self._cursor, self.right, self._cursor,
-            stroke="grey", stroke_opacity=0.5,
+            self.left,
+            self._cursor,
+            self.right,
+            self._cursor,
+            stroke="grey",
+            stroke_opacity=0.5,
             stroke_dasharray=self._separator_dash,
             css_class="ec-separator",
         )
@@ -404,9 +404,7 @@ class DetailsPageWriter:
         # or the first row's glyphs sit on the rule.
         self._cursor += self._body_size + 2.0
 
-    def _cell_x(
-        self, columns: list[DetailsColumn], index: int
-    ) -> tuple[float, float]:
+    def _cell_x(self, columns: list[DetailsColumn], index: int) -> tuple[float, float]:
         """Left edge and width of one column, in page units."""
         cursor_x = self.left
         for column in columns[:index]:
@@ -433,7 +431,9 @@ class DetailsPageWriter:
             # that wants two is truncated with an ellipsis rather than
             # written over the row below it.
             lines = fit_lines(
-                str(value or ""), usable, 1,
+                str(value or ""),
+                usable,
+                1,
                 lambda text: self._renderer._measure(text, font, size),
             )
             if lines:
@@ -443,13 +443,12 @@ class DetailsPageWriter:
                     opacity = column.fallback_opacity
                 x, anchor = self._align(cursor_x, cell_w, column.align)
                 self._renderer._draw_text(
-                    x, self._cursor, lines[0], font, size,
-                    fill=(
-                        color
-                        or style.get("color")
-                        or column.fallback_color
-                        or self._body_color
-                    ),
+                    x,
+                    self._cursor,
+                    lines[0],
+                    font,
+                    size,
+                    fill=(color or style.get("color") or column.fallback_color or self._body_color),
                     fill_opacity=1.0 if opacity is None else opacity,
                     anchor=anchor,
                     max_width=usable,

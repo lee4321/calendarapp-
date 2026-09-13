@@ -53,9 +53,7 @@ class CompactPlanLayout(BaseLayout):
         content_x = margins["left"]
         content_y = margins["bottom"] + hf["footer_height"]
         content_w = margins["usable_width"]
-        content_h = (
-            margins["usable_height"] - hf["header_height"] - hf["footer_height"]
-        )
+        content_h = margins["usable_height"] - hf["header_height"] - hf["footer_height"]
 
         coord["CompactPlanArea"] = (
             round(content_x, 2),

@@ -35,8 +35,7 @@ class ResultScreen(Screen):
         yield Header()
         with Vertical(id="result-body"):
             yield Static(self._title, id="result-title")
-            yield Static(preview_string(self._argv, python_entry=self._entry),
-                         id="result-cmd")
+            yield Static(preview_string(self._argv, python_entry=self._entry), id="result-cmd")
             yield Static("◐ running…", id="result-status")
             yield RichLog(id="result-log", highlight=True, markup=True, wrap=True)
             with Horizontal(id="result-actions"):
@@ -56,8 +55,12 @@ class ResultScreen(Screen):
         self.app.call_from_thread(log.write, f"[dim]$ {' '.join(cmd)}[/dim]")
         try:
             proc = subprocess.Popen(
-                cmd, cwd=self._cwd, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, text=True, bufsize=1,
+                cmd,
+                cwd=self._cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
             )
         except Exception as exc:  # pragma: no cover - launch failure
             self.app.call_from_thread(log.write, f"[red]Failed to launch: {exc}[/red]")
@@ -71,8 +74,7 @@ class ResultScreen(Screen):
         if code == 0:
             self.app.call_from_thread(status.update, "[green]✓ done[/green]")
         else:
-            self.app.call_from_thread(
-                status.update, f"[red]✗ exit {code}[/red]")
+            self.app.call_from_thread(status.update, f"[red]✗ exit {code}[/red]")
 
     def action_rerun(self) -> None:
         self.query_one("#result-log", RichLog).clear()

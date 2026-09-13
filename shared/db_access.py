@@ -79,9 +79,7 @@ class CalendarDB:
         # Shared connection, opened lazily on first query by _connect().
         self._conn: sqlite3.Connection | None = None
 
-    def load_python_holidays(
-        self, country: str | None, adjustedstart: str, adjustedend: str
-    ) -> None:
+    def load_python_holidays(self, country: str | None, adjustedstart: str, adjustedend: str) -> None:
         """
         Load government holidays from the 'holidays' Python package.
 
@@ -122,14 +120,9 @@ class CalendarDB:
 
         total_dates = len(self._python_holidays)
         year_str = ", ".join(str(y) for y in years)
-        logger.info(
-            f"Loaded {total_dates} holiday dates for "
-            f"{', '.join(countries)} ({year_str})"
-        )
+        logger.info(f"Loaded {total_dates} holiday dates for {', '.join(countries)} ({year_str})")
 
-    def _load_country_holidays(
-        self, holidays_lib, country: str, years: list[int]
-    ) -> None:
+    def _load_country_holidays(self, holidays_lib, country: str, years: list[int]) -> None:
         """
         Load every holiday category *country* supports into _python_holidays.
 
@@ -155,17 +148,11 @@ class CalendarDB:
         try:
             probe = holidays_lib.country_holidays(country, years=years[:1])
         except (KeyError, NotImplementedError):
-            logger.warning(
-                f"'holidays' package does not support country '{country}'; skipping"
-            )
+            logger.warning(f"'holidays' package does not support country '{country}'; skipping")
             return
 
-        supported: set[str] = set(
-            getattr(probe, "supported_categories", None) or {"public"}
-        )
-        nonwork_categories = _COUNTRY_NONWORK_CATEGORIES.get(
-            country, _NONWORK_CATEGORIES
-        )
+        supported: set[str] = set(getattr(probe, "supported_categories", None) or {"public"})
+        nonwork_categories = _COUNTRY_NONWORK_CATEGORIES.get(country, _NONWORK_CATEGORIES)
         nonwork_cats = [c for c in nonwork_categories if c in supported]
         # Anything the package reports that is not a nonworking category is
         # informational.  Sorted for deterministic output across runs.
@@ -176,9 +163,7 @@ class CalendarDB:
         def load(cat: str) -> dict[str, list[str]]:
             """Return {daykey: [holiday name, ...]} for one category."""
             try:
-                h = holidays_lib.country_holidays(
-                    country, years=years, categories=(cat,)
-                )
+                h = holidays_lib.country_holidays(country, years=years, categories=(cat,))
             except Exception as e:
                 logger.debug(f"Could not load '{cat}' holidays for {country}: {e}")
                 return {}
@@ -192,10 +177,7 @@ class CalendarDB:
         def add(daykey: str, name: str, nonworkday: int) -> None:
             """Append one holiday, skipping names already held for this country."""
             entries = self._python_holidays.setdefault(daykey, [])
-            if any(
-                e.get("country") == country and e.get("displayname") == name
-                for e in entries
-            ):
+            if any(e.get("country") == country and e.get("displayname") == name for e in entries):
                 return
             entries.append(
                 {
@@ -267,9 +249,7 @@ class CalendarDB:
             self._conn.close()
             self._conn = None
 
-    def get_events_for_date_range(
-        self, start: str, end: str, user_id: int | None = None
-    ) -> list[dict]:
+    def get_events_for_date_range(self, start: str, end: str, user_id: int | None = None) -> list[dict]:
         """
         Get events within a date range.
 
@@ -307,9 +287,7 @@ class CalendarDB:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
-    def get_holidays_for_date(
-        self, daykey: str, country: str | None = None
-    ) -> list[dict]:
+    def get_holidays_for_date(self, daykey: str, country: str | None = None) -> list[dict]:
         """
         Get government holidays for a specific date.
 
@@ -448,9 +426,7 @@ class CalendarDB:
 
         return {"nonworkday": nonworkday, "tags": tags}
 
-    def get_holiday_title_for_date(
-        self, daykey: str, country: str | None = None
-    ) -> tuple[str | None, str | None]:
+    def get_holiday_title_for_date(self, daykey: str, country: str | None = None) -> tuple[str | None, str | None]:
         """
         Get holiday title and icon for a date.
 
@@ -466,12 +442,7 @@ class CalendarDB:
         if holidays:
             holiday = holidays[0]
             title = holiday.get("displayname")
-            raw_icon = (
-                holiday.get("icon")
-                or holiday.get("displayiconid")
-                or holiday.get("displayicon")
-                or ""
-            )
+            raw_icon = holiday.get("icon") or holiday.get("displayiconid") or holiday.get("displayicon") or ""
             icon = str(raw_icon).strip()
             # Backward compatibility: if holiday icon is stored as numeric ID,
             # resolve it through fonticon.
@@ -603,9 +574,7 @@ class CalendarDB:
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT filename, name, alternativenames, svg FROM icon ORDER BY name"
-            )
+            cursor.execute("SELECT filename, name, alternativenames, svg FROM icon ORDER BY name")
             return [dict(row) for row in cursor.fetchall()]
 
     def get_all_colors(self) -> list[dict]:
@@ -688,10 +657,7 @@ class CalendarDB:
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name, width_points, height_points, landscape "
-                "FROM papersizes ORDER BY name"
-            )
+            cursor.execute("SELECT name, width_points, height_points, landscape FROM papersizes ORDER BY name")
             sizes: dict[str, tuple[float, float]] = {}
             for row in cursor.fetchall():
                 w = row["width_points"]
@@ -773,8 +739,7 @@ class CalendarDB:
             cursor = conn.cursor()
             cursor.execute("SELECT name, palette FROM palettes")
             return {
-                row["name"]: [c.strip() for c in row["palette"].split(",") if c.strip()]
-                for row in cursor.fetchall()
+                row["name"]: [c.strip() for c in row["palette"].split(",") if c.strip()] for row in cursor.fetchall()
             }
 
     def sample_palette_n(self, name: str, n: int) -> list[str] | None:
@@ -803,8 +768,7 @@ class CalendarDB:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                'SELECT "group", name, width_points, height_points, landscape '
-                'FROM papersizes ORDER BY "group", name'
+                'SELECT "group", name, width_points, height_points, landscape FROM papersizes ORDER BY "group", name'
             )
             groups: dict[str, list[tuple[str, float, float]]] = {}
             for row in cursor.fetchall():

@@ -144,11 +144,25 @@ class GanttRenderer(BaseSVGRenderer):
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "gantt"
     TOKENS = (
-        "text:heading", "text:label", "text:body", "text:band_label",
-        "text:event_name", "text:event_notes", "text:duration_date",
-        "box:cell", "box:header", "box:band", "box:duration", "box:milestone",
-        "line:grid", "line:axis", "line:separator", "line:today",
-        "icon:event", "icon:duration", "icon:milestone",
+        "text:heading",
+        "text:label",
+        "text:body",
+        "text:band_label",
+        "text:event_name",
+        "text:event_notes",
+        "text:duration_date",
+        "box:cell",
+        "box:header",
+        "box:band",
+        "box:duration",
+        "box:milestone",
+        "line:grid",
+        "line:axis",
+        "line:separator",
+        "line:today",
+        "icon:event",
+        "icon:duration",
+        "icon:milestone",
     )
 
     def __init__(self) -> None:
@@ -222,15 +236,18 @@ class GanttRenderer(BaseSVGRenderer):
             self._draw_page(config, coordinates, page, rows, columns, days, segments, db)
 
             if not page.is_first:
-                self.drawing.save_svg(
-                    _page_output_path(config.outputfile, page.number)
-                )
+                self.drawing.save_svg(_page_output_path(config.outputfile, page.number))
 
         self._extra_page_count = len(pages) - 1
 
         if config.include_gantt_details:
             self._details_page_count = render_details_pages(
-                self, config, coordinates, rows, columns, self.exceptions,
+                self,
+                config,
+                coordinates,
+                rows,
+                columns,
+                self.exceptions,
             )
 
         # The base class saves whatever is in _drawing as page 1.
@@ -263,9 +280,7 @@ class GanttRenderer(BaseSVGRenderer):
         _cx, _cy, chart_w, _ch = coordinates["GanttChartBody"]
 
         min_day_width = max(float(config.gantt_min_day_width), 0.0)
-        days_per_page = (
-            int(chart_w // min_day_width) if min_day_width > 0 else len(days)
-        )
+        days_per_page = int(chart_w // min_day_width) if min_day_width > 0 else len(days)
 
         return plan_pages(
             row_count=len(rows),
@@ -313,14 +328,16 @@ class GanttRenderer(BaseSVGRenderer):
         return list(getattr(self, "_exceptions", []))
 
     def _note(
-        self, kind: str, task: str, datekey: str = "", detail: str = "",
+        self,
+        kind: str,
+        task: str,
+        datekey: str = "",
+        detail: str = "",
     ) -> None:
         """Record one exception for the companion details page."""
         if not hasattr(self, "_exceptions"):
             self._exceptions = []
-        self._exceptions.append(
-            GanttException(kind=kind, task=task, datekey=datekey, detail=detail)
-        )
+        self._exceptions.append(GanttException(kind=kind, task=task, datekey=datekey, detail=detail))
 
     # ── Geometry helpers ──────────────────────────────────────────────────
 
@@ -357,15 +374,25 @@ class GanttRenderer(BaseSVGRenderer):
         color, width, opacity = self._grid_style()
 
         self._draw_rect(
-            area_x, area_y, area_w, area_h,
-            stroke=color, stroke_width=width, stroke_opacity=opacity,
+            area_x,
+            area_y,
+            area_w,
+            area_h,
+            stroke=color,
+            stroke_width=width,
+            stroke_opacity=opacity,
             css_class="ec-grid-line",
         )
 
         divider_x = area_x + table_w
         self._draw_line(
-            divider_x, area_y, divider_x, area_y + area_h,
-            stroke=color, stroke_width=width, stroke_opacity=opacity,
+            divider_x,
+            area_y,
+            divider_x,
+            area_y + area_h,
+            stroke=color,
+            stroke_width=width,
+            stroke_opacity=opacity,
             css_class="ec-separator",
         )
 
@@ -396,8 +423,12 @@ class GanttRenderer(BaseSVGRenderer):
             if not classify_day(day, db, config):
                 continue
             self._draw_rect(
-                chart_x + index * day_w, chart_y, day_w, chart_h,
-                fill=fill, fill_opacity=opacity,
+                chart_x + index * day_w,
+                chart_y,
+                day_w,
+                chart_h,
+                fill=fill,
+                fill_opacity=opacity,
                 css_class="ec-cell",
             )
 
@@ -426,7 +457,12 @@ class GanttRenderer(BaseSVGRenderer):
                 if not isinstance(band, dict):
                     continue
                 segments[(stack, index)] = build_segments(
-                    band, start, end, config, visible_days=days, db=db,
+                    band,
+                    start,
+                    end,
+                    config,
+                    visible_days=days,
+                    db=db,
                 )
         return segments
 
@@ -442,12 +478,21 @@ class GanttRenderer(BaseSVGRenderer):
         bottom = coordinates.get("GanttBottomBands")
         if top:
             self._draw_band_stack(
-                config, top, config.gantt_top_time_bands, days, segments, "top",
+                config,
+                top,
+                config.gantt_top_time_bands,
+                days,
+                segments,
+                "top",
             )
         if bottom:
             self._draw_band_stack(
-                config, bottom, config.get_gantt_bottom_bands(), days,
-                segments, "bottom",
+                config,
+                bottom,
+                config.get_gantt_bottom_bands(),
+                days,
+                segments,
+                "bottom",
             )
 
     def _draw_band_stack(
@@ -474,8 +519,14 @@ class GanttRenderer(BaseSVGRenderer):
         for index, (band, height) in enumerate(zip(bands, heights, strict=False)):
             row_h = height * scale
             self._draw_band_row(
-                config, band, segments.get((stack, index), []), days,
-                region_x, cursor_y, region_w, row_h,
+                config,
+                band,
+                segments.get((stack, index), []),
+                days,
+                region_x,
+                cursor_y,
+                region_w,
+                row_h,
             )
             cursor_y += row_h
 
@@ -508,11 +559,7 @@ class GanttRenderer(BaseSVGRenderer):
         font_size = min(float(token.get("size") or 8.0), max(h - 2.0, 4.0))
 
         for segment in segments:
-            span = [
-                index
-                for day, index in day_index.items()
-                if segment.start <= day < segment.end_exclusive
-            ]
+            span = [index for day, index in day_index.items() if segment.start <= day < segment.end_exclusive]
             if not span:
                 # Every day of this segment is hidden (a weekend-only
                 # segment under weekend_style 0) — nothing to draw.
@@ -522,18 +569,27 @@ class GanttRenderer(BaseSVGRenderer):
             seg_w = (max(span) - min(span) + 1) * day_w
 
             self._draw_rect(
-                seg_x, y, seg_w, h,
+                seg_x,
+                y,
+                seg_w,
+                h,
                 fill=box.fill or "none",
-                fill_opacity=float(
-                    box.fill_opacity if box.fill_opacity is not None else 1.0
-                ),
-                stroke=color, stroke_width=width, stroke_opacity=opacity,
+                fill_opacity=float(box.fill_opacity if box.fill_opacity is not None else 1.0),
+                stroke=color,
+                stroke_width=width,
+                stroke_opacity=opacity,
                 css_class="ec-band-cell",
             )
             self._draw_clipped_text(
-                segment.label, seg_x, y + h / 2 + font_size / 3, seg_w,
-                font, font_size, token.get("color") or "black",
-                align="center", css_class="ec-tick-label",
+                segment.label,
+                seg_x,
+                y + h / 2 + font_size / 3,
+                seg_w,
+                font,
+                font_size,
+                token.get("color") or "black",
+                align="center",
+                css_class="ec-tick-label",
             )
 
     def _draw_holiday_band_row(
@@ -562,20 +618,19 @@ class GanttRenderer(BaseSVGRenderer):
         for index, day in enumerate(days):
             cell_x = x + index * day_w
             self._draw_rect(
-                cell_x, y, day_w, h,
+                cell_x,
+                y,
+                day_w,
+                h,
                 fill=box.fill or "none",
-                fill_opacity=float(
-                    box.fill_opacity if box.fill_opacity is not None else 1.0
-                ),
-                stroke=color, stroke_width=width, stroke_opacity=opacity,
+                fill_opacity=float(box.fill_opacity if box.fill_opacity is not None else 1.0),
+                stroke=color,
+                stroke_width=width,
+                stroke_opacity=opacity,
                 css_class="ec-band-cell",
             )
 
-            marks = [
-                m
-                for m in self._holiday_days.get(day, ())
-                if show_all or m.nonworkday
-            ]
+            marks = [m for m in self._holiday_days.get(day, ()) if show_all or m.nonworkday]
             if not marks:
                 continue
 
@@ -590,7 +645,10 @@ class GanttRenderer(BaseSVGRenderer):
 
             for mark in drawn:
                 self._draw_icon_svg(
-                    mark.icon, icon_x, baseline, icon_size,
+                    mark.icon,
+                    icon_x,
+                    baseline,
+                    icon_size,
                     css_class="ec-holiday-icon",
                 )
                 icon_x += per_icon
@@ -616,40 +674,56 @@ class GanttRenderer(BaseSVGRenderer):
         fill = box.fill or "none"
         if str(fill).strip().lower() not in {"", "none", "transparent"}:
             self._draw_rect(
-                head_x, head_y, head_w, head_h,
+                head_x,
+                head_y,
+                head_w,
+                head_h,
                 fill=fill,
-                fill_opacity=float(
-                    box.fill_opacity if box.fill_opacity is not None else 1.0
-                ),
+                fill_opacity=float(box.fill_opacity if box.fill_opacity is not None else 1.0),
                 css_class="ec-heading-cell",
             )
 
-        for column, (col_x, col_w) in zip(
-            columns, column_x_positions(columns, head_x, head_w), strict=False
-        ):
+        for column, (col_x, col_w) in zip(columns, column_x_positions(columns, head_x, head_w), strict=False):
             usable = col_w - _CELL_PAD * 2
             # Truncate rather than let _draw_text squeeze the glyphs: a
             # narrow column should lose characters, not legibility.
             header_lines = fit_lines(
-                column.header, usable, 1,
+                column.header,
+                usable,
+                1,
                 lambda text: self._measure(text, font, font_size),
             )
             if header_lines:
                 self._draw_clipped_text(
                     header_lines[0],
-                    col_x + _CELL_PAD, head_y + head_h / 2 + font_size / 3, usable,
-                    font, font_size, token.get("color") or "black",
-                    align=column.align, css_class="ec-column-header",
+                    col_x + _CELL_PAD,
+                    head_y + head_h / 2 + font_size / 3,
+                    usable,
+                    font,
+                    font_size,
+                    token.get("color") or "black",
+                    align=column.align,
+                    css_class="ec-column-header",
                 )
             self._draw_line(
-                col_x, head_y, col_x, head_y + head_h,
-                stroke=color, stroke_width=width, stroke_opacity=opacity,
+                col_x,
+                head_y,
+                col_x,
+                head_y + head_h,
+                stroke=color,
+                stroke_width=width,
+                stroke_opacity=opacity,
                 css_class="ec-grid-line",
             )
 
         self._draw_line(
-            head_x, head_y + head_h, head_x + head_w, head_y + head_h,
-            stroke=color, stroke_width=width, stroke_opacity=opacity,
+            head_x,
+            head_y + head_h,
+            head_x + head_w,
+            head_y + head_h,
+            stroke=color,
+            stroke_width=width,
+            stroke_opacity=opacity,
             css_class="ec-separator",
         )
 
@@ -679,9 +753,7 @@ class GanttRenderer(BaseSVGRenderer):
 
         band = config.get_box_style("ec-row-band")
         band_fill = band.fill or "none"
-        band_opacity = float(
-            band.fill_opacity if band.fill_opacity is not None else 0.15
-        )
+        band_opacity = float(band.fill_opacity if band.fill_opacity is not None else 0.15)
         banded = str(band_fill).strip().lower() not in {"", "none", "transparent"}
 
         token = self._tk("text:body")
@@ -696,20 +768,36 @@ class GanttRenderer(BaseSVGRenderer):
 
             if banded and row.index % 2 == 1:
                 self._draw_rect(
-                    table_x, row_y, table_w + chart_w, row_h,
-                    fill=band_fill, fill_opacity=band_opacity,
+                    table_x,
+                    row_y,
+                    table_w + chart_w,
+                    row_h,
+                    fill=band_fill,
+                    fill_opacity=band_opacity,
                     css_class="ec-row-band",
                 )
 
             self._draw_line(
-                table_x, row_y + row_h, table_x + table_w + chart_w, row_y + row_h,
-                stroke=color, stroke_width=width, stroke_opacity=opacity,
+                table_x,
+                row_y + row_h,
+                table_x + table_w + chart_w,
+                row_y + row_h,
+                stroke=color,
+                stroke_width=width,
+                stroke_opacity=opacity,
                 css_class="ec-grid-line",
             )
 
             self._draw_row_cells(
-                config, row, columns, positions, row_y, row_h,
-                font, font_size, text_color,
+                config,
+                row,
+                columns,
+                positions,
+                row_y,
+                row_h,
+                font,
+                font_size,
+                text_color,
             )
 
     def _draw_row_cells(
@@ -735,7 +823,13 @@ class GanttRenderer(BaseSVGRenderer):
 
             if column.field == LINK_REF_FIELD:
                 self._draw_reference_cell(
-                    config, row, col_x, col_w, row_y, row_h, font_size,
+                    config,
+                    row,
+                    col_x,
+                    col_w,
+                    row_y,
+                    row_h,
+                    font_size,
                 )
                 continue
 
@@ -766,9 +860,15 @@ class GanttRenderer(BaseSVGRenderer):
             first_baseline = row_y + (row_h - block_h) / 2 + font_size * 0.8
             for line_index, line in enumerate(lines):
                 self._draw_clipped_text(
-                    line, left, first_baseline + line_index * font_size, usable,
-                    font, font_size, text_color,
-                    align=column.align, css_class="ec-task-cell",
+                    line,
+                    left,
+                    first_baseline + line_index * font_size,
+                    usable,
+                    font,
+                    font_size,
+                    text_color,
+                    align=column.align,
+                    css_class="ec-task-cell",
                 )
 
     # ── Marks: bars, progress, floats, brackets, icons ────────────────────
@@ -800,7 +900,10 @@ class GanttRenderer(BaseSVGRenderer):
         _bx, body_y, _bw, body_h = coordinates["GanttChartBody"]
         token = self._tk("line:today")
         self._draw_line(
-            axis.left_of(index), body_y, axis.left_of(index), body_y + body_h,
+            axis.left_of(index),
+            body_y,
+            axis.left_of(index),
+            body_y + body_h,
             stroke=token.get("color") or "#FF4444",
             stroke_width=float(token.get("width") or 1.5),
             stroke_opacity=float(token.get("opacity") or 1.0),
@@ -831,7 +934,11 @@ class GanttRenderer(BaseSVGRenderer):
 
         for row in rows:
             anchor = self._draw_row_marks(
-                config, row, axis, table_y + (row.index - row_offset) * row_h, row_h,
+                config,
+                row,
+                axis,
+                table_y + (row.index - row_offset) * row_h,
+                row_h,
             )
             if anchor is not None:
                 anchors[row.index] = anchor
@@ -863,16 +970,20 @@ class GanttRenderer(BaseSVGRenderer):
 
         if event.rollup:
             # Brackets only: no progress line, no float bars (answer 19).
-            anchor = self._draw_rollup_bracket(
-                config, axis, start, end, bar_y, bar_h, style
-            )
+            anchor = self._draw_rollup_bracket(config, axis, start, end, bar_y, bar_h, style)
         elif event.milestone:
-            anchor = self._draw_milestone(
-                config, axis, event, end, row_y, row_h, style
-            )
+            anchor = self._draw_milestone(config, axis, event, end, row_y, row_h, style)
         else:
             anchor = self._draw_task_bar(
-                config, event, axis, start, end, bar_y, bar_h, row_h, style,
+                config,
+                event,
+                axis,
+                start,
+                end,
+                bar_y,
+                bar_h,
+                row_h,
+                style,
             )
 
         self._draw_deadline(config, axis, event, row_y, row_h)
@@ -894,7 +1005,9 @@ class GanttRenderer(BaseSVGRenderer):
         geometry = bar_geometry(axis, start, end)
         if not geometry.visible:
             self._note(
-                KIND_UNDRAWN, event.task_name, event.start,
+                KIND_UNDRAWN,
+                event.task_name,
+                event.start,
                 "every day of the span is hidden",
             )
             return None
@@ -906,12 +1019,13 @@ class GanttRenderer(BaseSVGRenderer):
 
         token = self._tk("box:duration")
         self._draw_rect(
-            geometry.x, bar_y, geometry.width, bar_h,
+            geometry.x,
+            bar_y,
+            geometry.width,
+            bar_h,
             fill=fill,
             fill_opacity=float(
-                style.fill_opacity
-                if style.fill_opacity is not None
-                else (token.get("fill_opacity") or 0.85)
+                style.fill_opacity if style.fill_opacity is not None else (token.get("fill_opacity") or 0.85)
             ),
             stroke=style.stroke_color or token.get("stroke") or "none",
             stroke_width=float(style.stroke_width or token.get("stroke_width") or 0),
@@ -924,12 +1038,16 @@ class GanttRenderer(BaseSVGRenderer):
 
         if geometry.clipped_start:
             self._note(
-                KIND_CLIPPED_START, event.task_name, event.start,
+                KIND_CLIPPED_START,
+                event.task_name,
+                event.start,
                 f"starts {event.start}, before the range",
             )
         if geometry.clipped_end:
             self._note(
-                KIND_CLIPPED_END, event.task_name, event.end,
+                KIND_CLIPPED_END,
+                event.task_name,
+                event.end,
                 f"ends {event.end}, after the range",
             )
 
@@ -945,7 +1063,9 @@ class GanttRenderer(BaseSVGRenderer):
                 css_class="ec-event-icon",
             )
             self._note(
-                KIND_SNAPPED_EVENT, event.task_name, event.start,
+                KIND_SNAPPED_EVENT,
+                event.task_name,
+                event.start,
                 "drawn on the next working day",
             )
 
@@ -974,8 +1094,12 @@ class GanttRenderer(BaseSVGRenderer):
             if not span.visible:
                 continue
             self._draw_rect(
-                span.x, bar_y, span.width, bar_h,
-                fill=fill, fill_opacity=scale,
+                span.x,
+                bar_y,
+                span.width,
+                bar_h,
+                fill=fill,
+                fill_opacity=scale,
                 css_class="ec-float-bar",
             )
 
@@ -995,7 +1119,10 @@ class GanttRenderer(BaseSVGRenderer):
 
         line_y = bar_y + bar_h / 2
         self._draw_line(
-            geometry.x, line_y, geometry.x + width, line_y,
+            geometry.x,
+            line_y,
+            geometry.x + width,
+            line_y,
             stroke=config.gantt_progress_color,
             stroke_width=float(config.gantt_progress_width),
             stroke_dasharray=style.stroke_dasharray,
@@ -1012,16 +1139,21 @@ class GanttRenderer(BaseSVGRenderer):
         """Icons inside the bar edges where the span leaves the range."""
         if geometry.clipped_start:
             self._draw_icon_svg(
-                "arrow-bar-left", geometry.x + bar_h / 2,
-                self._icon_baseline(bar_y + bar_h / 2, bar_h), bar_h,
-                anchor="middle", css_class="ec-continuation-icon",
+                "arrow-bar-left",
+                geometry.x + bar_h / 2,
+                self._icon_baseline(bar_y + bar_h / 2, bar_h),
+                bar_h,
+                anchor="middle",
+                css_class="ec-continuation-icon",
             )
         if geometry.clipped_end:
             self._draw_icon_svg(
                 config.gantt_continuation_icon,
                 geometry.x + geometry.width - bar_h / 2,
-                self._icon_baseline(bar_y + bar_h / 2, bar_h), bar_h,
-                anchor="middle", css_class="ec-continuation-icon",
+                self._icon_baseline(bar_y + bar_h / 2, bar_h),
+                bar_h,
+                anchor="middle",
+                css_class="ec-continuation-icon",
             )
 
     def _draw_rollup_bracket(
@@ -1093,7 +1225,9 @@ class GanttRenderer(BaseSVGRenderer):
 
         center_x = axis.center_of(index)
         return RowAnchor(
-            left=center_x - size / 2, right=center_x + size / 2, y=row_y + row_h / 2,
+            left=center_x - size / 2,
+            right=center_x + size / 2,
+            y=row_y + row_h / 2,
         )
 
     def _draw_deadline(
@@ -1125,9 +1259,7 @@ class GanttRenderer(BaseSVGRenderer):
             css_class="ec-event-icon",
         )
 
-    def _bar_fill(
-        self, config: CalendarConfig, event, style: StyleResult
-    ) -> str:
+    def _bar_fill(self, config: CalendarConfig, event, style: StyleResult) -> str:
         """Bar color: a matching style_rule, then the event, then the theme."""
         if style.fill_color:
             return str(style.fill_color)
@@ -1169,9 +1301,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     # ── Dependencies ──────────────────────────────────────────────────────
 
-    def _build_link_graph(
-        self, config: CalendarConfig, rows: list, pages: list
-    ) -> None:
+    def _build_link_graph(self, config: CalendarConfig, rows: list, pages: list) -> None:
         """Resolve every link once and number the ones pagination breaks.
 
         Resolution runs against the whole chart, so "on another page" stays
@@ -1186,13 +1316,9 @@ class GanttRenderer(BaseSVGRenderer):
         if not rows:
             return
 
-        dependencies, exceptions = resolve_dependencies(
-            rows, {row.index for row in rows}
-        )
+        dependencies, exceptions = resolve_dependencies(rows, {row.index for row in rows})
         for exception in exceptions:
-            self._note(
-                exception.kind, exception.task, exception.datekey, exception.detail
-            )
+            self._note(exception.kind, exception.task, exception.datekey, exception.detail)
         self._dependencies = dependencies
 
         # Rows share a page when they fall in the same row block; horizontal
@@ -1218,17 +1344,13 @@ class GanttRenderer(BaseSVGRenderer):
         for reference in references.values():
             source = by_index.get(reference.source_index)
             for target_index in reference.target_indexes:
-                self._reference_marks.setdefault(target_index, []).append(
-                    reference.icon
-                )
+                self._reference_marks.setdefault(target_index, []).append(reference.icon)
                 target = by_index.get(target_index)
                 self._note(
                     KIND_OFFCHART_DEPENDENCY,
                     target.event.task_name if target else "",
                     "",
-                    f"{reference.icon}: depends on "
-                    f"{source.event.task_name if source else '?'}, "
-                    "drawn on another page",
+                    f"{reference.icon}: depends on {source.event.task_name if source else '?'}, drawn on another page",
                 )
 
     def _draw_dependencies(
@@ -1350,17 +1472,11 @@ class GanttRenderer(BaseSVGRenderer):
         token = self._tk("line:grid")
         color = style.stroke_color or token.get("color") or "grey"
         width = float(style.stroke_width or token.get("width") or 1.0)
-        opacity = float(
-            style.stroke_opacity
-            if style.stroke_opacity is not None
-            else (token.get("opacity") or 0.9)
-        )
+        opacity = float(style.stroke_opacity if style.stroke_opacity is not None else (token.get("opacity") or 0.9))
 
         override = style.leader_override or {}
         marker_kind = override.get("marker_end") or config.gantt_arrow_marker_end
-        marker_size = float(
-            override.get("marker_end_size") or config.gantt_arrow_marker_end_size
-        )
+        marker_size = float(override.get("marker_end_size") or config.gantt_arrow_marker_end_size)
         marker_id = self._ensure_arrow_marker_def(
             marker_kind,
             override.get("arrow_color") or color,
@@ -1445,9 +1561,7 @@ class GanttRenderer(BaseSVGRenderer):
         if not text or width <= 0 or font_size <= 0:
             return
 
-        anchor = {"left": "start", "center": "middle", "right": "end"}.get(
-            align, "start"
-        )
+        anchor = {"left": "start", "center": "middle", "right": "end"}.get(align, "start")
         if anchor == "middle":
             draw_x = x + width / 2
         elif anchor == "end":
@@ -1456,6 +1570,13 @@ class GanttRenderer(BaseSVGRenderer):
             draw_x = x
 
         self._draw_text(
-            draw_x, baseline_y, text, font, font_size,
-            fill=color, anchor=anchor, max_width=width, css_class=css_class,
+            draw_x,
+            baseline_y,
+            text,
+            font,
+            font_size,
+            fill=color,
+            anchor=anchor,
+            max_width=width,
+            css_class=css_class,
         )

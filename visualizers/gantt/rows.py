@@ -34,8 +34,8 @@ class GanttRow:
     """One task line: the event plus where it sits in the table."""
 
     event: Event
-    depth: int      # indentation level; 0 for top level and for no WBS
-    index: int      # final row order, 0-based
+    depth: int  # indentation level; 0 for top level and for no WBS
+    index: int  # final row order, 0-based
 
 
 def build_rows(events: list[Any], config: CalendarConfig) -> list[GanttRow]:
@@ -56,10 +56,7 @@ def build_rows(events: list[Any], config: CalendarConfig) -> list[GanttRow]:
 
     ordered = sorted(parsed, key=lambda ev: _sort_key(ev, sort_fields))
 
-    return [
-        GanttRow(event=event, depth=wbs_depth(event.wbs), index=index)
-        for index, event in enumerate(ordered)
-    ]
+    return [GanttRow(event=event, depth=wbs_depth(event.wbs), index=index) for index, event in enumerate(ordered)]
 
 
 def _sort_key(event: Event, sort_fields: list[str]) -> tuple:

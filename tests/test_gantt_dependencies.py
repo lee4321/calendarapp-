@@ -98,7 +98,8 @@ def test_multiple_predecessors_all_resolve():
     rows = [row(0, "1"), row(1, "2"), row(2, "3", "1,2FF")]
     dependencies, _exceptions = resolve_dependencies(rows, {0, 1, 2})
     assert [(d.predecessor_index, d.link_type) for d in dependencies] == [
-        (0, "FS"), (1, "FF"),
+        (0, "FS"),
+        (1, "FF"),
     ]
 
 
@@ -118,15 +119,13 @@ SUCCESSOR = RowAnchor(left=300.0, right=400.0, y=30.0)
 @pytest.mark.parametrize(
     "link_type,expected_exit,expected_entry,expected_head",
     [
-        ("FS", 200.0, 300.0, +1),   # right edge  → left edge, head right
-        ("SS", 100.0, 300.0, +1),   # left edge   → left edge, head right
-        ("FF", 200.0, 400.0, -1),   # right edge  → right edge, head left
-        ("SF", 200.0, 300.0, -1),   # right edge  → left edge from the right
+        ("FS", 200.0, 300.0, +1),  # right edge  → left edge, head right
+        ("SS", 100.0, 300.0, +1),  # left edge   → left edge, head right
+        ("FF", 200.0, 400.0, -1),  # right edge  → right edge, head left
+        ("SF", 200.0, 300.0, -1),  # right edge  → left edge from the right
     ],
 )
-def test_each_link_type_leaves_and_enters_its_own_edges(
-    link_type, expected_exit, expected_entry, expected_head
-):
+def test_each_link_type_leaves_and_enters_its_own_edges(link_type, expected_exit, expected_entry, expected_head):
     route = route_arrow(PREDECESSOR, SUCCESSOR, link_type)
     assert route.points[0] == (expected_exit, PREDECESSOR.y)
     assert route.tip == (expected_entry, SUCCESSOR.y)
@@ -228,7 +227,10 @@ def linked_tasks() -> list[dict]:
     return [
         task(Task_Name="first", Source_ID="1", Start="20260202", End="20260204"),
         task(
-            Task_Name="second", Source_ID="2", Start="20260209", End="20260211",
+            Task_Name="second",
+            Source_ID="2",
+            Start="20260209",
+            End="20260211",
             Predecessors="1",
         ),
     ]
@@ -260,9 +262,11 @@ def test_no_arrows_without_predecessor_data():
 
 
 def test_an_offchart_predecessor_draws_the_marker_icon():
-    renderer = render([
-        task(Task_Name="orphan", Source_ID="2", Predecessors="999"),
-    ])
+    renderer = render(
+        [
+            task(Task_Name="orphan", Source_ID="2", Predecessors="999"),
+        ]
+    )
     assert any(i["icon"] == "crosssquare" for i in renderer.icons)
     assert [e.kind for e in renderer.exceptions] == [KIND_UNRESOLVED_PREDECESSOR]
 

@@ -53,9 +53,7 @@ def main() -> int:
         if stale is not None:
             stale.unlink()
 
-        proc = subprocess.run(
-            argv, cwd=str(ROOT), capture_output=True, text=True, timeout=180
-        )
+        proc = subprocess.run(argv, cwd=str(ROOT), capture_output=True, text=True, timeout=180)
         out_path = _resolve(output_name, paginate=False)
         ok = proc.returncode == 0 and out_path is not None
 

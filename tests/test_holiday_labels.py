@@ -67,8 +67,7 @@ def test_text_mini_details_carry_the_country_code():
     config = _config()
     db = _StubDB(_HOLIDAYS, _SPECIALS)
     _, details = TextMiniCalendarRenderer()._build_symbol_map(config, [], {}, db)
-    by_text = {d.category: [e.text for e in details if e.category == d.category]
-               for d in details}
+    by_text = {d.category: [e.text for e in details if e.category == d.category] for d in details}
 
     assert "UA - Ukrainian Statehood Day" in by_text["holiday"]
     assert "US - Independence Day" in by_text["holiday"]
@@ -82,9 +81,7 @@ def test_mini_details_page_carries_the_country_code():
     config = _config()
     config.country = "US,UA"
     coords = {f"Cell_202607{d:02d}": (0.0, 0.0, 10.0, 10.0) for d in range(1, 32)}
-    rows = MiniCalendarRenderer._collect_holiday_special_rows(
-        coords, config, _StubDB(_HOLIDAYS, _SPECIALS)
-    )
+    rows = MiniCalendarRenderer._collect_holiday_special_rows(coords, config, _StubDB(_HOLIDAYS, _SPECIALS))
     named = {r["name"]: r for r in rows}
 
     assert "UA - Ukrainian Statehood Day" in named
@@ -99,12 +96,14 @@ def test_mini_details_page_collapses_a_shared_name_onto_one_row():
 
     config = _config()
     config.country = "US,CA"
-    db = _StubDB({
-        "20260701": [
-            {"displayname": "New Year's Day", "country": "CA"},
-            {"displayname": "New Year's Day", "country": "US"},
-        ]
-    })
+    db = _StubDB(
+        {
+            "20260701": [
+                {"displayname": "New Year's Day", "country": "CA"},
+                {"displayname": "New Year's Day", "country": "US"},
+            ]
+        }
+    )
     coords = {"Cell_20260701": (0.0, 0.0, 10.0, 10.0)}
     rows = MiniCalendarRenderer._collect_holiday_special_rows(coords, config, db)
 
@@ -118,9 +117,7 @@ def test_compactplan_key_carries_the_country_code():
     config = _config()
     config.country = "US,UA"
     days = [date(2026, 7, 1) + timedelta(days=i) for i in range(31)]
-    rows = holiday_special_rows(
-        (d.strftime("%Y%m%d") for d in days), config, _StubDB(_HOLIDAYS, _SPECIALS)
-    )
+    rows = holiday_special_rows((d.strftime("%Y%m%d") for d in days), config, _StubDB(_HOLIDAYS, _SPECIALS))
     names = [row["name"] for row in rows]
 
     assert "UA - Ukrainian Statehood Day" in names

@@ -42,48 +42,52 @@ import yaml
 # Top-level sections recognized by the unified parser.  Anything not in this
 # set is rejected with a ThemeError naming the converter.  This list mirrors
 # the post-migration enumeration in design §9.4.
-VALID_SECTIONS: frozenset[str] = frozenset({
-    "theme",
-    "base",
-    "layout",
-    "header",
-    "footer",
-    "events",
-    "durations",
-    "watermark",
-    "continuation",
-    "overflow",
-    "fiscal",
-    "colors",
-    "weekly",
-    "mini_calendar",
-    "mini_details",
-    "text_mini",
-    "candybar",
-    "timeline",
-    "timeline_events",
-    "timeline_durations",
-    "pit",
-    "compact_plan",
-    "blockplan",
-    "gantt",
-    "excelblockplan",
-    "time_bands",
-    "style_rules",
-    "element_overrides",
-})
+VALID_SECTIONS: frozenset[str] = frozenset(
+    {
+        "theme",
+        "base",
+        "layout",
+        "header",
+        "footer",
+        "events",
+        "durations",
+        "watermark",
+        "continuation",
+        "overflow",
+        "fiscal",
+        "colors",
+        "weekly",
+        "mini_calendar",
+        "mini_details",
+        "text_mini",
+        "candybar",
+        "timeline",
+        "timeline_events",
+        "timeline_durations",
+        "pit",
+        "compact_plan",
+        "blockplan",
+        "gantt",
+        "excelblockplan",
+        "time_bands",
+        "style_rules",
+        "element_overrides",
+    }
+)
 
 # Legacy sections that the migration retires.  Their presence is a hard parse
 # error pointing the author at tools/migrate_theme.py.
-RETIRED_SECTIONS: frozenset[str] = frozenset({
-    "text_styles",
-    "box_styles",
-    "line_styles",
-    "icon_styles",
-    "element_styles",
-    "axis",
-    "swimlane_rules",
-})
+RETIRED_SECTIONS: frozenset[str] = frozenset(
+    {
+        "text_styles",
+        "box_styles",
+        "line_styles",
+        "icon_styles",
+        "element_styles",
+        "axis",
+        "swimlane_rules",
+    }
+)
 
 # Sections that moved to a new name.  A theme still using the old name gets a
 # hard parse error naming the replacement.
@@ -102,21 +106,45 @@ TOKEN_KINDS: frozenset[str] = DEFINE_KINDS
 # Recognized selector keys.  This list is the syntactic registry — semantic
 # matching for several of these still needs renderer-side hookup.  See
 # design §4 schema tree.
-SELECTOR_KEYS: frozenset[str] = frozenset({
-    # context
-    "papersize", "visualizer", "scope", "element",
-    # content predicates
-    "event_type", "task_name", "notes", "resource_group", "resource_names",
-    "wbs", "milestone", "rollup", "federal_holiday", "company_holiday",
-    "nonworkday", "workday", "weekend",
-    "priority", "priority_min", "priority_max",
-    "percent_complete", "band", "value", "repeat",
-    "date", "date_overlap",
-    "swimlane",
-    "color", "icon",
-    # aggregation modifiers
-    "min_match", "any_event", "all_events",
-})
+SELECTOR_KEYS: frozenset[str] = frozenset(
+    {
+        # context
+        "papersize",
+        "visualizer",
+        "scope",
+        "element",
+        # content predicates
+        "event_type",
+        "task_name",
+        "notes",
+        "resource_group",
+        "resource_names",
+        "wbs",
+        "milestone",
+        "rollup",
+        "federal_holiday",
+        "company_holiday",
+        "nonworkday",
+        "workday",
+        "weekend",
+        "priority",
+        "priority_min",
+        "priority_max",
+        "percent_complete",
+        "band",
+        "value",
+        "repeat",
+        "date",
+        "date_overlap",
+        "swimlane",
+        "color",
+        "icon",
+        # aggregation modifiers
+        "min_match",
+        "any_event",
+        "all_events",
+    }
+)
 
 
 # ─── Exception ──────────────────────────────────────────────────────────────
@@ -134,8 +162,8 @@ class Rule:
     """One entry in ``style_rules``."""
 
     name: str
-    define: str | None       # "text" | "box" | "line" | "icon" | None
-    as_name: str | None      # token name when define: is set
+    define: str | None  # "text" | "box" | "line" | "icon" | None
+    as_name: str | None  # token name when define: is set
     apply_to: tuple[str, ...]  # list-valued apply_to is normalized to a tuple
     select: dict[str, Any]
     style: dict[str, Any]
@@ -238,10 +266,7 @@ class UnifiedTheme:
 
     def defined_tokens(self) -> list[str]:
         """All ``<kind>:<name>`` tokens that have at least one definition."""
-        return sorted(
-            t for t, layers in self._token_index.items()
-            if any(r.is_definition for r in layers)
-        )
+        return sorted(t for t, layers in self._token_index.items() if any(r.is_definition for r in layers))
 
 
 # ─── Selector matching ──────────────────────────────────────────────────────
@@ -374,10 +399,7 @@ def _check_section_names(raw: dict[str, Any], *, origin: str) -> None:
                 "run `uv run python tools/migrate_theme.py` to convert this "
                 "theme to the unified style_rules schema."
             )
-        raise ThemeError(
-            f"{origin}: unknown top-level section '{key}'. "
-            f"Valid sections: {sorted(VALID_SECTIONS)}"
-        )
+        raise ThemeError(f"{origin}: unknown top-level section '{key}'. Valid sections: {sorted(VALID_SECTIONS)}")
 
 
 def _parse_rules(raw_rules: Iterable[Any], *, origin: str) -> list[Rule]:
@@ -400,9 +422,7 @@ def _parse_rules(raw_rules: Iterable[Any], *, origin: str) -> list[Rule]:
                     f"{sorted(DEFINE_KINDS)}, got {define!r}"
                 )
             if not isinstance(as_name, str) or not as_name:
-                raise ThemeError(
-                    f"{origin}: style_rules[{i}] '{name}': define: requires a non-empty `as:` token name"
-                )
+                raise ThemeError(f"{origin}: style_rules[{i}] '{name}': define: requires a non-empty `as:` token name")
             if apply_to is not None:
                 raise ThemeError(
                     f"{origin}: style_rules[{i}] '{name}': `apply_to:` must be omitted on a `define:` rule"
@@ -411,9 +431,7 @@ def _parse_rules(raw_rules: Iterable[Any], *, origin: str) -> list[Rule]:
             apply_to_tuple = (f"{define}:{as_name}",)
         else:
             if apply_to is None:
-                raise ThemeError(
-                    f"{origin}: style_rules[{i}] '{name}': `apply_to:` is required (or use `define:`)"
-                )
+                raise ThemeError(f"{origin}: style_rules[{i}] '{name}': `apply_to:` is required (or use `define:`)")
             apply_to_tuple = _normalize_apply_to(apply_to, name=name, index=i, origin=origin)
 
         if not isinstance(select, dict):
@@ -423,14 +441,16 @@ def _parse_rules(raw_rules: Iterable[Any], *, origin: str) -> list[Rule]:
 
         _check_selector_keys(select, name=name, index=i, origin=origin)
 
-        out.append(Rule(
-            name=name,
-            define=define,
-            as_name=as_name if isinstance(as_name, str) else None,
-            apply_to=apply_to_tuple,
-            select=select,
-            style=style,
-        ))
+        out.append(
+            Rule(
+                name=name,
+                define=define,
+                as_name=as_name if isinstance(as_name, str) else None,
+                apply_to=apply_to_tuple,
+                select=select,
+                style=style,
+            )
+        )
     return out
 
 
@@ -443,9 +463,7 @@ def _normalize_apply_to(value: Any, *, name: str, index: int, origin: str) -> tu
     elif isinstance(value, list):
         value_list = [str(x) for x in value]
     else:
-        raise ThemeError(
-            f"{origin}: style_rules[{index}] '{name}': apply_to: must be a string or list of strings"
-        )
+        raise ThemeError(f"{origin}: style_rules[{index}] '{name}': apply_to: must be a string or list of strings")
     normalized: list[str] = []
     for t in value_list:
         if t in APPLY_TO_BASE:

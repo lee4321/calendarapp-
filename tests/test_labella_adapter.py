@@ -37,21 +37,21 @@ def dense_events() -> list[Event]:
     """15 events with many overlaps along the axis."""
     # Clusters at 2026-06-05, 06-06 (heavy), 06-15, 06-25 (heavy), 07-10.
     raw = [
-        ("Kickoff",        "20260605"),
-        ("Demo A",         "20260606"),
-        ("Demo B",         "20260606"),
-        ("Demo C",         "20260606"),
-        ("Demo D",         "20260606"),
-        ("Sync",           "20260615"),
-        ("Review 1",       "20260625"),
-        ("Review 2",       "20260625"),
-        ("Review 3",       "20260625"),
-        ("Review 4",       "20260625"),
-        ("Review 5",       "20260625"),
-        ("Status",         "20260705"),
-        ("Status check",   "20260705"),
-        ("Wrap",           "20260710"),
-        ("Final",          "20260710"),
+        ("Kickoff", "20260605"),
+        ("Demo A", "20260606"),
+        ("Demo B", "20260606"),
+        ("Demo C", "20260606"),
+        ("Demo D", "20260606"),
+        ("Sync", "20260615"),
+        ("Review 1", "20260625"),
+        ("Review 2", "20260625"),
+        ("Review 3", "20260625"),
+        ("Review 4", "20260625"),
+        ("Review 5", "20260625"),
+        ("Status", "20260705"),
+        ("Status check", "20260705"),
+        ("Wrap", "20260710"),
+        ("Final", "20260710"),
     ]
     return [_ev(n, d) for n, d in raw]
 
@@ -107,9 +107,7 @@ def test_empty_events_returns_empty_list(config):
         (Orientation.VERTICAL, Side.SECONDARY),
     ],
 )
-def test_single_side_no_overlap_per_layer(
-    config, dense_events, orientation, side
-):
+def test_single_side_no_overlap_per_layer(config, dense_events, orientation, side):
     axis_length = 600.0
     axis_origin = (50.0, 80.0)
     pos_for_day = _pos_for_day_factory("20260601", "20260730", axis_length)
@@ -270,9 +268,7 @@ def test_vertical_secondary_labels_left_of_axis(config, dense_events):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "orientation", [Orientation.HORIZONTAL, Orientation.VERTICAL]
-)
+@pytest.mark.parametrize("orientation", [Orientation.HORIZONTAL, Orientation.VERTICAL])
 def test_both_partitions_events_between_sides(config, dense_events, orientation):
     pos_for_day = _pos_for_day_factory("20260601", "20260730", 600.0)
     placements = layout_callouts(
@@ -343,13 +339,13 @@ def clustered_events() -> list[Event]:
     sees no reason to split — but half of them share a fortnight.
     """
     raw = [
-        ("Canary Deployment 5 percent",  "20260717"),
+        ("Canary Deployment 5 percent", "20260717"),
         ("Production Rollout 25 percent", "20260717"),
         ("Production Rollout 100 percent", "20260720"),
-        ("Go/No-Go Decision Meeting",    "20260720"),
-        ("Training Sign-off Complete",   "20260722"),
-        ("Operations Readiness Review",  "20260722"),
-        ("Go-Live Event Announcement",   "20260724"),
+        ("Go/No-Go Decision Meeting", "20260720"),
+        ("Training Sign-off Complete", "20260722"),
+        ("Operations Readiness Review", "20260722"),
+        ("Go-Live Event Announcement", "20260724"),
         ("Project Closeout Retrospective", "20260724"),
     ]
     return [_ev(name, day) for name, day in raw]
@@ -464,12 +460,17 @@ def test_the_row_search_stops_at_the_room_available(monkeypatch):
     def placement(x: float, y: float) -> LL.CalloutPlacement:
         return LL.CalloutPlacement(
             event=_ev("E", "20260601"),
-            x_dot=x, y_dot=400.0,
-            x_label=x, y_label=y,
-            label_w=100.0, label_h=10.0,
-            layer=0, leader_path_d="M 0 0",
+            x_dot=x,
+            y_dot=400.0,
+            x_label=x,
+            y_label=y,
+            label_w=100.0,
+            label_h=10.0,
+            layer=0,
+            leader_path_d="M 0 0",
             axis_origin=(0.0, 400.0),
-            side=Side.PRIMARY, orientation=Orientation.HORIZONTAL,
+            side=Side.PRIMARY,
+            orientation=Orientation.HORIZONTAL,
         )
 
     depths = []
@@ -485,12 +486,17 @@ def test_the_row_search_stops_at_the_room_available(monkeypatch):
 
     result = LL._layout_one_side(
         [_ev("A", "20260601"), _ev("B", "20260601")],
-        axis_origin=(0.0, 400.0), axis_length=500.0,
-        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        axis_origin=(0.0, 400.0),
+        axis_length=500.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
         pos_for_day=lambda d: 0.0,
-        node_width=lambda ev: 100.0, node_height=lambda evs: 10.0,
-        density=0.75, layer_gap=8.0,
-        max_extent=100.0, on_side_events=None,
+        node_width=lambda ev: 100.0,
+        node_height=lambda evs: 10.0,
+        density=0.75,
+        layer_gap=8.0,
+        max_extent=100.0,
+        on_side_events=None,
     )
 
     # It stopped at the first attempt that would have exceeded the room...
@@ -512,10 +518,18 @@ def test_the_row_search_is_unbounded_without_a_limit(monkeypatch):
         second_x = 50.0 if overlapping else 400.0
         return [
             LL.CalloutPlacement(
-                event=_ev("E", "20260601"), x_dot=x, y_dot=400.0,
-                x_label=x, y_label=y, label_w=100.0, label_h=10.0,
-                layer=0, leader_path_d="M 0 0", axis_origin=(0.0, 400.0),
-                side=Side.PRIMARY, orientation=Orientation.HORIZONTAL,
+                event=_ev("E", "20260601"),
+                x_dot=x,
+                y_dot=400.0,
+                x_label=x,
+                y_label=y,
+                label_w=100.0,
+                label_h=10.0,
+                layer=0,
+                leader_path_d="M 0 0",
+                axis_origin=(0.0, 400.0),
+                side=Side.PRIMARY,
+                orientation=Orientation.HORIZONTAL,
             )
             for x in (0.0, second_x)
         ]
@@ -523,13 +537,18 @@ def test_the_row_search_is_unbounded_without_a_limit(monkeypatch):
     monkeypatch.setattr(LL, "_run_labella", fake_run)
     result = LL._layout_one_side(
         [_ev("A", "20260601"), _ev("B", "20260601")],
-        axis_origin=(0.0, 400.0), axis_length=500.0,
-        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        axis_origin=(0.0, 400.0),
+        axis_length=500.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
         pos_for_day=lambda d: 0.0,
-        node_width=lambda ev: 100.0, node_height=lambda evs: 10.0,
-        density=0.75, layer_gap=8.0, on_side_events=None,
+        node_width=lambda ev: 100.0,
+        node_height=lambda evs: 10.0,
+        density=0.75,
+        layer_gap=8.0,
+        on_side_events=None,
     )
-    assert len(calls) == 4              # kept going until the overlap cleared
+    assert len(calls) == 4  # kept going until the overlap cleared
     assert LL._row_overlap_count(result) == 0
 
 
@@ -569,9 +588,7 @@ def test_the_first_row_gap_does_not_inflate_the_row_stride(config):
     assert len(rows_plain) == len(rows_offset) > 1
 
     # Every row moved by the same amount — the stride is untouched.
-    shifts = {
-        round(b - a, 2) for a, b in zip(sorted(rows_plain), sorted(rows_offset), strict=True)
-    }
+    shifts = {round(b - a, 2) for a, b in zip(sorted(rows_plain), sorted(rows_offset), strict=True)}
     assert len(shifts) == 1
     assert next(iter(shifts)) != 0.0
 
@@ -704,9 +721,7 @@ def test_a_box_wider_than_the_page_hugs_the_leading_edge(config):
     node = Node(idealPos=200.0, width=400.0)
     node.currentPos = 200.0
     node.x = 200.0
-    _clamp_labels_to_bounds(
-        [node], Orientation.HORIZONTAL, (0.0, 0.0), (10.0, 110.0)
-    )
+    _clamp_labels_to_bounds([node], Orientation.HORIZONTAL, (0.0, 0.0), (10.0, 110.0))
     assert node.currentPos == pytest.approx(10.0)
     assert node.x == pytest.approx(10.0)
 
@@ -718,9 +733,7 @@ def test_a_label_already_inside_the_bounds_is_left_alone(config):
     node = Node(idealPos=50.0, width=40.0)
     node.currentPos = 50.0
     node.x = 50.0
-    _clamp_labels_to_bounds(
-        [node], Orientation.HORIZONTAL, (0.0, 0.0), (0.0, 500.0)
-    )
+    _clamp_labels_to_bounds([node], Orientation.HORIZONTAL, (0.0, 0.0), (0.0, 500.0))
     assert node.currentPos == pytest.approx(50.0)
 
 
@@ -772,9 +785,7 @@ def test_timeline_leaders_end_with_a_perpendicular_stub(config):
 
 
 def test_zero_stubs_leave_the_bezier_untouched(config):
-    paths = _leaders(
-        config, timeline_leader_start_stub=0.0, timeline_leader_end_stub=0.0
-    )
+    paths = _leaders(config, timeline_leader_start_stub=0.0, timeline_leader_end_stub=0.0)
     assert paths
     for d in paths:
         tokens = d.strip().split()
@@ -796,9 +807,7 @@ def test_a_stub_never_swallows_the_whole_segment(config):
     assert -3.0 < trimmed_y <= -1.3 + 1e-6
 
 
-@pytest.mark.parametrize(
-    "path", ["", "M 10 0", "not a path", "M 10 0 L 10 -4"]
-)
+@pytest.mark.parametrize("path", ["", "M 10 0", "not a path", "M 10 0 L 10 -4"])
 def test_stub_rewrites_leave_odd_paths_alone(path):
     from shared.labella_layout import append_perp_stub, prepend_perp_stub
 

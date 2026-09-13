@@ -23,8 +23,7 @@ class CalendarTUI(App):
         ("d", "toggle_dark", "Dark/light"),
     ]
 
-    def __init__(self, *, project_root: str | None = None,
-                 db_path: str = "calendar.db") -> None:
+    def __init__(self, *, project_root: str | None = None, db_path: str = "calendar.db") -> None:
         super().__init__()
         self.project_root = Path(project_root or Path.cwd()).resolve()
         self.db_path = str(self.project_root / db_path)
@@ -33,6 +32,4 @@ class CalendarTUI(App):
         self.push_screen(HomeScreen())
 
     def action_toggle_dark(self) -> None:
-        self.theme = (
-            "textual-light" if self.theme == "textual-dark" else "textual-dark"
-        )
+        self.theme = "textual-light" if self.theme == "textual-dark" else "textual-dark"

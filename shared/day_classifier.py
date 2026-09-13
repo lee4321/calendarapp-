@@ -12,6 +12,7 @@ A date can belong to multiple classes; callers pick how to rank them.
 This module is the single source of truth used by blockplan, excelblockplan,
 and (optionally) other visualizers so non-workday styling stays consistent.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -107,6 +108,4 @@ def day_rule_matches(classes: frozenset[str], rule: dict[str, Any]) -> bool:
 
 def rule_has_day_keys(rule: dict[str, Any]) -> bool:
     """Return True if *rule* uses any day-based match key."""
-    return any(
-        k in rule for k in ("federal_holiday", "company_holiday", "weekend", "nonworkday")
-    )
+    return any(k in rule for k in ("federal_holiday", "company_holiday", "weekend", "nonworkday"))

@@ -23,9 +23,7 @@ class _FontWithoutUnicodeCmap:
 
 @pytest.fixture
 def no_cmap_font(monkeypatch):
-    monkeypatch.setattr(
-        glyph_cache, "_load_ttfont", lambda path: _FontWithoutUnicodeCmap()
-    )
+    monkeypatch.setattr(glyph_cache, "_load_ttfont", lambda path: _FontWithoutUnicodeCmap())
     glyph_cache.get_ink_extents.cache_clear()
     yield "no-cmap.ttf"
     glyph_cache.get_ink_extents.cache_clear()

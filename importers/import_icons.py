@@ -68,16 +68,11 @@ def import_icons(folder: Path, db_path: Path, replace: bool) -> None:
     finally:
         conn.close()
 
-    print(
-        f"Processed {len(svg_files)} SVG(s): inserted={inserted}, "
-        f"replaced={replaced}, skipped={skipped}"
-    )
+    print(f"Processed {len(svg_files)} SVG(s): inserted={inserted}, replaced={replaced}, skipped={skipped}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Import .svg files into the icon table in a SQLite database."
-    )
+    parser = argparse.ArgumentParser(description="Import .svg files into the icon table in a SQLite database.")
     parser.add_argument("folder", help="Path to folder containing .svg files")
     parser.add_argument(
         "--db",

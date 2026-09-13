@@ -4,6 +4,7 @@ Shared fiscal calendar rendering utilities.
 Provides color lookup, label formatting, and segment-building functions
 used by all visualizers to render fiscal period/quarter data uniformly.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -19,8 +20,8 @@ if TYPE_CHECKING:
 class FiscalSegment:
     """A contiguous date range corresponding to one fiscal period or quarter."""
 
-    start: date           # first day (inclusive)
-    end_exclusive: date   # first day of the NEXT segment (exclusive)
+    start: date  # first day (inclusive)
+    end_exclusive: date  # first day of the NEXT segment (exclusive)
     label: str
 
 
@@ -60,9 +61,7 @@ def format_fiscal_period_label(
     _fy_offset = config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
     effective_year = fiscal_info.fiscal_year + _fy_offset
     quarter_label = (
-        f"Q{fiscal_info.fiscal_quarter}"
-        if config.fiscal_show_quarter_labels and fiscal_info.is_quarter_start
-        else ""
+        f"Q{fiscal_info.fiscal_quarter}" if config.fiscal_show_quarter_labels and fiscal_info.is_quarter_start else ""
     )
     year_label = f"FY{effective_year % 100}" if fiscal_info.is_fiscal_year_start else ""
     prefix = quarter_label + (" " if quarter_label else "")
@@ -162,11 +161,13 @@ def build_fiscal_period_segments(
             if current_key is None or key != current_key:
                 # Flush previous segment
                 if seg_start is not None and seg_first_info is not None:
-                    segments.append(FiscalSegment(
-                        start=seg_start,
-                        end_exclusive=cursor,
-                        label=format_fiscal_period_label(seg_first_info, config),
-                    ))
+                    segments.append(
+                        FiscalSegment(
+                            start=seg_start,
+                            end_exclusive=cursor,
+                            label=format_fiscal_period_label(seg_first_info, config),
+                        )
+                    )
                 seg_start = cursor
                 current_key = key
                 seg_first_info = info
@@ -174,11 +175,13 @@ def build_fiscal_period_segments(
 
     # Flush final segment
     if seg_start is not None and seg_first_info is not None:
-        segments.append(FiscalSegment(
-            start=seg_start,
-            end_exclusive=end + one_day,
-            label=format_fiscal_period_label(seg_first_info, config),
-        ))
+        segments.append(
+            FiscalSegment(
+                start=seg_start,
+                end_exclusive=end + one_day,
+                label=format_fiscal_period_label(seg_first_info, config),
+            )
+        )
 
     return segments
 
@@ -228,22 +231,26 @@ def build_fiscal_quarter_segments(
                 key = (info.fiscal_year, info.fiscal_quarter)
                 if current_key is None or key != current_key:
                     if seg_start is not None and seg_first_info is not None:
-                        segments.append(FiscalSegment(
-                            start=seg_start,
-                            end_exclusive=cursor,
-                            label=_make_label(seg_first_info.fiscal_year, seg_first_info.fiscal_quarter),
-                        ))
+                        segments.append(
+                            FiscalSegment(
+                                start=seg_start,
+                                end_exclusive=cursor,
+                                label=_make_label(seg_first_info.fiscal_year, seg_first_info.fiscal_quarter),
+                            )
+                        )
                     seg_start = cursor
                     current_key = key
                     seg_first_info = info
             cursor += one_day
 
         if seg_start is not None and seg_first_info is not None:
-            segments.append(FiscalSegment(
-                start=seg_start,
-                end_exclusive=end + one_day,
-                label=_make_label(seg_first_info.fiscal_year, seg_first_info.fiscal_quarter),
-            ))
+            segments.append(
+                FiscalSegment(
+                    start=seg_start,
+                    end_exclusive=end + one_day,
+                    label=_make_label(seg_first_info.fiscal_year, seg_first_info.fiscal_quarter),
+                )
+            )
         return segments
 
     # Gregorian fallback path (no fiscal_lookup / --fiscal not set).
@@ -265,10 +272,12 @@ def build_fiscal_quarter_segments(
             seg_s = max(cursor_date, start)
             seg_e = min(next_cursor, end + one_day)
             if seg_s < seg_e:
-                segments.append(FiscalSegment(
-                    start=seg_s,
-                    end_exclusive=seg_e,
-                    label=_make_label(fy_raw, q_num),
-                ))
+                segments.append(
+                    FiscalSegment(
+                        start=seg_s,
+                        end_exclusive=seg_e,
+                        label=_make_label(fy_raw, q_num),
+                    )
+                )
         cursor_date = next_cursor
     return segments

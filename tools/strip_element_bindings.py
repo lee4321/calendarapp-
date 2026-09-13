@@ -85,9 +85,7 @@ def _strip_one(data: Any, *, catalog) -> tuple[OrderedDict, int, int]:
     if not isinstance(rules, list):
         return out, 0, 0
 
-    overrides: OrderedDict[str, dict[str, Any]] = OrderedDict(
-        out.get("element_overrides") or {}
-    )
+    overrides: OrderedDict[str, dict[str, Any]] = OrderedDict(out.get("element_overrides") or {})
     kept: list[Any] = []
     dropped = 0
     hoisted = 0
@@ -96,11 +94,7 @@ def _strip_one(data: Any, *, catalog) -> tuple[OrderedDict, int, int]:
             kept.append(rule)
             continue
         apply_to = rule.get("apply_to")
-        targets = (
-            [apply_to] if isinstance(apply_to, str)
-            else list(apply_to) if isinstance(apply_to, list)
-            else []
-        )
+        targets = [apply_to] if isinstance(apply_to, str) else list(apply_to) if isinstance(apply_to, list) else []
         if "element" not in targets:
             kept.append(rule)
             continue
@@ -116,10 +110,7 @@ def _strip_one(data: Any, *, catalog) -> tuple[OrderedDict, int, int]:
 
         style = rule.get("style") or {}
         use = style.get("use") if isinstance(style, dict) else None
-        extras = {
-            k: v for k, v in (style or {}).items()
-            if k != "use" and k in {"color"}
-        }
+        extras = {k: v for k, v in (style or {}).items() if k != "use" and k in {"color"}}
 
         for ec in ec_names:
             entry = catalog.get(ec)
@@ -161,7 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument("files", nargs="*", help="theme YAML files to process")
     parser.add_argument(
-        "--no-backup", action="store_true",
+        "--no-backup",
+        action="store_true",
         help="Skip writing .bak files (default: write one next to each rewritten file)",
     )
     args = parser.parse_args(argv)

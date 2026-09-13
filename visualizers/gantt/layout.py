@@ -39,7 +39,7 @@ class GanttPage:
     what it shows and where it sits in the whole.
     """
 
-    number: int          # 1-based; page 1 keeps the base filename
+    number: int  # 1-based; page 1 keeps the base filename
     row_start: int
     row_end: int
     day_start: int
@@ -132,9 +132,7 @@ class GanttLayout(BaseLayout):
         content_x = margins["left"]
         content_y = margins["bottom"] + hf["footer_height"]
         content_w = margins["usable_width"]
-        content_h = (
-            margins["usable_height"] - hf["header_height"] - hf["footer_height"]
-        )
+        content_h = margins["usable_height"] - hf["header_height"] - hf["footer_height"]
 
         # The table takes its configured share of the content width; the
         # chart takes the rest.  Clamped so a mis-set ratio cannot leave
@@ -188,21 +186,34 @@ class GanttLayout(BaseLayout):
         body_h = header_y - body_y
 
         coord["GanttColumnHeader"] = (
-            round(content_x, 2), round(header_y, 2), table_w, round(header_h, 2),
+            round(content_x, 2),
+            round(header_y, 2),
+            table_w,
+            round(header_h, 2),
         )
         coord["GanttTopBands"] = (
-            round(chart_x, 2), round(top_bands_y, 2),
-            round(chart_w, 2), round(top_bands_h, 2),
+            round(chart_x, 2),
+            round(top_bands_y, 2),
+            round(chart_w, 2),
+            round(top_bands_h, 2),
         )
         coord["GanttBottomBands"] = (
-            round(chart_x, 2), round(content_y, 2),
-            round(chart_w, 2), round(bottom_bands_h, 2),
+            round(chart_x, 2),
+            round(content_y, 2),
+            round(chart_w, 2),
+            round(bottom_bands_h, 2),
         )
         coord["GanttTableBody"] = (
-            round(content_x, 2), round(body_y, 2), table_w, round(body_h, 2),
+            round(content_x, 2),
+            round(body_y, 2),
+            table_w,
+            round(body_h, 2),
         )
         coord["GanttChartBody"] = (
-            round(chart_x, 2), round(body_y, 2), round(chart_w, 2), round(body_h, 2),
+            round(chart_x, 2),
+            round(body_y, 2),
+            round(chart_w, 2),
+            round(body_h, 2),
         )
 
         return self._to_svg_coords(coord, config.pageY)
@@ -216,8 +227,4 @@ class GanttLayout(BaseLayout):
         a malformed theme costs one band, not the page.
         """
         default_h = float(config.gantt_band_row_height)
-        return sum(
-            float(band.get("row_height", default_h))
-            for band in (bands or [])
-            if isinstance(band, dict)
-        )
+        return sum(float(band.get("row_height", default_h)) for band in (bands or []) if isinstance(band, dict))

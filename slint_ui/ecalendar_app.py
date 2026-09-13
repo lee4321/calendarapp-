@@ -222,14 +222,27 @@ SENTINELS = {"", "(default)", "(none)"}
 # the sheets/exporters treat --outputfile as a literal path (relative to cwd), so
 # we prefix "output/" ourselves to keep every preview file inside output/.
 AUTOPREFIX_COMMANDS = {
-    "weekly", "mini", "mini-icon", "candybar", "text-mini",
-    "timeline", "pit", "blockplan", "gantt", "compactplan",
+    "weekly",
+    "mini",
+    "mini-icon",
+    "candybar",
+    "text-mini",
+    "timeline",
+    "pit",
+    "blockplan",
+    "gantt",
+    "compactplan",
 }
 
 # All property names we read back from the window (spec fields + specials).
 VALUE_PROPS = {p for p, _, _ in FIELDS} | {
-    "begin_date", "end_date", "database", "weekends_index",
-    "verbose_index", "today_line", "palette_name",
+    "begin_date",
+    "end_date",
+    "database",
+    "weekends_index",
+    "verbose_index",
+    "today_line",
+    "palette_name",
 }
 
 
@@ -238,9 +251,7 @@ def _introspect() -> tuple[dict[str, set[str]], dict[str, list[str]]]:
     import ecalendar
 
     parser = ecalendar._create_argument_parser("ecalendar_preview.svg")
-    sub_action = next(
-        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
-    )
+    sub_action = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
     flags: dict[str, set[str]] = {}
     positionals: dict[str, list[str]] = {}
     for name, subparser in sub_action.choices.items():
@@ -286,9 +297,7 @@ def build_argv(command: str, values: dict, output_name: str) -> list[str]:
 
     # --- output file (every subcommand supports --outputfile) --------------
     if "--outputfile" in cmd_flags:
-        out_arg = (
-            output_name if command in AUTOPREFIX_COMMANDS else f"output/{output_name}"
-        )
+        out_arg = output_name if command in AUTOPREFIX_COMMANDS else f"output/{output_name}"
         argv += ["--outputfile", out_arg]
 
     # --- database (all except fontsheet) -----------------------------------
@@ -333,9 +342,7 @@ def build_argv(command: str, values: dict, output_name: str) -> list[str]:
     return argv
 
 
-def preset_date_range(
-    preset: str, today: datetime.date | None = None
-) -> tuple[str, str] | None:
+def preset_date_range(preset: str, today: datetime.date | None = None) -> tuple[str, str] | None:
     """Resolve a quick-range preset to ``(begin, end)`` YYYYMMDD strings.
 
     Pure and window-free so it can be exercised headlessly. Returns ``None`` for
@@ -439,9 +446,15 @@ class EcalendarApp:
             return flag in flags
 
         content_flags = {
-            "--noevents", "--nodurations", "--milestones", "--WBS",
-            "--status", "--empty", "--shade",
-            "--includenotes", "--overflow",
+            "--noevents",
+            "--nodurations",
+            "--milestones",
+            "--WBS",
+            "--status",
+            "--empty",
+            "--shade",
+            "--includenotes",
+            "--overflow",
         }
 
         w.command_hint = hint
@@ -479,9 +492,7 @@ class EcalendarApp:
         w.sheet_has_color = has("--color")
         w.sheet_has_paginate = has("--paginate")
         w.sheet_has_fullset = has("--fullset")
-        w.show_sheet = (
-            w.sheet_has_name or w.sheet_has_filter or w.sheet_has_fullset
-        )
+        w.show_sheet = w.sheet_has_name or w.sheet_has_filter or w.sheet_has_fullset
         w.show_logging = has("--verbose")
 
         w.preview_mode = OUTPUT[command][1]
@@ -510,13 +521,9 @@ class EcalendarApp:
         ).start()
 
         self._poll_timer = self._slint.Timer()
-        self._poll_timer.start(
-            self._slint.TimerMode.Repeated, POLL_INTERVAL, self._poll
-        )
+        self._poll_timer.start(self._slint.TimerMode.Repeated, POLL_INTERVAL, self._poll)
 
-    def _worker(
-        self, argv: list[str], command: str, output_name: str, mode: str, since: float
-    ) -> None:
+    def _worker(self, argv: list[str], command: str, output_name: str, mode: str, since: float) -> None:
         meta = (command, output_name, mode, since)
         try:
             proc = subprocess.run(
@@ -542,16 +549,14 @@ class EcalendarApp:
         self.window.generating = False
 
         if code != 0:
-            detail = (err.strip() or out.strip() or f"exit code {code}")
+            detail = err.strip() or out.strip() or f"exit code {code}"
             last_line = detail.splitlines()[-1] if detail else f"exit code {code}"
             self.window.status_text = f"Error: {last_line}"
             return
 
         pages = self._collect_outputs(output_name, since)
         if not pages:
-            self.window.status_text = (
-                f"Ran OK but no output file found for {command} ({output_name})."
-            )
+            self.window.status_text = f"Ran OK but no output file found for {command} ({output_name})."
             return
 
         self._pages = pages
@@ -603,9 +608,7 @@ class EcalendarApp:
         path = self._pages[index]
         total = len(self._pages)
         self.window.has_pages = total > 1
-        self.window.page_label = (
-            f"{index + 1} / {total}  ·  {path.name}" if total > 1 else ""
-        )
+        self.window.page_label = f"{index + 1} / {total}  ·  {path.name}" if total > 1 else ""
         self._show_preview(path, self._page_mode)
 
     def _show_preview(self, path: Path, mode: str) -> None:

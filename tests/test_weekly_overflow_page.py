@@ -34,10 +34,7 @@ def _render(cfg, entries) -> int:
 
 
 def _entries(count: int) -> list[OverflowEntry]:
-    return [
-        OverflowEntry("20260401", "20260403", f"Task {n}", "20260401")
-        for n in range(count)
-    ]
+    return [OverflowEntry("20260401", "20260403", f"Task {n}", "20260401") for n in range(count)]
 
 
 def test_overflow_page_renders_without_a_visualizer_token_ctx(tmp_path):
@@ -95,7 +92,7 @@ def test_report_carries_no_weekday_header(tmp_path):
     renderer._drawing = renderer._create_drawing(cfg)
     renderer._render_overflow_svg(cfg, coords, _entries(2))
 
-    assert "Overflow" in drawn          # the section heading is drawn
+    assert "Overflow" in drawn  # the section heading is drawn
     assert not WeeklyCalendarRenderer._DAY_NAME_KEYS & set(drawn)
 
 

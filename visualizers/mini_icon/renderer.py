@@ -80,7 +80,10 @@ class MiniIconRenderer(MiniCalendarRenderer):
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
             self._draw_rect(
-                x, y, w, h,
+                x,
+                y,
+                w,
+                h,
                 fill=style.shade_color,
                 fill_opacity=style.shade_opacity,
             )
@@ -88,8 +91,14 @@ class MiniIconRenderer(MiniCalendarRenderer):
         # 2. SVG pattern decorations
         for dec in style.hash_decorations:
             self._draw_mini_svg_pattern(
-                config, x, y, w, h,
-                dec.pattern, dec.color, dec.opacity,
+                config,
+                x,
+                y,
+                w,
+                h,
+                dec.pattern,
+                dec.color,
+                dec.opacity,
             )
 
         # 3. Legacy hash pattern
@@ -99,26 +108,21 @@ class MiniIconRenderer(MiniCalendarRenderer):
         # 4. Grid lines
         if config.mini_grid_lines:
             grid_stroke_width = float(
-                grid_line.get("width") if grid_line.get("width") is not None
-                else config.mini_grid_line_width
+                grid_line.get("width") if grid_line.get("width") is not None else config.mini_grid_line_width
             )
             inset = grid_stroke_width / 2
             self._draw_rect(
-                x + inset, y + inset,
+                x + inset,
+                y + inset,
                 max(0.0, w - grid_stroke_width),
                 max(0.0, h - grid_stroke_width),
                 fill="none",
                 stroke=grid_line.get("color") or config.mini_grid_line_color,
                 stroke_width=grid_stroke_width,
                 stroke_opacity=float(
-                    grid_line.get("opacity") if grid_line.get("opacity") is not None
-                    else config.mini_grid_line_opacity
+                    grid_line.get("opacity") if grid_line.get("opacity") is not None else config.mini_grid_line_opacity
                 ),
-                stroke_dasharray=(
-                    grid_line.get("dasharray")
-                    or config.mini_grid_line_dasharray
-                    or None
-                ),
+                stroke_dasharray=(grid_line.get("dasharray") or config.mini_grid_line_dasharray or None),
             )
 
     def _draw_day_cell_foreground(
@@ -150,7 +154,9 @@ class MiniIconRenderer(MiniCalendarRenderer):
         if style.circled:
             radius = min(w, h) * 0.38
             self._draw_circle(
-                cx, cy, radius,
+                cx,
+                cy,
+                radius,
                 stroke=style.circle_color,
                 fill=style.circle_fill or "none",
                 stroke_width=float(
@@ -196,21 +202,19 @@ class MiniIconRenderer(MiniCalendarRenderer):
         # as plain text so the calendar is still usable.
         if not drawn:
             display_text = self._format_day_number(day_num, config)
-            font = (
-                config.mini_cell_bold_font if style.bold
-                else (day_text.get("font") or config.mini_cell_font)
-            )
+            font = config.mini_cell_bold_font if style.bold else (day_text.get("font") or config.mini_cell_font)
             token_size = day_text.get("size")
             if token_size is None:
-                assert config.mini_cell_font_size is not None, (
-                    "setfontsizes() must run before mini-icon renders"
-                )
+                assert config.mini_cell_font_size is not None, "setfontsizes() must run before mini-icon renders"
                 token_size = config.mini_cell_font_size
             font_size = float(token_size)
             text_y = cy + (font_size / 3)
             self._draw_text(
-                cx, text_y, display_text,
-                font, font_size,
+                cx,
+                text_y,
+                display_text,
+                font,
+                font_size,
                 fill=text_color,
                 fill_opacity=style.text_opacity,
                 anchor="middle",

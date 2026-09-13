@@ -212,9 +212,7 @@ def test_real_package_ua_2026_is_fully_nonworking(tmp_path):
     assert entries, "expected UA holidays for 2026"
     assert all(e["nonworkday"] == 1 for e in entries)
 
-    expected = holidays_lib.country_holidays(
-        "UA", years=[2026], categories=("workday",)
-    )
+    expected = holidays_lib.country_holidays("UA", years=[2026], categories=("workday",))
     for d in expected:
         assert db.is_government_nonworkday(d.strftime("%Y%m%d"), "UA") is True
 
@@ -234,9 +232,7 @@ def test_real_package_loads_beyond_public_category(tmp_path):
     """Smoke test against the installed package for a non-public category."""
     holidays_lib = pytest.importorskip("holidays")
 
-    supported = set(
-        holidays_lib.country_holidays("JP", years=[2026]).supported_categories
-    )
+    supported = set(holidays_lib.country_holidays("JP", years=[2026]).supported_categories)
     if "bank" not in supported:
         pytest.skip("installed 'holidays' has no bank category for JP")
 
@@ -248,6 +244,4 @@ def test_real_package_loads_beyond_public_category(tmp_path):
     extra = [d for d in bank_only if d not in public]
     assert extra, "expected JP bank holidays outside the public category"
     for d in extra:
-        assert db._python_holidays.get(d.strftime("%Y%m%d")), (
-            f"{d} missing from loaded holidays"
-        )
+        assert db._python_holidays.get(d.strftime("%Y%m%d")), f"{d} missing from loaded holidays"

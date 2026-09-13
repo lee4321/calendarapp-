@@ -80,12 +80,12 @@ docs/REQUIREMENTS.html, USER_GUIDE.md, ARCHITECTURE.md, changelog.md
 ```python
 @dataclass(frozen=True)
 class Link:
-    ref: str                    # source_id of the predecessor, as written
-    type: str = "FS"            # "FS" | "SS" | "FF" | "SF", upper-cased
-    lag_days: float = 0.0       # signed; 0.0 when absent or unparseable
-    lag_percent: float | None = None   # "+50%" lags
-    lag_elapsed: bool = False   # MS Project elapsed units, "+3ed"
-    lag_text: str | None = None # as written, kept for reporting
+    ref: str  # source_id of the predecessor, as written
+    type: str = "FS"  # "FS" | "SS" | "FF" | "SF", upper-cased
+    lag_days: float = 0.0  # signed; 0.0 when absent or unparseable
+    lag_percent: float | None = None  # "+50%" lags
+    lag_elapsed: bool = False  # MS Project elapsed units, "+3ed"
+    lag_text: str | None = None  # as written, kept for reporting
 ```
 
 - `parse_links(text) -> list[Link]` for the common case;
@@ -154,32 +154,32 @@ Tests build this dataset in-memory rather than depending on `calendar.db` state.
 
 ```python
 # ── Gantt: table ──────────────────────────────────────────────────────────
-gantt_columns: list[dict[str, Any]]        # see §4.2; default = the 16-column set
-gantt_table_width_ratio: float = 0.38      # table share of content width
-gantt_row_height: float = 14.0             # fixed and uniform (answer 9)
+gantt_columns: list[dict[str, Any]]  # see §4.2; default = the 16-column set
+gantt_table_width_ratio: float = 0.38  # table share of content width
+gantt_row_height: float = 14.0  # fixed and uniform (answer 9)
 gantt_header_row_height: float = 18.0
 gantt_indent_per_level: float = 8.0
 gantt_sort: list[str] = ["wbs", "start_date"]
 
 # ── Gantt: timescale ──────────────────────────────────────────────────────
-gantt_top_time_bands: list[dict[str, Any]]     # blockplan band schema (answer 17)
+gantt_top_time_bands: list[dict[str, Any]]  # blockplan band schema (answer 17)
 gantt_bottom_time_bands: list[dict[str, Any]]  # defaults to a copy of the top bands
 gantt_band_row_height: float = 10.0
 
 # ── Gantt: marks ──────────────────────────────────────────────────────────
 gantt_milestone_icon: str = "diamond-fill"
-gantt_deadline_icon: str = "square-fill"          # answer 21
-gantt_rollup_icon: str = "check"                  # answer 4
-gantt_milestone_flag_icon: str = "check"          # answer 4 (milestone column)
-gantt_snapped_event_icon: str = "arrow-left-circle"   # answer 22
-gantt_offchart_dep_icon: str = "crosssquare"          # answer 27
-gantt_continuation_icon: str = "arrow-bar-right"      # answer 16 (mirrored at the left edge)
+gantt_deadline_icon: str = "square-fill"  # answer 21
+gantt_rollup_icon: str = "check"  # answer 4
+gantt_milestone_flag_icon: str = "check"  # answer 4 (milestone column)
+gantt_snapped_event_icon: str = "arrow-left-circle"  # answer 22
+gantt_offchart_dep_icon: str = "crosssquare"  # answer 27
+gantt_continuation_icon: str = "arrow-bar-right"  # answer 16 (mirrored at the left edge)
 gantt_progress_color: str = "black"
 gantt_float_opacity_scale: float = 0.4
 
 # ── Gantt: today line (mirrors PIT, answer 32) ────────────────────────────
 gantt_show_today_line: bool = True
-gantt_today_date: str | None = None        # YYYYMMDD override, else wall clock
+gantt_today_date: str | None = None  # YYYYMMDD override, else wall clock
 
 # ── Gantt: details page ───────────────────────────────────────────────────
 include_gantt_details: bool = True

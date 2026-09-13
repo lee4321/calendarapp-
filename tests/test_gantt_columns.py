@@ -38,31 +38,37 @@ def test_default_widths_sum_to_one():
 
 
 def test_widths_are_renormalized():
-    config = column(entries=[
-        {"field": "name", "width": 3},
-        {"field": "wbs", "width": 1},
-    ])
+    config = column(
+        entries=[
+            {"field": "name", "width": 3},
+            {"field": "wbs", "width": 1},
+        ]
+    )
     widths = [col.width for col in resolve_columns(config)]
     assert widths == pytest.approx([0.75, 0.25])
 
 
 def test_unsized_columns_take_the_average_of_the_sized_ones():
-    config = column(entries=[
-        {"field": "name", "width": 2},
-        {"field": "wbs", "width": 2},
-        {"field": "notes"},
-    ])
+    config = column(
+        entries=[
+            {"field": "name", "width": 2},
+            {"field": "wbs", "width": 2},
+            {"field": "notes"},
+        ]
+    )
     widths = [col.width for col in resolve_columns(config)]
     assert widths == pytest.approx([1 / 3, 1 / 3, 1 / 3])
     assert sum(widths) == pytest.approx(1.0)
 
 
 def test_columns_without_a_field_are_dropped():
-    config = column(entries=[
-        {"field": "name", "width": 1},
-        {"header": "Oops", "width": 1},
-        "not a dict",
-    ])
+    config = column(
+        entries=[
+            {"field": "name", "width": 1},
+            {"header": "Oops", "width": 1},
+            "not a dict",
+        ]
+    )
     assert [col.field for col in resolve_columns(config)] == ["name"]
 
 
@@ -78,7 +84,7 @@ def test_header_defaults_to_the_field_name():
         ("start_date", "start"),
         ("end_date", "end"),
         ("finish", "end"),
-        ("wbs", "wbs"),               # no alias needed
+        ("wbs", "wbs"),  # no alias needed
         ("percent_complete", "percent_complete"),
     ],
 )
@@ -91,27 +97,33 @@ def test_table_column_names_resolve_to_event_attributes(field, expected_attr):
 
 
 def test_icon_columns_take_their_default_icon_from_config():
-    config = column(entries=[
-        {"field": "rollup", "width": 1, "render": "icon"},
-        {"field": "milestone", "width": 1, "render": "icon"},
-    ])
+    config = column(
+        entries=[
+            {"field": "rollup", "width": 1, "render": "icon"},
+            {"field": "milestone", "width": 1, "render": "icon"},
+        ]
+    )
     icons = [col.icon for col in resolve_columns(config)]
     assert icons == [config.gantt_rollup_icon, config.gantt_milestone_flag_icon]
 
 
 def test_explicit_icon_beats_the_default():
-    config = column(entries=[
-        {"field": "rollup", "width": 1, "render": "icon", "icon": "star"},
-    ])
+    config = column(
+        entries=[
+            {"field": "rollup", "width": 1, "render": "icon", "icon": "star"},
+        ]
+    )
     assert resolve_columns(config)[0].icon == "star"
 
 
 def test_column_x_positions_tile_the_table_width():
-    config = column(entries=[
-        {"field": "name", "width": 1},
-        {"field": "wbs", "width": 1},
-        {"field": "notes", "width": 2},
-    ])
+    config = column(
+        entries=[
+            {"field": "name", "width": 1},
+            {"field": "wbs", "width": 1},
+            {"field": "notes", "width": 2},
+        ]
+    )
     positions = column_x_positions(resolve_columns(config), 100.0, 400.0)
     assert positions == [(100.0, 100.0), (200.0, 100.0), (300.0, 200.0)]
 
@@ -134,30 +146,38 @@ def event() -> Event:
 
 
 def test_date_columns_use_arrow_formats_including_dd(event):
-    config = column(entries=[
-        {"field": "start_date", "width": 1, "date_format": "dd MM/DD/YY"},
-    ])
+    config = column(
+        entries=[
+            {"field": "start_date", "width": 1, "date_format": "dd MM/DD/YY"},
+        ]
+    )
     assert cell_value(resolve_columns(config)[0], event) == "Mo 02/02/26"
 
 
 def test_unparseable_date_passes_through(event):
-    config = column(entries=[
-        {"field": "duration_text", "width": 1, "date_format": "MM/DD/YY"},
-    ])
+    config = column(
+        entries=[
+            {"field": "duration_text", "width": 1, "date_format": "MM/DD/YY"},
+        ]
+    )
     assert cell_value(resolve_columns(config)[0], event) == "10 days"
 
 
 def test_format_spec_is_applied(event):
-    config = column(entries=[
-        {"field": "percent_complete", "width": 1, "format": "{:.0%}"},
-    ])
+    config = column(
+        entries=[
+            {"field": "percent_complete", "width": 1, "format": "{:.0%}"},
+        ]
+    )
     assert cell_value(resolve_columns(config)[0], event) == "35%"
 
 
 def test_a_format_spec_that_does_not_fit_costs_only_the_formatting(event):
-    config = column(entries=[
-        {"field": "task_name", "width": 1, "format": "{:.0%}"},
-    ])
+    config = column(
+        entries=[
+            {"field": "task_name", "width": 1, "format": "{:.0%}"},
+        ]
+    )
     assert cell_value(resolve_columns(config)[0], event) == "Ledger Migration"
 
 
@@ -167,10 +187,12 @@ def test_missing_values_render_empty(event):
 
 
 def test_icon_columns_have_no_text_but_report_visibility(event):
-    config = column(entries=[
-        {"field": "milestone", "width": 1, "render": "icon"},
-        {"field": "rollup", "width": 1, "render": "icon"},
-    ])
+    config = column(
+        entries=[
+            {"field": "milestone", "width": 1, "render": "icon"},
+            {"field": "rollup", "width": 1, "render": "icon"},
+        ]
+    )
     milestone, rollup = resolve_columns(config)
     assert cell_value(milestone, event) == ""
     assert cell_icon_visible(milestone, event) is True

@@ -1,4 +1,5 @@
 """Tests for the excelblockplan Excel workbook generator."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -43,9 +44,7 @@ class _BaseDB(FakeCalendarDB):
         return daykey in self.NONWORK_KEYS
 
     def is_government_nonworkday(self, daykey, country=None):
-        return daykey in {
-            k for k, v in self.HOLIDAYS.items() if any(h.get("nonworkday") for h in v)
-        }
+        return daykey in {k for k, v in self.HOLIDAYS.items() if any(h.get("nonworkday") for h in v)}
 
     def get_all_events_in_range(self, start, end):
         return list(self.EVENTS)
@@ -136,9 +135,7 @@ def test_excelblockplan_column_header_row_has_every_label(tmp_path):
     ws = wb.active
     header_row = 2  # 1 timeband row + 1 column-header row
     expected = [name for name, _w in FIXED_COLUMNS]
-    headers = [
-        ws.cell(row=header_row, column=c).value for c in range(1, LABEL_COL_END + 1)
-    ]
+    headers = [ws.cell(row=header_row, column=c).value for c in range(1, LABEL_COL_END + 1)]
     assert headers == expected
     # Continuation column is reserved for the icon — header cell is empty
     assert ws.cell(row=header_row, column=CONTINUATION_COL).value in ("", None)
@@ -151,9 +148,7 @@ def test_excelblockplan_every_events_table_column_is_mapped():
     A column present in FIXED_COLUMNS but absent from _EVENT_FIELD_MAP would
     silently write blanks for the whole sheet.
     """
-    unmapped = [
-        name for name, _w in FIXED_COLUMNS if name not in _EVENT_FIELD_MAP
-    ]
+    unmapped = [name for name, _w in FIXED_COLUMNS if name not in _EVENT_FIELD_MAP]
     assert not unmapped, f"label columns with no events-table source: {unmapped}"
 
 
@@ -181,9 +176,7 @@ def test_excelblockplan_events_each_on_own_row_ordered_by_start(tmp_path):
     for row in range(data_start, data_start + 3):
         for col in range(1, LABEL_COL_END + 1):
             cell = ws.cell(row=row, column=col)
-            assert not isinstance(cell, MergedCell), (
-                f"cell {col},{row} is a merged cell — data rows must be unmerged"
-            )
+            assert not isinstance(cell, MergedCell), f"cell {col},{row} is a merged cell — data rows must be unmerged"
 
 
 def test_excelblockplan_event_icon_placed_in_start_date_column(tmp_path):
@@ -234,9 +227,7 @@ def test_excelblockplan_duration_fills_day_columns_between_start_and_end(tmp_pat
     # Jan 12 = visible day 5 (0-indexed); Jan 16 = visible day 9.
     for offset in range(5, 10):
         cell = ws.cell(row=data_row, column=FIRST_DATE_COL + offset)
-        assert cell.fill.fill_type == "solid", (
-            f"day offset {offset} should have a solid fill from the duration"
-        )
+        assert cell.fill.fill_type == "solid", f"day offset {offset} should have a solid fill from the duration"
     # Day immediately before start should NOT be filled.
     pre = ws.cell(row=data_row, column=FIRST_DATE_COL + 4)
     assert pre.fill.fill_type is None
@@ -256,9 +247,7 @@ def test_excelblockplan_holiday_overlays_duration_with_pattern(tmp_path):
             _event(eid=1, name="Long task", start="20260112", end="20260123", color="#4472C4"),
         ]
         HOLIDAYS: ClassVar[dict[str, list[dict]]] = {
-            "20260119": [
-                {"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}
-            ]
+            "20260119": [{"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}]
         }
         NONWORK_KEYS: ClassVar[set[str]] = {"20260119"}
 
@@ -305,9 +294,7 @@ def test_excelblockplan_no_freeze_panes(tmp_path):
     generate_excel_blockplan(cfg, _BaseDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    assert ws.freeze_panes in (None, ""), (
-        f"excelblockplan should not freeze panes, got {ws.freeze_panes!r}"
-    )
+    assert ws.freeze_panes in (None, ""), f"excelblockplan should not freeze panes, got {ws.freeze_panes!r}"
 
 
 def test_excelblockplan_default_output_filename(tmp_path, monkeypatch):
@@ -323,9 +310,12 @@ def test_excelblockplan_default_output_filename(tmp_path, monkeypatch):
     db_path = repo_root / "calendar.db"
     rc = ecalendar.run(
         [
-            "ecalendar.py", "excelblockplan",
-            "20260105", "20260109",
-            "--database", str(db_path),
+            "ecalendar.py",
+            "excelblockplan",
+            "20260105",
+            "20260109",
+            "--database",
+            str(db_path),
             "--quiet",
         ]
     )
@@ -450,8 +440,7 @@ def test_excelblockplan_multi_day_band_segments_are_merged(tmp_path):
     ws = openpyxl.load_workbook(str(out)).active
 
     assert any(
-        r.min_row == 1 and r.min_col == FIRST_DATE_COL and r.max_col > FIRST_DATE_COL
-        for r in ws.merged_cells.ranges
+        r.min_row == 1 and r.min_col == FIRST_DATE_COL and r.max_col > FIRST_DATE_COL for r in ws.merged_cells.ranges
     ), "expected a merged month segment starting at the first day column"
 
 
@@ -465,9 +454,7 @@ def test_excelblockplan_holiday_shades_header_and_empty_day_cells(tmp_path):
     class _DB(_BaseDB):
         EVENTS: ClassVar[list[dict]] = [_event(eid=1, name="Kickoff", start="20260106")]
         HOLIDAYS: ClassVar[dict[str, list[dict]]] = {
-            "20260119": [
-                {"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}
-            ]
+            "20260119": [{"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}]
         }
         NONWORK_KEYS: ClassVar[set[str]] = {"20260119"}
 
@@ -493,7 +480,8 @@ def test_excelblockplan_vertical_lines_become_right_borders(tmp_path):
     ws = openpyxl.load_workbook(str(out)).active
 
     bordered = [
-        col for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 15)
+        col
+        for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 15)
         if ws.cell(row=2, column=col).border.right.border_style not in (None, "none")
     ]
     assert bordered, "expected right borders from vertical_lines on the column-header row"

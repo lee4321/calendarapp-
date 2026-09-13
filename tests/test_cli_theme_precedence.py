@@ -68,9 +68,7 @@ def test_override_table_matches_parser_dests_and_defaults():
     sentinel its kind relies on: None for "value" rows (so ``is not None``
     means explicitly given), False for "enable"/"disable" store_true flags."""
     parser = ecalendar._create_argument_parser("x.svg")
-    sub = next(
-        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
-    )
+    sub = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
     defaults: dict[str, set] = {}
     for subparser in sub.choices.values():
         try:
@@ -88,9 +86,7 @@ def test_override_table_matches_parser_dests_and_defaults():
 
 def test_override_table_targets_real_config_fields():
     config = create_calendar_config()
-    missing = [
-        attr for _, attr, _ in _CLI_CONFIG_OVERRIDES if not hasattr(config, attr)
-    ]
+    missing = [attr for _, attr, _ in _CLI_CONFIG_OVERRIDES if not hasattr(config, attr)]
     assert not missing, f"table targets unknown CalendarConfig fields: {missing}"
 
 

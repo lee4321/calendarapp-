@@ -112,9 +112,7 @@ def test_migration_preserves_existing_rows(legacy_db):
 
     conn = sqlite3.connect(legacy_db)
     try:
-        row = conn.execute(
-            "SELECT name, start_date, end_date, source_id, cost FROM events"
-        ).fetchone()
+        row = conn.execute("SELECT name, start_date, end_date, source_id, cost FROM events").fetchone()
     finally:
         conn.close()
 
@@ -190,9 +188,7 @@ def test_migration_skips_a_database_without_an_events_table(tmp_path):
         conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)")
         conn.commit()
         assert migrate_events_table(conn) == []
-        tables = {
-            r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        }
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert tables == {"notes"}
     finally:
         conn.close()

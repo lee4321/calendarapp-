@@ -258,9 +258,7 @@ class ThirteenPeriodCalendar(FiscalCalendar):
                     period_name=f"Period {period_num}",
                     period_short_name=f"P{period_num}",
                     is_period_start=(d == period_start),
-                    is_quarter_start=(
-                        d == period_start and period_num in (1, 4, 7, 10)
-                    ),
+                    is_quarter_start=(d == period_start and period_num in (1, 4, 7, 10)),
                     is_fiscal_year_start=(d == fy_start),
                 )
 
@@ -300,9 +298,7 @@ def create_fiscal_calendar(calendar_type: str) -> FiscalCalendar:
     cls = FISCAL_CALENDAR_TYPES.get(calendar_type)
     if cls is None:
         available = ", ".join(sorted(FISCAL_CALENDAR_TYPES.keys()))
-        raise ValueError(
-            f"Unknown fiscal calendar type: {calendar_type!r}. Available: {available}"
-        )
+        raise ValueError(f"Unknown fiscal calendar type: {calendar_type!r}. Available: {available}")
     return cls()
 
 

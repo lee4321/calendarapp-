@@ -23,9 +23,7 @@ def config() -> CalendarConfig:
 
 def test_wbs_segments_compare_numerically_not_lexically(config):
     """The ordering plain string comparison gets wrong: 1.9 before 1.10."""
-    rows = build_rows(
-        [event("nine", "1.9"), event("ten", "1.10"), event("two", "1.2")], config
-    )
+    rows = build_rows([event("nine", "1.9"), event("ten", "1.10"), event("two", "1.2")], config)
     assert [row.event.task_name for row in rows] == ["two", "nine", "ten"]
 
 
@@ -33,7 +31,12 @@ def test_deep_hierarchies_order_by_each_segment(config):
     codes = ["1.10.1", "1.2", "1.2.10", "1.2.2", "1", "2"]
     rows = build_rows([event(code, code) for code in codes], config)
     assert [row.event.task_name for row in rows] == [
-        "1", "1.2", "1.2.2", "1.2.10", "1.10.1", "2",
+        "1",
+        "1.2",
+        "1.2.2",
+        "1.2.10",
+        "1.10.1",
+        "2",
     ]
 
 
@@ -60,7 +63,9 @@ def test_rows_without_wbs_follow_every_wbs_row(config):
         config,
     )
     assert [row.event.task_name for row in rows] == [
-        "numbered", "loose early", "loose late",
+        "numbered",
+        "loose early",
+        "loose late",
     ]
 
 
@@ -88,9 +93,7 @@ def test_depth_counts_wbs_segments(wbs, expected):
 
 
 def test_rows_carry_their_depth_and_order(config):
-    rows = build_rows(
-        [event("child", "1.1"), event("parent", "1"), event("loose")], config
-    )
+    rows = build_rows([event("child", "1.1"), event("parent", "1"), event("loose")], config)
     assert [(row.event.task_name, row.depth, row.index) for row in rows] == [
         ("parent", 0, 0),
         ("child", 1, 1),
@@ -103,8 +106,7 @@ def test_rows_carry_their_depth_and_order(config):
 
 def test_accepts_database_dicts_as_well_as_events(config):
     rows = build_rows(
-        [{"Task_Name": "from dict", "Start": "20260202", "End": "20260202",
-          "WBS": "1.1"}],
+        [{"Task_Name": "from dict", "Start": "20260202", "End": "20260202", "WBS": "1.1"}],
         config,
     )
     assert rows[0].event.task_name == "from dict"
@@ -126,7 +128,8 @@ def test_sorting_tolerates_mixed_types_in_one_field(config):
         Event(task_name="number", start="20260202", end="20260202", priority=2),
     ]
     assert [row.event.task_name for row in build_rows(events, config)] == [
-        "number", "text",
+        "number",
+        "text",
     ]
 
 

@@ -35,8 +35,12 @@ class _DummyDB(FakeCalendarDB):
         return {
             name: '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>'
             for name in (
-                "diamond-fill", "square-fill", "check",
-                "arrow-left-circle", "arrow-bar-left", "arrow-bar-right",
+                "diamond-fill",
+                "square-fill",
+                "check",
+                "arrow-left-circle",
+                "arrow-bar-left",
+                "arrow-bar-right",
                 "crosssquare",
             )
         }
@@ -89,9 +93,7 @@ class _CaptureRenderer(GanttRenderer):
         return f"{kwargs.get('prefix', 'marker')}-{kind}"
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icons.append(
-            {"icon": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs}
-        )
+        self.icons.append({"icon": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs})
         return True
 
     def _load_icon_svg_cache(self, db):
@@ -103,8 +105,7 @@ class _CaptureRenderer(GanttRenderer):
         return [item for item in collection if item.get("css_class") == css_class]
 
 
-def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None,
-           **config_overrides):
+def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None, **config_overrides):
     """Render *events* over a short range; return the capturing renderer."""
     config = create_calendar_config()
     config.pageX, config.pageY = 1000.0, 400.0
@@ -140,9 +141,14 @@ def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None
 def task(**overrides) -> dict:
     """One events-table row, in the PascalCase shape the DB returns."""
     row = {
-        "Task_Name": "Task", "Start": "20260203", "End": "20260205",
-        "WBS": "1", "Status": "active", "Percent_Complete": 0.0,
-        "Rollup": 0, "Milestone": 0,
+        "Task_Name": "Task",
+        "Start": "20260203",
+        "End": "20260205",
+        "WBS": "1",
+        "Status": "active",
+        "Percent_Complete": 0.0,
+        "Rollup": 0,
+        "Milestone": 0,
     }
     row.update(overrides)
     return row
@@ -173,9 +179,7 @@ def test_a_single_day_event_is_one_column_wide():
 
 def test_the_event_color_wins_over_the_theme_default():
     renderer = render([task(Color="rebeccapurple")])
-    assert renderer.of_class(renderer.rects, "ec-duration-bar")[0]["fill"] == (
-        "rebeccapurple"
-    )
+    assert renderer.of_class(renderer.rects, "ec-duration-bar")[0]["fill"] == ("rebeccapurple")
 
 
 def test_a_style_rule_wins_over_the_event_color():
@@ -204,9 +208,7 @@ def test_a_style_rule_that_does_not_match_leaves_the_bar_alone():
         [task(Color="rebeccapurple", Resource_Group="Delivery")],
         theme_style_rules=[rule],
     )
-    assert renderer.of_class(renderer.rects, "ec-duration-bar")[0]["fill"] == (
-        "rebeccapurple"
-    )
+    assert renderer.of_class(renderer.rects, "ec-duration-bar")[0]["fill"] == ("rebeccapurple")
 
 
 # ── Progress ──────────────────────────────────────────────────────────────
@@ -240,12 +242,16 @@ def test_progress_defaults_to_black():
 
 
 def test_float_dates_draw_bars_at_reduced_opacity():
-    renderer = render([
-        task(
-            Start="20260204", End="20260206",
-            Earliest_Start_Date="20260202", Latest_End_Date="20260210",
-        )
-    ])
+    renderer = render(
+        [
+            task(
+                Start="20260204",
+                End="20260206",
+                Earliest_Start_Date="20260202",
+                Latest_End_Date="20260210",
+            )
+        ]
+    )
     floats = renderer.of_class(renderer.rects, "ec-float-bar")
     assert len(floats) == 2
     assert all(f["fill_opacity"] < 1.0 for f in floats)
@@ -269,16 +275,14 @@ def test_the_bracket_faces_downward_at_both_ends():
     renderer = render([task(Rollup=1)])
     segments = renderer.of_class(renderer.polylines, "ec-rollup-bracket")[0]["segments"]
     left, top, right = segments
-    assert left[0] == left[2]          # vertical at the start
-    assert top[1] == top[3]            # horizontal across the span
-    assert right[0] == right[2]        # vertical at the end
-    assert left[1] > left[3]           # ends drop below the top bar
+    assert left[0] == left[2]  # vertical at the start
+    assert top[1] == top[3]  # horizontal across the span
+    assert right[0] == right[2]  # vertical at the end
+    assert left[1] > left[3]  # ends drop below the top bar
 
 
 def test_a_rollup_gets_no_progress_or_float():
-    renderer = render([
-        task(Rollup=1, Percent_Complete=0.9, Earliest_Start_Date="20260202")
-    ])
+    renderer = render([task(Rollup=1, Percent_Complete=0.9, Earliest_Start_Date="20260202")])
     assert renderer.of_class(renderer.lines, "ec-progress-line") == []
     assert renderer.of_class(renderer.rects, "ec-float-bar") == []
 
@@ -296,9 +300,7 @@ def test_the_milestone_anchors_on_the_end_date():
     renderer = render([task(Milestone=1, Start="20260203", End="20260210")])
     marker = renderer.of_class(renderer.icons, "ec-milestone-marker")[0]
     # 10 Feb is the 7th working column (index 6); the glyph centers on it.
-    assert marker["x"] == pytest.approx(
-        renderer.chart_x + renderer.day_w * 6.5
-    )
+    assert marker["x"] == pytest.approx(renderer.chart_x + renderer.day_w * 6.5)
 
 
 # ── Deadlines ─────────────────────────────────────────────────────────────
@@ -377,32 +379,24 @@ def test_holidays_on_working_days_are_shaded_not_reported():
 
 
 def test_the_today_line_draws_at_the_configured_date():
-    renderer = render(
-        [task()], gantt_show_today_line=True, gantt_today_date="20260205"
-    )
+    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20260205")
     lines = renderer.of_class(renderer.lines, "ec-today-line")
     assert len(lines) == 1
     assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 3)
 
 
 def test_a_today_date_outside_the_range_draws_nothing():
-    renderer = render(
-        [task()], gantt_show_today_line=True, gantt_today_date="20270101"
-    )
+    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20270101")
     assert renderer.of_class(renderer.lines, "ec-today-line") == []
 
 
 def test_the_today_line_can_be_switched_off():
-    renderer = render(
-        [task()], gantt_show_today_line=False, gantt_today_date="20260205"
-    )
+    renderer = render([task()], gantt_show_today_line=False, gantt_today_date="20260205")
     assert renderer.of_class(renderer.lines, "ec-today-line") == []
 
 
 def test_a_today_date_on_a_hidden_day_snaps_to_the_next_column():
-    renderer = render(
-        [task()], gantt_show_today_line=True, gantt_today_date="20260207"
-    )
+    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20260207")
     lines = renderer.of_class(renderer.lines, "ec-today-line")
     assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 5)
 
@@ -413,6 +407,7 @@ def test_a_today_date_on_a_hidden_day_snaps_to_the_next_column():
 # the glyph's middle sits 0.3 * size *above* the baseline it is given. Every
 # call site used to work that offset out for itself and most got it wrong,
 # leaving icons sitting low in their row — milestones by 0.2 * size.
+
 
 #: Where a glyph's middle lands for a given baseline (see _draw_icon_svg).
 def _glyph_mid(icon: dict) -> float:
@@ -439,7 +434,8 @@ def test_a_milestone_glyph_is_centred_in_its_row():
 def test_a_deadline_glyph_is_centred_in_its_row():
     renderer = render([task(Deadline="20260210")])
     marks = [
-        i for i in renderer.of_class(renderer.icons, "ec-event-icon")
+        i
+        for i in renderer.of_class(renderer.icons, "ec-event-icon")
         if i["icon"] == renderer.config.gantt_deadline_icon
     ]
     assert marks

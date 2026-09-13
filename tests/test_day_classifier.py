@@ -1,4 +1,5 @@
 """Tests for shared.day_classifier."""
+
 from datetime import date
 
 import pytest
@@ -83,7 +84,7 @@ def test_classify_days_batch():
     c = _cfg(weekend_days=[5, 6])
     days = [date(2026, 5, 1), date(2026, 5, 2), date(2026, 5, 3)]
     out = classify_days(days, None, c)
-    assert out[date(2026, 5, 1)] == frozenset()      # Fri
+    assert out[date(2026, 5, 1)] == frozenset()  # Fri
     assert out[date(2026, 5, 2)] == frozenset({"weekend"})
     assert out[date(2026, 5, 3)] == frozenset({"weekend"})
 

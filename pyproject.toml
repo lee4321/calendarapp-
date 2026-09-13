@@ -38,6 +38,7 @@ no-binary-package = ["pillow"]
 exclude = ["vendor", ".claude"]
 
 [tool.ruff]
+line-length = 120
 extend-exclude = ["vendor", ".claude"]
 
 [tool.ruff.lint]

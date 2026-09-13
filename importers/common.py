@@ -31,9 +31,7 @@ from dateutil.parser import parse as dateutil_parse
 from shared.db_access import CalendarDB
 
 
-def setup_logging(
-    module_name: str, log_file: str | None = None, level: str = "info"
-) -> logging.Logger:
+def setup_logging(module_name: str, log_file: str | None = None, level: str = "info") -> logging.Logger:
     """Configure logging to file and console.
 
     Args:
@@ -452,18 +450,12 @@ class ImportDatabase:
 
             self.extra_migrations(conn)
 
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS import_sequence (next_id INTEGER NOT NULL)"
-            )
+            conn.execute("CREATE TABLE IF NOT EXISTS import_sequence (next_id INTEGER NOT NULL)")
             cursor = conn.execute("SELECT COUNT(*) FROM import_sequence")
             if cursor.fetchone()[0] == 0:
-                cursor = conn.execute(
-                    "SELECT COALESCE(MAX(id), 0) + 1 FROM import_history"
-                )
+                cursor = conn.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM import_history")
                 next_id = cursor.fetchone()[0]
-                conn.execute(
-                    "INSERT INTO import_sequence (next_id) VALUES (?)", (next_id,)
-                )
+                conn.execute("INSERT INTO import_sequence (next_id) VALUES (?)", (next_id,))
             conn.commit()
 
     def extra_migrations(self, conn) -> None:
@@ -517,9 +509,7 @@ class ImportDatabase:
 
     def delete_by_import_id(self, cursor, import_id):
         """Delete this importer's rows from a previous import (for --replace)."""
-        cursor.execute(
-            f"DELETE FROM {self.ROW_TABLE} WHERE import_id = ?", (import_id,)
-        )
+        cursor.execute(f"DELETE FROM {self.ROW_TABLE} WHERE import_id = ?", (import_id,))
         return cursor.rowcount
 
     def delete_import_record(self, cursor, import_id):
@@ -599,28 +589,20 @@ def list_import_history(db: ImportDatabase, log) -> None:
             return
 
         log("\nImport History:")
-        log(
-            f"  {'ID':>4}  {'Filename':<20}  {'Date':<19}  {'Rows':>6}  {'Hash (first 8)':<14}  {'Command'}"
-        )
-        log(
-            f"  {'--':>4}  {'-' * 20}  {'-' * 19}  {'------':>6}  {'-' * 14}  {'-' * 50}"
-        )
+        log(f"  {'ID':>4}  {'Filename':<20}  {'Date':<19}  {'Rows':>6}  {'Hash (first 8)':<14}  {'Command'}")
+        log(f"  {'--':>4}  {'-' * 20}  {'-' * 19}  {'------':>6}  {'-' * 14}  {'-' * 50}")
 
         total_rows = 0
         for row in imports:
             import_id, _userid, filename, date, filehash, row_count, command = row
             display_name = (
-                filename[:20]
-                if filename and len(filename) <= 20
-                else (filename[:17] + "..." if filename else "")
+                filename[:20] if filename and len(filename) <= 20 else (filename[:17] + "..." if filename else "")
             )
             display_date = date[:19] if date else ""
             short_hash = filehash[:8] if filehash else ""
             display_command = ""
             if command:
-                display_command = (
-                    command if len(command) <= 50 else command[:47] + "..."
-                )
+                display_command = command if len(command) <= 50 else command[:47] + "..."
 
             log(
                 f"  {import_id:>4}  {display_name:<20}  {display_date:<19}  {row_count:>6}  {short_hash:<14}  {display_command}"
@@ -646,12 +628,8 @@ def remove_import(db: ImportDatabase, import_id, log, force=False, verbose=False
 
     if not force:
         display_date = date[:19] if date else ""
-        log(
-            f"Import ID {import_id}: {filename} ({row_count} {unit}, imported {display_date})"
-        )
-        response = input(
-            f"Are you sure you want to delete this import and all its {unit}? [y/N]: "
-        )
+        log(f"Import ID {import_id}: {filename} ({row_count} {unit}, imported {display_date})")
+        response = input(f"Are you sure you want to delete this import and all its {unit}? [y/N]: ")
         if response.lower() != "y":
             log("Cancelled.")
             return False

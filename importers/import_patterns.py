@@ -58,9 +58,7 @@ def load_svgs(folder: Path, db_path: Path, replace: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Import SVG files into the calendar.db patterns table."
-    )
+    parser = argparse.ArgumentParser(description="Import SVG files into the calendar.db patterns table.")
     parser.add_argument("folder", help="Folder containing .svg files")
     parser.add_argument(
         "--db",

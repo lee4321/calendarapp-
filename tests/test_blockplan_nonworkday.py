@@ -1,4 +1,5 @@
 """Tests for blockplan non-workday fill rules on date/dow timebands."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -52,14 +53,12 @@ def _cfg(output: Path) -> CalendarConfig:
     c.pageX, c.pageY = 792.0, 1224.0
     c = setfontsizes(c)
     c.weekend_style = 1  # show weekends so Sat/Sun columns exist
-    c.userstart = "20260209"    # Mon
-    c.userend = "20260220"      # Fri
+    c.userstart = "20260209"  # Mon
+    c.userend = "20260220"  # Fri
     c.adjustedstart = "20260209"
     c.adjustedend = "20260220"
     c.outputfile = str(output)
-    c.blockplan_top_time_bands = [
-        {"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}
-    ]
+    c.blockplan_top_time_bands = [{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}]
     c.blockplan_bottom_time_bands = []
     c.blockplan_swimlanes = [{"name": "Lane", "match": {}}]
     return c
@@ -77,11 +76,11 @@ def test_nonworkday_fill_applied_from_config_default(tmp_path):
 
     band_rects = [rc for rc in r.rects if rc.get("css_class") == "ec-band-cell"]
     # Weekend cells should have grey fill
-    assert any(rc.get("fill") == "#CCCCCC" for rc in band_rects), \
-        "expected weekend cells to be filled with #CCCCCC"
+    assert any(rc.get("fill") == "#CCCCCC" for rc in band_rects), "expected weekend cells to be filled with #CCCCCC"
     # Federal holiday cell should have red fill
-    assert any(rc.get("fill") == "#FF0000" for rc in band_rects), \
+    assert any(rc.get("fill") == "#FF0000" for rc in band_rects), (
         "expected federal holiday cell to be filled with #FF0000"
+    )
 
 
 def test_fill_rules_override_global_default(tmp_path):
@@ -106,10 +105,10 @@ def test_fill_rules_override_global_default(tmp_path):
     r.render(cfg, coords, events=[], db=_NonworkDB())
 
     band_rects = [rc for rc in r.rects if rc.get("css_class") == "ec-band-cell"]
-    assert any(rc.get("fill") == "#FFD700" for rc in band_rects), \
-        "band-level fill_rule should override config default"
-    assert not any(rc.get("fill") == "#FF0000" for rc in band_rects), \
+    assert any(rc.get("fill") == "#FFD700" for rc in band_rects), "band-level fill_rule should override config default"
+    assert not any(rc.get("fill") == "#FF0000" for rc in band_rects), (
         "config default should not apply when fill_rules matched"
+    )
 
 
 def test_no_fill_when_nothing_configured(tmp_path):

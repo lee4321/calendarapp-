@@ -38,7 +38,7 @@ AVAILABLE = (
     [
         (1, "circle-1"),
         (100, "circle-100"),
-        (101, "darkcircle-01"),   # second family, zero-padded spelling
+        (101, "darkcircle-01"),  # second family, zero-padded spelling
         (109, "darkcircle-09"),
         (110, "darkcircle-10"),
         (200, "darkcircle-100"),
@@ -105,27 +105,22 @@ def test_a_link_across_pages_is_numbered_on_its_source_event():
 
 def test_one_number_covers_every_successor_an_event_cannot_reach():
     """Answer 3: one stub, one icon, stamped on each far row."""
-    references, _unnumbered = assign(
-        [link(9, 0), link(10, 0), link(11, 0)], {0: 0, 9: 9, 10: 9, 11: 9}
-    )
+    references, _unnumbered = assign([link(9, 0), link(10, 0), link(11, 0)], {0: 0, 9: 9, 10: 9, 11: 9})
     assert list(references) == [0]
     assert references[0].target_indexes == (9, 10, 11)
     assert references[0].number == 1
 
 
 def test_a_repeated_pair_does_not_duplicate_a_target():
-    references, _unnumbered = assign(
-        [link(9, 0, "FS"), link(9, 0, "SS")], {0: 0, 9: 9}
-    )
+    references, _unnumbered = assign([link(9, 0, "FS"), link(9, 0, "SS")], {0: 0, 9: 9})
     assert references[0].target_indexes == (9,)
 
 
 def test_separate_source_events_get_separate_numbers_in_row_order():
-    references, _unnumbered = assign(
-        [link(9, 3), link(9, 1)], {1: 0, 3: 0, 9: 9}
-    )
+    references, _unnumbered = assign([link(9, 3), link(9, 1)], {1: 0, 3: 0, 9: 9})
     assert [(index, ref.number) for index, ref in sorted(references.items())] == [
-        (1, 1), (3, 2),
+        (1, 1),
+        (3, 2),
     ]
 
 
@@ -139,9 +134,7 @@ def test_numbering_stops_when_the_icons_run_out():
     """Exhaustion degrades quietly; it never wraps onto a used number."""
     dependencies = [link(100 + n, n) for n in range(4)]
     blocks = {n: 0 for n in range(4)} | {100 + n: 100 for n in range(4)}
-    references, _unnumbered = assign(
-        dependencies, blocks, families=["circle-"], family_size=2
-    )
+    references, _unnumbered = assign(dependencies, blocks, families=["circle-"], family_size=2)
     assert sorted(ref.number for ref in references.values()) == [1, 2]
 
 
@@ -149,9 +142,7 @@ def test_numbering_stops_when_the_icons_run_out():
 
 
 def paged_tasks(count: int = 12) -> list[dict]:
-    return [
-        task(Task_Name=f"t{n}", Source_ID=str(n), WBS=f"1.{n}") for n in range(count)
-    ]
+    return [task(Task_Name=f"t{n}", Source_ID=str(n), WBS=f"1.{n}") for n in range(count)]
 
 
 def render_paged(tasks, tmp_path, **overrides):
@@ -166,7 +157,7 @@ def render_paged(tasks, tmp_path, **overrides):
 
 def test_a_cross_page_link_is_numbered_at_both_ends(tmp_path):
     tasks = paged_tasks()
-    tasks[11]["Predecessors"] = "0"           # first row feeds the last
+    tasks[11]["Predecessors"] = "0"  # first row feeds the last
     renderer = render_paged(tasks, tmp_path)
 
     assert len(renderer._references) == 1
@@ -191,7 +182,7 @@ def test_the_reference_is_reported_with_its_icon(tmp_path):
     entries = [e for e in renderer.exceptions if e.kind == KIND_OFFCHART_DEPENDENCY]
     assert len(entries) == 1
     assert entries[0].detail.startswith("circle-1: ")
-    assert "t0" in entries[0].detail          # names the far end
+    assert "t0" in entries[0].detail  # names the far end
     assert entries[0].task == "t11"
 
 
@@ -214,7 +205,7 @@ def test_one_event_feeding_several_off_page_rows_draws_one_stub(tmp_path):
 
 def test_a_same_page_link_still_draws_a_real_arrow(tmp_path):
     tasks = paged_tasks()
-    tasks[1]["Predecessors"] = "0"            # adjacent rows, same page
+    tasks[1]["Predecessors"] = "0"  # adjacent rows, same page
     renderer = render_paged(tasks, tmp_path)
 
     assert renderer._references == {}
@@ -234,15 +225,12 @@ def test_an_unresolvable_reference_stays_unnumbered(tmp_path):
 
 def test_a_row_referenced_by_several_events_caps_its_icons(tmp_path):
     tasks = paged_tasks()
-    tasks[11]["Predecessors"] = "0,1,2"       # three off-page sources
+    tasks[11]["Predecessors"] = "0,1,2"  # three off-page sources
     renderer = render_paged(tasks, tmp_path, gantt_link_ref_max_icons=2)
 
     assert len(renderer._references) == 3
     assert renderer._reference_marks[11] == ["circle-1", "circle-2", "circle-3"]
 
     chart_x = renderer.chart_x
-    in_column = [
-        i for i in renderer.icons
-        if i["x"] < chart_x and i["icon"].startswith("circle-")
-    ]
+    in_column = [i for i in renderer.icons if i["x"] < chart_x and i["icon"].startswith("circle-")]
     assert len(in_column) == 2, "capped by gantt_link_ref_max_icons"

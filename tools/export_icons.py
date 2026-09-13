@@ -108,9 +108,7 @@ def export_icons(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Export SVG icons from the calendar.db icon table."
-    )
+    parser = argparse.ArgumentParser(description="Export SVG icons from the calendar.db icon table.")
     parser.add_argument("folder", help="destination folder (created if missing)")
     parser.add_argument(
         "--db",

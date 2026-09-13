@@ -162,10 +162,18 @@ class TimelineRenderer(BaseSVGRenderer):
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "timeline"
     TOKENS = (
-        "text:event_name", "text:event_notes", "text:event_date",
-        "text:duration_date", "text:label", "text:today_label",
-        "line:axis", "line:today", "line:tick", "line:duration_bar",
-        "icon:event", "icon:milestone",
+        "text:event_name",
+        "text:event_notes",
+        "text:event_date",
+        "text:duration_date",
+        "text:label",
+        "text:today_label",
+        "line:axis",
+        "line:today",
+        "line:tick",
+        "line:duration_bar",
+        "icon:event",
+        "icon:milestone",
     )
 
     #: Outermost ink drawn beside a vertical axis — tick dates, holiday
@@ -207,9 +215,7 @@ class TimelineRenderer(BaseSVGRenderer):
         for its name breaks the name over two rows instead — see
         :py:meth:`_duration_cells`.)
         """
-        area_x, area_y, area_w, area_h = coordinates.get(
-            "TimelineArea", (0.0, 0.0, config.pageX, config.pageY)
-        )
+        area_x, area_y, area_w, area_h = coordinates.get("TimelineArea", (0.0, 0.0, config.pageX, config.pageY))
 
         # Timeline is a continuous time axis — use the user-typed range so the
         # axis edges match the requested dates exactly. Fall back to the
@@ -251,9 +257,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # One color per WBS group for the whole chart, so a phase's events,
         # milestones and bars match instead of each layout cycling its own
         # palette independently.
-        group_colors = self._wbs_group_colors(
-            config, list(point_events) + list(duration_events)
-        )
+        group_colors = self._wbs_group_colors(config, list(point_events) + list(duration_events))
 
         # Compute the axis geometry for the chosen orientation. axis_origin
         # is the (x, y) where the 1-D idealPos=0 maps in absolute SVG. For
@@ -327,9 +331,7 @@ class TimelineRenderer(BaseSVGRenderer):
             label_bounds = (area_x + _edge_inset, area_x + area_w - _edge_inset)
         else:
             room_low = max(0.0, axis_origin[0] - (area_x + top_bands_h))
-            room_high = max(
-                0.0, (area_x + area_w - bottom_bands_h) - axis_origin[0]
-            )
+            room_high = max(0.0, (area_x + area_w - bottom_bands_h) - axis_origin[0])
             label_bounds = (area_y + _edge_inset, area_y + area_h - _edge_inset)
         callout_room = self._callout_room(orient, label_side, room_low, room_high)
 
@@ -386,27 +388,22 @@ class TimelineRenderer(BaseSVGRenderer):
         leader_style = config.get_line_style("ec-callout-leader")
         leader_stroke_width = leader_style.width or 1.25
         leader_opacity = leader_style.opacity or 0.75
-        leader_dasharray = (
-            leader_style.dasharray
-            or config.timeline_connector_stroke_dasharray
-            or None
-        )
+        leader_dasharray = leader_style.dasharray or config.timeline_connector_stroke_dasharray or None
         ox, oy = axis_origin
         for callout in callouts:
             if not callout.leader_path_d:
                 continue
-            dash_attr = (
-                f' stroke-dasharray="{leader_dasharray}"'
-                if leader_dasharray else ""
+            dash_attr = f' stroke-dasharray="{leader_dasharray}"' if leader_dasharray else ""
+            self.drawing.append(
+                drawsvg.Raw(
+                    f'<g transform="translate({ox:.2f},{oy:.2f})" '
+                    f'class="ec-callout-leader">'
+                    f'<path d="{callout.leader_path_d}" '
+                    f'stroke="{callout.color}" stroke-width="{leader_stroke_width}" '
+                    f'stroke-opacity="{leader_opacity}" fill="none"{dash_attr}/>'
+                    f"</g>"
+                )
             )
-            self.drawing.append(drawsvg.Raw(
-                f'<g transform="translate({ox:.2f},{oy:.2f})" '
-                f'class="ec-callout-leader">'
-                f'<path d="{callout.leader_path_d}" '
-                f'stroke="{callout.color}" stroke-width="{leader_stroke_width}" '
-                f'stroke-opacity="{leader_opacity}" fill="none"{dash_attr}/>'
-                f'</g>'
-            ))
         # How far the duration band may reach before it leaves the paper.
         # None under --shrink: the viewBox is grown to whatever the bars
         # need, so every lane is drawn however deep the stack goes.
@@ -426,22 +423,14 @@ class TimelineRenderer(BaseSVGRenderer):
         def _vertical_room(item: TimelineDuration) -> float | None:
             if config.shrink_to_content:
                 return None
-            return (
-                room_primary
-                if item.lane_side is Side.PRIMARY
-                else room_secondary
-            )
+            return room_primary if item.lane_side is Side.PRIMARY else room_secondary
 
         if orient is Orientation.HORIZONTAL:
             for duration in durations:
-                self._draw_duration_connectors(
-                    config, duration, axis_y, duration_limit
-                )
+                self._draw_duration_connectors(config, duration, axis_y, duration_limit)
         else:
             for duration in durations:
-                self._draw_duration_connectors_vertical(
-                    config, duration, axis_origin[0], _vertical_room(duration)
-                )
+                self._draw_duration_connectors_vertical(config, duration, axis_origin[0], _vertical_room(duration))
 
         # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
         # → (axis_x, axis_bottom).
@@ -466,9 +455,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         tick_bands_cfg = getattr(config, "timeline_ticks", None)
         if tick_bands_cfg:
-            tick_bands = (
-                [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
-            )
+            tick_bands = [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
             # Precompute ticks per band so labels can be deduplicated when
             # bands collide on the same day. The band whose unit covers the
             # largest number of days (e.g. month > week > day) wins the label.
@@ -479,9 +466,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     band_ticks.append([])
                     band_priorities.append(-1)
                     continue
-                band_ticks.append(
-                    self._compute_band_ticks(config, tb, start, end, db)
-                )
+                band_ticks.append(self._compute_band_ticks(config, tb, start, end, db))
                 band_priorities.append(self._tick_unit_priority(tb))
             # Per-date max priority across bands. Equal-priority bands ticking
             # on the same date all draw their labels (each sits on its own
@@ -497,19 +482,30 @@ class TimelineRenderer(BaseSVGRenderer):
                 if not isinstance(tb, dict):
                     continue
                 prio = band_priorities[idx]
-                allowed = {
-                    d for d, _l in band_ticks[idx] if max_prio.get(d) == prio
-                }
+                allowed = {d for d, _l in band_ticks[idx] if max_prio.get(d) == prio}
                 if _horizontal:
                     self._draw_axis_ticks_from_band(
-                        config, tb, start, end, axis_left, axis_right, axis_y, db,
+                        config,
+                        tb,
+                        start,
+                        end,
+                        axis_left,
+                        axis_right,
+                        axis_y,
+                        db,
                         ticks=band_ticks[idx],
                         allowed_label_dates=allowed,
                     )
                 else:
                     self._draw_axis_ticks_from_band_vertical(
-                        config, tb, start, end, axis_origin[1], axis_end[1],
-                        axis_origin[0], db,
+                        config,
+                        tb,
+                        start,
+                        end,
+                        axis_origin[1],
+                        axis_end[1],
+                        axis_origin[0],
+                        db,
                         ticks=band_ticks[idx],
                         allowed_label_dates=allowed,
                         label_side=tick_label_side,
@@ -518,29 +514,50 @@ class TimelineRenderer(BaseSVGRenderer):
             self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
         else:
             self._draw_month_ticks_vertical(
-                config, start, end, axis_origin[1], axis_end[1], axis_origin[0],
+                config,
+                start,
+                end,
+                axis_origin[1],
+                axis_end[1],
+                axis_origin[0],
                 label_side=tick_label_side,
             )
 
-        if config.fiscal_lookup and (
-            config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters
-        ):
+        if config.fiscal_lookup and (config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters):
             if _horizontal:
                 self._draw_fiscal_bands(config, start, end, axis_left, axis_right, axis_y)
             else:
                 self._draw_fiscal_bands_vertical(
-                    config, start, end, axis_origin[1], axis_end[1], axis_origin[0],
+                    config,
+                    start,
+                    end,
+                    axis_origin[1],
+                    axis_end[1],
+                    axis_origin[0],
                     side=tick_label_side,
                 )
 
         if _horizontal:
             self._draw_today_marker(
-                config, start, end, axis_left, axis_right, axis_y, area_y, area_h,
+                config,
+                start,
+                end,
+                axis_left,
+                axis_right,
+                axis_y,
+                area_y,
+                area_h,
             )
         else:
             self._draw_today_marker_vertical(
-                config, start, end, axis_origin[1], axis_end[1], axis_origin[0],
-                area_x, area_w,
+                config,
+                start,
+                end,
+                axis_origin[1],
+                axis_end[1],
+                axis_origin[0],
+                area_x,
+                area_w,
                 label_bounds=(
                     area_x + top_bands_h,
                     area_x + area_w - bottom_bands_h,
@@ -551,13 +568,17 @@ class TimelineRenderer(BaseSVGRenderer):
         # bars (the duration offset already reserves enough space for them).
         if getattr(config, "timeline_show_holiday_icons", True):
             if _horizontal:
-                self._draw_holiday_icons(
-                    config, start, end, axis_left, axis_right, axis_y, db
-                )
+                self._draw_holiday_icons(config, start, end, axis_left, axis_right, axis_y, db)
             else:
                 self._draw_holiday_icons_vertical(
-                    config, start, end, axis_origin[1], axis_end[1], axis_origin[0],
-                    db, side=duration_side,
+                    config,
+                    start,
+                    end,
+                    axis_origin[1],
+                    axis_end[1],
+                    axis_origin[0],
+                    db,
+                    side=duration_side,
                 )
 
         # Pass 2: draw all boxes, markers, and text on top.
@@ -565,9 +586,7 @@ class TimelineRenderer(BaseSVGRenderer):
             self._draw_callout(config, callout, axis_y)
         for duration in durations:
             if duration.orientation is Orientation.VERTICAL:
-                self._draw_duration_vertical(
-                    config, duration, axis_origin[0], _vertical_room(duration)
-                )
+                self._draw_duration_vertical(config, duration, axis_origin[0], _vertical_room(duration))
             else:
                 self._draw_duration(config, duration, axis_y, duration_limit)
 
@@ -576,14 +595,28 @@ class TimelineRenderer(BaseSVGRenderer):
         if top_bands:
             if _horizontal:
                 self._draw_timeline_bands(
-                    config, top_bands, area_y, axis_left, axis_right, start, end, db,
+                    config,
+                    top_bands,
+                    area_y,
+                    axis_left,
+                    axis_right,
+                    start,
+                    end,
+                    db,
                     events=event_objs,
                 )
             else:
                 self._draw_timeline_bands_vertical(
-                    config, top_bands, area_x + top_bands_h,
-                    axis_origin[1], axis_end[1], start, end, db,
-                    events=event_objs, sign=-1.0,
+                    config,
+                    top_bands,
+                    area_x + top_bands_h,
+                    axis_origin[1],
+                    axis_end[1],
+                    start,
+                    end,
+                    db,
+                    events=event_objs,
+                    sign=-1.0,
                 )
         if bottom_bands:
             if _horizontal:
@@ -600,9 +633,16 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
             else:
                 self._draw_timeline_bands_vertical(
-                    config, bottom_bands, area_x + area_w - bottom_bands_h,
-                    axis_origin[1], axis_end[1], start, end, db,
-                    events=event_objs, sign=1.0,
+                    config,
+                    bottom_bands,
+                    area_x + area_w - bottom_bands_h,
+                    axis_origin[1],
+                    axis_end[1],
+                    start,
+                    end,
+                    db,
+                    events=event_objs,
+                    sign=1.0,
                 )
 
         # After all content is laid out, tighten the SVG viewBox to the actual
@@ -685,16 +725,12 @@ class TimelineRenderer(BaseSVGRenderer):
             min_y = min(min_y, callout.box_y - half_stroke)
             max_y = max(max_y, callout.box_y + callout.box_height + half_stroke)
             min_x = min(min_x, callout.box_x - half_stroke)
-            max_x = max(
-                max_x, callout.box_x + callout.box_width + half_stroke
-            )
+            max_x = max(max_x, callout.box_x + callout.box_width + half_stroke)
 
         if durations:
             _title_size, _notes_size, d_date_size, bar_h = self._duration_metrics(config)
             min_duration_offset = self._min_duration_offset(config, d_date_size)
-            duration_offset = max(
-                config.timeline_duration_offset_y, min_duration_offset
-            )
+            duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
             lane_gap = max(config.timeline_duration_lane_gap_y, d_date_size * 0.9)
             lane_stride_h = bar_h + lane_gap
             lane_stride_v = bar_h + lane_gap
@@ -796,14 +832,8 @@ class TimelineRenderer(BaseSVGRenderer):
         # User-range filtering — matches the legacy behavior so events
         # outside the requested window don't get drawn even though the
         # axis itself spans the rendered range.
-        user_start = (
-            self._safe_day(config.userstart, fallback=start)
-            if config.userstart else start
-        )
-        user_end = (
-            self._safe_day(config.userend, fallback=end)
-            if config.userend else end
-        )
+        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
+        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
 
         # Filter events to the user-requested window and assign palette
         # colors in chronological order BEFORE labella runs, so colour
@@ -811,10 +841,7 @@ class TimelineRenderer(BaseSVGRenderer):
         in_range: list[Event] = []
         for ev in events:
             day = self._safe_day(ev.start, fallback=start)
-            if (
-                day.floor("day") < user_start.floor("day")
-                or day.floor("day") > user_end.floor("day")
-            ):
+            if day.floor("day") < user_start.floor("day") or day.floor("day") > user_end.floor("day"):
                 continue
             in_range.append(ev)
         if not in_range:
@@ -833,8 +860,7 @@ class TimelineRenderer(BaseSVGRenderer):
         group_depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
 
         palette_primary = config.timeline_top_colors or [
-            config.get_text_style("ec-event-name").color
-            or config.timeline_name_text_font_color
+            config.get_text_style("ec-event-name").color or config.timeline_name_text_font_color
         ]
         palette_secondary = config.timeline_bottom_colors or palette_primary
 
@@ -843,9 +869,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # partitions events into two groups).
         per_event: dict[int, tuple[str, StyleResult | None, int]] = {}
         for idx, event in enumerate(ordered):
-            base_palette = (
-                palette_secondary if side is Side.SECONDARY else palette_primary
-            )
+            base_palette = palette_secondary if side is Side.SECONDARY else palette_primary
             group = wbs_group(event.wbs, group_depth) if group_colors else None
             color = (
                 group_colors[group]
@@ -866,11 +890,7 @@ class TimelineRenderer(BaseSVGRenderer):
             clamped = max(0, min(offset, span_days))
             return axis_length * (clamped / span_days)
 
-        place = (
-            _pack_callouts
-            if config.timeline_event_placement == "packed"
-            else _labella_layout_callouts
-        )
+        place = _pack_callouts if config.timeline_event_placement == "packed" else _labella_layout_callouts
         placements = place(
             ordered,
             axis_origin=axis_origin,
@@ -882,9 +902,7 @@ class TimelineRenderer(BaseSVGRenderer):
             # The tick dates are written between the axis and the first
             # row of callouts, whichever way the axis runs, so the row has
             # to start past them.  Zero when no labels will be drawn.
-            min_layer_gap=self._axis_label_clearance(
-                config, start, end, orientation=orientation
-            ),
+            min_layer_gap=self._axis_label_clearance(config, start, end, orientation=orientation),
             max_extent=max_extent,
             label_bounds=label_bounds,
         )
@@ -895,14 +913,8 @@ class TimelineRenderer(BaseSVGRenderer):
         out: list[TimelineCallout] = []
         for p in placements:
             color, sr, source_idx = per_event[id(p.event)]
-            if (
-                not group_colors
-                and p.side is Side.SECONDARY
-                and config.timeline_bottom_colors
-            ):
-                color = config.timeline_bottom_colors[
-                    source_idx % len(config.timeline_bottom_colors)
-                ]
+            if not group_colors and p.side is Side.SECONDARY and config.timeline_bottom_colors:
+                color = config.timeline_bottom_colors[source_idx % len(config.timeline_bottom_colors)]
                 if sr is not None and sr.fill_color:
                     color = sr.fill_color
             out.append(
@@ -927,9 +939,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return out
 
     @staticmethod
-    def _wbs_group_colors(
-        config: CalendarConfig, events: Sequence[Event]
-    ) -> dict[str, str]:
+    def _wbs_group_colors(config: CalendarConfig, events: Sequence[Event]) -> dict[str, str]:
         """One color per WBS group, shared by every item drawn on the chart.
 
         Events, milestones and duration bars are laid out separately but
@@ -1041,9 +1051,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 colors[id(event)] = group_colors.get(groups[id(event)], "")
         else:
             _notes_style = config.get_text_style("ec-event-notes")
-            palette = config.timeline_bottom_colors or [
-                _notes_style.color or config.timeline_notes_text_font_color
-            ]
+            palette = config.timeline_bottom_colors or [_notes_style.color or config.timeline_notes_text_font_color]
             for index, event in enumerate(ordered):
                 colors[id(event)] = palette[index % len(palette)]
 
@@ -1081,9 +1089,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered, duration_colors = self._order_durations(
-            config, events, group_colors
-        )
+        ordered, duration_colors = self._order_durations(config, events, group_colors)
 
         lane_last_end: list[float] = []
         # Lane each group's rollups reached, so the bars they summarise can
@@ -1124,7 +1130,10 @@ class TimelineRenderer(BaseSVGRenderer):
 
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
-                lane_last_end, sx, ex, min_gap,
+                lane_last_end,
+                sx,
+                ex,
+                min_gap,
                 self._rollup_lane_floor(rollup_floors, group, event),
             )
             if group is not None and event.rollup:
@@ -1186,28 +1195,35 @@ class TimelineRenderer(BaseSVGRenderer):
         if not events:
             return []
 
-        ordered, duration_colors = self._order_durations(
-            config, events, group_colors
-        )
+        ordered, duration_colors = self._order_durations(config, events, group_colors)
 
         if side is Side.BOTH:
             # Chronological alternation mirrors how callouts split for
             # Side.BOTH; gives a balanced layout regardless of input order.
             primary_events = [e for i, e in enumerate(ordered) if i % 2 == 0]
             secondary_events = [e for i, e in enumerate(ordered) if i % 2 == 1]
-            return (
-                self._layout_durations_vertical(
-                    config, primary_events, start, end,
-                    axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
-                    side=Side.PRIMARY, style_engine=style_engine,
-                    group_colors=group_colors,
-                )
-                + self._layout_durations_vertical(
-                    config, secondary_events, start, end,
-                    axis_x=axis_x, axis_top=axis_top, axis_bottom=axis_bottom,
-                    side=Side.SECONDARY, style_engine=style_engine,
-                    group_colors=group_colors,
-                )
+            return self._layout_durations_vertical(
+                config,
+                primary_events,
+                start,
+                end,
+                axis_x=axis_x,
+                axis_top=axis_top,
+                axis_bottom=axis_bottom,
+                side=Side.PRIMARY,
+                style_engine=style_engine,
+                group_colors=group_colors,
+            ) + self._layout_durations_vertical(
+                config,
+                secondary_events,
+                start,
+                end,
+                axis_x=axis_x,
+                axis_top=axis_top,
+                axis_bottom=axis_bottom,
+                side=Side.SECONDARY,
+                style_engine=style_engine,
+                group_colors=group_colors,
             )
 
         lane_last_end: list[float] = []
@@ -1242,7 +1258,10 @@ class TimelineRenderer(BaseSVGRenderer):
             min_length = self._duration_full_extent(config, event, start_day)
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
-                lane_last_end, sy, ey, min_gap,
+                lane_last_end,
+                sy,
+                ey,
+                min_gap,
                 self._rollup_lane_floor(rollup_floors, group, event),
             )
             if group is not None and event.rollup:
@@ -1313,9 +1332,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return wbs_group(event.wbs, depth)
 
     @staticmethod
-    def _rollup_lane_floor(
-        floors: dict[str, int], group: str | None, event: Event
-    ) -> int:
+    def _rollup_lane_floor(floors: dict[str, int], group: str | None, event: Event) -> int:
         """Lowest lane a bar may take, given its group's rollup.
 
         A rollup summarises the bars under it, so it has to read as their
@@ -1341,10 +1358,7 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> bool:
         ax1, ay1, ax2, ay2 = box_a
         bx1, by1, bx2, by2 = box_b
-        return not (
-            ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1
-        )
-
+        return not (ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1)
 
     @classmethod
     def _cell_baseline(
@@ -1364,9 +1378,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return cell_top + ((cell_h - (ascent + descent)) / 2.0) + ascent
 
     @classmethod
-    def _cell_font_size(
-        cls, cell_h: float, font_path: str | None, size: float
-    ) -> float:
+    def _cell_font_size(cls, cell_h: float, font_path: str | None, size: float) -> float:
         """``size``, capped so its ink fits the cell's height.
 
         Width is not consulted: a callout box is never stretched to its
@@ -1473,22 +1485,11 @@ class TimelineRenderer(BaseSVGRenderer):
         _notes_style = config.get_text_style("ec-event-notes")
         tk_name = self._tk("text:event_name")
         tk_notes = self._tk("text:event_notes")
-        name_font_default = (
-            tk_name.get("font")
-            or config.timeline_name_text_font_name
-            or _name_style.font
-        )
-        notes_font_default = (
-            tk_notes.get("font")
-            or config.timeline_notes_text_font_name
-            or _notes_style.font
-        )
+        name_font_default = tk_name.get("font") or config.timeline_name_text_font_name or _name_style.font
+        notes_font_default = tk_notes.get("font") or config.timeline_notes_text_font_name or _notes_style.font
 
         event_text_color = (
-            tk_name.get("color")
-            or config.timeline_name_text_font_color
-            or _name_style.color
-            or item.color
+            tk_name.get("color") or config.timeline_name_text_font_color or _name_style.color or item.color
         )
         name_font, _, name_color, name_opacity = _sr.text_override(
             "event_name",
@@ -1500,10 +1501,7 @@ class TimelineRenderer(BaseSVGRenderer):
             "event_notes",
             font=notes_font_default,
             color=(
-                tk_notes.get("color")
-                or config.timeline_notes_text_font_color
-                or _notes_style.color
-                or event_text_color
+                tk_notes.get("color") or config.timeline_notes_text_font_color or _notes_style.color or event_text_color
             ),
             opacity=_notes_style.opacity,
         )
@@ -1523,11 +1521,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 anchor="middle",
                 color=_sr.icon_color or event_text_color,
                 css_class="ec-event-icon",
-                box_token=(
-                    "box:milestone"
-                    if getattr(item.event, "milestone", False)
-                    else "box:event"
-                ),
+                box_token=("box:milestone" if getattr(item.event, "milestone", False) else "box:event"),
                 box_ctx=self._event_ctx(item.event),
             )
 
@@ -1569,16 +1563,8 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_event_date = self._tk("text:event_date")
         date_font, _, date_color, _ = _sr.text_override(
             "event_date",
-            font=(
-                _event_date_style.font
-                or tk_event_date.get("font")
-                or config.timeline_date_font
-            ),
-            color=(
-                _event_date_style.color
-                or tk_event_date.get("color")
-                or event_text_color
-            ),
+            font=(_event_date_style.font or tk_event_date.get("font") or config.timeline_date_font),
+            color=(_event_date_style.color or tk_event_date.get("color") or event_text_color),
         )
         date_path = self._safe_font_path(date_font)
         fitted_date = self._cell_font_size(row_h, date_path, date_size)
@@ -1594,9 +1580,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-event-date",
         )
 
-    def _duration_bar_y(
-        self, config: CalendarConfig, item: TimelineDuration, axis_y: float
-    ) -> tuple[float, float]:
+    def _duration_bar_y(self, config: CalendarConfig, item: TimelineDuration, axis_y: float) -> tuple[float, float]:
         """``(bar_y, bar_h)`` for one horizontal duration bar.
 
         The connector and the bar itself both need this and used to compute
@@ -1721,9 +1705,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-connector",
         )
         if not fits:
-            self._draw_missing_box_marker(
-                config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color
-            )
+            self._draw_missing_box_marker(config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color)
 
     def _draw_duration(
         self,
@@ -1744,11 +1726,8 @@ class TimelineRenderer(BaseSVGRenderer):
         printed off the edge of the paper.
         """
         _probe_y, _probe_h = self._duration_bar_y(config, item, axis_y)
-        if not self._duration_fits(
-            _probe_y + self._duration_row_extent(config), limit
-        ):
+        if not self._duration_fits(_probe_y + self._duration_row_extent(config), limit):
             return
-
 
         _title_size, _notes_size, date_size, bar_h = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
@@ -1767,10 +1746,7 @@ class TimelineRenderer(BaseSVGRenderer):
         _sr = item.style or StyleResult()
         rect_kwargs = _sr.rect_overrides(
             fill=item.color,
-            fill_opacity=(
-                _tk_bar_opacity if _tk_bar_opacity is not None
-                else _dur_bar_style.opacity
-            ),
+            fill_opacity=(_tk_bar_opacity if _tk_bar_opacity is not None else _dur_bar_style.opacity),
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.9,
@@ -1805,9 +1781,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # continues_left == event starts before the visualization start
         # ("before"); continues_right == event ends after the visualization
         # end ("after"). Driven by the global `continuation` theme section.
-        if (item.continues_left or item.continues_right) and bool(
-            getattr(config, "show_continuation_icon", True)
-        ):
+        if (item.continues_left or item.continues_right) and bool(getattr(config, "show_continuation_icon", True)):
             cont_h = float(getattr(config, "continuation_icon_height", 8.0))
             cont_color_cfg = getattr(config, "continuation_icon_color", None)
             cont_color = cont_color_cfg if cont_color_cfg else item.color
@@ -1851,7 +1825,6 @@ class TimelineRenderer(BaseSVGRenderer):
             _sr,
         )
 
-
     def _duration_full_extent(
         self,
         config: CalendarConfig,
@@ -1868,18 +1841,14 @@ class TimelineRenderer(BaseSVGRenderer):
         which of them break their name over two rows and condense.
         """
         configured = (
-            float(config.timeline_duration_box_width)
-            if config.timeline_duration_box_width is not None
-            else 0.0
+            float(config.timeline_duration_box_width) if config.timeline_duration_box_width is not None else 0.0
         )
         if configured > 0:
             return configured
 
         title_size, notes_size, date_size, _bar_h = self._duration_metrics(config)
         fonts = self._duration_text_fonts(config, StyleResult())
-        name_w = string_width(
-            event.task_name or "", self._safe_font_path(fonts["name_font"]), title_size
-        )
+        name_w = string_width(event.task_name or "", self._safe_font_path(fonts["name_font"]), title_size)
         notes_w = (
             string_width(
                 (event.notes or "").strip(),
@@ -1910,14 +1879,11 @@ class TimelineRenderer(BaseSVGRenderer):
         # inner*(1-2r) - 2*gap >= text for inner puts the gaps back here.
         inner = max(
             max(start_w, end_w) / ratio,
-            (max(name_w, notes_w) + 2.0 * _DURATION_DATE_GAP_X)
-            / max(0.05, 1.0 - 2.0 * ratio),
+            (max(name_w, notes_w) + 2.0 * _DURATION_DATE_GAP_X) / max(0.05, 1.0 - 2.0 * ratio),
         )
         return inner + 2.0 * _DURATION_DATE_PAD_X
 
-    def _duration_cell_layout(
-        self, config: CalendarConfig, inner_w: float
-    ) -> list[tuple[float, float]]:
+    def _duration_cell_layout(self, config: CalendarConfig, inner_w: float) -> list[tuple[float, float]]:
         """The three columns of a duration bar, as (offset, width) pairs.
 
         The two side columns are the same width — the callout box's icon
@@ -1946,9 +1912,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return float(configured)
         return float(config.timeline_event_icon_column_ratio)
 
-    def _duration_text_fonts(
-        self, config: CalendarConfig, _sr: StyleResult
-    ) -> dict:
+    def _duration_text_fonts(self, config: CalendarConfig, _sr: StyleResult) -> dict:
         """Fonts, colors and opacities for everything inside a duration bar.
 
         One resolution shared by the horizontal and vertical layouts, which
@@ -1962,21 +1926,9 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_notes = self._tk("text:event_notes")
         tk_date = self._tk("text:duration_date")
 
-        name_font_default = (
-            tk_name.get("font")
-            or config.timeline_name_text_font_name
-            or _name_style.font
-        )
-        notes_font_default = (
-            tk_notes.get("font")
-            or config.timeline_notes_text_font_name
-            or _notes_style.font
-        )
-        text_color = (
-            tk_name.get("color")
-            or config.timeline_name_text_font_color
-            or _name_style.color
-        )
+        name_font_default = tk_name.get("font") or config.timeline_name_text_font_name or _name_style.font
+        notes_font_default = tk_notes.get("font") or config.timeline_notes_text_font_name or _notes_style.font
+        text_color = tk_name.get("color") or config.timeline_name_text_font_color or _name_style.color
         name_font, _, name_color, name_opacity = _sr.text_override(
             "duration_name",
             font=name_font_default,
@@ -1986,32 +1938,17 @@ class TimelineRenderer(BaseSVGRenderer):
         notes_font, _, notes_color, notes_opacity = _sr.text_override(
             "duration_notes",
             font=notes_font_default,
-            color=(
-                tk_notes.get("color")
-                or config.timeline_notes_text_font_color
-                or _notes_style.color
-                or text_color
-            ),
+            color=(tk_notes.get("color") or config.timeline_notes_text_font_color or _notes_style.color or text_color),
             opacity=_notes_style.opacity,
         )
         date_font_base = (
-            _date_style.font
-            or config.timeline_duration_date_font
-            or tk_date.get("font")
-            or config.timeline_date_font
+            _date_style.font or config.timeline_duration_date_font or tk_date.get("font") or config.timeline_date_font
         )
-        date_color_base = (
-            _date_style.color
-            or config.timeline_duration_date_color
-            or tk_date.get("color")
-            or text_color
-        )
+        date_color_base = _date_style.color or config.timeline_duration_date_color or tk_date.get("color") or text_color
         start_font, _, start_color, _ = _sr.text_override(
             "duration_start_date", font=date_font_base, color=date_color_base
         )
-        end_font, _, end_color, _ = _sr.text_override(
-            "duration_end_date", font=date_font_base, color=date_color_base
-        )
+        end_font, _, end_color, _ = _sr.text_override("duration_end_date", font=date_font_base, color=date_color_base)
         return {
             "name_font": name_font,
             "name_color": name_color,
@@ -2027,9 +1964,7 @@ class TimelineRenderer(BaseSVGRenderer):
         }
 
     @staticmethod
-    def _split_name_two_lines(
-        name: str, font_path: str, size: float
-    ) -> tuple[str, str]:
+    def _split_name_two_lines(name: str, font_path: str, size: float) -> tuple[str, str]:
         """Break a name at the word boundary that balances the two lines.
 
         "Balanced" means the narrower of the two widest lines, since that
@@ -2072,20 +2007,14 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         start_day = self._safe_day(item.event.start, fallback=arrow.now())
         end_day = self._safe_day(item.event.end, fallback=start_day)
-        show_icon = bool(config.timeline_duration_icon_visible) and bool(
-            item.event.icon
-        )
+        show_icon = bool(config.timeline_duration_icon_visible) and bool(item.event.icon)
         cells: list[tuple[int, int, str, str]] = []
         if show_icon:
             cells.append((0, 0, "icon", str(item.event.icon)))
-        cells.append(
-            (0, 1, "date", format_arrow_date(start_day, config.timeline_date_format))
-        )
+        cells.append((0, 1, "date", format_arrow_date(start_day, config.timeline_date_format)))
         name = item.event.task_name or "(untitled duration)"
         if item.text_overflow:
-            first, second = self._split_name_two_lines(
-                name, self._safe_font_path(fonts["name_font"]), title_size
-            )
+            first, second = self._split_name_two_lines(name, self._safe_font_path(fonts["name_font"]), title_size)
             cells.append((1, 0, "name", first))
             if second:
                 cells.append((1, 1, "name", second))
@@ -2094,15 +2023,11 @@ class TimelineRenderer(BaseSVGRenderer):
             notes = (item.event.notes or "").strip()
             if notes and config.include_notes:
                 cells.append((1, 1, "notes", notes))
-        cells.append(
-            (2, 1, "date", format_arrow_date(end_day, config.timeline_date_format))
-        )
+        cells.append((2, 1, "date", format_arrow_date(end_day, config.timeline_date_format)))
         return cells
 
     @staticmethod
-    def _duration_cell_style(
-        kind: str, fonts: dict, col: int
-    ) -> tuple[str, str, float, str]:
+    def _duration_cell_style(kind: str, fonts: dict, col: int) -> tuple[str, str, float, str]:
         """Font, color, opacity and CSS class for one duration text cell.
 
         Both lines of a broken name are drawn in the name's own style even
@@ -2110,10 +2035,8 @@ class TimelineRenderer(BaseSVGRenderer):
         text, and switching font halfway down reads as two.
         """
         return {
-            "name": (fonts["name_font"], fonts["name_color"],
-                     fonts["name_opacity"], "ec-event-name"),
-            "notes": (fonts["notes_font"], fonts["notes_color"],
-                      fonts["notes_opacity"], "ec-event-notes"),
+            "name": (fonts["name_font"], fonts["name_color"], fonts["name_opacity"], "ec-event-name"),
+            "notes": (fonts["notes_font"], fonts["notes_color"], fonts["notes_opacity"], "ec-event-notes"),
         }.get(
             kind,
             (
@@ -2157,9 +2080,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return min(1.0, squeeze)
 
     @staticmethod
-    def _squeeze_transform(
-        squeeze: float, cx: float, cy: float, axis: str = "x"
-    ) -> str | None:
+    def _squeeze_transform(squeeze: float, cx: float, cy: float, axis: str = "x") -> str | None:
         """Condense about ``(cx, cy)`` along ``axis``; None at full width.
 
         ``axis`` is the direction the bar's text runs in: "x" beside a
@@ -2169,10 +2090,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if squeeze >= 1.0:
             return None
         sx, sy = (squeeze, 1.0) if axis == "x" else (1.0, squeeze)
-        return (
-            f"translate({cx:.4f} {cy:.4f}) scale({sx:.6f} {sy:.6f}) "
-            f"translate({-cx:.4f} {-cy:.4f})"
-        )
+        return f"translate({cx:.4f} {cy:.4f}) scale({sx:.6f} {sy:.6f}) translate({-cx:.4f} {-cy:.4f})"
 
     def _draw_duration_contents(
         self,
@@ -2225,14 +2143,27 @@ class TimelineRenderer(BaseSVGRenderer):
             if kind == "icon":
                 cx, cy = cell_x + cell_w / 2.0, cell_y + row_h / 2.0
                 self._draw_duration_cell_icon(
-                    config, item, text, _sr,
-                    cx, cy, min(cell_w, row_h), fonts["text_color"],
+                    config,
+                    item,
+                    text,
+                    _sr,
+                    cx,
+                    cy,
+                    min(cell_w, row_h),
+                    fonts["text_color"],
                     transform=self._squeeze_transform(squeeze, cx, cy),
                 )
                 continue
             self._draw_duration_cell_text(
-                kind, text, fonts, size_for[kind],
-                cell_x, cell_y, cell_w, row_h, col,
+                kind,
+                text,
+                fonts,
+                size_for[kind],
+                cell_x,
+                cell_y,
+                cell_w,
+                row_h,
+                col,
                 align=("start", "middle", "end")[col],
                 squeeze=squeeze,
             )
@@ -2384,7 +2315,10 @@ class TimelineRenderer(BaseSVGRenderer):
             if kind == "icon":
                 icon_cy = along0 + length / 2.0
                 self._draw_duration_cell_icon(
-                    config, item, text, _sr,
+                    config,
+                    item,
+                    text,
+                    _sr,
                     row_center,
                     icon_cy,
                     min(length, row_h),
@@ -2392,9 +2326,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     # The rows run down the page here, so the bar condenses
                     # along y — the icon has to follow the text's axis, not
                     # the screen's.
-                    transform=self._squeeze_transform(
-                        squeeze, row_center, icon_cy, axis="y"
-                    ),
+                    transform=self._squeeze_transform(squeeze, row_center, icon_cy, axis="y"),
                 )
                 continue
             # Pre-rotation x runs along the axis but backwards: rotate(-90)
@@ -2404,8 +2336,15 @@ class TimelineRenderer(BaseSVGRenderer):
             cell_pre_x = cx + (cy - (along0 + length))
             cell_pre_y = cy - (cx - (row_center - row_h / 2.0))
             self._draw_duration_cell_text(
-                kind, text, fonts, size_for[kind],
-                cell_pre_x, cell_pre_y, length, row_h, col,
+                kind,
+                text,
+                fonts,
+                size_for[kind],
+                cell_pre_x,
+                cell_pre_y,
+                length,
+                row_h,
+                col,
                 align=("end", "middle", "start")[col],
                 transform=rot,
                 squeeze=squeeze,
@@ -2429,16 +2368,10 @@ class TimelineRenderer(BaseSVGRenderer):
         gets a leader that stops at the edge and ends in the missing-box icon
         rather than one that runs off the page.
         """
-        bar_near_axis_x, bar_thickness, sign = self._duration_bar_x(
-            config, item, axis_x
-        )
+        bar_near_axis_x, bar_thickness, sign = self._duration_bar_x(config, item, axis_x)
         far_edge = bar_near_axis_x + sign * bar_thickness
         fits = self._duration_fits(abs(far_edge - axis_x), limit)
-        end_x = (
-            bar_near_axis_x
-            if fits or limit is None
-            else axis_x + sign * (limit - bar_thickness)
-        )
+        end_x = bar_near_axis_x if fits or limit is None else axis_x + sign * (limit - bar_thickness)
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
             axis_x,
@@ -2473,11 +2406,8 @@ class TimelineRenderer(BaseSVGRenderer):
         icon instead.
         """
         _near_x, _thickness, _sign = self._duration_bar_x(config, item, axis_x)
-        if not self._duration_fits(
-            abs(_near_x + _sign * _thickness - axis_x), limit
-        ):
+        if not self._duration_fits(abs(_near_x + _sign * _thickness - axis_x), limit):
             return
-
 
         _title_size, _notes_size, date_size, bar_thickness = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
@@ -2503,10 +2433,7 @@ class TimelineRenderer(BaseSVGRenderer):
         _sr = item.style or StyleResult()
         rect_kwargs = _sr.rect_overrides(
             fill=item.color,
-            fill_opacity=(
-                _tk_bar_opacity if _tk_bar_opacity is not None
-                else _dur_bar_style.opacity
-            ),
+            fill_opacity=(_tk_bar_opacity if _tk_bar_opacity is not None else _dur_bar_style.opacity),
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=0.9,
@@ -2540,9 +2467,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # continues_right == event ends after visualization end ("after").
         # On a vertical axis the second element of a [horizontal, vertical]
         # icon-list pair selects the orientation-appropriate glyph.
-        if (item.continues_left or item.continues_right) and bool(
-            getattr(config, "show_continuation_icon", True)
-        ):
+        if (item.continues_left or item.continues_right) and bool(getattr(config, "show_continuation_icon", True)):
             cont_h = float(getattr(config, "continuation_icon_height", 8.0))
             cont_color_cfg = getattr(config, "continuation_icon_color", None)
             cont_color = cont_color_cfg if cont_color_cfg else item.color
@@ -2576,9 +2501,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     css_class="ec-duration-icon",
                 )
 
-        self._draw_duration_contents_vertical(
-            config, item, bar_x, bar_y, bar_thickness, bar_h, _sr
-        )
+        self._draw_duration_contents_vertical(config, item, bar_x, bar_y, bar_thickness, bar_h, _sr)
 
     def _draw_timeline_marker(
         self,
@@ -2645,29 +2568,20 @@ class TimelineRenderer(BaseSVGRenderer):
         Token sizes are taken at face value — if a theme defines an explicit
         size for the duration bar text, it's expected to be that size.
         """
-        title_size = (
-            self._tk("text:event_name").get("size")
-            or (
-                float(config.timeline_name_text_font_size * 0.85)
-                if config.timeline_name_text_font_size is not None
-                else max(8.0, _base_name_size(config) * 0.86)
-            )
+        title_size = self._tk("text:event_name").get("size") or (
+            float(config.timeline_name_text_font_size * 0.85)
+            if config.timeline_name_text_font_size is not None
+            else max(8.0, _base_name_size(config) * 0.86)
         )
-        notes_size = (
-            self._tk("text:event_notes").get("size")
-            or (
-                float(config.timeline_notes_text_font_size * 0.82)
-                if config.timeline_notes_text_font_size is not None
-                else max(7.0, _base_name_size(config) * 0.74)
-            )
+        notes_size = self._tk("text:event_notes").get("size") or (
+            float(config.timeline_notes_text_font_size * 0.82)
+            if config.timeline_notes_text_font_size is not None
+            else max(7.0, _base_name_size(config) * 0.74)
         )
-        date_size = (
-            self._tk("text:duration_date").get("size")
-            or (
-                float(config.timeline_duration_date_font_size)
-                if config.timeline_duration_date_font_size is not None
-                else max(7.0, _base_name_size(config) * 0.78)
-            )
+        date_size = self._tk("text:duration_date").get("size") or (
+            float(config.timeline_duration_date_font_size)
+            if config.timeline_duration_date_font_size is not None
+            else max(7.0, _base_name_size(config) * 0.78)
         )
         if config.timeline_duration_box_height is not None:
             bar_h = max(8.0, float(config.timeline_duration_box_height))
@@ -2720,6 +2634,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # visible_days for date/dow units (continuous calendar — timeline does
         # not skip weekends).
         from datetime import timedelta
+
         visible_days: list = []
         d = start_d
         while d <= end_d:
@@ -2727,9 +2642,7 @@ class TimelineRenderer(BaseSVGRenderer):
             d = d + timedelta(days=1)
 
         _events: list[Event] = events or []
-        _day_classes: dict = (
-            {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
-        )
+        _day_classes: dict = {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
 
         def _classify(day_) -> frozenset:
             return _day_classes.get(day_, frozenset())
@@ -2738,9 +2651,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_band_label = self._tk("text:label")
         text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
         text_opacity = float(
-            tk_band_label.get("opacity")
-            if tk_band_label.get("opacity") is not None
-            else _band_text_style.opacity
+            tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity
         )
 
         row_y = block_top_y
@@ -2751,9 +2662,7 @@ class TimelineRenderer(BaseSVGRenderer):
             # ── Icon band — one cell per visible day, icons driven by rules ──
             if unit == "icon":
                 icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(
-                    _events, icon_rules, visible_days, classify_fn=_classify
-                )
+                day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days, classify_fn=_classify)
                 icon_h = float(band.get("icon_height") or row_h * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 day_cells: list[tuple[float, float, list[tuple[str, str]]]] = []
@@ -2767,8 +2676,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 self._draw_icon_band_row(day_cells, row_y, row_h, icon_h, fill)
                 sep_y = row_y + row_h
                 self._draw_line(
-                    axis_left, sep_y, axis_right, sep_y,
-                    stroke="#cccccc", stroke_width=0.5,
+                    axis_left,
+                    sep_y,
+                    axis_right,
+                    sep_y,
+                    stroke="#cccccc",
+                    stroke_width=0.5,
                     css_class="ec-separator",
                 )
                 row_y += row_h
@@ -2780,34 +2693,26 @@ class TimelineRenderer(BaseSVGRenderer):
             if text_align not in {"left", "center", "right"}:
                 text_align = "center"
             band_font = str(
-                band.get("font")
-                or tk_band_label.get("font")
-                or _band_text_style.font
-                or config.timeline_text_font_name
+                band.get("font") or tk_band_label.get("font") or _band_text_style.font or config.timeline_text_font_name
             )
             band_font_color = str(band.get("font_color") or text_color)
             band_label_color = str(band.get("label_color") or band_font_color)
-            font_size = float(
-                band.get("font_size")
-                or tk_band_label.get("size")
-                or max(7.0, row_h * 0.55)
-            )
+            font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, row_h * 0.55))
 
             segments = _build_band_segments(
-                band, start_d, end_d, config,
+                band,
+                start_d,
+                end_d,
+                config,
                 visible_days=visible_days,
                 db=db,
                 week_start_default=0,
-                fiscal_year_start_month_default=int(
-                    getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
-                ),
+                fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
             )
 
             for seg_idx, seg in enumerate(segments):
                 seg_start_arrow = arrow.Arrow(seg.start.year, seg.start.month, seg.start.day)
-                seg_end_arrow = arrow.Arrow(
-                    seg.end_exclusive.year, seg.end_exclusive.month, seg.end_exclusive.day
-                )
+                seg_end_arrow = arrow.Arrow(seg.end_exclusive.year, seg.end_exclusive.month, seg.end_exclusive.day)
                 x1 = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
                 x2 = self._x_for_day(seg_end_arrow, start, end, axis_left, axis_right)
                 seg_w = max(0.0, x2 - x1)
@@ -2817,7 +2722,10 @@ class TimelineRenderer(BaseSVGRenderer):
                 fill = alt_fill_color if seg_idx % 2 else fill_color
                 if fill and fill.strip().lower() not in {"none", "transparent", ""}:
                     self._draw_rect(
-                        x1, row_y, seg_w, row_h,
+                        x1,
+                        row_y,
+                        seg_w,
+                        row_h,
                         fill=fill,
                         fill_opacity=1.0,
                         css_class="ec-band-cell",
@@ -2839,8 +2747,11 @@ class TimelineRenderer(BaseSVGRenderer):
                         anchor = "start"
                         max_w = seg_w - pad * 2
                     self._draw_text(
-                        text_x, row_y + row_h * 0.72, label,
-                        band_font, font_size,
+                        text_x,
+                        row_y + row_h * 0.72,
+                        label,
+                        band_font,
+                        font_size,
                         fill=band_label_color,
                         fill_opacity=text_opacity,
                         anchor=anchor,
@@ -2850,15 +2761,17 @@ class TimelineRenderer(BaseSVGRenderer):
 
             sep_y = row_y + row_h
             self._draw_line(
-                axis_left, sep_y, axis_right, sep_y,
-                stroke="#cccccc", stroke_width=0.5,
+                axis_left,
+                sep_y,
+                axis_right,
+                sep_y,
+                stroke="#cccccc",
+                stroke_width=0.5,
                 css_class="ec-separator",
             )
             row_y += row_h
 
-    def _tick_side_clearance(
-        self, config: CalendarConfig, start: arrow.Arrow, end: arrow.Arrow
-    ) -> float:
+    def _tick_side_clearance(self, config: CalendarConfig, start: arrow.Arrow, end: arrow.Arrow) -> float:
         """Room the axis ticks and their dates need on their own side.
 
         The wider of what a theme's ``timeline.ticks`` bands claim and what
@@ -2867,16 +2780,12 @@ class TimelineRenderer(BaseSVGRenderer):
         dates somewhere to be printed.
         """
         return max(
-            self._tick_label_top_clearance(
-                config, getattr(config, "timeline_ticks", None)
-            ),
+            self._tick_label_top_clearance(config, getattr(config, "timeline_ticks", None)),
             self._axis_label_clearance(config, start, end),
         )
 
     @staticmethod
-    def _tick_label_top_clearance(
-        config: CalendarConfig, tick_bands_cfg: dict | list | None
-    ) -> float:
+    def _tick_label_top_clearance(config: CalendarConfig, tick_bands_cfg: dict | list | None) -> float:
         """Maximum vertical extent (pts) of any tick band's label above the axis.
 
         Used to size the area above axis_y when there are no callouts/events to
@@ -2885,11 +2794,7 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         if not tick_bands_cfg:
             return 0.0
-        bands = (
-            [tick_bands_cfg]
-            if isinstance(tick_bands_cfg, dict)
-            else list(tick_bands_cfg)
-        )
+        bands = [tick_bands_cfg] if isinstance(tick_bands_cfg, dict) else list(tick_bands_cfg)
         default_label_size = max(7.0, _base_name_size(config) * 0.8)
         default_tick_h = max(6.0, config.timeline_axis_width * 2.5)
         max_above = 0.0
@@ -2897,11 +2802,7 @@ class TimelineRenderer(BaseSVGRenderer):
             if not isinstance(tb, dict):
                 continue
             tick_h = float(tb.get("tick_length") or default_tick_h)
-            lsize = float(
-                tb.get("label_font_size")
-                or tb.get("font_size")
-                or default_label_size
-            )
+            lsize = float(tb.get("label_font_size") or tb.get("font_size") or default_label_size)
             offset = tb.get("label_offset_y")
             gap = tb.get("label_gap")
             # (kept inline: this walks every band to find the deepest)
@@ -2959,13 +2860,14 @@ class TimelineRenderer(BaseSVGRenderer):
             d = d + timedelta(days=1)
 
         segments = _build_band_segments(
-            band, start_d, end_d, config,
+            band,
+            start_d,
+            end_d,
+            config,
             visible_days=visible_days,
             db=db,
             week_start_default=0,
-            fiscal_year_start_month_default=int(
-                getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
-            ),
+            fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
         )
         if not segments:
             return []
@@ -3010,39 +2912,21 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_event_date = self._tk("text:event_date")
         tick_h = float(band.get("tick_length") or self._axis_tick_height(config))
         label_size = float(
-            band.get("label_font_size")
-            or band.get("font_size")
-            or max(7.0, _base_name_size(config) * 0.8)
+            band.get("label_font_size") or band.get("font_size") or max(7.0, _base_name_size(config) * 0.8)
         )
         return {
             "tick_h": tick_h,
             "tick_width": float(band.get("tick_width") or 1.0),
-            "tick_opacity": float(
-                tick_opacity
-                if (tick_opacity := band.get("tick_opacity")) is not None
-                else 0.35
-            ),
+            "tick_opacity": float(tick_opacity if (tick_opacity := band.get("tick_opacity")) is not None else 0.35),
             "tick_color": str(band.get("tick_color") or _tick_style.color),
             "tick_dash": band.get("tick_dasharray") or _tick_style.dasharray or None,
             "label_size": label_size,
-            "draw_labels": bool(band.get("show_labels", True))
-            and tick_count <= int(band.get("max_label_count", 60)),
+            "draw_labels": bool(band.get("show_labels", True)) and tick_count <= int(band.get("max_label_count", 60)),
             "label_color": str(
-                band.get("label_color")
-                or band.get("font_color")
-                or tk_event_date.get("color")
-                or _tick_style.color
+                band.get("label_color") or band.get("font_color") or tk_event_date.get("color") or _tick_style.color
             ),
-            "label_opacity": float(
-                label_opacity
-                if (label_opacity := band.get("label_opacity")) is not None
-                else 0.8
-            ),
-            "font_name": str(
-                band.get("font")
-                or tk_event_date.get("font")
-                or config.timeline_date_font
-            ),
+            "label_opacity": float(label_opacity if (label_opacity := band.get("label_opacity")) is not None else 0.8),
+            "font_name": str(band.get("font") or tk_event_date.get("font") or config.timeline_date_font),
             "label_offset": self._tick_label_offset(
                 tick_h,
                 label_size,
@@ -3115,11 +2999,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 stroke_dasharray=tick_dash,
                 css_class="ec-axis-tick",
             )
-            if (
-                draw_labels
-                and tick_label
-                and (allowed_label_dates is None or tick_date in allowed_label_dates)
-            ):
+            if draw_labels and tick_label and (allowed_label_dates is None or tick_date in allowed_label_dates):
                 if idx == 0:
                     label_anchor = "start"
                 elif idx == last_idx:
@@ -3189,9 +3069,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 and tick_label
                 and (allowed_label_dates is None or tick_date in allowed_label_dates)
             ):
-                label_x, anchor = self._tick_label_x(
-                    axis_x, style["label_offset"], label_side
-                )
+                label_x, anchor = self._tick_label_x(axis_x, style["label_offset"], label_side)
                 self._draw_text(
                     label_x,
                     self._tick_label_baseline(y, label_size, axis_top, axis_bottom),
@@ -3203,14 +3081,10 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor=anchor,
                     css_class="ec-label",
                 )
-                self._note_label_ink(
-                    label_x, tick_label, style["font_name"], label_size, label_side
-                )
+                self._note_label_ink(label_x, tick_label, style["font_name"], label_size, label_side)
 
     @staticmethod
-    def _tick_label_x(
-        axis_x: float, label_offset: float, label_side: Side
-    ) -> tuple[float, str]:
+    def _tick_label_x(axis_x: float, label_offset: float, label_side: Side) -> tuple[float, str]:
         """Where a vertical tick's date starts, and which end it hangs from.
 
         Either way the text grows away from the axis, so the offset is all
@@ -3245,14 +3119,10 @@ class TimelineRenderer(BaseSVGRenderer):
     ) -> None:
         """:py:meth:`_note_side_ink` for a label, whose width it measures."""
         width = string_width(label, self._safe_font_path(font_name), label_size)
-        self._note_side_ink(
-            label_x, label_x + width if side is Side.PRIMARY else label_x - width
-        )
+        self._note_side_ink(label_x, label_x + width if side is Side.PRIMARY else label_x - width)
 
     @staticmethod
-    def _tick_label_baseline(
-        y: float, label_size: float, axis_top: float, axis_bottom: float
-    ) -> float:
+    def _tick_label_baseline(y: float, label_size: float, axis_top: float, axis_bottom: float) -> float:
         """Baseline that centres a tick's label on its mark, kept on the page.
 
         The first and last ticks sit on the ends of the axis, where half the
@@ -3310,9 +3180,7 @@ class TimelineRenderer(BaseSVGRenderer):
             if draw_labels:
                 label = format_arrow_date(m, config.timeline_tick_label_format)
                 font_name = tk_event_date.get("font") or config.timeline_date_font
-                label_x, anchor = self._tick_label_x(
-                    axis_x, label_offset, label_side
-                )
+                label_x, anchor = self._tick_label_x(axis_x, label_offset, label_side)
                 self._draw_text(
                     label_x,
                     self._tick_label_baseline(y, label_size, axis_top, axis_bottom),
@@ -3324,9 +3192,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor=anchor,
                     css_class="ec-label",
                 )
-                self._note_label_ink(
-                    label_x, label, font_name, label_size, label_side
-                )
+                self._note_label_ink(label_x, label, font_name, label_size, label_side)
 
     @staticmethod
     def _holiday_icon_size(config: CalendarConfig) -> float:
@@ -3365,12 +3231,11 @@ class TimelineRenderer(BaseSVGRenderer):
         axis itself can show at that position.
         """
         if pos_for_day is None:
+
             def pos_for_day(day: arrow.Arrow) -> float:
                 return self._x_for_day(day, start, end, axis_left, axis_right)
-        date_format = (
-            getattr(config, "timeline_holiday_date_format", None)
-            or config.timeline_date_format
-        )
+
+        date_format = getattr(config, "timeline_holiday_date_format", None) or config.timeline_date_format
         marks: list[tuple[float, str, str]] = []
         seen: set[str] = set()
         for day in arrow.Arrow.range("day", start.floor("day"), end.floor("day")):
@@ -3383,8 +3248,7 @@ class TimelineRenderer(BaseSVGRenderer):
             except Exception:
                 continue
             icon_name = next(
-                (h.get("icon") for h in hols
-                 if h.get("nonworkday") and h.get("icon")),
+                (h.get("icon") for h in hols if h.get("nonworkday") and h.get("icon")),
                 None,
             )
             if not icon_name:
@@ -3448,9 +3312,7 @@ class TimelineRenderer(BaseSVGRenderer):
         color = getattr(config, "timeline_holiday_icon_color", None)
         baseline_y = axis_y + y_offset + (size * 0.80)
 
-        marks = self._holiday_marks(
-            config, start, end, axis_left, axis_right, db
-        )
+        marks = self._holiday_marks(config, start, end, axis_left, axis_right, db)
         for x, icon_name, _date_label in marks:
             self._draw_icon_svg(
                 icon_name,
@@ -3485,9 +3347,7 @@ class TimelineRenderer(BaseSVGRenderer):
         row_stride = date_size * 1.15
 
         labelled = [(x, label) for x, _icon, label in marks if label]
-        rows = self._assign_holiday_date_rows(
-            [(x, string_width(label, font_path, date_size)) for x, label in labelled]
-        )
+        rows = self._assign_holiday_date_rows([(x, string_width(label, font_path, date_size)) for x, label in labelled])
         for (x, label), row in zip(labelled, rows, strict=False):
             if row < 0:
                 continue
@@ -3518,9 +3378,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return extent
 
     @staticmethod
-    def _callout_room(
-        orient: Orientation, label_side: Side, room_low: float, room_high: float
-    ) -> float:
+    def _callout_room(orient: Orientation, label_side: Side, room_low: float, room_high: float) -> float:
         """How deep the callout stack may go before it leaves the paper.
 
         ``room_low`` / ``room_high`` are the space on the two sides of the
@@ -3548,9 +3406,7 @@ class TimelineRenderer(BaseSVGRenderer):
         timeline reads: callouts above, bars below.  Naming a concrete side
         pins them there instead, wherever the callouts went.
         """
-        configured = str(
-            getattr(config, "timeline_duration_side", "opposite") or "opposite"
-        ).lower()
+        configured = str(getattr(config, "timeline_duration_side", "opposite") or "opposite").lower()
         if configured != "opposite":
             return Side(configured)
         if label_side is Side.BOTH:
@@ -3572,9 +3428,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return Side.PRIMARY if duration_side is Side.SECONDARY else Side.SECONDARY
 
     @staticmethod
-    def _month_tick_arrows(
-        start: arrow.Arrow, end: arrow.Arrow
-    ) -> list[arrow.Arrow]:
+    def _month_tick_arrows(start: arrow.Arrow, end: arrow.Arrow) -> list[arrow.Arrow]:
         """First day of each month inside the visible range."""
         month_start = start.floor("month")
         if month_start < start.floor("day"):
@@ -3620,7 +3474,8 @@ class TimelineRenderer(BaseSVGRenderer):
             if draw_labels:
                 self._draw_text(
                     x,
-                    axis_y - self._tick_label_offset(
+                    axis_y
+                    - self._tick_label_offset(
                         tick_h,
                         label_size,
                         config.timeline_tick_label_gap,
@@ -3689,15 +3544,22 @@ class TimelineRenderer(BaseSVGRenderer):
                     continue
                 fill = alt_colors[seg_idx % 2]
                 self._draw_rect(
-                    x1, row_top, x2 - x1, band_h,
-                    fill=fill, fill_opacity=0.6,
-                    stroke="#aaaaaa", stroke_width=0.5,
+                    x1,
+                    row_top,
+                    x2 - x1,
+                    band_h,
+                    fill=fill,
+                    fill_opacity=0.6,
+                    stroke="#aaaaaa",
+                    stroke_width=0.5,
                     css_class="ec-callout-box",
                 )
                 cx = (x1 + x2) / 2.0
                 cy = row_top + band_h / 2.0 + label_size * 0.35
                 self._draw_text(
-                    cx, cy, seg.label,
+                    cx,
+                    cy,
+                    seg.label,
                     self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
                     fill=label_color,
@@ -3744,41 +3606,41 @@ class TimelineRenderer(BaseSVGRenderer):
         sign = 1.0 if side is Side.PRIMARY else -1.0
         # Clear the tick labels, which occupy this side of the axis.
         band_start = axis_x + sign * (
-            self._axis_label_clearance(config, start, end)
-            or (self._axis_tick_height(config) + label_size * 1.5)
+            self._axis_label_clearance(config, start, end) or (self._axis_tick_height(config) + label_size * 1.5)
         )
 
         alt_colors = ["#e8eaf0", "#d4d8e8"]
         label_color = config.get_line_style("ec-axis-tick").color
-        font_name = (
-            self._tk("text:event_date").get("font") or config.timeline_date_font
-        )
+        font_name = self._tk("text:event_date").get("font") or config.timeline_date_font
 
         for row_idx, segments in enumerate(rows):
             near = band_start + sign * (row_idx * (band_w + band_gap))
             col_x = min(near, near + sign * band_w)
             for seg_idx, seg in enumerate(segments):
-                y1 = self._y_for_day(
-                    arrow.get(seg.start), start, end, axis_top, axis_bottom
-                )
-                y2 = self._y_for_day(
-                    arrow.get(seg.end_exclusive), start, end, axis_top, axis_bottom
-                )
+                y1 = self._y_for_day(arrow.get(seg.start), start, end, axis_top, axis_bottom)
+                y2 = self._y_for_day(arrow.get(seg.end_exclusive), start, end, axis_top, axis_bottom)
                 y1 = max(y1, axis_top)
                 y2 = min(y2, axis_bottom)
                 if y2 <= y1:
                     continue
                 self._draw_rect(
-                    col_x, y1, band_w, y2 - y1,
-                    fill=alt_colors[seg_idx % 2], fill_opacity=0.6,
-                    stroke="#aaaaaa", stroke_width=0.5,
+                    col_x,
+                    y1,
+                    band_w,
+                    y2 - y1,
+                    fill=alt_colors[seg_idx % 2],
+                    fill_opacity=0.6,
+                    stroke="#aaaaaa",
+                    stroke_width=0.5,
                     css_class="ec-callout-box",
                 )
                 self._note_side_ink(col_x, col_x + band_w)
                 cx = col_x + band_w / 2.0
                 cy = (y1 + y2) / 2.0
                 self._draw_text(
-                    cx, cy + label_size * 0.35, seg.label,
+                    cx,
+                    cy + label_size * 0.35,
+                    seg.label,
                     font_name,
                     label_size,
                     fill=label_color,
@@ -3816,6 +3678,7 @@ class TimelineRenderer(BaseSVGRenderer):
         start_d = start.floor("day").date()
         end_d = end.floor("day").date()
         from datetime import timedelta
+
         visible_days: list = []
         d = start_d
         while d <= end_d:
@@ -3823,10 +3686,7 @@ class TimelineRenderer(BaseSVGRenderer):
             d = d + timedelta(days=1)
 
         _events: list[Event] = events or []
-        _day_classes: dict = (
-            {d: classify_day(d, db, config) for d in visible_days}
-            if db is not None else {}
-        )
+        _day_classes: dict = {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
 
         def _classify(day_) -> frozenset:
             return _day_classes.get(day_, frozenset())
@@ -3835,9 +3695,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_band_label = self._tk("text:label")
         text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
         text_opacity = float(
-            tk_band_label.get("opacity")
-            if tk_band_label.get("opacity") is not None
-            else _band_text_style.opacity
+            tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity
         )
 
         col_near = block_near_x
@@ -3848,19 +3706,13 @@ class TimelineRenderer(BaseSVGRenderer):
 
             if unit == "icon":
                 icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(
-                    _events, icon_rules, visible_days, classify_fn=_classify
-                )
+                day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days, classify_fn=_classify)
                 icon_h = float(band.get("icon_height") or col_w * 0.65)
                 fill = str(band.get("fill_color") or "none")
                 for day_d in visible_days:
                     day_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day)
-                    cell_y = self._y_for_day(
-                        day_arrow, start, end, axis_top, axis_bottom
-                    )
-                    cell_y2 = self._y_for_day(
-                        day_arrow.shift(days=1), start, end, axis_top, axis_bottom
-                    )
+                    cell_y = self._y_for_day(day_arrow, start, end, axis_top, axis_bottom)
+                    cell_y2 = self._y_for_day(day_arrow.shift(days=1), start, end, axis_top, axis_bottom)
                     self._draw_icon_band_row(
                         [(col_x, col_w, day_icon_map.get(day_d, []))],
                         cell_y,
@@ -3869,8 +3721,12 @@ class TimelineRenderer(BaseSVGRenderer):
                         fill,
                     )
                 self._draw_line(
-                    col_x, axis_top, col_x, axis_bottom,
-                    stroke="#cccccc", stroke_width=0.5,
+                    col_x,
+                    axis_top,
+                    col_x,
+                    axis_bottom,
+                    stroke="#cccccc",
+                    stroke_width=0.5,
                     css_class="ec-separator",
                 )
                 self._note_side_ink(col_x, col_x + col_w)
@@ -3883,33 +3739,30 @@ class TimelineRenderer(BaseSVGRenderer):
             if text_align not in {"left", "center", "right"}:
                 text_align = "center"
             band_font = str(
-                band.get("font")
-                or tk_band_label.get("font")
-                or _band_text_style.font
-                or config.timeline_text_font_name
+                band.get("font") or tk_band_label.get("font") or _band_text_style.font or config.timeline_text_font_name
             )
             band_font_color = str(band.get("font_color") or text_color)
             band_label_color = str(band.get("label_color") or band_font_color)
-            font_size = float(
-                band.get("font_size")
-                or tk_band_label.get("size")
-                or max(7.0, col_w * 0.55)
-            )
+            font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, col_w * 0.55))
 
             segments = _build_band_segments(
-                band, start_d, end_d, config,
+                band,
+                start_d,
+                end_d,
+                config,
                 visible_days=visible_days,
                 db=db,
                 week_start_default=0,
-                fiscal_year_start_month_default=int(
-                    getattr(config, "blockplan_fiscal_year_start_month", 2) or 2
-                ),
+                fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
             )
 
             for seg_idx, seg in enumerate(segments):
                 y1 = self._y_for_day(
                     arrow.Arrow(seg.start.year, seg.start.month, seg.start.day),
-                    start, end, axis_top, axis_bottom,
+                    start,
+                    end,
+                    axis_top,
+                    axis_bottom,
                 )
                 y2 = self._y_for_day(
                     arrow.Arrow(
@@ -3917,7 +3770,10 @@ class TimelineRenderer(BaseSVGRenderer):
                         seg.end_exclusive.month,
                         seg.end_exclusive.day,
                     ),
-                    start, end, axis_top, axis_bottom,
+                    start,
+                    end,
+                    axis_top,
+                    axis_bottom,
                 )
                 seg_h = max(0.0, y2 - y1)
                 if seg_h <= 0:
@@ -3926,7 +3782,10 @@ class TimelineRenderer(BaseSVGRenderer):
                 fill = alt_fill_color if seg_idx % 2 else fill_color
                 if fill and fill.strip().lower() not in {"none", "transparent", ""}:
                     self._draw_rect(
-                        col_x, y1, col_w, seg_h,
+                        col_x,
+                        y1,
+                        col_w,
+                        seg_h,
                         fill=fill,
                         fill_opacity=1.0,
                         css_class="ec-band-cell",
@@ -3947,8 +3806,11 @@ class TimelineRenderer(BaseSVGRenderer):
                     else:
                         text_x, anchor = cx, "middle"
                     self._draw_text(
-                        text_x, cy, seg.label,
-                        band_font, font_size,
+                        text_x,
+                        cy,
+                        seg.label,
+                        band_font,
+                        font_size,
                         fill=band_label_color,
                         fill_opacity=text_opacity,
                         anchor=anchor,
@@ -3959,8 +3821,12 @@ class TimelineRenderer(BaseSVGRenderer):
 
             sep_x = col_x if sign < 0 else col_x + col_w
             self._draw_line(
-                sep_x, axis_top, sep_x, axis_bottom,
-                stroke="#cccccc", stroke_width=0.5,
+                sep_x,
+                axis_top,
+                sep_x,
+                axis_bottom,
+                stroke="#cccccc",
+                stroke_width=0.5,
                 css_class="ec-separator",
             )
             self._note_side_ink(col_x, col_x + col_w)
@@ -3994,10 +3860,13 @@ class TimelineRenderer(BaseSVGRenderer):
         icon_x = axis_x + sign * (y_offset + size * 0.5)
 
         marks = self._holiday_marks(
-            config, start, end, 0.0, 0.0, db,
-            pos_for_day=lambda day: self._y_for_day(
-                day, start, end, axis_top, axis_bottom
-            ),
+            config,
+            start,
+            end,
+            0.0,
+            0.0,
+            db,
+            pos_for_day=lambda day: self._y_for_day(day, start, end, axis_top, axis_bottom),
         )
         if not marks:
             return
@@ -4031,16 +3900,10 @@ class TimelineRenderer(BaseSVGRenderer):
         # one; along the axis a date claims its own line height.
         first_x = axis_x + sign * (y_offset + size + 2.0)
         row_stride = sign * (
-            max(
-                string_width(label, self._safe_font_path(font_name), date_size)
-                for _p, _i, label in marks
-            )
-            + 3.0
+            max(string_width(label, self._safe_font_path(font_name), date_size) for _p, _i, label in marks) + 3.0
         )
         labelled = [(y, label) for y, _icon, label in marks if label]
-        rows = self._assign_holiday_date_rows(
-            [(y, date_size * 1.2) for y, _label in labelled]
-        )
+        rows = self._assign_holiday_date_rows([(y, date_size * 1.2) for y, _label in labelled])
         for (y, label), row in zip(labelled, rows, strict=False):
             if row < 0:
                 continue
@@ -4114,16 +3977,9 @@ class TimelineRenderer(BaseSVGRenderer):
         )
         self._note_side_ink(line_left, line_right)
         tk_today_label = self._tk("text:today_label")
-        label_size = (
-            tk_today_label.get("size")
-            or max(7.0, _base_name_size(config) * 0.8)
-        )
+        label_size = tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)
         label = config.timeline_today_label_text or "Today"
-        font_name = (
-            tk_today_label.get("font")
-            or _today_label_style.font
-            or config.timeline_date_font
-        )
+        font_name = tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font
         # The label rides off the leading end of the line, and tucks just
         # inside it when there is no room there — the horizontal marker
         # drops its label below the line's top for the same reason.
@@ -4219,10 +4075,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-today-line",
         )
         tk_today_label = self._tk("text:today_label")
-        label_size = (
-            tk_today_label.get("size")
-            or max(7.0, _base_name_size(config) * 0.8)
-        )
+        label_size = tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
         # Keep label baseline inside SVG bounds.
         min_y = label_size * 1.1
@@ -4307,9 +4160,7 @@ class TimelineRenderer(BaseSVGRenderer):
             config.timeline_tick_label_offset_y,
         )
         if orientation is Orientation.VERTICAL:
-            font_path = self._safe_font_path(
-                self._tk("text:event_date").get("font") or config.timeline_date_font
-            )
+            font_path = self._safe_font_path(self._tk("text:event_date").get("font") or config.timeline_date_font)
             widest = max(
                 string_width(
                     format_arrow_date(m, config.timeline_tick_label_format),
@@ -4323,9 +4174,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # row has to clear the configured offset plus that.
         return baseline + (label_size * 0.8) + _AXIS_LABEL_MARGIN
 
-    def _callout_date_label(
-        self, config: CalendarConfig, item: TimelineCallout
-    ) -> str:
+    def _callout_date_label(self, config: CalendarConfig, item: TimelineCallout) -> str:
         """The date shown inside a callout box, or "" when it has none.
 
         A vertical timeline used to leave this blank on the theory that the
@@ -4404,24 +4253,15 @@ class TimelineRenderer(BaseSVGRenderer):
         tokens first; falls back to the legacy ``timeline_*_font_size`` fields
         and finally to the page-scaled ``weekly_name_text_font_size``.
         """
-        title_size = (
-            self._tk("text:event_name").get("size")
-            or (
-                float(config.timeline_name_text_font_size)
-                if config.timeline_name_text_font_size is not None
-                else max(10.0, _base_name_size(config) + 2.0)
-            )
+        title_size = self._tk("text:event_name").get("size") or (
+            float(config.timeline_name_text_font_size)
+            if config.timeline_name_text_font_size is not None
+            else max(10.0, _base_name_size(config) + 2.0)
         )
-        notes_size = (
-            self._tk("text:event_notes").get("size")
-            or (
-                float(config.timeline_notes_text_font_size)
-                if config.timeline_notes_text_font_size is not None
-                else max(8.0, _base_name_size(config) * 0.9)
-            )
+        notes_size = self._tk("text:event_notes").get("size") or (
+            float(config.timeline_notes_text_font_size)
+            if config.timeline_notes_text_font_size is not None
+            else max(8.0, _base_name_size(config) * 0.9)
         )
-        date_size = (
-            self._tk("text:event_date").get("size")
-            or max(8.0, _base_name_size(config) * 0.95)
-        )
+        date_size = self._tk("text:event_date").get("size") or max(8.0, _base_name_size(config) * 0.95)
         return title_size, notes_size, date_size

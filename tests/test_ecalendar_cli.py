@@ -226,9 +226,7 @@ def test_help_blockplan_shows_usage(capsys):
 
 
 def _subparsers_action(parser: argparse.ArgumentParser) -> argparse._SubParsersAction:
-    return next(
-        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
-    )
+    return next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
 
 
 def test_top_level_help_lists_subcommands_alphabetically():
@@ -239,9 +237,7 @@ def test_top_level_help_lists_subcommands_alphabetically():
     # One line per subcommand, indented four spaces (wrapped help lines are
     # indented further).
     listed = [
-        line.split()[0]
-        for line in help_text.splitlines()
-        if line.startswith("    ") and not line.startswith("     ")
+        line.split()[0] for line in help_text.splitlines() if line.startswith("    ") and not line.startswith("     ")
     ]
     assert listed == sorted(names)
     # The {a,b,...} choices in the usage line and positional heading, too.
@@ -265,9 +261,7 @@ def test_unknown_subcommand_error_lists_choices_alphabetically(capsys):
 def test_help_subcommand_choices_are_sorted_and_cover_every_command(capsys):
     parser = ecalendar._create_argument_parser("calendar.svg")
     subparsers = _subparsers_action(parser)
-    target = next(
-        a for a in subparsers.choices["help"]._actions if a.dest == "subcommand"
-    )
+    target = next(a for a in subparsers.choices["help"]._actions if a.dest == "subcommand")
     choices = list(target.choices)
 
     assert choices == sorted(choices)

@@ -28,9 +28,7 @@ ICON_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M1 1 L23 23" stroke="c
 def _colors(n: int) -> list[dict]:
     """``n`` colour rows spread across the hue circle, as the DB returns them."""
     return [
-        {"EN": f"color{i:03d}", "red": (i * 7) % 256, "green": (i * 13) % 256,
-         "blue": (i * 29) % 256}
-        for i in range(n)
+        {"EN": f"color{i:03d}", "red": (i * 7) % 256, "green": (i * 13) % 256, "blue": (i * 29) % 256} for i in range(n)
     ]
 
 
@@ -65,9 +63,7 @@ class SheetPaginationTests(unittest.TestCase):
 
     def test_colorsheet_paginates_into_numbered_pages(self):
         # 25 colours over 2×3 pages → 6 per page → 5 pages.
-        written = _generate_colorsheet_svg(
-            _colors(25), self.out, paginate=True, columns=2, rows=3
-        )
+        written = _generate_colorsheet_svg(_colors(25), self.out, paginate=True, columns=2, rows=3)
         self.assertEqual(
             [p.name for p in written],
             [f"sheet_p{i:02d}.svg" for i in range(1, 6)],
@@ -75,45 +71,37 @@ class SheetPaginationTests(unittest.TestCase):
         self.assertTrue(all(p.exists() for p in written))
 
     def test_iconsheet_paginates_into_numbered_pages(self):
-        written = _generate_iconsheet_svg(
-            _icons(25), self.out, paginate=True, columns=2, rows=3
-        )
+        written = _generate_iconsheet_svg(_icons(25), self.out, paginate=True, columns=2, rows=3)
         self.assertEqual(
             [p.name for p in written],
             [f"sheet_p{i:02d}.svg" for i in range(1, 6)],
         )
 
     def test_single_page_run_keeps_base_filename(self):
-        written = _generate_colorsheet_svg(
-            _colors(4), self.out, paginate=True, columns=4, rows=10
-        )
+        written = _generate_colorsheet_svg(_colors(4), self.out, paginate=True, columns=4, rows=10)
         self.assertEqual(written, [self.out])
 
     def test_paginated_page_shows_name_range_instead_of_count(self):
-        written = _generate_colorsheet_svg(
-            _colors(6), self.out, title="Colors", paginate=True, columns=3, rows=1
-        )
+        written = _generate_colorsheet_svg(_colors(6), self.out, title="Colors", paginate=True, columns=3, rows=1)
         first = written[0].read_text(encoding="utf-8")
         self.assertIn("(color000 to color002)", first)
         self.assertNotIn("colors)</tspan>", first)
 
     def test_last_page_holds_the_remainder(self):
-        written = _generate_colorsheet_svg(
-            _colors(7), self.out, paginate=True, columns=3, rows=1
-        )
+        written = _generate_colorsheet_svg(_colors(7), self.out, paginate=True, columns=3, rows=1)
         self.assertEqual(len(written), 3)
         # The trailing page has one swatch, so its range collapses to one name.
         self.assertIn("(color006)", written[-1].read_text(encoding="utf-8"))
 
     def test_cell_size_scales_the_swatch_box(self):
-        default = _generate_colorsheet_svg(
-            _colors(1), self.out, paginate=True, columns=1, rows=1
-        )[0].read_text(encoding="utf-8")
+        default = _generate_colorsheet_svg(_colors(1), self.out, paginate=True, columns=1, rows=1)[0].read_text(
+            encoding="utf-8"
+        )
         self.assertIn('width="110" height="60"', default)
 
-        sized = _generate_colorsheet_svg(
-            _colors(1), self.out, paginate=True, columns=1, rows=1, cell_size=220
-        )[0].read_text(encoding="utf-8")
+        sized = _generate_colorsheet_svg(_colors(1), self.out, paginate=True, columns=1, rows=1, cell_size=220)[
+            0
+        ].read_text(encoding="utf-8")
         # Height follows the width so the sheet keeps its aspect ratio.
         self.assertIn('width="220" height="120"', sized)
 
@@ -121,9 +109,7 @@ class SheetPaginationTests(unittest.TestCase):
 
     def test_all_palettes_pack_several_palettes_onto_one_page(self):
         palettes = {"Alpha": _palette(3), "Beta": _palette(4), "Gamma": _palette(2)}
-        written = _generate_all_palettes_svg(
-            palettes, self.out, paginate=True, columns=12, rows=10
-        )
+        written = _generate_all_palettes_svg(palettes, self.out, paginate=True, columns=12, rows=10)
         # Each palette is one swatch row, so all three fit in a 10-row budget.
         self.assertEqual(written, [self.out])
         document = self.out.read_text(encoding="utf-8")
@@ -132,9 +118,7 @@ class SheetPaginationTests(unittest.TestCase):
 
     def test_all_palettes_break_page_when_budget_is_exhausted(self):
         palettes = {name: _palette(4) for name in ("Alpha", "Beta", "Gamma", "Delta")}
-        written = _generate_all_palettes_svg(
-            palettes, self.out, paginate=True, columns=4, rows=3
-        )
+        written = _generate_all_palettes_svg(palettes, self.out, paginate=True, columns=4, rows=3)
         self.assertEqual(len(written), 2)
         first = written[0].read_text(encoding="utf-8")
         second = written[1].read_text(encoding="utf-8")
@@ -148,9 +132,7 @@ class SheetPaginationTests(unittest.TestCase):
         # "Big" alone is taller than the one-row budget; it must still land on a
         # single (taller) page rather than being cut in half.
         palettes = {"Big": _palette(12), "Small": _palette(2)}
-        written = _generate_all_palettes_svg(
-            palettes, self.out, paginate=True, columns=3, rows=1
-        )
+        written = _generate_all_palettes_svg(palettes, self.out, paginate=True, columns=3, rows=1)
         self.assertEqual(len(written), 2)
         big_page = written[0].read_text(encoding="utf-8")
         self.assertIn(">Big  <", big_page)
@@ -183,9 +165,7 @@ class FontsheetPaginationTests(unittest.TestCase):
         self.assertIn("(5 fonts)", self.out.read_text(encoding="utf-8"))
 
     def test_paginates_into_numbered_pages(self):
-        written = _generate_fontsheet_svg(
-            self.fonts, self.out, paginate=True, columns=1, rows=2
-        )
+        written = _generate_fontsheet_svg(self.fonts, self.out, paginate=True, columns=1, rows=2)
         self.assertEqual(
             [p.name for p in written],
             ["sheet_p01.svg", "sheet_p02.svg", "sheet_p03.svg"],
@@ -193,9 +173,7 @@ class FontsheetPaginationTests(unittest.TestCase):
 
     def test_paginated_page_shows_font_name_range(self):
         names = sorted(self.fonts, key=str.lower)
-        written = _generate_fontsheet_svg(
-            self.fonts, self.out, paginate=True, columns=1, rows=2
-        )
+        written = _generate_fontsheet_svg(self.fonts, self.out, paginate=True, columns=1, rows=2)
         first = written[0].read_text(encoding="utf-8")
         self.assertIn(f"({names[0]} to {names[1]})", first)
         self.assertNotIn("fonts)</tspan>", first)

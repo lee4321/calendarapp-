@@ -35,6 +35,7 @@ def _mini_style_rules(config: CalendarConfig) -> list:
             return rules
     return list(getattr(config, "theme_style_rules", None) or [])
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,7 +144,7 @@ class DayStyle:
         that shifts between runs.
         """
         ordered = sorted(self.icons, key=lambda i: -i.rank)
-        return ordered[:max(0, limit)]
+        return ordered[: max(0, limit)]
 
 
 class DayStyleResolver:
@@ -180,10 +181,7 @@ class DayStyleResolver:
         style = DayStyle(is_adjacent_month=is_adjacent)
 
         if is_adjacent:
-            style.text_color = (
-                self._config.theme_mini_adjacent_month_color
-                or self._config.mini_adjacent_month_color
-            )
+            style.text_color = self._config.theme_mini_adjacent_month_color or self._config.mini_adjacent_month_color
             style.text_opacity = 0.4
             return style
 
@@ -199,6 +197,7 @@ class DayStyleResolver:
                     style.shade_opacity = 0.50
                 if self._config.fiscal_show_period_labels and fiscal_info.is_period_start:
                     from shared.fiscal_renderer import format_fiscal_period_label
+
                     style.fiscal_period_label = format_fiscal_period_label(fiscal_info, self._config)
 
         # Layer 1: Government holidays
@@ -223,10 +222,7 @@ class DayStyleResolver:
         if self._config.shade_current_day:
             today_key = date.today().strftime("%Y%m%d")
             if daykey == today_key:
-                style.shade_color = (
-                    self._config.theme_mini_current_day_color
-                    or self._config.mini_current_day_color
-                )
+                style.shade_color = self._config.theme_mini_current_day_color or self._config.mini_current_day_color
                 style.shade_opacity = 0.25
 
         return style
@@ -259,10 +255,7 @@ class DayStyleResolver:
         )
 
         if any(h.get("nonworkday") for h in holidays):
-            style.shade_color = (
-                self._config.theme_mini_nonworkday_fill_color
-                or self._config.mini_nonworkday_fill_color
-            )
+            style.shade_color = self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
             style.shade_opacity = 0.2
 
         for holiday in holidays:
@@ -283,8 +276,7 @@ class DayStyleResolver:
         for sd in special_days:
             if sd.get("nonworkday"):
                 style.shade_color = (
-                    self._config.theme_mini_nonworkday_fill_color
-                    or self._config.mini_nonworkday_fill_color
+                    self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
                 )
                 style.shade_opacity = 0.25
 
@@ -318,9 +310,7 @@ class DayStyleResolver:
             # Resource group coloring
             rg = (event.get("Resource_Group") or "").upper()
             if rg:
-                rg_colors = (
-                    self._config.theme_resource_group_colors or Resource_Group_colors
-                )
+                rg_colors = self._config.theme_resource_group_colors or Resource_Group_colors
                 if rg in rg_colors:
                     style.text_color = rg_colors[rg]
 
@@ -397,11 +387,13 @@ class DayStyleResolver:
                 style.shade_opacity = float(style_result.fill_opacity)
 
         if style_result.pattern:
-            style.hash_decorations = [HashDecoration(
-                pattern=style_result.pattern,
-                color=style_result.pattern_color,
-                opacity=style_result.pattern_opacity,
-            )]
+            style.hash_decorations = [
+                HashDecoration(
+                    pattern=style_result.pattern,
+                    color=style_result.pattern_color,
+                    opacity=style_result.pattern_opacity,
+                )
+            ]
 
         style.add_icon(style_result.icon, ICON_RANK_STYLE_RULE)
 
@@ -452,17 +444,20 @@ class DayStyleResolver:
                     style.shade_opacity = float(fop)
             pattern = sty.get("pattern")
             if pattern:
-                style.hash_decorations = [HashDecoration(
-                    pattern=pattern,
-                    color=sty.get("pattern_color"),
-                    opacity=sty.get("pattern_opacity"),
-                )]
+                style.hash_decorations = [
+                    HashDecoration(
+                        pattern=pattern,
+                        color=sty.get("pattern_color"),
+                        opacity=sty.get("pattern_opacity"),
+                    )
+                ]
             style.add_icon(sty.get("icon"), ICON_RANK_STYLE_RULE)
 
     @staticmethod
     def _dict_to_event(d: dict):
         """Convert a mini event dict to an Event object for rule matching."""
         from shared.data_models import Event
+
         try:
             pc = float(d.get("Percent_Complete") or 0.0)
         except (TypeError, ValueError):

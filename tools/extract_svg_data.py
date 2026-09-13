@@ -40,8 +40,7 @@ def extract_csv(svg_path: str) -> str:
 
     if data_elem is None:
         print(
-            "Error: No embedded event data found in this SVG.\n"
-            "Was it generated with --embed-data?",
+            "Error: No embedded event data found in this SVG.\nWas it generated with --embed-data?",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -49,8 +48,7 @@ def extract_csv(svg_path: str) -> str:
     encoding = data_elem.get("encoding", "")
     if encoding != "deflate+base64":
         print(
-            f"Error: Unsupported encoding '{encoding}'. "
-            "Expected 'deflate+base64'.",
+            f"Error: Unsupported encoding '{encoding}'. Expected 'deflate+base64'.",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -65,9 +63,7 @@ def extract_csv(svg_path: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Extract embedded CSV data from an EventCalendar SVG file."
-    )
+    parser = argparse.ArgumentParser(description="Extract embedded CSV data from an EventCalendar SVG file.")
     parser.add_argument("svg", help="Path to the SVG file")
     parser.add_argument(
         "-o",

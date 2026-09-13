@@ -41,6 +41,7 @@ def _event(**fields) -> dict:
 
 # ── Columns ───────────────────────────────────────────────────────────────
 
+
 def test_columns_come_from_the_theme_headers():
     cfg = _config(
         mini_details_headers=["When", "What", "Who"],
@@ -84,10 +85,9 @@ def test_the_date_and_name_columns_carry_their_own_text_tokens():
 
 # ── Row content ───────────────────────────────────────────────────────────
 
+
 def test_a_row_states_the_event_across_the_default_columns():
-    cells = MiniCalendarRenderer._details_event_cells(
-        _event(Milestone=1, Priority=1), 5
-    )
+    cells = MiniCalendarRenderer._details_event_cells(_event(Milestone=1, Priority=1), 5)
 
     assert cells == ["2026-04-03", "Sprint 1 Demo", "True", "1", "Product"]
 
@@ -96,23 +96,20 @@ def test_a_row_is_padded_or_trimmed_to_the_column_count():
     """A theme asking for fewer columns must not slide the next event's
     values left, nor a wider one leave a short row."""
     assert MiniCalendarRenderer._details_event_cells(_event(), 2) == [
-        "2026-04-03", "Sprint 1 Demo",
+        "2026-04-03",
+        "Sprint 1 Demo",
     ]
     assert MiniCalendarRenderer._details_event_cells(_event(), 7)[-2:] == ["", ""]
 
 
 def test_a_single_day_event_notes_carry_no_end_date():
-    note = MiniCalendarRenderer._details_event_note(
-        _event(Notes="Stakeholder demo")
-    )
+    note = MiniCalendarRenderer._details_event_note(_event(Notes="Stakeholder demo"))
 
     assert note == "Stakeholder demo"
 
 
 def test_a_multi_day_event_states_its_end_date_in_the_sub_line():
-    note = MiniCalendarRenderer._details_event_note(
-        _event(End="20260410", Notes="Stakeholder demo")
-    )
+    note = MiniCalendarRenderer._details_event_note(_event(End="20260410", Notes="Stakeholder demo"))
 
     assert note == "Stakeholder demo | End: 2026-04-10"
 
@@ -133,6 +130,7 @@ def test_a_finish_column_stands_in_for_a_missing_end():
 
 # ── Ordering ──────────────────────────────────────────────────────────────
 
+
 def test_events_are_listed_by_span_then_name():
     events = [
         _event(Start="20260410", Task_Name="Later"),
@@ -145,6 +143,7 @@ def test_events_are_listed_by_span_then_name():
 
 
 # ── The flags that switch the page on and off ─────────────────────────────
+
 
 def _parse(view: str, *flags):
     from cli.args import _create_argument_parser

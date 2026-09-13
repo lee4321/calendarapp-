@@ -56,7 +56,9 @@ def _write(cfg, rows: int, columns=None) -> tuple[_Recording, int]:
     from renderers.details_page import numbered_page_path
 
     writer = DetailsPageWriter(
-        renderer, cfg, coords,
+        renderer,
+        cfg,
+        coords,
         lambda n: numbered_page_path(cfg.outputfile, n),
         "Title",
     )
@@ -124,9 +126,7 @@ def test_every_page_opens_on_an_unbanded_row(tmp_path):
     # The first row of page 2 is drawn after that page's column header.
     headers = [i for i, t in enumerate(renderer.texts) if t["text"] == "Name"]
     assert len(headers) == pages
-    first_row_y = next(
-        t["y"] for t in renderer.texts[headers[1]:] if t["text"].startswith("Row ")
-    )
+    first_row_y = next(t["y"] for t in renderer.texts[headers[1] :] if t["text"].startswith("Row "))
     page2_bands = [b for b in _bands(renderer) if b["y"] >= first_row_y]
     assert all(b["y"] > first_row_y for b in page2_bands)
 
@@ -163,7 +163,6 @@ def test_the_body_size_scales_with_the_page(tmp_path):
     assert large.details_body_font_size > small.details_body_font_size
 
 
-
 def test_a_row_mark_is_painted_inside_its_cell(tmp_path):
     """A mark -- a key's swatch, say -- gets its cell's padded bounds and
     the row's baseline, so it sits in the row it keys."""
@@ -174,7 +173,9 @@ def test_a_row_mark_is_painted_inside_its_cell(tmp_path):
     from renderers.details_page import numbered_page_path
 
     writer = DetailsPageWriter(
-        renderer, cfg, coords,
+        renderer,
+        cfg,
+        coords,
         lambda n: numbered_page_path(cfg.outputfile, n),
         "Title",
     )
@@ -183,7 +184,7 @@ def test_a_row_mark_is_painted_inside_its_cell(tmp_path):
     writer.row(["Row", "1"], _COLUMNS, mark=(1, lambda *args: calls.append(args)))
     writer.finish()
 
-    (x, baseline, width, size), = calls
+    ((x, baseline, width, size),) = calls
     row_text = next(t for t in renderer.texts if t["text"] == "Row")
     cell_left = writer.left + writer.width * _COLUMNS[0].width
     assert cell_left < x < cell_left + writer.width * _COLUMNS[1].width

@@ -110,11 +110,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     TOKEN_VISUALIZER = "weekly"
     TOKENS = (
-        "text:day_number", "text:event_name", "text:event_notes",
-        "text:fiscal_label", "text:week_number", "text:holiday_title",
+        "text:day_number",
+        "text:event_name",
+        "text:event_notes",
+        "text:fiscal_label",
+        "text:week_number",
+        "text:holiday_title",
         "box:cell",
         "line:hash",
-        "icon:event", "icon:overflow",
+        "icon:event",
+        "icon:overflow",
     )
 
     def _build_day_boxes(
@@ -212,11 +217,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         type_tokens = [o for o in order if o in ("milestones", "events", "durations")]
         if type_tokens:
             # Events whose type is not listed go after all listed types
-            type_rank = (
-                type_tokens.index(event_type)
-                if event_type in type_tokens
-                else len(type_tokens)
-            )
+            type_rank = type_tokens.index(event_type) if event_type in type_tokens else len(type_tokens)
         else:
             # No type tokens (e.g. ["priority"] or ["alphabetical"]) — no grouping
             type_rank = 0
@@ -264,9 +265,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
             if config.milestones and t.milestone:  # noqa: SIM114 - configured apart from events
                 if t.datekey in days_to_print:
-                    rows_on_days, had_overflow = self._place_event_and_notes(
-                        config, rows_on_days, t, t.datekey
-                    )
+                    rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
                     if had_overflow:
                         overflow_count += 1
                         overflow_entries.append(
@@ -278,15 +277,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             )
                         )
 
-            elif (
-                (daystart == dayend)
-                and config.includeevents
-                and (t.task_name and t.task_name.strip())
-            ):
+            elif (daystart == dayend) and config.includeevents and (t.task_name and t.task_name.strip()):
                 if t.datekey in days_to_print:
-                    rows_on_days, had_overflow = self._place_event_and_notes(
-                        config, rows_on_days, t, t.datekey
-                    )
+                    rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
                     if had_overflow:
                         overflow_count += 1
                         overflow_entries.append(
@@ -299,9 +292,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                         )
 
             elif (daystart != dayend) and config.includedurations:
-                rows_on_days, had_overflow = self._place_duration(
-                    config, days_to_print, rows_on_days, t, t.datekey
-                )
+                rows_on_days, had_overflow = self._place_duration(config, days_to_print, rows_on_days, t, t.datekey)
                 if had_overflow:
                     overflow_count += 1
                     overflow_entries.append(
@@ -379,7 +370,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 config,
                 oneday,
                 daykey,
-                X, Y, W, H,
+                X,
+                Y,
+                W,
+                H,
                 has_overflow=daykey in self._overflow_daykeys,
                 holidays=holidays,
                 day_num_width=day_num_width,
@@ -545,12 +539,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             name = h.get("displayname")
             if not name:
                 continue
-            raw_icon = (
-                h.get("icon")
-                or h.get("displayiconid")
-                or h.get("displayicon")
-                or ""
-            )
+            raw_icon = h.get("icon") or h.get("displayiconid") or h.get("displayicon") or ""
             icon = str(raw_icon).strip()
             if icon.isdigit():
                 resolved = db.get_icon_by_id(int(icon))
@@ -616,10 +605,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             fill_opacity = fill_alpha if fill_alpha is not None else CompanyHolidayAlpha
         elif config.fiscal_use_period_colors and config.fiscal_lookup:
             fiscal_info = config.fiscal_lookup.get(oneday_str)
-            if fiscal_info:
-                fill_color = get_fiscal_period_color(fiscal_info, config)
-            else:
-                fill_color = _monthcolors[month]
+            fill_color = get_fiscal_period_color(fiscal_info, config) if fiscal_info else _monthcolors[month]
             fill_opacity = 0.50
         else:
             fill_color = _monthcolors[month]
@@ -654,11 +640,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if (
             boxdate == "1"
             or oneday_str == config.adjustedstart
-            or (
-                weekend_style_is_workweek(config.weekend_style)
-                and boxdate in ("2", "3")
-                and dayoftheweek == "Mon"
-            )
+            or (weekend_style_is_workweek(config.weekend_style) and boxdate in ("2", "3") and dayoftheweek == "Mon")
         ):
             boxdate = month_indicator + boxdate
 
@@ -681,9 +663,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         fiscal_info = config.fiscal_lookup.get(oneday_str)
         is_week_start = (
-            oneday.isoweekday() == 7
-            if weekend_style_starts_sunday(config.weekend_style)
-            else oneday.isoweekday() == 1
+            oneday.isoweekday() == 7 if weekend_style_starts_sunday(config.weekend_style) else oneday.isoweekday() == 1
         )
 
         # If weeks start on Monday but fiscal period starts on Sunday,
@@ -702,10 +682,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if fiscal_info:
             next_day = oneday.shift(days=1)
             next_info = config.fiscal_lookup.get(next_day.format("YYYYMMDD"))
-            is_period_end = (
-                next_info is None
-                or next_info.fiscal_period != fiscal_info.fiscal_period
-            )
+            is_period_end = next_info is None or next_info.fiscal_period != fiscal_info.fiscal_period
 
         label_parts = []
         if fiscal_info and fiscal_info.is_period_start:
@@ -765,9 +742,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             return 0.0
 
         week_start_sunday = weekend_style_starts_sunday(config.weekend_style)
-        is_week_start = (
-            oneday.isoweekday() == 7 if week_start_sunday else oneday.isoweekday() == 1
-        )
+        is_week_start = oneday.isoweekday() == 7 if week_start_sunday else oneday.isoweekday() == 1
         if not is_week_start:
             return 0.0
 
@@ -822,11 +797,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if not drew_inside:
             return 0.0
         font_path = get_font_path(wn_font)
-        text_w = (
-            string_width(week_text, font_path, wn_size)
-            if font_path
-            else 0.0
-        )
+        text_w = string_width(week_text, font_path, wn_size) if font_path else 0.0
         return wn_x + text_w
 
     def _draw_day_top_row_extras(
@@ -867,12 +838,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         # 1. Fiscal label and week-number (unchanged from prior behavior).
         label_x = X + (W * 0.02)
-        label_width = self._draw_fiscal_label(
-            config, oneday, oneday_str, dbc, label_x
-        )
-        wn_right_x = self._draw_week_number_label(
-            config, oneday, y1, X, label_x, label_width
-        )
+        label_width = self._draw_fiscal_label(config, oneday, oneday_str, dbc, label_x)
+        wn_right_x = self._draw_week_number_label(config, oneday, y1, X, label_x, label_width)
 
         # Available horizontal budget runs from the left edge (past any
         # week-number label, etc.) to just before the day number.
@@ -923,10 +890,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         ht_font = tk_ht.get("font") or _ts_ht.font
         ht_color = tk_ht.get("color") or _ts_ht.color
         icon_color = tk_icon_ev.get("color") or _is_ei.color
-        ht_max_size = (
-            tk_ht.get("size")
-            or tk_en.get("size")
-        )
+        ht_max_size = tk_ht.get("size") or tk_en.get("size")
         icon_size = ht_max_size
         icon_baseline_y = y1 - 0.3 * (day_num_size - icon_size)
 
@@ -1012,9 +976,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         x1, y1 = dbc["Number"]
 
         # Background fill (style_result overrides holiday/fiscal defaults)
-        fill_color, fill_opacity = self._resolve_day_box_fill(
-            config, oneday_str, month, shadespecialday
-        )
+        fill_color, fill_opacity = self._resolve_day_box_fill(config, oneday_str, month, shadespecialday)
         if style_result is not None and style_result.fill_color is not None:
             fill_color = style_result.fill_color
         if style_result is not None and style_result.fill_opacity is not None:
@@ -1035,16 +997,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 else config.day_box_stroke_opacity
             ),
             stroke_width=(
-                tk_cell.get("stroke_width")
-                if tk_cell.get("stroke_width") is not None
-                else config.day_box_stroke_width
+                tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else config.day_box_stroke_width
             ),
             rx=5,
-            stroke_dasharray=(
-                tk_cell.get("dasharray")
-                or config.day_box_stroke_dasharray
-                or None
-            ),
+            stroke_dasharray=(tk_cell.get("dasharray") or config.day_box_stroke_dasharray or None),
             css_class="ec-cell",
         )
 
@@ -1112,18 +1068,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # In SVG coordinates Y increases downward and y is the top edge of the
         # day box, so we shift the pattern rect down by top_clearance and
         # shrink its height to match.
-        top_clearance = (
-            self._tk("text:day_number").get("size")
-           
-        ) * 1.2
+        top_clearance = (self._tk("text:day_number").get("size")) * 1.2
         pattern_h = max(0.0, h - top_clearance)
 
         if pattern_h <= 0:
             return
 
-        effective_opacity = (
-            opacity if opacity is not None else config.hash_pattern_opacity
-        )
+        effective_opacity = opacity if opacity is not None else config.hash_pattern_opacity
         self._draw_rect(
             x,
             y + top_clearance,
@@ -1210,9 +1161,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 css_class="ec-event-name",
             )
 
-            ev_icon_size = (
-                _is_ei.size if _is_ei.size is not None else _event_icon_size(config)
-            )
+            ev_icon_size = _is_ei.size if _is_ei.size is not None else _event_icon_size(config)
             self._draw_icon_svg(
                 icon_to_draw,
                 iconx,
@@ -1223,11 +1172,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 fallback_size=config.default_missing_icon_size,
                 fallback_color="red",
                 css_class="ec-event-icon",
-                box_token=(
-                    "box:milestone"
-                    if getattr(t, "milestone", False)
-                    else "box:event"
-                ),
+                box_token=("box:milestone" if getattr(t, "milestone", False) else "box:event"),
                 box_ctx=self._event_ctx(t),
                 opacity=status_opacity,
             )
@@ -1274,9 +1219,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         numofrows = len(row_coords[daykey])
 
         for rownumber in row_coords[daykey]:
-            (X, Y, Width, Height, textx, texty, iconx, icony, used) = row_coords[
-                daykey
-            ][rownumber]
+            (X, Y, Width, Height, textx, texty, iconx, icony, used) = row_coords[daykey][rownumber]
 
             if not used:
                 has_notes = bool(t.notes and str(t.notes).strip())
@@ -1323,21 +1266,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             # name: after the icon column when an icon is shown,
                             # or at the icon-column left edge when there is none.
                             notes_x = ntextx if t.icon else niconx
-                            notes_max_w = (
-                                nWidth - (ntextx - niconx) if t.icon else nWidth
-                            )
+                            notes_max_w = nWidth - (ntextx - niconx) if t.icon else nWidth
                             _ts_notes = config.get_text_style("ec-event-notes")
                             tk_notes = self._tk("text:event_notes")
-                            _ev_style = StyleEngine(
-                                _weekly_style_rules(config)
-                            ).evaluate_event(t)
+                            _ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
                             n_font, n_size, n_color, _ = _ev_style.text_override(
                                 "event_notes",
                                 font=tk_notes.get("font") or _ts_notes.font,
-                                font_size=(
-                                    tk_notes.get("size")
-                                   
-                                ),
+                                font_size=(tk_notes.get("size")),
                                 color=tk_notes.get("color") or _ts_notes.color,
                             )
                             self._draw_text(
@@ -1420,9 +1356,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """
         for daykey in days_to_print:
             for rownumber in rowids:
-                X, Y, Width, Height, textx, texty, iconx, icony, _boolean = rowcoords[
-                    daykey
-                ][rownumber]
+                X, Y, Width, Height, textx, texty, iconx, icony, _boolean = rowcoords[daykey][rownumber]
                 rowcoords[daykey][rownumber] = (
                     X,
                     Y,
@@ -1534,9 +1468,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         icon_color = dur_style.icon_color or _is_di.color
         # Theme-declared `icon:duration` size wins; fall back to the global
         # event/duration size when the theme is silent.
-        icon_size = (
-            _is_di.size if _is_di.size is not None else _event_icon_size(config)
-        )
+        icon_size = _is_di.size if _is_di.size is not None else _event_icon_size(config)
         icon_gap = icon_size * 0.4
 
         name_font_path = ""
@@ -1563,9 +1495,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         status_opacity = _status_opacity(getattr(t, "status", None))
         # Compose with any theme-supplied fill_opacity already in rect_kwargs.
         rect_kwargs = dict(rect_kwargs)
-        rect_kwargs["fill_opacity"] = (
-            rect_kwargs.get("fill_opacity", 1.0) * status_opacity
-        )
+        rect_kwargs["fill_opacity"] = rect_kwargs.get("fill_opacity", 1.0) * status_opacity
 
         for i_rect, (X, Y, Width, Height, _tx, name_ty, _ix, _iy, notes_ty) in enumerate(list_of_rects):
             self._draw_rect(
@@ -1578,10 +1508,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 **rect_kwargs,
             )
 
-            if inline_notes and has_notes:
-                display_name = f"{t.task_name}: {t.notes}"
-            else:
-                display_name = t.task_name
+            display_name = f"{t.task_name}: {t.notes}" if inline_notes and has_notes else t.task_name
             centerX = X + (Width / 2)
             text_max_width = Width
             if icon_to_draw:
@@ -1600,11 +1527,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             )
 
             if icon_to_draw:
-                measured = (
-                    string_width(display_name or "", name_font_path, name_size)
-                    if name_font_path
-                    else 0.0
-                )
+                measured = string_width(display_name or "", name_font_path, name_size) if name_font_path else 0.0
                 rendered_w = min(measured, text_max_width)
                 icon_x = centerX - (rendered_w / 2) - icon_gap - icon_size
                 icon_x = max(X + 2.0, icon_x)
@@ -1764,14 +1687,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         if use_double_height:
             for rowid in range(1, config.maxrows):
-                if List_of_Possibilities.count(rowid) == len(
-                    duration_dates
-                ) and List_of_Possibilities.count(rowid - 1) == len(duration_dates):
+                if List_of_Possibilities.count(rowid) == len(duration_dates) and List_of_Possibilities.count(
+                    rowid - 1
+                ) == len(duration_dates):
                     rownotfound = False
                     rowids = [rowid - 1, rowid]
-                    self._place_duration_rect(
-                        config, t, duration_dates, rowcoords, rowids, inline_notes=False
-                    )
+                    self._place_duration_rect(config, t, duration_dates, rowcoords, rowids, inline_notes=False)
                     rowcoords = self._mark_rows_used(duration_dates, rowcoords, rowids)
                     break
         else:

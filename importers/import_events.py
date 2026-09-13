@@ -353,9 +353,7 @@ def load_generator_script(script_path):
     spec.loader.exec_module(module)
 
     if not hasattr(module, "generate_events"):
-        raise ValueError(
-            f"Generator script must define a generate_events() function: {script_path}"
-        )
+        raise ValueError(f"Generator script must define a generate_events() function: {script_path}")
 
     if not callable(module.generate_events):
         raise ValueError(f"generate_events must be callable in: {script_path}")
@@ -386,9 +384,7 @@ def call_generate_fn(generate_fn, **kwargs):
     params = sig.parameters
 
     # Check if function accepts **kwargs (VAR_KEYWORD)
-    has_var_keyword = any(
-        p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
-    )
+    has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
 
     if kwargs:
         if len(params) == 0:
@@ -405,8 +401,7 @@ def call_generate_fn(generate_fn, **kwargs):
                 name
                 for name, p in params.items()
                 if p.default is inspect.Parameter.empty
-                and p.kind
-                not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+                and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
             ]
             if required_params:
                 raise ValueError(
@@ -472,9 +467,7 @@ def import_generated_events(
 
     # Validate the returned value is a DataFrame
     if not isinstance(df, pandas.DataFrame):
-        msg = (
-            f"generate_events() must return a pandas DataFrame, got {type(df).__name__}"
-        )
+        msg = f"generate_events() must return a pandas DataFrame, got {type(df).__name__}"
         result.errors.append(msg)
         log(f"  {msg}", "error")
         return result
@@ -491,9 +484,7 @@ def import_generated_events(
     result.total_rows = len(df)
 
     if verbose:
-        log(
-            f"  Generated {result.total_rows} rows from {os.path.basename(script_path)}"
-        )
+        log(f"  Generated {result.total_rows} rows from {os.path.basename(script_path)}")
         log(f"  Columns: {', '.join(df.columns)}")
 
     # Import with transaction (same pattern as import_file)
@@ -501,10 +492,7 @@ def import_generated_events(
         # Check for duplicate import
         existing = db.check_duplicate(cursor, script_hash)
         if existing and not replace:
-            msg = (
-                f"Script already imported (id={existing[0]}, filename={existing[1]}). "
-                "Use --replace to re-import."
-            )
+            msg = f"Script already imported (id={existing[0]}, filename={existing[1]}). Use --replace to re-import."
             result.errors.append(msg)
             if verbose:
                 log(f"  SKIPPED: {msg}", "warning")
@@ -517,9 +505,7 @@ def import_generated_events(
                 log(f"  Deleted {deleted} existing events from previous import")
 
         # Create import history record
-        import_id = db.create_import_record(
-            cursor, user_id, script_path, script_hash, command=command
-        )
+        import_id = db.create_import_record(cursor, user_id, script_path, script_hash, command=command)
         result.import_id = import_id
 
         if verbose:
@@ -530,9 +516,7 @@ def import_generated_events(
 
         # Process each row through the same transform_row pipeline
         for idx, row in df.iterrows():
-            event, error = transform_row(
-                row.to_dict(), user_id, import_id, next_event_id
-            )
+            event, error = transform_row(row.to_dict(), user_id, import_id, next_event_id)
 
             if error:
                 result.failed_rows += 1
@@ -607,9 +591,7 @@ def _to_currency(value) -> float | None:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return float(value)
 
-    text = _CURRENCY_NOISE_RE.sub(
-        "", normalize_decimal_separators(str(value).strip())
-    )
+    text = _CURRENCY_NOISE_RE.sub("", normalize_decimal_separators(str(value).strip()))
     negative = text.startswith("(") and text.endswith(")")
     if negative:
         text = text[1:-1]
@@ -725,9 +707,7 @@ def transform_row(row, user_id, import_id, event_id):
 # ============================================================================
 
 
-def import_file(
-    db, filepath, user_id, replace=False, verbose=False, skip_errors=False, command=None
-):
+def import_file(db, filepath, user_id, replace=False, verbose=False, skip_errors=False, command=None):
     """
     Import a single file into database.
 
@@ -765,10 +745,7 @@ def import_file(
         # Check for duplicate import
         existing = db.check_duplicate(cursor, file_hash)
         if existing and not replace:
-            msg = (
-                f"File already imported (id={existing[0]}, filename={existing[1]}). "
-                "Use --replace to re-import."
-            )
+            msg = f"File already imported (id={existing[0]}, filename={existing[1]}). Use --replace to re-import."
             result.errors.append(msg)
             if verbose:
                 log(f"  SKIPPED: {msg}", "warning")
@@ -781,9 +758,7 @@ def import_file(
                 log(f"  Deleted {deleted} existing events from previous import")
 
         # Create import history record
-        import_id = db.create_import_record(
-            cursor, user_id, filepath, file_hash, command=command
-        )
+        import_id = db.create_import_record(cursor, user_id, filepath, file_hash, command=command)
         result.import_id = import_id
 
         if verbose:
@@ -794,9 +769,7 @@ def import_file(
 
         # Process each row
         for idx, row in df.iterrows():
-            event, error = transform_row(
-                row.to_dict(), user_id, import_id, next_event_id
-            )
+            event, error = transform_row(row.to_dict(), user_id, import_id, next_event_id)
 
             if error:
                 result.failed_rows += 1
@@ -826,9 +799,7 @@ def import_file(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        prog="import_events", description="Import XLSX/CSV event files into calendar.db"
-    )
+    parser = argparse.ArgumentParser(prog="import_events", description="Import XLSX/CSV event files into calendar.db")
 
     # Make files optional (not required for --list or --remove)
     parser.add_argument("files", nargs="*", help="Files or directories to import")
@@ -851,12 +822,8 @@ def main():
         action="store_true",
         help="Replace events from previously imported file",
     )
-    parser.add_argument(
-        "--dry-run", "-n", action="store_true", help="Validate files without importing"
-    )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show detailed progress"
-    )
+    parser.add_argument("--dry-run", "-n", action="store_true", help="Validate files without importing")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
     parser.add_argument(
         "--skip-errors",
         action="store_true",
@@ -933,9 +900,7 @@ def main():
     generator_kwargs = {}
 
     if (args.start_date or args.end_date or args.param) and not args.generate:
-        parser.error(
-            "--start-date, --end-date, and --param can only be used with --generate"
-        )
+        parser.error("--start-date, --end-date, and --param can only be used with --generate")
 
     if args.start_date or args.end_date:
         if bool(args.start_date) != bool(args.end_date):
@@ -961,9 +926,7 @@ def main():
     if args.param:
         for param_str in args.param:
             if "=" not in param_str:
-                parser.error(
-                    f"Invalid --param format: '{param_str}'. Expected KEY=VALUE"
-                )
+                parser.error(f"Invalid --param format: '{param_str}'. Expected KEY=VALUE")
             key, value = param_str.split("=", 1)
             key = key.strip()
             if not key:
@@ -1037,15 +1000,11 @@ def main():
                     if record:
                         _, _, filename, date, _, event_count, _ = record
                         display_date = date[:19] if date else ""
-                        log(
-                            f"  ID {import_id}: {filename} ({event_count} events, {display_date})"
-                        )
+                        log(f"  ID {import_id}: {filename} ({event_count} events, {display_date})")
                         total_events += event_count
                 log(f"  Total: {total_events} events will be deleted")
 
-            response = input(
-                "Are you sure you want to delete these imports and all their events? [y/N]: "
-            )
+            response = input("Are you sure you want to delete these imports and all their events? [y/N]: ")
             if response.lower() != "y":
                 log("Cancelled.")
                 log("=== import_events.py completed ===")

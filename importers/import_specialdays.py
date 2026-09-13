@@ -236,9 +236,7 @@ def transform_row(row, user_id, import_id, sd_id, default_country, default_langu
     """Transform a DataFrame row to a specialdays record."""
     norm = normalize_row(row)
 
-    start_date, end_date, dates_valid = process_dates(
-        norm.get("startdate"), norm.get("enddate")
-    )
+    start_date, end_date, dates_valid = process_dates(norm.get("startdate"), norm.get("enddate"))
     if not dates_valid:
         return None, "Invalid or missing dates"
 
@@ -247,11 +245,7 @@ def transform_row(row, user_id, import_id, sd_id, default_country, default_langu
         return None, "name is required"
 
     def _str(v):
-        return (
-            str(v).strip()
-            if v is not None and pandas.notna(v) and str(v).strip()
-            else None
-        )
+        return str(v).strip() if v is not None and pandas.notna(v) and str(v).strip() else None
 
     country = _str(norm.get("country")) or default_country
     language = _str(norm.get("language")) or default_language
@@ -333,10 +327,7 @@ def import_file(
     with db.transaction() as cursor:
         existing = db.check_duplicate(cursor, file_hash)
         if existing and not replace:
-            msg = (
-                f"File already imported (id={existing[0]}, filename={existing[1]}). "
-                "Use --replace to re-import."
-            )
+            msg = f"File already imported (id={existing[0]}, filename={existing[1]}). Use --replace to re-import."
             result.errors.append(msg)
             if verbose:
                 log(f"  SKIPPED: {msg}", "warning")
@@ -348,9 +339,7 @@ def import_file(
             if verbose:
                 log(f"  Deleted {deleted} existing special days from previous import")
 
-        import_id = db.create_import_record(
-            cursor, user_id, filepath, file_hash, command=command
-        )
+        import_id = db.create_import_record(cursor, user_id, filepath, file_hash, command=command)
         result.import_id = import_id
 
         if verbose:
@@ -401,9 +390,7 @@ def main():
         description="Import XLSX/CSV company special-day files into calendar.db",
     )
 
-    parser.add_argument(
-        "files", nargs="*", help="Files or directories to import"
-    )
+    parser.add_argument("files", nargs="*", help="Files or directories to import")
     parser.add_argument(
         "--database",
         "-db",
@@ -435,12 +422,8 @@ def main():
         action="store_true",
         help="Replace special days from previously imported file",
     )
-    parser.add_argument(
-        "--dry-run", "-n", action="store_true", help="Validate files without importing"
-    )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show detailed progress"
-    )
+    parser.add_argument("--dry-run", "-n", action="store_true", help="Validate files without importing")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
     parser.add_argument(
         "--skip-errors",
         action="store_true",
@@ -518,9 +501,7 @@ def main():
             sys.exit(1)
 
         with db.transaction() as cursor:
-            existing_ids = [
-                i for i in import_ids if db.get_import_by_id(cursor, i)
-            ]
+            existing_ids = [i for i in import_ids if db.get_import_by_id(cursor, i)]
 
         if not existing_ids:
             log(f"No matching imports found for pattern: {args.remove}", "warning")
@@ -537,15 +518,11 @@ def main():
                     if record:
                         _, _, filename, date, _, sd_count, _ = record
                         display_date = date[:19] if date else ""
-                        log(
-                            f"  ID {import_id}: {filename} ({sd_count} special days, {display_date})"
-                        )
+                        log(f"  ID {import_id}: {filename} ({sd_count} special days, {display_date})")
                         total += sd_count
                 log(f"  Total: {total} special days will be deleted")
 
-            response = input(
-                "Are you sure you want to delete these imports and all their special days? [y/N]: "
-            )
+            response = input("Are you sure you want to delete these imports and all their special days? [y/N]: ")
             if response.lower() != "y":
                 log("Cancelled.")
                 log("=== import_specialdays.py completed ===")
@@ -564,9 +541,7 @@ def main():
         sys.exit(0 if fail_count == 0 else 1)
 
     if not args.files:
-        parser.error(
-            "Files are required for import. Use --list to view imports or --remove ID to delete."
-        )
+        parser.error("Files are required for import. Use --list to view imports or --remove ID to delete.")
 
     all_files = []
     for path in args.files:
@@ -591,9 +566,7 @@ def main():
                 log(f"  {os.path.basename(filepath)}: {len(df)} rows")
                 log(f"    Columns: {', '.join(df.columns)}")
 
-                norm_cols = {
-                    COLUMN_MAPPING.get(c.strip().lower()) for c in df.columns
-                }
+                norm_cols = {COLUMN_MAPPING.get(c.strip().lower()) for c in df.columns}
                 missing = []
                 if "name" not in norm_cols:
                     missing.append("name (or title, special_day, holiday)")

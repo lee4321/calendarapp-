@@ -37,7 +37,7 @@ POSITIONAL_HEADING = "## Positional Arguments by Command"
 def catalog_section() -> str:
     text = GUIDE.read_text()
     start = text.index(HEADING)
-    match = re.search(r"^## ", text[start + len(HEADING):], re.M)
+    match = re.search(r"^## ", text[start + len(HEADING) :], re.M)
     end = start + len(HEADING) + (match.start() if match else len(text))
     return text[start:end]
 
@@ -50,7 +50,7 @@ def test_the_catalog_matches_the_parser():
 def positional_section() -> str:
     text = GUIDE.read_text()
     start = text.index(POSITIONAL_HEADING)
-    match = re.search(r"^## ", text[start + len(POSITIONAL_HEADING):], re.M)
+    match = re.search(r"^## ", text[start + len(POSITIONAL_HEADING) :], re.M)
     end = start + len(POSITIONAL_HEADING) + (match.start() if match else len(text))
     return text[start:end]
 
@@ -73,9 +73,9 @@ def test_regeneration_preserves_the_hand_written_prose():
     """Only tables are generated; the notes around them are not."""
     section = positional_section()
     for phrase in (
-        "Generates an Excel workbook",          # excelblockplan block
-        "The label columns are **not** frozen", # excelblockplan block
-        "to generate an empty spreadsheet",     # excelblockplan block
+        "Generates an Excel workbook",  # excelblockplan block
+        "The label columns are **not** frozen",  # excelblockplan block
+        "to generate an empty spreadsheet",  # excelblockplan block
     ):
         assert phrase in section
 
@@ -83,17 +83,16 @@ def test_regeneration_preserves_the_hand_written_prose():
 def test_the_check_mode_agrees():
     result = subprocess.run(
         [sys.executable, "tools/generate_option_catalog.py", "--check"],
-        cwd=REPO_ROOT, capture_output=True, text=True,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stderr
 
 
 def test_every_row_has_five_columns():
     """A stray pipe in a help string would silently break the table."""
-    rows = [
-        line for line in catalog_section().splitlines()
-        if line.startswith("| ") and not line.startswith("|---")
-    ]
+    rows = [line for line in catalog_section().splitlines() if line.startswith("| ") and not line.startswith("|---")]
     assert rows
     for row in rows:
         # Cells are pipe-separated; escaped pipes inside a cell do not count.
@@ -110,9 +109,7 @@ def test_every_subcommand_appears_somewhere():
 def test_gantt_options_are_listed():
     """The view this catalog regeneration was prompted by."""
     section = catalog_section()
-    gantt_rows = [
-        line for line in section.splitlines() if "`gantt`" in line
-    ]
+    gantt_rows = [line for line in section.splitlines() if "`gantt`" in line]
     assert len(gantt_rows) > 20
     for flag in ("--WBS", "--weekends", "--milestones", "--includenotes", "--theme"):
         assert any(line.startswith(f"| `{flag}`") for line in gantt_rows), flag
@@ -121,13 +118,10 @@ def test_gantt_options_are_listed():
 @pytest.mark.parametrize(
     "option,expected",
     [
-        ("--outputfile", "`-o` for `exportdata`"),   # per-command short flag
-        ("--weekends", "choices `0, 1, 2, 3, 4`"),   # choices rendered
+        ("--outputfile", "`-o` for `exportdata`"),  # per-command short flag
+        ("--weekends", "choices `0, 1, 2, 3, 4`"),  # choices rendered
     ],
 )
 def test_notable_rows_render_their_detail(option, expected):
-    row = next(
-        line for line in catalog_section().splitlines()
-        if line.startswith(f"| `{option}`")
-    )
+    row = next(line for line in catalog_section().splitlines() if line.startswith(f"| `{option}`"))
     assert expected in row

@@ -44,6 +44,7 @@ def _config(start: str, end: str, **overrides) -> CalendarConfig:
 # Layout
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def test_full_year_has_53_week_rows():
     """A full ISO year (2026) spans 53 Monday-start week rows."""
     cfg = _config("20260101", "20261231")
@@ -72,23 +73,28 @@ def test_day_cells_hold_in_range_days_only():
     coords = layout.calculate(cfg)
     cells = sorted(k for k in coords if k.startswith("Cell_"))
     assert cells == [
-        "Cell_20260107", "Cell_20260108", "Cell_20260109", "Cell_20260110",
+        "Cell_20260107",
+        "Cell_20260108",
+        "Cell_20260109",
+        "Cell_20260110",
     ]
 
 
 def test_expand_to_week_boundaries_snaps_partial_weeks():
     """The visualizer expands the range to enclosing whole weeks."""
     from visualizers.candybar.visualizer import CandybarVisualizer
+
     # 2026-02-04 is Wed, 2026-02-10 is Tue (Monday-start weeks).
     cfg = _config("20260204", "20260210")
     CandybarVisualizer._expand_to_week_boundaries(cfg)
     assert cfg.adjustedstart == "20260202"  # back to Monday
-    assert cfg.adjustedend == "20260215"    # forward to Sunday
+    assert cfg.adjustedend == "20260215"  # forward to Sunday
 
 
 def test_rows_are_full_after_boundary_expansion():
     """After expansion every row is a complete week (no blank end cells)."""
     from visualizers.candybar.visualizer import CandybarVisualizer
+
     cfg = _config("20260204", "20260210")
     CandybarVisualizer._expand_to_week_boundaries(cfg)
     coords = CandybarLayout().calculate(cfg)
@@ -151,6 +157,7 @@ def test_boundary_week_attributed_to_new_month():
 # Box width
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def test_day_cells_are_square_by_default():
     """Default day cells have width == height (square)."""
     cfg = _config("20260101", "20260131")
@@ -170,7 +177,8 @@ def test_cell_width_override_sets_absolute_width():
 def test_column_ratios_scale_weeknum_and_month_widths():
     """Week-number and month-box widths follow the configured ratios."""
     cfg = _config(
-        "20260101", "20260131",
+        "20260101",
+        "20260131",
         candybar_cell_width=10.0,
         candybar_weeknum_col_ratio=0.5,
         candybar_month_col_ratio=2.0,
@@ -185,6 +193,7 @@ def test_column_ratios_scale_weeknum_and_month_widths():
 # Weekend suppression
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def test_suppress_weekends_drops_saturday_sunday():
     cfg = _config("20260105", "20260111", candybar_suppress_weekends=True)
     layout = CandybarLayout()
@@ -192,8 +201,11 @@ def test_suppress_weekends_drops_saturday_sunday():
     cells = sorted(k for k in coords if k.startswith("Cell_"))
     # Mon–Fri only (Jan 5–9); Sat 10 / Sun 11 dropped.
     assert cells == [
-        "Cell_20260105", "Cell_20260106", "Cell_20260107",
-        "Cell_20260108", "Cell_20260109",
+        "Cell_20260105",
+        "Cell_20260106",
+        "Cell_20260107",
+        "Cell_20260108",
+        "Cell_20260109",
     ]
 
 
@@ -238,8 +250,11 @@ def test_trailing_weekend_only_week_is_dropped():
     cells = sorted(k for k in coords if k.startswith("Cell_"))
     # Mon Feb2 – Fri Feb6 only; Sat Feb7 suppressed, no blank trailing row.
     assert cells == [
-        "Cell_20260202", "Cell_20260203", "Cell_20260204",
-        "Cell_20260205", "Cell_20260206",
+        "Cell_20260202",
+        "Cell_20260203",
+        "Cell_20260204",
+        "Cell_20260205",
+        "Cell_20260206",
     ]
     assert len(layout.week_numbers) == 1
 
@@ -257,6 +272,7 @@ def test_header_labels_reflect_weekend_suppression():
 # ──────────────────────────────────────────────────────────────────────────
 # Renderer
 # ──────────────────────────────────────────────────────────────────────────
+
 
 class _CaptureRenderer(CandybarRenderer):
     """Records text draws and their transforms instead of emitting SVG."""
@@ -314,10 +330,10 @@ def test_renderer_draws_day_numbers_week_numbers_and_months():
     cfg = _config("20260101", "20260131")
     r = _render(cfg)
     texts = [t["text"] for t in r.texts]
-    assert "Jan" in texts        # month-box label
-    assert "15" in texts         # a day number
+    assert "Jan" in texts  # month-box label
+    assert "15" in texts  # a day number
     assert any(t.startswith("W") and t[1:].isdigit() for t in texts)  # week number
-    assert "Mon" in texts        # header label
+    assert "Mon" in texts  # header label
 
 
 def test_month_label_rotation_emits_transform():
@@ -338,6 +354,7 @@ def test_no_rotation_emits_no_transform():
 # ──────────────────────────────────────────────────────────────────────────
 # Base shading (weekends + month banding)
 # ──────────────────────────────────────────────────────────────────────────
+
 
 def test_weekend_fill_shades_only_weekend_cells():
     # One full ISO week, weekends shown.
@@ -374,6 +391,7 @@ def test_no_month_shading_by_default():
 # ──────────────────────────────────────────────────────────────────────────
 # Registration
 # ──────────────────────────────────────────────────────────────────────────
+
 
 def test_candybar_registered_in_factory():
     assert "candybar" in VisualizerFactory.available_types()

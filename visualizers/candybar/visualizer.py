@@ -101,11 +101,11 @@ class CandybarVisualizer(MiniCalendarVisualizer):
             return
 
         if candybar_week_starts_sunday(config):
-            start_off = (start.weekday() + 1) % 7   # back to Sunday
-            end_off = (5 - end.weekday()) % 7       # forward to Saturday
+            start_off = (start.weekday() + 1) % 7  # back to Sunday
+            end_off = (5 - end.weekday()) % 7  # forward to Saturday
         else:
-            start_off = start.weekday()             # back to Monday
-            end_off = 6 - end.weekday()             # forward to Sunday
+            start_off = start.weekday()  # back to Monday
+            end_off = 6 - end.weekday()  # forward to Sunday
 
         config.adjustedstart = (start - timedelta(days=start_off)).strftime("%Y%m%d")
         config.adjustedend = (end + timedelta(days=end_off)).strftime("%Y%m%d")

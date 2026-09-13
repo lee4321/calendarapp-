@@ -145,9 +145,7 @@ def fit_lines(
     return lines
 
 
-def _take_line(
-    words: list[str], width: float, measure: Callable[[str], float]
-) -> tuple[str, list[str]]:
+def _take_line(words: list[str], width: float, measure: Callable[[str], float]) -> tuple[str, list[str]]:
     """Pack as many words as fit; returns the line and what is left over."""
     line = ""
     index = 0
@@ -160,14 +158,12 @@ def _take_line(
             # First word does not fit on its own — break it mid-word so a
             # long unbroken token cannot overflow the column.
             head, tail = _split_to_fit(word, width, measure)
-            return head, ([tail] if tail else []) + words[index + 1:]
+            return head, ([tail] if tail else []) + words[index + 1 :]
         return line, words[index:]
     return line, []
 
 
-def _split_to_fit(
-    word: str, width: float, measure: Callable[[str], float]
-) -> tuple[str, str]:
+def _split_to_fit(word: str, width: float, measure: Callable[[str], float]) -> tuple[str, str]:
     """Split *word* at the last character that still fits."""
     for cut in range(len(word) - 1, 0, -1):
         if measure(word[:cut]) <= width:
@@ -175,9 +171,7 @@ def _split_to_fit(
     return word[:1], word[1:]
 
 
-def _with_ellipsis(
-    line: str, width: float, measure: Callable[[str], float]
-) -> str:
+def _with_ellipsis(line: str, width: float, measure: Callable[[str], float]) -> str:
     """Append the ellipsis, dropping characters until it fits."""
     candidate = line.rstrip()
     while candidate and measure(candidate + ELLIPSIS) > width:

@@ -80,9 +80,7 @@ def test_shared_connection_is_usable_after_a_rollback(db):
 
     # The rolled-back connection is reused, so it must be left in a clean state.
     with db.transaction() as cursor:
-        import_id = db.create_import_record(
-            cursor, user_id=1, filename="d.csv", file_hash="h4"
-        )
+        import_id = db.create_import_record(cursor, user_id=1, filename="d.csv", file_hash="h4")
         db.insert_row(
             cursor,
             {
@@ -109,9 +107,7 @@ def test_rollback_returns_the_claimed_id_to_the_sequence(db):
         raise RuntimeError("boom")
 
     with db.transaction() as cursor:
-        second_id = db.create_import_record(
-            cursor, user_id=1, filename="f.csv", file_hash="h6"
-        )
+        second_id = db.create_import_record(cursor, user_id=1, filename="f.csv", file_hash="h6")
 
     # The sequence bump was rolled back with the rest of the failed transaction,
     # so the next successful import takes the id the failed one had claimed.

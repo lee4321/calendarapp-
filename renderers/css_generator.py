@@ -17,32 +17,34 @@ if TYPE_CHECKING:
 # Emitting CSS rules for these classes would override the inline presentation
 # attributes (CSS beats presentation attrs in the cascade), clobbering
 # per-instance colors like duration bar strokes or band-cell fills.
-_INLINE_STYLED_CLASSES: frozenset[str] = frozenset({
-    "ec-band-cell",
-    "ec-heading-cell",
-    "ec-duration-bar",
-    "ec-grid-line",
-    "ec-separator",
-    "ec-vline",
-    "ec-vline-fill",
-    "ec-background",
-    # PIT: per-event colors / patterns / strokes are set inline by the
-    # renderer (resolved through the style-rule engine and palette
-    # round-robin). Emitting CSS rules here would clobber them in the
-    # cascade. External user stylesheets must use !important to override
-    # these — documented in USER_GUIDE.md.
-    "ec-pit-event-marker",
-    "ec-callout-leader",
-    "ec-callout-box",
-    "ec-milestone-marker",
-    # Gantt: the progress line's color, the float bar's fill (mirroring
-    # its task's bar), the rollup bracket and the dependency arrows are
-    # all resolved per item from config plus the style-rule engine.
-    "ec-progress-line",
-    "ec-float-bar",
-    "ec-rollup-bracket",
-    "ec-dependency-arrow",
-})
+_INLINE_STYLED_CLASSES: frozenset[str] = frozenset(
+    {
+        "ec-band-cell",
+        "ec-heading-cell",
+        "ec-duration-bar",
+        "ec-grid-line",
+        "ec-separator",
+        "ec-vline",
+        "ec-vline-fill",
+        "ec-background",
+        # PIT: per-event colors / patterns / strokes are set inline by the
+        # renderer (resolved through the style-rule engine and palette
+        # round-robin). Emitting CSS rules here would clobber them in the
+        # cascade. External user stylesheets must use !important to override
+        # these — documented in USER_GUIDE.md.
+        "ec-pit-event-marker",
+        "ec-callout-leader",
+        "ec-callout-box",
+        "ec-milestone-marker",
+        # Gantt: the progress line's color, the float bar's fill (mirroring
+        # its task's bar), the rollup bracket and the dependency arrows are
+        # all resolved per item from config plus the style-rule engine.
+        "ec-progress-line",
+        "ec-float-bar",
+        "ec-rollup-bracket",
+        "ec-dependency-arrow",
+    }
+)
 
 
 def generate_css(theme_styles: ThemeStyles) -> str:

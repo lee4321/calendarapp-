@@ -40,8 +40,11 @@ class _CaptureTimelineRenderer(TimelineRenderer):
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
         self.text_calls.append(
             {
-                "x": x, "y": y, "text": text,
-                "font": font_name, "size": font_size,
+                "x": x,
+                "y": y,
+                "text": text,
+                "font": font_name,
+                "size": font_size,
                 **kwargs,
             }
         )
@@ -63,8 +66,15 @@ class _CaptureMarkerRenderer(TimelineRenderer):
         self.text_calls: list[dict] = []
 
     def _draw_circle(
-        self, cx, cy, radius, stroke="black", fill="none", stroke_width=1.0,
-        stroke_opacity=None, css_class=None,
+        self,
+        cx,
+        cy,
+        radius,
+        stroke="black",
+        fill="none",
+        stroke_width=1.0,
+        stroke_opacity=None,
+        css_class=None,
     ):
         self.circle_calls.append(
             {
@@ -78,9 +88,7 @@ class _CaptureMarkerRenderer(TimelineRenderer):
         )
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
-        self.text_calls.append(
-            {"x": x, "y": y, "text": text, "font": font_name, "size": font_size}
-        )
+        self.text_calls.append({"x": x, "y": y, "text": text, "font": font_name, "size": font_size})
 
 
 def _base_config(output: Path):
@@ -153,9 +161,7 @@ def test_timeline_background_none_is_transparent(tmp_path):
     renderer.render(config, coords, events=[], db=_DummyDB())
 
     text = output.read_text(encoding="utf-8")
-    assert (
-        f'<rect x="0" y="0" width="{config.pageX}" height="{config.pageY}"' not in text
-    )
+    assert f'<rect x="0" y="0" width="{config.pageX}" height="{config.pageY}"' not in text
 
 
 def test_timeline_duration_bars_use_start_end_alignment(tmp_path):
@@ -176,9 +182,7 @@ def test_timeline_duration_bars_use_start_end_alignment(tmp_path):
         Event(task_name="A", start="20260110", end="20260210"),
         Event(task_name="B", start="20260301", end="20260401"),
     ]
-    laid_out = renderer._layout_durations(
-        config, durations, start, end, axis_left, axis_right, axis_y
-    )
+    laid_out = renderer._layout_durations(config, durations, start, end, axis_left, axis_right, axis_y)
 
     assert len(laid_out) == 2
     assert laid_out[0].start_x < laid_out[0].end_x
@@ -204,10 +208,7 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
     axis_y = 400.0
 
     # Same/close-day events are worst-case for overlap.
-    point_events = [
-        Event(task_name=f"E{i}", start="20260215", end="20260215", priority=i)
-        for i in range(6)
-    ]
+    point_events = [Event(task_name=f"E{i}", start="20260215", end="20260215", priority=i) for i in range(6)]
     callouts = renderer._layout_callouts(
         config,
         point_events,
@@ -223,16 +224,11 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
     assert len(callouts) == len(point_events)
     by_layer: dict[int, list[tuple[float, float]]] = {}
     for c in callouts:
-        by_layer.setdefault(c.lane, []).append(
-            (c.box_x, c.box_x + c.box_width)
-        )
+        by_layer.setdefault(c.lane, []).append((c.box_x, c.box_x + c.box_width))
     for layer, intervals in by_layer.items():
         intervals.sort()
         for (a_lo, a_hi), (b_lo, b_hi) in itertools.pairwise(intervals):
-            assert a_hi <= b_lo + 1e-6, (
-                f"Layer {layer}: [{a_lo:.2f},{a_hi:.2f}] "
-                f"overlaps [{b_lo:.2f},{b_hi:.2f}]"
-            )
+            assert a_hi <= b_lo + 1e-6, f"Layer {layer}: [{a_lo:.2f},{a_hi:.2f}] overlaps [{b_lo:.2f},{b_hi:.2f}]"
 
 
 @pytest.mark.parametrize(
@@ -246,9 +242,7 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
         (Orientation.VERTICAL, Side.BOTH),
     ],
 )
-def test_timeline_layout_callouts_produces_callouts_for_each_orientation_side(
-    tmp_path, orientation, side
-):
+def test_timeline_layout_callouts_produces_callouts_for_each_orientation_side(tmp_path, orientation, side):
     """Every orientation × side combo returns one callout per event,
     each carrying both the dot position and a non-empty leader path."""
     config = _base_config(tmp_path / f"timeline_{orientation.value}_{side.value}.svg")
@@ -260,10 +254,7 @@ def test_timeline_layout_callouts_produces_callouts_for_each_orientation_side(
 
     start = arrow.get("20260201", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
-    events = [
-        Event(task_name=f"E{i}", start=f"202602{10+i:02d}", end=f"202602{10+i:02d}")
-        for i in range(8)
-    ]
+    events = [Event(task_name=f"E{i}", start=f"202602{10 + i:02d}", end=f"202602{10 + i:02d}") for i in range(8)]
     callouts = renderer._layout_callouts(
         config,
         events,
@@ -310,9 +301,7 @@ def test_timeline_duration_dates_share_same_y_and_offset_is_configurable(tmp_pat
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(
-        config, durations, start, end, 50.0, 700.0, 300.0
-    )
+    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
 
     renderer._draw_duration(config, laid_out[0], axis_y=300.0)
 
@@ -339,9 +328,7 @@ def test_timeline_duration_minimum_offset_exceeds_timeline_date_height(tmp_path)
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260120")]
-    laid_out = renderer._layout_durations(
-        config, durations, start, end, 50.0, 700.0, 300.0
-    )
+    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
 
     renderer._draw_duration(config, laid_out[0], axis_y=300.0)
 
@@ -380,9 +367,7 @@ def test_timeline_date_format_is_configurable(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(
-        config, durations, start, end, 50.0, 700.0, 300.0
-    )
+    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
     renderer._draw_duration(config, laid_out[0], axis_y=300.0)
 
     labels = {c["text"] for c in renderer.text_calls}
@@ -408,9 +393,7 @@ def test_timeline_marker_defaults_to_filled_circle_and_icon_uses_circle(tmp_path
     assert renderer.circle_calls[-1]["radius"] == 6.0
 
     renderer._drawing = drawsvg.Drawing(200, 200)
-    renderer._icon_svg_map = {
-        "rocket": '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>'
-    }
+    renderer._icon_svg_map = {"rocket": '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>'}
     renderer._draw_timeline_marker(
         config,
         x=120.0,
@@ -569,9 +552,7 @@ def test_timeline_duration_uses_configured_box_height_and_text_width(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="A", start="20260110", end="20260110", notes="B")]
-    laid_out = renderer._layout_durations(
-        config, durations, start, end, 60.0, 730.0, 300.0
-    )
+    laid_out = renderer._layout_durations(config, durations, start, end, 60.0, 730.0, 300.0)
     assert len(laid_out) == 1
     assert laid_out[0].min_width == 140.0
     assert (laid_out[0].end_x - laid_out[0].start_x) < 140.0
@@ -631,10 +612,7 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
     axis_right = 324.0
     axis_y = 240.0
 
-    close_events = [
-        Event(task_name=f"Event {i}", start="20260115", end="20260115", priority=i)
-        for i in range(10)
-    ]
+    close_events = [Event(task_name=f"Event {i}", start="20260115", end="20260115", priority=i) for i in range(10)]
     callouts = renderer._layout_callouts(
         config,
         close_events,
@@ -646,10 +624,7 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
         side=Side.PRIMARY,
     )
 
-    boxes = [
-        (c.box_x, c.box_y, c.box_x + c.box_width, c.box_y + c.box_height)
-        for c in callouts
-    ]
+    boxes = [(c.box_x, c.box_y, c.box_x + c.box_width, c.box_y + c.box_height) for c in callouts]
     overlaps = 0
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
@@ -757,9 +732,7 @@ def test_today_line_direction_both_full_span(tmp_path):
     renderer = _draw_today(config, direction="both", length=0.0)
     line = _today_line_call(renderer)
     assert min(line["y1"], line["y2"]) == pytest.approx(20.0)  # area_top (small SVG y)
-    assert max(line["y1"], line["y2"]) == pytest.approx(
-        600.0
-    )  # area_bottom (large SVG y)
+    assert max(line["y1"], line["y2"]) == pytest.approx(600.0)  # area_bottom (large SVG y)
 
 
 def test_today_line_direction_above_full_span(tmp_path):
@@ -779,9 +752,7 @@ def test_today_line_direction_below_full_span(tmp_path):
     renderer = _draw_today(config, direction="below", length=0.0)
     line = _today_line_call(renderer)
     assert min(line["y1"], line["y2"]) == pytest.approx(300.0)  # axis_y
-    assert max(line["y1"], line["y2"]) == pytest.approx(
-        600.0
-    )  # area_bottom (large SVG y)
+    assert max(line["y1"], line["y2"]) == pytest.approx(600.0)  # area_bottom (large SVG y)
 
 
 def test_today_line_explicit_length_both(tmp_path):
@@ -905,9 +876,7 @@ class _CaptureHolidayRenderer(_CaptureTimelineRenderer):
         self.icon_calls: list[dict] = []
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icon_calls.append(
-            {"icon": icon_name, "x": x, "y": baseline_y, "size": size}
-        )
+        self.icon_calls.append({"icon": icon_name, "x": x, "y": baseline_y, "size": size})
         return True
 
 
@@ -919,9 +888,7 @@ def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(
-        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119", "20260525"])
-    )
+    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119", "20260525"]))
 
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
@@ -941,9 +908,7 @@ def test_timeline_holiday_dates_stagger_instead_of_colliding(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20261231", "YYYYMMDD")
-    renderer._draw_holiday_icons(
-        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260703", "20260704"])
-    )
+    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260703", "20260704"]))
 
     dates = [c for c in renderer.text_calls if c["text"] in ("Jul 3", "Jul 4")]
     assert len(dates) == 2
@@ -959,9 +924,7 @@ def test_timeline_holiday_dates_can_be_switched_off(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(
-        config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119"])
-    )
+    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119"]))
 
     assert len(renderer.icon_calls) == 1
     assert not [c for c in renderer.text_calls if c["text"] == "Jan 19"]
@@ -1006,8 +969,12 @@ def test_a_line_of_text_stays_inside_its_own_cell(tmp_path, cell_h):
     title_size, _notes_size, _date = renderer._callout_metrics(config)
 
     top, bottom = _cell_ink(
-        renderer, config, 100.0, cell_h,
-        config.timeline_name_text_font_name, title_size,
+        renderer,
+        config,
+        100.0,
+        cell_h,
+        config.timeline_name_text_font_name,
+        title_size,
     )
     assert top >= 100.0 - 0.01
     assert bottom <= 100.0 + cell_h + 0.01
@@ -1020,8 +987,12 @@ def test_a_line_is_centred_in_its_cell(tmp_path):
     title_size, _notes, _date = renderer._callout_metrics(config)
 
     top, bottom = _cell_ink(
-        renderer, config, 100.0, 40.0,
-        config.timeline_name_text_font_name, title_size,
+        renderer,
+        config,
+        100.0,
+        40.0,
+        config.timeline_name_text_font_name,
+        title_size,
     )
     assert (top - 100.0) == pytest.approx(140.0 - bottom, abs=0.01)
 
@@ -1044,12 +1015,20 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
     row_h = 12.0
 
     _top, name_bottom = _cell_ink(
-        renderer, config, 100.0, row_h,
-        config.timeline_name_text_font_name, title_size,
+        renderer,
+        config,
+        100.0,
+        row_h,
+        config.timeline_name_text_font_name,
+        title_size,
     )
     notes_top, _bottom = _cell_ink(
-        renderer, config, 100.0 + row_h, row_h,
-        config.timeline_notes_text_font_name, notes_size,
+        renderer,
+        config,
+        100.0 + row_h,
+        row_h,
+        config.timeline_notes_text_font_name,
+        notes_size,
     )
     assert notes_top >= name_bottom - 0.01
 
@@ -1066,9 +1045,7 @@ def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    laid_out = renderer._layout_durations(
-        config, [event], start, end, axis_left, axis_right, 300.0
-    )
+    laid_out = renderer._layout_durations(config, [event], start, end, axis_left, axis_right, 300.0)
     renderer._draw_duration_connectors(config, laid_out[0], axis_y=300.0)
     return laid_out[0], [c["x1"] for c in renderer.line_calls]
 
@@ -1160,7 +1137,7 @@ def test_different_wbs_groups_get_different_colors(tmp_path):
     bars = _grouped_bars(config, _phase_events())
 
     per_group = {wbs_group(b.event.wbs, 2): b.color for b in bars}
-    assert len(per_group) == 3          # NP.1, NP.2, NP.3
+    assert len(per_group) == 3  # NP.1, NP.2, NP.3
     assert len(set(per_group.values())) == 3
 
 
@@ -1182,11 +1159,7 @@ def test_deeper_codes_fold_into_their_group(tmp_path):
     config.timeline_wbs_group_depth = 2
     bars = _grouped_bars(config, _phase_events())
 
-    colors = {
-        b.event.task_name: b.color
-        for b in bars
-        if b.event.task_name in ("B build 1", "B build 2")
-    }
+    colors = {b.event.task_name: b.color for b in bars if b.event.task_name in ("B build 1", "B build 2")}
     assert len(colors) == 2
     assert len(set(colors.values())) == 1
 
@@ -1249,10 +1222,10 @@ def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
     [
         ("NP.3.S1.4", 2, "NP.3"),
         ("NP.3.S1.4", 3, "NP.3.S1"),
-        ("NP", 2, "NP"),          # shorter than the depth → its own group
-        (None, 2, ""),            # no WBS → the unnumbered block
+        ("NP", 2, "NP"),  # shorter than the depth → its own group
+        (None, 2, ""),  # no WBS → the unnumbered block
         ("", 2, ""),
-        ("NP.1", 0, ""),          # depth 0 → grouping off
+        ("NP.1", 0, ""),  # depth 0 → grouping off
     ],
 )
 def test_wbs_group_prefixes(wbs, depth, expected):
@@ -1302,8 +1275,7 @@ def test_a_rollup_sits_nearer_the_axis_than_every_bar_it_summarises(tmp_path):
         parts = [b.lane for b in items if not b.event.rollup]
         assert rollups and parts, f"{group} needs both to be a test"
         assert max(rollups) < min(parts), (
-            f"{group}: rollup at lane {max(rollups)} is further out than a "
-            f"part at lane {min(parts)}"
+            f"{group}: rollup at lane {max(rollups)} is further out than a part at lane {min(parts)}"
         )
 
 
@@ -1344,10 +1316,13 @@ def test_a_rollup_leads_its_group_even_when_its_code_is_not_a_prefix(tmp_path):
     """
     config = _base_config(tmp_path / "rollup_order.svg")
     config.timeline_wbs_group_depth = 2
-    bars = _grouped_bars(config, [
-        _dur("part", "20260202", "20260213", "NP.1.1"),
-        _dur("summary", "20260202", "20260227", "NP.1.99", rollup=True),
-    ])
+    bars = _grouped_bars(
+        config,
+        [
+            _dur("part", "20260202", "20260213", "NP.1.1"),
+            _dur("summary", "20260202", "20260227", "NP.1.99", rollup=True),
+        ],
+    )
     assert [b.event.task_name for b in bars] == ["summary", "part"]
     lanes = _lanes_by_name(bars)
     assert lanes["summary"] < lanes["part"]
@@ -1380,9 +1355,7 @@ class _CaptureOverflowRenderer(_CaptureTimelineRenderer):
         self.icon_calls: list[dict] = []
 
     def _draw_icon_svg(self, icon_name, x, baseline_y, size, **kwargs):
-        self.icon_calls.append(
-            {"icon": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs}
-        )
+        self.icon_calls.append({"icon": icon_name, "x": x, "y": baseline_y, "size": size, **kwargs})
         return True
 
 
@@ -1443,8 +1416,8 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
 
     assert len(renderer.line_calls) == 1
     end_y = renderer.line_calls[0]["y2"]
-    assert end_y < bar_y                 # pulled back from the missing bar
-    assert end_y <= limit                # and inside the drawable area
+    assert end_y < bar_y  # pulled back from the missing bar
+    assert end_y <= limit  # and inside the drawable area
 
     assert len(renderer.icon_calls) == 1
     icon = renderer.icon_calls[0]
@@ -1559,8 +1532,7 @@ def test_the_name_is_centred_between_the_two_date_columns(tmp_path):
     config, renderer, bar = _drawn_duration(tmp_path, "in_bar_mid.svg", event)
     assert not bar.text_overflow
 
-    title = next(c for c in renderer.text_calls
-             if c.get("css_class") == "ec-event-name")
+    title = next(c for c in renderer.text_calls if c.get("css_class") == "ec-event-name")
     assert title["anchor"] == "middle"
     assert title["x"] == pytest.approx((bar.start_x + bar.end_x) / 2.0)
     # Its cell is the middle column, so it never reaches the dates.
@@ -1572,12 +1544,8 @@ def test_the_name_is_centred_between_the_two_date_columns(tmp_path):
 def test_the_two_side_columns_are_the_same_width(tmp_path):
     config = _base_config(tmp_path / "grid_cols.svg")
     renderer = TimelineRenderer()
-    (off1, side1), (off2, mid), (off3, side3) = renderer._duration_cell_layout(
-        config, 200.0
-    )
-    assert side1 == side3 == pytest.approx(
-        200.0 * config.timeline_event_icon_column_ratio
-    )
+    (off1, side1), (off2, mid), (off3, side3) = renderer._duration_cell_layout(config, 200.0)
+    assert side1 == side3 == pytest.approx(200.0 * config.timeline_event_icon_column_ratio)
     assert off1 == 0.0 and off3 + side3 == pytest.approx(200.0)
     # The middle column keeps a gap clear of each date column.
     assert off2 == pytest.approx(side1 + 4.0)
@@ -1588,29 +1556,29 @@ def test_a_theme_can_widen_a_duration_bar_side_column(tmp_path):
     config = _base_config(tmp_path / "grid_ratio.svg")
     config.timeline_duration_icon_column_ratio = 0.3
     renderer = TimelineRenderer()
-    (_o1, side), (_o2, mid), (_o3, side3) = renderer._duration_cell_layout(
-        config, 200.0
-    )
+    (_o1, side), (_o2, mid), (_o3, side3) = renderer._duration_cell_layout(config, 200.0)
     assert side == side3 == pytest.approx(60.0)
     assert mid == pytest.approx(80.0 - 8.0)
 
 
 def test_the_event_icon_leads_the_row_above_the_start_date(tmp_path):
-    event = Event(task_name="Build", start="20260210", end="20260320",
-                  icon="rocket")
+    event = Event(task_name="Build", start="20260210", end="20260320", icon="rocket")
     config = _base_config(tmp_path / "grid_icon.svg")
     config.timeline_duration_icon_visible = True
     renderer = _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     bars = renderer._layout_durations(
-        config, [event],
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        50.0, 700.0, 300.0,
+        config,
+        [event],
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
     )
     renderer._draw_duration(config, bars[0], 300.0)
 
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-duration-icon"]
+    icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
     start_date = _date_texts(renderer)[0]
     # First column, first row: over the start date, at the bar's left end.
@@ -1657,15 +1625,22 @@ class _CaptureCircleRenderer(_CaptureOverflowRenderer):
         self.circle_calls.append({"cx": cx, "cy": cy, "radius": radius})
 
 
-def _aligned_bars(tmp_path, name, events, axis_left=50.0, axis_right=700.0,
-                  renderer=None, config=None):
+def _aligned_bars(tmp_path, name, events, axis_left=50.0, axis_right=700.0, renderer=None, config=None):
     config = config or _base_config(tmp_path / name)
     renderer = renderer or _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    return config, renderer, renderer._layout_durations(
-        config, events,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        axis_left, axis_right, 300.0,
+    return (
+        config,
+        renderer,
+        renderer._layout_durations(
+            config,
+            events,
+            arrow.get("20260101", "YYYYMMDD"),
+            arrow.get("20260630", "YYYYMMDD"),
+            axis_left,
+            axis_right,
+            300.0,
+        ),
     )
 
 
@@ -1674,7 +1649,8 @@ def _day_x(renderer, daykey, axis_left=50.0, axis_right=700.0):
         arrow.get(daykey, "YYYYMMDD"),
         arrow.get("20260101", "YYYYMMDD"),
         arrow.get("20260630", "YYYYMMDD"),
-        axis_left, axis_right,
+        axis_left,
+        axis_right,
     )
 
 
@@ -1705,8 +1681,7 @@ def test_bars_starting_on_the_same_day_share_a_left_edge(tmp_path):
 
 
 def test_a_bar_spans_exactly_its_two_dates(tmp_path):
-    events = [Event(task_name="Wide name on a short event", start="20260316",
-                    end="20260320")]
+    events = [Event(task_name="Wide name on a short event", start="20260316", end="20260320")]
     _config, renderer, bars = _aligned_bars(tmp_path, "aligned_x.svg", events)
     bar = bars[0]
     assert bar.start_x == pytest.approx(_day_x(renderer, "20260316"))
@@ -1718,8 +1693,7 @@ def test_a_bar_spans_exactly_its_two_dates(tmp_path):
 
 def test_a_bar_at_the_left_margin_is_not_pushed_right_either(tmp_path):
     """The old fallback grew a bar rightward when the left ran out."""
-    events = [Event(task_name="A name much wider than a few days of this axis",
-                    start="20260101", end="20260103")]
+    events = [Event(task_name="A name much wider than a few days of this axis", start="20260101", end="20260103")]
     _config, renderer, bars = _aligned_bars(tmp_path, "aligned_margin.svg", events)
     bar = bars[0]
     assert bar.start_x == pytest.approx(50.0)
@@ -1733,7 +1707,8 @@ def test_the_axis_marker_sits_on_the_start_date_only(tmp_path):
     day the dot left on the axis belonged to no bar in particular.
     """
     config, renderer, bars = _aligned_bars(
-        tmp_path, "aligned_markers.svg",
+        tmp_path,
+        "aligned_markers.svg",
         [Event(task_name="Ship it", start="20260316", end="20260320")],
         renderer=_CaptureCircleRenderer(),
     )
@@ -1744,7 +1719,8 @@ def test_the_axis_marker_sits_on_the_start_date_only(tmp_path):
 
 def test_a_vertical_bar_also_marks_only_its_start_date(tmp_path):
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_markers.svg",
+        tmp_path,
+        "v_markers.svg",
         [Event(task_name="Build", start="20260210", end="20260501")],
         renderer=_CaptureCircleRenderer(),
     )
@@ -1765,9 +1741,7 @@ def _overflow_drawn(tmp_path, name, event, config=None, **cfg):
     config = config or _base_config(tmp_path / name)
     for key, value in cfg.items():
         setattr(config, key, value)
-    config, renderer, bars = _aligned_bars(
-        tmp_path, name, [event], config=config
-    )
+    config, renderer, bars = _aligned_bars(tmp_path, name, [event], config=config)
     renderer._draw_duration(config, bars[0], 300.0)
     return config, renderer, bars[0]
 
@@ -1778,28 +1752,24 @@ def _names(renderer):
 
 def test_an_overflowing_bar_draws_no_overflow_icon(tmp_path):
     """The mark is gone: the two-line name says the same thing, legibly."""
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260410")
+    event = Event(task_name="A name much wider than this bar", start="20260316", end="20260410")
     _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_icon.svg", event)
     assert bar.text_overflow
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
 
 
 def test_a_bar_with_room_carries_no_overflow_mark(tmp_path):
     event = Event(task_name="Build", start="20260210", end="20260501")
     _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_none.svg", event)
     assert not bar.text_overflow
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
 
 
 def test_an_overflowing_name_breaks_over_the_middle_column_two_rows(tmp_path):
     """Half a name reads as a different activity; two lines of it do not."""
     # Wide enough for the icon and the name, too narrow for all of the name
     # plus the two in-bar dates.
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260410")
+    event = Event(task_name="A name much wider than this bar", start="20260316", end="20260410")
     config, renderer, bar = _overflow_drawn(tmp_path, "ovl_name.svg", event)
     assert bar.text_overflow
 
@@ -1820,81 +1790,65 @@ def test_the_two_lines_of_a_broken_name_are_balanced(tmp_path):
     """Splitting at the middle word leaves one line long and one short."""
     renderer = TimelineRenderer()
     font_path = renderer._safe_font_path("Roboto")
-    first, second = renderer._split_name_two_lines(
-        "Integration and acceptance testing", font_path, 10.0
-    )
+    first, second = renderer._split_name_two_lines("Integration and acceptance testing", font_path, 10.0)
     assert (first, second) == ("Integration and", "acceptance testing")
 
 
 def test_a_single_word_name_is_not_broken_in_half(tmp_path):
     renderer = TimelineRenderer()
-    assert renderer._split_name_two_lines(
-        "Reconciliation", renderer._safe_font_path("Roboto"), 10.0
-    ) == ("Reconciliation", "")
+    assert renderer._split_name_two_lines("Reconciliation", renderer._safe_font_path("Roboto"), 10.0) == (
+        "Reconciliation",
+        "",
+    )
 
 
 def test_an_overflowing_bar_drops_its_notes_for_the_name(tmp_path):
     """The second row is the rest of the name; the description gives way."""
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260410", notes="notes that will not fit either")
-    _config, renderer, _bar = _overflow_drawn(
-        tmp_path, "ovl_dates.svg", event, include_notes=True
+    event = Event(
+        task_name="A name much wider than this bar",
+        start="20260316",
+        end="20260410",
+        notes="notes that will not fit either",
     )
-    assert len(_date_texts(renderer)) == 2      # the grid otherwise holds
-    assert [c for c in renderer.text_calls
-            if c.get("css_class") == "ec-event-notes"] == []
+    _config, renderer, _bar = _overflow_drawn(tmp_path, "ovl_dates.svg", event, include_notes=True)
+    assert len(_date_texts(renderer)) == 2  # the grid otherwise holds
+    assert [c for c in renderer.text_calls if c.get("css_class") == "ec-event-notes"] == []
     assert len(_names(renderer)) == 2
 
 
 def test_a_bar_with_room_keeps_its_notes(tmp_path):
-    event = Event(task_name="Build", start="20260210", end="20260501",
-                  notes="a short note")
-    _config, renderer, bar = _overflow_drawn(
-        tmp_path, "ovl_keep_notes.svg", event, include_notes=True
-    )
+    event = Event(task_name="Build", start="20260210", end="20260501", notes="a short note")
+    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_keep_notes.svg", event, include_notes=True)
     assert not bar.text_overflow
-    notes = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-event-notes"]
+    notes = [c for c in renderer.text_calls if c.get("css_class") == "ec-event-notes"]
     assert [n["text"] for n in notes] == ["a short note"]
     assert len(_names(renderer)) == 1
 
 
 def test_everything_in_a_condensed_bar_condenses_by_the_same_factor(tmp_path):
     """One squashed line beside a full-width date read as two typefaces."""
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260410", icon="rocket")
-    _config, renderer, bar = _overflow_drawn(
-        tmp_path, "ovl_uniform.svg", event, timeline_duration_icon_visible=True
-    )
+    event = Event(task_name="A name much wider than this bar", start="20260316", end="20260410", icon="rocket")
+    _config, renderer, bar = _overflow_drawn(tmp_path, "ovl_uniform.svg", event, timeline_duration_icon_visible=True)
     assert bar.text_overflow
 
-    drawn = [c for c in renderer.text_calls
-             if c.get("css_class") in ("ec-event-name", "ec-duration-date")]
-    assert len(drawn) == 4                      # two name lines, two dates
-    factors = [
-        c["max_width"] / string_width(
-            c["text"], renderer._safe_font_path(c["font"]), c["size"]
-        )
-        for c in drawn
-    ]
+    drawn = [c for c in renderer.text_calls if c.get("css_class") in ("ec-event-name", "ec-duration-date")]
+    assert len(drawn) == 4  # two name lines, two dates
+    factors = [c["max_width"] / string_width(c["text"], renderer._safe_font_path(c["font"]), c["size"]) for c in drawn]
     assert max(factors) == pytest.approx(min(factors))
-    assert min(factors) < 1.0                   # it really is condensing
+    assert min(factors) < 1.0  # it really is condensing
 
     # ...and the icon narrows with them, on the same axis.
-    icon = next(c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon")
+    icon = next(c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon")
     assert f"scale({factors[0]:.6f} 1.000000)" in (icon.get("transform") or "")
 
 
 def test_a_bar_with_room_condenses_nothing(tmp_path):
-    event = Event(task_name="Build", start="20260210", end="20260501",
-                  icon="rocket")
+    event = Event(task_name="Build", start="20260210", end="20260501", icon="rocket")
     _config, renderer, bar = _overflow_drawn(
         tmp_path, "ovl_uncondensed.svg", event, timeline_duration_icon_visible=True
     )
     assert not bar.text_overflow
-    icon = next(c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon")
+    icon = next(c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon")
     assert icon.get("transform") is None
 
 
@@ -1910,12 +1864,10 @@ def test_a_bar_with_room_keeps_its_full_name_and_dates(tmp_path):
 
 def test_a_bar_too_narrow_to_grid_draws_nothing_inside(tmp_path):
     """Every cell would be narrower than its ink, so the rect stands alone."""
-    event = Event(task_name="A name much wider than this bar", start="20260316",
-                  end="20260320")
+    event = Event(task_name="A name much wider than this bar", start="20260316", end="20260320")
     _config, renderer, _bar = _overflow_drawn(tmp_path, "ovl_bare.svg", event)
 
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
     assert _names(renderer) == []
     assert _date_texts(renderer) == []
 
@@ -1934,14 +1886,15 @@ def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
     config = _base_config(tmp_path / "in_bar_stride.svg")
     renderer = _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    events = [
-        Event(task_name=f"T{i}", start="20260210", end="20260320", wbs=f"1.{i}")
-        for i in range(3)
-    ]
+    events = [Event(task_name=f"T{i}", start="20260210", end="20260320", wbs=f"1.{i}") for i in range(3)]
     bars = renderer._layout_durations(
-        config, events,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        50.0, 700.0, 300.0,
+        config,
+        events,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
     )
     lanes = sorted({b.lane for b in bars})
     assert len(lanes) >= 2
@@ -1949,9 +1902,7 @@ def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
     _t, _n, date_size, bar_h = renderer._duration_metrics(config)
     lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
     y0, _ = renderer._duration_bar_y(config, bars[0], 300.0)
-    y1, _ = renderer._duration_bar_y(
-        config, next(b for b in bars if b.lane == 1), 300.0
-    )
+    y1, _ = renderer._duration_bar_y(config, next(b for b in bars if b.lane == 1), 300.0)
     assert y1 - y0 == pytest.approx(bar_h + lane_gap)
 
 
@@ -1978,7 +1929,7 @@ def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
     for date_call in dates:
         assert "rotate(-90" in (date_call.get("transform") or "")
     cx_values = {round(d["x"], 3) for d in dates}
-    assert len(cx_values) == 2      # one toward each end, not stacked
+    assert len(cx_values) == 2  # one toward each end, not stacked
 
 
 # ── Vertical bars align on their dates too ────────────────────────────────
@@ -1992,10 +1943,19 @@ def _vertical_bars(tmp_path, name, events, config=None, renderer=None):
     config.timeline_orientation = "vertical"
     renderer = renderer or _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    return config, renderer, renderer._layout_durations_vertical(
-        config, events,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        axis_x=200.0, axis_top=50.0, axis_bottom=700.0, side=Side.PRIMARY,
+    return (
+        config,
+        renderer,
+        renderer._layout_durations_vertical(
+            config,
+            events,
+            arrow.get("20260101", "YYYYMMDD"),
+            arrow.get("20260630", "YYYYMMDD"),
+            axis_x=200.0,
+            axis_top=50.0,
+            axis_bottom=700.0,
+            side=Side.PRIMARY,
+        ),
     )
 
 
@@ -2004,15 +1964,16 @@ def _day_y(renderer, daykey, axis_top=50.0, axis_bottom=700.0):
         arrow.get(daykey, "YYYYMMDD"),
         arrow.get("20260101", "YYYYMMDD"),
         arrow.get("20260630", "YYYYMMDD"),
-        axis_top, axis_bottom,
+        axis_top,
+        axis_bottom,
     )
 
 
 def test_a_vertical_bar_spans_exactly_its_two_dates(tmp_path):
     _config, renderer, bars = _vertical_bars(
-        tmp_path, "v_span.svg",
-        [Event(task_name="A name much longer than four days of this axis",
-               start="20260316", end="20260320")],
+        tmp_path,
+        "v_span.svg",
+        [Event(task_name="A name much longer than four days of this axis", start="20260316", end="20260320")],
     )
     bar = bars[0]
     assert bar.start_y == pytest.approx(_day_y(renderer, "20260316"))
@@ -2023,9 +1984,12 @@ def test_a_vertical_bar_spans_exactly_its_two_dates(tmp_path):
 
 def test_vertical_bars_sharing_a_date_share_an_edge(tmp_path):
     _config, _renderer, bars = _vertical_bars(
-        tmp_path, "v_share.svg",
-        [Event(task_name="Ship it", start="20260210", end="20260213", wbs="1.1"),
-         Event(task_name="Long haul", start="20260210", end="20260501", wbs="1.2")],
+        tmp_path,
+        "v_share.svg",
+        [
+            Event(task_name="Ship it", start="20260210", end="20260213", wbs="1.1"),
+            Event(task_name="Long haul", start="20260210", end="20260501", wbs="1.2"),
+        ],
     )
     short, long_ = bars
     assert short.start_y == pytest.approx(long_.start_y)
@@ -2033,16 +1997,15 @@ def test_vertical_bars_sharing_a_date_share_an_edge(tmp_path):
 
 def test_an_overflowing_vertical_bar_breaks_its_name_over_two_rows(tmp_path):
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_overflow.svg",
-        [Event(task_name="A name much longer than this bar",
-               start="20260210", end="20260310")],
+        tmp_path,
+        "v_overflow.svg",
+        [Event(task_name="A name much longer than this bar", start="20260210", end="20260310")],
     )
     bar = bars[0]
     assert bar.text_overflow
     renderer._draw_duration_vertical(config, bar, 200.0)
 
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
 
     names = _names(renderer)
     assert len(names) == 2
@@ -2062,28 +2025,27 @@ def test_an_overflowing_vertical_bar_breaks_its_name_over_two_rows(tmp_path):
 def test_a_condensed_vertical_bar_condenses_its_icon_along_the_axis(tmp_path):
     """The rows run down the page here, so the squeeze is on y, not x."""
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_squeeze.svg",
-        [Event(task_name="A name much longer than this bar", icon="rocket",
-               start="20260210", end="20260310")],
+        tmp_path,
+        "v_squeeze.svg",
+        [Event(task_name="A name much longer than this bar", icon="rocket", start="20260210", end="20260310")],
     )
     config.timeline_duration_icon_visible = True
     renderer._draw_duration_vertical(config, bars[0], 200.0)
 
-    icon = next(c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon")
+    icon = next(c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon")
     transform = icon.get("transform") or ""
     assert "scale(1.000000 " in transform
 
 
 def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_wide.svg",
+        tmp_path,
+        "v_wide.svg",
         [Event(task_name="Build", start="20260210", end="20260501")],
     )
     assert not bars[0].text_overflow
     renderer._draw_duration_vertical(config, bars[0], 200.0)
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-overflow-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
     assert len(_date_texts(renderer)) == 2
 
 
@@ -2135,15 +2097,19 @@ def test_the_notes_share_a_left_edge_with_the_name(tmp_path):
     name = _by_class(renderer, "ec-event-name")[0]
     notes = _by_class(renderer, "ec-event-notes")[0]
     assert notes["x"] == pytest.approx(name["x"])
-    assert notes["y"] > name["y"]        # second line
+    assert notes["y"] > name["y"]  # second line
 
 
 def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
     config, renderer = _drawn_callout(
-        tmp_path, "callout_date.svg",
+        tmp_path,
+        "callout_date.svg",
         event=Event(
-            task_name="Go-Live Event", start="20260727", end="20260727",
-            notes="Public launch announcement", icon="rocket",
+            task_name="Go-Live Event",
+            start="20260727",
+            end="20260727",
+            notes="Public launch announcement",
+            icon="rocket",
         ),
     )
     date = _by_class(renderer, "ec-event-date")[0]
@@ -2152,9 +2118,7 @@ def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
     icon = renderer.icon_calls[0]
 
     pad = config.timeline_event_box_pad
-    col1_right = 150.0 + pad + (200.0 - 2 * pad) * (
-        config.timeline_event_icon_column_ratio
-    )
+    col1_right = 150.0 + pad + (200.0 - 2 * pad) * (config.timeline_event_icon_column_ratio)
     assert date["anchor"] == "start"
     # Both live in column 1 — the icon centred in its cell, the date on the
     # column's left edge.
@@ -2165,7 +2129,7 @@ def test_the_date_sits_under_the_icon_on_the_notes_line(tmp_path):
     row2_top = 230.0 + pad + (30.0 - 2 * pad) / 2.0
     assert row2_top < date["y"] < 230.0 + 30.0
     assert row2_top < notes["y"] < 230.0 + 30.0
-    assert date["x"] < notes["x"]                  # left of the text column
+    assert date["x"] < notes["x"]  # left of the text column
 
 
 def test_the_date_is_no_longer_on_the_title_line(tmp_path):
@@ -2182,10 +2146,14 @@ def test_the_column_split_follows_the_theme_ratio(tmp_path):
     compressed to the column instead.
     """
     config, renderer = _drawn_callout(
-        tmp_path, "callout_col.svg",
+        tmp_path,
+        "callout_col.svg",
         event=Event(
-            task_name="Go-Live Event", start="20260727", end="20260727",
-            notes="Public launch announcement", icon="rocket",
+            task_name="Go-Live Event",
+            start="20260727",
+            end="20260727",
+            notes="Public launch announcement",
+            icon="rocket",
         ),
     )
     date = _by_class(renderer, "ec-event-date")[0]
@@ -2193,9 +2161,7 @@ def test_the_column_split_follows_the_theme_ratio(tmp_path):
     inner_w = 200.0 - 2 * config.timeline_event_box_pad
 
     column = notes["x"] - date["x"]
-    assert column == pytest.approx(
-        inner_w * config.timeline_event_icon_column_ratio, abs=0.01
-    )
+    assert column == pytest.approx(inner_w * config.timeline_event_icon_column_ratio, abs=0.01)
     # Each line is capped at its own column's width, so nothing overruns.
     assert date["max_width"] == pytest.approx(column, abs=0.01)
     assert notes["max_width"] == pytest.approx(inner_w - column, abs=0.01)
@@ -2203,9 +2169,12 @@ def test_the_column_split_follows_the_theme_ratio(tmp_path):
 
 def test_a_callout_without_an_icon_still_lines_its_columns_up(tmp_path):
     _config, renderer = _drawn_callout(
-        tmp_path, "callout_noicon.svg",
+        tmp_path,
+        "callout_noicon.svg",
         event=Event(
-            task_name="Go-Live Event", start="20260727", end="20260727",
+            task_name="Go-Live Event",
+            start="20260727",
+            end="20260727",
             notes="Public launch announcement",
         ),
     )
@@ -2244,12 +2213,10 @@ def _mixed_wbs_events():
     """One point event, one milestone and one bar in each of two groups."""
     return [
         Event(task_name="A plan", start="20260202", end="20260220", wbs="1.1"),
-        Event(task_name="A gate", start="20260223", end="20260223", wbs="1.2",
-              milestone=True),
+        Event(task_name="A gate", start="20260223", end="20260223", wbs="1.2", milestone=True),
         Event(task_name="A note", start="20260225", end="20260225", wbs="1.3"),
         Event(task_name="B build", start="20260302", end="20260320", wbs="2.1"),
-        Event(task_name="B gate", start="20260323", end="20260323", wbs="2.2",
-              milestone=True),
+        Event(task_name="B gate", start="20260323", end="20260323", wbs="2.2", milestone=True),
         Event(task_name="B note", start="20260325", end="20260325", wbs="2.3"),
     ]
 
@@ -2268,13 +2235,24 @@ def test_every_item_type_in_a_group_takes_one_color(tmp_path):
     assert points and durations, "the fixture should have both kinds"
 
     callouts = renderer._layout_callouts(
-        config, points, start, end,
-        axis_origin=(60.0, 300.0), axis_length=670.0,
-        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        config,
+        points,
+        start,
+        end,
+        axis_origin=(60.0, 300.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
         group_colors=group_colors,
     )
     bars = renderer._layout_durations(
-        config, durations, start, end, 60.0, 730.0, 300.0,
+        config,
+        durations,
+        start,
+        end,
+        60.0,
+        730.0,
+        300.0,
         group_colors=group_colors,
     )
 
@@ -2298,16 +2276,25 @@ def test_a_milestone_matches_the_bars_in_its_phase(tmp_path):
     points, durations = renderer._split_events(config, events)
 
     callouts = renderer._layout_callouts(
-        config, points,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        axis_origin=(60.0, 300.0), axis_length=670.0,
-        orientation=Orientation.HORIZONTAL, side=Side.PRIMARY,
+        config,
+        points,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_origin=(60.0, 300.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.PRIMARY,
         group_colors=group_colors,
     )
     bars = renderer._layout_durations(
-        config, durations,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        60.0, 730.0, 300.0, group_colors=group_colors,
+        config,
+        durations,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        60.0,
+        730.0,
+        300.0,
+        group_colors=group_colors,
     )
     milestone = next(c for c in callouts if c.event.task_name == "A gate")
     bar = next(b for b in bars if b.event.task_name == "A plan")
@@ -2325,10 +2312,14 @@ def test_the_secondary_palette_does_not_break_a_group_color(tmp_path):
 
     group_colors = renderer._wbs_group_colors(config, events)
     callouts = renderer._layout_callouts(
-        config, events,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"),
-        axis_origin=(60.0, 300.0), axis_length=670.0,
-        orientation=Orientation.HORIZONTAL, side=Side.BOTH,
+        config,
+        events,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260630", "YYYYMMDD"),
+        axis_origin=(60.0, 300.0),
+        axis_length=670.0,
+        orientation=Orientation.HORIZONTAL,
+        side=Side.BOTH,
         group_colors=group_colors,
     )
     by_group: dict[str, set[str]] = {}
@@ -2372,9 +2363,7 @@ def test_the_tick_label_distance_defaults_to_the_old_formula(tmp_path):
     tick_h = renderer._axis_tick_height(config)
     label_size = renderer._axis_tick_label_size(config)
 
-    assert renderer._tick_label_offset(tick_h, label_size, None, None) == (
-        pytest.approx(tick_h + label_size * 1.5)
-    )
+    assert renderer._tick_label_offset(tick_h, label_size, None, None) == (pytest.approx(tick_h + label_size * 1.5))
 
 
 def test_a_gap_is_measured_from_the_tick_tip(tmp_path):
@@ -2400,7 +2389,9 @@ def test_the_built_in_ticks_read_the_theme_keys(tmp_path):
         config,
         arrow.get("20260101", "YYYYMMDD"),
         arrow.get("20260430", "YYYYMMDD"),
-        60.0, 700.0, 300.0,
+        60.0,
+        700.0,
+        300.0,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels
@@ -2422,8 +2413,7 @@ def test_a_vertical_callout_carries_its_start_date(tmp_path):
 
     item = _callout(orientation=Orientation.VERTICAL)
     renderer._draw_callout_contents(config, item, StyleResult())
-    dates = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-event-date"]
+    dates = [c for c in renderer.text_calls if c.get("css_class") == "ec-event-date"]
     assert len(dates) == 1
     assert dates[0]["text"] == renderer._callout_date_label(config, item)
     assert dates[0]["text"]
@@ -2431,19 +2421,20 @@ def test_a_vertical_callout_carries_its_start_date(tmp_path):
 
 def test_a_vertical_duration_bar_shows_the_event_icon(tmp_path):
     """`timeline.duration_icon_visible` reached only horizontal bars."""
-    event = Event(task_name="Build", start="20260210", end="20260501",
-                  icon="rocket")
+    event = Event(task_name="Build", start="20260210", end="20260501", icon="rocket")
     config = _base_config(tmp_path / "v_bar_icon.svg")
     config.timeline_duration_icon_visible = True
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_bar_icon.svg", [event],
-        config=config, renderer=_CaptureOverflowRenderer(),
+        tmp_path,
+        "v_bar_icon.svg",
+        [event],
+        config=config,
+        renderer=_CaptureOverflowRenderer(),
     )
     assert not bars[0].text_overflow
     renderer._draw_duration_vertical(config, bars[0], 200.0)
 
-    icons = [c for c in renderer.icon_calls
-             if c.get("css_class") == "ec-duration-icon"]
+    icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
     # Upright, in the first column — the bar's start end, over the start date.
     assert icons[0].get("transform") is None
@@ -2451,17 +2442,18 @@ def test_a_vertical_duration_bar_shows_the_event_icon(tmp_path):
 
 
 def test_a_vertical_duration_bar_leaves_the_icon_out_when_told_to(tmp_path):
-    event = Event(task_name="Build", start="20260210", end="20260501",
-                  icon="rocket")
+    event = Event(task_name="Build", start="20260210", end="20260501", icon="rocket")
     config = _base_config(tmp_path / "v_bar_noicon.svg")
     config.timeline_duration_icon_visible = False
     config, renderer, bars = _vertical_bars(
-        tmp_path, "v_bar_noicon.svg", [event],
-        config=config, renderer=_CaptureOverflowRenderer(),
+        tmp_path,
+        "v_bar_noicon.svg",
+        [event],
+        config=config,
+        renderer=_CaptureOverflowRenderer(),
     )
     renderer._draw_duration_vertical(config, bars[0], 200.0)
-    assert [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon"] == []
+    assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"] == []
 
 
 def test_a_vertical_timeband_honors_text_align(tmp_path):
@@ -2476,10 +2468,15 @@ def test_a_vertical_timeband_honors_text_align(tmp_path):
         renderer._draw_timeline_bands_vertical(
             config,
             [{"unit": "month", "row_height": 16.0, "text_align": align}],
-            100.0, 50.0, 700.0, start, end, _DummyDB(), sign=-1.0,
+            100.0,
+            50.0,
+            700.0,
+            start,
+            end,
+            _DummyDB(),
+            sign=-1.0,
         )
-        return [c for c in renderer.text_calls
-                if c.get("css_class") == "ec-label"]
+        return [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
 
     left, centre, right = (_label_xs(a) for a in ("left", "center", "right"))
     assert left and centre and right
@@ -2495,15 +2492,11 @@ def test_the_callout_stack_is_measured_on_the_side_it_uses(tmp_path):
     renderer = TimelineRenderer()
     low, high = 100.0, 400.0
     # Horizontal: primary is above, i.e. the low side.
-    assert renderer._callout_room(
-        Orientation.HORIZONTAL, Side.PRIMARY, low, high) == low
-    assert renderer._callout_room(
-        Orientation.HORIZONTAL, Side.SECONDARY, low, high) == high
+    assert renderer._callout_room(Orientation.HORIZONTAL, Side.PRIMARY, low, high) == low
+    assert renderer._callout_room(Orientation.HORIZONTAL, Side.SECONDARY, low, high) == high
     # Vertical: primary is the right — the high side.
-    assert renderer._callout_room(
-        Orientation.VERTICAL, Side.PRIMARY, low, high) == high
-    assert renderer._callout_room(
-        Orientation.VERTICAL, Side.SECONDARY, low, high) == low
+    assert renderer._callout_room(Orientation.VERTICAL, Side.PRIMARY, low, high) == high
+    assert renderer._callout_room(Orientation.VERTICAL, Side.SECONDARY, low, high) == low
     # A stack on each side has to fit the smaller of the two.
     for orient in (Orientation.HORIZONTAL, Orientation.VERTICAL):
         assert renderer._callout_room(orient, Side.BOTH, low, high) == low
@@ -2521,9 +2514,7 @@ def test_a_vertical_axis_reserves_the_width_of_its_tick_dates(tmp_path):
     end = arrow.get("20260430", "YYYYMMDD")
 
     across = renderer._axis_label_clearance(config, start, end)
-    beside = renderer._axis_label_clearance(
-        config, start, end, orientation=Orientation.VERTICAL
-    )
+    beside = renderer._axis_label_clearance(config, start, end, orientation=Orientation.VERTICAL)
     label_size = renderer._axis_tick_label_size(config)
     widest = max(
         string_width(
@@ -2545,12 +2536,9 @@ def test_the_tick_clearance_covers_both_kinds_of_tick(tmp_path):
     end = arrow.get("20260430", "YYYYMMDD")
 
     month_only = renderer._tick_side_clearance(config, start, end)
-    assert month_only == pytest.approx(
-        renderer._axis_label_clearance(config, start, end)
-    )
+    assert month_only == pytest.approx(renderer._axis_label_clearance(config, start, end))
     # A band that reaches further wins.
-    config.timeline_ticks = [{"unit": "month", "tick_length": 30.0,
-                              "label_offset_y": 90.0}]
+    config.timeline_ticks = [{"unit": "month", "tick_length": 30.0, "label_offset_y": 90.0}]
     assert renderer._tick_side_clearance(config, start, end) > month_only
 
 
@@ -2576,11 +2564,9 @@ def test_the_today_line_crosses_a_vertical_axis(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_today_marker_vertical(
-        config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0
-    )
+    renderer._draw_today_marker_vertical(config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0)
     lines = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
-    assert len(lines) == 1                      # runs across, not along
+    assert len(lines) == 1  # runs across, not along
     assert lines[0]["x1"] == pytest.approx(0.0)
     assert lines[0]["x2"] == pytest.approx(600.0)
     assert "Reference Date" in [c["text"] for c in renderer.text_calls]
@@ -2596,14 +2582,12 @@ def test_the_today_line_direction_maps_to_the_two_sides(tmp_path):
         config.timeline_today_line_direction = direction
         renderer = _CaptureTimelineRenderer()
         start, end = _vertical_render_args(config, renderer)
-        renderer._draw_today_marker_vertical(
-            config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0
-        )
+        renderer._draw_today_marker_vertical(config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0)
         line = next(c for c in renderer.line_calls if c["y1"] == c["y2"])
         return line["x1"], line["x2"]
 
-    assert _span("above") == (300.0, 600.0)     # right of the axis
-    assert _span("below") == (0.0, 300.0)       # left of it
+    assert _span("above") == (300.0, 600.0)  # right of the axis
+    assert _span("below") == (0.0, 300.0)  # left of it
     assert _span("both") == (0.0, 600.0)
 
 
@@ -2615,11 +2599,17 @@ def test_the_today_label_keeps_clear_of_the_band_columns(tmp_path):
     start, end = _vertical_render_args(config, renderer)
 
     renderer._draw_today_marker_vertical(
-        config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0,
+        config,
+        start,
+        end,
+        50.0,
+        700.0,
+        300.0,
+        0.0,
+        600.0,
         label_bounds=(40.0, 560.0),
     )
-    label = next(c for c in renderer.text_calls
-             if c.get("css_class") == "ec-today-label")
+    label = next(c for c in renderer.text_calls if c.get("css_class") == "ec-today-label")
     assert label["x"] >= 40.0
 
 
@@ -2630,8 +2620,14 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     start, end = _vertical_render_args(config, renderer)
 
     renderer._draw_holiday_icons_vertical(
-        config, start, end, 50.0, 700.0, 300.0,
-        _HolidayDB(["20260216", "20260406"]), side=Side.SECONDARY,
+        config,
+        start,
+        end,
+        50.0,
+        700.0,
+        300.0,
+        _HolidayDB(["20260216", "20260406"]),
+        side=Side.SECONDARY,
     )
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     # Between the axis and the bars: just off the axis, on the bars' side.
@@ -2641,11 +2637,10 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     # Each icon marks its own day, so they differ along the axis.
     assert renderer.icon_calls[0]["y"] < renderer.icon_calls[1]["y"]
 
-    dates = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-holiday-date"]
+    dates = [c for c in renderer.text_calls if c.get("css_class") == "ec-holiday-date"]
     assert [d["text"] for d in dates] == ["Feb 16", "Apr 6"]
     for date_call, icon in zip(dates, renderer.icon_calls, strict=True):
-        assert date_call["x"] < icon["x"]            # written past the icon
+        assert date_call["x"] < icon["x"]  # written past the icon
         assert date_call["anchor"] == "end"
 
 
@@ -2656,12 +2651,17 @@ def test_holiday_marks_follow_the_bars_to_the_other_side(tmp_path):
     start, end = _vertical_render_args(config, renderer)
 
     renderer._draw_holiday_icons_vertical(
-        config, start, end, 50.0, 700.0, 300.0,
-        _HolidayDB(["20260216"]), side=Side.PRIMARY,
+        config,
+        start,
+        end,
+        50.0,
+        700.0,
+        300.0,
+        _HolidayDB(["20260216"]),
+        side=Side.PRIMARY,
     )
     assert renderer.icon_calls[0]["x"] > 300.0
-    dates = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-holiday-date"]
+    dates = [c for c in renderer.text_calls if c.get("css_class") == "ec-holiday-date"]
     assert dates[0]["anchor"] == "start"
 
 
@@ -2672,14 +2672,12 @@ def test_fiscal_bands_run_as_columns_beside_a_vertical_axis(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_fiscal_bands_vertical(
-        config, start, end, 50.0, 700.0, 300.0, side=Side.PRIMARY
-    )
+    renderer._draw_fiscal_bands_vertical(config, start, end, 50.0, 700.0, 300.0, side=Side.PRIMARY)
     rects = renderer.rect_calls
     assert rects
     for rect in rects:
-        assert rect["x"] > 300.0                # out on the primary side
-        assert rect["h"] > rect["w"]            # a column, not a row
+        assert rect["x"] > 300.0  # out on the primary side
+        assert rect["h"] > rect["w"]  # a column, not a row
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels
     # Too narrow to read across, so the period names are turned with the band.
@@ -2696,7 +2694,15 @@ def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
     ]
 
     renderer._draw_timeline_bands_vertical(
-        config, bands, 100.0, 50.0, 700.0, start, end, _DummyDB(), sign=-1.0,
+        config,
+        bands,
+        100.0,
+        50.0,
+        700.0,
+        start,
+        end,
+        _DummyDB(),
+        sign=-1.0,
     )
     cells = [c for c in renderer.rect_calls]
     assert cells
@@ -2706,9 +2712,7 @@ def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
     assert widths == {16.0, 12.0}
     assert min(c["x"] for c in cells) == pytest.approx(100.0 - 16.0 - 12.0)
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
-    assert labels and all(
-        "rotate(-90" in (lbl.get("transform") or "") for lbl in labels
-    )
+    assert labels and all("rotate(-90" in (lbl.get("transform") or "") for lbl in labels)
 
 
 # ── Sides of a vertical axis ──────────────────────────────────────────────
@@ -2757,8 +2761,12 @@ def test_a_vertical_chart_with_no_holidays_still_draws(tmp_path):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     renderer._draw_holiday_icons_vertical(
         config,
-        arrow.get("20260201", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
-        50.0, 700.0, 300.0, _HolidayDB([]),
+        arrow.get("20260201", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
+        _HolidayDB([]),
     )
     assert renderer.icon_calls == []
 
@@ -2779,9 +2787,9 @@ def test_a_bare_vertical_axis_is_placed_by_where_the_bars_went(tmp_path):
     coords = {"TimelineArea": (0.0, 0.0, 1000.0, 700.0)}
     renderer._drawing = drawsvg.Drawing(config.pageX, config.pageY)
     renderer._render_content(
-        config, coords,
-        [{"Task_Name": "Build", "Start": "20260210", "End": "20260320",
-          "WBS": "1.1"}],
+        config,
+        coords,
+        [{"Task_Name": "Build", "Start": "20260210", "End": "20260320", "WBS": "1.1"}],
         _DummyDB(),
     )
     axis = [c for c in renderer.line_calls if c["x1"] == c["x2"]]
@@ -2815,15 +2823,16 @@ def test_a_tick_date_grows_away_from_the_axis(tmp_path):
 # side, resolved through the same keys.
 
 
-def _vertical_ticks(config, start="20260101", end="20260430",
-                    axis_top=50.0, axis_bottom=700.0, axis_x=300.0):
+def _vertical_ticks(config, start="20260101", end="20260430", axis_top=50.0, axis_bottom=700.0, axis_x=300.0):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     renderer._draw_month_ticks_vertical(
         config,
         arrow.get(start, "YYYYMMDD"),
         arrow.get(end, "YYYYMMDD"),
-        axis_top, axis_bottom, axis_x,
+        axis_top,
+        axis_bottom,
+        axis_x,
     )
     return renderer
 
@@ -2835,7 +2844,7 @@ def test_a_vertical_axis_ticks_each_month_start(tmp_path):
     labels = [c["text"] for c in renderer.text_calls]
     assert "Feb 1" in labels
     assert "Mar 1" in labels
-    assert "Jan 1" not in labels          # before the visible range
+    assert "Jan 1" not in labels  # before the visible range
     # The mark crosses the axis, so it runs in x at a fixed y.
     ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
     assert len(ticks) == len(labels)
@@ -2851,8 +2860,8 @@ def test_a_vertical_tick_label_is_written_beside_the_axis(tmp_path):
     tick_h = renderer._axis_tick_height(config)
     for label in labels:
         assert label["x"] == pytest.approx(300.0 - (tick_h + 20.0))
-        assert label["anchor"] == "end"    # grows away from the axis
-        assert label.get("transform") is None   # dates are read, not followed
+        assert label["anchor"] == "end"  # grows away from the axis
+        assert label.get("transform") is None  # dates are read, not followed
 
 
 def test_tick_labels_move_to_the_far_side_with_the_bars(tmp_path):
@@ -2863,8 +2872,11 @@ def test_tick_labels_move_to_the_far_side_with_the_bars(tmp_path):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     renderer._draw_month_ticks_vertical(
         config,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
-        50.0, 700.0, 300.0,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
         label_side=Side.PRIMARY,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
@@ -2881,12 +2893,14 @@ def test_vertical_tick_labels_take_the_theme_font_and_color(tmp_path):
     config.timeline_tick_label_format = "MMMM"
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._tokens = {"text:event_date": {"font": "JuliaMono-Regular",
-                                            "color": "hotpink"}}
+    renderer._tokens = {"text:event_date": {"font": "JuliaMono-Regular", "color": "hotpink"}}
     renderer._draw_month_ticks_vertical(
         config,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
-        50.0, 700.0, 300.0,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert [lbl["text"] for lbl in labels][:2] == ["January", "February"]
@@ -2906,9 +2920,14 @@ def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
         "font": "JuliaMono-Regular",
     }
     renderer._draw_axis_ticks_from_band_vertical(
-        config, band,
-        arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"),
-        50.0, 700.0, 300.0, None,
+        config,
+        band,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20260430", "YYYYMMDD"),
+        50.0,
+        700.0,
+        300.0,
+        None,
         ticks=[(date(2026, 2, 1), "Feb"), (date(2026, 3, 1), "Mar")],
     )
     ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
@@ -2925,8 +2944,7 @@ def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
 def test_a_tick_label_at_the_end_of_the_axis_stays_on_the_page(tmp_path):
     config = _base_config(tmp_path / "v_tick_edge.svg")
     # A range starting exactly on a month boundary ticks at the very top.
-    renderer = _vertical_ticks(config, start="20260201", end="20260430",
-                               axis_top=50.0, axis_bottom=700.0)
+    renderer = _vertical_ticks(config, start="20260201", end="20260430", axis_top=50.0, axis_bottom=700.0)
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     size = renderer._axis_tick_label_size(config)
     assert labels[0]["y"] >= 50.0 + size * 0.8
@@ -2944,6 +2962,4 @@ def test_the_callout_clearance_follows_the_configured_gap(tmp_path):
     config.timeline_tick_label_gap = 40.0
     wide = renderer._axis_label_clearance(config, start, end)
     assert wide > narrow
-    assert wide - narrow == pytest.approx(
-        40.0 - renderer._axis_tick_label_size(config) * 1.5
-    )
+    assert wide - narrow == pytest.approx(40.0 - renderer._axis_tick_label_size(config) * 1.5)

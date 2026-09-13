@@ -62,21 +62,13 @@ class WeeklyCalendarLayout(BaseLayout):
         if config.include_header:
             headerY = round(config.pageY * config.header_percent, 2)
             header_y_pos = config.pageY - top - headerY
-            coord.update(
-                self._generate_three_column_coords(
-                    left, config.pageX, header_y_pos, headerY, "Header", right
-                )
-            )
+            coord.update(self._generate_three_column_coords(left, config.pageX, header_y_pos, headerY, "Header", right))
 
         # Footer coordinates
         footerY = 0.0
         if config.include_footer:
             footerY = round(config.pageY * config.footer_percent, 2)
-            coord.update(
-                self._generate_three_column_coords(
-                    left, config.pageX, bottom, footerY, "Footer", right
-                )
-            )
+            coord.update(self._generate_three_column_coords(left, config.pageX, bottom, footerY, "Footer", right))
 
         # Color key coordinates
         colkeyY = 0.0
@@ -101,12 +93,8 @@ class WeeklyCalendarLayout(BaseLayout):
             daylabY = round(config.pageY * config.day_name_percent, 2)
 
         # Calculate day box canvas dimensions
-        DayBoxCanvasWidth = round(
-            config.pageX - left - right - monthlablesX - weeknumsX, 2
-        )
-        DayBoxCanvasHeight = round(
-            config.pageY - top - bottom - footerY - headerY - daylabY - colkeyY, 2
-        )
+        DayBoxCanvasWidth = round(config.pageX - left - right - monthlablesX - weeknumsX, 2)
+        DayBoxCanvasHeight = round(config.pageY - top - bottom - footerY - headerY - daylabY - colkeyY, 2)
 
         baseX = round(left + monthlablesX + weeknumsX, 2)
         baseY = round(bottom + footerY + colkeyY, 2)
@@ -120,9 +108,7 @@ class WeeklyCalendarLayout(BaseLayout):
         caldays = get_calendar_days(config.adjustedstart, config.adjustedend)
 
         # Calculate column layout
-        weekday_width, weekend_width, col_widths, col_x = self._calculate_column_layout(
-            DayBoxCanvasWidth, baseX, style
-        )
+        weekday_width, weekend_width, col_widths, col_x = self._calculate_column_layout(DayBoxCanvasWidth, baseX, style)
 
         # Calculate row height
         row_height = round(DayBoxCanvasHeight / config.numberofweeks, 2)
@@ -156,9 +142,7 @@ class WeeklyCalendarLayout(BaseLayout):
 
         # Generate day name label coordinates
         if config.include_day_names:
-            day_name_coords = self._generate_day_name_coords(
-                baseX, label_y, daylabY, style["day_order"], col_widths
-            )
+            day_name_coords = self._generate_day_name_coords(baseX, label_y, daylabY, style["day_order"], col_widths)
             coord.update(day_name_coords)
 
         return self._to_svg_coords(coord, config.pageY)

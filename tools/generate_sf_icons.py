@@ -78,8 +78,8 @@ def extract_glyph_svg(font: TTFont, gid: int, upm: int, font_size: float = FONT_
         f'  <g fill="black" stroke="black" stroke-width="0.25">\n'
         f'    <path d="{path_d}" '
         f'transform="translate({tx:.4f},{ty:.4f}) scale({scale:.6f},{-scale:.6f})"/>\n'
-        f'  </g>\n'
-        f'</svg>\n'
+        f"  </g>\n"
+        f"</svg>\n"
     )
 
 
@@ -128,9 +128,7 @@ def generate_icons(font_path: str, input_file: str, output_dir: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate SVG icons from SF-Compact font glyph IDs."
-    )
+    parser = argparse.ArgumentParser(description="Generate SVG icons from SF-Compact font glyph IDs.")
     parser.add_argument(
         "--font-path",
         default=DEFAULT_FONT,

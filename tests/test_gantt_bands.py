@@ -23,10 +23,7 @@ _PAGE = (792.0, 612.0)
 
 
 def bands(count: int, row_height: float = 10.0, unit: str = "month") -> list[dict]:
-    return [
-        {"label": f"B{index}", "unit": unit, "row_height": row_height}
-        for index in range(count)
-    ]
+    return [{"label": f"B{index}", "unit": unit, "row_height": row_height} for index in range(count)]
 
 
 @pytest.fixture
@@ -43,9 +40,7 @@ def config() -> CalendarConfig:
 def test_a_stack_of_any_length_gets_its_full_height(config, count):
     config.gantt_top_time_bands = bands(count)
     config.gantt_bottom_time_bands = []
-    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(
-        10.0 * count, abs=0.01
-    )
+    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(10.0 * count, abs=0.01)
 
 
 @pytest.mark.parametrize("count", [1, 4, 9])
@@ -61,13 +56,11 @@ def test_bands_may_each_state_their_own_height(config):
     config.gantt_top_time_bands = [
         {"label": "a", "unit": "month", "row_height": 24},
         {"label": "b", "unit": "week", "row_height": 10},
-        {"label": "c", "unit": "date"},          # falls back to the config default
+        {"label": "c", "unit": "date"},  # falls back to the config default
     ]
     config.gantt_band_row_height = 6.0
     config.gantt_bottom_time_bands = []
-    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(
-        40.0, abs=0.01
-    )
+    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(40.0, abs=0.01)
 
 
 @pytest.mark.parametrize("count", [20, 60, 200])
@@ -78,11 +71,7 @@ def test_a_very_tall_stack_scales_instead_of_starving_the_body(config, count):
     coords = GanttLayout().calculate(config)
 
     content_h = coords["GanttArea"][3]
-    chrome = (
-        coords["GanttTopBands"][3]
-        + coords["GanttBottomBands"][3]
-        + coords["GanttColumnHeader"][3]
-    )
+    chrome = coords["GanttTopBands"][3] + coords["GanttBottomBands"][3] + coords["GanttColumnHeader"][3]
     assert coords["GanttChartBody"][3] > 0
     assert coords["GanttTableBody"][3] > 0
     assert chrome <= content_h * MAX_CHROME_SHARE + 0.01
@@ -93,9 +82,7 @@ def test_the_stacks_keep_their_proportions_when_scaled(config):
     config.gantt_top_time_bands = bands(40)
     config.gantt_bottom_time_bands = bands(20)
     coords = GanttLayout().calculate(config)
-    assert coords["GanttTopBands"][3] == pytest.approx(
-        coords["GanttBottomBands"][3] * 2, rel=0.01
-    )
+    assert coords["GanttTopBands"][3] == pytest.approx(coords["GanttBottomBands"][3] * 2, rel=0.01)
 
 
 def test_no_bands_at_all_is_allowed(config):
@@ -113,9 +100,7 @@ def test_malformed_entries_cost_one_band_not_the_page(config):
         None,
     ]
     config.gantt_bottom_time_bands = []
-    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(
-        10.0, abs=0.01
-    )
+    assert GanttLayout().calculate(config)["GanttTopBands"][3] == pytest.approx(10.0, abs=0.01)
 
 
 # ── Segments and drawing ──────────────────────────────────────────────────
@@ -141,12 +126,8 @@ def test_every_band_in_both_stacks_gets_its_own_segments():
     days = visible_days(start, end, int(config.weekend_style))
     segments = renderer._build_all_segments(config, start, end, days, None)
 
-    assert [key for key in segments if key[0] == "top"] == [
-        ("top", 0), ("top", 1), ("top", 2), ("top", 3)
-    ]
-    assert [key for key in segments if key[0] == "bottom"] == [
-        ("bottom", 0), ("bottom", 1)
-    ]
+    assert [key for key in segments if key[0] == "top"] == [("top", 0), ("top", 1), ("top", 2), ("top", 3)]
+    assert [key for key in segments if key[0] == "bottom"] == [("bottom", 0), ("bottom", 1)]
     assert all(segments[key] for key in segments), "every band produced segments"
 
 
@@ -160,9 +141,7 @@ def test_the_renderer_draws_a_row_for_every_band(count):
     )
     many = render(
         [task()],
-        gantt_top_time_bands=[
-            {"label": f"m{i}", "unit": "month", "row_height": 8} for i in range(count)
-        ],
+        gantt_top_time_bands=[{"label": f"m{i}", "unit": "month", "row_height": 8} for i in range(count)],
         gantt_bottom_time_bands=[],
     )
     one_row = len(single.of_class(single.rects, "ec-band-cell"))

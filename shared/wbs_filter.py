@@ -38,10 +38,7 @@ def _match_pattern(pattern: list[str], wbs_segments: list[str]) -> bool:
             if token == "**":
                 if pi == len(pattern) - 1:
                     return True
-                for skip in range(wi, len(wbs_segments) + 1):
-                    if rec(pi + 1, skip):
-                        return True
-                return False
+                return any(rec(pi + 1, skip) for skip in range(wi, len(wbs_segments) + 1))
             if wi >= len(wbs_segments):
                 return False
             if token != "*" and token != wbs_segments[wi]:
@@ -140,6 +137,7 @@ def _wbs_segments(wbs: str | None) -> list[str]:
     if not wbs:
         return []
     return [seg for seg in str(wbs).strip().split(".") if seg]
+
 
 def wbs_group(wbs: str | None, depth: int) -> str:
     """The WBS prefix that groups a task with its siblings.

@@ -27,9 +27,8 @@ def test_basic_yaml_satisfies_every_visualizer() -> None:
     theme = load_theme_file(THEMES_DIR / "basic.yaml")
     failures = check_all_visualizers(theme)
     bad = {v: keys for v, keys in failures.items() if keys}
-    assert not bad, (
-        "basic.yaml is missing required keys for visualizers: "
-        + "; ".join(f"{v}={[k.path for k in keys]}" for v, keys in bad.items())
+    assert not bad, "basic.yaml is missing required keys for visualizers: " + "; ".join(
+        f"{v}={[k.path for k in keys]}" for v, keys in bad.items()
     )
 
 
@@ -38,9 +37,8 @@ def test_sample_yaml_satisfies_every_visualizer() -> None:
     theme = load_theme_file(THEMES_DIR / "SAMPLE.yaml")
     failures = check_all_visualizers(theme)
     bad = {v: keys for v, keys in failures.items() if keys}
-    assert not bad, (
-        "SAMPLE.yaml is missing required keys for visualizers: "
-        + "; ".join(f"{v}={[k.path for k in keys]}" for v, keys in bad.items())
+    assert not bad, "SAMPLE.yaml is missing required keys for visualizers: " + "; ".join(
+        f"{v}={[k.path for k in keys]}" for v, keys in bad.items()
     )
 
 
@@ -55,27 +53,38 @@ def test_visualizer_specific_keys_not_checked_for_other_visualizers() -> None:
         "layout": {"margin": {"top": 1, "right": 1, "bottom": 1, "left": 1}},
         "events": {"item_placement_order": ["priority"]},
         "fiscal": {"label_format": "{period_short}", "end_label_format": "End"},
-        "colors": {"month_palette": "Greys", "fiscal_palette": "Greys",
-                   "group_palette": "Greys"},
+        "colors": {"month_palette": "Greys", "fiscal_palette": "Greys", "group_palette": "Greys"},
         "overflow": {"icon": "x"},
         "weekly": {"week_numbers": {"label_format": "W"}},
         # Token definitions weekly needs
         "style_rules": [
-            {"define": "text", "as": name,
-             "style": {"font": "Roboto-Regular", "size": 8, "color": "black"}}
+            {"define": "text", "as": name, "style": {"font": "Roboto-Regular", "size": 8, "color": "black"}}
             for name in (
-                "base", "heading", "body", "caption", "label",
-                "day_number", "month_title", "week_number",
-                "event_name", "event_notes", "event_date", "duration_date",
-                "holiday_title", "fiscal_label",
+                "base",
+                "heading",
+                "body",
+                "caption",
+                "label",
+                "day_number",
+                "month_title",
+                "week_number",
+                "event_name",
+                "event_notes",
+                "event_date",
+                "duration_date",
+                "holiday_title",
+                "fiscal_label",
             )
-        ] + [
+        ]
+        + [
             {"define": "box", "as": name, "style": {"fill": "white"}}
             for name in ("default", "cell", "header", "day", "event", "duration")
-        ] + [
+        ]
+        + [
             {"define": "line", "as": name, "style": {"color": "grey", "width": 0.5, "opacity": 1.0}}
             for name in ("grid", "separator")
-        ] + [
+        ]
+        + [
             {"define": "icon", "as": name, "style": {"icon": "x", "color": "black", "size": 8}}
             for name in ("event", "duration", "overflow")
         ],
@@ -148,9 +157,7 @@ def test_registry_paths_unique() -> None:
 def test_registry_used_by_subset_of_visualizers() -> None:
     for req in REQUIRED_KEYS:
         unknown = req.used_by - VISUALIZERS
-        assert not unknown, (
-            f"{req.path}: used_by has unknown visualizers {unknown}"
-        )
+        assert not unknown, f"{req.path}: used_by has unknown visualizers {unknown}"
 
 
 @pytest.mark.parametrize("visualizer", sorted(VISUALIZERS))

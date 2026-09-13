@@ -179,15 +179,11 @@ def _parser() -> argparse.ArgumentParser:
 def all_commands() -> dict[str, CommandSpec]:
     """Return every subcommand spec keyed by name."""
     parser = _parser()
-    sub_action = next(
-        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
-    )
+    sub_action = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
 
     # argparse stores one (name -> subparser) entry plus aliases; dedupe by id.
     specs: dict[str, CommandSpec] = {}
-    help_by_name = {
-        choice.dest: choice.help for choice in sub_action._choices_actions
-    }
+    help_by_name = {choice.dest: choice.help for choice in sub_action._choices_actions}
 
     for name, subparser in sub_action.choices.items():
         if name in specs:

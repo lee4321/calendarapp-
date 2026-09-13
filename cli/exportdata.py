@@ -90,12 +90,8 @@ def _event_to_row(ev: dict) -> dict:
     return {
         "task_name": ev.get("Task_Name", ""),
         "status": ev.get("Status", ""),
-        "start_date": _fmt_date(
-            ev.get("Start") or ev.get("Start_Date"), ev.get("Start_Time")
-        ),
-        "finish_date": _fmt_date(
-            ev.get("End") or ev.get("Finish_Date"), ev.get("End_Time")
-        ),
+        "start_date": _fmt_date(ev.get("Start") or ev.get("Start_Date"), ev.get("Start_Time")),
+        "finish_date": _fmt_date(ev.get("End") or ev.get("Finish_Date"), ev.get("End_Time")),
         "earliest_start_date": _fmt_date(ev.get("Earliest_Start_Date")),
         "latest_start_date": _fmt_date(ev.get("Latest_Start_Date")),
         "earliest_end_date": _fmt_date(ev.get("Earliest_End_Date")),
@@ -116,12 +112,8 @@ def _event_to_row(ev: dict) -> dict:
         "tags": ev.get("Tags", ""),
         "id": ev.get("Source_ID", ""),
         "critical": ev.get("Critical", ""),
-        "actual_start_date": _fmt_date(
-            ev.get("Actual_Start_Date"), ev.get("Actual_Start_Time")
-        ),
-        "actual_end_date": _fmt_date(
-            ev.get("Actual_End_Date"), ev.get("Actual_End_Time")
-        ),
+        "actual_start_date": _fmt_date(ev.get("Actual_Start_Date"), ev.get("Actual_Start_Time")),
+        "actual_end_date": _fmt_date(ev.get("Actual_End_Date"), ev.get("Actual_End_Time")),
         "deadline": _fmt_date(ev.get("Deadline")),
         "start_variance": ev.get("Start_Variance", ""),
         "finish_variance": ev.get("Finish_Variance", ""),
@@ -165,4 +157,3 @@ def _write_exportdata_csv(events: list[dict], out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", newline="", encoding="utf-8") as fh:
         fh.write(csv_text)
-

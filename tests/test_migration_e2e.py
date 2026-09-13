@@ -40,12 +40,12 @@ THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 # visualizers' required keys, so we don't enforce full-matrix completeness
 # on them.  Map each to the visualizer(s) the theme is intended for.
 SPECIALIZED_THEMES: dict[str, set[str]] = {
-    "TJXweekly":      {"weekly"},
-    "TJXmini":        {"mini"},
-    "TJXmini-icon":   {"mini-icon"},
-    "TJXtext-mini":   {"text-mini"},
-    "TJXtimeline":    {"timeline"},
-    "TJXblockplan":   {"blockplan"},
+    "TJXweekly": {"weekly"},
+    "TJXmini": {"mini"},
+    "TJXmini-icon": {"mini-icon"},
+    "TJXtext-mini": {"text-mini"},
+    "TJXtimeline": {"timeline"},
+    "TJXblockplan": {"blockplan"},
     "TJXcompactplan": {"compactplan"},
     "TJXexcelblockplan": {"excelblockplan"},
 }

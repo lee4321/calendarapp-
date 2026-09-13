@@ -2,6 +2,7 @@
 Tests for the PIT (Points in Time) visualizer.
 Covers the ~30 test cases from pit_plan.html §8 and §12.5.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -101,17 +102,18 @@ def _make_config(
 
 def _events_dicts(count: int = 4) -> list[dict]:
     """Return a small set of point-in-time event dicts spread across a year."""
-    dates = ["20260115", "20260315", "20260601", "20260901",
-             "20261015", "20261201"]
+    dates = ["20260115", "20260315", "20260601", "20260901", "20261015", "20261201"]
     dicts = []
     for i, d in enumerate(dates[:count]):
-        dicts.append({
-            "Task_Name": f"Event {i+1}",
-            "Start": d,
-            "End": d,
-            "Notes": f"Notes for event {i+1}",
-            "Priority": i + 1,
-        })
+        dicts.append(
+            {
+                "Task_Name": f"Event {i + 1}",
+                "Start": d,
+                "End": d,
+                "Notes": f"Notes for event {i + 1}",
+                "Priority": i + 1,
+            }
+        )
     return dicts
 
 
@@ -202,12 +204,8 @@ def _callout_box_rows(svg: str) -> dict[int, list[tuple[float, float]]]:
 def _leader_endpoints(svg: str) -> list[float]:
     """Absolute x of each callout leader's final waypoint."""
     out: list[float] = []
-    for g in re.findall(
-        r"<g class=\"ec-pit-callout-group.*?</g>\s*</g>", svg, re.S
-    ):
-        tr = re.search(
-            r"translate\(([0-9.]+),[0-9.-]+\).*?<path d=\"(.*?)\"", g, re.S
-        )
+    for g in re.findall(r"<g class=\"ec-pit-callout-group.*?</g>\s*</g>", svg, re.S):
+        tr = re.search(r"translate\(([0-9.]+),[0-9.-]+\).*?<path d=\"(.*?)\"", g, re.S)
         if not tr:
             continue
         ox = float(tr.group(1))
@@ -220,9 +218,7 @@ def test_pit_leader_anchor_center_aligns_box_middle(tmp_path):
     """Default 'center' anchor: leader endpoint == horizontal box center."""
     svg = _render_pit(tmp_path, _events_dicts(6))
     rows = _callout_box_rows(svg)
-    centers = sorted(
-        (x0 + x1) / 2 for boxes in rows.values() for (x0, x1) in boxes
-    )
+    centers = sorted((x0 + x1) / 2 for boxes in rows.values() for (x0, x1) in boxes)
     leaders = sorted(_leader_endpoints(svg))
     assert centers and leaders
     assert len(centers) == len(leaders)
@@ -328,8 +324,7 @@ def test_pit_applies_content_filter_flags(tmp_path):
     """
     events = [
         {"Task_Name": "Launch", "Start": "20260315", "End": "20260315", "Milestone": 1},
-        {"Task_Name": "Shipped", "Start": "20260601", "End": "20260601",
-         "Milestone": 1, "Percent_Complete": 1},
+        {"Task_Name": "Shipped", "Start": "20260601", "End": "20260601", "Milestone": 1, "Percent_Complete": 1},
         {"Task_Name": "Review", "Start": "20260901", "End": "20260901"},
     ]
 
@@ -414,18 +409,14 @@ def _render_pit_ticks(tmp_path: Path, **kw) -> str:
 def test_pit_ticks_drawn_by_default(tmp_path):
     """Axis ticks (and labels) render out of the box (default month unit)."""
     svg = _render_pit_ticks(tmp_path)
-    assert svg.count('class="ec-axis-tick"') >= 3      # Feb..May boundaries
+    assert svg.count('class="ec-axis-tick"') >= 3  # Feb..May boundaries
     assert "ec-label" in svg
 
 
 def test_pit_ticks_week_denser_than_month(tmp_path):
     """A finer tick unit yields more ticks over the same range."""
-    n_month = _render_pit_ticks(tmp_path / "m", pit_tick_unit="month").count(
-        'class="ec-axis-tick"'
-    )
-    n_week = _render_pit_ticks(tmp_path / "w", pit_tick_unit="week").count(
-        'class="ec-axis-tick"'
-    )
+    n_month = _render_pit_ticks(tmp_path / "m", pit_tick_unit="month").count('class="ec-axis-tick"')
+    n_week = _render_pit_ticks(tmp_path / "w", pit_tick_unit="week").count('class="ec-axis-tick"')
     assert n_week > n_month
 
 
@@ -438,9 +429,7 @@ def test_pit_show_ticks_false_suppresses(tmp_path):
 
 def test_pit_tick_labels_can_be_suppressed(tmp_path):
     """Marks without labels when pit_show_tick_labels == False."""
-    svg = _render_pit_ticks(
-        tmp_path, pit_tick_unit="week", pit_show_tick_labels=False
-    )
+    svg = _render_pit_ticks(tmp_path, pit_tick_unit="week", pit_show_tick_labels=False)
     assert 'class="ec-axis-tick"' in svg
     assert "ec-label" not in svg
 
@@ -453,9 +442,7 @@ def test_pit_ticks_vertical(tmp_path):
 
 def test_pit_ticks_multiple_bands(tmp_path):
     """pit_ticks with two bands draws more ticks than either alone."""
-    n_month = _render_pit_ticks(
-        tmp_path / "m", pit_ticks=[{"unit": "month"}]
-    ).count('class="ec-axis-tick"')
+    n_month = _render_pit_ticks(tmp_path / "m", pit_ticks=[{"unit": "month"}]).count('class="ec-axis-tick"')
     n_both = _render_pit_ticks(
         tmp_path / "mw",
         pit_ticks=[{"unit": "month"}, {"unit": "week"}],
@@ -471,9 +458,7 @@ def test_pit_ticks_overrides_scalar_unit(tmp_path):
         pit_tick_unit="month",
         pit_ticks=[{"unit": "week"}],
     ).count('class="ec-axis-tick"')
-    n_month = _render_pit_ticks(
-        tmp_path / "m2", pit_ticks=[{"unit": "month"}]
-    ).count('class="ec-axis-tick"')
+    n_month = _render_pit_ticks(tmp_path / "m2", pit_ticks=[{"unit": "month"}]).count('class="ec-axis-tick"')
     assert n > n_month
 
 
@@ -511,12 +496,8 @@ def _tick_label_coords(svg: str, axis: str = "y") -> list[float]:
 
 def test_pit_tick_label_side_horizontal(tmp_path):
     """label_side pins horizontal-axis labels above vs below the axis."""
-    above = _render_pit_ticks(
-        tmp_path / "a", pit_ticks=[{"unit": "month", "label_side": "above"}]
-    )
-    below = _render_pit_ticks(
-        tmp_path / "b", pit_ticks=[{"unit": "month", "label_side": "below"}]
-    )
+    above = _render_pit_ticks(tmp_path / "a", pit_ticks=[{"unit": "month", "label_side": "above"}])
+    below = _render_pit_ticks(tmp_path / "b", pit_ticks=[{"unit": "month", "label_side": "below"}])
     ya = _tick_label_coords(above, "y")
     yb = _tick_label_coords(below, "y")
     assert ya and yb
@@ -589,22 +570,34 @@ def test_pit_interval_label_format_uses_date(tmp_path):
     s, e = arrow.get("2026-02-01"), arrow.get("2026-04-01")
 
     dated = PITRenderer._pit_tick_segments(
-        r, cfg, {"unit": "interval", "interval_days": 14, "label_format": "MMM D"},
-        s, e, None,
+        r,
+        cfg,
+        {"unit": "interval", "interval_days": 14, "label_format": "MMM D"},
+        s,
+        e,
+        None,
     )
     assert [lbl for _, _, lbl in dated][:3] == ["Feb 1", "Feb 15", "Mar 1"]
 
     # interval alias is accepted in place of interval_days.
     aliased = PITRenderer._pit_tick_segments(
-        r, cfg, {"unit": "interval", "interval": 14, "label_format": "M/D"},
-        s, e, None,
+        r,
+        cfg,
+        {"unit": "interval", "interval": 14, "label_format": "M/D"},
+        s,
+        e,
+        None,
     )
     assert [lbl for _, _, lbl in aliased][:2] == ["2/1", "2/15"]
 
     # No label_format → running index; prefix customizes it.
     counter = PITRenderer._pit_tick_segments(
-        r, cfg, {"unit": "interval", "interval_days": 14, "prefix": "Sprint "},
-        s, e, None,
+        r,
+        cfg,
+        {"unit": "interval", "interval_days": 14, "prefix": "Sprint "},
+        s,
+        e,
+        None,
     )
     assert [lbl for _, _, lbl in counter][:2] == ["Sprint 1", "Sprint 2"]
 
@@ -621,13 +614,14 @@ def test_pit_interval_prefix_with_date_format(tmp_path):
     s, e = arrow.get("2026-02-01"), arrow.get("2026-04-01")
 
     segs = PITRenderer._pit_tick_segments(
-        r, cfg,
+        r,
+        cfg,
         {"unit": "interval", "interval_days": 7, "prefix": "Week of ", "label_format": "MM/DD"},
-        s, e, None,
+        s,
+        e,
+        None,
     )
-    assert [lbl for _, _, lbl in segs][:3] == [
-        "Week of 02/01", "Week of 02/08", "Week of 02/15"
-    ]
+    assert [lbl for _, _, lbl in segs][:3] == ["Week of 02/01", "Week of 02/08", "Week of 02/15"]
 
 
 def _first_label_glyph_x(svg: str) -> float:
@@ -646,8 +640,7 @@ def test_pit_tick_label_align_start_vs_center(tmp_path):
     def render(align):
         config = _make_config(tmp_path / align, start="20260201", end="20260530")
         config.pit_ticks = [
-            {"unit": "month", "label_format": "MMMM", "label_align": align,
-             "tick_length": 8.0, "label_gap": 10.0}
+            {"unit": "month", "label_format": "MMMM", "label_align": align, "tick_length": 8.0, "label_gap": 10.0}
         ]
         coords = PITLayout().calculate(config)
         PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
@@ -666,8 +659,7 @@ def test_pit_tick_label_align_synonyms(tmp_path):
     def render(align):
         config = _make_config(tmp_path / str(align), start="20260201", end="20260530")
         config.pit_ticks = [
-            {"unit": "month", "label_format": "MMMM", "label_align": align,
-             "tick_length": 8.0, "label_gap": 10.0}
+            {"unit": "month", "label_format": "MMMM", "label_align": align, "tick_length": 8.0, "label_gap": 10.0}
         ]
         coords = PITLayout().calculate(config)
         PITRenderer().render(config, coords, _events_dicts(3), _DummyDB())
@@ -681,9 +673,7 @@ def _first_label_glyph_xy(svg: str) -> tuple[float, float]:
     """(x, y) of the first glyph in the first ec-label group."""
     import re
 
-    m = re.search(
-        r'class="ec-label"[^>]*>\s*<path[^>]*translate\(([-\d.]+),([-\d.]+)', svg
-    )
+    m = re.search(r'class="ec-label"[^>]*>\s*<path[^>]*translate\(([-\d.]+),([-\d.]+)', svg)
     assert m, "no ec-label glyph found"
     return float(m.group(1)), float(m.group(2))
 
@@ -758,10 +748,18 @@ def test_pit_axis_marker_is_always_a_shape():
     # Config default does NOT override the axis either.
     config.pit_default_event_icon = "myicon"
     config.pit_default_milestone_icon = "myicon"
-    assert resolve_marker(Event(task_name="x", start="20260101", end="20260101"),
-                          config=config, icon_svg_map=icon_map).shape == "circle"
-    assert resolve_marker(Event(task_name="x", start="20260101", end="20260101", milestone=True),
-                          config=config, icon_svg_map=icon_map).shape == "diamond"
+    assert (
+        resolve_marker(
+            Event(task_name="x", start="20260101", end="20260101"), config=config, icon_svg_map=icon_map
+        ).shape
+        == "circle"
+    )
+    assert (
+        resolve_marker(
+            Event(task_name="x", start="20260101", end="20260101", milestone=True), config=config, icon_svg_map=icon_map
+        ).shape
+        == "diamond"
+    )
 
 
 def test_pit_label_icon_resolution():
@@ -815,9 +813,12 @@ def test_pit_label_icon_drawing():
     raw_tall = '<svg viewBox="0 0 8 16"><path fill="#000" d="M0 0Z"/></svg>'
     for raw in (raw_wide, raw_tall):
         draw_label_icon(
-            drawing, raw,
-            x_left=20.0, y_center=40.0,
-            size=10.0, color="tomato",
+            drawing,
+            raw,
+            x_left=20.0,
+            y_center=40.0,
+            size=10.0,
+            color="tomato",
             strip_svg_wrapper=BaseSVGRenderer._strip_svg_wrapper,
         )
     # Both calls emitted a <g> wrapper.
@@ -914,9 +915,9 @@ def test_pit_marker_start_arrow_axis(tmp_path):
     # marker-end="..." must NOT appear on the axis line when kind is "none".
     # (It may appear on leaders though — check axis line specifically.)
     # The axis <line> class is ec-axis-line.
-    axis_match = re.search(r'<line[^/]*ec-axis-line[^/]*/>', svg)
+    axis_match = re.search(r"<line[^/]*ec-axis-line[^/]*/>", svg)
     if axis_match:
-        assert 'marker-end' not in axis_match.group()
+        assert "marker-end" not in axis_match.group()
 
 
 def test_pit_marker_end_arrow_leader(tmp_path):
@@ -996,9 +997,7 @@ def test_pit_marker_none_emits_nothing(tmp_path):
 def test_pit_label_pattern_fill(tmp_path):
     """Label boxes with a pattern emit <defs><pattern> and fill='url(#pat-...)'."""
     pattern_svg = (
-        '<svg viewBox="0 0 4 4" width="4" height="4">'
-        '<path d="M0 4L4 0" stroke="black" stroke-width="0.5"/>'
-        '</svg>'
+        '<svg viewBox="0 0 4 4" width="4" height="4"><path d="M0 4L4 0" stroke="black" stroke-width="0.5"/></svg>'
     )
     config = _make_config(tmp_path)
     config.theme_pit_label_pattern = "diag"
@@ -1011,7 +1010,7 @@ def test_pit_label_pattern_fill(tmp_path):
     svg = Path(config.outputfile).read_text(encoding="utf-8")
 
     assert "<pattern " in svg
-    assert "fill=\"url(#pat-" in svg
+    assert 'fill="url(#pat-' in svg
 
 
 def test_pit_label_fill_precedence(tmp_path):
@@ -1064,10 +1063,7 @@ def test_pit_palette_reference(tmp_path):
 
 def test_pit_both_side_partition():
     """With side=BOTH, events are split to both sides with alternating assignment."""
-    events = [
-        Event(task_name=f"E{i}", start=f"2026{i+1:02d}01", end=f"2026{i+1:02d}01")
-        for i in range(4)
-    ]
+    events = [Event(task_name=f"E{i}", start=f"2026{i + 1:02d}01", end=f"2026{i + 1:02d}01") for i in range(4)]
     primary, secondary = _partition_for_both(events)
     assert len(primary) == 2
     assert len(secondary) == 2
@@ -1095,7 +1091,7 @@ def _date_baselines(svg: str) -> list[tuple[float, float]]:
     """(x, y) baseline of each ec-event-date group via its parent translate."""
     out: list[tuple[float, float]] = []
     for m in re.finditer(r"ec-event-date", svg):
-        pre = svg[max(0, m.start() - 240): m.start()]
+        pre = svg[max(0, m.start() - 240) : m.start()]
         tr = re.findall(r"translate\(([0-9.]+),\s*([0-9.]+)\)", pre)
         if tr:
             out.append((float(tr[-1][0]), float(tr[-1][1])))
@@ -1118,10 +1114,9 @@ def test_pit_date_inline_is_default(tmp_path):
     assert dates
     # Every inline date baseline falls within some callout box.
     for dx, dy in dates:
-        assert any(
-            bx - 1 <= dx <= bx + bw + 1 and by - 2 <= dy <= by + bh + 3
-            for bx, by, bw, bh in boxes
-        ), f"inline date at ({dx},{dy}) is not inside any box"
+        assert any(bx - 1 <= dx <= bx + bw + 1 and by - 2 <= dy <= by + bh + 3 for bx, by, bw, bh in boxes), (
+            f"inline date at ({dx},{dy}) is not inside any box"
+        )
 
 
 def _render_pit_placement(tmp_path: Path, placement: str) -> str:
@@ -1221,10 +1216,7 @@ def test_pit_today_line_markers(tmp_path):
 
 def test_pit_density_warning(tmp_path, caplog):
     """With > 80 events on a side, the logger emits a WARNING."""
-    events = [
-        Event(task_name=f"E{i}", start="20260115", end="20260115")
-        for i in range(PIT_MAX_EVENTS_PER_SIDE + 1)
-    ]
+    events = [Event(task_name=f"E{i}", start="20260115", end="20260115") for i in range(PIT_MAX_EVENTS_PER_SIDE + 1)]
     config = _make_config(tmp_path, side="primary")
     axis_origin = (50.0, 300.0)
     axis_length = 600.0
@@ -1273,18 +1265,24 @@ def test_pit_theme_application(tmp_path):
 def test_pit_emits_ec_classes(tmp_path):
     """Core ec-* CSS classes are present in the rendered SVG."""
     svg = _render_pit(tmp_path, _events_dicts(2))
-    for cls in ("ec-pit-axis-group", "ec-pit-callout-group",
-                "ec-callout-leader", "ec-callout-box",
-                "ec-pit-event-marker", "ec-event-name", "ec-event-date"):
+    for cls in (
+        "ec-pit-axis-group",
+        "ec-pit-callout-group",
+        "ec-callout-leader",
+        "ec-callout-box",
+        "ec-pit-event-marker",
+        "ec-event-name",
+        "ec-event-date",
+    ):
         assert cls in svg, f"Missing class: {cls}"
 
 
 def test_pit_callout_group_data_attrs(tmp_path):
     """Each callout group has data-event-date, data-milestone, data-priority attrs."""
     svg = _render_pit(tmp_path, _events_dicts(1))
-    assert 'data-event-date=' in svg
-    assert 'data-milestone=' in svg
-    assert 'data-priority=' in svg
+    assert "data-event-date=" in svg
+    assert "data-milestone=" in svg
+    assert "data-priority=" in svg
 
 
 def test_pit_side_class(tmp_path):
@@ -1301,6 +1299,7 @@ def test_pit_side_class(tmp_path):
 def test_pit_css_style_block_injected(tmp_path):
     """When CSS is available (ThemeStyles.css is set), it's injected as <style>."""
     from config.styles import ThemeStyles
+
     config = _make_config(tmp_path)
     ts = ThemeStyles()
     ts.css = ".ec-pit-test { fill: red; }"
@@ -1322,14 +1321,12 @@ def test_pit_inline_styled_classes_have_no_css(tmp_path):
 
     svg = _render_pit(tmp_path, _events_dicts(1))
     # Extract the <style> block.
-    style_match = re.search(r'<style[^>]*>(.*?)</style>', svg, re.DOTALL)
+    style_match = re.search(r"<style[^>]*>(.*?)</style>", svg, re.DOTALL)
     if style_match:
         style_text = style_match.group(1)
         for cls in _INLINE_STYLED_CLASSES:
             # The inline-styled classes should not have CSS rules defined.
-            assert f".{cls}" not in style_text, (
-                f"{cls} found in <style> but should be inline-only"
-            )
+            assert f".{cls}" not in style_text, f"{cls} found in <style> but should be inline-only"
 
 
 def test_pit_external_css_override(tmp_path):

@@ -17,20 +17,13 @@ def test_every_font_file_is_registered() -> None:
     The scan used a case-sensitive `*.ttf` glob, which silently skipped
     `TECHNCL.TTF` — the file shipped but no theme could reference it.
     """
-    on_disk = {
-        p.stem
-        for p in FONTS_DIR.iterdir()
-        if p.is_file() and p.suffix.lower() in (".ttf", ".otf")
-    }
+    on_disk = {p.stem for p in FONTS_DIR.iterdir() if p.is_file() and p.suffix.lower() in (".ttf", ".otf")}
     assert on_disk - set(FONT_REGISTRY) == set()
 
 
 def test_uppercase_extension_is_registered() -> None:
     """Guards the case-insensitive glob specifically."""
-    uppercase = [
-        p for p in FONTS_DIR.iterdir()
-        if p.is_file() and p.suffix in (".TTF", ".OTF")
-    ]
+    uppercase = [p for p in FONTS_DIR.iterdir() if p.is_file() and p.suffix in (".TTF", ".OTF")]
     if not uppercase:
         pytest.skip("no uppercase-extension font files in fonts/")
     for path in uppercase:

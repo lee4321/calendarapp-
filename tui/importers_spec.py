@@ -36,54 +36,77 @@ class ImporterSpec:
 
 def _shared_fields(*, country_lang: bool, generate: bool) -> list[ImportField]:
     out = [
-        ImportField("files", "Source file / folder", "path", None,
-                    help="XLSX/CSV file or a directory of them"),
-        ImportField("database", "Target database", "path", "--database", "calendar.db",
-                    help="SQLite database to write into"),
+        ImportField("files", "Source file / folder", "path", None, help="XLSX/CSV file or a directory of them"),
+        ImportField(
+            "database", "Target database", "path", "--database", "calendar.db", help="SQLite database to write into"
+        ),
     ]
     if country_lang:
         out += [
-            ImportField("country", "Country", "text", "--country",
-                        help="ISO country code tag for imported rows"),
-            ImportField("language", "Language", "text", "--language",
-                        help="Language tag for imported rows"),
-    ]
+            ImportField("country", "Country", "text", "--country", help="ISO country code tag for imported rows"),
+            ImportField("language", "Language", "text", "--language", help="Language tag for imported rows"),
+        ]
     out += [
-        ImportField("replace", "Replace prior import", "flag", "--replace", False,
-                    help="Delete previously imported rows from this file first"),
-        ImportField("dry_run", "Dry run (validate only)", "flag", "--dry-run", True,
-                    help="Validate without writing"),
-        ImportField("skip_errors", "Skip bad rows", "flag", "--skip-errors", False,
-                    help="Continue when individual rows fail"),
+        ImportField(
+            "replace",
+            "Replace prior import",
+            "flag",
+            "--replace",
+            False,
+            help="Delete previously imported rows from this file first",
+        ),
+        ImportField("dry_run", "Dry run (validate only)", "flag", "--dry-run", True, help="Validate without writing"),
+        ImportField(
+            "skip_errors", "Skip bad rows", "flag", "--skip-errors", False, help="Continue when individual rows fail"
+        ),
         ImportField("verbose", "Verbose", "flag", "--verbose", False),
-        ImportField("log_level", "Log level", "choice", "--log-level", "info",
-                    choices=["debug", "info", "warning", "error"]),
+        ImportField(
+            "log_level", "Log level", "choice", "--log-level", "info", choices=["debug", "info", "warning", "error"]
+        ),
     ]
     return out
 
 
 def events_spec() -> ImporterSpec:
     fields = [
-        ImportField("files", "Source file / folder", "path", None,
-                    help="XLSX/CSV file or directory (leave blank when generating)"),
+        ImportField(
+            "files",
+            "Source file / folder",
+            "path",
+            None,
+            help="XLSX/CSV file or directory (leave blank when generating)",
+        ),
         ImportField("database", "Target database", "path", "--database", "calendar.db"),
-        ImportField("user_id", "User ID", "int", "--user-id", 1,
-                    help="Owner user id for imported events"),
-        ImportField("generate", "Generator script", "path", "--generate",
-                    help="Python script with generate_events() -> DataFrame",
-                    generator_only=False),
-        ImportField("start_date", "Generator start date", "text", "--start-date",
-                    help="e.g. 2026-01-01", generator_only=True),
-        ImportField("end_date", "Generator end date", "text", "--end-date",
-                    help="e.g. 2026-12-31", generator_only=True),
-        ImportField("param", "Generator params (KEY=VALUE)", "text", "--param",
-                    help="Repeatable; one KEY=VALUE per line", generator_only=True),
+        ImportField("user_id", "User ID", "int", "--user-id", 1, help="Owner user id for imported events"),
+        ImportField(
+            "generate",
+            "Generator script",
+            "path",
+            "--generate",
+            help="Python script with generate_events() -> DataFrame",
+            generator_only=False,
+        ),
+        ImportField(
+            "start_date", "Generator start date", "text", "--start-date", help="e.g. 2026-01-01", generator_only=True
+        ),
+        ImportField(
+            "end_date", "Generator end date", "text", "--end-date", help="e.g. 2026-12-31", generator_only=True
+        ),
+        ImportField(
+            "param",
+            "Generator params (KEY=VALUE)",
+            "text",
+            "--param",
+            help="Repeatable; one KEY=VALUE per line",
+            generator_only=True,
+        ),
         ImportField("replace", "Replace prior import", "flag", "--replace", False),
         ImportField("dry_run", "Dry run (validate only)", "flag", "--dry-run", True),
         ImportField("skip_errors", "Skip bad rows", "flag", "--skip-errors", False),
         ImportField("verbose", "Verbose", "flag", "--verbose", False),
-        ImportField("log_level", "Log level", "choice", "--log-level", "info",
-                    choices=["debug", "info", "warning", "error"]),
+        ImportField(
+            "log_level", "Log level", "choice", "--log-level", "info", choices=["debug", "info", "warning", "error"]
+        ),
     ]
     return ImporterSpec(
         key="events",
@@ -115,23 +138,27 @@ def specialdays_spec() -> ImporterSpec:
 def content_specs() -> list[ImporterSpec]:
     return [
         ImporterSpec(
-            key="icons", title="Icons", script="importers/import_icons.py",
+            key="icons",
+            title="Icons",
+            script="importers/import_icons.py",
             summary="Folder of .svg -> icon table",
-            fields=[ImportField("folder", "SVG folder", "dir", None,
-                                help="Directory containing .svg files")],
+            fields=[ImportField("folder", "SVG folder", "dir", None, help="Directory containing .svg files")],
         ),
         ImporterSpec(
-            key="patterns", title="Patterns", script="importers/import_patterns.py",
+            key="patterns",
+            title="Patterns",
+            script="importers/import_patterns.py",
             summary="Folder of .svg -> patterns table (day-box decoration)",
             fields=[ImportField("folder", "SVG folder", "dir", None)],
         ),
         ImporterSpec(
-            key="colors", title="Colors", script="importers/import_rcairo_colors.py",
+            key="colors",
+            title="Colors",
+            script="importers/import_rcairo_colors.py",
             summary="Colors CSV (name,hex,r,g,b) -> colors table",
             fields=[
                 ImportField("db", "Database", "path", "--db", "calendar.db"),
-                ImportField("csv", "CSV file", "path", "--csv",
-                            help="CSV with name,hex,r,g,b columns"),
+                ImportField("csv", "CSV file", "path", "--csv", help="CSV with name,hex,r,g,b columns"),
             ],
         ),
     ]
@@ -144,9 +171,7 @@ def all_importers() -> dict[str, ImporterSpec]:
 
 def build_import_argv(spec: ImporterSpec, values: dict[str, object]) -> list[str]:
     """Assemble argv tail (without the script path) for an importer run."""
-    is_generate = spec.supports_generate and bool(
-        str(values.get("generate") or "").strip()
-    )
+    is_generate = spec.supports_generate and bool(str(values.get("generate") or "").strip())
     argv: list[str] = []
     positional: list[str] = []
 
