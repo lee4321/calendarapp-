@@ -42,15 +42,14 @@ class ArgField(Vertical):
                 # Textual's blank sentinel must not be passed explicitly; omit
                 # `value` to leave the Select blank, and only set it when the
                 # default is a real option.
-                kwargs = dict(
-                    allow_blank=True,
-                    prompt=f"(default: {self._default_str() or 'none'})",
-                    id=self._control_id,
-                )
+                prompt = f"(default: {self._default_str() or 'none'})"
                 default = str(spec.default) if spec.default is not None else None
                 if default is not None and any(default == v for _, v in options):
-                    kwargs["value"] = default
-                yield Select(options, **kwargs)
+                    yield Select(options, allow_blank=True, prompt=prompt,
+                                 id=self._control_id, value=default)
+                else:
+                    yield Select(options, allow_blank=True, prompt=prompt,
+                                 id=self._control_id)
 
         elif spec.kind in ("int", "float"):
             yield Input(value=self._default_str(),
@@ -92,5 +91,6 @@ class ArgField(Vertical):
             return ctl.value
         if isinstance(ctl, Select):
             return None if ctl.is_blank() else ctl.value
-        # Input
-        return ctl.value
+        if isinstance(ctl, Input):
+            return ctl.value
+        return None

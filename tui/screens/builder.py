@@ -6,6 +6,8 @@ introspected spec, so new CLI flags appear here automatically.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, VerticalScroll
@@ -23,6 +25,9 @@ from tui.runner import build_view_argv, preview_string
 from tui.screens.result import ResultScreen
 from tui.spec import CommandSpec, command
 from tui.widgets import ArgField, DateRange
+
+if TYPE_CHECKING:
+    from tui.app import CalendarTUI
 
 
 class BuilderScreen(Screen):
@@ -104,7 +109,7 @@ class BuilderScreen(Screen):
     def action_run(self) -> None:
         argv = self._argv()
         self.app.push_screen(
-            ResultScreen(argv, cwd=str(self.app.project_root),
+            ResultScreen(argv, cwd=str(cast("CalendarTUI", self.app).project_root),
                          entry="ecalendar.py",
                          title=f"Run · ecalendar {self.cmd.name}")
         )
