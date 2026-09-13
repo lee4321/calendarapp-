@@ -671,7 +671,7 @@ def _write_timebands(
                     _apply_fill(ws.cell(row=current_row, column=col), icon_fill)
                 if not icons:
                     continue
-                icon_name, icon_color = icons[0]
+                _icon_name, icon_color = icons[0]
                 symbol = "●"  # ● filled circle
                 cell = ws.cell(row=current_row, column=col, value=symbol)
                 cell.font = Font(

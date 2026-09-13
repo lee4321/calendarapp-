@@ -1680,10 +1680,7 @@ class ThemeEngine:
                 continue
             style = rule.style or {}
             fc = style.get("fill_colors")
-            if isinstance(fc, list):
-                fill_colors = tuple(fc)
-            else:
-                fill_colors = None
+            fill_colors = tuple(fc) if isinstance(fc, list) else None
             try:
                 fill_opacity = float(style.get("fill_opacity", 1.0))
             except (TypeError, ValueError):

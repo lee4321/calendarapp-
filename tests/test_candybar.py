@@ -8,6 +8,8 @@ month-name labels, rotation transform).
 
 from __future__ import annotations
 
+import itertools
+
 from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
@@ -126,7 +128,7 @@ def test_month_boxes_are_contiguous_and_non_overlapping():
         key=lambda b: b[1],  # SVG y (top-down)
     )
     assert len(boxes) == 12
-    for upper, lower in zip(boxes, boxes[1:]):
+    for upper, lower in itertools.pairwise(boxes):
         # bottom edge of the upper box meets the top edge of the next
         assert abs((upper[1] + upper[3]) - lower[1]) < 0.01
 

@@ -12,6 +12,7 @@ empty-input edge case using fabricated events. Verifies:
 
 from __future__ import annotations
 
+import itertools
 from typing import Any
 
 import arrow
@@ -140,7 +141,7 @@ def test_single_side_no_overlap_per_layer(
 
     for layer, intervals in by_layer.items():
         intervals.sort()
-        for (a_lo, a_hi), (b_lo, b_hi) in zip(intervals, intervals[1:]):
+        for (a_lo, a_hi), (b_lo, b_hi) in itertools.pairwise(intervals):
             assert a_hi <= b_lo + 1e-6, (
                 f"Layer {layer} {orientation.value}/{side.value}: "
                 f"[{a_lo:.2f},{a_hi:.2f}] overlaps [{b_lo:.2f},{b_hi:.2f}]"
@@ -365,7 +366,7 @@ def _worst_overlap(placements) -> float:
     worst = 0.0
     for spans in _rows(placements).values():
         spans.sort()
-        for (x, w), (next_x, _) in zip(spans, spans[1:]):
+        for (x, w), (next_x, _) in itertools.pairwise(spans):
             worst = max(worst, (x + w) - next_x)
     return worst
 

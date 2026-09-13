@@ -1421,7 +1421,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """
         for daykey in days_to_print:
             for rownumber in rowids:
-                X, Y, Width, Height, textx, texty, iconx, icony, boolean = rowcoords[
+                X, Y, Width, Height, textx, texty, iconx, icony, _boolean = rowcoords[
                     daykey
                 ][rownumber]
                 rowcoords[daykey][rownumber] = (
@@ -1471,7 +1471,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         lower_rowid = rowids[1] if len(rowids) > 1 else rowids[0]
 
         oneday = days_to_print[0]
-        (X, Y, W, H, tx, ty, ix, iy, B) = rowcoords[oneday][rowid]
+        (X, Y, W, H, tx, ty, ix, iy, _B) = rowcoords[oneday][rowid]
         if use_double_height:
             H = H * 2
             # rowids[0] is the top row in SVG space (smaller Y = higher on page);
@@ -1484,7 +1484,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             notes_ty = ty
 
         for i, oneday in enumerate(days_to_print):
-            (Xb, Yb, Wb, Hb, txb, tyb, ixb, iyb, Bb) = rowcoords[oneday][rowid]
+            (Xb, Yb, Wb, Hb, txb, tyb, ixb, iyb, _Bb) = rowcoords[oneday][rowid]
             if i > 0 and Yb == Y:
                 W = W + Wb
             if Yb != Y:
@@ -1517,13 +1517,13 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         tk_en = self._tk("text:event_name")
         tk_notes = self._tk("text:event_notes")
-        name_font, name_size, name_color, name_opacity = dur_style.text_override(
+        name_font, name_size, name_color, _name_opacity = dur_style.text_override(
             "duration_name",
             font=tk_en.get("font") or _ts_en.font,
             font_size=tk_en.get("size"),
             color=tk_en.get("color") or _ts_en.color,
         )
-        notes_font, notes_size, notes_color, notes_opacity = dur_style.text_override(
+        notes_font, notes_size, notes_color, _notes_opacity = dur_style.text_override(
             "duration_notes",
             font=tk_notes.get("font") or _ts_notes.font,
             font_size=tk_notes.get("size"),
@@ -1751,7 +1751,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         for dateid in duration_dates:
             for rowid in rowcoords[dateid]:
-                (X, Y, W, H, tx, ty, ix, iy, B) = rowcoords[dateid][rowid]
+                (_X, _Y, _W, _H, _tx, _ty, _ix, _iy, B) = rowcoords[dateid][rowid]
                 if B == False:
                     List_of_Possibilities.append(rowid)
 

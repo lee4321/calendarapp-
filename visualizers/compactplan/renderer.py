@@ -1742,10 +1742,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     @staticmethod
     def _overlaps(x1: float, x2: float, occupied: list[tuple[float, float]]) -> bool:
         """Return True if interval [x1, x2) overlaps any interval in occupied."""
-        for ox1, ox2 in occupied:
-            if x1 < ox2 and x2 > ox1:
-                return True
-        return False
+        return any(x1 < ox2 and x2 > ox1 for ox1, ox2 in occupied)
 
     @staticmethod
     def _row_y(

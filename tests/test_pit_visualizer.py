@@ -4,6 +4,7 @@ Covers the ~30 test cases from pit_plan.html §8 and §12.5.
 """
 from __future__ import annotations
 
+import itertools
 import logging
 import re
 from pathlib import Path
@@ -234,7 +235,7 @@ def test_pit_leader_anchor_center_no_row_overlap(tmp_path):
     svg = _render_pit(tmp_path, _events_dicts(6))
     for boxes in _callout_box_rows(svg).values():
         boxes.sort()
-        for (x0, x1), (nx0, _nx1) in zip(boxes, boxes[1:]):
+        for (_x0, x1), (nx0, _nx1) in itertools.pairwise(boxes):
             assert nx0 >= x1 - 0.01, "callout boxes overlap on the same row"
 
 

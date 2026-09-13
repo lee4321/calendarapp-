@@ -193,11 +193,11 @@ def text_to_svg_group(
     if not text:
         return ""
 
-    font_size_int = int(round(font_size))
+    font_size_int = round(font_size)
     if font_size_int < 1:
         return ""
 
-    upm, ascender, descender = get_font_metrics(font_path)
+    upm, _ascender, _descender = get_font_metrics(font_path)
     scale = font_size / upm
 
     # Compute per-character advance positions using PIL (handles kerning)

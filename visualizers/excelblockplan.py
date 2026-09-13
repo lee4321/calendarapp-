@@ -246,7 +246,7 @@ def generate_excel_blockplan(
     # start date; sort/filter workflows want full-sheet scroll, and clearing
     # freeze_panes after the fact corrupts the XML (orphaned <selection pane>
     # elements remain), so the freeze must never be set in the first place.
-    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, all_events, settings = (
+    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, _all_events, settings = (
         _prepare_sheet(config, db, subcommand="excelblockplan", freeze=False)
     )
 

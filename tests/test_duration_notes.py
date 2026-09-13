@@ -119,10 +119,7 @@ def _get_duration_rect_height(config, event, days):
 
     # Determine rowids the same way _place_duration does
     has_notes = bool(event.notes and str(event.notes).strip())
-    if config.include_notes and has_notes:
-        rowids = [0, 1]
-    else:
-        rowids = [0]
+    rowids = [0, 1] if config.include_notes and has_notes else [0]
 
     renderer._place_duration_rect(config, event, days, rowcoords, rowids)
 

@@ -623,7 +623,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         _px_per_day = timeline_w / max(1, _n_vis)
 
         cumulative_h = 0.0
-        for idx, band in enumerate(bands):
+        for _idx, band in enumerate(bands):
             has_explicit_row_h = "row_height" in band
             row_h = self._band_row_h(band, config)
             y_top = top_y + cumulative_h
@@ -1181,10 +1181,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if priority_min is not None and event.priority < int(priority_min):
             return False
         priority_max = match.get("priority_max")
-        if priority_max is not None and event.priority > int(priority_max):
-            return False
-
-        return True
+        return not (priority_max is not None and event.priority > int(priority_max))
 
     def _assign_events_to_lanes(
         self,
@@ -2127,7 +2124,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             )
             if _sr.fill_color:
                 event_color = _sr.fill_color
-            ev_name_font, _, ev_name_color, ev_name_opacity = _sr.text_override(
+            ev_name_font, _, ev_name_color, _ev_name_opacity = _sr.text_override(
                 "event_name",
                 font=_evt_name_font,
                 color=event_color,

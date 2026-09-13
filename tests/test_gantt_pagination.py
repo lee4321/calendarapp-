@@ -102,7 +102,7 @@ def build_segments_over(start: date, end: date):
 
 def test_band_segments_are_built_once_for_the_whole_range():
     """Per-page building would restart interval counters at each break."""
-    segments, days = build_segments_over(date(2026, 2, 2), date(2027, 6, 30))
+    segments, _days = build_segments_over(date(2026, 2, 2), date(2027, 6, 30))
     weeks = segments[("top", 1)]
 
     first = weeks[0].label

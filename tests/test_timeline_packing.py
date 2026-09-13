@@ -10,6 +10,7 @@ left to go is not drawn at all.
 
 from __future__ import annotations
 
+import itertools
 import logging
 import re
 
@@ -290,7 +291,7 @@ def test_no_two_boxes_on_a_row_ever_overlap():
         by_row.setdefault(p.layer, []).append((p.x_label, p.x_label + p.label_w))
     for row, spans in by_row.items():
         spans.sort()
-        for (_a_lo, a_hi), (b_lo, _b_hi) in zip(spans, spans[1:]):
+        for (_a_lo, a_hi), (b_lo, _b_hi) in itertools.pairwise(spans):
             assert a_hi <= b_lo + 1e-6, f"row {row} overlaps"
 
 

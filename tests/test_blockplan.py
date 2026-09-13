@@ -655,7 +655,7 @@ def test_blockplan_split_ratio_zero_removes_dividing_line(tmp_path):
     # outer lane border) must not exist.  The outer border lines are x1!=x2; the
     # split divider would have y1==y2 and span from timeline_x to timeline_x+timeline_w.
     # We simply verify no horizontal line was drawn strictly *inside* the lane area.
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     horizontal_interior = [
         (x1, y1, x2, y2)
         for (x1, y1, x2, y2) in renderer.line_calls
@@ -711,7 +711,7 @@ def test_blockplan_split_ratio_zero_gives_full_lane_to_both_types(tmp_path):
     assert kickoff_texts, "Point event should be drawn when split_ratio=0.0"
 
     # Both should be placed within the full lane height.
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    _area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     bar_y = sprint_rects[0]["y"]
     bar_bottom = bar_y + sprint_rects[0]["h"]
     evt_y = kickoff_texts[0]["y"]
@@ -738,7 +738,7 @@ def test_blockplan_split_ratio_custom_value_draws_line_at_correct_position(tmp_p
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    _area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     # With no time bands the lane area equals the full BlockPlanArea.
     # lane_top == area_y (SVG top), lane_bottom == area_y + area_h (SVG bottom).
     lane_h = area_h
@@ -769,7 +769,7 @@ def test_blockplan_per_lane_split_ratio_overrides_global(tmp_path):
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     horizontal_interior = [
         (x1, y1, x2, y2)
         for (x1, y1, x2, y2) in renderer.line_calls
@@ -810,7 +810,7 @@ def test_blockplan_item_placement_order_events_first_puts_events_on_top(tmp_path
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events, _DummyDB())
 
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    _area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     lane_mid = area_y + area_h / 2.0
 
     # With events on top, the "Kickoff" event text should be above the midpoint
@@ -861,7 +861,7 @@ def test_blockplan_item_placement_order_durations_first_default_behavior(tmp_pat
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events, _DummyDB())
 
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    _area_x, area_y, _area_w, area_h = coords["BlockPlanArea"]
     lane_mid = area_y + area_h / 2.0
 
     kickoff_y = next(
@@ -955,7 +955,7 @@ def test_blockplan_per_lane_timeline_fill_color_paints_content_area(tmp_path):
     shaded = [r for r in renderer.rect_calls if r.get("fill") == "lightyellow"]
     assert shaded, "Expected a rect with timeline_fill_color 'lightyellow'"
     # The timeline rect has x >= the label column boundary.
-    area_x, area_y, area_w, area_h = coords["BlockPlanArea"]
+    area_x, _area_y, area_w, _area_h = coords["BlockPlanArea"]
     label_w = min(
         area_w * 0.45, max(80.0, area_w * config.blockplan_label_column_ratio)
     )

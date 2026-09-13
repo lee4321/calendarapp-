@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -227,7 +228,7 @@ def test_timeline_callouts_do_not_overlap_for_close_dates(tmp_path):
         )
     for layer, intervals in by_layer.items():
         intervals.sort()
-        for (a_lo, a_hi), (b_lo, b_hi) in zip(intervals, intervals[1:]):
+        for (a_lo, a_hi), (b_lo, b_hi) in itertools.pairwise(intervals):
             assert a_hi <= b_lo + 1e-6, (
                 f"Layer {layer}: [{a_lo:.2f},{a_hi:.2f}] "
                 f"overlaps [{b_lo:.2f},{b_hi:.2f}]"
@@ -1538,7 +1539,7 @@ def test_the_start_and_end_dates_are_drawn_inside_the_bar(tmp_path):
 
 def test_the_start_date_sits_at_the_left_end_and_the_end_date_at_the_right(tmp_path):
     event = Event(task_name="Build", start="20260210", end="20260320")
-    config, renderer, bar = _drawn_duration(tmp_path, "in_bar_ends.svg", event)
+    _config, renderer, bar = _drawn_duration(tmp_path, "in_bar_ends.svg", event)
 
     start_date, end_date = _date_texts(renderer)
     assert start_date["anchor"] == "start"
@@ -1558,8 +1559,8 @@ def test_the_name_is_centred_between_the_two_date_columns(tmp_path):
     config, renderer, bar = _drawn_duration(tmp_path, "in_bar_mid.svg", event)
     assert not bar.text_overflow
 
-    title = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-event-name"][0]
+    title = next(c for c in renderer.text_calls
+             if c.get("css_class") == "ec-event-name")
     assert title["anchor"] == "middle"
     assert title["x"] == pytest.approx((bar.start_x + bar.end_x) / 2.0)
     # Its cell is the middle column, so it never reaches the dates.
@@ -1880,8 +1881,8 @@ def test_everything_in_a_condensed_bar_condenses_by_the_same_factor(tmp_path):
     assert min(factors) < 1.0                   # it really is condensing
 
     # ...and the icon narrows with them, on the same axis.
-    icon = [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon"][0]
+    icon = next(c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon")
     assert f"scale({factors[0]:.6f} 1.000000)" in (icon.get("transform") or "")
 
 
@@ -1892,8 +1893,8 @@ def test_a_bar_with_room_condenses_nothing(tmp_path):
         tmp_path, "ovl_uncondensed.svg", event, timeline_duration_icon_visible=True
     )
     assert not bar.text_overflow
-    icon = [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon"][0]
+    icon = next(c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon")
     assert icon.get("transform") is None
 
 
@@ -2068,8 +2069,8 @@ def test_a_condensed_vertical_bar_condenses_its_icon_along_the_axis(tmp_path):
     config.timeline_duration_icon_visible = True
     renderer._draw_duration_vertical(config, bars[0], 200.0)
 
-    icon = [c for c in renderer.icon_calls
-            if c.get("css_class") == "ec-duration-icon"][0]
+    icon = next(c for c in renderer.icon_calls
+            if c.get("css_class") == "ec-duration-icon")
     transform = icon.get("transform") or ""
     assert "scale(1.000000 " in transform
 
@@ -2598,7 +2599,7 @@ def test_the_today_line_direction_maps_to_the_two_sides(tmp_path):
         renderer._draw_today_marker_vertical(
             config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0
         )
-        line = [c for c in renderer.line_calls if c["y1"] == c["y2"]][0]
+        line = next(c for c in renderer.line_calls if c["y1"] == c["y2"])
         return line["x1"], line["x2"]
 
     assert _span("above") == (300.0, 600.0)     # right of the axis
@@ -2617,8 +2618,8 @@ def test_the_today_label_keeps_clear_of_the_band_columns(tmp_path):
         config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0,
         label_bounds=(40.0, 560.0),
     )
-    label = [c for c in renderer.text_calls
-             if c.get("css_class") == "ec-today-label"][0]
+    label = next(c for c in renderer.text_calls
+             if c.get("css_class") == "ec-today-label")
     assert label["x"] >= 40.0
 
 

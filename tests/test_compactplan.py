@@ -116,7 +116,7 @@ def test_layout_returns_compact_plan_area(tmp_path):
     config = _base_config(tmp_path / "out.svg")
     coords = CompactPlanLayout().calculate(config)
     assert "CompactPlanArea" in coords
-    x, y, w, h = coords["CompactPlanArea"]
+    _x, _y, w, h = coords["CompactPlanArea"]
     assert w > 0
     assert h > 0
 
@@ -369,7 +369,7 @@ def test_renderer_draws_axis_line(tmp_path):
     renderer.render(config, coords, [], _DummyDB())
 
     # The axis line is a full-width horizontal line
-    area_x, _, area_w, _ = coords["CompactPlanArea"]
+    _area_x, _, area_w, _ = coords["CompactPlanArea"]
     axis_lines = [
         (x1, y1, x2, y2)
         for x1, y1, x2, y2 in renderer.line_calls
@@ -388,7 +388,7 @@ def test_renderer_draws_duration_lines(tmp_path):
     renderer.render(config, coords, events, _DummyDB())
 
     # At least one line must not be the full axis width (i.e. a duration line)
-    area_x, _, area_w, _ = coords["CompactPlanArea"]
+    _area_x, _, area_w, _ = coords["CompactPlanArea"]
     non_axis = [
         c for c in renderer.line_calls
         if abs(c[1] - c[3]) < 0.01 and abs(c[2] - c[0] - area_w) > 5.0
@@ -624,7 +624,7 @@ def _render(tmp_path, events, db=None, **overrides):
 
 
 def test_key_is_written_to_its_own_page(tmp_path):
-    renderer, result, output = _render(
+    renderer, result, _output = _render(
         tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
     )
 

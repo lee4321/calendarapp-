@@ -31,6 +31,8 @@ import sys
 # Ensure project root is on sys.path when run as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import contextlib
+
 import pandas
 
 from importers.common import (
@@ -221,10 +223,8 @@ class SpecialDaysDatabase(_ImportDatabaseBase):
 
     def extra_migrations(self, conn) -> None:
         # Tag specialdays rows with the import they came from
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("ALTER TABLE specialdays ADD COLUMN import_id INTEGER")
-        except sqlite3.OperationalError:
-            pass
 
 
 # ============================================================================

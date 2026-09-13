@@ -26,7 +26,7 @@ def string_width(text: str, font_path: str, font_size: float) -> float:
     """
     if not text:
         return 0.0
-    font = _get_font(font_path, int(round(font_size)))
+    font = _get_font(font_path, round(font_size))
     return font.getlength(text)
 
 
