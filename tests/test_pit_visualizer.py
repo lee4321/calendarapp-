@@ -340,7 +340,6 @@ def test_pit_applies_content_filter_flags(tmp_path):
     def drawn(name: str, *, filtered: bool) -> tuple[int, int]:
         """(events rendered, callouts in the SVG) for one run."""
         config = _make_config(tmp_path / name)
-        config.rollups = False  # the dataclass default keeps only rollups
         config.milestones = filtered
         config.ignorecomplete = filtered
         result = PITVisualizer().generate(config, _EventsDB())

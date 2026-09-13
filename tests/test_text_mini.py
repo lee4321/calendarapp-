@@ -39,7 +39,6 @@ def test_text_mini_generates_file_with_symbols():
     config.mini_columns = 1
     config.mini_rows = 1
     config.mini_show_week_numbers = True
-    config.rollups = False
 
     events = [
         {
@@ -73,7 +72,6 @@ def _config_for(tmp_dir, **overrides):
     config.userstart = config.adjustedstart = "20260101"
     config.userend = config.adjustedend = "20260131"
     config.mini_columns = config.mini_rows = 1
-    config.rollups = False
     config.outputfile = str(Path(tmp_dir) / "mini.txt")
     for key, value in overrides.items():
         setattr(config, key, value)
