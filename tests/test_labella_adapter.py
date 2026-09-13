@@ -12,6 +12,8 @@ empty-input edge case using fabricated events. Verifies:
 
 from __future__ import annotations
 
+from typing import Any
+
 import arrow
 import pytest
 
@@ -387,7 +389,7 @@ def test_clustered_labels_are_split_across_rows(config, clustered_events):
 def test_a_sparse_timeline_keeps_the_requested_density(config):
     """Relaxation is a fallback — a layout that already fits is untouched."""
     events = [_ev("One", "20260401"), _ev("Two", "20260601"), _ev("Three", "20260731")]
-    kwargs = dict(
+    kwargs: dict[str, Any] = dict(
         axis_origin=(0.0, 400.0),
         axis_length=1766.0,
         orientation=Orientation.HORIZONTAL,
@@ -534,7 +536,7 @@ def test_a_generous_bound_still_reaches_a_clean_layout(config):
     """The cap is a ceiling, not a target: given room, overlap still wins."""
     from shared.labella_layout import _row_overlap_count
 
-    kwargs = dict(
+    kwargs: dict[str, Any] = dict(
         axis_origin=(0.0, 400.0),
         axis_length=1766.0,
         orientation=Orientation.HORIZONTAL,
@@ -548,7 +550,7 @@ def test_a_generous_bound_still_reaches_a_clean_layout(config):
 
 def test_the_first_row_gap_does_not_inflate_the_row_stride(config):
     """stack_offset buys clearance once; layer_gap sets the stride."""
-    kwargs = dict(
+    kwargs: dict[str, Any] = dict(
         axis_origin=(0.0, 400.0),
         axis_length=1766.0,
         orientation=Orientation.HORIZONTAL,
@@ -934,7 +936,7 @@ def test_centring_is_opt_in(config):
     """PIT re-anchors in its own post-pass, so the default stays 'start'."""
     from shared.labella_layout import layout_callouts as shared_layout
 
-    common = dict(
+    common: dict[str, Any] = dict(
         axis_origin=(0.0, 400.0),
         axis_length=670.0,
         orientation=Orientation.HORIZONTAL,

@@ -3,12 +3,14 @@ Tests for StyleEngine.evaluate_day() — the unified style_rules engine that
 replaced the old per-renderer hash_rules / DayHashContext system.
 """
 
+from typing import Any
+
 from shared.data_models import Event
 from shared.rule_engine import DayContext, StyleEngine
 
 
 def _event(**kwargs) -> Event:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         task_name="",
         start="20260115",
         end="20260115",
@@ -25,7 +27,7 @@ def _event(**kwargs) -> Event:
 
 
 def _ctx(**kwargs) -> DayContext:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         date="20260115",
         federal_holiday=False,
         company_holiday=False,

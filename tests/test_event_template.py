@@ -36,7 +36,7 @@ def test_every_header_is_recognized(headers):
 
 def test_no_two_headers_target_the_same_column(headers):
     """Two columns mapping to one DB field means one is silently dropped."""
-    seen: dict[str, str] = {}
+    seen: dict[str | None, str] = {}
     collisions = []
     for header in headers:
         db_col = lookup_column(header)

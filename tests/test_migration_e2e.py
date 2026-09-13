@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -63,7 +64,7 @@ def _legacy_theme_paths() -> list[Path]:
     return out
 
 
-def _deep_to_dict(obj: object) -> object:
+def _deep_to_dict(obj: Any) -> Any:
     """Recursively convert OrderedDict / nested OrderedDicts to plain dicts.
 
     The converter emits OrderedDicts to preserve section order; the unified

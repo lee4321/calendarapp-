@@ -2,6 +2,7 @@
 from datetime import date
 
 import pytest
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config
 from shared.day_classifier import (
@@ -12,7 +13,7 @@ from shared.day_classifier import (
 )
 
 
-class _DB:
+class _DB(FakeCalendarDB):
     def __init__(
         self,
         govt: set[str] | None = None,

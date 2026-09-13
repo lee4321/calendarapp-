@@ -8,7 +8,9 @@ month-name labels, rotation transform).
 
 from __future__ import annotations
 
-from config.config import create_calendar_config, setfontsizes
+from fakes import FakeCalendarDB
+
+from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from visualizers.candybar.layout import (
     CandybarLayout,
     candybar_suppress_weekends,
@@ -18,7 +20,7 @@ from visualizers.candybar.renderer import CandybarRenderer
 from visualizers.factory import VisualizerFactory
 
 
-def _config(start: str, end: str, **overrides) -> object:
+def _config(start: str, end: str, **overrides) -> CalendarConfig:
     cfg = create_calendar_config()
     cfg.pageX = 792.0
     cfg.pageY = 612.0
@@ -278,10 +280,10 @@ class _CaptureRenderer(CandybarRenderer):
         pass
 
 
-class _FakeDB:
+class _FakeDB(FakeCalendarDB):
     """Minimal CalendarDB stand-in for renderer unit tests."""
 
-    def get_holidays_for_date(self, daykey, country):
+    def get_holidays_for_date(self, daykey, country=None):
         return []
 
     def get_special_days_for_date(self, daykey):
@@ -300,7 +302,8 @@ def _render(cfg) -> _CaptureRenderer:
     r = _CaptureRenderer()
     r.set_week_numbers(layout.week_numbers)
     r._config = cfg
-    r._load_icon_svg_cache = lambda db: None  # skip DB icon load
+    # Skip the DB icon load.
+    r._load_icon_svg_cache = lambda db: None  # ty: ignore[invalid-assignment]
     r._render_content(cfg, coords, [], _FakeDB())
     return r
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import openpyxl
+from fakes import FakeCalendarDB
 from openpyxl.utils import get_column_letter
 
 from config.config import create_calendar_config
@@ -19,31 +20,25 @@ from visualizers.excelheader import (
 # ── Stubs ─────────────────────────────────────────────────────────────────────
 
 
-class _DummyDB:
+class _DummyDB(FakeCalendarDB):
     """Minimal DB stub — no holidays, no palettes, no events."""
 
-    @staticmethod
-    def get_palette(name):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def get_holidays_for_date(daykey, country=None):
+    def get_holidays_for_date(self, daykey, country=None):
         return []
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
-    @staticmethod
-    def is_nonworkday(daykey, country=None):
+    def is_nonworkday(self, daykey, country=None):
         return False
 
-    @staticmethod
-    def is_government_nonworkday(daykey, country=None):
+    def is_government_nonworkday(self, daykey, country=None):
         return False
 
-    @staticmethod
-    def get_all_events_in_range(start, end):
+    def get_all_events_in_range(self, start, end):
         return []
 
 
@@ -308,8 +303,7 @@ def test_excelheader_weekends_excluded_when_style_zero(tmp_path):
 class _EventDB(_DummyDB):
     """Stub that returns a single milestone event on Mon Jan 12 2026."""
 
-    @staticmethod
-    def get_all_events_in_range(start, end):
+    def get_all_events_in_range(self, start, end):
         return [
             {
                 "ID": 1,

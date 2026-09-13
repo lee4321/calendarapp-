@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from fakes import FakeCalendarDB
 
 from config.config import (
     create_calendar_config,
@@ -13,23 +14,19 @@ from visualizers.blockplan.layout import BlockPlanLayout
 from visualizers.blockplan.renderer import BlockPlanRenderer
 
 
-class _DummyDB:
-    @staticmethod
-    def get_palette(name):
+class _DummyDB(FakeCalendarDB):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def is_nonworkday(daykey, country=None):
+    def is_nonworkday(self, daykey, country=None):
         return False
 
 
-class _DummyIconDB:
-    @staticmethod
-    def get_palette(name):
+class _DummyIconDB(FakeCalendarDB):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {"rocket": '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>'}
 
 
@@ -1214,8 +1211,7 @@ def test_blockplan_countdown_skip_nonworkdays(tmp_path):
     ]
 
     class _HolidayDB(_DummyDB):
-        @staticmethod
-        def is_nonworkday(daykey, country=None):
+        def is_nonworkday(self, daykey, country=None):
             return daykey == "20260205"  # Thu Feb 5 is a holiday
 
     coords = BlockPlanLayout().calculate(config)
@@ -1300,8 +1296,7 @@ def test_blockplan_countup_skip_nonworkdays(tmp_path):
     ]
 
     class _HolidayDB(_DummyDB):
-        @staticmethod
-        def is_nonworkday(daykey, country=None):
+        def is_nonworkday(self, daykey, country=None):
             return daykey == "20260201"  # Sun Feb 1 is marked nonworkday
 
     coords = BlockPlanLayout().calculate(config)
@@ -1331,8 +1326,7 @@ class _BlockPlanFlagDB(_DummyDB):
     def get_holidays_for_date(self, daykey, country=None):
         return self.rows.get(daykey, [])
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {
             "us": '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
             "ua": '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',

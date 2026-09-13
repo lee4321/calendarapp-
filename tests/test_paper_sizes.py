@@ -63,6 +63,8 @@ class TestFormulaFontSizes(unittest.TestCase):
         config.orientation = "portrait"
         config = setfontsizes(config)
 
+        assert config.weekly_name_text_font_size is not None
+        assert config.header_left_font_size is not None
         self.assertGreater(config.weekly_name_text_font_size, 0.0)
         self.assertGreater(config.header_left_font_size, config.weekly_name_text_font_size)
 
@@ -75,6 +77,10 @@ class TestFormulaFontSizes(unittest.TestCase):
         tabloid_config.pageX, tabloid_config.pageY = 792.0, 1224.0
         tabloid_config = setfontsizes(tabloid_config)
 
+        assert tabloid_config.weekly_name_text_font_size is not None
+        assert letter_config.weekly_name_text_font_size is not None
+        assert tabloid_config.watermark_font_size is not None
+        assert letter_config.watermark_font_size is not None
         self.assertGreater(
             tabloid_config.weekly_name_text_font_size,
             letter_config.weekly_name_text_font_size,
@@ -127,6 +133,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         config.pageX, config.pageY = 612.0, 792.0
         config.desired_font_size = 12.0
         config = setfontsizes(config)
+        assert config.weekly_name_text_font_size is not None
         self.assertAlmostEqual(config.weekly_name_text_font_size, 12.0, places=2)
 
     def test_resolve_page_margins_uses_side_overrides(self):

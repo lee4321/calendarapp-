@@ -10,13 +10,13 @@ header row, and as many pages as the entries need.
 
 from __future__ import annotations
 
-from config.config import create_calendar_config, setfontsizes
+from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from shared.date_utils import calc_calendar_range
 from visualizers.weekly.layout import WeeklyCalendarLayout
 from visualizers.weekly.renderer import OverflowEntry, WeeklyCalendarRenderer
 
 
-def _config(tmp_path) -> object:
+def _config(tmp_path) -> CalendarConfig:
     cfg = create_calendar_config()
     cfg.pageX = 792.0
     cfg.pageY = 612.0

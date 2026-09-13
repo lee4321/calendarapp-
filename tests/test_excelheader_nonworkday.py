@@ -4,34 +4,29 @@ from __future__ import annotations
 from pathlib import Path
 
 import openpyxl
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config
 from visualizers.excelheader import FIRST_DATE_COL, generate_excel_header
 
 
-class _DummyDB:
-    @staticmethod
-    def get_palette(name):
+class _DummyDB(FakeCalendarDB):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def get_holidays_for_date(daykey, country=None):
+    def get_holidays_for_date(self, daykey, country=None):
         return []
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
-    @staticmethod
-    def is_nonworkday(daykey, country=None):
+    def is_nonworkday(self, daykey, country=None):
         return False
 
-    @staticmethod
-    def is_government_nonworkday(daykey, country=None):
+    def is_government_nonworkday(self, daykey, country=None):
         return False
 
-    @staticmethod
-    def get_all_events_in_range(start, end):
+    def get_all_events_in_range(self, start, end):
         return []
 
 

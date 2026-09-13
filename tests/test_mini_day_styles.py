@@ -1,11 +1,12 @@
 import pytest
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
 from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 from visualizers.mini.renderer import MiniCalendarRenderer
 
 
-class _StubDB:
+class _StubDB(FakeCalendarDB):
     def __init__(self, holidays=None, special_days=None):
         self._holidays = holidays or []
         self._special_days = special_days or []

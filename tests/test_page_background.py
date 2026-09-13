@@ -31,7 +31,7 @@ def _config(ground: str | None = "black"):
     calc_calendar_range(cfg, "20260401", "20260630")
     setfontsizes(cfg)
     style = BoxStyle(fill=ground) if ground is not None else BoxStyle(fill="none")
-    cfg.get_box_style = lambda ec: style if ec == "ec-background" else BoxStyle()
+    cfg.get_box_style = lambda ec: style if ec == "ec-background" else BoxStyle()  # ty: ignore[invalid-assignment]
     return cfg
 
 

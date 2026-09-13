@@ -31,9 +31,9 @@ class _Recording(WeeklyCalendarRenderer):
         self.rects.append({"x": x, "y": y, "w": w, "h": h, **kwargs})
         return super()._draw_rect(x, y, w, h, **kwargs)
 
-    def _draw_text(self, x, y, text, font, size, **kwargs):
+    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
         self.texts.append({"x": x, "y": y, "text": text, **kwargs})
-        return super()._draw_text(x, y, text, font, size, **kwargs)
+        return super()._draw_text(x, y, text, font_name, font_size, **kwargs)
 
 
 def _config(tmp_path, **overrides):
@@ -146,7 +146,7 @@ def test_shrink_to_content_crops_the_page(tmp_path):
     cfg = _config(tmp_path, shrink_to_content=True)
     renderer, _ = _write(cfg, rows=4)
 
-    assert renderer._drawing.height < cfg.pageY
+    assert renderer.drawing.height < cfg.pageY
 
 
 def test_the_body_size_scales_with_the_page(tmp_path):

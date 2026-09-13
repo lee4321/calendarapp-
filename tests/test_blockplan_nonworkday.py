@@ -3,34 +3,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from config.config import create_calendar_config, setfontsizes
+from fakes import FakeCalendarDB
+
+from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from visualizers.blockplan.layout import BlockPlanLayout
 from visualizers.blockplan.renderer import BlockPlanRenderer
 
 
-class _NonworkDB:
+class _NonworkDB(FakeCalendarDB):
     """Stub DB where 2026-02-16 is a US federal holiday (Presidents' Day)."""
 
     HOLIDAY = "20260216"
 
-    @staticmethod
-    def get_palette(name):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def is_nonworkday(daykey, country=None):
+    def is_nonworkday(self, daykey, country=None):
         return daykey == _NonworkDB.HOLIDAY
 
-    @staticmethod
-    def is_government_nonworkday(daykey, country=None):
+    def is_government_nonworkday(self, daykey, country=None):
         return daykey == _NonworkDB.HOLIDAY
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
-    @staticmethod
-    def resolve_color_name(name):
+    def resolve_color_name(self, name):
         return name
 
 
@@ -50,7 +47,7 @@ class _Capture(BlockPlanRenderer):
         return None
 
 
-def _cfg(output: Path) -> create_calendar_config.__class__:
+def _cfg(output: Path) -> CalendarConfig:
     c = create_calendar_config()
     c.pageX, c.pageY = 792.0, 1224.0
     c = setfontsizes(c)
