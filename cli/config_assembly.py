@@ -431,9 +431,10 @@ def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -
 def _parse_status_filter(raw: str | None) -> frozenset[str] | None:
     """Parse ``--status`` CLI value into the set used by ``config.status_filter``.
 
-    ``None`` / empty / ``"all"`` → ``None`` (no filter). Otherwise a
-    comma-separated list of status names (case-insensitive). Unknown values
-    are rejected against :data:`shared.data_models.ALLOWED_STATUSES`.
+    ``None`` (flag omitted) → ``{"active"}`` (the default). Empty / ``"all"``
+    → ``None`` (no filter). Otherwise a comma-separated list of status names
+    (case-insensitive). Unknown values are rejected against
+    :data:`shared.data_models.ALLOWED_STATUSES`.
     """
     from shared.data_models import ALLOWED_STATUSES
 
