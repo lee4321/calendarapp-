@@ -320,20 +320,38 @@ def test_pit_leader_end_stub_zero_is_pure_bezier(tmp_path):
         assert not re.search(r"L\s+-?[0-9.]+\s+-?[0-9.]+\s*$", d.strip())
 
 
-def test_pit_inherits_filter_flags(tmp_path):
-    """Content-filter flags propagate to config without error."""
-    config = _make_config(tmp_path)
-    config.milestones = True
-    config.ignorecomplete = True
-    config.rollups = False
-    config.include_notes = True
-    config.WBS = ""
+def test_pit_applies_content_filter_flags(tmp_path):
+    """--milestones and --ignorecomplete filter the events PIT draws.
 
-    coords = PITLayout().calculate(config)
-    # Just verify it renders without exception.
-    renderer = PITRenderer()
-    renderer.render(config, coords, _events_dicts(), _DummyDB())
-    assert Path(config.outputfile).exists()
+    Events go through PITVisualizer.generate(), the path that applies
+    filter_events(); calling the renderer directly would skip the filters.
+    """
+    events = [
+        {"Task_Name": "Launch", "Start": "20260315", "End": "20260315", "Milestone": 1},
+        {"Task_Name": "Shipped", "Start": "20260601", "End": "20260601",
+         "Milestone": 1, "Percent_Complete": 1},
+        {"Task_Name": "Review", "Start": "20260901", "End": "20260901"},
+    ]
+
+    class _EventsDB(_DummyDB):
+        def get_all_events_in_range(self, start, end):
+            return [dict(ev) for ev in events]
+
+    def drawn(name: str, *, filtered: bool) -> tuple[int, int]:
+        """(events rendered, callouts in the SVG) for one run."""
+        config = _make_config(tmp_path / name)
+        config.rollups = False  # the dataclass default keeps only rollups
+        config.milestones = filtered
+        config.ignorecomplete = filtered
+        result = PITVisualizer().generate(config, _EventsDB())
+        svg = Path(config.outputfile).read_text(encoding="utf-8")
+        return result.event_count, svg.count("ec-pit-callout-group")
+
+    # Unfiltered, every event gets a callout.
+    assert drawn("all", filtered=False) == (3, 3)
+    # Filtered, only the pending milestone is left: "Shipped" is complete
+    # and "Review" is not a milestone.
+    assert drawn("filtered", filtered=True) == (1, 1)
 
 
 def test_pit_notes_rendered_when_include_notes(tmp_path):
