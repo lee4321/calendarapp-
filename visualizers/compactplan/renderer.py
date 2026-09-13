@@ -74,7 +74,7 @@ from shared.timeband import (
 # isn't a hex literal is treated as "unknown" — the contrast code then leaves
 # the icon color alone, which preserves backward behaviour for exotic names.
 
-_NAMED_COLORS: dict[str, tuple[int, int, int]] = {
+_NAMED_COLORS: dict[str, tuple[int, int, int] | None] = {
     "black": (0, 0, 0),                "white": (255, 255, 255),
     "grey": (128, 128, 128),           "gray": (128, 128, 128),
     "lightgrey": (211, 211, 211),      "lightgray": (211, 211, 211),
@@ -609,7 +609,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             or config.compactplan_company_holiday_icon
             or config.compactplan_weekend_icon
         )
-        if _day_classes and _has_nwd_icons:
+        if db is not None and _day_classes and _has_nwd_icons:
             self._load_icon_svg_cache(db)
         # A federal-holiday date/dow cell shows the flag of every country
         # closed that day — the same one-flag-per-country marks the holiday
@@ -1427,6 +1427,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         is restored afterwards.
         """
         key = self._chart_key
+        if key is None:
+            return 0
         saved_drawing = self._drawing
 
         def page_path(number: int) -> str:
