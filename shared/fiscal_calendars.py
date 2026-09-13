@@ -21,6 +21,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import ClassVar
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ class _NRFBase(FiscalCalendar):
     and the name/period_count properties.
     """
 
-    PATTERN: list[int]  # 12 entries, each 4 or 5
+    PATTERN: ClassVar[list[int]]  # 12 entries, each 4 or 5
 
     def fiscal_year_start(self, gregorian_year: int) -> date:
         return _sunday_closest_to_feb1(gregorian_year)
@@ -169,7 +170,7 @@ class _NRFBase(FiscalCalendar):
 class NRF454Calendar(_NRFBase):
     """NRF 4-5-4 retail calendar."""
 
-    PATTERN = [4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4]
+    PATTERN: ClassVar[list[int]] = [4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4]
 
     @property
     def name(self) -> str:
@@ -179,7 +180,7 @@ class NRF454Calendar(_NRFBase):
 class NRF445Calendar(_NRFBase):
     """NRF 4-4-5 variant."""
 
-    PATTERN = [4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5]
+    PATTERN: ClassVar[list[int]] = [4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5]
 
     @property
     def name(self) -> str:
@@ -189,7 +190,7 @@ class NRF445Calendar(_NRFBase):
 class NRF544Calendar(_NRFBase):
     """NRF 5-4-4 variant."""
 
-    PATTERN = [5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]
+    PATTERN: ClassVar[list[int]] = [5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]
 
     @property
     def name(self) -> str:

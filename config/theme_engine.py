@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 
@@ -1758,7 +1758,7 @@ class ThemeEngine:
         return result
 
     # ec-class binding kind → ElementBinding field name.
-    _BIND_KIND_TO_FIELD: dict[str, str] = {
+    _BIND_KIND_TO_FIELD: ClassVar[dict[str, str]] = {
         "text": "text_style",
         "box": "box_style",
         "line": "line_style",
@@ -1766,7 +1766,7 @@ class ThemeEngine:
     }
 
     # One-time warning state — keep noise out of the log on repeated apply().
-    _FALLBACK_TOKENS_WARNED: set[tuple[str, str]] = set()
+    _FALLBACK_TOKENS_WARNED: ClassVar[set[tuple[str, str]]] = set()
 
     @classmethod
     def _apply_catalog_defaults(

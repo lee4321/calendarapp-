@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import ClassVar
 
 import openpyxl
 from fakes import FakeCalendarDB
@@ -23,10 +24,10 @@ from visualizers.excelheader import (
 class _BaseDB(FakeCalendarDB):
     """Minimal DB stub — overridable hooks for events/holidays."""
 
-    EVENTS: list[dict] = []
-    HOLIDAYS: dict[str, list[dict]] = {}
-    SPECIAL: dict[str, list[dict]] = {}
-    NONWORK_KEYS: set[str] = set()
+    EVENTS: ClassVar[list[dict]] = []
+    HOLIDAYS: ClassVar[dict[str, list[dict]]] = {}
+    SPECIAL: ClassVar[dict[str, list[dict]]] = {}
+    NONWORK_KEYS: ClassVar[set[str]] = set()
 
     def get_palette(self, name):  # noqa: D401
         return None
@@ -164,7 +165,7 @@ def test_excelblockplan_events_each_on_own_row_ordered_by_start(tmp_path):
     cfg = _cfg(out)
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             _event(eid=2, name="Zebra", start="20260120"),
             _event(eid=1, name="Apple", start="20260106", milestone=True),
             _event(eid=3, name="Mango", start="20260112", end="20260115"),
@@ -193,7 +194,7 @@ def test_excelblockplan_event_icon_placed_in_start_date_column(tmp_path):
     cfg = _cfg(out)
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             _event(eid=1, name="Release", start="20260112", milestone=True, icon="★"),
         ]
 
@@ -217,7 +218,7 @@ def test_excelblockplan_duration_fills_day_columns_between_start_and_end(tmp_pat
     cfg = _cfg(out)
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             _event(
                 eid=1,
                 name="Sprint 1",
@@ -253,15 +254,15 @@ def test_excelblockplan_holiday_overlays_duration_with_pattern(tmp_path):
     cfg.excelheader_federal_holiday_fill_color = "#FF0000"
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             _event(eid=1, name="Long task", start="20260112", end="20260123", color="#4472C4"),
         ]
-        HOLIDAYS = {
+        HOLIDAYS: ClassVar[dict[str, list[dict]]] = {
             "20260119": [
                 {"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}
             ]
         }
-        NONWORK_KEYS = {"20260119"}
+        NONWORK_KEYS: ClassVar[set[str]] = {"20260119"}
 
     generate_excel_blockplan(cfg, _DB(), out)
     wb = openpyxl.load_workbook(str(out))
@@ -283,7 +284,7 @@ def test_excelblockplan_continuation_marker_for_duration_running_past_range(tmp_
     cfg = _cfg(out)
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             # Starts before, ends after — both arrows expected
             _event(eid=1, name="Forever", start="20251201", end="20260601"),
         ]
@@ -364,7 +365,7 @@ def test_excelblockplan_content_filters_exclude_events(tmp_path):
     cfg.includedurations = True
 
     class _DB(_BaseDB):
-        EVENTS = [
+        EVENTS: ClassVar[list[dict]] = [
             _event(eid=1, name="Solo event", start="20260108", milestone=True),
             _event(eid=2, name="Duration", start="20260112", end="20260116"),
         ]

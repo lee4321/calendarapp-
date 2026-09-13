@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import ClassVar
 
 from fakes import FakeCalendarDB
 
@@ -931,7 +932,7 @@ def test_the_key_marks_a_milestone_with_the_icon_the_chart_drew(tmp_path):
 class _FlagDB(_DummyDB):
     """A public holiday on Mon 16 Mar, an observance on Wed 18 Mar."""
 
-    _ROWS = {
+    _ROWS: ClassVar[dict] = {
         "20260316": [{"icon": "flag-us", "displayname": "Founders Day", "nonworkday": 1, "country": "US"}],
         "20260318": [{"icon": "flag-ca", "displayname": "Heritage Day", "nonworkday": 0, "country": "CA"}],
     }

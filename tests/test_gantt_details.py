@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 from test_gantt_marks import render, task
 
@@ -159,7 +161,7 @@ def test_exceptions_reach_the_page(tmp_path):
 
 def test_a_hidden_holiday_is_reported_without_a_task_name(tmp_path):
     class _HolidayDB:
-        holidays = {"20260208"}          # a Sunday
+        holidays: ClassVar[set[str]] = {"20260208"}  # a Sunday
 
         @staticmethod
         def get_palette(name):

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import subprocess
+from typing import ClassVar
 
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import BindingType
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, RichLog, Static
@@ -16,7 +18,7 @@ from tui.runner import full_command, preview_string
 class ResultScreen(Screen):
     """Generic runner: takes an argv tail + entry script, shows live output."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("escape", "app.pop_screen", "Back"),
         ("c", "copy", "Copy command"),
         ("r", "rerun", "Re-run"),

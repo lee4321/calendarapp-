@@ -204,7 +204,7 @@ def text_to_svg_group(
     pil_font = _load_pil_font(font_path, font_size_int)
     char_advances: list[float] = []
     cumulative = 0.0
-    for i, ch in enumerate(text):
+    for i in range(len(text)):
         char_advances.append(cumulative)
         # Use PIL to get the advance for this character in context
         # getlength of substring up to i+1 gives cumulative advance
