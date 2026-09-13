@@ -27,6 +27,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
+from typing import Any, cast
 
 import arrow
 
@@ -287,7 +288,7 @@ def _leader_path(
     if not direct:
         return renderer.generatePath(node)
 
-    options = renderer.options
+    options: dict[str, Any] = renderer.options
     gap = options["nodeHeight"] + options["layerGap"]
     # Matches Renderer.getWayPoints: the label's near edge sits one
     # node-height inside the layer's outer boundary.
@@ -431,7 +432,9 @@ def _run_labella(
     # centre; drawing the box from it as a leading edge puts every box half
     # a width off its date and lands the leader on a corner.
     centred = label_anchor == "center"
-    for n in nodes:
+    # Vendored labella types node positions as None until layout() fills
+    # them, so its nodes are read untyped here.
+    for n in cast(list[Any], nodes):
         # node.x/y are top-left of the label rect in axis-local coords.
         # node.dx/dy are extents in (x, y). Convert to absolute SVG.
         x_dot, y_dot = axis_to_xy(n.idealPos, orientation, axis_origin)
