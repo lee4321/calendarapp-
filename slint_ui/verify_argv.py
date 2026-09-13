@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Headless coverage check for the unified Slint front-end's argv builder.
 

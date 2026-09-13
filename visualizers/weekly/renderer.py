@@ -1485,9 +1485,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         for i, oneday in enumerate(days_to_print):
             (Xb, Yb, Wb, Hb, txb, tyb, ixb, iyb, Bb) = rowcoords[oneday][rowid]
-            if i > 0 and Y == Yb:
+            if i > 0 and Yb == Y:
                 W = W + Wb
-            if Y != Yb:
+            if Yb != Y:
                 list_of_rects.append((X, Y, W, H, tx, name_ty, ix, iy, notes_ty))
                 X, Y, W, H = Xb, Yb, Wb, Hb
                 tx, ty, ix, iy = txb, tyb, ixb, iyb

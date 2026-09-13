@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 EventCalendar - SVG Calendar Generator
 
@@ -10,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.2"
+__version__ = "26.09.13.3"
 
 import logging
 import sys
@@ -352,7 +351,7 @@ def run(argv: list[str] | None = None) -> int:
         print(f"Available SVG icons ({len(all_icons)}):")
         print("  Use in event Icon fields by icon name.")
         print()
-        names = [str((row.get("name") or "")).strip() for row in all_icons]
+        names = [str(row.get("name") or "").strip() for row in all_icons]
         names = [n for n in names if n]
         if names:
             col_width = max(len(n) for n in names) + 2

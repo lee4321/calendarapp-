@@ -66,19 +66,17 @@ def test_transaction_commits_are_durable(db):
 
 
 def test_transaction_rolls_back_on_exception(db):
-    with pytest.raises(RuntimeError):
-        with db.transaction() as cursor:
-            db.create_import_record(cursor, user_id=1, filename="b.csv", file_hash="h2")
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), db.transaction() as cursor:
+        db.create_import_record(cursor, user_id=1, filename="b.csv", file_hash="h2")
+        raise RuntimeError("boom")
 
     assert _history_ids_from_fresh_connection(db.db_path) == []
 
 
 def test_shared_connection_is_usable_after_a_rollback(db):
-    with pytest.raises(RuntimeError):
-        with db.transaction() as cursor:
-            db.create_import_record(cursor, user_id=1, filename="c.csv", file_hash="h3")
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), db.transaction() as cursor:
+        db.create_import_record(cursor, user_id=1, filename="c.csv", file_hash="h3")
+        raise RuntimeError("boom")
 
     # The rolled-back connection is reused, so it must be left in a clean state.
     with db.transaction() as cursor:
@@ -106,10 +104,9 @@ def test_rollback_returns_the_claimed_id_to_the_sequence(db):
     the `import_sequence` bump is written inside the transaction, so a rollback
     discards it along with the rows and the next import takes that id.
     """
-    with pytest.raises(RuntimeError):
-        with db.transaction() as cursor:
-            db.create_import_record(cursor, user_id=1, filename="e.csv", file_hash="h5")
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), db.transaction() as cursor:
+        db.create_import_record(cursor, user_id=1, filename="e.csv", file_hash="h5")
+        raise RuntimeError("boom")
 
     with db.transaction() as cursor:
         second_id = db.create_import_record(

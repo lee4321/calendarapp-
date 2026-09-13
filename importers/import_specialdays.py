@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 import_specialdays.py - Import XLSX/CSV company special-day files into calendar.db
 

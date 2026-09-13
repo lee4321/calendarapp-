@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 sample_generator.py - Example event generator script for import_events.py
 

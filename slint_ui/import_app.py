@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Slint UI proof-of-concept for ``importers/import_events.py``.
 

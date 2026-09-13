@@ -10,7 +10,7 @@ from visualizers.mini.renderer import MiniCalendarRenderer
 from visualizers.mini.visualizer import MiniCalendarVisualizer
 
 __all__ = [
-    "MiniCalendarVisualizer",
     "MiniCalendarLayout",
     "MiniCalendarRenderer",
+    "MiniCalendarVisualizer",
 ]

@@ -33,9 +33,8 @@ def test_public_wrapper_yields_the_same_shared_connection(tmp_path):
     db = CalendarDB(str(tmp_path / "wrapper.sqlite"))
     _make_db(db.db_path)
 
-    with db.get_connection() as public:
-        with db._get_connection() as private:
-            assert public is private
+    with db.get_connection() as public, db._get_connection() as private:
+        assert public is private
 
 
 def test_connection_stays_open_after_the_block_exits(tmp_path):
