@@ -7,16 +7,13 @@ Renders weekly calendar visualization using drawsvg for SVG generation.
 from __future__ import annotations
 
 import logging
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import arrow
-import drawsvg
 
 from config.config import (
-    FONT_REGISTRY,
     CompanyHolidayAlpha,
     CompanyHolidayColor,
     FederalHolidayAlpha,
@@ -27,7 +24,6 @@ from config.config import (
     monthcolors,
     resolve_page_margins,
     weekend_style_is_workweek,
-    weekend_style_starts_monday,
     weekend_style_starts_sunday,
 )
 from renderers.svg_base import BaseSVGRenderer
@@ -45,7 +41,7 @@ from shared.rule_engine import DayContext, StyleEngine, StyleResult
 if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
-    from visualizers.base import CoordinateDict, VisualizationResult
+    from visualizers.base import CoordinateDict
 
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,6 @@ appropriate visualizer based on view type.
 
 from __future__ import annotations
 
-from typing import Type
 
 from visualizers.base import BaseVisualizer
 

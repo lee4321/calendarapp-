@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from dataclasses import dataclass, replace
-from datetime import date, timedelta
+from datetime import date
 from typing import TYPE_CHECKING, Any
 
 import arrow

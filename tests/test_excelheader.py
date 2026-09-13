@@ -1,7 +1,6 @@
 """Tests for the excelheader Excel workbook generator."""
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 
 import openpyxl

@@ -23,13 +23,11 @@ Examples:
 import argparse
 import importlib.util
 import inspect
-import logging
 import os
 import re
 import shlex
 import sqlite3
 import sys
-from typing import Any, Dict
 
 # Ensure project root is on sys.path when run as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -45,7 +43,6 @@ from importers.common import (
     compute_file_hash,
     convert_date,
     convert_datetime,
-    determine_file_type,
     find_files,
     list_import_history,
     parse_import_pattern,
@@ -1136,7 +1133,7 @@ def main():
             if len(result.errors) > 3:
                 log(f"  ... and {len(result.errors) - 3} more errors", "error")
 
-        log(f"\n=== Generate Complete ===")
+        log("\n=== Generate Complete ===")
         log(f"Total imported: {result.imported_rows}")
         log(f"Total failed: {result.failed_rows}")
         log("=== import_events.py completed ===")
@@ -1220,7 +1217,7 @@ def main():
         total_imported += result.imported_rows
         total_failed += result.failed_rows
 
-    log(f"\n=== Import Complete ===")
+    log("\n=== Import Complete ===")
     log(f"Total imported: {total_imported}")
     log(f"Total failed: {total_failed}")
     log("=== import_events.py completed ===")

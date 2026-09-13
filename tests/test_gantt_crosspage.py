@@ -11,14 +11,12 @@ from __future__ import annotations
 import pytest
 from test_gantt_marks import render, task
 
-from shared.data_models import Event
 from visualizers.gantt.dependencies import (
     Dependency,
     assign_cross_page_references,
     icon_for_number,
 )
 from visualizers.gantt.details import KIND_OFFCHART_DEPENDENCY
-from visualizers.gantt.rows import GanttRow
 
 FAMILIES = ["circle-", "darkcircle-", "square-"]
 

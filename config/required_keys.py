@@ -28,7 +28,7 @@ never drift apart (§11.4).
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Iterable
 
@@ -377,7 +377,7 @@ def format_missing_key_error(
         buf.write(f"  used by:       {', '.join(sorted(req.used_by))}\n")
         if req.description:
             buf.write(f"  description:   {req.description}\n")
-        buf.write(f"  reference:     config/themes/basic.yaml\n")
+        buf.write("  reference:     config/themes/basic.yaml\n")
         buf.write("\n")
         buf.write("  add to your theme:\n\n")
         for line in _example_for(req).split("\n"):

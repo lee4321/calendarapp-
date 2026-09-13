@@ -4,14 +4,11 @@ Covers the ~30 test cases from pit_plan.html §8 and §12.5.
 """
 from __future__ import annotations
 
-import io
 import logging
 import re
-import tempfile
 from pathlib import Path
 
 import arrow
-import pytest
 
 from config.config import create_calendar_config, setfontsizes
 from shared.data_models import Event
@@ -20,15 +17,12 @@ from shared.rule_engine import StyleResult
 from visualizers.factory import VisualizerFactory
 from visualizers.pit.labella_adapter import (
     PIT_MAX_EVENTS_PER_SIDE,
-    PITPlacement,
     _partition_for_both,
     layout_pit_callouts,
 )
 from visualizers.pit.layout import PITLayout
 from visualizers.pit.markers import (
     _FILL_REPLACE_RE,
-    BUILTIN_SHAPES,
-    MarkerSpec,
     draw_label_icon,
     resolve_label_icon,
     resolve_marker,
@@ -1212,7 +1206,7 @@ def test_pit_today_line_markers(tmp_path):
 def test_pit_density_warning(tmp_path, caplog):
     """With > 80 events on a side, the logger emits a WARNING."""
     events = [
-        Event(task_name=f"E{i}", start=f"20260115", end=f"20260115")
+        Event(task_name=f"E{i}", start="20260115", end="20260115")
         for i in range(PIT_MAX_EVENTS_PER_SIDE + 1)
     ]
     config = _make_config(tmp_path, side="primary")

@@ -28,9 +28,6 @@ from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
 from shared.wbs_filter import wbs_group, wbs_sort_key
 from visualizers.timeline.labella_adapter import (
-    CalloutPlacement,
-)
-from visualizers.timeline.labella_adapter import (
     layout_callouts as _labella_layout_callouts,
 )
 from visualizers.timeline.packing import pack_callouts as _pack_callouts

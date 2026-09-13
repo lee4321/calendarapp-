@@ -2,7 +2,6 @@ import tempfile
 import unittest
 from argparse import Namespace
 
-import arrow
 import yaml
 
 from config.config import create_calendar_config

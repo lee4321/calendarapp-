@@ -40,8 +40,6 @@ from importers.common import (
 from importers.common import (
     ImportResult,
     compute_file_hash,
-    convert_date,
-    determine_file_type,
     find_files,
     list_import_history,
     parse_import_pattern,
@@ -644,7 +642,7 @@ def main():
         total_imported += result.imported_rows
         total_failed += result.failed_rows
 
-    log(f"\n=== Import Complete ===")
+    log("\n=== Import Complete ===")
     log(f"Total imported: {total_imported}")
     log(f"Total failed: {total_failed}")
     log("=== import_specialdays.py completed ===")
