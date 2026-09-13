@@ -1011,7 +1011,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             # StyleResult.  All matches for a given rule share the same style.
             sample_sr = items[0][1]
             fill_color_raw: Any = (
-                sample_sr.fill_color
+                sample_sr.fill_colors
+                if sample_sr.fill_colors is not None
+                else sample_sr.fill_color
                 if sample_sr.fill_color is not None
                 else _vline_fill_style.fill
             )

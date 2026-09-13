@@ -28,4 +28,5 @@ def test_vertical_line_rule_keeps_the_whole_fill_list():
         _rules("vertical_line", {"band": "Month", "repeat": True}, ["red", "blue"])
     )
     [(_, sr)] = engine.evaluate_band_segment("Month", "Sep")
-    assert sr.fill_color == ["red", "blue"]
+    assert sr.fill_colors == ["red", "blue"]
+    assert sr.fill_color == "red"

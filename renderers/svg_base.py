@@ -11,7 +11,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -1283,7 +1283,7 @@ class BaseSVGRenderer(ABC):
 
     def _draw_icon_band_row(
         self,
-        day_cells: list[tuple[float, float, list[tuple[str, str | None]]]],
+        day_cells: Sequence[tuple[float, float, Sequence[tuple[str, str | None]]]],
         row_y: float,
         row_h: float,
         icon_h: float,
@@ -1326,7 +1326,7 @@ class BaseSVGRenderer(ABC):
 
     def _draw_cell_icons(
         self,
-        icons: list[tuple[str, str | None]],
+        icons: Sequence[tuple[str, str | None]],
         cell_x: float,
         cell_w: float,
         row_y: float,
