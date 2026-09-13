@@ -1,5 +1,6 @@
 #!/bin/bash
-# Pre-commit: type-check, lint and test, then bump the CalVer version.
+# Pre-commit: type-check, lint, check formatting and test, then bump the
+# CalVer version.
 #
 # Checks run against the working tree, not only what is staged, and take
 # about 15 seconds. Skip them for one commit with `git commit --no-verify`.
@@ -23,6 +24,13 @@ echo "pre-commit: ruff"
 if ! uv run ruff check . --quiet >/dev/null 2>&1; then
     uv run ruff check . || true  # show the findings; set -e would stop here
     echo "pre-commit: ruff found problems (commit with --no-verify to skip)." >&2
+    exit 1
+fi
+
+echo "pre-commit: ruff format"
+if ! uv run ruff format --check . --quiet >/dev/null 2>&1; then
+    uv run ruff format --check . || true  # list the files; set -e would stop here
+    echo "pre-commit: files need formatting; run 'uv run ruff format .' (commit with --no-verify to skip)." >&2
     exit 1
 fi
 
