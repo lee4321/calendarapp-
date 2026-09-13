@@ -608,7 +608,7 @@ def list_import_history(db: ImportDatabase, log) -> None:
 
         total_rows = 0
         for row in imports:
-            import_id, userid, filename, date, filehash, row_count, command = row
+            import_id, _userid, filename, date, filehash, row_count, command = row
             display_name = (
                 filename[:20]
                 if filename and len(filename) <= 20
@@ -642,7 +642,7 @@ def remove_import(db: ImportDatabase, import_id, log, force=False, verbose=False
         log(f"Error: Import ID {import_id} not found.", "error")
         return False
 
-    _, userid, filename, date, _, row_count, _ = import_record
+    _, _userid, filename, date, _, row_count, _ = import_record
 
     if not force:
         display_date = date[:19] if date else ""

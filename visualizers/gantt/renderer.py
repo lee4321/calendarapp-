@@ -673,7 +673,7 @@ class GanttRenderer(BaseSVGRenderer):
             return
 
         table_x, table_y, table_w, _table_h = table
-        chart_x, _cy, chart_w, _ch = chart
+        _chart_x, _cy, chart_w, _ch = chart
         row_h = max(float(config.gantt_row_height), 1.0)
         visible_rows = rows
 

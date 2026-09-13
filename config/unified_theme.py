@@ -289,9 +289,7 @@ def _value_matches(want: Any, have: Any, *, key: str) -> bool:
             return False
         if lo is not None and n < float(lo):
             return False
-        if hi is not None and n > float(hi):
-            return False
-        return True
+        return not (hi is not None and n > float(hi))
 
     # priority_min / priority_max keys
     if key.endswith("_min"):
@@ -308,10 +306,7 @@ def _value_matches(want: Any, have: Any, *, key: str) -> bool:
     # List-valued selector — substring match on string contexts, exact-match
     # on others.  Case-insensitive for strings.
     if isinstance(want, list):
-        for item in want:
-            if _scalar_matches(item, have):
-                return True
-        return False
+        return any(_scalar_matches(item, have) for item in want)
 
     return _scalar_matches(want, have)
 

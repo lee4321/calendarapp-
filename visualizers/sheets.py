@@ -758,7 +758,7 @@ def _render_font_fullset(
     """
     from renderers.glyph_cache import get_font_codepoints, get_font_metrics, get_glyph
 
-    font_size_int = int(round(font_size))
+    font_size_int = round(font_size)
     upm, _, _ = get_font_metrics(font_path)
     scale = font_size / upm
     row_h = font_size + 5

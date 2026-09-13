@@ -806,10 +806,7 @@ class PITRenderer(BaseSVGRenderer):
             spec = resolve_marker(ev)
             base_color = ms_color_default if ev.milestone else dot_color_default
             color = ev.color or base_color
-            if ev.milestone:
-                m_size = marker_size
-            else:
-                m_size = dot_size
+            m_size = marker_size if ev.milestone else dot_size
             draw_marker(
                 self._drawing, spec, p.x_dot, p.y_dot,
                 size=m_size, color=color,
@@ -1034,7 +1031,7 @@ class PITRenderer(BaseSVGRenderer):
 
         # Geometry — perpendicular to the axis.
         ox, oy = axis_origin
-        ex, ey = axis_end
+        _ex, _ey = axis_end
         if direction is Orientation.HORIZONTAL:
             x = ox + pos
             # Half the axis-perp clearance — use the page-area band as

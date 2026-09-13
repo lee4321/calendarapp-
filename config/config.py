@@ -2776,7 +2776,7 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     )
 
     # Watermark base font size (paper-size aware, theme-overridable)
-    config.watermark_font_size = int(round(_clamp(h * 0.10, 24.0, 256.0)))
+    config.watermark_font_size = round(_clamp(h * 0.10, 24.0, 256.0))
 
     # Phase 2 wave 2: inject heuristic-derived size tokens so renderers'
     # `tk.get("size")` reads always return a value, even from test fixtures

@@ -12,6 +12,7 @@ applied to individual day cells. The DayStyle dataclass captures all
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import date
@@ -289,10 +290,8 @@ class DayStyleResolver:
 
             pattern = sd.get("pattern", 0)
             if pattern:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     style.hash_pattern = int(pattern)
-                except (ValueError, TypeError):
-                    pass
 
             style.add_icon(sd.get("icon"), ICON_RANK_SPECIAL_DAY)
 

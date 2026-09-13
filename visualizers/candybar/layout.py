@@ -221,10 +221,7 @@ class CandybarLayout(BaseLayout):
 
         # Split weeks into chunks (side-by-side strips).
         max_rows = max(0, int(config.candybar_max_rows_per_page or 0))
-        if max_rows > 0 and len(weeks) > max_rows:
-            chunk_size = max_rows
-        else:
-            chunk_size = len(weeks)
+        chunk_size = max_rows if max_rows > 0 and len(weeks) > max_rows else len(weeks)
         num_chunks = math.ceil(len(weeks) / chunk_size)
 
         # Row height: fixed when configured, else fit chunk_size rows + 1 header

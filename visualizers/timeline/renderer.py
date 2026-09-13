@@ -690,7 +690,7 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
         if durations:
-            title_size, notes_size, d_date_size, bar_h = self._duration_metrics(config)
+            _title_size, _notes_size, d_date_size, bar_h = self._duration_metrics(config)
             min_duration_offset = self._min_duration_offset(config, d_date_size)
             duration_offset = max(
                 config.timeline_duration_offset_y, min_duration_offset
@@ -1090,7 +1090,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # be kept further from the axis than their header is.
         rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_width * 0.01)
-        title_size, notes_size, date_size, _ = self._duration_metrics(config)
+        _title_size, _notes_size, _date_size, _ = self._duration_metrics(config)
 
         out: list[TimelineDuration] = []
 
@@ -1100,7 +1100,7 @@ class TimelineRenderer(BaseSVGRenderer):
         user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
         user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
 
-        for idx, event in enumerate(ordered):
+        for _idx, event in enumerate(ordered):
             start_day = self._safe_day(event.start, fallback=start)
             end_day = self._safe_day(event.end, fallback=start_day)
             if end_day < start_day:
@@ -1213,14 +1213,14 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_last_end: list[float] = []
         rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_height * 0.01)
-        title_size, notes_size, date_size, _ = self._duration_metrics(config)
+        _title_size, _notes_size, _date_size, _ = self._duration_metrics(config)
 
         out: list[TimelineDuration] = []
 
         user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
         user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
 
-        for idx, event in enumerate(ordered):
+        for _idx, event in enumerate(ordered):
             start_day = self._safe_day(event.start, fallback=start)
             end_day = self._safe_day(event.end, fallback=start_day)
             if end_day < start_day:
@@ -1750,7 +1750,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return
 
 
-        title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
+        _title_size, _notes_size, date_size, bar_h = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
@@ -2479,7 +2479,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return
 
 
-        title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
+        _title_size, _notes_size, date_size, bar_thickness = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
         duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
