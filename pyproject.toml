@@ -10,7 +10,7 @@ dependencies = [
     "openpyxl>=3.1.0",
     "pandas>=2.2.3",
     "python-dateutil>=2.9.0.post0",
-    "pillow>=11.0.0",
+    "pillow>=12.3.0",
     "pyyaml>=6.0",
     "fonttools>=4.50.0",
     "holidays>=0.92",
@@ -21,9 +21,17 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
+    "pytest>=9.0.3",
     "ruff>=0.16.7",
 ]
+
+[tool.uv]
+# PyPI's Pillow wheels ship without libraqm, which silently drops text
+# measurement to the BASIC layout engine (whole-pixel advances, no kerning)
+# and shifts every rendered label.  Build from source against the system
+# libraqm instead (macOS: `brew install libraqm`); guarded by
+# tests/test_text_layout_engine.py.
+no-binary-package = ["pillow"]
 
 [tool.ty.src]
 # Vendored third-party code and agent worktrees aren't ours to type-check.

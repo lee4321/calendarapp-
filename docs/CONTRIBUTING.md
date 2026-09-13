@@ -6,6 +6,11 @@ The architecture reading order lives in `docs/architecture/README.md`
 
 ## Ground rules
 
+- System prerequisite: `brew install libraqm` (pulls in fribidi). Pillow is
+  built from source (`[tool.uv] no-binary-package` in `pyproject.toml`) so it
+  links libraqm; PyPI wheels lack it and fall back to whole-pixel, unkerned
+  text measurement, which moves every label.
+  `tests/test_text_layout_engine.py` fails if raqm is missing.
 - Python is run with `uv run python …` (never a bare `python`).
 - Tests: `uv run python -m pytest tests/ -q` — the whole suite runs in ~10 s;
   run it after every change, not just at the end.
