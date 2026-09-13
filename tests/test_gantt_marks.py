@@ -6,6 +6,8 @@ primitives the renderer emitted, keyed by their `ec-*` class.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 from fakes import FakeCalendarDB
 
@@ -24,7 +26,7 @@ from visualizers.gantt.renderer import GanttRenderer
 class _DummyDB(FakeCalendarDB):
     """The minimum surface classify_day and the icon cache need."""
 
-    holidays: set[str] = set()
+    holidays: ClassVar[set[str]] = set()
 
     def get_palette(self, name):
         return None
@@ -356,7 +358,7 @@ def test_a_task_hidden_entirely_by_the_weekend_is_reported_not_drawn():
 
 def test_a_holiday_hidden_with_its_weekend_is_reported():
     class _HolidayDB(_DummyDB):
-        holidays = {"20260208"}  # a Sunday
+        holidays: ClassVar[set[str]] = {"20260208"}  # a Sunday
 
     renderer = render([task()], db=_HolidayDB())
     entries = [e for e in renderer.exceptions if e.kind == KIND_HIDDEN_HOLIDAY]
@@ -365,7 +367,7 @@ def test_a_holiday_hidden_with_its_weekend_is_reported():
 
 def test_holidays_on_working_days_are_shaded_not_reported():
     class _HolidayDB(_DummyDB):
-        holidays = {"20260204"}  # a Wednesday
+        holidays: ClassVar[set[str]] = {"20260204"}  # a Wednesday
 
     renderer = render([task()], db=_HolidayDB())
     assert [e for e in renderer.exceptions if e.kind == KIND_HIDDEN_HOLIDAY] == []

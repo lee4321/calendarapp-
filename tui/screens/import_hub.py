@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from textual import on
 from textual.app import ComposeResult
+from textual.binding import BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import (
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
 class ImportHubScreen(Screen):
     """Pick a data type to import."""
 
-    BINDINGS = [("escape", "app.pop_screen", "Home")]
+    BINDINGS: ClassVar[list[BindingType]] = [("escape", "app.pop_screen", "Home")]
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -62,7 +63,7 @@ class ImportHubScreen(Screen):
 class ImportWizardScreen(Screen):
     """Shared field-driven wizard for one importer."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("escape", "app.pop_screen", "Back"),
         ("ctrl+d", "dry_run", "Dry run"),
         ("ctrl+r", "do_import", "Import"),

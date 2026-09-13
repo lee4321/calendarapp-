@@ -13,7 +13,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 import arrow
 import drawsvg
@@ -1376,7 +1376,7 @@ class BaseSVGRenderer(ABC):
         ("FooterCenter", lambda X, W: X + W / 2, "middle", "footer_center"),
         ("FooterRight", lambda X, W: X + W, "end", "footer_right"),
     )
-    _HEADER_FOOTER_MAP: dict = {slot[0]: slot for slot in _HEADER_FOOTER_SLOTS}
+    _HEADER_FOOTER_MAP: ClassVar[dict] = {slot[0]: slot for slot in _HEADER_FOOTER_SLOTS}
 
     _DAY_NAME_KEYS: frozenset = frozenset(
         {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}

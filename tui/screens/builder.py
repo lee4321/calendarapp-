@@ -6,10 +6,11 @@ introspected spec, so new CLI flags appear here automatically.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from textual import on
 from textual.app import ComposeResult
+from textual.binding import BindingType
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import (
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
 
 
 class BuilderScreen(Screen):
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("escape", "app.pop_screen", "Home"),
         ("ctrl+r", "run", "Run"),
         ("ctrl+y", "copy", "Copy command"),

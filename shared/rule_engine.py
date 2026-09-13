@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 if TYPE_CHECKING:
     from shared.data_models import Event
@@ -516,7 +516,7 @@ class StyleEngine:
         self._rules = [r for r in (rules or []) if isinstance(r, dict)]
 
     # Legacy apply_to filter strings ↔ unified-schema tokens.
-    _UNIFIED_ALIASES: dict[str, set[str]] = {
+    _UNIFIED_ALIASES: ClassVar[dict[str, set[str]]] = {
         "duration": {"box:duration"},
         "event": {"box:event"},
         "day_box": {"box:day"},

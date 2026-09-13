@@ -7,6 +7,8 @@ appropriate visualizer based on view type.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from visualizers.base import BaseVisualizer
 
 
@@ -18,7 +20,7 @@ class VisualizerFactory:
     instances by type name.
     """
 
-    _visualizers: dict[str, type[BaseVisualizer]] = {}
+    _visualizers: ClassVar[dict[str, type[BaseVisualizer]]] = {}
 
     @classmethod
     def _ensure_registered(cls):

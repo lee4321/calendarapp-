@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from textual import on
 from textual.app import ComposeResult
+from textual.binding import BindingType
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
 
 
 class HomeScreen(Screen):
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("i", "import_hub", "Import"),
         ("q", "app.quit", "Quit"),
     ]

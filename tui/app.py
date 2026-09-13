@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import ClassVar
 
 from textual.app import App
+from textual.binding import BindingType
 
 from tui.screens.home import HomeScreen
 
@@ -16,7 +18,7 @@ class CalendarTUI(App):
     TITLE = "EventCalendar"
     SUB_TITLE = "Textual UI"
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("ctrl+q", "quit", "Quit"),
         ("d", "toggle_dark", "Dark/light"),
     ]
