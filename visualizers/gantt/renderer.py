@@ -282,7 +282,7 @@ class GanttRenderer(BaseSVGRenderer):
         rows: list,
         columns: list[GanttColumn],
         days: list[date],
-        segments: dict[int, list[BandSegment]],
+        segments: dict[tuple[str, int], list[BandSegment]],
         db: CalendarDB,
     ) -> None:
         """Draw one page: its slice of rows over its slice of the axis."""

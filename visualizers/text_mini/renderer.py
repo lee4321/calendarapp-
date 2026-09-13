@@ -263,11 +263,10 @@ class TextMiniCalendarRenderer:
                 symbol = event_symbol_map.get(id(event))
                 if not symbol:
                     continue
+                event_end = event.get("End") or event.get("Finish")
                 if event.get("Milestone"):
                     self._set_symbol(symbol_map, daykey, symbol, 80)
-                elif (event.get("End") or event.get("Finish")) and (
-                    (event.get("End") or event.get("Finish"))[:8] != event.get("Start")
-                ):
+                elif event_end and event_end[:8] != event.get("Start"):
                     # duration will be handled separately
                     pass
                 else:
@@ -368,7 +367,7 @@ class TextMiniCalendarRenderer:
             symbol_map[daykey] = symbol
             symbol_map[f"_prio_{daykey}"] = priority  # type: ignore
             return
-        prev = symbol_map.get(f"_prio_{daykey}", 0)  # type: ignore
+        prev = int(symbol_map.get(f"_prio_{daykey}", 0))
         if priority >= prev:
             symbol_map[daykey] = symbol
             symbol_map[f"_prio_{daykey}"] = priority  # type: ignore
