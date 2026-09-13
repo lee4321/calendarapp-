@@ -1376,7 +1376,7 @@ The validator parses the YAML, checks every required key per visualizer, and emi
 
 Every bundled theme passes `validate_theme.py`. When you add or remove required keys, keep these in mind:
 
-- **Leaving out a style token is not the same as defining it with the catalog default.** Without the token, several views draw those elements with their own built-in font, size and colour, and these differ from view to view. Defining the token — even with exactly the values in `config/element_catalog_defaults.yaml` — gives every view the same styling, so expect a visible change wherever it is used. The tokens where this shows are `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:holiday_title`, `text:week_number`, `text:today_label`, `text:band_label`, `text:swimlane_label`, `box:band`, `box:duration` and `icon:milestone`.
+- **Leaving out a style token is not the same as defining it with the catalog default.** Without the token, several views draw those elements with their own built-in font, size and colour, and these differ from view to view. Defining the token — even with exactly the values in `config/element_catalog_defaults.yaml` — gives every view the same styling, so expect a visible change wherever it is used. The tokens where this shows are `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:holiday_title`, `text:week_number`, `text:today_label`, `text:band_label`, `text:swimlane_label`, `box:band`, `box:duration` and `icon:milestone`. [Default Renderer Values](DefaultRendererValues.md) lists what each view draws when a token is left out.
 - **Some required keys have no visible effect.** Defining the tokens `text:base`, `text:milestone_label`, `box:swimlane_heading` and `box:swimlane_content` does not change the output, and the settings `compact_plan.legend_area_ratio` and `blockplan.band_row_height` are not read when rendering. They are required only so the validator passes, so any sensible value will do.
 - **`layout.margin` overrides `--margin`.** A side set in the theme is used for every render with that theme. Without it, pages have no margin unless `--margin` is passed, which adds a margin of 2% of the page width. A theme that sets all four sides to `0` therefore renders without a margin even when `--margin` is given.
 - **`blockplan.swimlanes` only declares lanes** (their `name` and `split_ratio`). An entry that also carries a `match:` block is rejected when the theme loads; route items into lanes with `apply_to: lane` rules instead (see [Lane Routing (Blockplan)](#lane-routing-blockplan)). A theme that omits `blockplan.swimlanes` gets the built-in Engineering, Operations and Quality lanes, which use `match:` and so can't be copied into a theme as they are.
@@ -1625,6 +1625,13 @@ onto a second page does not put the stripe on the other foot.
 > [Complex Structures Reference → `style_rules`](#style_rules--unified-visual-styling-rules).
 
 Grouped by visualization type. Within each group, rows are sorted alphabetically by `config field`.
+
+> **What actually gets drawn when a theme leaves a value unset.** The config defaults below are only part of the answer: style tokens fall back through per-view chains in the renderers, and element styles depend on whether the theme has a `style_rules:` section. [Default Renderer Values](DefaultRendererValues.md) lists the resulting values for every visualization, generated from the code by `tools/generate_default_renderer_values.py`:
+>
+> - [How a missing value is resolved](DefaultRendererValues.md#how-a-missing-value-is-resolved), including the text sizes computed from the page size
+> - Shared: [page chrome](DefaultRendererValues.md#page-chrome) and [companion details pages](DefaultRendererValues.md#companion-details-pages)
+> - Per visualization: [weekly](DefaultRendererValues.md#weekly), [mini](DefaultRendererValues.md#mini), [mini-icon](DefaultRendererValues.md#mini-icon), [candybar](DefaultRendererValues.md#candybar), [timeline](DefaultRendererValues.md#timeline), [pit](DefaultRendererValues.md#pit), [blockplan](DefaultRendererValues.md#blockplan), [gantt](DefaultRendererValues.md#gantt), [compactplan](DefaultRendererValues.md#compactplan), [text-mini](DefaultRendererValues.md#text-mini), [excelblockplan](DefaultRendererValues.md#excelblockplan)
+> - [Element style defaults](DefaultRendererValues.md#appendix-element-style-defaults) for every `ec-*` class, with and without `style_rules:`
 
 #### `shared`
 
