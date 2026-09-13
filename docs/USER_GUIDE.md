@@ -1359,7 +1359,7 @@ Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`,
 The fastest path is to copy `config/themes/basic.yaml` — the minimum viable theme — and edit. `basic.yaml` ships with every required key set to a plain default, so each line you change is a deliberate styling choice. Recipe:
 
 1. Start with a `theme:` metadata block (name, version, description).
-2. Define the `style_rules` tokens you need with `define:` entries — typically a few `text:` tokens (heading, body, day_number…), one or two `box:` tokens (cell, header), and any `icon:` tokens you reference.  The element catalog (`config/element_catalog.yaml`) lists the token names each `ec-*` element looks up.  Any required token you omit falls back to a safe default from `config/element_catalog_defaults.yaml`.
+2. Define the `style_rules` tokens you need with `define:` entries — typically a few `text:` tokens (heading, body, day_number…), one or two `box:` tokens (cell, header), and any `icon:` tokens you reference.  The element catalog (`config/element_catalog.yaml`) lists the token names each `ec-*` element looks up.  A token you omit doesn't break rendering — each view falls back to its own built-in styling (see [What the required keys do](#what-the-required-keys-do)) — but `validate_theme.py` reports it as missing.
 3. (Optional) Add an `element_overrides:` block if you need to rebind a single `ec-*` element to a different token (`use: text:label`) or pin a per-element color.  Most themes need no overrides; the catalog covers every element class out of the box.
 4. Add content rules that should override the defaults — federal-holiday tinting, high-priority highlighting, sprint hatching — by appending `apply_to: box:day` (or `box:event`, etc.) entries with `select:` predicates.
 5. Add any non-styling configuration you need: format strings under `weekly` / `mini_calendar` / `timeline` / `fiscal`; structural lists under `blockplan.swimlanes` and the shared `time_bands:` catalog; `colors.*_palette` palette names.
@@ -1371,6 +1371,15 @@ uv run python tools/validate_theme.py config/themes/mytheme.yaml
 ```
 
 The validator parses the YAML, checks every required key per visualizer, and emits a paste-ready snippet (from `basic.yaml`) for anything missing.
+
+#### What the required keys do
+
+Every bundled theme passes `validate_theme.py`. When you add or remove required keys, keep these in mind:
+
+- **Leaving out a style token is not the same as defining it with the catalog default.** Without the token, several views draw those elements with their own built-in font, size and colour, and these differ from view to view. Defining the token — even with exactly the values in `config/element_catalog_defaults.yaml` — gives every view the same styling, so expect a visible change wherever it is used. The tokens where this shows are `text:event_name`, `text:event_notes`, `text:event_date`, `text:duration_date`, `text:holiday_title`, `text:week_number`, `text:today_label`, `text:band_label`, `text:swimlane_label`, `box:band`, `box:duration` and `icon:milestone`.
+- **Some required keys have no visible effect.** Defining the tokens `text:base`, `text:milestone_label`, `box:swimlane_heading` and `box:swimlane_content` does not change the output, and the settings `compact_plan.legend_area_ratio` and `blockplan.band_row_height` are not read when rendering. They are required only so the validator passes, so any sensible value will do.
+- **`layout.margin` overrides `--margin`.** A side set in the theme is used for every render with that theme. Without it, pages have no margin unless `--margin` is passed, which adds a margin of 2% of the page width. A theme that sets all four sides to `0` therefore renders without a margin even when `--margin` is given.
+- **`blockplan.swimlanes` only declares lanes** (their `name` and `split_ratio`). An entry that also carries a `match:` block is rejected when the theme loads; route items into lanes with `apply_to: lane` rules instead (see [Lane Routing (Blockplan)](#lane-routing-blockplan)). A theme that omits `blockplan.swimlanes` gets the built-in Engineering, Operations and Quality lanes, which use `match:` and so can't be copied into a theme as they are.
 
 ### External CSS Overrides
 
@@ -1943,8 +1952,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_marker_radius` | `blockplan.marker_radius` | `float` | `2.0` | marker radius |
 | `blockplan_palette` | `blockplan.palette` | `list[str]` | `field(default_factory=lambda: ['lightskyblue', 'gold', 'tomato', 'springgreen...` | palette |
 | `blockplan_show_unmatched_lane` | `blockplan.show_unmatched_lane` | `bool` | `True` | show unmatched lane |
-| `blockplan_swimlanes` | `blockplan.swimlanes` | `list[dict[str, Any]]` | see default | Lane visual definitions only. Routing is handled by top-level `swimlane_rules`. |
-| *(new)* | `swimlane_rules` (top-level) | `list[dict]` | `[]` | Blockplan lane routing: `select:` + `apply_to: "lane name"`. First match wins. See Complex Structures Reference. |
+| `blockplan_swimlanes` | `blockplan.swimlanes` | `list[dict[str, Any]]` | see default | Lane declarations only (`name`, `split_ratio`); an entry with `match:` is rejected. Route items into lanes with `apply_to: lane` rules in `style_rules` (first match wins) — see Lane Routing (Blockplan). |
 | `blockplan_time_bands` | `blockplan.time_bands` | `list[dict[str, Any]]` | `field(default_factory=lambda: [{'label': 'Fiscal Quarter', 'unit': 'fiscal_qu...` | time bands |
 | `blockplan_top_time_bands` | `blockplan.top_time_bands` | `list[dict]` | see default | time-band rows rendered above swimlanes; see Complex Structures Reference |
 | `blockplan_timeband_fill_color` | `blockplan.timeband_fill_color` | `str` | `'none'` | timeband fill color |
@@ -2536,10 +2544,11 @@ Anything that controls *appearance* — fills, strokes, fonts, colors, patterns,
 ## Notes
 
 - Paper-size-conditional styling is expressed as a `style_rules` entry with `select.papersize: [letter, tabloid]` (or similar). Later rules override earlier ones.
-- `layout.margin.*` accepts numeric points or values with units such as `0.5in` and `10mm`.
+- `layout.margin.*` accepts numeric points or values with units such as `0.5in` and `10mm`. A side set in the theme applies to every render with that theme, including with `--margin`.
 - `colors.*_palette` keys reference DB palette names and resolve during render.
 - Run `ecalendar.py help <subcommand>` for allowed values and focused help output.
 - Run `uv run python tools/validate_theme.py <theme.yaml>` to check a theme against the unified schema.
+- Run `ecalendar.py` from the project root. Font files are located relative to it, so SVG views fail with a font error when run from another directory.
 
 ---
 

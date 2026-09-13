@@ -36,6 +36,52 @@ timeline_events:
   inner_pad: 2.0
   # share of a box's inner width given to the icon / date column
   icon_column_ratio: 0.15
+blockplan:
+  band_row_height: 12.0
+  fiscal_year_start_month: 10
+  label_column_ratio: 0.16
+  lane_match_mode: first
+  show_unmatched_lane: true
+  swimlanes:
+  - name: Other
+  unmatched_lane_name: Unmatched
+  week_start: 0
+colors:
+  fiscal_palette: Greys
+  group_palette: Greys
+  month_palette: Greys
+compact_plan:
+  legend_area_ratio: 0.25
+events:
+  item_placement_order: [priority]
+excelblockplan:
+  band_row_height: 18.0
+  font_name: Calibri
+  font_size: 9
+fiscal:
+  end_label_format: '{period_short} End'
+  label_format: '{prefix}{period_short}'
+layout:
+  margin:
+    bottom: 0
+    left: 0
+    right: 0
+    top: 0
+mini_details:
+  column_widths: [0.16, 0.52, 0.1, 0.1, 0.12]
+  headers: [Start Date, Name / Description, Milestone, Priority, Group]
+  output_suffix: _details
+  title_text: Event Details
+text_mini:
+  cell_width: 2
+  event_symbols: [⯍, ⯏, 🟈, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐, 🞿, 🞭, 🞹, ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐, ❖, ◊, ⯪, ⯫, ꥟, 𜱃, 𜱪, 𜱩, 𜸂, "\U0001cecf", 🟙, 🝴, "\U0001fa54", 🮻, 🯀, 🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633", ⟠, ⨷, ✢, ✨, ❂]
+  holiday_symbols: [🅰, 🅱, 🅲, 🅳, 🅴, 🅵, 🅶, 🅷, 🅸, 🅹, 🅺, 🅻, 🅼, 🅽, 🅾, 🅿, 🆀, 🆁, 🆂, 🆃, 🆄, 🆅, 🆆, 🆇, 🆈, 🆉]
+  milestone_symbols: [🄰, 🄱, 🄲, 🄳, 🄴, 🄵, 🄶, 🄷, 🄸, 🄹, 🄺, 🄻, 🄼, 🄽, 🄾, 🄿, 🅀, 🅁, 🅂, 🅃, 🅄, 🅅, 🅆, 🅇, 🅈, 🅉]
+  month_gap: 4
+  nonworkday_symbols: [𝒂, 𝒃, 𝒄, 𝒅, 𝒆, 𝒇, 𝒈, 𝒉, 𝒊, 𝒋, 𝒌, 𝒍, 𝒎, 𝒏, 𝒐, 𝒑, 𝒒, 𝒓, 𝒔, 𝒕, 𝒖, 𝒗, 𝒘, 𝒙, 𝒚, 𝒛]
+weekly:
+  week_numbers:
+    label_format: W{num:02d}
 style_rules:
   - name: define text:heading
     define: text
@@ -103,6 +149,202 @@ style_rules:
     as: event
     style:
       color: '#333333'
+  - name: define box:band
+    define: box
+    as: band
+    style:
+      fill: none
+      stroke: none
+  - name: define box:callout
+    define: box
+    as: callout
+    style:
+      fill: white
+      fill_opacity: 0.25
+      stroke: '#CCCCCC'
+      stroke_width: 1.0
+  - name: define box:day
+    define: box
+    as: day
+    style:
+      fill: '#F8F8FF'
+      fill_opacity: 0.25
+      stroke: '#CCCCCC'
+      stroke_width: 0.5
+  - name: define box:duration
+    define: box
+    as: duration
+    style:
+      fill: '#888888'
+      fill_opacity: 0.75
+      stroke: none
+  - name: define box:event
+    define: box
+    as: event
+    style:
+      fill: none
+      stroke: none
+  - name: define box:header
+    define: box
+    as: header
+    style:
+      fill: none
+      stroke: none
+  - name: define box:milestone
+    define: box
+    as: milestone
+    style:
+      fill: none
+      stroke: none
+  - name: define box:swimlane_content
+    define: box
+    as: swimlane_content
+    style:
+      fill: none
+      stroke: none
+  - name: define box:swimlane_heading
+    define: box
+    as: swimlane_heading
+    style:
+      fill: '#fafafa'
+      stroke: lightgrey
+      stroke_width: 0.5
+  - name: define box:vline
+    define: box
+    as: vline
+    style:
+      fill: lightblue
+      fill_opacity: 0.3
+      stroke: none
+  - name: define icon:duration
+    define: icon
+    as: duration
+    style:
+      color: '#555555'
+      size: 10
+  - name: define icon:milestone
+    define: icon
+    as: milestone
+    style:
+      color: '#333333'
+      size: 10
+  - name: define icon:overflow
+    define: icon
+    as: overflow
+    style:
+      color: red
+      size: 10
+      icon: overflow
+  - name: define line:separator
+    define: line
+    as: separator
+    style:
+      color: '#CCCCCC'
+      width: 0.5
+      opacity: 0.5
+  - name: define text:band_label
+    define: text
+    as: band_label
+    style:
+      font: Roboto-Regular
+      size: 7
+      color: black
+  - name: define text:base
+    define: text
+    as: base
+    style:
+      font: Roboto-Regular
+      size: 9
+      color: black
+  - name: define text:day_number
+    define: text
+    as: day_number
+    style:
+      font: RobotoCondensed-Bold
+      size: 11
+      color: '#333333'
+  - name: define text:duration_date
+    define: text
+    as: duration_date
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:event_date
+    define: text
+    as: event_date
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:event_name
+    define: text
+    as: event_name
+    style:
+      font: RobotoCondensed-Light
+      size: 10
+      color: '#333333'
+  - name: define text:event_notes
+    define: text
+    as: event_notes
+    style:
+      font: RobotoCondensed-LightItalic
+      size: 9
+      color: '#666666'
+  - name: define text:fiscal_label
+    define: text
+    as: fiscal_label
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:holiday_title
+    define: text
+    as: holiday_title
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#333333'
+  - name: define text:milestone_label
+    define: text
+    as: milestone_label
+    style:
+      font: Roboto-Regular
+      size: 7
+      color: black
+  - name: define text:month_title
+    define: text
+    as: month_title
+    style:
+      font: RobotoCondensed-Bold
+      size: 11
+      color: '#333333'
+  - name: define text:swimlane_label
+    define: text
+    as: swimlane_label
+    style:
+      font: Roboto-Regular
+      size: 8
+      color: black
+  - name: define text:today_label
+    define: text
+    as: today_label
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#FF4444'
+  - name: define text:week_number
+    define: text
+    as: week_number
+    style:
+      font: RobotoCondensed-Light
+      size: 9
+      color: '#888888'
+  - name: route everything to Other
+    apply_to: lane
+    select: {}
+    style:
+      swimlane: Other
 element_overrides:
   ec-day-number:
     use: text:label
@@ -148,6 +390,8 @@ element_overrides:
 base:
   # size of the stand-in glyph; null = the size of what it replaces
   default_missing_icon_size: null
+  default_missing_icon: applet-closed
+  font_family: Roboto-Regular
 overflow:
   # marks a box that could not hold what it was given: a weekly day with
   # more events than rows, a timeline bar narrower than its own name
@@ -161,6 +405,8 @@ mini_calendar:
   # top-right first and then clockwise
   event_icon_scale: 0.25      # fraction of the cell's shorter side
   event_icon_opacity: 0.6     # keeps the day number legible underneath
+  title_format: MMMM YYYY
+  week_number_label_format: W{num}
 timeline:
   leader:
     # one curve per leader instead of one per row it crosses
@@ -187,3 +433,9 @@ timeline:
   tick_label_gap: null
   # the whole distance; wins over the gap
   tick_label_offset_y: null
+  duration_lane_gap_y: 8.0
+  duration_offset_y: 44.0
+  icon_size: 8.0
+  marker_radius: 6
+  tick_label_format: MMM D
+  today_label_text: Today
