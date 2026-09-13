@@ -146,6 +146,16 @@ _DURATION_DATE_GAP_X: float = 4.0
 _DURATION_ICON_MIN_SIZE: float = 3.0
 
 
+def _base_name_size(config: CalendarConfig) -> float:
+    """Page-scaled event-name size the timeline's text sizes derive from.
+
+    setfontsizes() sets it before any render, so None here is a caller bug.
+    """
+    size = config.weekly_name_text_font_size
+    assert size is not None, "setfontsizes() must run before the timeline renders"
+    return size
+
+
 class TimelineRenderer(BaseSVGRenderer):
     """Renderer for timeline visualization."""
 
@@ -643,8 +653,8 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         # Seed bounds with the axis line itself (plus tick clearance).
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
-        date_size = max(8.0, config.weekly_name_text_font_size * 0.95)
+        label_size = max(7.0, _base_name_size(config) * 0.8)
+        date_size = max(8.0, _base_name_size(config) * 0.95)
 
         # Axis + tick labels extend above axis_y (smaller SVG y = visually higher)
         axis_tick_top = axis_y - (tick_h + label_size * 1.5)
@@ -1697,7 +1707,7 @@ class TimelineRenderer(BaseSVGRenderer):
         bar_y, bar_h = self._duration_bar_y(config, item, axis_y)
         row_extent = self._duration_row_extent(config)
         fits = self._duration_fits(bar_y + row_extent, limit)
-        end_y = bar_y if fits else float(limit) - row_extent
+        end_y = bar_y if fits or limit is None else limit - row_extent
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
             item.start_x,
@@ -2018,7 +2028,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _split_name_two_lines(
-        name: str, font_path: str | None, size: float
+        name: str, font_path: str, size: float
     ) -> tuple[str, str]:
         """Break a name at the word boundary that balances the two lines.
 
@@ -2426,8 +2436,8 @@ class TimelineRenderer(BaseSVGRenderer):
         fits = self._duration_fits(abs(far_edge - axis_x), limit)
         end_x = (
             bar_near_axis_x
-            if fits
-            else axis_x + sign * (float(limit) - bar_thickness)
+            if fits or limit is None
+            else axis_x + sign * (limit - bar_thickness)
         )
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         self._draw_line(
@@ -2640,7 +2650,7 @@ class TimelineRenderer(BaseSVGRenderer):
             or (
                 float(config.timeline_name_text_font_size * 0.85)
                 if config.timeline_name_text_font_size is not None
-                else max(8.0, config.weekly_name_text_font_size * 0.86)
+                else max(8.0, _base_name_size(config) * 0.86)
             )
         )
         notes_size = (
@@ -2648,7 +2658,7 @@ class TimelineRenderer(BaseSVGRenderer):
             or (
                 float(config.timeline_notes_text_font_size * 0.82)
                 if config.timeline_notes_text_font_size is not None
-                else max(7.0, config.weekly_name_text_font_size * 0.74)
+                else max(7.0, _base_name_size(config) * 0.74)
             )
         )
         date_size = (
@@ -2656,7 +2666,7 @@ class TimelineRenderer(BaseSVGRenderer):
             or (
                 float(config.timeline_duration_date_font_size)
                 if config.timeline_duration_date_font_size is not None
-                else max(7.0, config.weekly_name_text_font_size * 0.78)
+                else max(7.0, _base_name_size(config) * 0.78)
             )
         )
         if config.timeline_duration_box_height is not None:
@@ -2865,7 +2875,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _tick_label_top_clearance(
-        config: CalendarConfig, tick_bands_cfg: object
+        config: CalendarConfig, tick_bands_cfg: dict | list | None
     ) -> float:
         """Maximum vertical extent (pts) of any tick band's label above the axis.
 
@@ -2880,7 +2890,7 @@ class TimelineRenderer(BaseSVGRenderer):
             if isinstance(tick_bands_cfg, dict)
             else list(tick_bands_cfg)
         )
-        default_label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        default_label_size = max(7.0, _base_name_size(config) * 0.8)
         default_tick_h = max(6.0, config.timeline_axis_width * 2.5)
         max_above = 0.0
         for tb in bands:
@@ -3002,14 +3012,14 @@ class TimelineRenderer(BaseSVGRenderer):
         label_size = float(
             band.get("label_font_size")
             or band.get("font_size")
-            or max(7.0, config.weekly_name_text_font_size * 0.8)
+            or max(7.0, _base_name_size(config) * 0.8)
         )
         return {
             "tick_h": tick_h,
             "tick_width": float(band.get("tick_width") or 1.0),
             "tick_opacity": float(
-                band.get("tick_opacity")
-                if band.get("tick_opacity") is not None
+                tick_opacity
+                if (tick_opacity := band.get("tick_opacity")) is not None
                 else 0.35
             ),
             "tick_color": str(band.get("tick_color") or _tick_style.color),
@@ -3024,8 +3034,8 @@ class TimelineRenderer(BaseSVGRenderer):
                 or _tick_style.color
             ),
             "label_opacity": float(
-                band.get("label_opacity")
-                if band.get("label_opacity") is not None
+                label_opacity
+                if (label_opacity := band.get("label_opacity")) is not None
                 else 0.8
             ),
             "font_name": str(
@@ -3645,7 +3655,7 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        label_size = max(7.0, _base_name_size(config) * 0.8)
         band_h = label_size * 1.8
         band_gap = 2.0
 
@@ -3728,7 +3738,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if not rows:
             return
 
-        label_size = max(7.0, config.weekly_name_text_font_size * 0.8)
+        label_size = max(7.0, _base_name_size(config) * 0.8)
         band_w = label_size * 1.8
         band_gap = 2.0
         sign = 1.0 if side is Side.PRIMARY else -1.0
@@ -4106,7 +4116,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_today_label = self._tk("text:today_label")
         label_size = (
             tk_today_label.get("size")
-            or max(7.0, config.weekly_name_text_font_size * 0.8)
+            or max(7.0, _base_name_size(config) * 0.8)
         )
         label = config.timeline_today_label_text or "Today"
         font_name = (
@@ -4211,7 +4221,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_today_label = self._tk("text:today_label")
         label_size = (
             tk_today_label.get("size")
-            or max(7.0, config.weekly_name_text_font_size * 0.8)
+            or max(7.0, _base_name_size(config) * 0.8)
         )
         preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
         # Keep label baseline inside SVG bounds.
@@ -4399,7 +4409,7 @@ class TimelineRenderer(BaseSVGRenderer):
             or (
                 float(config.timeline_name_text_font_size)
                 if config.timeline_name_text_font_size is not None
-                else max(10.0, config.weekly_name_text_font_size + 2.0)
+                else max(10.0, _base_name_size(config) + 2.0)
             )
         )
         notes_size = (
@@ -4407,11 +4417,11 @@ class TimelineRenderer(BaseSVGRenderer):
             or (
                 float(config.timeline_notes_text_font_size)
                 if config.timeline_notes_text_font_size is not None
-                else max(8.0, config.weekly_name_text_font_size * 0.9)
+                else max(8.0, _base_name_size(config) * 0.9)
             )
         )
         date_size = (
             self._tk("text:event_date").get("size")
-            or max(8.0, config.weekly_name_text_font_size * 0.95)
+            or max(8.0, _base_name_size(config) * 0.95)
         )
         return title_size, notes_size, date_size
