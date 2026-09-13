@@ -49,7 +49,7 @@ def _get_glyph_path(font_path: str, codepoint: int) -> str:
     Returns empty string if the glyph is not found or has no outlines.
     """
     ttfont = _load_ttfont(font_path)
-    cmap = ttfont.getBestCmap()
+    cmap = ttfont.getBestCmap() or {}
     if codepoint not in cmap:
         return ""
     glyph_name = cmap[codepoint]
@@ -122,7 +122,7 @@ def get_ink_extents(font_path: str) -> tuple[float, float]:
         ttfont = _load_ttfont(font_path)
         upm = ttfont["head"].unitsPerEm
         glyph_set = ttfont.getGlyphSet()
-        cmap = ttfont.getBestCmap()
+        cmap = ttfont.getBestCmap() or {}
     except Exception:
         return _INK_FALLBACK
 

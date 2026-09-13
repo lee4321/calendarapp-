@@ -17,8 +17,6 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
-from dataclasses import dataclass, field
-
 from shared.fiscal_renderer import get_fiscal_period_color
 from shared.rule_engine import DayContext, StyleEngine
 

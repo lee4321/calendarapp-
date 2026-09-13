@@ -163,10 +163,8 @@ def _resolve_event_style(
     icon_color: str | None = None
     if engine is not None:
         sr = engine.evaluate_event(event, ctx=_event_day_context(event))
-        if sr.fill_color and not isinstance(sr.fill_color, list):
+        if sr.fill_color:
             fill_color = str(sr.fill_color)
-        elif isinstance(sr.fill_color, list) and sr.fill_color:
-            fill_color = str(sr.fill_color[0])
         if sr.icon_color:
             icon_color = str(sr.icon_color)
     if icon_color is None:

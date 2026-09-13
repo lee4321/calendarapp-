@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from typing import Iterator
 
@@ -253,7 +253,7 @@ class CalendarDB:
         """
         yield self._connect()
 
-    def get_connection(self) -> Iterator[sqlite3.Connection]:
+    def get_connection(self) -> AbstractContextManager[sqlite3.Connection]:
         """Public context manager for database connections.
 
         Yields the same shared connection as :meth:`_get_connection`; callers

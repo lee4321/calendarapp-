@@ -502,3 +502,12 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
     # The text:day_number token beats everything below it.
     for r in renderers:
         assert r._resolve_day_number_color(config, {"color": "crimson"}) == "crimson"
+
+
+def test_a_fill_list_on_a_day_rule_shades_with_its_first_color():
+    config = _config()
+    config.theme_style_rules = [
+        {"apply_to": "day_box", "select": {}, "style": {"fill": ["red", "blue"]}}
+    ]
+    style = DayStyleResolver(config, _StubDB()).resolve("20260914", [])
+    assert style.shade_color == "red"

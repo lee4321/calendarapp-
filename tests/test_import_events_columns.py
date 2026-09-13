@@ -276,3 +276,17 @@ def test_custom_fields_and_lists_pass_through():
 def test_status_defaults_to_active():
     assert _transform()["status"] == "active"
     assert _transform(Status="draft")["status"] == "draft"
+
+
+def test_generator_script_that_cannot_be_loaded_raises_a_clear_error(
+    tmp_path, monkeypatch
+):
+    from importers import import_events
+
+    script = tmp_path / "gen.py"
+    script.write_text("def generate_events():\n    return []\n")
+    monkeypatch.setattr(
+        "importlib.util.spec_from_file_location", lambda *args, **kwargs: None
+    )
+    with pytest.raises(ValueError, match="Cannot load generator script"):
+        import_events.load_generator_script(str(script))
