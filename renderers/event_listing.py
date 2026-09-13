@@ -11,8 +11,8 @@ every one of them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from renderers.details_page import DetailsColumn, format_datekey
 from shared.holiday_labels import format_holiday_label

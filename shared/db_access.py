@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
-from collections.abc import Iterator
 
 from shared.events_schema import migrate_events_table
 
