@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from fakes import FakeCalendarDB
 
 import ecalendar
 from config.config import create_calendar_config, setfontsizes
@@ -11,7 +12,7 @@ from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
 _PAPER_SIZES = {"Widescreen": (1056.0, 594.0), "Letter": (792.0, 612.0)}
 
 
-class _FakeDB:
+class _FakeDB(FakeCalendarDB):
     def __init__(self, events, holidays=None, specials=None):
         self._events = events
         self._holidays = holidays or {}

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import arrow
 import drawsvg
 import pytest
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
 from renderers.text_utils import string_width
@@ -22,9 +24,8 @@ from visualizers.timeline.renderer import (
 )
 
 
-class _DummyDB:
-    @staticmethod
-    def get_palette(name):
+class _DummyDB(FakeCalendarDB):
+    def get_palette(self, name):
         return None
 
 
@@ -60,7 +61,10 @@ class _CaptureMarkerRenderer(TimelineRenderer):
         self.circle_calls: list[dict] = []
         self.text_calls: list[dict] = []
 
-    def _draw_circle(self, cx, cy, radius, fill, stroke, stroke_width):
+    def _draw_circle(
+        self, cx, cy, radius, stroke="black", fill="none", stroke_width=1.0,
+        stroke_opacity=None, css_class=None,
+    ):
         self.circle_calls.append(
             {
                 "cx": cx,
@@ -484,11 +488,11 @@ def test_timeline_callout_date_is_drawn_inside_its_own_box(tmp_path):
     date_b = [c for c in renderer.text_calls if c["text"] == "20260111"]
     assert date_a and date_b
 
-    for date, callout in ((date_a[0], callout_a), (date_b[0], callout_b)):
+    for date_call, callout in ((date_a[0], callout_a), (date_b[0], callout_b)):
         # Right-aligned on the title line, so the anchor sits at the box's
         # right edge and the baseline within its vertical span.
-        assert callout.box_x < date["x"] <= callout.box_x + callout.box_width
-        assert callout.box_y <= date["y"] <= callout.box_y + callout.box_height
+        assert callout.box_x < date_call["x"] <= callout.box_x + callout.box_width
+        assert callout.box_y <= date_call["y"] <= callout.box_y + callout.box_height
 
     # Each date tracks its own box rather than a shared row near the axis.
     assert date_a[0]["x"] != date_b[0]["x"]
@@ -922,9 +926,9 @@ def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
     dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
     assert [d["text"] for d in dates] == ["Jan 19", "May 25"]
     # Each date is centered on its own icon and sits below it.
-    for icon, date in zip(renderer.icon_calls, dates):
-        assert date["x"] == pytest.approx(icon["x"])
-        assert date["y"] > icon["y"]
+    for icon, date_call in zip(renderer.icon_calls, dates):
+        assert date_call["x"] == pytest.approx(icon["x"])
+        assert date_call["y"] > icon["y"]
 
 
 def test_timeline_holiday_dates_stagger_instead_of_colliding(tmp_path):
@@ -1527,9 +1531,9 @@ def test_the_start_and_end_dates_are_drawn_inside_the_bar(tmp_path):
 
     dates = _date_texts(renderer)
     assert len(dates) == 2
-    for date in dates:
-        assert bar.start_x <= date["x"] <= bar.end_x
-        assert bar_y <= date["y"] <= bar_y + bar_h
+    for date_call in dates:
+        assert bar.start_x <= date_call["x"] <= bar.end_x
+        assert bar_y <= date_call["y"] <= bar_y + bar_h
 
 
 def test_the_start_date_sits_at_the_left_end_and_the_end_date_at_the_right(tmp_path):
@@ -1648,7 +1652,7 @@ class _CaptureCircleRenderer(_CaptureOverflowRenderer):
         super().__init__()
         self.circle_calls: list[dict] = []
 
-    def _draw_circle(self, cx, cy, radius, **kwargs):
+    def _draw_circle(self, cx, cy, radius, *args, **kwargs):
         self.circle_calls.append({"cx": cx, "cy": cy, "radius": radius})
 
 
@@ -1970,8 +1974,8 @@ def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
     dates = _date_texts(renderer)
     assert len(dates) == 2
     # Rotated with the label, and pulled in from each along-axis end.
-    for date in dates:
-        assert "rotate(-90" in (date.get("transform") or "")
+    for date_call in dates:
+        assert "rotate(-90" in (date_call.get("transform") or "")
     cx_values = {round(d["x"], 3) for d in dates}
     assert len(cx_values) == 2      # one toward each end, not stacked
 
@@ -2091,7 +2095,7 @@ def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):
 
 
 def _callout(**overrides):
-    kwargs = dict(
+    kwargs: dict[str, Any] = dict(
         event=Event(
             task_name="Go-Live Event",
             start="20260727",
@@ -2639,9 +2643,9 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     dates = [c for c in renderer.text_calls
              if c.get("css_class") == "ec-holiday-date"]
     assert [d["text"] for d in dates] == ["Feb 16", "Apr 6"]
-    for date, icon in zip(dates, renderer.icon_calls):
-        assert date["x"] < icon["x"]            # written past the icon
-        assert date["anchor"] == "end"
+    for date_call, icon in zip(dates, renderer.icon_calls):
+        assert date_call["x"] < icon["x"]            # written past the icon
+        assert date_call["anchor"] == "end"
 
 
 def test_holiday_marks_follow_the_bars_to_the_other_side(tmp_path):

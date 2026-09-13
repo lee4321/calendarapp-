@@ -76,6 +76,7 @@ def test_every_theme_lays_out_callouts_at_one_width(theme_path: Path, tmp_path):
     )
 
     widths = {round(c.box_width, 2) for c in callouts}
+    assert config.timeline_event_box_width is not None
     assert widths == {round(float(config.timeline_event_box_width), 2)}, (
         f"{theme_path.name} produced callout widths {sorted(widths)}"
     )

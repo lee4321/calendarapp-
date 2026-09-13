@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+from fakes import FakeCalendarDB
+
 from config.config import create_calendar_config, setfontsizes
 from visualizers.compactplan.layout import CompactPlanLayout
 from visualizers.compactplan.renderer import CompactPlanRenderer
@@ -13,21 +15,17 @@ from visualizers.compactplan.renderer import CompactPlanRenderer
 # ---------------------------------------------------------------------------
 
 
-class _DummyDB:
-    @staticmethod
-    def get_palette(name):
+class _DummyDB(FakeCalendarDB):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def is_nonworkday(daykey, country=None):
+    def is_nonworkday(self, daykey, country=None):
         return False
 
-    @staticmethod
-    def get_holidays_for_date(daykey, country=None):
+    def get_holidays_for_date(self, daykey, country=None):
         return []
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
 
@@ -496,8 +494,7 @@ def test_renderer_empty_events_no_crash(tmp_path):
 class _IconDB(_DummyDB):
     """DB stub that serves a single named icon so icon bands can draw."""
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {
             "diamond": '<svg viewBox="0 0 24 24"><path d="M12 2L22 12L12 22L2 12Z"/></svg>'
         }
@@ -573,7 +570,7 @@ def test_renderer_icon_band_cells_carry_band_class(tmp_path):
 def test_icon_band_row_rects_unclassed_by_default():
     """blockplan / timeline call the helper without css_class — stays unclassed."""
     renderer = _IconCaptureRenderer()
-    renderer._draw_rect = lambda *a, **kw: renderer.rect_calls.append(kw)  # type: ignore[method-assign]
+    renderer._draw_rect = lambda *a, **kw: renderer.rect_calls.append(kw)  # ty: ignore[invalid-assignment]
 
     renderer._draw_icon_band_row(
         [(0.0, 10.0, [])], row_y=0.0, row_h=12.0, icon_h=8.0, fill_color="#cccccc"
@@ -608,8 +605,7 @@ class _PageCaptureRenderer(_CaptureCompactPlanRenderer):
 
 
 class _HolidayDB(_DummyDB):
-    @staticmethod
-    def get_holidays_for_date(daykey, country=None):
+    def get_holidays_for_date(self, daykey, country=None):
         if daykey == "20260316":
             return [{"displayname": "Founders Day", "country": "US"}]
         return []
@@ -840,7 +836,9 @@ def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
         shrink_to_content=True,
     )
 
-    view_box = re.search(r'viewBox="([^"]+)"', output.read_text()).group(1)
+    match = re.search(r'viewBox="([^"]+)"', output.read_text())
+    assert match is not None
+    view_box = match.group(1)
     _, top, _, height = (float(v) for v in view_box.split())
     lowest = max(p.row_y for p in renderer._chart_key.placed.values())
     icon_h = renderer._duration_icon_height(renderer._config)
@@ -942,8 +940,7 @@ class _FlagDB(_DummyDB):
     def get_holidays_for_date(cls, daykey, country=None):
         return cls._ROWS.get(daykey, [])
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         square = '<svg viewBox="0 0 24 24"><rect width="24" height="24"/></svg>'
         return {"flag-us": square, "flag-ca": square}
 
@@ -1152,13 +1149,11 @@ def test_a_rule_color_may_reference_a_palette():
     from config.config import CalendarConfig
     from config.palette_resolver import _resolve_palette_overrides
 
-    class _PaletteDB:
-        @staticmethod
-        def get_palette(name):
+    class _PaletteDB(FakeCalendarDB):
+        def get_palette(self, name):
             return ["#111111", "#222222", "#333333"] if name == "Greys" else None
 
-        @staticmethod
-        def sample_palette_n(name, n):
+        def sample_palette_n(self, name, n):
             return None
 
     rules = [{"select": {}, "color": "palette:Greys:1"}, {"select": {}, "color": "red"}]
@@ -1201,7 +1196,8 @@ class TestColorRuleEngine:
     def test_a_rule_without_a_color_is_skipped(self, caplog):
         from shared.rule_engine import ColorRuleEngine
 
-        engine = ColorRuleEngine([{"select": {}}, "not a rule"])
+        # A malformed rule list, on purpose.
+        engine = ColorRuleEngine([{"select": {}}, "not a rule"])  # ty: ignore[invalid-argument-type]
 
         assert not engine
         assert engine.assign(self._event()) is None

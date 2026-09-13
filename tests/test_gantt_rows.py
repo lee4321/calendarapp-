@@ -122,7 +122,7 @@ def test_sorting_tolerates_mixed_types_in_one_field(config):
     """priority is NUMERIC in SQLite, so a column can hold ints and text."""
     config.gantt_sort = ["priority"]
     events = [
-        Event(task_name="text", start="20260202", end="20260202", priority="high"),
+        Event(task_name="text", start="20260202", end="20260202", priority="high"),  # ty: ignore[invalid-argument-type]
         Event(task_name="number", start="20260202", end="20260202", priority=2),
     ]
     assert [row.event.task_name for row in build_rows(events, config)] == [

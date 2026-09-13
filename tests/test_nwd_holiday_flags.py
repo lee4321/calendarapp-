@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import arrow
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
 from visualizers.blockplan.layout import BlockPlanLayout
@@ -31,7 +32,7 @@ def _row(icon, name, nonworkday=1, country=None):
     }
 
 
-class _HolidayDB:
+class _HolidayDB(FakeCalendarDB):
     """Stub DB whose holidays are canned rows keyed by daykey."""
 
     def __init__(self, rows: dict[str, list[dict]]):
@@ -46,24 +47,20 @@ class _HolidayDB:
     def is_nonworkday(self, daykey, country=None):
         return self.is_government_nonworkday(daykey, country)
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
-    @staticmethod
-    def get_palette(name):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def resolve_color_name(name):
+    def resolve_color_name(self, name):
         return name
 
     @staticmethod
     def get_icon_svg(name):
         return _SVG
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {name: _SVG for name in ("ca", "gb", "us", "in", "star")}
 
 

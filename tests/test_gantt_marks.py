@@ -7,8 +7,9 @@ primitives the renderer emitted, keyed by their `ec-*` class.
 from __future__ import annotations
 
 import pytest
+from fakes import FakeCalendarDB
 
-from config.config import create_calendar_config, setfontsizes
+from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from visualizers.gantt.details import (
     KIND_CLIPPED_END,
     KIND_CLIPPED_START,
@@ -20,17 +21,15 @@ from visualizers.gantt.layout import GanttLayout
 from visualizers.gantt.renderer import GanttRenderer
 
 
-class _DummyDB:
+class _DummyDB(FakeCalendarDB):
     """The minimum surface classify_day and the icon cache need."""
 
     holidays: set[str] = set()
 
-    @staticmethod
-    def get_palette(name):
+    def get_palette(self, name):
         return None
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {
             name: '<svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>'
             for name in (
@@ -44,13 +43,19 @@ class _DummyDB:
     def is_government_nonworkday(cls, daykey, country=None):
         return daykey in cls.holidays
 
-    @staticmethod
-    def get_special_days_for_date(daykey):
+    def get_special_days_for_date(self, daykey):
         return []
 
 
 class _CaptureRenderer(GanttRenderer):
     """Records primitives instead of drawing them."""
+
+    # Chart geometry a test sets directly when it draws without a render pass.
+    config: CalendarConfig
+    chart_x: float
+    chart_w: float
+    table_x: float
+    day_w: float
 
     def __init__(self):
         super().__init__()
@@ -68,8 +73,8 @@ class _CaptureRenderer(GanttRenderer):
     def _draw_line(self, x1, y1, x2, y2, **kwargs):
         self.lines.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, **kwargs})
 
-    def _draw_lines(self, segments, **kwargs):
-        self.polylines.append({"segments": list(segments), **kwargs})
+    def _draw_lines(self, line_list, **kwargs):
+        self.polylines.append({"segments": list(line_list), **kwargs})
 
     def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
         self.texts.append({"x": x, "y": y, "text": str(text), **kwargs})

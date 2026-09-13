@@ -9,8 +9,9 @@ import re
 from pathlib import Path
 
 import arrow
+from fakes import FakeCalendarDB
 
-from config.config import create_calendar_config, setfontsizes
+from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from shared.data_models import Event
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
@@ -35,7 +36,7 @@ from visualizers.pit.visualizer import PITVisualizer
 # ---------------------------------------------------------------------------
 
 
-class _DummyDB:
+class _DummyDB(FakeCalendarDB):
     """Minimal DB stub — returns empty collections."""
 
     def get_icon_svg_map(self) -> dict:
@@ -79,7 +80,7 @@ def _make_config(
     direction: str = "horizontal",
     side: str = "both",
     tick_unit: str = "month",
-) -> object:
+) -> CalendarConfig:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 612.0  # landscape letter
@@ -261,9 +262,9 @@ def test_pit_leader_length_tracks_layer_gap(tmp_path):
         coords = PITLayout().calculate(config)
         PITRenderer().render(config, coords, _events_dicts(5), _DummyDB())
         svg = Path(config.outputfile).read_text(encoding="utf-8").replace("\n", " ")
-        axis_y = float(
-            re.search(r'<line[^>]*y1="([0-9.]+)"[^>]*ec-axis-line', svg).group(1)
-        )
+        axis_match = re.search(r'<line[^>]*y1="([0-9.]+)"[^>]*ec-axis-line', svg)
+        assert axis_match is not None
+        axis_y = float(axis_match.group(1))
         # primary side = labels above the axis → box bottom nearest the axis.
         bottoms = [
             float(y) + float(h)
@@ -325,9 +326,7 @@ def test_pit_inherits_filter_flags(tmp_path):
     config.ignorecomplete = True
     config.rollups = False
     config.include_notes = True
-    config.WBS = None
-    config.noevents = False
-    config.empty = False
+    config.WBS = ""
 
     coords = PITLayout().calculate(config)
     # Just verify it renders without exception.

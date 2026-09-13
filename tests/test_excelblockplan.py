@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import openpyxl
+from fakes import FakeCalendarDB
+from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter
 
 from config.config import create_calendar_config
@@ -18,7 +20,7 @@ from visualizers.excelheader import (
 # ── Stubs ─────────────────────────────────────────────────────────────────────
 
 
-class _BaseDB:
+class _BaseDB(FakeCalendarDB):
     """Minimal DB stub — overridable hooks for events/holidays."""
 
     EVENTS: list[dict] = []
@@ -180,7 +182,7 @@ def test_excelblockplan_events_each_on_own_row_ordered_by_start(tmp_path):
     for row in range(data_start, data_start + 3):
         for col in range(1, LABEL_COL_END + 1):
             cell = ws.cell(row=row, column=col)
-            assert not isinstance(cell, openpyxl.cell.cell.MergedCell), (
+            assert not isinstance(cell, MergedCell), (
                 f"cell {col},{row} is a merged cell — data rows must be unmerged"
             )
 

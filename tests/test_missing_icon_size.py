@@ -36,7 +36,7 @@ class _Probe(BaseSVGRenderer):
         return 0, []
 
     def last_icon_size(self) -> float | None:
-        markup = "".join(str(getattr(e, "content", "")) for e in self._drawing.elements)
+        markup = "".join(str(getattr(e, "content", "")) for e in self.drawing.elements)
         sizes = re.findall(r'<svg x="[\d.-]+" y="[\d.-]+" width="([\d.]+)"', markup)
         return float(sizes[-1]) if sizes else None
 

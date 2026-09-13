@@ -1212,8 +1212,6 @@ class TestStrokeDasharrayTimelineMini:
         from visualizers.timeline.renderer import TimelineRenderer
 
         config = create_calendar_config()
-        config.start = "20260101"
-        config.end = "20260131"
         config.adjustedstart = "20260101"
         config.adjustedend = "20260131"
         config.timeline_axis_stroke_dasharray = "6,3"

@@ -175,7 +175,8 @@ def test_mini_week_number_formatting_applied():
 
     renderer = _CaptureRenderer()
     mini = MiniCalendarRenderer()
-    mini._draw_text = renderer._draw_text  # capture
+    # Capture the mini renderer's text through the capture renderer.
+    mini._draw_text = renderer._draw_text  # ty: ignore[invalid-assignment]
     mini._draw_week_number(config, x=0, y=0, w=10, h=10, wn_value=7)
 
     assert "WN7" in renderer.text_calls

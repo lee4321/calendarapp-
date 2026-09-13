@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from fakes import FakeCalendarDB
 from test_gantt_marks import _DummyDB, render, task
 
 from config.config import CalendarConfig
@@ -18,7 +19,7 @@ from shared.holiday_band import HolidayMark, compute_holiday_band_days
 from shared.timeband import build_segments
 
 
-class _HolidayDB:
+class _HolidayDB(FakeCalendarDB):
     """Returns canned holiday rows keyed by daykey."""
 
     def __init__(self, rows: dict[str, list[dict]]):
@@ -136,9 +137,8 @@ def test_no_db_yields_empty_marks(config):
 
 
 def test_a_failing_lookup_does_not_break_the_render(config):
-    class _Boom:
-        @staticmethod
-        def get_holidays_for_date(daykey, country=None):
+    class _Boom(FakeCalendarDB):
+        def get_holidays_for_date(self, daykey, country=None):
             raise RuntimeError("db is unhappy")
 
     marks = compute_holiday_band_days(DAYS, _Boom(), config)
@@ -160,8 +160,7 @@ class _FlagDB(_DummyDB):
     def get_holidays_for_date(self, daykey, country=None):
         return self.rows.get(daykey, [])
 
-    @staticmethod
-    def get_icon_svg_map():
+    def get_icon_svg_map(self):
         return {"us": "<svg/>", "ua": "<svg/>"}
 
 
