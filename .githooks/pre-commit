@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pre-commit: type-check and test, then bump the CalVer version.
+# Pre-commit: type-check, lint and test, then bump the CalVer version.
 #
 # Checks run against the working tree, not only what is staged, and take
 # about 15 seconds. Skip them for one commit with `git commit --no-verify`.
@@ -14,8 +14,15 @@ fi
 
 echo "pre-commit: uv check"
 if ! uv check --locked --quiet >/dev/null 2>&1; then
-    uv check --locked
+    uv check --locked || true  # show the errors; set -e would stop here
     echo "pre-commit: type check failed (commit with --no-verify to skip)." >&2
+    exit 1
+fi
+
+echo "pre-commit: ruff"
+if ! uv run ruff check . --quiet >/dev/null 2>&1; then
+    uv run ruff check . || true  # show the findings; set -e would stop here
+    echo "pre-commit: ruff found problems (commit with --no-verify to skip)." >&2
     exit 1
 fi
 

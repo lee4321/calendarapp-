@@ -277,9 +277,8 @@ check 0.5s, pytest 13s) and run on the working tree, not just what's staged.
 in a GUI git client, the hook fails with that message rather than skipping
 silently.
 
-**Ruff is deliberately not in the gate** (decided 2026-09-13): 311 findings
-across 30 rules remain, so run it by hand. To gate it later, either clear or
-ignore those rules first; otherwise every commit would be blocked.
+**Ruff joined the gate on 2026-09-13,** after its findings were cleared (311 → 0).
+The hook now runs `uv check`, then `uv run ruff check .`, then pytest.
 `tools/refcorpus.sh check` isn't gated either; run it after renderer or
 config changes.
 
