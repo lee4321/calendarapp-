@@ -23,6 +23,7 @@ from renderers.text_utils import fit_lines
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
+    from renderers.svg_base import TokenStyle
     from visualizers.base import CoordinateDict
 
 #: Vertical breathing room between a section heading and its table.
@@ -191,7 +192,7 @@ class DetailsPageWriter:
             "", "none", "transparent",
         }
 
-    def _token(self, name: str) -> dict:
+    def _token(self, name: str) -> TokenStyle:
         return self._renderer._resolve_token(self._config, name, self._ctx)
 
     # ── Page lifecycle ────────────────────────────────────────────────────

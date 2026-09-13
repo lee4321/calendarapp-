@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 if TYPE_CHECKING:
     from shared.data_models import Event
@@ -131,6 +131,29 @@ class StyleResult:
             "stroke_dasharray": self.stroke_dasharray if self.stroke_dasharray is not None else stroke_dasharray,
         }
 
+    # A base value passed in comes back as that value or an override, so a
+    # caller that passes a str font/color (or float size/opacity) gets one back.
+    @overload
+    def text_override(
+        self, key: str, *, font: str, font_size: float, color: str,
+        opacity: None = None,
+    ) -> tuple[str, float, str, float | None]: ...
+    @overload
+    def text_override(
+        self, key: str, *, font: str, font_size: None = None, color: str,
+        opacity: float,
+    ) -> tuple[str, float | None, str, float]: ...
+    @overload
+    def text_override(
+        self, key: str, *, font: str, font_size: None = None, color: str,
+        opacity: None = None,
+    ) -> tuple[str, float | None, str, float | None]: ...
+    @overload
+    def text_override(
+        self, key: str, *, font: str | None = None,
+        font_size: float | None = None, color: str | None = None,
+        opacity: float | None = None,
+    ) -> tuple[str | None, float | None, str | None, float | None]: ...
     def text_override(
         self,
         key: str,

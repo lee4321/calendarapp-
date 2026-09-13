@@ -222,7 +222,7 @@ class GanttRenderer(BaseSVGRenderer):
             self._draw_page(config, coordinates, page, rows, columns, days, segments, db)
 
             if not page.is_first:
-                self._drawing.save_svg(
+                self.drawing.save_svg(
                     _page_output_path(config.outputfile, page.number)
                 )
 

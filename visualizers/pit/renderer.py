@@ -312,14 +312,14 @@ class PITRenderer(BaseSVGRenderer):
         side: Side = Side.PRIMARY,
     ) -> None:
         """Wrap the axis line and its ticks in ec-pit-axis-group."""
-        self._drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
+        self.drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
         if config.pit_show_ticks:
             self._draw_axis_ticks(
                 config, start, end, axis_origin, direction, pos_for_day, db,
                 side,
             )
         self._draw_axis(config, axis_origin, axis_end)
-        self._drawing.append(drawsvg.Raw('</g>'))
+        self.drawing.append(drawsvg.Raw('</g>'))
 
     # ------------------------------------------------------------------
     # Axis ticks (timeband segments → perpendicular marks + labels)
@@ -777,7 +777,7 @@ class PITRenderer(BaseSVGRenderer):
             )
             groups_attr = ev.resource_group or ""
             # Open the per-event group with data-* attrs.
-            self._drawing.append(drawsvg.Raw(
+            self.drawing.append(drawsvg.Raw(
                 f'<g class="ec-pit-callout-group {side_class}" '
                 f'data-event-date="{ev.start}" '
                 f'data-milestone="{str(bool(ev.milestone)).lower()}" '
@@ -788,7 +788,7 @@ class PITRenderer(BaseSVGRenderer):
             # Leader (axis-local path inside a translate() group).
             ox, oy = p.axis_origin
             if p.leader_path_d:
-                self._drawing.append(drawsvg.Raw(
+                self.drawing.append(drawsvg.Raw(
                     f'<g transform="translate({ox:.2f},{oy:.2f})" '
                     f'class="ec-callout-leader">'
                     f'<path d="{p.leader_path_d}" '
@@ -846,7 +846,7 @@ class PITRenderer(BaseSVGRenderer):
             if eff_pattern:
                 pat_id = self._ensure_svg_pattern_def(eff_pattern, eff_label_stroke)
                 if pat_id:
-                    self._drawing.append(drawsvg.Raw(
+                    self.drawing.append(drawsvg.Raw(
                         f'<rect x="{p.x_label:.2f}" y="{p.y_label:.2f}" '
                         f'width="{p.label_w:.2f}" height="{p.label_h:.2f}" '
                         f'fill="url(#{pat_id})" '
@@ -954,7 +954,7 @@ class PITRenderer(BaseSVGRenderer):
                     css_class="ec-event-date",
                 )
 
-            self._drawing.append(drawsvg.Raw('</g>'))
+            self.drawing.append(drawsvg.Raw('</g>'))
 
     def _draw_axis(
         self,
@@ -978,7 +978,7 @@ class PITRenderer(BaseSVGRenderer):
         ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
         me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
 
-        self._drawing.append(drawsvg.Raw(
+        self.drawing.append(drawsvg.Raw(
             f'<line x1="{axis_origin[0]:.2f}" y1="{axis_origin[1]:.2f}" '
             f'x2="{axis_end[0]:.2f}" y2="{axis_end[1]:.2f}" '
             f'stroke="{color}" stroke-width="{width:.3f}" '
@@ -1078,7 +1078,7 @@ class PITRenderer(BaseSVGRenderer):
         me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
         dash_attr = f' stroke-dasharray="{dasharray}"' if dasharray else ""
 
-        self._drawing.append(drawsvg.Raw(
+        self.drawing.append(drawsvg.Raw(
             f'<line x1="{line_x1:.2f}" y1="{line_y1:.2f}" '
             f'x2="{line_x2:.2f}" y2="{line_y2:.2f}" '
             f'stroke="{color}" stroke-width="{width:.3f}" '

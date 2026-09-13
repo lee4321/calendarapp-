@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Any
 
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -28,6 +29,12 @@ class GlyphPath:
 def _load_ttfont(font_path: str) -> TTFont:
     """Load and cache a fonttools TTFont."""
     return TTFont(font_path)
+
+
+def _table(ttfont: TTFont, tag: str) -> Any:
+    """Font table *tag*.  fontTools sets table fields as it decompiles them,
+    so they carry no static types."""
+    return ttfont[tag]
 
 
 @lru_cache(maxsize=64)
@@ -92,8 +99,8 @@ def get_font_metrics(font_path: str) -> tuple[int, int, int]:
     Ascender is positive (above baseline), descender is negative (below).
     """
     ttfont = _load_ttfont(font_path)
-    upm = ttfont["head"].unitsPerEm
-    os2 = ttfont["OS/2"]
+    upm = _table(ttfont, "head").unitsPerEm
+    os2 = _table(ttfont, "OS/2")
     return upm, os2.sTypoAscender, os2.sTypoDescender
 
 
@@ -119,7 +126,7 @@ def get_ink_extents(font_path: str) -> tuple[float, float]:
     """
     try:
         ttfont = _load_ttfont(font_path)
-        upm = ttfont["head"].unitsPerEm
+        upm = _table(ttfont, "head").unitsPerEm
         glyph_set = ttfont.getGlyphSet()
         cmap = ttfont.getBestCmap() or {}
     except Exception:
