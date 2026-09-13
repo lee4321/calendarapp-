@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class BlockPlanLayout(BaseLayout):
     """Layout calculator for blockplan visualization."""
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         coord: CoordinateDict = {}
 
         margins = self._calculate_margins(config)

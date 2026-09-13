@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING, Callable, Sequence
+from typing import TYPE_CHECKING
+from collections.abc import Callable, Sequence
 
 import arrow
 import drawsvg
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
 _AXIS_LABEL_MARGIN = 2.0
 
 
-def _timeline_style_rules(config: "CalendarConfig") -> list:
+def _timeline_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
 
     Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
@@ -182,10 +183,10 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         """Assemble the timeline page for either axis orientation.
 
@@ -627,7 +628,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _actual_content_bounds(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         callouts: list[TimelineCallout],
         durations: list[TimelineDuration],
         axis_left: float,
@@ -737,7 +738,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _split_events(
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
     ) -> tuple[list[Event], list[Event]]:
         """Split into (point_events, duration_events), honoring the
@@ -757,7 +758,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _layout_callouts(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         start: arrow.Arrow,
         end: arrow.Arrow,
@@ -833,7 +834,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # Pre-resolve color + rule-engine style per event, keyed by identity
         # so the post-labella lookup is robust to reordering (Side.BOTH
         # partitions events into two groups).
-        per_event: dict[int, tuple[str, "StyleResult | None", int]] = {}
+        per_event: dict[int, tuple[str, StyleResult | None, int]] = {}
         for idx, event in enumerate(ordered):
             base_palette = (
                 palette_secondary if side is Side.SECONDARY else palette_primary
@@ -920,7 +921,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _wbs_group_colors(
-        config: "CalendarConfig", events: "Sequence[Event]"
+        config: CalendarConfig, events: Sequence[Event]
     ) -> dict[str, str]:
         """One color per WBS group, shared by every item drawn on the chart.
 
@@ -967,7 +968,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _order_durations(
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         group_colors: dict[str, str] | None = None,
     ) -> tuple[list[Event], dict[int, str]]:
@@ -1043,7 +1044,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _layout_durations(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         start: arrow.Arrow,
         end: arrow.Arrow,
@@ -1153,7 +1154,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _layout_durations_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         start: arrow.Arrow,
         end: arrow.Arrow,
@@ -1314,7 +1315,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return len(lane_last_end) - 1
 
     @staticmethod
-    def _rollup_group(config: "CalendarConfig", event: Event) -> str | None:
+    def _rollup_group(config: CalendarConfig, event: Event) -> str | None:
         """The WBS group whose rollup outranks this bar, or ``None``.
 
         ``None`` when WBS grouping is off (``timeline_wbs_group_depth`` 0):
@@ -1394,7 +1395,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_callout(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineCallout,
         axis_y: float,
     ) -> None:
@@ -1452,7 +1453,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_callout_contents(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineCallout,
         _sr: StyleResult,
     ) -> None:
@@ -1609,7 +1610,7 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
     def _duration_bar_y(
-        self, config: "CalendarConfig", item: TimelineDuration, axis_y: float
+        self, config: CalendarConfig, item: TimelineDuration, axis_y: float
     ) -> tuple[float, float]:
         """``(bar_y, bar_h)`` for one horizontal duration bar.
 
@@ -1628,7 +1629,7 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_stride = bar_h + lane_gap
         return axis_y + duration_offset + (item.lane * lane_stride), bar_h
 
-    def _duration_row_extent(self, config: "CalendarConfig") -> float:
+    def _duration_row_extent(self, config: CalendarConfig) -> float:
         """Vertical room one duration row needs, its date labels included.
 
         The dates sit inside the bar, so the row is just the rect.  Kept as
@@ -1639,7 +1640,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return bar_h
 
     def _duration_bar_x(
-        self, config: "CalendarConfig", item: TimelineDuration, axis_x: float
+        self, config: CalendarConfig, item: TimelineDuration, axis_x: float
     ) -> tuple[float, float, float]:
         """``(near_edge_x, thickness, sign)`` for one vertical duration bar.
 
@@ -1670,7 +1671,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_missing_box_marker(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         size: float,
@@ -1702,7 +1703,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_connectors(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         axis_y: float,
         limit: float | None = None,
@@ -1741,7 +1742,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         axis_y: float,
         limit: float | None = None,
@@ -1872,7 +1873,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _duration_full_extent(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         event: Event,
         fallback: arrow.Arrow,
     ) -> float:
@@ -1934,7 +1935,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return inner + 2.0 * _DURATION_DATE_PAD_X
 
     def _duration_cell_layout(
-        self, config: "CalendarConfig", inner_w: float
+        self, config: CalendarConfig, inner_w: float
     ) -> list[tuple[float, float]]:
         """The three columns of a duration bar, as (offset, width) pairs.
 
@@ -1952,7 +1953,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return [(0.0, side), (side + gap, mid), (inner_w - side, side)]
 
     @staticmethod
-    def _duration_column_ratio(config: "CalendarConfig") -> float:
+    def _duration_column_ratio(config: CalendarConfig) -> float:
         """Share of a duration bar given to each of its two side columns.
 
         ``timeline_durations.icon_column_ratio`` when a theme sets one,
@@ -1965,7 +1966,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return float(config.timeline_event_icon_column_ratio)
 
     def _duration_text_fonts(
-        self, config: "CalendarConfig", _sr: StyleResult
+        self, config: CalendarConfig, _sr: StyleResult
     ) -> dict:
         """Fonts, colors and opacities for everything inside a duration bar.
 
@@ -2071,7 +2072,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _duration_cells(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         fonts: dict,
         title_size: float,
@@ -2194,7 +2195,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_contents(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         bar_x: float,
         bar_y: float,
@@ -2257,7 +2258,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_cell_icon(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         icon_name: str,
         _sr: StyleResult,
@@ -2351,7 +2352,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_contents_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         bar_x: float,
         bar_y: float,
@@ -2431,7 +2432,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_connectors_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         axis_x: float,
         limit: float | None = None,
@@ -2480,7 +2481,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_duration_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         item: TimelineDuration,
         axis_x: float,
         limit: float | None = None,
@@ -2604,7 +2605,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_timeline_marker(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         color: str,
@@ -2656,7 +2657,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _duration_metrics(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
     ) -> tuple[float, float, float, float]:
         """Return (title_size, notes_size, date_size, bar_height).
 
@@ -2701,7 +2702,7 @@ class TimelineRenderer(BaseSVGRenderer):
         bar_h = top_pad + title_size + line_gap + notes_size + bottom_pad
         return title_size, notes_size, date_size, bar_h
 
-    def _min_duration_offset(self, config: "CalendarConfig", date_size: float) -> float:
+    def _min_duration_offset(self, config: CalendarConfig, date_size: float) -> float:
         """Minimum axis-to-bar clearance so what sits under the axis stays legible.
 
         The clearance has to cover the timeline date labels and, when holiday
@@ -2714,15 +2715,15 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_timeline_bands(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         bands: list[dict],
         block_top_y: float,
         axis_left: float,
         axis_right: float,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: "CalendarDB",
-        events: "list[Event] | None" = None,
+        db: CalendarDB,
+        events: list[Event] | None = None,
     ) -> None:
         """Draw a stack of timebands using shared.timeband.build_segments().
 
@@ -2879,7 +2880,7 @@ class TimelineRenderer(BaseSVGRenderer):
             row_y += row_h
 
     def _tick_side_clearance(
-        self, config: "CalendarConfig", start: arrow.Arrow, end: arrow.Arrow
+        self, config: CalendarConfig, start: arrow.Arrow, end: arrow.Arrow
     ) -> float:
         """Room the axis ticks and their dates need on their own side.
 
@@ -2897,7 +2898,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _tick_label_top_clearance(
-        config: "CalendarConfig", tick_bands_cfg: object
+        config: CalendarConfig, tick_bands_cfg: object
     ) -> float:
         """Maximum vertical extent (pts) of any tick band's label above the axis.
 
@@ -2963,11 +2964,11 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _compute_band_ticks(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> list[tuple[date, str]]:
         """Return the (date, label) ticks a band would draw."""
         from datetime import timedelta
@@ -3017,7 +3018,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _band_tick_style(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict,
         tick_count: int,
     ) -> dict:
@@ -3075,14 +3076,14 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_axis_ticks_from_band(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
         axis_right: float,
         axis_y: float,
-        db: "CalendarDB",
+        db: CalendarDB,
         ticks: list[tuple[date, str]] | None = None,
         allowed_label_dates: set[date] | None = None,
     ) -> None:
@@ -3162,14 +3163,14 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_axis_ticks_from_band_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_top: float,
         axis_bottom: float,
         axis_x: float,
-        db: "CalendarDB",
+        db: CalendarDB,
         ticks: list[tuple[date, str]] | None = None,
         allowed_label_dates: set[date] | None = None,
         label_side: Side = Side.SECONDARY,
@@ -3286,7 +3287,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_month_ticks_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_top: float,
@@ -3351,12 +3352,12 @@ class TimelineRenderer(BaseSVGRenderer):
                 )
 
     @staticmethod
-    def _holiday_icon_size(config: "CalendarConfig") -> float:
+    def _holiday_icon_size(config: CalendarConfig) -> float:
         """Drawn height of one holiday icon; <= 0 suppresses the whole band."""
         return float(getattr(config, "timeline_holiday_icon_size", 10.0))
 
     @staticmethod
-    def _holiday_date_font_size(config: "CalendarConfig") -> float:
+    def _holiday_date_font_size(config: CalendarConfig) -> float:
         """Font size of the date printed under a holiday icon.
 
         Defaults to a fraction of the icon so the pair reads as one mark
@@ -3369,13 +3370,13 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _holiday_marks(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
         axis_right: float,
-        db: "CalendarDB",
-        pos_for_day: "Callable[[arrow.Arrow], float] | None" = None,
+        db: CalendarDB,
+        pos_for_day: Callable[[arrow.Arrow], float] | None = None,
     ) -> list[tuple[float, str, str]]:
         """Return (pos, icon_name, date_label) for each government holiday.
 
@@ -3453,13 +3454,13 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_holiday_icons(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
         axis_right: float,
         axis_y: float,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> None:
         """Render each government holiday below the axis as an icon and,
         unless suppressed, the date it falls on."""
@@ -3524,7 +3525,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 css_class="ec-holiday-date",
             )
 
-    def _holiday_band_extent(self, config: "CalendarConfig") -> float:
+    def _holiday_band_extent(self, config: CalendarConfig) -> float:
         """Height the holiday icons and their dates claim below the axis."""
         size = self._holiday_icon_size(config)
         if size <= 0 or not getattr(config, "timeline_show_holiday_icons", True):
@@ -3562,7 +3563,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return room_high if primary_is_low else room_low
 
     @staticmethod
-    def _duration_side(config: "CalendarConfig", label_side: Side) -> Side:
+    def _duration_side(config: CalendarConfig, label_side: Side) -> Side:
         """Which side of a vertical axis the duration bars stack on.
 
         ``timeline.duration_side: opposite`` — the default — puts them
@@ -3608,7 +3609,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_month_ticks(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
@@ -3659,7 +3660,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_fiscal_bands(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
@@ -3732,7 +3733,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_fiscal_bands_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_top: float,
@@ -3814,15 +3815,15 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_timeline_bands_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         bands: list[dict],
         block_near_x: float,
         axis_top: float,
         axis_bottom: float,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: "CalendarDB",
-        events: "list[Event] | None" = None,
+        db: CalendarDB,
+        events: list[Event] | None = None,
         sign: float = -1.0,
     ) -> None:
         """:py:meth:`_draw_timeline_bands` as columns beside a vertical axis.
@@ -3991,13 +3992,13 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_holiday_icons_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_top: float,
         axis_bottom: float,
         axis_x: float,
-        db: "CalendarDB",
+        db: CalendarDB,
         side: Side = Side.SECONDARY,
     ) -> None:
         """:py:meth:`_draw_holiday_icons` turned on its side.
@@ -4082,7 +4083,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_today_marker_vertical(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_top: float,
@@ -4175,7 +4176,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
     def _draw_today_marker(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_left: float,
@@ -4268,7 +4269,7 @@ class TimelineRenderer(BaseSVGRenderer):
     # _draw_circle() is inherited from BaseSVGRenderer.
 
     @staticmethod
-    def _axis_tick_height(config: "CalendarConfig") -> float:
+    def _axis_tick_height(config: CalendarConfig) -> float:
         """Half-length of a month tick mark, above and below the axis."""
         return max(6.0, config.timeline_axis_width * 2.5)
 
@@ -4295,13 +4296,13 @@ class TimelineRenderer(BaseSVGRenderer):
         return tick_h + label_size * 1.5
 
     @staticmethod
-    def _axis_tick_label_size(config: "CalendarConfig") -> float:
+    def _axis_tick_label_size(config: CalendarConfig) -> float:
         """Font size of the month tick labels."""
         return max(7.0, float(config.weekly_name_text_font_size or 10.0) * 0.8)
 
     def _axis_label_clearance(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         orientation: Orientation = Orientation.HORIZONTAL,
@@ -4347,7 +4348,7 @@ class TimelineRenderer(BaseSVGRenderer):
         return baseline + (label_size * 0.8) + _AXIS_LABEL_MARGIN
 
     def _callout_date_label(
-        self, config: "CalendarConfig", item: "TimelineCallout"
+        self, config: CalendarConfig, item: TimelineCallout
     ) -> str:
         """The date shown inside a callout box, or "" when it has none.
 
@@ -4369,7 +4370,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return fallback
 
     @staticmethod
-    def _resolve_today(config: "CalendarConfig") -> arrow.Arrow:
+    def _resolve_today(config: CalendarConfig) -> arrow.Arrow:
         """Resolve 'today' from config override (if set), otherwise use current date."""
         raw = (config.timeline_today_date or "").strip()
         if not raw:
@@ -4420,7 +4421,7 @@ class TimelineRenderer(BaseSVGRenderer):
         except KeyError:
             return get_font_path("RobotoCondensed-Bold")
 
-    def _callout_metrics(self, config: "CalendarConfig") -> tuple[float, float, float]:
+    def _callout_metrics(self, config: CalendarConfig) -> tuple[float, float, float]:
         """Return (title_size, notes_size, date_size) for point-event callouts.
 
         Consults ``text:event_name`` / ``text:event_notes`` / ``text:event_date``

@@ -45,7 +45,7 @@ _INLINE_STYLED_CLASSES: frozenset[str] = frozenset({
 })
 
 
-def generate_css(theme_styles: "ThemeStyles") -> str:
+def generate_css(theme_styles: ThemeStyles) -> str:
     """
     Generate CSS rules from theme element bindings.
 
@@ -66,7 +66,7 @@ def generate_css(theme_styles: "ThemeStyles") -> str:
     return "\n".join(rules)
 
 
-def _binding_to_css_properties(binding: "ElementBinding") -> list[tuple[str, str]]:
+def _binding_to_css_properties(binding: ElementBinding) -> list[tuple[str, str]]:
     """Convert an ElementBinding to a list of (property, value) CSS pairs."""
     props: list[tuple[str, str]] = []
 

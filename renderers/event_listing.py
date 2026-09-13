@@ -11,7 +11,8 @@ every one of them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
+from collections.abc import Iterable
 
 from renderers.details_page import DetailsColumn, format_datekey
 from shared.holiday_labels import format_holiday_label
@@ -40,7 +41,7 @@ def format_details_date(value: str | None) -> str:
     return format_datekey(str(value or "")[:8])
 
 
-def details_columns(config: "CalendarConfig") -> list[DetailsColumn]:
+def details_columns(config: CalendarConfig) -> list[DetailsColumn]:
     """The listing's columns, from ``mini_details.headers``.
 
     The first column carries dates and the second the event name, so
@@ -167,8 +168,8 @@ def holiday_cells(row: dict, count: int) -> list[str]:
 
 def holiday_special_rows(
     daykeys: Iterable[str],
-    config: "CalendarConfig",
-    db: "CalendarDB",
+    config: CalendarConfig,
+    db: CalendarDB,
 ) -> list[dict]:
     """The deduplicated holiday + special-day entries for *daykeys*.
 

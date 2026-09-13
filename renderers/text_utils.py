@@ -7,7 +7,7 @@ specified widths using PIL (Pillow) for font metrics.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from renderers.glyph_cache import get_pil_font as _get_font
 

@@ -15,7 +15,7 @@ implicitly appending "**".
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from collections.abc import Iterable
 
 
 def _normalize_segments(value: str) -> list[str]:
@@ -59,7 +59,7 @@ class WBSFilter:
     exclude: list[list[str]]
 
     @classmethod
-    def parse(cls, value: str | None) -> "WBSFilter | None":
+    def parse(cls, value: str | None) -> WBSFilter | None:
         if not value:
             return None
 

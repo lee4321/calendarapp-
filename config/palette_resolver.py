@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _resolve_single_palette_ref(value: str, db: "CalendarDB") -> str:
+def _resolve_single_palette_ref(value: str, db: CalendarDB) -> str:
     """
     Resolve a ``"palette:NAME:INDEX"`` colour reference to a concrete hex value.
 
@@ -69,7 +69,7 @@ def _resolve_single_palette_ref(value: str, db: "CalendarDB") -> str:
     return colors[idx]
 
 
-def _resolve_palette_overrides(config: "CalendarConfig", db: "CalendarDB") -> None:
+def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
     """
     Bulk-resolve all palette name references in CalendarConfig to hex colours.
 

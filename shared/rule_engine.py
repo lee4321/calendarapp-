@@ -46,7 +46,7 @@ class TextStyle:
     font_color: str | None = None
     font_opacity: float | None = None
 
-    def merge(self, other: "TextStyle") -> None:
+    def merge(self, other: TextStyle) -> None:
         """Apply non-None fields from other onto self."""
         if other.font is not None:
             self.font = other.font
@@ -153,7 +153,7 @@ class StyleResult:
             ts.font_opacity if ts.font_opacity is not None else opacity,
         )
 
-    def merge(self, other: "StyleResult") -> None:
+    def merge(self, other: StyleResult) -> None:
         """Layer non-None fields from other on top of self (later rules win)."""
         if other.fill_color is not None:
             self.fill_color = other.fill_color
@@ -285,7 +285,7 @@ _EVENT_CRITERIA_KEYS: frozenset[str] = frozenset({
 })
 
 
-def _matches_event_fields(select: dict, event: "Event") -> bool | None:
+def _matches_event_fields(select: dict, event: Event) -> bool | None:
     """
     Check event-level criteria in select against an Event.
     Returns None when no event criteria present.
@@ -518,7 +518,7 @@ class StyleEngine:
     def evaluate_day(
         self,
         ctx: DayContext,
-        events: "list[Event] | None" = None,
+        events: list[Event] | None = None,
     ) -> StyleResult:
         """
         Layer all day_box rules that match ctx and the day's events.
@@ -547,7 +547,7 @@ class StyleEngine:
     def _eval_event_criteria_for_day(
         self,
         select: dict,
-        events: "list[Event]",
+        events: list[Event],
         rule: dict,
     ) -> bool | None:
         """
@@ -570,7 +570,7 @@ class StyleEngine:
 
     def evaluate_event(
         self,
-        event: "Event",
+        event: Event,
         ctx: DayContext | None = None,
     ) -> StyleResult:
         """
@@ -584,7 +584,7 @@ class StyleEngine:
     def evaluate_target(
         self,
         target: str,
-        event: "Event",
+        event: Event,
         ctx: DayContext | None = None,
     ) -> StyleResult:
         """
@@ -692,7 +692,7 @@ class StyleEngine:
         return out
 
 
-def _matches_date_overlap(criterion: Any, event: "Event") -> bool:
+def _matches_date_overlap(criterion: Any, event: Event) -> bool:
     """Check if an event's date span overlaps the criterion date/range."""
     if isinstance(criterion, list):
         return any(event.start <= str(d).strip() <= event.end for d in criterion)
@@ -719,7 +719,7 @@ class LaneEngine:
 
     def assign(
         self,
-        event: "Event",
+        event: Event,
         ctx: DayContext | None = None,
     ) -> str | None:
         """Return the lane name for the first matching rule, or None if unmatched."""
@@ -799,7 +799,7 @@ class ColorRuleEngine:
         """Each usable rule's color, in rule order."""
         return [color for _, _, color in self._rules]
 
-    def assign(self, event: "Event") -> tuple[int, str] | None:
+    def assign(self, event: Event) -> tuple[int, str] | None:
         """``(rule index, color)`` of the first rule *event* matches, or None.
 
         The index is the rule's position in the theme's list, so it stays

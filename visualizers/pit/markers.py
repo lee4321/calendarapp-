@@ -85,9 +85,9 @@ _FILL_REPLACE_RE = re.compile(
 def resolve_marker(
     event: Event,
     *,
-    config: "CalendarConfig" = None,           # kept for signature stability
+    config: CalendarConfig = None,           # kept for signature stability
     icon_svg_map: dict[str, str] | None = None, # ignored — axis uses shapes
-    style_result: "StyleResult | None" = None,  # ignored — axis uses shapes
+    style_result: StyleResult | None = None,  # ignored — axis uses shapes
 ) -> MarkerSpec:
     """Pick the axis marker for one event.
 
@@ -110,9 +110,9 @@ def resolve_marker(
 def resolve_label_icon(
     event: Event,
     *,
-    config: "CalendarConfig",
+    config: CalendarConfig,
     icon_svg_map: dict[str, str] | None = None,
-    style_result: "StyleResult | None" = None,
+    style_result: StyleResult | None = None,
 ) -> str | None:
     """Return raw SVG markup for the event's label icon, or ``None``.
 
@@ -319,7 +319,7 @@ def _draw_icon_at_center(
 # ---------------------------------------------------------------------------
 def _draw_icon_marker(
     drawing,
-    spec: "MarkerSpec | object",
+    spec: MarkerSpec | object,
     cx: float,
     cy: float,
     size: float,

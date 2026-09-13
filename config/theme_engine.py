@@ -928,7 +928,7 @@ class ThemeEngine:
         result = self._find_matching_size_rule(rules, section_path, papersize)
         return result[1] if result is not None else None
 
-    def _apply_element_size_rules(self, config: "CalendarConfig") -> None:
+    def _apply_element_size_rules(self, config: CalendarConfig) -> None:
         """
         Apply per-element size_rule matches to explicit *_font_size config fields.
 
@@ -984,7 +984,7 @@ class ThemeEngine:
                         raw,
                     )
 
-    def _apply_layout_overrides(self, config: "CalendarConfig") -> None:
+    def _apply_layout_overrides(self, config: CalendarConfig) -> None:
         """
         Apply layout-level overrides (currently explicit side margins with units).
 
@@ -1036,7 +1036,7 @@ class ThemeEngine:
         if any_side:
             config.include_margin = True
 
-    def apply(self, config: "CalendarConfig") -> "CalendarConfig":
+    def apply(self, config: CalendarConfig) -> CalendarConfig:
         """
         Apply theme overrides to a CalendarConfig instance.
 
@@ -1216,7 +1216,7 @@ class ThemeEngine:
         ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
     )
 
-    def _apply_pit_blocks(self, config: "CalendarConfig") -> None:
+    def _apply_pit_blocks(self, config: CalendarConfig) -> None:
         """Decompose the pit: YAML sub-blocks into individual config fields.
 
         Simple scalar keys from pit: are handled by THEME_TO_CONFIG_MAP.
@@ -1422,7 +1422,7 @@ class ThemeEngine:
                 if v is not None:
                     config.pit_label_icon_gap = v
 
-    def _apply_band_placements(self, config: "CalendarConfig") -> None:
+    def _apply_band_placements(self, config: CalendarConfig) -> None:
         """Expand placement-list references against the top-level time_bands catalog.
 
         Each placement entry is one of:
@@ -1507,7 +1507,7 @@ class ThemeEngine:
         )
         return None
 
-    def _apply_color_maps(self, config: "CalendarConfig") -> None:
+    def _apply_color_maps(self, config: CalendarConfig) -> None:
         """Apply the colors: section to theme override fields on config."""
         colors = self._theme_data.get("colors", {})
         if not isinstance(colors, dict):
@@ -1592,7 +1592,7 @@ class ThemeEngine:
         """Return True if the theme uses the new unified format."""
         return bool(self._theme_data.keys() & _NEW_FORMAT_SECTIONS)
 
-    def _build_theme_styles(self, config: "CalendarConfig") -> None:
+    def _build_theme_styles(self, config: CalendarConfig) -> None:
         """Build ThemeStyles directly from the parsed UnifiedTheme.
 
         Replaces the legacy `_parse_text_styles` / `_parse_box_styles` /
@@ -2024,7 +2024,7 @@ class ThemeEngine:
                     "run tools/migrate_theme.py to convert to swimlane_rules"
                 )
 
-    def _load_rule_lists(self, config: "CalendarConfig") -> None:
+    def _load_rule_lists(self, config: CalendarConfig) -> None:
         """Load style_rules and swimlane_rules from the top-level theme data."""
         style_rules = self._theme_data.get("style_rules")
         if isinstance(style_rules, list):

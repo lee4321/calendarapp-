@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class PITLayout(BaseLayout):
     """Layout calculator for PIT visualization."""
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         """Calculate coordinates for PIT rendering."""
         coord: CoordinateDict = {}
 

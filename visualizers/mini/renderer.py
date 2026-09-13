@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _mini_style_rules(config: "CalendarConfig") -> list:
+def _mini_style_rules(config: CalendarConfig) -> list:
     """Return the raw style_rules list to feed StyleEngine.
 
     Prefers the parsed UnifiedTheme's section so the renderer no longer
@@ -667,7 +667,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
     def _draw_corner_icons(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,
@@ -719,7 +719,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
     def _draw_mini_hash_lines(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,
@@ -745,7 +745,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             )
 
     @staticmethod
-    def _format_day_number(day_num: int, config: "CalendarConfig") -> str:
+    def _format_day_number(day_num: int, config: CalendarConfig) -> str:
         """Format a mini SVG day number with optional digit substitutions."""
         glyphs = config.mini_day_number_glyphs
         if glyphs and len(glyphs) >= 31 and 1 <= day_num <= 31:
@@ -766,7 +766,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
     def _draw_mini_svg_pattern(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,
@@ -938,7 +938,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB | None" = None,
+        db: CalendarDB | None = None,
     ) -> int:
         """Render the companion details page; returns how many were written.
 
@@ -1003,9 +1003,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _collect_holiday_special_rows(
-        coordinates: "CoordinateDict",
-        config: "CalendarConfig",
-        db: "CalendarDB",
+        coordinates: CoordinateDict,
+        config: CalendarConfig,
+        db: CalendarDB,
     ) -> list[dict]:
         """The holiday + special-day rows for the days the grid shows.
 

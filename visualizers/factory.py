@@ -20,7 +20,7 @@ class VisualizerFactory:
     instances by type name.
     """
 
-    _visualizers: dict[str, Type[BaseVisualizer]] = {}
+    _visualizers: dict[str, type[BaseVisualizer]] = {}
 
     @classmethod
     def _ensure_registered(cls):
@@ -51,7 +51,7 @@ class VisualizerFactory:
             }
 
     @classmethod
-    def register(cls, name: str, visualizer_class: Type[BaseVisualizer]):
+    def register(cls, name: str, visualizer_class: type[BaseVisualizer]):
         """
         Register a new visualizer type.
 

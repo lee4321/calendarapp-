@@ -62,10 +62,10 @@ def build_segments(
     band: dict[str, Any],
     start: date,
     end: date,
-    config: "CalendarConfig",
+    config: CalendarConfig,
     *,
     visible_days: list[date] | None = None,
-    db: "CalendarDB | None" = None,
+    db: CalendarDB | None = None,
     week_start_default: int = 0,
     fiscal_year_start_month_default: int = 2,
 ) -> list[BandSegment]:

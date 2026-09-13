@@ -179,8 +179,8 @@ class ImportResult:
     total_rows: int = 0
     imported_rows: int = 0
     failed_rows: int = 0
-    errors: List[str] = field(default_factory=list)
-    import_id: Optional[int] = None
+    errors: list[str] = field(default_factory=list)
+    import_id: int | None = None
 
 
 # ============================================================================

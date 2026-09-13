@@ -11,7 +11,7 @@ import logging
 import sqlite3
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
-from typing import Iterator
+from collections.abc import Iterator
 
 from shared.events_schema import migrate_events_table
 

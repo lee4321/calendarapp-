@@ -29,7 +29,7 @@ class FiscalSegment:
 # ---------------------------------------------------------------------------
 
 
-def get_fiscal_period_color(fiscal_info: "FiscalPeriodInfo", config: "CalendarConfig") -> str:
+def get_fiscal_period_color(fiscal_info: FiscalPeriodInfo, config: CalendarConfig) -> str:
     """Resolve the fill color for a fiscal period.
 
     Returns the color from config.theme_fiscal_period_colors keyed by
@@ -49,8 +49,8 @@ def get_fiscal_period_color(fiscal_info: "FiscalPeriodInfo", config: "CalendarCo
 
 
 def format_fiscal_period_label(
-    fiscal_info: "FiscalPeriodInfo",
-    config: "CalendarConfig",
+    fiscal_info: FiscalPeriodInfo,
+    config: CalendarConfig,
 ) -> str:
     """Format a fiscal period start label string using config template.
 
@@ -85,8 +85,8 @@ def format_fiscal_period_label(
 
 
 def format_fiscal_period_end_label(
-    fiscal_info: "FiscalPeriodInfo",
-    config: "CalendarConfig",
+    fiscal_info: FiscalPeriodInfo,
+    config: CalendarConfig,
 ) -> str:
     """Format a fiscal period end label string using config template."""
     _fy_offset = config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
@@ -135,7 +135,7 @@ def _fiscal_quarter_start_gregorian(day: date, fiscal_start_month: int) -> date:
 def build_fiscal_period_segments(
     start: date,
     end: date,
-    config: "CalendarConfig",
+    config: CalendarConfig,
 ) -> list[FiscalSegment]:
     """Build one FiscalSegment per fiscal period in [start, end].
 
@@ -191,7 +191,7 @@ def build_fiscal_period_segments(
 def build_fiscal_quarter_segments(
     start: date,
     end: date,
-    config: "CalendarConfig",
+    config: CalendarConfig,
     *,
     fiscal_start_month: int | None = None,
     label_format: str = "FY{fy} Q{q}",

@@ -79,7 +79,7 @@ class GanttColumn:
     indent: bool = False             # WBS depth shifts this column's text
 
 
-def resolve_columns(config: "CalendarConfig") -> list[GanttColumn]:
+def resolve_columns(config: CalendarConfig) -> list[GanttColumn]:
     """Build the column list from ``config.gantt_columns``.
 
     Entries without a ``field`` are dropped -- a theme typo costs one
@@ -186,7 +186,7 @@ def column_x_positions(
     return positions
 
 
-def cell_value(column: GanttColumn, event: "Event") -> str:
+def cell_value(column: GanttColumn, event: Event) -> str:
     """Render one cell's value as display text.
 
     Icon columns return ``""`` -- the renderer draws their glyph -- so a
@@ -216,7 +216,7 @@ def cell_value(column: GanttColumn, event: "Event") -> str:
     return str(value)
 
 
-def cell_icon_visible(column: GanttColumn, event: "Event") -> bool:
+def cell_icon_visible(column: GanttColumn, event: Event) -> bool:
     """True when an icon column should draw its glyph for this row.
 
     The reference column is never driven from the event — its icons come

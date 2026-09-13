@@ -28,57 +28,57 @@ class Event:
     task_name: str
     start: str  # YYYYMMDD
     end: str  # YYYYMMDD
-    notes: Optional[str] = None
-    icon: Optional[str] = None
-    resource_group: Optional[str] = None
-    resource_names: Optional[str] = None  # comma-separated individual resource names
+    notes: str | None = None
+    icon: str | None = None
+    resource_group: str | None = None
+    resource_names: str | None = None  # comma-separated individual resource names
     percent_complete: float = 0.0
     milestone: bool = False
     rollup: bool = False
-    datekey: Optional[str] = None
+    datekey: str | None = None
     priority: int = 0
-    wbs: Optional[str] = None
-    color: Optional[str] = None
+    wbs: str | None = None
+    color: str | None = None
     status: str = "active"
 
     # Schedule data elements.  All optional: rows imported before these
     # columns existed, and files that omit the columns, leave them unset.
-    source_id: Optional[str] = None
+    source_id: str | None = None
     critical: bool = False
-    start_time: Optional[str] = None  # HHMM
-    end_time: Optional[str] = None  # HHMM
-    duration: Optional[float] = None  # decimal days
-    duration_text: Optional[str] = None  # source string, e.g. "4hr"
-    effort: Optional[float] = None  # decimal days
-    effort_text: Optional[str] = None  # source string, e.g. "0.5d"
-    actual_start_date: Optional[str] = None
-    actual_start_time: Optional[str] = None
-    actual_end_date: Optional[str] = None
-    actual_end_time: Optional[str] = None
+    start_time: str | None = None  # HHMM
+    end_time: str | None = None  # HHMM
+    duration: float | None = None  # decimal days
+    duration_text: str | None = None  # source string, e.g. "4hr"
+    effort: float | None = None  # decimal days
+    effort_text: str | None = None  # source string, e.g. "0.5d"
+    actual_start_date: str | None = None
+    actual_start_time: str | None = None
+    actual_end_date: str | None = None
+    actual_end_time: str | None = None
     # Schedule window (float).  Populated only by tools that export a
     # critical-path analysis; the Gantt draws float bars when they are
     # present and simply omits them when they are not.
-    earliest_start_date: Optional[str] = None  # YYYYMMDD
-    latest_start_date: Optional[str] = None  # YYYYMMDD
-    earliest_end_date: Optional[str] = None  # YYYYMMDD
-    latest_end_date: Optional[str] = None  # YYYYMMDD
-    deadline: Optional[str] = None
-    start_variance: Optional[str] = None
-    finish_variance: Optional[str] = None
-    cost: Optional[float] = None
-    fixed_cost: Optional[float] = None
+    earliest_start_date: str | None = None  # YYYYMMDD
+    latest_start_date: str | None = None  # YYYYMMDD
+    earliest_end_date: str | None = None  # YYYYMMDD
+    latest_end_date: str | None = None  # YYYYMMDD
+    deadline: str | None = None
+    start_variance: str | None = None
+    finish_variance: str | None = None
+    cost: float | None = None
+    fixed_cost: float | None = None
     percent_work_complete: float = 0.0
-    predecessors: Optional[str] = None
-    successors: Optional[str] = None
-    tags: Optional[str] = None
-    custom1: Optional[str] = None
-    custom2: Optional[str] = None
-    custom3: Optional[str] = None
-    custom4: Optional[str] = None
-    custom5: Optional[str] = None
+    predecessors: str | None = None
+    successors: str | None = None
+    tags: str | None = None
+    custom1: str | None = None
+    custom2: str | None = None
+    custom3: str | None = None
+    custom4: str | None = None
+    custom5: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Event":
+    def from_dict(cls, data: dict) -> Event:
         """
         Create an Event from a dictionary (e.g., database row).
 
@@ -152,13 +152,13 @@ class SpecialDay:
     """
 
     title: str
-    icon: Optional[str] = None
+    icon: str | None = None
     nonworkday: bool = False
     hash_pattern: int = 0
-    country: Optional[str] = None
+    country: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "SpecialDay":
+    def from_dict(cls, data: dict) -> SpecialDay:
         """
         Create a SpecialDay from a dictionary.
 

@@ -625,13 +625,13 @@ _COLORSHEET_MAX_COLS = 8
 
 def _generate_colorsheet_svg(
     colors: list[dict],
-    output_path: "Path",
+    output_path: Path,
     title: str = "Colors",
     paginate: bool = False,
     columns: int = _COLORSHEET_MAX_COLS,
     rows: int = 10,
     cell_size: int = _COLORSHEET_BOX_W,
-) -> list["Path"]:
+) -> list[Path]:
     """
     Write one or more SVG grids of named-colour swatches from the ``colors`` table.
 
@@ -959,7 +959,7 @@ def _render_fontsheet_page(
 
 def _generate_fontsheet_svg(
     font_registry: dict,
-    output_path: "Path",
+    output_path: Path,
     color: str = "#222222",
     title: str = "Fonts",
     fullset: bool = False,
@@ -967,7 +967,7 @@ def _generate_fontsheet_svg(
     columns: int = _FONTSHEET_COLS,
     rows: int = 10,
     cell_size: int = _FONTSHEET_SAMPLE_SIZE,
-) -> list["Path"]:
+) -> list[Path]:
     """
     Write one or more SVG sample sheets for the fonts in the registry.
 
@@ -1055,14 +1055,14 @@ def _generate_fontsheet_svg(
 
 def _generate_iconsheet_svg(
     icons: list[dict],
-    output_path: "Path",
+    output_path: Path,
     color: str = "#333333",
     title: str = "Icons",
     paginate: bool = False,
     columns: int = 8,
     rows: int = 10,
     cell_size: int = 24,
-) -> list["Path"]:
+) -> list[Path]:
     """
     Write one or more SVG grids of icon previews from the ``icon`` table.
 
@@ -1271,7 +1271,7 @@ def _generate_iconsheet_svg(
 
 def _generate_patternsheet_svg(
     patterns: list[tuple[str, str]],
-    output_path: "Path",
+    output_path: Path,
     color: str = "#333333",
     title: str = "Patterns",
 ) -> None:

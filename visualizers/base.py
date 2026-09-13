@@ -23,7 +23,7 @@ Coordinate = tuple[float, float, float, float]  # (x, y, width, height)
 CoordinateDict = dict[str, Coordinate]
 
 
-def filter_events(events: list[dict], config: "CalendarConfig") -> list[dict]:
+def filter_events(events: list[dict], config: CalendarConfig) -> list[dict]:
     """
     Return only the events from *events* that should appear in a rendered output.
 

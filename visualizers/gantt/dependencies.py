@@ -45,7 +45,7 @@ avoidance is attempted, so arrows may cross other bars.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from collections.abc import Callable
 
 from shared.predecessors import Link, parse_links_with_rejects
 from vendor.labella.renderer import lineTo as _lineTo
@@ -274,7 +274,7 @@ def icon_for_number(
 
 def assign_cross_page_references(
     dependencies: list[Dependency],
-    same_page: "Callable[[int, int], bool]",
+    same_page: Callable[[int, int], bool],
     families: list[str],
     family_size: int,
     available: set[str] | None = None,

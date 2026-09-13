@@ -97,7 +97,7 @@ def plan_pages(
 class GanttLayout(BaseLayout):
     """Layout calculator for the Gantt visualization."""
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         """Calculate the page frame: header, footer, table and chart areas."""
         coord: CoordinateDict = {}
 
@@ -208,7 +208,7 @@ class GanttLayout(BaseLayout):
         return self._to_svg_coords(coord, config.pageY)
 
     @staticmethod
-    def _bands_height(config: "CalendarConfig", bands: list) -> float:
+    def _bands_height(config: CalendarConfig, bands: list) -> float:
         """Total height of a band stack of any length.
 
         Each band may state its own ``row_height``; those that do not fall

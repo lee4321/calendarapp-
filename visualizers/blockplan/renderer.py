@@ -55,7 +55,7 @@ from shared.timeband import (
 )
 
 
-def _blockplan_style_rules(config: "CalendarConfig") -> list:
+def _blockplan_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
 
     Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
@@ -70,7 +70,7 @@ def _blockplan_style_rules(config: "CalendarConfig") -> list:
     return list(getattr(config, "theme_style_rules", None) or [])
 
 
-def _blockplan_swimlane_rules(config: "CalendarConfig") -> list:
+def _blockplan_swimlane_rules(config: CalendarConfig) -> list:
     """Source the raw swimlane_rules list for LaneEngine, UnifiedTheme-first."""
     theme = getattr(config, "theme", None)
     if theme is not None:
@@ -83,7 +83,7 @@ def _blockplan_swimlane_rules(config: "CalendarConfig") -> list:
 def _nwd_fill_for_classes(
     classes: frozenset[str],
     band_fill_rules: list[dict] | None,
-    config: "CalendarConfig",
+    config: CalendarConfig,
 ) -> str | None:
     """Resolve a non-workday fill override for a single-day cell.
 
@@ -121,7 +121,7 @@ def _nwd_fill_for_classes(
 def _nwd_fill_opacity_for_classes(
     classes: frozenset[str],
     band_fill_rules: list[dict] | None,
-    config: "CalendarConfig",
+    config: CalendarConfig,
 ) -> float | None:
     """Resolve the fill opacity for a non-workday override cell.
 
@@ -153,7 +153,7 @@ def _nwd_fill_opacity_for_classes(
 
 
 def _nwd_icon_for_classes(
-    classes: frozenset[str], config: "CalendarConfig"
+    classes: frozenset[str], config: CalendarConfig
 ) -> tuple[str, str] | None:
     """Resolve a global non-workday icon for a single-day cell.
 
@@ -210,10 +210,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         """Assemble the page: bands, vertical lines, then swimlanes.
 
@@ -372,7 +372,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     def _timeband_stroke(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
         """Stroke attrs for band/heading row cells.
 
@@ -405,7 +405,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     def _grid_stroke(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
         """Stroke attrs for blockplan grid lines.
 
@@ -426,7 +426,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         dasharray = tk_grid.get("dasharray") or config.blockplan_grid_dasharray
         return color, float(width), float(opacity), dasharray
 
-    def _band_row_h(self, band: dict[str, Any], config: "CalendarConfig") -> float:
+    def _band_row_h(self, band: dict[str, Any], config: CalendarConfig) -> float:
         """Row height for one time band.
 
         When ``row_height`` is explicitly set on the band that value is used directly,
@@ -479,7 +479,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _resolve_color_list(
         fill_color: Any,
         fill_palette: Any,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> list[str]:
         """Return an ordered color list for cycling across band segments.
 
@@ -523,9 +523,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
         band: dict[str, Any],
         start: date,
         end: date,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         visible_days: list[date] | None = None,
-        db: "CalendarDB | None" = None,
+        db: CalendarDB | None = None,
     ) -> list[_BandSegment]:
         return _build_band_segments(
             band, start, end, config,
@@ -538,8 +538,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_time_bands(
         self,
         *,
-        config: "CalendarConfig",
-        db: "CalendarDB",
+        config: CalendarConfig,
+        db: CalendarDB,
         bands: list[dict[str, Any]],
         start: date,
         end: date,
@@ -926,8 +926,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_configured_vertical_lines(
         self,
         *,
-        config: "CalendarConfig",
-        db: "CalendarDB",
+        config: CalendarConfig,
+        db: CalendarDB,
         bands: list[dict[str, Any]],
         start: date,
         end: date,
@@ -973,7 +973,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         _vline_fill_style = config.get_box_style("ec-vline-fill")
         _vline_style = config.get_line_style("ec-vline")
 
-        def _ctx_for(seg: "_BandSegment") -> DayContext:
+        def _ctx_for(seg: _BandSegment) -> DayContext:
             classes = classify_day(seg.start, db, config)
             return DayContext(
                 date=seg.start.strftime("%Y%m%d"),
@@ -1187,7 +1187,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     def _assign_events_to_lanes(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         lanes: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
@@ -1331,7 +1331,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_swimlanes(
         self,
         *,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         lane_defs: list[dict[str, Any]],
         start: date,
         end: date,
@@ -1562,7 +1562,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_lane_durations(
         self,
         *,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         start: date,
         end: date,
@@ -1966,7 +1966,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_lane_events(
         self,
         *,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         events: list[Event],
         start: date,
         end: date,
@@ -2254,7 +2254,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
     def _draw_lane_label(
         self,
         *,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         lane_name: str,
         lane_cfg: dict[str, Any],
         left_x: float,
@@ -2373,7 +2373,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
     def _band_heading_text_pos(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict[str, Any],
         left_x: float,
         timeline_x: float,

@@ -185,7 +185,7 @@ def _color_key(color: str) -> str:
     return str(color or "").strip().lower()
 
 
-def _resolve_style_rules(config: "CalendarConfig") -> list:
+def _resolve_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
 
     Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
@@ -201,7 +201,7 @@ def _resolve_style_rules(config: "CalendarConfig") -> list:
 
 def _nwd_fill_for_classes(
     classes: frozenset[str],
-    config: "CalendarConfig",
+    config: CalendarConfig,
 ) -> str | None:
     """Resolve a non-workday fill override for a single-day cell.
 
@@ -221,7 +221,7 @@ def _nwd_fill_for_classes(
 
 def _nwd_fill_opacity_for_classes(
     classes: frozenset[str],
-    config: "CalendarConfig",
+    config: CalendarConfig,
 ) -> float | None:
     if not classes:
         return None
@@ -235,7 +235,7 @@ def _nwd_fill_opacity_for_classes(
 
 
 def _nwd_icon_for_classes(
-    classes: frozenset[str], config: "CalendarConfig"
+    classes: frozenset[str], config: CalendarConfig
 ) -> tuple[str, str] | None:
     if not classes:
         return None
@@ -320,10 +320,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def render(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ):
         self._chart_key: _ChartKey | None = None
         result = super().render(config, coordinates, events, db)
@@ -334,10 +334,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         area_x, area_y, area_w, area_h = coordinates.get(
             "CompactPlanArea", (0.0, 0.0, config.pageX, config.pageY)
@@ -551,7 +551,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _band_row_h(band: dict[str, Any], config: "CalendarConfig") -> float:
+    def _band_row_h(band: dict[str, Any], config: CalendarConfig) -> float:
         """Row height for one band: its own ``row_height``, else the
         view-wide ``compact_plan.band_row_height``."""
         if band.get("row_height") is not None:
@@ -560,7 +560,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def _draw_bands(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         time_bands: list[dict],
         area_x: float,
         area_y: float,
@@ -570,8 +570,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         visible_days: list[date],
         px_per_day: float,
         n_vis: int,
-        events: "list[Event] | None" = None,
-        db: "CalendarDB | None" = None,
+        events: list[Event] | None = None,
+        db: CalendarDB | None = None,
     ) -> None:
         """Draw the header band stack from ``area_y`` down.
 
@@ -793,10 +793,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         band: dict[str, Any],
         start: date,
         end: date,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         visible_days: list[date],
         band_idx: int,
-        db: "CalendarDB | None" = None,
+        db: CalendarDB | None = None,
     ) -> list[_BandSegment]:
         return _build_band_segments(
             band, start, end, config,
@@ -813,7 +813,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
 
     def _assign_group_colors(
-        self, events: list[Event], config: "CalendarConfig"
+        self, events: list[Event], config: CalendarConfig
     ) -> dict[str, str]:
         palette: list[str] = list(config.compactplan_palette) or ["steelblue"]
         groups = sorted({
@@ -848,7 +848,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         timeline_x: float,
         timeline_x_end: float,
         px_per_day: float,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis_y: float,
     ) -> list[_PlacedDuration]:
         from config.config import ICON_SETS
@@ -967,7 +967,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         milestones: list[Event],
         day_x: dict[date, float],
         px_per_day: float,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         max_label_x: float | None = None,
     ) -> dict[int, int]:
         """
@@ -1047,7 +1047,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         day_x: dict[date, float],
         px_per_day: float,
         axis_y: float,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         label_lane: int = 0,
         stem_base_h: float | None = None,
         max_label_x: float | None = None,
@@ -1126,7 +1126,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
 
     @staticmethod
-    def _milestone_label_step(config: "CalendarConfig") -> float:
+    def _milestone_label_step(config: CalendarConfig) -> float:
         """Vertical distance between milestone label lanes (one text line)."""
         font_size = float(
             getattr(config, "compactplan_name_text_font_size", None) or 8.0
@@ -1136,7 +1136,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     @classmethod
     def _milestone_flag_height(
         cls,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         label_lane: int,
         base: float | None = None,
     ) -> float:
@@ -1206,7 +1206,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _bar_stroke(p: _PlacedDuration, config: "CalendarConfig") -> dict[str, Any]:
+    def _bar_stroke(p: _PlacedDuration, config: CalendarConfig) -> dict[str, Any]:
         """A duration bar's stroke: style-rule overrides over the theme's."""
         rule = p.style or StyleResult()
         theme = config.get_line_style("ec-duration-bar")
@@ -1230,7 +1230,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         }
 
     @staticmethod
-    def _duration_icon_height(config: "CalendarConfig") -> float:
+    def _duration_icon_height(config: CalendarConfig) -> float:
         """Size of a bar's start icon.
 
         Theme-declared `icon:duration size:` overrides the per-visualizer
@@ -1249,7 +1249,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         x: float,
         center_y: float,
         size: float,
-        config: "CalendarConfig",
+        config: CalendarConfig,
     ) -> None:
         """Draw a bar's start icon from *x*, centred on *center_y*."""
         if not p.icon_name:
@@ -1273,7 +1273,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
 
     @staticmethod
-    def _continuation_icon_style(config: "CalendarConfig") -> tuple[str, float, str]:
+    def _continuation_icon_style(config: CalendarConfig) -> tuple[str, float, str]:
         """``(icon, size, configured color)`` of the continuation icon.
 
         Theme `icon:continuation` (bound to ec-continuation-icon) takes
@@ -1298,7 +1298,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def _draw_continuation_icon(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         right_x: float,
         center_y: float,
         bar_color: str | None,
@@ -1328,7 +1328,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
 
     def _milestone_style(
-        self, evt: Event, config: "CalendarConfig"
+        self, evt: Event, config: CalendarConfig
     ) -> tuple[str, StyleResult]:
         """A milestone's marker color, and the style rules it matched."""
         engine = getattr(self, "_style_engine", None)
@@ -1341,7 +1341,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return color, rule
 
     def _milestone_icon_name(
-        self, evt: Event, rule: StyleResult, config: "CalendarConfig"
+        self, evt: Event, rule: StyleResult, config: CalendarConfig
     ) -> str | None:
         """The icon a milestone is marked with instead of a pennant, if any.
 
@@ -1356,7 +1356,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return name if self._resolve_icon_svg(name) else None
 
     @classmethod
-    def _milestone_icon_size(cls, config: "CalendarConfig") -> float:
+    def _milestone_icon_size(cls, config: CalendarConfig) -> float:
         """Size of a milestone icon: the flag's height, but never taller than
         a label lane, so icons in neighbouring lanes cannot touch."""
         return min(
@@ -1364,7 +1364,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             cls._milestone_label_step(config),
         )
 
-    def _milestone_mark_width(self, evt: Event, config: "CalendarConfig") -> float:
+    def _milestone_mark_width(self, evt: Event, config: CalendarConfig) -> float:
         """How far right of the stem a milestone's pennant or icon reaches."""
         _, rule = self._milestone_style(evt, config)
         if self._milestone_icon_name(evt, rule, config):
@@ -1373,7 +1373,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def _chart_bottom(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         placed: list[_PlacedDuration],
         content_bottom: float,
         axis_y: float,
@@ -1405,9 +1405,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     def _render_key_svg(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
-        db: "CalendarDB | None",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
+        db: CalendarDB | None,
     ) -> int:
         """Write the chart's key beside it; returns how many pages it took.
 
@@ -1541,7 +1541,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             return (0, ranks[_color_key(bar.color)], *event_listing.sort_key(row))
         return (1, 0, *event_listing.sort_key(row))
 
-    def _key_column_width(self, config: "CalendarConfig", key: _ChartKey) -> float:
+    def _key_column_width(self, config: CalendarConfig, key: _ChartKey) -> float:
         """Width of the key page's mark column, in points."""
         swatch = float(config.compactplan_legend_swatch_width)
         if key.continuations:
@@ -1581,7 +1581,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         ))
 
     def _key_arrow_end(
-        self, config: "CalendarConfig", x: float, width: float, size: float
+        self, config: CalendarConfig, x: float, width: float, size: float
     ) -> float:
         """Right edge of a continuation arrow on the key: just past the
         swatch's end, so the arrow never covers the color it continues."""
@@ -1589,7 +1589,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         arrow = min(self._continuation_icon_style(config)[1], size * 1.25)
         return min(x + width, x + swatch + 1.0 + arrow)
 
-    def _bar_mark(self, p: _PlacedDuration, config: "CalendarConfig") -> RowMark:
+    def _bar_mark(self, p: _PlacedDuration, config: CalendarConfig) -> RowMark:
         """An activity's bar in miniature: its stroke, start icon and any
         continuation arrow, painted as the chart painted them."""
 
@@ -1611,7 +1611,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         return draw
 
-    def _milestone_mark(self, evt: Event, config: "CalendarConfig") -> RowMark:
+    def _milestone_mark(self, evt: Event, config: CalendarConfig) -> RowMark:
         """A milestone's flag in its color, or the icon the chart drew for it."""
 
         def draw(x: float, baseline: float, width: float, size: float) -> None:
@@ -1636,7 +1636,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         return draw
 
-    def _holiday_mark(self, icon: str, config: "CalendarConfig") -> RowMark:
+    def _holiday_mark(self, icon: str, config: CalendarConfig) -> RowMark:
         """A holiday or special day's own icon."""
         color = str(config.get_text_style("ec-event-name").color or "#595959")
 
@@ -1650,7 +1650,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return draw
 
     def _key_symbols(
-        self, config: "CalendarConfig", key: _ChartKey
+        self, config: CalendarConfig, key: _ChartKey
     ) -> list[tuple[RowMark, str]]:
         """The chart's symbols the key explains, as ``(mark, meaning)``."""
         swatch_w = float(config.compactplan_legend_swatch_width)
@@ -1758,7 +1758,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _resolve_font(
-        font_setting: str | None, config: "CalendarConfig", italic: bool = False
+        font_setting: str | None, config: CalendarConfig, italic: bool = False
     ) -> str:
         """Resolve a font name: explicit setting → base config font → safe fallback."""
         from config.config import FONT_REGISTRY, Fonts

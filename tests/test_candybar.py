@@ -18,7 +18,7 @@ from visualizers.candybar.renderer import CandybarRenderer
 from visualizers.factory import VisualizerFactory
 
 
-def _config(start: str, end: str, **overrides) -> "object":
+def _config(start: str, end: str, **overrides) -> object:
     cfg = create_calendar_config()
     cfg.pageX = 792.0
     cfg.pageY = 612.0

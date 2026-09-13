@@ -31,7 +31,8 @@ A rule that contains any day-based key is treated as a day rule.
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
 
 from shared.day_classifier import day_rule_matches, rule_has_day_keys
 
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     from shared.data_models import Event
 
 
-def icon_rule_matches(event: "Event", rule: dict[str, Any]) -> bool:
+def icon_rule_matches(event: Event, rule: dict[str, Any]) -> bool:
     """Return True if *event* satisfies every criterion in *rule*."""
     # milestone: bool — exact match
     if "milestone" in rule:
@@ -88,7 +89,7 @@ def icon_rule_matches(event: "Event", rule: dict[str, Any]) -> bool:
 
 
 def compute_icon_band_days(
-    events: "list[Event]",
+    events: list[Event],
     rules: list[dict[str, Any]],
     visible_days: list[date],
     classify_fn: Callable[[date], frozenset[str]] | None = None,

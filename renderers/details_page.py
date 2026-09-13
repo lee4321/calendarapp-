@@ -16,7 +16,8 @@ there before -- ``finish()`` leaves the last details page in it.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Sequence
+from typing import TYPE_CHECKING
+from collections.abc import Callable, Sequence
 
 from renderers.text_utils import fit_lines
 
@@ -104,8 +105,8 @@ class DetailsPageWriter:
     def __init__(
         self,
         renderer,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         page_path: Callable[[int], str],
         title_text: str,
     ):
@@ -289,7 +290,7 @@ class DetailsPageWriter:
         cells: Sequence[str],
         columns: Sequence,
         sub_line: tuple[int, str] | None = None,
-        mark: tuple[int, "RowMark"] | None = None,
+        mark: tuple[int, RowMark] | None = None,
     ) -> None:
         """Draw one data row, breaking to a new page when out of space.
 

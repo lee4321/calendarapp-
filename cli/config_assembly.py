@@ -429,7 +429,7 @@ def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -
     _apply_text_options(args, config)
 
 
-def _parse_status_filter(raw: str | None) -> "frozenset[str] | None":
+def _parse_status_filter(raw: str | None) -> frozenset[str] | None:
     """Parse ``--status`` CLI value into the set used by ``config.status_filter``.
 
     ``None`` / empty / ``"all"`` → ``None`` (no filter). Otherwise a

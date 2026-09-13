@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class TimelineLayout(BaseLayout):
     """Layout calculator for timeline visualization."""
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         """Calculate coordinates for timeline rendering."""
         coord: CoordinateDict = {}
 
