@@ -10,8 +10,9 @@ the parser directly.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from cli.errors import ConfigError
 
@@ -146,6 +147,57 @@ def _to_output_dir_path(filename: str) -> str:
             "as 'chart.svg' (it is always written under output/)"
         )
     return str(Path("output") / name)
+
+
+class _EventCalendarParser(argparse.ArgumentParser):
+    """ArgumentParser whose unknown-subcommand error lists the choices sorted.
+
+    argparse joins ``action.choices`` in registration order; only that list
+    is re-joined alphabetically, so the message (and any 'maybe you meant'
+    suggestion) is otherwise argparse's own.  The parser itself keeps its
+    registration order — see _SortedSubcommandsHelpFormatter.
+    """
+
+    def _check_value(self, action: argparse.Action, value: Any) -> None:
+        if not isinstance(action, argparse._SubParsersAction):
+            super()._check_value(action, value)
+            return
+        try:
+            super()._check_value(action, value)
+        except argparse.ArgumentError as exc:
+            listed = ", ".join(map(str, action.choices))
+            ordered = ", ".join(sorted(map(str, action.choices)))
+            raise argparse.ArgumentError(
+                action, exc.message.replace(listed, ordered)
+            ) from None
+
+
+class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Help formatter that lists the subcommands alphabetically.
+
+    Only the printed help is sorted — both the ``{a,b,…}`` choices in the
+    usage line / positional heading and the one-line-per-subcommand list.
+    The parser keeps its registration order, which the Slint UI, the TUI
+    and tools/generate_option_catalog.py walk.
+    """
+
+    def _iter_indented_subactions(
+        self, action: argparse.Action
+    ) -> Generator[argparse.Action]:
+        if not isinstance(action, argparse._SubParsersAction):
+            yield from super()._iter_indented_subactions(action)
+            return
+        self._indent()
+        yield from sorted(action._get_subactions(), key=lambda a: a.dest)
+        self._dedent()
+
+    def _metavar_formatter(
+        self, action: argparse.Action, default_metavar: str
+    ) -> Callable[[int], tuple[str, ...]]:
+        if action.metavar is None and isinstance(action, argparse._SubParsersAction):
+            names = "{" + ",".join(sorted(action.choices)) + "}"
+            return lambda tuple_size: (names,) * tuple_size
+        return super()._metavar_formatter(action, default_metavar)
 
 
 def _add_content_filter_args(
@@ -320,7 +372,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     Returns:
         Fully configured ArgumentParser ready for parse_args().
     """
-    parser = argparse.ArgumentParser(
+    parser = _EventCalendarParser(
         prog="EventCalendar",
         fromfile_prefix_chars="@",
         description="Create calendars with events from a SQLite database",
@@ -330,7 +382,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "\n"
             "Command line parameters can be read from a file using @filename"
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_SortedSubcommandsHelpFormatter,
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
@@ -404,30 +456,30 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         "subcommand",
         type=str,
         choices=[
-            "weekly",
-            "mini",
-            "mini-icon",
-            "candybar",
-            "text-mini",
-            "timeline",
-            "pit",
             "blockplan",
-            "gantt",
+            "candybar",
+            "colors",
+            "colorsheet",
             "compactplan",
             "excelblockplan",
-            "themes",
+            "exportdata",
+            "fonts",
+            "fontsheet",
+            "gantt",
+            "icons",
+            "iconsheet",
+            "mini",
+            "mini-icon",
+            "palettes",
+            "palettesheet",
             "papersizes",
             "patterns",
             "patternsheet",
-            "icons",
-            "iconsheet",
-            "colors",
-            "colorsheet",
-            "palettes",
-            "palettesheet",
-            "fonts",
-            "fontsheet",
-            "exportdata",
+            "pit",
+            "text-mini",
+            "themes",
+            "timeline",
+            "weekly",
         ],
         help="Subcommand to show help for",
     )

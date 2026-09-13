@@ -385,7 +385,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, candybar, text-mini, timeline, pit, blockplan, gantt, compactplan, excelblockplan, themes, papersizes, patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes, palettesheet, fonts, fontsheet, exportdata |
+| `subcommand` | yes | Subcommand to show help for | blockplan, candybar, colors, colorsheet, compactplan, excelblockplan, exportdata, fonts, fontsheet, gantt, icons, iconsheet, mini, mini-icon, palettes, palettesheet, papersizes, patterns, patternsheet, pit, text-mini, themes, timeline, weekly |
 
 ### `mini`
 

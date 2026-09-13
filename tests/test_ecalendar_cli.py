@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import sqlite3
 from pathlib import Path
 
@@ -222,3 +223,55 @@ def test_help_blockplan_shows_usage(capsys):
 
     assert rc == 0
     assert "usage: EventCalendar blockplan" in out
+
+
+def _subparsers_action(parser: argparse.ArgumentParser) -> argparse._SubParsersAction:
+    return next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+
+
+def test_top_level_help_lists_subcommands_alphabetically():
+    parser = ecalendar._create_argument_parser("calendar.svg")
+    names = list(_subparsers_action(parser).choices)
+    help_text = parser.format_help()
+
+    # One line per subcommand, indented four spaces (wrapped help lines are
+    # indented further).
+    listed = [
+        line.split()[0]
+        for line in help_text.splitlines()
+        if line.startswith("    ") and not line.startswith("     ")
+    ]
+    assert listed == sorted(names)
+    # The {a,b,...} choices in the usage line and positional heading, too.
+    assert "{" + ",".join(sorted(names)) + "}" in help_text
+    assert "{" + ",".join(names) + "}" not in help_text
+    # The parser itself keeps registration order for the UIs that walk it.
+    assert names[0] == "weekly"
+
+
+def test_unknown_subcommand_error_lists_choices_alphabetically(capsys):
+    parser = ecalendar._create_argument_parser("calendar.svg")
+    names = list(_subparsers_action(parser).choices)
+    with pytest.raises(SystemExit):
+        parser.parse_args(["bogus"])
+    err = capsys.readouterr().err
+
+    assert "invalid choice: 'bogus'" in err
+    assert f"(choose from {', '.join(sorted(names))})" in err
+
+
+def test_help_subcommand_choices_are_sorted_and_cover_every_command(capsys):
+    parser = ecalendar._create_argument_parser("calendar.svg")
+    subparsers = _subparsers_action(parser)
+    target = next(
+        a for a in subparsers.choices["help"]._actions if a.dest == "subcommand"
+    )
+    choices = list(target.choices)
+
+    assert choices == sorted(choices)
+    assert set(choices) == set(subparsers.choices) - {"help"}
+    with pytest.raises(SystemExit):
+        parser.parse_args(["help", "bogus"])
+    assert f"(choose from {', '.join(choices)})" in capsys.readouterr().err
