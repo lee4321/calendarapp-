@@ -1,11 +1,17 @@
 # ══════════════════════════════════════════════════════════════════════════════
 # Catalog fallback tokens
 #
-# Used by config/element_catalog.py when a theme YAML omits a token that the
-# catalog references.  The renderer never crashes on a missing token; instead
-# the value below is substituted and the theme engine logs a one-time INFO
-# noting which fallback was used.  Theme authors who want explicit control
-# should copy the snippet below into their YAML as a `define:` rule.
+# Used when a theme YAML omits a token that the element catalog references:
+# ThemeEngine._apply_catalog_defaults() fills the missing token with the value
+# below for the ec-* element bindings (config.get_text_style() and friends,
+# and the generated CSS) and logs a one-time INFO naming the fallback used.
+#
+# Renderers that read tokens directly (BaseSVGRenderer._tk() ->
+# UnifiedTheme.resolve_token()) never see these values: a missing token
+# resolves to {} and the drawing code uses its own built-in defaults.  So
+# copying a value below into a theme as a `define:` rule is not a no-op; it
+# can change how the views that read that token look (see "What the
+# required keys do" in docs/USER_GUIDE.md).
 #
 # Keep these values neutral — no opinionated colors or fonts.  They are a
 # safety net, not a "house style".

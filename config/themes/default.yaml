@@ -157,15 +157,16 @@ mini_details:
     - 0.1
     - 0.1
     - 0.12
+  output_suffix: _details
 text_mini:
   cell_width: 2
   month_gap: 4
   week_number_digits: null
   day_number_digits: null
-  event_symbols: null
-  milestone_symbols: null
-  holiday_symbols: null
-  nonworkday_symbols: null
+  event_symbols: [⯍, ⯏, 🟈, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐, 🞿, 🞭, 🞹, ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐, ❖, ◊, ⯪, ⯫, ꥟, 𜱃, 𜱪, 𜱩, 𜸂, "\U0001cecf", 🟙, 🝴, "\U0001fa54", 🮻, 🯀, 🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633", ⟠, ⨷, ✢, ✨, ❂]
+  milestone_symbols: [🄰, 🄱, 🄲, 🄳, 🄴, 🄵, 🄶, 🄷, 🄸, 🄹, 🄺, 🄻, 🄼, 🄽, 🄾, 🄿, 🅀, 🅁, 🅂, 🅃, 🅄, 🅅, 🅆, 🅇, 🅈, 🅉]
+  holiday_symbols: [🅰, 🅱, 🅲, 🅳, 🅴, 🅵, 🅶, 🅷, 🅸, 🅹, 🅺, 🅻, 🅼, 🅽, 🅾, 🅿, 🆀, 🆁, 🆂, 🆃, 🆄, 🆅, 🆆, 🆇, 🆈, 🆉]
+  nonworkday_symbols: [𝒂, 𝒃, 𝒄, 𝒅, 𝒆, 𝒇, 𝒈, 𝒉, 𝒊, 𝒋, 𝒌, 𝒍, 𝒎, 𝒏, 𝒐, 𝒑, 𝒒, 𝒓, 𝒔, 𝒕, 𝒖, 𝒗, 𝒘, 𝒙, 𝒚, 𝒛]
   duration_symbols: null
   duration_fill: null
 candybar:
@@ -420,6 +421,7 @@ compact_plan:
     - date_range
     - week
     - date
+  legend_area_ratio: 0.25
 blockplan:
   background_color: none
   grid_color: grey
@@ -618,6 +620,16 @@ time_bands:
     date_format: ddd
     show_every: 1
 
+excelblockplan:
+  band_row_height: 18.0
+  font_name: Calibri
+  font_size: 9
+layout:
+  margin:
+    bottom: 0
+    left: 0
+    right: 0
+    top: 0
 style_rules:
   - name: gantt dependency arrows
     apply_to: line:dependency_arrow
@@ -993,6 +1005,149 @@ style_rules:
         - b
     style:
       swimlane: Operations
+  - name: define box:band
+    define: box
+    as: band
+    style:
+      fill: none
+      stroke: none
+  - name: define box:day
+    define: box
+    as: day
+    style:
+      fill: '#F8F8FF'
+      fill_opacity: 0.25
+      stroke: '#CCCCCC'
+      stroke_width: 0.5
+  - name: define box:duration
+    define: box
+    as: duration
+    style:
+      fill: '#888888'
+      fill_opacity: 0.75
+      stroke: none
+  - name: define box:event
+    define: box
+    as: event
+    style:
+      fill: none
+      stroke: none
+  - name: define box:milestone
+    define: box
+    as: milestone
+    style:
+      fill: none
+      stroke: none
+  - name: define box:swimlane_content
+    define: box
+    as: swimlane_content
+    style:
+      fill: none
+      stroke: none
+  - name: define box:swimlane_heading
+    define: box
+    as: swimlane_heading
+    style:
+      fill: '#fafafa'
+      stroke: lightgrey
+      stroke_width: 0.5
+  - name: define box:vline
+    define: box
+    as: vline
+    style:
+      fill: lightblue
+      fill_opacity: 0.3
+      stroke: none
+  - name: define icon:milestone
+    define: icon
+    as: milestone
+    style:
+      color: '#333333'
+      size: 10
+  - name: define text:band_label
+    define: text
+    as: band_label
+    style:
+      font: Roboto-Regular
+      size: 7
+      color: black
+  - name: define text:base
+    define: text
+    as: base
+    style:
+      font: Roboto-Regular
+      size: 9
+      color: black
+  - name: define text:duration_date
+    define: text
+    as: duration_date
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:event_date
+    define: text
+    as: event_date
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:event_name
+    define: text
+    as: event_name
+    style:
+      font: RobotoCondensed-Light
+      size: 10
+      color: '#333333'
+  - name: define text:event_notes
+    define: text
+    as: event_notes
+    style:
+      font: RobotoCondensed-LightItalic
+      size: 9
+      color: '#666666'
+  - name: define text:fiscal_label
+    define: text
+    as: fiscal_label
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#666666'
+  - name: define text:holiday_title
+    define: text
+    as: holiday_title
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#333333'
+  - name: define text:milestone_label
+    define: text
+    as: milestone_label
+    style:
+      font: Roboto-Regular
+      size: 7
+      color: black
+  - name: define text:swimlane_label
+    define: text
+    as: swimlane_label
+    style:
+      font: Roboto-Regular
+      size: 8
+      color: black
+  - name: define text:today_label
+    define: text
+    as: today_label
+    style:
+      font: RobotoCondensed-Light
+      size: 8
+      color: '#FF4444'
+  - name: define text:week_number
+    define: text
+    as: week_number
+    style:
+      font: RobotoCondensed-Light
+      size: 9
+      color: '#888888'
 element_overrides:
   ec-axis-tick:
     use: line:tick
