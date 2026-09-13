@@ -1258,7 +1258,6 @@ class GanttRenderer(BaseSVGRenderer):
         if not dependencies:
             return
         engine = getattr(self, "_style_engine", None)
-        token = self._tk("line:grid")
 
         for dependency in dependencies:
             successor = anchors.get(dependency.successor_index)

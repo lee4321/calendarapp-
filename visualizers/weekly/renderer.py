@@ -192,8 +192,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """
         is_milestone = event.milestone
         is_duration = event.start != event.end
-        # An "event" is single-day and not a milestone
-        is_event = not is_milestone and not is_duration
 
         # Map this event to its type token
         if is_milestone:
@@ -410,7 +408,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         name_size = self._tk("text:event_name").get("size")
         day_num_size = self._tk("text:day_number").get("size")
         textrowheight = round(name_size * 1.3, 2)
-        daynumheight = day_num_size
 
         # All Y coordinates are in SVG space: y is the TOP edge of the day box,
         # y + height is the BOTTOM edge, and Y increases downward.
@@ -419,15 +416,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         numX = round((x + width) - (day_num_size * 0.25), 2)
         numY = round(y + (day_num_size * 1.1), 2)
 
-        monthX = round(x + (width * 0.1), 2)
-        monthY = round(y + textrowheight, 2)
-
         eventIconX = round(x + (width * 0.01), 2)
         eventIconY = round(numY + (textrowheight * 1.1), 2)
 
         eventTextX = round(eventIconX + (textrowheight * 1.1), 2)
         eventTextY = eventIconY
-        eventTextWidth = round(width - (textrowheight * 2.1), 2)
 
         overflowindicatorX = eventIconX
         overflowindicatorY = round(numY - (textrowheight / 2), 2)
@@ -1064,11 +1057,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         dn_size = tk_dn.get("size")
         dn_color = tk_dn.get("color") or _ts_dn.color
         boxdate = self._build_day_number_label(config, oneday, oneday_str)
-        day_num_width = string_width(
-            boxdate,
-            get_font_path(dn_font),
-            dn_size,
-        )
         self._draw_text(
             x1,
             y1,

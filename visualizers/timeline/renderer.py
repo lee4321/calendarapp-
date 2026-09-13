@@ -1080,16 +1080,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # be kept further from the axis than their header is.
         rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_width * 0.01)
-        _layout_notes_style = config.get_text_style("ec-event-notes")
         title_size, notes_size, date_size, _ = self._duration_metrics(config)
-        title_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
-        notes_font_path = self._safe_font_path(_layout_notes_style.font or config.timeline_notes_text_font_name)
-        date_font_path = self._safe_font_path(
-            config.get_text_style("ec-duration-date").font
-            or config.timeline_duration_date_font
-            or self._tk("text:duration_date").get("font")
-            or config.timeline_date_font
-        )
 
         out: list[TimelineDuration] = []
 
@@ -1212,20 +1203,7 @@ class TimelineRenderer(BaseSVGRenderer):
         lane_last_end: list[float] = []
         rollup_floors: dict[str, int] = {}
         min_gap = max(10.0, self._page_height * 0.01)
-        _layout_notes_style = config.get_text_style("ec-event-notes")
         title_size, notes_size, date_size, _ = self._duration_metrics(config)
-        title_font_path = self._safe_font_path(
-            _layout_notes_style.font or config.timeline_notes_text_font_name
-        )
-        notes_font_path = self._safe_font_path(
-            _layout_notes_style.font or config.timeline_notes_text_font_name
-        )
-        date_font_path = self._safe_font_path(
-            config.get_text_style("ec-duration-date").font
-            or config.timeline_duration_date_font
-            or self._tk("text:duration_date").get("font")
-            or config.timeline_date_font
-        )
 
         out: list[TimelineDuration] = []
 
@@ -1761,10 +1739,6 @@ class TimelineRenderer(BaseSVGRenderer):
         ):
             return
 
-        title = item.event.task_name or "(untitled duration)"
-        notes = (item.event.notes or "").strip()
-        start_day = self._safe_day(item.event.start, fallback=arrow.now())
-        end_day = self._safe_day(item.event.end, fallback=start_day)
 
         title_size, notes_size, date_size, bar_h = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
@@ -2494,10 +2468,6 @@ class TimelineRenderer(BaseSVGRenderer):
         ):
             return
 
-        title = item.event.task_name or "(untitled duration)"
-        notes = (item.event.notes or "").strip()
-        start_day = self._safe_day(item.event.start, fallback=arrow.now())
-        end_day = self._safe_day(item.event.end, fallback=start_day)
 
         title_size, notes_size, date_size, bar_thickness = self._duration_metrics(config)
         min_duration_offset = self._min_duration_offset(config, date_size)
@@ -3698,7 +3668,6 @@ class TimelineRenderer(BaseSVGRenderer):
 
         for row_idx, segments in enumerate(rows):
             row_top = band_bottom - (row_idx + 1) * (band_h + band_gap)
-            row_bottom = row_top + band_h
             for seg_idx, seg in enumerate(segments):
                 seg_start_arrow = arrow.get(seg.start)
                 seg_end_arrow = arrow.get(seg.end_exclusive)

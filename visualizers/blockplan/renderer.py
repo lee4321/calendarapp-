@@ -627,7 +627,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
             has_explicit_row_h = "row_height" in band
             row_h = self._band_row_h(band, config)
             y_top = top_y + cumulative_h
-            y_bottom = y_top + row_h
             cumulative_h += row_h
 
             unit = str(band.get("unit", "date")).strip().lower()
@@ -1772,8 +1771,22 @@ class BlockPlanRenderer(BaseSVGRenderer):
             event_icon_color = _sr.icon_color or dur_text_color
 
             # --- shared icon-layout helper ---
+            # The loop values are bound as defaults so the helper can only
+            # ever see this iteration's duration.
             def _draw_icon_and_text(
-                baseline_y: float, font_size: float, max_w: float
+                baseline_y: float,
+                font_size: float,
+                max_w: float,
+                *,
+                event=event,
+                x0=x0,
+                w=w,
+                show_icon=show_icon,
+                event_icon_to_draw=event_icon_to_draw,
+                event_icon_color=event_icon_color,
+                _event_name_style=_event_name_style,
+                _dur_name_font=_dur_name_font,
+                dur_text_color=dur_text_color,
             ) -> None:
                 """Draw icon (if show_icon) + task name on a single baseline row."""
                 if show_icon:

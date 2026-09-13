@@ -126,7 +126,6 @@ class TextMiniCalendarRenderer:
         symbol_map: dict[str, str],
         week_start_sunday: bool,
     ) -> list[str]:
-        cell_w = max(1, config.text_mini_cell_width)
         gap = " " * max(1, config.text_mini_month_gap)
 
         month_blocks: list[list[str]] = []
