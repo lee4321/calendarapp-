@@ -12,36 +12,35 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import arrow
 import drawsvg
 
-import arrow
-
-from renderers.svg_base import BaseSVGRenderer
-from renderers.text_utils import shrinktext, string_width
-from shared.date_utils import get_week_number
-from shared.data_models import Event
-from shared.day_classifier import classify_day
-from shared.rule_engine import DayContext, StyleResult, StyleEngine
-from shared.fiscal_renderer import (
-    get_fiscal_period_color,
-    format_fiscal_period_label,
-    format_fiscal_period_end_label,
-)
 from config.config import (
     FONT_REGISTRY,
-    FederalHolidayColor,
-    FederalHolidayAlpha,
-    CompanyHolidayColor,
     CompanyHolidayAlpha,
-    get_font_path,
-    weekend_style_is_workweek,
-    weekend_style_starts_sunday,
-    weekend_style_starts_monday,
-    monthcolors,
-    hashlinecolor,
+    CompanyHolidayColor,
+    FederalHolidayAlpha,
+    FederalHolidayColor,
     Resource_Group_colors,
+    get_font_path,
+    hashlinecolor,
+    monthcolors,
     resolve_page_margins,
+    weekend_style_is_workweek,
+    weekend_style_starts_monday,
+    weekend_style_starts_sunday,
 )
+from renderers.svg_base import BaseSVGRenderer
+from renderers.text_utils import shrinktext, string_width
+from shared.data_models import Event
+from shared.date_utils import get_week_number
+from shared.day_classifier import classify_day
+from shared.fiscal_renderer import (
+    format_fiscal_period_end_label,
+    format_fiscal_period_label,
+    get_fiscal_period_color,
+)
+from shared.rule_engine import DayContext, StyleEngine, StyleResult
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

@@ -5,13 +5,12 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from test_gantt_marks import _DummyDB, render, task
 
 from config.config import create_calendar_config, setfontsizes
 from shared.date_utils import visible_days
-from test_gantt_marks import _DummyDB, render, task
 from visualizers.gantt.layout import GanttLayout, plan_pages
 from visualizers.gantt.renderer import GanttRenderer, _page_output_path
-
 
 # ── Page planning ─────────────────────────────────────────────────────────
 

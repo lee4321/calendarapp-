@@ -2,8 +2,8 @@ import arrow
 
 from config.config import create_calendar_config, setfontsizes
 from shared.fiscal_calendars import FiscalPeriodInfo
-from visualizers.weekly.renderer import WeeklyCalendarRenderer
 from visualizers.mini.renderer import MiniCalendarRenderer
+from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
 
 class _CaptureRenderer(WeeklyCalendarRenderer):

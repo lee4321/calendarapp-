@@ -756,7 +756,7 @@ def _render_font_fullset(
         A tuple of (path_element_strings, total_rendered_height).
         Returns ([], 0.0) if the font has no mapped codepoints.
     """
-    from renderers.glyph_cache import get_font_codepoints, get_glyph, get_font_metrics
+    from renderers.glyph_cache import get_font_codepoints, get_font_metrics, get_glyph
 
     font_size_int = int(round(font_size))
     upm, _, _ = get_font_metrics(font_path)

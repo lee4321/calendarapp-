@@ -11,11 +11,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from test_gantt_marks import _DummyDB, render, task
 
 from config.config import CalendarConfig
 from shared.holiday_band import HolidayMark, compute_holiday_band_days
 from shared.timeband import build_segments
-from test_gantt_marks import _DummyDB, render, task
 
 
 class _HolidayDB:

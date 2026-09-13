@@ -16,7 +16,6 @@ from shared.predecessors import (
     parse_links_with_rejects,
 )
 
-
 # ── Empty input ───────────────────────────────────────────────────────────
 
 

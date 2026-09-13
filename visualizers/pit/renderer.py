@@ -24,6 +24,8 @@ import drawsvg
 
 from renderers.svg_base import BaseSVGRenderer
 from shared.data_models import Event
+from shared.date_utils import format_arrow_date
+from shared.orientation import Orientation, Side, opposite
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments
 from visualizers.pit.labella_adapter import (
@@ -36,8 +38,6 @@ from visualizers.pit.markers import (
     resolve_label_icon,
     resolve_marker,
 )
-from shared.date_utils import format_arrow_date
-from shared.orientation import Orientation, Side, opposite
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

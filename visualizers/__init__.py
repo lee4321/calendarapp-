@@ -7,8 +7,8 @@ Gantt charts, and timelines.
 """
 
 from visualizers.base import (
-    BaseVisualizer,
     BaseLayout,
+    BaseVisualizer,
     VisualizationResult,
     Visualizer,
 )

@@ -24,10 +24,10 @@ Date formats supported: YYYY-MM-DD, MM/DD/YYYY, M/D/YYYY, M/D/YY
 """
 
 import argparse
-import sys
 import os
-import sqlite3
 import shlex
+import sqlite3
+import sys
 
 # Ensure project root is on sys.path when run as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,6 +36,8 @@ import pandas
 
 from importers.common import (
     ImportDatabase as _ImportDatabaseBase,
+)
+from importers.common import (
     ImportResult,
     compute_file_hash,
     convert_date,
@@ -46,9 +48,10 @@ from importers.common import (
     process_dates,
     read_file,
     remove_import,
+)
+from importers.common import (
     setup_logging as _setup_logging_common,
 )
-
 
 # ============================================================================
 # Logging

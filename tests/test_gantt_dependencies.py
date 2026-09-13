@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from test_gantt_marks import render, task
 
 from shared.data_models import Event
-from test_gantt_marks import render, task
 from visualizers.gantt.dependencies import (
     ARROW_STYLE_TARGET,
     DEFAULT_STUB,

@@ -12,10 +12,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from test_gantt_marks import _DummyDB, render, task
 
 from config.config import CalendarConfig
 from shared.date_utils import visible_days
-from test_gantt_marks import _DummyDB, render, task
 from visualizers.gantt.layout import MAX_CHROME_SHARE, GanttLayout
 from visualizers.gantt.renderer import GanttRenderer
 

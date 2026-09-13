@@ -1,7 +1,7 @@
 import unittest
 
+from config.config import create_calendar_config, resolve_page_margins, setfontsizes
 from shared.db_access import CalendarDB
-from config.config import setfontsizes, create_calendar_config, resolve_page_margins
 
 
 class TestPaperSizesFromDB(unittest.TestCase):

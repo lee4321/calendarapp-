@@ -8,7 +8,6 @@ from config.config import create_calendar_config, setfontsizes
 from visualizers.compactplan.layout import CompactPlanLayout
 from visualizers.compactplan.renderer import CompactPlanRenderer
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------

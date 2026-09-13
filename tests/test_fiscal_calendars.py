@@ -4,8 +4,8 @@ import unittest
 from datetime import date, timedelta
 
 from shared.fiscal_calendars import (
-    NRF454Calendar,
     NRF445Calendar,
+    NRF454Calendar,
     NRF544Calendar,
     ThirteenPeriodCalendar,
     build_fiscal_lookup,

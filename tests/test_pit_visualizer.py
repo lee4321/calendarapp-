@@ -15,6 +15,7 @@ import pytest
 
 from config.config import create_calendar_config, setfontsizes
 from shared.data_models import Event
+from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
 from visualizers.factory import VisualizerFactory
 from visualizers.pit.labella_adapter import (
@@ -25,17 +26,15 @@ from visualizers.pit.labella_adapter import (
 )
 from visualizers.pit.layout import PITLayout
 from visualizers.pit.markers import (
+    _FILL_REPLACE_RE,
     BUILTIN_SHAPES,
     MarkerSpec,
-    _FILL_REPLACE_RE,
     draw_label_icon,
     resolve_label_icon,
     resolve_marker,
 )
 from visualizers.pit.renderer import PITRenderer
 from visualizers.pit.visualizer import PITVisualizer
-from shared.orientation import Orientation, Side
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -798,6 +797,7 @@ def test_pit_icon_colorization():
 def test_pit_label_icon_drawing():
     """draw_label_icon emits a colorized, scaled glyph anchored at x_left."""
     import drawsvg
+
     from renderers.svg_base import BaseSVGRenderer
 
     drawing = drawsvg.Drawing(100, 100)

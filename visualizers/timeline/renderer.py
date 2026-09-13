@@ -8,9 +8,8 @@ and duration bars aligned to start/end dates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Sequence
-
 from datetime import date
+from typing import TYPE_CHECKING, Callable, Sequence
 
 import arrow
 import drawsvg
@@ -21,17 +20,19 @@ from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
-from shared.rule_engine import StyleEngine, StyleResult
-from shared.wbs_filter import wbs_group, wbs_sort_key
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
+from shared.orientation import Orientation, Side
+from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
+from shared.wbs_filter import wbs_group, wbs_sort_key
 from visualizers.timeline.labella_adapter import (
     CalloutPlacement,
+)
+from visualizers.timeline.labella_adapter import (
     layout_callouts as _labella_layout_callouts,
 )
 from visualizers.timeline.packing import pack_callouts as _pack_callouts
-from shared.orientation import Orientation, Side
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

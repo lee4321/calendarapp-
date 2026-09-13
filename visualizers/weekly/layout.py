@@ -10,9 +10,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from visualizers.base import BaseLayout, CoordinateDict
 from config.config import WEEKEND_STYLES
 from shared.date_utils import get_calendar_days
+from visualizers.base import BaseLayout, CoordinateDict
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

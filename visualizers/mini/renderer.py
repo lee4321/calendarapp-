@@ -12,15 +12,21 @@ from typing import TYPE_CHECKING
 
 import arrow
 
-from renderers.svg_base import BaseSVGRenderer, _is_none_color
-from visualizers.mini.day_styles import DayStyleResolver, DayStyle
-from config.config import day_short, weekend_style_is_workweek, weekend_style_starts_sunday
-from shared.date_utils import (
-    format_arrow_date,
-    index_events_by_day as _index_events_by_day,
+from config.config import (
+    day_short,
+    weekend_style_is_workweek,
+    weekend_style_starts_sunday,
 )
 from renderers import event_listing
+from renderers.svg_base import BaseSVGRenderer, _is_none_color
+from shared.date_utils import (
+    format_arrow_date,
+)
+from shared.date_utils import (
+    index_events_by_day as _index_events_by_day,
+)
 from shared.rule_engine import StyleEngine
+from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -553,8 +559,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 6. Box around number
         if style.boxed:
-            from renderers.text_utils import string_width
             from config.config import get_font_path
+            from renderers.text_utils import string_width
 
             font_path = get_font_path(font)
             tw = string_width(display_text, font_path, font_size)
@@ -631,8 +637,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 7. Strikethrough
         if style.strikethrough:
-            from renderers.text_utils import string_width
             from config.config import get_font_path
+            from renderers.text_utils import string_width
 
             font_path = get_font_path(font)
             tw = string_width(display_text, font_path, font_size)
@@ -823,8 +829,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # Assign a distinct color and StyleResult to each duration event.
         palette = config.group_colors or ["lightsteelblue"]
         style_engine = StyleEngine(_mini_style_rules(config))
-        from visualizers.mini.day_styles import DayStyleResolver
         from shared.rule_engine import StyleResult
+        from visualizers.mini.day_styles import DayStyleResolver
         event_styles: dict[int, tuple[str, StyleResult]] = {}
         for idx, event in enumerate(duration_events):
             color = palette[idx % len(palette)]

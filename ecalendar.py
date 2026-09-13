@@ -10,14 +10,13 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.0"
+__version__ = "26.09.13.1"
 
 import logging
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-
 
 from config.config import (
     create_calendar_config,
@@ -40,7 +39,6 @@ logger = logging.getLogger(__name__)
 # The private names are re-exported here because tests and downstream
 # tooling historically reach them via `ecalendar.<name>`.
 
-from cli.errors import CalendarError, ConfigError, DatabaseError  # noqa: E402,F401
 from cli.args import (  # noqa: E402,F401
     _create_argument_parser,
     _expand_sanitized_atfiles,
@@ -59,6 +57,7 @@ from cli.config_assembly import (  # noqa: E402,F401
     _validate_database,
     replace_template_vars,
 )
+from cli.errors import CalendarError, ConfigError, DatabaseError  # noqa: E402,F401
 from cli.exportdata import (  # noqa: E402,F401
     _event_to_row,
     _events_to_csv_string,
@@ -77,7 +76,6 @@ from visualizers.sheets import (  # noqa: E402,F401
     _generate_palette_svg,
     _generate_patternsheet_svg,
 )
-
 
 # =============================================================================
 # CLI Argument Parsing
@@ -718,8 +716,8 @@ def run(argv: list[str] | None = None) -> int:
         # Build fiscal calendar lookup if fiscal calendar is enabled
         if config.fiscal_calendar_type:
             from shared.fiscal_calendars import (
-                create_fiscal_calendar,
                 build_fiscal_lookup,
+                create_fiscal_calendar,
             )
 
             fiscal_cal = create_fiscal_calendar(config.fiscal_calendar_type)

@@ -17,9 +17,8 @@ import pytest
 
 from config.config import CalendarConfig
 from shared.data_models import Event
-from visualizers.timeline.labella_adapter import layout_callouts
 from shared.orientation import Orientation, Side
-
+from visualizers.timeline.labella_adapter import layout_callouts
 
 # ---------------------------------------------------------------------------
 # Fixtures

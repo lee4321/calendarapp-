@@ -29,9 +29,15 @@ from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
     append_perp_stub,
-    layout_callouts as _layout_callouts_shared,
-    partition_for_both as _partition_for_both,
     prepend_perp_stub,
+)
+from shared.labella_layout import (
+    layout_callouts as _layout_callouts_shared,
+)
+from shared.labella_layout import (
+    partition_for_both as _partition_for_both,
+)
+from shared.labella_layout import (
     resolve_font_path as _resolve_font_path,
 )
 from shared.orientation import Orientation, Side

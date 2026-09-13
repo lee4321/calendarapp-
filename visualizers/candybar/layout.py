@@ -22,10 +22,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from shared.date_utils import get_week_number
 from config.config import (
     weekend_style_starts_sunday,
 )
+from shared.date_utils import get_week_number
 from visualizers.base import BaseLayout, CoordinateDict
 
 if TYPE_CHECKING:

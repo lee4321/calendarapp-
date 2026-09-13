@@ -1,14 +1,14 @@
-import unittest
 import tempfile
-import yaml
+import unittest
+from argparse import Namespace
 
 import arrow
+import yaml
 
 from config.config import create_calendar_config
 from config.theme_engine import ThemeEngine
 from ecalendar import _reapply_post_theme_cli_overrides
 from shared.date_utils import calc_calendar_range
-from argparse import Namespace
 
 
 class TestCalendarRange(unittest.TestCase):

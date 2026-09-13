@@ -46,7 +46,11 @@ from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import DayContext, StyleEngine, StyleResult
 from shared.timeband import (
     BandSegment as _BandSegment,
+)
+from shared.timeband import (
     build_segments as _build_band_segments,
+)
+from shared.timeband import (
     group_segments as _group_band_segments,
 )
 

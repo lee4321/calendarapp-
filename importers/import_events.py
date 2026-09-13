@@ -21,15 +21,15 @@ Examples:
 """
 
 import argparse
-import sys
-import os
+import importlib.util
+import inspect
 import logging
+import os
 import re
 import shlex
 import sqlite3
-from typing import Dict, Any
-import importlib.util
-import inspect
+import sys
+from typing import Any, Dict
 
 # Ensure project root is on sys.path when run as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -38,6 +38,8 @@ import pandas
 
 from importers.common import (
     ImportDatabase as _ImportDatabaseBase,
+)
+from importers.common import (
     ImportResult,
     coerce_source_text,
     compute_file_hash,
@@ -50,10 +52,11 @@ from importers.common import (
     process_datetimes,
     read_file,
     remove_import,
+)
+from importers.common import (
     setup_logging as _setup_logging_common,
 )
 from shared.duration_parser import normalize_decimal_separators, parse_duration
-
 
 # ============================================================================
 # Logging
