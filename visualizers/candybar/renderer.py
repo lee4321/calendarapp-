@@ -28,7 +28,7 @@ from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
 from visualizers.candybar.layout import compute_columns
-from visualizers.mini.day_styles import DayStyleResolver
+from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 from visualizers.mini.renderer import MiniCalendarRenderer
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class CandybarRenderer(MiniCalendarRenderer):
         events_by_day = _index_events_by_day(effective_events)
 
         # Resolve every day cell's style once.
-        cell_state: list[tuple[float, float, float, float, str, object]] = []
+        cell_state: list[tuple[float, float, float, float, str, DayStyle]] = []
         for key in sorted(coordinates):
             if not key.startswith("Cell_"):
                 continue
