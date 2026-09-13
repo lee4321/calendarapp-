@@ -206,6 +206,44 @@ def _apply_cli_config_overrides(args: Namespace, config: CalendarConfig) -> None
             setattr(config, config_attr, kind == "enable")
 
 
+def _apply_content_filters(args: Namespace, config: CalendarConfig) -> None:
+    """
+    Transfer the shared content-filter flags into *config*.
+
+    The config side of ``cli.args._add_content_filter_args()`` and the one
+    place the event filters are wired, for every subcommand that registers
+    them: the SVG views and text-mini (through _apply_args_to_config), and
+    excelblockplan and exportdata (called directly from run()).  A flag the
+    subcommand does not register reads as its default.
+
+    ``--empty`` overrides the rest: no events, no durations, and not
+    milestones-only.
+
+    Args:
+        args:   Namespace from argparse.parse_args().
+        config: CalendarConfig instance to populate (mutated in-place).
+    """
+    config.includeevents = not getattr(args, "noevents", False)
+    # Most views take durations by default and opt out with --nodurations.
+    # The mini family spreads a duration over a run of day cells and hides the
+    # single-day marks beneath it, so those views show single-day events and
+    # milestones only, and durations are opt-in via --durations.
+    if getattr(args, "command", None) in _DURATIONS_OPTIN_COMMANDS:
+        config.includedurations = bool(getattr(args, "durations", False))
+    else:
+        config.includedurations = not getattr(args, "nodurations", False)
+    config.milestones = getattr(args, "milestones", False)
+    config.WBS = getattr(args, "WBS", config.WBS)
+    config.country = getattr(args, "country", None)
+    config.status_filter = _parse_status_filter(getattr(args, "status", None))
+
+    if getattr(args, "empty", False):
+        logger.info("Creating empty calendar (no events)")
+        config.includeevents = False
+        config.includedurations = False
+        config.milestones = False
+
+
 def _apply_args_to_config(
     args: Namespace,
     config: CalendarConfig,
@@ -227,8 +265,9 @@ def _apply_args_to_config(
     5. Layout toggles        → header, footer, margin, overflow, shrink flags
     6. Paper size/orientation→ case-insensitive lookup; sets config.pageX/pageY;
                                raises ConfigError on unknown size
-    7. Display options       → events, durations, milestones, WBS,
-                               today-shading, country
+    7. Display options       → today-shading, notes; event filters (events,
+                               durations, milestones, WBS, status, country,
+                               --empty) via _apply_content_filters
     8. Simple field overrides→ mini / candybar / timeline / PIT / fiscal
                                options via _CLI_CONFIG_OVERRIDES (applied only
                                when explicitly given, and re-asserted after
@@ -313,24 +352,11 @@ def _apply_args_to_config(
     config.papersize = paper_name
     config.orientation = getattr(args, "orientation", config.orientation)
 
-    # Display options.
-    # Kept as explicit one-to-one assignments so CLI/config wiring is easy to
-    # audit during reviews; migrate to a mapping table if this list expands.
+    # Display options, then the event filters shared with excelblockplan and
+    # exportdata.
     config.shade_current_day = getattr(args, "shade", False)
-    config.includeevents = not getattr(args, "noevents", False)
-    # Most views take durations by default and opt out with --nodurations.
-    # The mini family spreads a duration over a run of day cells and hides the
-    # single-day marks beneath it, so those views show single-day events and
-    # milestones only, and durations are opt-in via --durations.
-    if getattr(args, "command", None) in _DURATIONS_OPTIN_COMMANDS:
-        config.includedurations = bool(getattr(args, "durations", False))
-    else:
-        config.includedurations = not getattr(args, "nodurations", False)
-    config.milestones = getattr(args, "milestones", False)
     config.include_notes = getattr(args, "includenotes", False)
-    config.WBS = getattr(args, "WBS", config.WBS)
-    config.country = getattr(args, "country", None)
-    config.status_filter = _parse_status_filter(getattr(args, "status", None))
+    _apply_content_filters(args, config)
 
     # Mini / candybar / timeline / PIT / fiscal simple field overrides —
     # table-driven so the post-theme re-apply pass uses the identical list.

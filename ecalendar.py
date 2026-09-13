@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.6"
+__version__ = "26.09.13.7"
 
 import logging
 import sys
@@ -47,6 +47,7 @@ from cli.args import (  # noqa: E402,F401
 )
 from cli.config_assembly import (  # noqa: E402,F401
     _apply_args_to_config,
+    _apply_content_filters,
     _apply_text_options,
     _configure_logging,
     _open_calendar_db,
@@ -615,19 +616,9 @@ def run(argv: list[str] | None = None) -> int:
         _ebp_wd = getattr(args, "weekend_days", None)
         if _ebp_wd:
             _ebp_config.weekend_days = _parse_weekend_days(_ebp_wd)
-        _ebp_config.country = args.country
         _ebp_config.userstart = args.begin
         _ebp_config.userend = args.end
-        # Blockplan-equivalent content filters
-        _ebp_config.includeevents = not args.noevents
-        _ebp_config.includedurations = not args.nodurations
-        _ebp_config.milestones = args.milestones
-        _ebp_config.WBS = args.WBS
-        _ebp_config.status_filter = _parse_status_filter(getattr(args, "status", None))
-        if args.empty:
-            _ebp_config.includeevents = False
-            _ebp_config.includedurations = False
-            _ebp_config.milestones = False
+        _apply_content_filters(args, _ebp_config)
         calc_calendar_range(_ebp_config, args.begin, args.end)
         _ebp_db.load_python_holidays(
             _ebp_config.country, _ebp_config.adjustedstart, _ebp_config.adjustedend
@@ -654,12 +645,7 @@ def run(argv: list[str] | None = None) -> int:
     if args.command == "exportdata":
         _ed_db = _open_calendar_db(args.database)
         _ed_config = create_calendar_config()
-        _ed_config.country = args.country
-        _ed_config.includeevents = not args.noevents
-        _ed_config.includedurations = not args.nodurations
-        _ed_config.milestones = args.milestones
-        _ed_config.WBS = args.WBS
-        _ed_config.status_filter = _parse_status_filter(getattr(args, "status", None))
+        _apply_content_filters(args, _ed_config)
         calc_calendar_range(_ed_config, args.begin, args.end)
         _ed_db.load_python_holidays(
             _ed_config.country, _ed_config.adjustedstart, _ed_config.adjustedend
@@ -756,13 +742,6 @@ def run(argv: list[str] | None = None) -> int:
         output_name = args.outputfile or default_output
         Path("output").mkdir(parents=True, exist_ok=True)
         config.outputfile = _to_output_dir_path(output_name)
-
-        # Handle empty calendar option
-        if args.empty:
-            logger.info("Creating empty calendar (no events)")
-            config.includeevents = False
-            config.includedurations = False
-            config.milestones = False
 
         # Store command line for SVG metadata
         config.command_line = " ".join(argv if argv else sys.argv)

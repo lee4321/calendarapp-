@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Literal
 
 from cli.errors import ConfigError
 
@@ -145,6 +146,127 @@ def _to_output_dir_path(filename: str) -> str:
             "as 'chart.svg' (it is always written under output/)"
         )
     return str(Path("output") / name)
+
+
+def _add_content_filter_args(
+    parser: argparse.ArgumentParser,
+    *,
+    durations: Literal["optout", "optin", "none"] = "optout",
+    empty_help: str | None = "Create blank calendar (no events)",
+    shade: bool = False,
+    includenotes: bool = False,
+    overflow: bool = False,
+) -> None:
+    """
+    Register the "Content Filtering" group on one subcommand parser.
+
+    The single definition of the event filters shared by the SVG views,
+    text-mini, excelblockplan and exportdata, so their flags, help text and
+    defaults cannot drift apart.  The keyword switches carry the per-view
+    gating: a flag a view never reads is not registered on its parser
+    (docs/cli_theme_overrides.html, Appendix A).
+    ``cli.config_assembly._apply_content_filters()`` is the config side.
+
+    Args:
+        parser:       Subcommand parser to extend.
+        durations:    "optout" registers --nodurations (durations shown by
+                      default); "optin" registers --durations (the mini
+                      family, whose day cells a duration would bury); "none"
+                      registers neither (PIT always drops durations).
+        empty_help:   Help text for --empty, or None to leave the flag out.
+        shade:        Register --shade (day-grid views).
+        includenotes: Register --includenotes (views that draw a notes line).
+        overflow:     Register --overflow (weekly only).
+    """
+    group = parser.add_argument_group("Content Filtering")
+    if empty_help is not None:
+        group.add_argument(
+            "--empty",
+            "-e",
+            action="store_true",
+            help=empty_help,
+        )
+    if shade:
+        group.add_argument(
+            "--shade",
+            "-sh",
+            action="store_true",
+            help="Shade current date",
+        )
+    group.add_argument(
+        "--noevents",
+        "-ne",
+        action="store_true",
+        help="Exclude single-day events",
+    )
+    if durations == "optin":
+        group.add_argument(
+            "--durations",
+            "-du",
+            action="store_true",
+            help="Include multi-day durations (excluded by default)",
+        )
+    elif durations == "optout":
+        group.add_argument(
+            "--nodurations",
+            "-nd",
+            action="store_true",
+            help="Exclude multi-day durations",
+        )
+    group.add_argument(
+        "--milestones",
+        "-mo",
+        action="store_true",
+        help="Show only milestones",
+    )
+    if includenotes:
+        group.add_argument(
+            "--includenotes",
+            "-notes",
+            action="store_true",
+            help="Show notes with event names",
+        )
+    group.add_argument(
+        "--WBS",
+        type=str,
+        default="",
+        help=(
+            "WBS filter expression. Comma-separated tokens; '!' excludes. "
+            "Segments are dot-separated. '*' matches a segment, '**' matches "
+            "any remaining segments (implicit if omitted)."
+        ),
+    )
+    group.add_argument(
+        "--status",
+        type=str,
+        default=None,
+        metavar="LIST",
+        help=(
+            "Comma-separated event statuses to include "
+            "(active, draft, cancelled, archived, on-hold). "
+            "Use 'all' for no filter. Default: active."
+        ),
+    )
+    if overflow:
+        group.add_argument(
+            "--overflow",
+            "-x",
+            action="store_true",
+            help="Create overflow page showing items",
+        )
+    group.add_argument(
+        "--country",
+        "-cc",
+        type=str,
+        default=None,
+        metavar="CODE",
+        help=(
+            "ISO 3166-1 alpha-2 country code(s) for government holidays. "
+            "Accepts a single code (e.g. US) or a comma-separated list "
+            "(e.g. US,CA,GB) to include holidays from multiple countries. "
+            "If omitted, US and CA holidays are loaded by default."
+        ),
+    )
 
 
 def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
@@ -626,8 +748,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
 
-    # excelblockplan subcommand arguments — mirror excelheader plus blockplan
-    # content filters so users get parity with the SVG blockplan view.
+    # excelblockplan subcommand arguments — mirror excelheader plus the
+    # shared content filters, so users get parity with the SVG blockplan view.
     excelblockplan.add_argument(
         "--outputfile",
         "-of",
@@ -672,63 +794,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "non-working days for holiday/weekend classification."
         ),
     )
-    excelblockplan.add_argument(
-        "--country",
-        "-cc",
-        type=str,
-        default=None,
-        metavar="CODE",
-        help=(
-            "ISO 3166-1 alpha-2 country code(s) for holidays. "
-            "Accepts a single code (e.g. US) or a comma-separated list "
-            "(e.g. US,CA,GB) to include holidays from multiple countries."
-        ),
-    )
-    _ebp_content = excelblockplan.add_argument_group("Content Filtering")
-    _ebp_content.add_argument(
-        "--noevents",
-        "-ne",
-        action="store_true",
-        help="Exclude single-day events",
-    )
-    _ebp_content.add_argument(
-        "--nodurations",
-        "-nd",
-        action="store_true",
-        help="Exclude multi-day durations",
-    )
-    _ebp_content.add_argument(
-        "--milestones",
-        "-mo",
-        action="store_true",
-        help="Show only milestones",
-    )
-    _ebp_content.add_argument(
-        "--WBS",
-        type=str,
-        default="",
-        help=(
-            "WBS filter expression. Comma-separated tokens; '!' excludes. "
-            "Segments are dot-separated. '*' matches a segment, '**' matches "
-            "any remaining segments (implicit if omitted)."
-        ),
-    )
-    _ebp_content.add_argument(
-        "--status",
-        type=str,
-        default=None,
-        metavar="LIST",
-        help=(
-            "Comma-separated event statuses to include "
-            "(active, draft, cancelled, archived, on-hold). "
-            "Use 'all' for no filter. Default: active."
-        ),
-    )
-    _ebp_content.add_argument(
-        "--empty",
-        "-e",
-        action="store_true",
-        help="Create blank workbook (no events)",
+    _add_content_filter_args(
+        excelblockplan, empty_help="Create blank workbook (no events)"
     )
 
     # exportdata subcommand arguments
@@ -743,59 +810,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "default: output/exportdata_YYYYMMDD.csv)"
         ),
     )
-    _ed_content = exportdata.add_argument_group("Content Filtering")
-    _ed_content.add_argument(
-        "--noevents",
-        "-ne",
-        action="store_true",
-        help="Exclude single-day events",
-    )
-    _ed_content.add_argument(
-        "--nodurations",
-        "-nd",
-        action="store_true",
-        help="Exclude multi-day durations",
-    )
-    _ed_content.add_argument(
-        "--milestones",
-        "-mo",
-        action="store_true",
-        help="Show only milestones",
-    )
-    _ed_content.add_argument(
-        "--WBS",
-        type=str,
-        default="",
-        help=(
-            "WBS filter expression. Comma-separated tokens; '!' excludes. "
-            "Segments are dot-separated. '*' matches a segment, '**' matches "
-            "any remaining segments (implicit if omitted)."
-        ),
-    )
-    _ed_content.add_argument(
-        "--status",
-        type=str,
-        default=None,
-        metavar="LIST",
-        help=(
-            "Comma-separated event statuses to include "
-            "(active, draft, cancelled, archived, on-hold). "
-            "Use 'all' for no filter. Default: active."
-        ),
-    )
-    _ed_content.add_argument(
-        "--country",
-        "-cc",
-        type=str,
-        default=None,
-        metavar="CODE",
-        help=(
-            "ISO 3166-1 alpha-2 country code(s) for government holidays. "
-            "Accepts a single code (e.g. US) or a comma-separated list "
-            "(e.g. US,CA,GB) to include holidays from multiple countries. "
-            "If omitted, US and CA holidays are loaded by default."
-        ),
-    )
+    _add_content_filter_args(exportdata, empty_help=None)
 
     # fontsheet subcommand arguments
     fontsheet.add_argument(
@@ -930,8 +945,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # of cells and buries the single-day marks under it, so the mini family
     # shows single-day events and milestones only unless --durations is given.
     # Candybar is here for the same reason — it reuses the mini day-style
-    # engine over a year-long strip of day cells.  (text-mini registers the
-    # same opt-in in its own argument group below.)
+    # engine over a year-long strip of day cells.  (text-mini takes the
+    # same durations="optin" below.)
     _durations_optin_views = (mini, mini_icon, candybar)
     _weekend_days_views = (weekly, timeline, blockplan, gantt, compactplan)
     _includenotes_views = (weekly, timeline, pit, blockplan, gantt, compactplan)
@@ -1108,94 +1123,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
         # Content filtering (day-grid views additionally get --shade; weekly
         # alone gets --overflow)
-        content_group = view_parser.add_argument_group("Content Filtering")
-        content_group.add_argument(
-            "--empty",
-            "-e",
-            action="store_true",
-            help="Create blank calendar (no events)",
-        )
-        if view_parser in _shade_views:
-            content_group.add_argument(
-                "--shade",
-                "-sh",
-                action="store_true",
-                help="Shade current date",
-            )
-        content_group.add_argument(
-            "--noevents",
-            "-ne",
-            action="store_true",
-            help="Exclude single-day events",
-        )
+        durations: Literal["optout", "optin", "none"] = "optout"
         if view_parser in _durations_optin_views:
-            content_group.add_argument(
-                "--durations",
-                "-du",
-                action="store_true",
-                help="Include multi-day durations (excluded by default)",
-            )
-        elif view_parser is not pit:
-            # PIT drops multi-day durations unconditionally.
-            content_group.add_argument(
-                "--nodurations",
-                "-nd",
-                action="store_true",
-                help="Exclude multi-day durations",
-            )
-        content_group.add_argument(
-            "--milestones",
-            "-mo",
-            action="store_true",
-            help="Show only milestones",
-        )
-        if view_parser in _includenotes_views:
-            content_group.add_argument(
-                "--includenotes",
-                "-notes",
-                action="store_true",
-                help="Show notes with event names",
-            )
-        content_group.add_argument(
-            "--WBS",
-            type=str,
-            default="",
-            help=(
-                "WBS filter expression. Comma-separated tokens; '!' excludes. "
-                "Segments are dot-separated. '*' matches a segment, '**' matches "
-                "any remaining segments (implicit if omitted)."
-            ),
-        )
-        content_group.add_argument(
-            "--status",
-            type=str,
-            default=None,
-            metavar="LIST",
-            help=(
-                "Comma-separated event statuses to include "
-                "(active, draft, cancelled, archived, on-hold). "
-                "Use 'all' for no filter. Default: active."
-            ),
-        )
-        if view_parser is weekly:
-            content_group.add_argument(
-                "--overflow",
-                "-x",
-                action="store_true",
-                help="Create overflow page showing items",
-            )
-        content_group.add_argument(
-            "--country",
-            "-cc",
-            type=str,
-            default=None,
-            metavar="CODE",
-            help=(
-                "ISO 3166-1 alpha-2 country code(s) for government holidays. "
-                "Accepts a single code (e.g. US) or a comma-separated list "
-                "(e.g. US,CA,GB) to include holidays from multiple countries. "
-                "If omitted, US and CA holidays are loaded by default."
-            ),
+            durations = "optin"
+        elif view_parser is pit:
+            durations = "none"  # PIT drops multi-day durations unconditionally
+        _add_content_filter_args(
+            view_parser,
+            durations=durations,
+            shade=view_parser in _shade_views,
+            includenotes=view_parser in _includenotes_views,
+            overflow=view_parser is weekly,
         )
 
     # text-mini: weekends + content filtering only (no SVG layout,
@@ -1217,68 +1155,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "4=half weekends Monday start"
         ),
     )
-    _tm_content = text_mini.add_argument_group("Content Filtering")
-    _tm_content.add_argument(
-        "--empty",
-        "-e",
-        action="store_true",
-        help="Create blank calendar (no events)",
-    )
-    _tm_content.add_argument(
-        "--noevents",
-        "-ne",
-        action="store_true",
-        help="Exclude single-day events",
-    )
     # text-mini is a day-per-cell text grid: a multi-day duration paints a
     # run of fill symbols across it and buries the single-day marks it runs
     # under, so durations are opt-in here rather than opt-out.
-    _tm_content.add_argument(
-        "--durations",
-        "-du",
-        action="store_true",
-        help="Include multi-day durations (excluded by default)",
-    )
-    _tm_content.add_argument(
-        "--milestones",
-        "-mo",
-        action="store_true",
-        help="Show only milestones",
-    )
-    _tm_content.add_argument(
-        "--WBS",
-        type=str,
-        default="",
-        help=(
-            "WBS filter expression. Comma-separated tokens; '!' excludes. "
-            "Segments are dot-separated. '*' matches a segment, '**' matches "
-            "any remaining segments (implicit if omitted)."
-        ),
-    )
-    _tm_content.add_argument(
-        "--status",
-        type=str,
-        default=None,
-        metavar="LIST",
-        help=(
-            "Comma-separated event statuses to include "
-            "(active, draft, cancelled, archived, on-hold). "
-            "Use 'all' for no filter. Default: active."
-        ),
-    )
-    _tm_content.add_argument(
-        "--country",
-        "-cc",
-        type=str,
-        default=None,
-        metavar="CODE",
-        help=(
-            "ISO 3166-1 alpha-2 country code(s) for government holidays. "
-            "Accepts a single code (e.g. US) or a comma-separated list "
-            "(e.g. US,CA,GB) to include holidays from multiple countries. "
-            "If omitted, US and CA holidays are loaded by default."
-        ),
-    )
+    _add_content_filter_args(text_mini, durations="optin")
 
     # Mini calendar options (SVG mini + mini-icon + text-mini)
     mini_group = mini.add_argument_group("Mini Calendar Options")
