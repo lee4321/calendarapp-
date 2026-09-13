@@ -348,6 +348,8 @@ def load_generator_script(script_path):
 
     module_name = os.path.splitext(os.path.basename(script_path))[0]
     spec = importlib.util.spec_from_file_location(module_name, script_path)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Cannot load generator script: {script_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

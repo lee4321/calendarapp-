@@ -32,7 +32,7 @@ rows past the bottom of the body are not drawn yet.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 import arrow
 
@@ -151,10 +151,12 @@ class GanttRenderer(BaseSVGRenderer):
         "icon:event", "icon:duration", "icon:milestone",
     )
 
-    #: Holiday marks per visible day, resolved once per render in
-    #: _render_content.  Empty until then so a band row drawn without a
-    #: render pass (tests, subclasses) simply shows no flags.
-    _holiday_days: ClassVar["dict[date, list[HolidayMark]]"] = {}
+    def __init__(self) -> None:
+        super().__init__()
+        #: Holiday marks per visible day, resolved once per render in
+        #: _render_content.  Empty until then so a band row drawn without a
+        #: render pass (tests, subclasses) simply shows no flags.
+        self._holiday_days: dict[date, list[HolidayMark]] = {}
 
     def _render_content(
         self,
@@ -1127,7 +1129,7 @@ class GanttRenderer(BaseSVGRenderer):
         self, config: "CalendarConfig", event, style: StyleResult
     ) -> str:
         """Bar color: a matching style_rule, then the event, then the theme."""
-        if style.fill_color and not isinstance(style.fill_color, list):
+        if style.fill_color:
             return str(style.fill_color)
         if event.color:
             return str(event.color)

@@ -2739,7 +2739,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         max(8.0, base_event * 0.9),
         visualizer="timeline",
     )
-    config.timeline_text_font_size = config.timeline_name_text_font_size
 
     # Blockplan font sizes — header is page chrome (no token).
     config.blockplan_header_font_size = _clamp(

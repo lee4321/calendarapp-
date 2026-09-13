@@ -100,6 +100,25 @@ instead of all of `E`, because E501 alone was 459 findings. `allowed-confusables
 9. **`ecalendar.py:514` `page_opts`.** A `dict(...)` mixing bool and int
    values is passed as `**kwargs`. Pass the keywords directly.
 
+**Done 2026-09-13.** Items 1–3 and 5–9 are fixed. Item 4 is not a bug:
+`_inject_heuristic_size_tokens` gives every blockplan text token a `size:`,
+and all 10 shipped themes plus the no-theme case resolve one. Fix notes:
+
+- Item 1 is fixed centrally. `_build_style_result(..., keep_fill_list=False)`
+  collapses a list to its first non-empty color; `evaluate_band_segment`
+  passes `True`. The list guards in `excelblockplan.py` and
+  `gantt/renderer.py` went away with it. Gantt bars now take a list fill's
+  first color, where before they ignored the rule.
+- Tests: `test_rule_engine_fill_lists.py`, `test_glyph_cache.py`, plus one
+  each in `test_mini_day_styles.py`, `test_gantt_render.py` and
+  `test_import_events_columns.py`. All 7 bug tests failed before the fix.
+- Items 2, 3, 7 (annotation), 8 and 9 are type-only; `uv check` confirms them.
+- `importers/common.py`, `renderers/glyph_cache.py`, `shared/db_access.py`
+  and `visualizers/mini/day_styles.py` are CRLF files. Edit them without
+  normalizing line endings, or the diff rewrites every line.
+
+After: pytest 1517 passed; `uv check` 833 (540 tests, 293 app).
+
 ## Phase 2 — Mechanical ruff autofix (one commit per rule group)
 
 Use `uv run ruff check --fix` with safe fixes only, grouped so diffs stay reviewable:

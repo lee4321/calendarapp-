@@ -84,3 +84,9 @@ def test_a_body_shorter_than_one_row_holds_none(config):
 def test_a_degenerate_row_height_cannot_divide_by_zero(config):
     config.gantt_row_height = 0.0
     assert GanttRenderer()._rows_that_fit(config, 100.0) == 100
+
+
+def test_each_renderer_starts_with_its_own_empty_holiday_marks():
+    first, second = GanttRenderer(), GanttRenderer()
+    assert first._holiday_days == {}
+    assert first._holiday_days is not second._holiday_days

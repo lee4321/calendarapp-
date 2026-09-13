@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.02.0"
+__version__ = "26.09.13.0"
 
 import logging
 import sys
@@ -512,12 +512,10 @@ def run(argv: list[str] | None = None) -> int:
         db = _open_calendar_db(args.database)
         # Map uppercase hex → colour name so swatches can be labelled like the colorsheet
         name_lookup = {c["hex"].upper(): c["EN"] for c in db.get_all_colors()}
-        page_opts = dict(
-            paginate=args.paginate,
-            columns=args.columns if args.columns is not None else 12,
-            rows=args.rows if args.rows is not None else 10,
-            cell_size=args.sized if args.sized is not None else 80,
-        )
+        paginate = bool(args.paginate)
+        page_columns = args.columns if args.columns is not None else 12
+        page_rows = args.rows if args.rows is not None else 10
+        cell_size = args.sized if args.sized is not None else 80
         if args.palette_name is None:
             all_palettes = db.get_all_palettes()
             if not all_palettes:
@@ -529,7 +527,9 @@ def run(argv: list[str] | None = None) -> int:
                 else Path("output") / "palettesheet.svg"
             )
             written = _generate_all_palettes_svg(
-                all_palettes, out_path, name_lookup, **page_opts
+                all_palettes, out_path, name_lookup,
+                paginate=paginate, columns=page_columns, rows=page_rows,
+                cell_size=cell_size,
             )
             if not args.quiet:
                 for page_path in written:
@@ -552,7 +552,9 @@ def run(argv: list[str] | None = None) -> int:
             safe_name = args.palette_name.replace("/", "_").replace("\\", "_")
             out_path = Path("output") / f"{safe_name}.svg"
         written = _generate_palette_svg(
-            args.palette_name, colors, out_path, name_lookup, **page_opts
+            args.palette_name, colors, out_path, name_lookup,
+            paginate=paginate, columns=page_columns, rows=page_rows,
+            cell_size=cell_size,
         )
         if not args.quiet:
             for page_path in written:

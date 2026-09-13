@@ -19,6 +19,7 @@ import logging
 import os
 import sqlite3
 import sys
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -76,7 +77,7 @@ def setup_logging(
     return log
 
 
-def make_log_fn(logger_ref: list) -> callable:
+def make_log_fn(logger_ref: list) -> Callable[..., None]:
     """Return a log() helper that dispatches to a logger stored in a mutable container.
 
     The container pattern allows the importer module to replace the logger after

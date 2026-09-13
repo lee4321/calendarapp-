@@ -372,8 +372,13 @@ def _matches_event_fields(select: dict, event: "Event") -> bool | None:
     return True
 
 
-def _build_style_result(rule_style: dict) -> StyleResult:
-    """Build a StyleResult from a rule's style: mapping."""
+def _build_style_result(rule_style: dict, *, keep_fill_list: bool = False) -> StyleResult:
+    """Build a StyleResult from a rule's style: mapping.
+
+    A list ``fill`` is kept whole only with *keep_fill_list*, for
+    vertical_line rules that cycle colors across band segments.  Every other
+    target draws one color, so it gets the list's first non-empty entry.
+    """
     sr = StyleResult()
 
     def _str_or_none(v: Any) -> str | None:
@@ -385,11 +390,11 @@ def _build_style_result(rule_style: dict) -> StyleResult:
     fill_key = "fill" if "fill" in rule_style else ("fill_color" if "fill_color" in rule_style else None)
     if fill_key is not None:
         raw = rule_style[fill_key]
-        # Preserve list values so vertical_line rules can cycle colors across
-        # matched segments. Other apply_to targets only ever see strings, so
-        # the renderers that expect str will already have a string here.
         if isinstance(raw, list):
-            sr.fill_color = list(raw)
+            if keep_fill_list:
+                sr.fill_color = list(raw)
+            else:
+                sr.fill_color = next((str(c) for c in raw if c), None)
         else:
             sr.fill_color = _str_or_none(raw)
     if "fill_opacity" in rule_style:
@@ -679,7 +684,10 @@ class StyleEngine:
                 if day_match is False:
                     continue
 
-            out.append((rule_index, _build_style_result(rule.get("style") or {})))
+            out.append((
+                rule_index,
+                _build_style_result(rule.get("style") or {}, keep_fill_list=True),
+            ))
 
         return out
 
