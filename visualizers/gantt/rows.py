@@ -18,7 +18,7 @@ from shared.data_models import Event
 
 # Re-exported: WBS ordering is shared with the timeline's duration
 # grouping, but callers and tests still reach it through this module.
-from shared.wbs_filter import wbs_depth, wbs_sort_key  # noqa: F401
+from shared.wbs_filter import wbs_depth, wbs_sort_key
 from visualizers.gantt.columns import resolve_field
 
 if TYPE_CHECKING:

@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ecalendar_app import (  # noqa: E402  (import after sys.path fix in the module)
+from ecalendar_app import (  # imported after the module's sys.path fix
     COMMANDS,
     OUTPUT,
     ROOT,

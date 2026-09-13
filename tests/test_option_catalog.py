@@ -22,7 +22,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from tools.generate_option_catalog import (  # noqa: E402
+from tools.generate_option_catalog import (
     _subcommand_parsers,
     build_table,
     positional_table,

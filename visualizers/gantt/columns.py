@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 
-from renderers.text_utils import ELLIPSIS, fit_lines  # noqa: F401  (re-exported)
+from renderers.text_utils import ELLIPSIS, fit_lines
 from shared.date_utils import format_arrow_date
 
 if TYPE_CHECKING:
