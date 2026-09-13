@@ -58,7 +58,7 @@ class ColumnGeometry:
     strip_width: float  # total width of all columns in the strip
 
 
-def resolve_cell_width(config: "CalendarConfig", cell_height: float) -> float:
+def resolve_cell_width(config: CalendarConfig, cell_height: float) -> float:
     """Resolve the day-cell width.
 
     Defaults to ``cell_height`` so day cells are square; a positive
@@ -76,7 +76,7 @@ def _ordered_weekdays(week_start_sunday: bool, suppress_weekends: bool) -> list[
     return order
 
 
-def candybar_suppress_weekends(config: "CalendarConfig") -> bool:
+def candybar_suppress_weekends(config: CalendarConfig) -> bool:
     """Resolve weekend suppression.
 
     Candybar shows weekends by default; Sat/Sun are dropped only when
@@ -88,7 +88,7 @@ def candybar_suppress_weekends(config: "CalendarConfig") -> bool:
     return bool(getattr(config, "candybar_suppress_weekends", None))
 
 
-def candybar_week_starts_sunday(config: "CalendarConfig") -> bool:
+def candybar_week_starts_sunday(config: CalendarConfig) -> bool:
     """Resolve week start: candybar_week_start overrides, else weekend_style."""
     ws = getattr(config, "candybar_week_start", -1)
     if ws == 0:
@@ -99,7 +99,7 @@ def candybar_week_starts_sunday(config: "CalendarConfig") -> bool:
 
 
 def compute_columns(
-    config: "CalendarConfig",
+    config: CalendarConfig,
     strip_x: float,
     day_col_w: float,
 ) -> ColumnGeometry:
@@ -176,7 +176,7 @@ class CandybarLayout(BaseLayout):
         super().__init__()
         self.week_numbers: dict[str, int] = {}
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         coord: CoordinateDict = {}
         self.week_numbers = {}
 
@@ -291,7 +291,7 @@ class CandybarLayout(BaseLayout):
     def _layout_chunk(
         self,
         coord: CoordinateDict,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         chunk_idx: int,
         chunk: list[date],
         cols: ColumnGeometry,
@@ -388,7 +388,7 @@ class CandybarLayout(BaseLayout):
         flush(run_month, run_first, run_last)
 
     @staticmethod
-    def _wn_anchor(config: "CalendarConfig") -> date | None:
+    def _wn_anchor(config: CalendarConfig) -> date | None:
         if config.mini_week_number_mode != "custom" or not config.mini_week1_start:
             return None
         try:
@@ -400,7 +400,7 @@ class CandybarLayout(BaseLayout):
     def _emit_header_footer_coords(
         self,
         coord: CoordinateDict,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         margins: dict,
         hf: dict,
     ) -> None:

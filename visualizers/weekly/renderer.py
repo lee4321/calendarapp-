@@ -70,7 +70,7 @@ def _status_opacity(status: str | None) -> float:
     return _STATUS_OPACITY.get(str(status).strip().lower(), 1.0)
 
 
-def _weekly_style_rules(config: "CalendarConfig") -> list:
+def _weekly_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
 
     Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
@@ -1096,7 +1096,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
     def _draw_svg_pattern(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,

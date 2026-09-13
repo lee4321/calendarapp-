@@ -132,7 +132,7 @@ def _split_reference(detail: str) -> tuple[str, str]:
 
 
 def _details_columns(
-    columns: list["GanttColumn"],
+    columns: list[GanttColumn],
 ) -> list[DetailsColumn]:
     """The details listing's columns, from the chart's own column model.
 
@@ -154,10 +154,10 @@ def _details_columns(
 
 def render_details_pages(
     renderer,
-    config: "CalendarConfig",
-    coordinates: "CoordinateDict",
+    config: CalendarConfig,
+    coordinates: CoordinateDict,
     rows: list,
-    columns: list["GanttColumn"],
+    columns: list[GanttColumn],
     exceptions: list[GanttException],
 ) -> int:
     """Draw the companion details page(s); returns how many were written.

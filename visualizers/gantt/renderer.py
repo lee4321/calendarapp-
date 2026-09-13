@@ -108,7 +108,7 @@ def _page_output_path(output_path: str, page_number: int) -> str:
     return f"{output_path}_p{page_number}.svg"
 
 
-def _gantt_style_rules(config: "CalendarConfig") -> list:
+def _gantt_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine, UnifiedTheme-first.
 
     Mirrors blockplan / compactplan / weekly.
@@ -160,10 +160,10 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         """Draw the chart.
 
@@ -253,8 +253,8 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _plan_pages(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         rows: list,
         days: list[date],
     ) -> list:
@@ -276,14 +276,14 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_page(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         page,
         rows: list,
-        columns: list["GanttColumn"],
+        columns: list[GanttColumn],
         days: list[date],
         segments: dict[int, list[BandSegment]],
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> None:
         """Draw one page: its slice of rows over its slice of the axis."""
         page_days = days[page.day_start : page.day_end]
@@ -325,7 +325,7 @@ class GanttRenderer(BaseSVGRenderer):
     # ── Geometry helpers ──────────────────────────────────────────────────
 
     @staticmethod
-    def _range(config: "CalendarConfig") -> tuple[date, date]:
+    def _range(config: CalendarConfig) -> tuple[date, date]:
         """The chart's date range, taken from the calendar range like every view."""
         range_start = str(config.userstart or config.adjustedstart)
         range_end = str(config.userend or config.adjustedend)
@@ -338,7 +338,7 @@ class GanttRenderer(BaseSVGRenderer):
         """Width of one visible-day column."""
         return chart_w / len(days) if days else 0.0
 
-    def _rows_that_fit(self, config: "CalendarConfig", body_h: float) -> int:
+    def _rows_that_fit(self, config: CalendarConfig, body_h: float) -> int:
         """How many task rows the body can show.
 
         Rows past this are dropped for now; phase 6 turns the remainder
@@ -349,7 +349,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     # ── Drawing ───────────────────────────────────────────────────────────
 
-    def _draw_frame(self, coordinates: "CoordinateDict") -> None:
+    def _draw_frame(self, coordinates: CoordinateDict) -> None:
         """Outer rule plus the divider between the table and the chart."""
         area_x, area_y, area_w, area_h = coordinates["GanttArea"]
         _tx, _ty, table_w, _th = coordinates["GanttTableArea"]
@@ -371,10 +371,10 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_nonworking_shading(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         days: list[date],
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> None:
         """Shade non-working day columns behind everything else.
 
@@ -403,11 +403,11 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _build_all_segments(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: date,
         end: date,
         days: list[date],
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> dict[tuple[str, int], list[BandSegment]]:
         """Build every band's segments once, over the whole date range.
 
@@ -432,8 +432,8 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_bands(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         days: list[date],
         segments: dict[tuple[str, int], list[BandSegment]],
     ) -> None:
@@ -452,7 +452,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_band_stack(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         region: tuple[float, float, float, float],
         bands: list[dict[str, Any]],
         days: list[date],
@@ -481,7 +481,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_band_row(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict[str, Any],
         segments: list[BandSegment],
         days: list[date],
@@ -538,7 +538,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_holiday_band_row(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict[str, Any],
         days: list[date],
         x: float,
@@ -597,9 +597,9 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_column_headers(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
-        columns: list["GanttColumn"],
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
+        columns: list[GanttColumn],
     ) -> None:
         """Draw the task-table header row."""
         header = coordinates.get("GanttColumnHeader")
@@ -655,10 +655,10 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_rows(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         rows: list,
-        columns: list["GanttColumn"],
+        columns: list[GanttColumn],
         row_offset: int = 0,
     ) -> None:
         """Draw this page's task rows: banding, grid lines and cell content.
@@ -714,9 +714,9 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_row_cells(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         row,
-        columns: list["GanttColumn"],
+        columns: list[GanttColumn],
         positions: list[tuple[float, float]],
         row_y: float,
         row_h: float,
@@ -775,8 +775,8 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_today_line(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         axis: DayAxis,
     ) -> None:
         """Vertical rule at the as-of date, PIT semantics (answer 32).
@@ -810,8 +810,8 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_marks(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         rows: list,
         axis: DayAxis,
         row_offset: int = 0,
@@ -839,7 +839,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_row_marks(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         row,
         axis: DayAxis,
         row_y: float,
@@ -880,7 +880,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_task_bar(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         event,
         axis: DayAxis,
         start: date,
@@ -957,7 +957,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_float_bars(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         event,
         axis: DayAxis,
         bar_y: float,
@@ -981,7 +981,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_progress(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         event,
         geometry: BarGeometry,
         bar_y: float,
@@ -1004,7 +1004,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_continuations(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         geometry: BarGeometry,
         bar_y: float,
         bar_h: float,
@@ -1026,7 +1026,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_rollup_bracket(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis: DayAxis,
         start: date,
         end: date,
@@ -1067,7 +1067,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_milestone(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis: DayAxis,
         event,
         anchor_day: date,
@@ -1098,7 +1098,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_deadline(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis: DayAxis,
         event,
         row_y: float,
@@ -1126,7 +1126,7 @@ class GanttRenderer(BaseSVGRenderer):
         )
 
     def _bar_fill(
-        self, config: "CalendarConfig", event, style: StyleResult
+        self, config: CalendarConfig, event, style: StyleResult
     ) -> str:
         """Bar color: a matching style_rule, then the event, then the theme."""
         if style.fill_color:
@@ -1137,11 +1137,11 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _log_hidden_holidays(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: date,
         end: date,
         days: list[date],
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> None:
         """Report holidays that fall on days the axis does not show.
 
@@ -1170,7 +1170,7 @@ class GanttRenderer(BaseSVGRenderer):
     # ── Dependencies ──────────────────────────────────────────────────────
 
     def _build_link_graph(
-        self, config: "CalendarConfig", rows: list, pages: list
+        self, config: CalendarConfig, rows: list, pages: list
     ) -> None:
         """Resolve every link once and number the ones pagination breaks.
 
@@ -1233,7 +1233,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_dependencies(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         rows: list,
         anchors: dict[int, RowAnchor],
     ) -> None:
@@ -1299,7 +1299,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_reference_stub(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         reference: CrossPageReference,
         anchors: dict[int, RowAnchor],
         by_index: dict,
@@ -1337,7 +1337,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_arrow(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         route: ArrowRoute,
         style: StyleResult,
     ) -> None:
@@ -1384,7 +1384,7 @@ class GanttRenderer(BaseSVGRenderer):
 
     def _draw_reference_cell(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         row,
         col_x: float,
         col_w: float,

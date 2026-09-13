@@ -38,8 +38,8 @@ class HolidayMark:
 
 def compute_holiday_band_days(
     visible_days: list[date],
-    db: "CalendarDB | None",
-    config: "CalendarConfig",
+    db: CalendarDB | None,
+    config: CalendarConfig,
     *,
     nonworkdays_only: bool = False,
 ) -> dict[date, list[HolidayMark]]:

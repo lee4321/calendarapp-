@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from shared.db_access import CalendarDB
 
 
-def classify_day(d: date, db: "CalendarDB | None", config: "CalendarConfig") -> frozenset[str]:
+def classify_day(d: date, db: CalendarDB | None, config: CalendarConfig) -> frozenset[str]:
     """Return the subset of non-workday classes that apply to *d*.
 
     Returned elements are drawn from ``{"federal_holiday", "company_holiday",
@@ -45,7 +45,7 @@ def classify_day(d: date, db: "CalendarDB | None", config: "CalendarConfig") -> 
     return frozenset(classes)
 
 
-def _is_company_nonworkday(db: "CalendarDB", daykey: str) -> bool:
+def _is_company_nonworkday(db: CalendarDB, daykey: str) -> bool:
     """Check ``companyspecialdays`` for a nonworkday entry on *daykey*.
 
     Unlike :meth:`CalendarDB.is_nonworkday`, this intentionally excludes
@@ -63,8 +63,8 @@ def _is_company_nonworkday(db: "CalendarDB", daykey: str) -> bool:
 
 def classify_days(
     visible_days: list[date],
-    db: "CalendarDB | None",
-    config: "CalendarConfig",
+    db: CalendarDB | None,
+    config: CalendarConfig,
 ) -> dict[date, frozenset[str]]:
     """Classify every day in *visible_days* in one pass; returns a cache dict."""
     return {d: classify_day(d, db, config) for d in visible_days}

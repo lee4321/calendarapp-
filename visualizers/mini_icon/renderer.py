@@ -53,7 +53,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
     circles, duration bars, details page, etc.) are inherited unchanged.
     """
 
-    def _get_day_icon_name(self, day_num: int, config: "CalendarConfig") -> str | None:
+    def _get_day_icon_name(self, day_num: int, config: CalendarConfig) -> str | None:
         """Return the icon name for *day_num* from the configured icon set."""
         icon_set_name = getattr(config, "mini_icon_set", "squares")
         icon_list = ICON_SETS.get(icon_set_name, squares)
@@ -63,7 +63,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
 
     def _draw_day_cell_background(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,
@@ -123,7 +123,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
 
     def _draw_day_cell_foreground(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         x: float,
         y: float,
         w: float,

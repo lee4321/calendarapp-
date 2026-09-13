@@ -38,7 +38,7 @@ class GanttRow:
     index: int      # final row order, 0-based
 
 
-def build_rows(events: list[Any], config: "CalendarConfig") -> list[GanttRow]:
+def build_rows(events: list[Any], config: CalendarConfig) -> list[GanttRow]:
     """Order *events* into task rows.
 
     Args:

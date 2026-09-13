@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from shared.db_access import CalendarDB
 
 
-def _mini_style_rules(config: "CalendarConfig") -> list:
+def _mini_style_rules(config: CalendarConfig) -> list:
     """Return the raw style_rules list (UnifiedTheme-preferred, legacy fallback)."""
     theme = getattr(config, "theme", None)
     if theme is not None:

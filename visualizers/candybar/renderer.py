@@ -42,10 +42,10 @@ class CandybarRenderer(MiniCalendarRenderer):
 
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         self._populate_tokens(config)
         resolver = DayStyleResolver(config, db)
@@ -104,7 +104,7 @@ class CandybarRenderer(MiniCalendarRenderer):
     # Base shading (month banding + weekends)
     # ------------------------------------------------------------------
 
-    def _draw_base_shading(self, config: "CalendarConfig", cell_state: list) -> None:
+    def _draw_base_shading(self, config: CalendarConfig, cell_state: list) -> None:
         """Shade day cells by month band and/or weekend, under the rule shade."""
         month_colors = self._resolve_month_shade_colors(config)
         weekend_fill = config.candybar_weekend_fill
@@ -142,7 +142,7 @@ class CandybarRenderer(MiniCalendarRenderer):
                     )
 
     @staticmethod
-    def _resolve_month_shade_colors(config: "CalendarConfig") -> list[str]:
+    def _resolve_month_shade_colors(config: CalendarConfig) -> list[str]:
         """Return the month-band color cycle, or [] when banding is off."""
         if not config.candybar_month_shading:
             return []
@@ -156,7 +156,7 @@ class CandybarRenderer(MiniCalendarRenderer):
     # Grid
     # ------------------------------------------------------------------
 
-    def _draw_grid(self, config: "CalendarConfig", coordinates: "CoordinateDict") -> None:
+    def _draw_grid(self, config: CalendarConfig, coordinates: CoordinateDict) -> None:
         if not config.candybar_grid_lines:
             return
         color = config.candybar_grid_line_color
@@ -176,7 +176,7 @@ class CandybarRenderer(MiniCalendarRenderer):
     # Header
     # ------------------------------------------------------------------
 
-    def _draw_headers(self, config: "CalendarConfig", coordinates: "CoordinateDict") -> None:
+    def _draw_headers(self, config: CalendarConfig, coordinates: CoordinateDict) -> None:
         _ts_label = config.get_text_style("ec-label")
         tk_label = self._tk("text:label")
         label_font = tk_label.get("font") or _ts_label.font
@@ -215,8 +215,8 @@ class CandybarRenderer(MiniCalendarRenderer):
 
     def _draw_month_boxes(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         *,
         fills_only: bool,
     ) -> None:

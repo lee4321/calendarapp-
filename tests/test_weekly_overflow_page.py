@@ -16,7 +16,7 @@ from visualizers.weekly.layout import WeeklyCalendarLayout
 from visualizers.weekly.renderer import OverflowEntry, WeeklyCalendarRenderer
 
 
-def _config(tmp_path) -> "object":
+def _config(tmp_path) -> object:
     cfg = create_calendar_config()
     cfg.pageX = 792.0
     cfg.pageY = 612.0

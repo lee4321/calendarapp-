@@ -50,7 +50,7 @@ class _Capture(BlockPlanRenderer):
         return None
 
 
-def _cfg(output: Path) -> "create_calendar_config.__class__":
+def _cfg(output: Path) -> create_calendar_config.__class__:
     c = create_calendar_config()
     c.pageX, c.pageY = 792.0, 1224.0
     c = setfontsizes(c)

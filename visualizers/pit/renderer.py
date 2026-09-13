@@ -61,7 +61,7 @@ def _xml_escape(s: str) -> str:
     )
 
 
-def _pit_style_rules(config: "CalendarConfig") -> list:
+def _pit_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for the PIT StyleEngine.
 
     Mirrors _timeline_style_rules: prefers the parsed UnifiedTheme so the
@@ -94,10 +94,10 @@ class PITRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     def _render_content(
         self,
-        config: "CalendarConfig",
-        coordinates: "CoordinateDict",
+        config: CalendarConfig,
+        coordinates: CoordinateDict,
         events: list,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> tuple[int, list]:
         """Render the PIT axis + callouts. Returns (overflow_count, [])."""
         # Reset per-render state.
@@ -301,14 +301,14 @@ class PITRenderer(BaseSVGRenderer):
 
     def _draw_axis_group(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis_origin: tuple[float, float],
         axis_end: tuple[float, float],
         start: arrow.Arrow,
         end: arrow.Arrow,
         direction: Orientation,
         pos_for_day,
-        db: "CalendarDB",
+        db: CalendarDB,
         side: Side = Side.PRIMARY,
     ) -> None:
         """Wrap the axis line and its ticks in ec-pit-axis-group."""
@@ -324,7 +324,7 @@ class PITRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     # Axis ticks (timeband segments → perpendicular marks + labels)
     # ------------------------------------------------------------------
-    def _pit_tick_bands(self, config: "CalendarConfig") -> list[dict]:
+    def _pit_tick_bands(self, config: CalendarConfig) -> list[dict]:
         """Return the list of tick-band dicts to draw on the axis.
 
         When ``config.pit_ticks`` is set it takes precedence (a single dict is
@@ -349,11 +349,11 @@ class PITRenderer(BaseSVGRenderer):
 
     def _pit_tick_segments(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: "CalendarDB",
+        db: CalendarDB,
     ) -> list[tuple[date, date, str]]:
         """Return (start, end_exclusive, label) tick segments for one band.
 
@@ -427,13 +427,13 @@ class PITRenderer(BaseSVGRenderer):
 
     def _draw_axis_ticks(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_origin: tuple[float, float],
         direction: Orientation,
         pos_for_day,
-        db: "CalendarDB",
+        db: CalendarDB,
         side: Side = Side.PRIMARY,
     ) -> None:
         """Draw one row of ticks per band, each perpendicular tick at a
@@ -611,7 +611,7 @@ class PITRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     def _resolve_label_fill(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         event_index: int,
         side: Side,
         label_override: dict | None,
@@ -650,7 +650,7 @@ class PITRenderer(BaseSVGRenderer):
 
     def _draw_callout_groups(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         placements: list[PITPlacement],
         direction: Orientation,
         side_config: Side,
@@ -958,7 +958,7 @@ class PITRenderer(BaseSVGRenderer):
 
     def _draw_axis(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         axis_origin: tuple[float, float],
         axis_end: tuple[float, float],
     ) -> None:
@@ -987,7 +987,7 @@ class PITRenderer(BaseSVGRenderer):
 
     def _draw_today_line(
         self,
-        config: "CalendarConfig",
+        config: CalendarConfig,
         start: arrow.Arrow,
         end: arrow.Arrow,
         axis_origin: tuple[float, float],

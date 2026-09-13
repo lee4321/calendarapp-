@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class CompactPlanLayout(BaseLayout):
     """Layout calculator for compact activities plan visualization."""
 
-    def calculate(self, config: "CalendarConfig") -> CoordinateDict:
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
         """Calculate coordinates for compactplan rendering."""
         coord: CoordinateDict = {}
 

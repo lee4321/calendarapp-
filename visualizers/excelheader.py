@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from shared.db_access import CalendarDB
 
 
-def _resolve_excel_token(config: "CalendarConfig", token: str) -> dict:
+def _resolve_excel_token(config: CalendarConfig, token: str) -> dict:
     """Return the unified-theme style dict for ``token`` (papersize-only ctx).
 
     The Excel writers have no per-event ctx (they draw timeband rows, not
@@ -254,7 +254,7 @@ def _col_for_day(
 
 # ── Visible-day helper ────────────────────────────────────────────────────────
 
-def compute_visible_days(config: "CalendarConfig") -> list[date]:
+def compute_visible_days(config: CalendarConfig) -> list[date]:
     """Return the ordered list of calendar dates that get a day column.
 
     Honors ``config.weekend_style`` (0 = weekdays only, 1+ = full week).
@@ -283,8 +283,8 @@ def compute_visible_days(config: "CalendarConfig") -> list[date]:
 
 def _build_holiday_map(
     visible_days: list[date],
-    db: "CalendarDB",
-    config: "CalendarConfig",
+    db: CalendarDB,
+    config: CalendarConfig,
     federal_color: str,
     company_color: str,
     weekend_color: str | None,
@@ -355,7 +355,7 @@ def _build_right_border_cols(
     vertical_lines: list[dict],
     band_segments: dict[str, list[_BandSegment]],
     visible_days: list[date],
-    config: "CalendarConfig",
+    config: CalendarConfig,
     *,
     default_color: str | None = None,
     default_width: float | None = None,
@@ -444,7 +444,7 @@ def _apply_overlay_fill(cell: Any, base_argb: str, overlay_color: str | None) ->
 
 # ── Shared sheet-builder helpers ──────────────────────────────────────────────
 
-def _read_band_settings(config: "CalendarConfig", subcommand: str) -> dict:
+def _read_band_settings(config: CalendarConfig, subcommand: str) -> dict:
     """Return dict of shared excel font, colours and band defaults for *subcommand*.
 
     ``subcommand`` is ``"excelheader"`` or ``"excelblockplan"``.  Per-subcommand
@@ -586,8 +586,8 @@ def _setup_column_widths(ws: Any, visible_days: list[date]) -> None:
 def _write_timebands(
     ws: Any,
     *,
-    config: "CalendarConfig",
-    db: "CalendarDB",
+    config: CalendarConfig,
+    db: CalendarDB,
     top_bands: list[dict],
     visible_days: list[date],
     band_events: list[Event],
@@ -785,7 +785,7 @@ def _write_column_header_row(
     ws: Any,
     *,
     header_row: int,
-    config: "CalendarConfig",
+    config: CalendarConfig,
     visible_days: list[date],
     holiday_map: dict[date, dict],
     right_border_cols: dict[int, dict],
@@ -821,8 +821,8 @@ def _write_column_header_row(
 
 
 def _prepare_sheet(
-    config: "CalendarConfig",
-    db: "CalendarDB",
+    config: CalendarConfig,
+    db: CalendarDB,
     *,
     subcommand: str,
     freeze: bool = True,
@@ -940,8 +940,8 @@ def _prepare_sheet(
 # ── Main entry point — excelheader ───────────────────────────────────────────
 
 def generate_excel_header(
-    config: "CalendarConfig",
-    db: "CalendarDB",
+    config: CalendarConfig,
+    db: CalendarDB,
     out_path: Path,
 ) -> None:
     """Generate the Excel workbook for the ``excelheader`` subcommand.

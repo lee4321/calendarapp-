@@ -218,7 +218,7 @@ def _parse_event_date(s: str | None) -> date | None:
         return None
 
 
-def _blockplan_style_rules(config: "CalendarConfig") -> list:
+def _blockplan_style_rules(config: CalendarConfig) -> list:
     """Source the style_rules list (UnifiedTheme first, legacy fallback)."""
     theme = getattr(config, "theme", None)
     if theme is not None:
@@ -229,8 +229,8 @@ def _blockplan_style_rules(config: "CalendarConfig") -> list:
 
 
 def generate_excel_blockplan(
-    config: "CalendarConfig",
-    db: "CalendarDB",
+    config: CalendarConfig,
+    db: CalendarDB,
     out_path: Path,
 ) -> None:
     """Generate the Excel workbook for the ``excelblockplan`` subcommand.

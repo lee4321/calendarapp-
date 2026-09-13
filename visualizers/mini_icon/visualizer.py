@@ -39,9 +39,9 @@ class MiniIconCalendarVisualizer(MiniCalendarVisualizer):
 
     def generate(
         self,
-        config: "CalendarConfig",
-        db: "CalendarDB",
-    ) -> "VisualizationResult":
+        config: CalendarConfig,
+        db: CalendarDB,
+    ) -> VisualizationResult:
         """Generate the mini-icon calendar SVG."""
         self._expand_to_month_boundaries(config)
 

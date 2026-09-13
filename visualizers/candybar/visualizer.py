@@ -50,8 +50,8 @@ class CandybarVisualizer(MiniCalendarVisualizer):
 
     def generate(
         self,
-        config: "CalendarConfig",
-        db: "CalendarDB",
+        config: CalendarConfig,
+        db: CalendarDB,
     ) -> VisualizationResult:
         """Generate the candybar SVG.
 
@@ -76,7 +76,7 @@ class CandybarVisualizer(MiniCalendarVisualizer):
         )
 
     @staticmethod
-    def _expand_to_week_boundaries(config: "CalendarConfig") -> None:
+    def _expand_to_week_boundaries(config: CalendarConfig) -> None:
         """Expand the date range to enclosing whole-week boundaries.
 
         Snaps the start back to its week-start day and the end forward to its

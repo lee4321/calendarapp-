@@ -150,7 +150,7 @@ def _events_to_csv_string(events: list[dict]) -> str:
     return buf.getvalue()
 
 
-def _write_exportdata_csv(events: list[dict], out_path: "Path") -> None:
+def _write_exportdata_csv(events: list[dict], out_path: Path) -> None:
     """
     Write filtered events to a CSV file compatible with importers/import_events.py.
 

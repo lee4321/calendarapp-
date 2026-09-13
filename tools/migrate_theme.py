@@ -1131,7 +1131,7 @@ def _path_has_value(d: dict[str, Any], path: str) -> bool:
     return cur is not None
 
 
-def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> "OrderedDict[str, Any]":
+def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> OrderedDict[str, Any]:
     """Strip `apply_to: element` rules; record non-catalog-default ones.
 
     Element-to-token bindings now live in config/element_catalog.yaml.  Every
@@ -1155,7 +1155,7 @@ def _hoist_element_overrides(out: OrderedDict, *, fname: str) -> "OrderedDict[st
     catalog = load_catalog()
     style_rules = out.get("style_rules") or []
     kept: list[dict[str, Any]] = []
-    overrides: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+    overrides: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     for rule in style_rules:
         if not isinstance(rule, dict):

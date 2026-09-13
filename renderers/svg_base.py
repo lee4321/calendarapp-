@@ -81,7 +81,7 @@ class BaseSVGRenderer(ABC):
     # Unified-theme token cache
     # =========================================================================
 
-    def _populate_tokens(self, config: "CalendarConfig") -> None:
+    def _populate_tokens(self, config: CalendarConfig) -> None:
         """Pre-resolve every token in ``self.TOKENS`` for this render.
 
         Draw code then reads via :py:meth:`_tk` — dict lookups, not rule
@@ -110,7 +110,7 @@ class BaseSVGRenderer(ABC):
             return len(text) * size * 0.5
         return string_width(text, path, size)
 
-    def _ensure_tokens(self, config: "CalendarConfig") -> None:
+    def _ensure_tokens(self, config: CalendarConfig) -> None:
         """Lazy-populate the per-render token cache when entering a draw
         method that bypasses ``_render_content`` (e.g. test fixtures that
         call draw methods directly).  No-op when already populated.
@@ -153,7 +153,7 @@ class BaseSVGRenderer(ABC):
 
     @staticmethod
     def _resolve_token(
-        config: "CalendarConfig",
+        config: CalendarConfig,
         token: str,
         ctx: dict | None = None,
     ) -> dict:
@@ -581,7 +581,7 @@ class BaseSVGRenderer(ABC):
         coordinates: CoordinateDict,
         events: list,
         db: CalendarDB,
-    ) -> "VisualizationResult":
+    ) -> VisualizationResult:
         """
         Template method for SVG rendering workflow.
 
@@ -985,7 +985,7 @@ class BaseSVGRenderer(ABC):
         nested = drawsvg.Raw(nested_svg)
         self._drawing.append(nested)
 
-    def _load_icon_svg_cache(self, db: "CalendarDB") -> None:
+    def _load_icon_svg_cache(self, db: CalendarDB) -> None:
         """Load icon SVG lookup from database (best-effort)."""
         try:
             self._icon_svg_map = db.get_icon_svg_map()
@@ -1256,7 +1256,7 @@ class BaseSVGRenderer(ABC):
 
     def _draw_icon_band_row(
         self,
-        day_cells: "list[tuple[float, float, list[tuple[str, str | None]]]]",
+        day_cells: list[tuple[float, float, list[tuple[str, str | None]]]],
         row_y: float,
         row_h: float,
         icon_h: float,
@@ -1299,7 +1299,7 @@ class BaseSVGRenderer(ABC):
 
     def _draw_cell_icons(
         self,
-        icons: "list[tuple[str, str | None]]",
+        icons: list[tuple[str, str | None]],
         cell_x: float,
         cell_w: float,
         row_y: float,

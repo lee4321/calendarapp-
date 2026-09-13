@@ -37,7 +37,7 @@ from __future__ import annotations
 import logging
 from bisect import insort
 from dataclasses import dataclass
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import arrow
 
