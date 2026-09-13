@@ -1,4 +1,29 @@
 #!/bin/bash
+# Pre-commit: type-check and test, then bump the CalVer version.
+#
+# Checks run against the working tree, not only what is staged, and take
+# about 15 seconds. Skip them for one commit with `git commit --no-verify`.
+
+set -e
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "pre-commit: uv is not on PATH, so the checks can't run." >&2
+    echo "Install uv, or commit with --no-verify to skip them." >&2
+    exit 1
+fi
+
+echo "pre-commit: uv check"
+if ! uv check --locked --quiet >/dev/null 2>&1; then
+    uv check --locked
+    echo "pre-commit: type check failed (commit with --no-verify to skip)." >&2
+    exit 1
+fi
+
+echo "pre-commit: pytest"
+if ! uv run python -m pytest tests/ -q -p no:cacheprovider; then
+    echo "pre-commit: tests failed (commit with --no-verify to skip)." >&2
+    exit 1
+fi
 
 FILE="ecalendar.py"
 

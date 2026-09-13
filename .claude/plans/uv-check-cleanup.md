@@ -268,6 +268,21 @@ ruff: 311 findings (was 316).
 Add `uv check --locked && uv run ruff check . && uv run python -m pytest tests/ -q`
 as the pre-commit step (or add it to `commit.sh`), so new code can't regress.
 
+**Done 2026-09-13.** `.githooks/pre-commit` (the repo already sets
+`core.hooksPath = .githooks`) now runs `uv check --locked` and then the full
+pytest suite, and only then the existing CalVer bump. Any failure stops the
+commit, which leaves `ecalendar.py` unbumped. The checks take about 14s (uv
+check 0.5s, pytest 13s) and run on the working tree, not just what's staged.
+`git commit --no-verify` skips them. If `uv` isn't on PATH, which can happen
+in a GUI git client, the hook fails with that message rather than skipping
+silently.
+
+**Ruff is deliberately not in the gate** (decided 2026-09-13): 311 findings
+across 30 rules remain, so run it by hand. To gate it later, either clear or
+ignore those rules first; otherwise every commit would be blocked.
+`tools/refcorpus.sh check` isn't gated either; run it after renderer or
+config changes.
+
 ## Order and sizing
 
 | Phase | Effort | Risk |
