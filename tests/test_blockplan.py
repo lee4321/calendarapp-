@@ -226,7 +226,7 @@ def test_blockplan_vertical_line_style_from_style_rules(tmp_path):
 
     styled = [
         kw
-        for (x1, y1, x2, y2), kw in zip(renderer.line_calls, renderer.line_kwargs)
+        for (x1, y1, x2, y2), kw in zip(renderer.line_calls, renderer.line_kwargs, strict=True)
         if x1 == x2 and y1 < y2 and kw.get("stroke") == "orange"
     ]
     assert styled

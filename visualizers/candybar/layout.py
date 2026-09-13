@@ -259,10 +259,8 @@ class CandybarLayout(BaseLayout):
         self, start: date, end: date, week_start_sunday: bool
     ) -> list[date]:
         """Return the first-day-of-week date for every week overlapping the range."""
-        if week_start_sunday:
-            offset = (start.weekday() + 1) % 7  # days since most recent Sunday
-        else:
-            offset = start.weekday()  # days since most recent Monday
+        # Days since the most recent Sunday (or Monday).
+        offset = (start.weekday() + 1) % 7 if week_start_sunday else start.weekday()
         first = start - timedelta(days=offset)
         weeks: list[date] = []
         cur = first

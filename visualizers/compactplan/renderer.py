@@ -28,6 +28,21 @@ from renderers.details_page import (
 )
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width
+from shared.data_models import Event
+from shared.date_utils import visible_days
+from shared.day_classifier import classify_day
+from shared.holiday_band import compute_holiday_band_days
+from shared.icon_band import compute_icon_band_days
+from shared.rule_engine import ColorRuleEngine, StyleEngine, StyleResult
+from shared.timeband import (
+    BandSegment as _BandSegment,
+)
+from shared.timeband import (
+    build_segments as _build_band_segments,
+)
+from shared.timeband import (
+    group_segments as _group_band_segments,
+)
 
 # Clear space kept after a milestone label before the next one may share
 # its lane, and the label line height as a multiple of the font size.
@@ -52,21 +67,6 @@ _MILESTONE_BAND_CLEARANCE = 3.0
 _KEY_COLUMN_HEADING = "Key"
 _KEY_COLUMN_MIN_WIDTH = 20.0
 _KEY_COLUMN_PADDING = 8.0
-from shared.data_models import Event
-from shared.date_utils import visible_days
-from shared.day_classifier import classify_day
-from shared.holiday_band import compute_holiday_band_days
-from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import ColorRuleEngine, StyleEngine, StyleResult
-from shared.timeband import (
-    BandSegment as _BandSegment,
-)
-from shared.timeband import (
-    build_segments as _build_band_segments,
-)
-from shared.timeband import (
-    group_segments as _group_band_segments,
-)
 
 # ─── Color helpers (named + hex → RGB → luminance) ──────────────────────────
 # A small CSS-named-color → RGB table covering the values that turn up in the
@@ -511,7 +511,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # page, written after the chart (see render()).  Keep what it has
         # to explain.
         self._chart_key = _ChartKey(
-            listing=list(zip(events, evt_objects)),
+            listing=list(zip(events, evt_objects, strict=False)),
             placed={id(p.event): p for p in placed},
             milestones=frozenset(
                 id(m) for m in milestones if self._parse_date(m.start) is not None

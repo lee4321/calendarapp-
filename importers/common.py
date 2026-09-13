@@ -131,8 +131,8 @@ def parse_import_pattern(pattern, max_id):
         try:
             ids = [int(x.strip()) for x in pattern.split(",")]
             return sorted(set(ids))
-        except ValueError:
-            raise ValueError(f"Invalid ID list: {pattern}")
+        except ValueError as exc:
+            raise ValueError(f"Invalid ID list: {pattern}") from exc
 
     # Ranges: "1-5", "5-" (to max), "-3" (from 1)
     if "-" in pattern:
@@ -141,28 +141,28 @@ def parse_import_pattern(pattern, max_id):
         if parts[1] == "":
             try:
                 return list(range(int(parts[0]), max_id + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range start: {pattern}")
+            except ValueError as exc:
+                raise ValueError(f"Invalid range start: {pattern}") from exc
 
         if parts[0] == "":
             try:
                 return list(range(1, int(parts[1]) + 1))
-            except ValueError:
-                raise ValueError(f"Invalid range end: {pattern}")
+            except ValueError as exc:
+                raise ValueError(f"Invalid range end: {pattern}") from exc
 
         try:
             start, end = int(parts[0]), int(parts[1])
             if start > end:
                 start, end = end, start
             return list(range(start, end + 1))
-        except ValueError:
-            raise ValueError(f"Invalid range: {pattern}")
+        except ValueError as exc:
+            raise ValueError(f"Invalid range: {pattern}") from exc
 
     # Single ID: "3"
     try:
         return [int(pattern)]
-    except ValueError:
-        raise ValueError(f"Invalid import ID pattern: {pattern}")
+    except ValueError as exc:
+        raise ValueError(f"Invalid import ID pattern: {pattern}") from exc
 
 
 # ============================================================================

@@ -244,7 +244,9 @@ def test_icons_shrink_to_fit_a_narrow_cell():
     right_edges = [c["x"] + size / 2 for c in icons]
     assert left_edges[0] >= 100.0 and right_edges[-1] <= 112.0
     # Each icon clears the next one.
-    assert all(r < l for r, l in zip(right_edges, left_edges[1:]))
+    assert all(
+        right < left for right, left in zip(right_edges, left_edges[1:], strict=False)
+    )
 
 
 def test_a_lone_icon_in_a_narrow_cell_stays_inside_it():

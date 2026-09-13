@@ -86,7 +86,7 @@ class TestNRF454PeriodBoundaries(unittest.TestCase):
         """Period lengths should be 4-5-4-4-5-4-4-5-4-4-5-4 weeks."""
         boundaries = self.cal.get_period_boundaries(2026)
         expected = [4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4]
-        for (start, end, _), exp_weeks in zip(boundaries, expected):
+        for (start, end, _), exp_weeks in zip(boundaries, expected, strict=True):
             actual_days = (end - start).days + 1
             actual_weeks = actual_days // 7
             self.assertEqual(
@@ -242,7 +242,7 @@ class TestNRF445Variant(unittest.TestCase):
     def test_pattern_is_445(self):
         boundaries = self.cal.get_period_boundaries(2026)
         expected = [4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5]
-        for (start, end, _), exp_weeks in zip(boundaries, expected):
+        for (start, end, _), exp_weeks in zip(boundaries, expected, strict=True):
             actual_weeks = ((end - start).days + 1) // 7
             self.assertEqual(actual_weeks, exp_weeks)
 
@@ -263,7 +263,7 @@ class TestNRF544Variant(unittest.TestCase):
     def test_pattern_is_544(self):
         boundaries = self.cal.get_period_boundaries(2026)
         expected = [5, 4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4]
-        for (start, end, _), exp_weeks in zip(boundaries, expected):
+        for (start, end, _), exp_weeks in zip(boundaries, expected, strict=True):
             actual_weeks = ((end - start).days + 1) // 7
             self.assertEqual(actual_weeks, exp_weeks)
 

@@ -1516,7 +1516,7 @@ class TestElementCatalogBindings:
             yaml.dump(theme, f)
             f.flush()
             engine.load(f.name)
-        with pytest.raises(ThemeError, match="weekly.overflow is deprecated"):
+        with pytest.raises(ThemeError, match=r"weekly\.overflow is deprecated"):
             engine.apply(CalendarConfig())
 
     def test_top_level_overflow_section_sets_the_icon(self):

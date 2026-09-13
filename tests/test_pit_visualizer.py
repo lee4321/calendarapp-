@@ -226,8 +226,8 @@ def test_pit_leader_anchor_center_aligns_box_middle(tmp_path):
     leaders = sorted(_leader_endpoints(svg))
     assert centers and leaders
     assert len(centers) == len(leaders)
-    for c, l in zip(centers, leaders):
-        assert abs(c - l) < 0.5
+    for c, leader in zip(centers, leaders, strict=True):
+        assert abs(c - leader) < 0.5
 
 
 def test_pit_leader_anchor_center_no_row_overlap(tmp_path):
@@ -250,8 +250,8 @@ def test_pit_leader_anchor_start_puts_box_after_endpoint(tmp_path):
     lefts = sorted(x0 for boxes in rows.values() for (x0, _x1) in boxes)
     leaders = sorted(_leader_endpoints(svg))
     assert len(lefts) == len(leaders)
-    for left, l in zip(lefts, leaders):
-        assert abs(left - l) < 0.5
+    for left, leader in zip(lefts, leaders, strict=True):
+        assert abs(left - leader) < 0.5
 
 
 def test_pit_leader_length_tracks_layer_gap(tmp_path):

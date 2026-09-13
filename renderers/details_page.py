@@ -359,9 +359,7 @@ class DetailsPageWriter:
 
     def _ensure(self, needed: float) -> None:
         """Break to a new page when *needed* points will not fit."""
-        if self._page_number == 0:
-            self.start_page()
-        elif self._cursor + needed > self.bottom:
+        if self._page_number == 0 or self._cursor + needed > self.bottom:
             self.start_page()
 
     def _band(self, height: float) -> None:
@@ -428,7 +426,7 @@ class DetailsPageWriter:
         font = font or self._body_font
         size = self._body_size if size is None else size
         cursor_x = self.left
-        for value, column in zip(values, columns):
+        for value, column in zip(values, columns, strict=False):
             cell_w = self.width * column.width
             usable = cell_w - _CELL_PAD * 2
             # One line per cell: the row height is uniform, so a value

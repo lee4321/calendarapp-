@@ -19,8 +19,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.generate_option_catalog import (
     _subcommand_parsers,
@@ -29,6 +28,7 @@ from tools.generate_option_catalog import (
     regenerate,
 )
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 GUIDE = REPO_ROOT / "docs" / "USER_GUIDE.md"
 HEADING = "## Command-Line Option Catalog (All Options)"
 POSITIONAL_HEADING = "## Positional Arguments by Command"

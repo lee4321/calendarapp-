@@ -148,7 +148,7 @@ def _details_columns(
     total = sum(widths)
     return [
         DetailsColumn(column.header, width / total, align=column.align)
-        for column, width in zip(columns, widths)
+        for column, width in zip(columns, widths, strict=False)
     ]
 
 

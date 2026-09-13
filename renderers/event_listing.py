@@ -61,7 +61,7 @@ def details_columns(config: CalendarConfig) -> list[DetailsColumn]:
         total = sum(widths)
 
     columns: list[DetailsColumn] = []
-    for index, (header, width) in enumerate(zip(headers, widths)):
+    for index, (header, width) in enumerate(zip(headers, widths, strict=False)):
         if index == 0:
             token, css = "text:event_date", "ec-event-date"
             # ec-event-date binds to text:caption in the bundled

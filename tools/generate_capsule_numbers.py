@@ -118,7 +118,7 @@ def compose_svg(
     bb_ymin = float("inf")
     bb_xmax = float("-inf")
     bb_ymax = float("-inf")
-    for g, x_off in zip(glyphs, positions_fu):
+    for g, x_off in zip(glyphs, positions_fu, strict=False):
         if g.bounds:
             gx_min, gy_min, gx_max, gy_max = g.bounds
             bb_xmin = min(bb_xmin, gx_min + x_off)
@@ -151,7 +151,7 @@ def compose_svg(
     # Each glyph transform: translate to its advance position, then scale with Y-flip
     # We shift by -svg_xmin, -svg_ymin to move content to (0,0)
     paths: list[str] = []
-    for g, x_fu in zip(glyphs, positions_fu):
+    for g, x_fu in zip(glyphs, positions_fu, strict=False):
         if g.path_d:
             # Glyph in SVG space before cropping: translate(x_fu*scale, 0) scale(s,-s)
             # After cropping offset: subtract svg_xmin from X, svg_ymin from Y

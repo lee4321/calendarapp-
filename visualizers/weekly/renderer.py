@@ -265,7 +265,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             if config.ignorecomplete and t.percent_complete == 1:
                 continue
 
-            if config.milestones and t.milestone:
+            if config.milestones and t.milestone:  # noqa: SIM114 - configured apart from events
                 if t.datekey in days_to_print:
                     rows_on_days, had_overflow = self._place_event_and_notes(
                         config, rows_on_days, t, t.datekey
@@ -587,7 +587,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             if span_end < span_start:
                 continue
 
-            if t.milestone and config.milestones:
+            if t.milestone and config.milestones:  # noqa: SIM114 - configured apart from events
                 day_key = t.datekey or daystart.format("YYYYMMDD")
                 result[day_key].append(t)
             elif daystart == dayend and config.includeevents:
@@ -652,14 +652,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if config.include_month_name:
             month_indicator = monthname + " "
 
-        if boxdate == "1":
-            boxdate = month_indicator + boxdate
-        elif oneday_str == config.adjustedstart:
-            boxdate = month_indicator + boxdate
-        elif (
-            weekend_style_is_workweek(config.weekend_style)
-            and (boxdate == "2" or boxdate == "3")
-            and (dayoftheweek == "Mon")
+        # The month name leads the 1st, the first day shown, and -- in a
+        # work-week view -- a Monday 2nd or 3rd whose 1st fell on a weekend.
+        if (
+            boxdate == "1"
+            or oneday_str == config.adjustedstart
+            or (
+                weekend_style_is_workweek(config.weekend_style)
+                and boxdate in ("2", "3")
+                and dayoftheweek == "Mon"
+            )
         ):
             boxdate = month_indicator + boxdate
 
@@ -1568,7 +1570,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             rect_kwargs.get("fill_opacity", 1.0) * status_opacity
         )
 
-        for i_rect, (X, Y, Width, Height, tx, name_ty, ix, iy, notes_ty) in enumerate(list_of_rects):
+        for i_rect, (X, Y, Width, Height, _tx, name_ty, _ix, _iy, notes_ty) in enumerate(list_of_rects):
             self._draw_rect(
                 X,
                 Y,
@@ -1752,7 +1754,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         for dateid in duration_dates:
             for rowid in rowcoords[dateid]:
                 (_X, _Y, _W, _H, _tx, _ty, _ix, _iy, B) = rowcoords[dateid][rowid]
-                if B == False:
+                if not B:
                     List_of_Possibilities.append(rowid)
 
         List_of_Possibilities.sort()

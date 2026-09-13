@@ -64,12 +64,10 @@ def main() -> int:
         if not ok:
             if proc.returncode != 0:
                 tail = (proc.stderr.strip() or proc.stdout.strip()).splitlines()
-                detail = "  exit=%d  %s" % (
-                    proc.returncode,
-                    tail[-1] if tail else "(no output)",
-                )
+                last = tail[-1] if tail else "(no output)"
+                detail = f"  exit={proc.returncode}  {last}"
             else:
-                detail = "  ran OK but no output file (%s)" % output_name
+                detail = f"  ran OK but no output file ({output_name})"
             failures.append(command)
         loc = out_path.relative_to(ROOT) if out_path else "-"
         print(f"[{status}] {command:<14} {mode:<6} -> {loc}{detail}")

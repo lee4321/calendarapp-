@@ -58,7 +58,7 @@ def test_sample_yaml_parses() -> None:
 ])
 def test_retired_sections_are_rejected(section: str) -> None:
     minimal = {"theme": {"name": "x", "version": "3.0"}, section: {}}
-    with pytest.raises(ThemeError, match="tools/migrate_theme.py"):
+    with pytest.raises(ThemeError, match=r"tools/migrate_theme\.py"):
         parse_theme(minimal)
 
 

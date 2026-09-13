@@ -74,7 +74,7 @@ class CandybarRenderer(MiniCalendarRenderer):
         self._draw_base_shading(config, cell_state)
 
         # Pass 2 — day-cell backgrounds (shade, SVG patterns, hash)
-        for x, y, w, h, daykey, style in cell_state:
+        for x, y, w, h, _daykey, style in cell_state:
             self._draw_day_cell_background(config, x, y, w, h, style)
 
         # Pass 3 — table grid around every structural cell

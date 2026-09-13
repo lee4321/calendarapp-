@@ -927,7 +927,7 @@ def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
     dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
     assert [d["text"] for d in dates] == ["Jan 19", "May 25"]
     # Each date is centered on its own icon and sits below it.
-    for icon, date_call in zip(renderer.icon_calls, dates):
+    for icon, date_call in zip(renderer.icon_calls, dates, strict=True):
         assert date_call["x"] == pytest.approx(icon["x"])
         assert date_call["y"] > icon["y"]
 
@@ -2483,9 +2483,9 @@ def test_a_vertical_timeband_honors_text_align(tmp_path):
 
     left, centre, right = (_label_xs(a) for a in ("left", "center", "right"))
     assert left and centre and right
-    assert [l["anchor"] for l in left] == ["start"] * len(left)
-    assert [l["anchor"] for l in centre] == ["middle"] * len(centre)
-    assert [l["anchor"] for l in right] == ["end"] * len(right)
+    assert [lbl["anchor"] for lbl in left] == ["start"] * len(left)
+    assert [lbl["anchor"] for lbl in centre] == ["middle"] * len(centre)
+    assert [lbl["anchor"] for lbl in right] == ["end"] * len(right)
     # A pre-rotation +x is up the bar, so "left" (the bottom of a segment)
     # anchors below "right" (its top).
     assert left[0]["x"] < right[0]["x"]
@@ -2644,7 +2644,7 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     dates = [c for c in renderer.text_calls
              if c.get("css_class") == "ec-holiday-date"]
     assert [d["text"] for d in dates] == ["Feb 16", "Apr 6"]
-    for date_call, icon in zip(dates, renderer.icon_calls):
+    for date_call, icon in zip(dates, renderer.icon_calls, strict=True):
         assert date_call["x"] < icon["x"]            # written past the icon
         assert date_call["anchor"] == "end"
 
@@ -2683,7 +2683,7 @@ def test_fiscal_bands_run_as_columns_beside_a_vertical_axis(tmp_path):
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels
     # Too narrow to read across, so the period names are turned with the band.
-    assert all("rotate(-90" in (l.get("transform") or "") for l in labels)
+    assert all("rotate(-90" in (lbl.get("transform") or "") for lbl in labels)
 
 
 def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
@@ -2707,7 +2707,7 @@ def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
     assert min(c["x"] for c in cells) == pytest.approx(100.0 - 16.0 - 12.0)
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels and all(
-        "rotate(-90" in (l.get("transform") or "") for l in labels
+        "rotate(-90" in (lbl.get("transform") or "") for lbl in labels
     )
 
 
@@ -2889,8 +2889,8 @@ def test_vertical_tick_labels_take_the_theme_font_and_color(tmp_path):
         50.0, 700.0, 300.0,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
-    assert [l["text"] for l in labels][:2] == ["January", "February"]
-    assert {l["font"] for l in labels} == {"JuliaMono-Regular"}
+    assert [lbl["text"] for lbl in labels][:2] == ["January", "February"]
+    assert {lbl["font"] for lbl in labels} == {"JuliaMono-Regular"}
 
 
 def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
@@ -2917,9 +2917,9 @@ def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
     assert ticks[0]["x2"] == pytest.approx(300.0 + 11.0)
 
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
-    assert [l["text"] for l in labels] == ["Feb", "Mar"]
+    assert [lbl["text"] for lbl in labels] == ["Feb", "Mar"]
     assert labels[0]["x"] == pytest.approx(300.0 - (11.0 + 5.0))
-    assert {l["font"] for l in labels} == {"JuliaMono-Regular"}
+    assert {lbl["font"] for lbl in labels} == {"JuliaMono-Regular"}
 
 
 def test_a_tick_label_at_the_end_of_the_axis_stays_on_the_page(tmp_path):
@@ -2930,7 +2930,7 @@ def test_a_tick_label_at_the_end_of_the_axis_stays_on_the_page(tmp_path):
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     size = renderer._axis_tick_label_size(config)
     assert labels[0]["y"] >= 50.0 + size * 0.8
-    assert all(50.0 <= l["y"] <= 700.0 for l in labels)
+    assert all(50.0 <= lbl["y"] <= 700.0 for lbl in labels)
 
 
 def test_the_callout_clearance_follows_the_configured_gap(tmp_path):

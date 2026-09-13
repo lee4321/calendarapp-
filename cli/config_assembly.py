@@ -94,9 +94,8 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
         level = logging.ERROR
     elif verbose >= 3:
         level = logging.DEBUG
-    elif verbose >= 2:
-        level = logging.INFO
     elif verbose >= 1:
+        # -v and -vv both log INFO; -vv adds logger names (format below).
         level = logging.INFO
     else:
         level = logging.WARNING
