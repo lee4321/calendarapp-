@@ -130,6 +130,36 @@ values as parameters.
 Guard: tests pass, and generated SVGs are byte-identical before and after
 (render each view × theme to `output/` and `diff -r`).
 
+**Done 2026-09-13.** Five commits (`03ee522a` through the second I001 pass).
+Every commit passed the full test suite, `tools/refcorpus.sh check` (40
+files identical apart from `<desc>`), and an import of all 116 app modules
+plus `ecalendar`. Notes:
+
+- **RUF100 was not applied.** It strips `noqa` comments that still document
+  intent: `# noqa: BLE001 - surface any failure in the UI`, and E402 notes
+  about imports placed after a `sys.path` fix. It also dropped the `noqa` on
+  a deliberate re-export. If you want RUF100, first set
+  `lint.external = ["BLE001"]` and keep the explanatory text.
+- **F401 has re-exports to watch.** `pit/labella_adapter.py` imports
+  `partition_for_both as _partition_for_both` for tests; it now has a `noqa`.
+  `text_mini/__init__.py` got an `__all__`. Searching for the bare name
+  misses aliases, but pytest collection catches them.
+- **F841 was all leftovers,** with no dropped logic. A delete can make an
+  earlier variable unused (timeline `start_day`) or match an identical line
+  that is still used, so match by line after checking.
+- **B023** was fixed by binding the blockplan closure's 9 loop values as
+  keyword defaults.
+- **The annotation pass unsorts imports.** Moving imports to
+  `collections.abc` needed a second I001 pass.
+- Ruff preserves CRLF endings; each commit was checked.
+
+After: pytest 1517 passed; `uv check` 832 (540 tests, 292 app); ruff 316,
+51 auto-fixable. Remaining top rules: RUF059 unused unpacked variable (54),
+RUF012 mutable class default (31), B905 zip without `strict` (30), SIM102
+collapsible if (28), RUF001 confusable characters (26), E741 ambiguous
+names (13), E402 (10, compactplan's late imports plus one test). None of
+these are in Phase 2's scope.
+
 ## Phase 3 — App-code typing (target: zero ty errors outside tests)
 
 - `BaseSVGRenderer`: add a `drawing` property that asserts `_drawing is not None`,
