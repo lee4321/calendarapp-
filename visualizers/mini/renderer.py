@@ -18,7 +18,7 @@ from config.config import (
     weekend_style_starts_sunday,
 )
 from renderers import event_listing
-from renderers.svg_base import BaseSVGRenderer, _is_none_color
+from renderers.svg_base import BaseSVGRenderer, TokenStyle, _is_none_color
 from shared.date_utils import (
     format_arrow_date,
 )
@@ -460,7 +460,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             )
 
     def _resolve_day_number_color(
-        self, config: CalendarConfig, token_style: dict
+        self, config: CalendarConfig, token_style: TokenStyle
     ) -> str:
         """Base day-number color, before any per-day override.
 

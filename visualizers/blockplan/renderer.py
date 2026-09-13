@@ -2187,7 +2187,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     stroke=ev_marker_stroke,
                     class_="ec-milestone-marker",
                 )
-                self._drawing.append(_circle)
+                self.drawing.append(_circle)
             marker_extent = icon_size if marker_drawn else icon_r
             label_x = x + marker_extent + 2.0
             max_width = max(8.0, (timeline_x + timeline_w) - x - 6)

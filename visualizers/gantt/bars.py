@@ -39,12 +39,14 @@ class DayAxis:
         return self.width / len(self.days) if self.days else 0.0
 
     @property
-    def first(self) -> date | None:
-        return self.days[0] if self.days else None
+    def first(self) -> date:
+        """First visible day.  Check ``days`` first: an empty axis has none."""
+        return self.days[0]
 
     @property
-    def last(self) -> date | None:
-        return self.days[-1] if self.days else None
+    def last(self) -> date:
+        """Last visible day.  Check ``days`` first: an empty axis has none."""
+        return self.days[-1]
 
     def index_at_or_after(self, day: date) -> int | None:
         """Index of the first visible day not before *day*."""

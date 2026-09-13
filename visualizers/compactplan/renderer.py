@@ -539,9 +539,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
             content_h = round(max(1.0, chart_bottom - bands_y), 4)
             vb_x = round(area_x, 4)
             vb_y = round(bands_y, 4)
-            self._drawing.view_box = (vb_x, vb_y, content_w, content_h)
-            self._drawing.width = content_w
-            self._drawing.height = content_h
+            self.drawing.view_box = (vb_x, vb_y, content_w, content_h)
+            self.drawing.width = content_w
+            self.drawing.height = content_h
             self._content_bbox_svg = (area_x, bands_y, area_x + area_w, chart_bottom)
 
         return 0, []
@@ -1198,7 +1198,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         path.L(x + flag_w * 0.4, p_bot - indent)
         path.L(x, p_bot - indent)
         path.Z()
-        self._drawing.append(path)
+        self.drawing.append(path)
 
     # ------------------------------------------------------------------
     # Mark styling — shared by the chart and its key, so a swatch on the
@@ -1575,7 +1575,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             parts.append(f"stroke-opacity:{stroke['stroke_opacity']}")
         if stroke.get("stroke_dasharray"):
             parts.append(f"stroke-dasharray:{stroke['stroke_dasharray']}")
-        self._drawing.append(drawsvg.Raw(
+        self.drawing.append(drawsvg.Raw(
             f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{(x + length):.2f}" y2="{y:.2f}" '
             f'style="{";".join(parts)}" class="ec-legend-swatch" />'
         ))

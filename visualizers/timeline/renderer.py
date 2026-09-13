@@ -389,7 +389,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 f' stroke-dasharray="{leader_dasharray}"'
                 if leader_dasharray else ""
             )
-            self._drawing.append(drawsvg.Raw(
+            self.drawing.append(drawsvg.Raw(
                 f'<g transform="translate({ox:.2f},{oy:.2f})" '
                 f'class="ec-callout-leader">'
                 f'<path d="{callout.leader_path_d}" '
@@ -615,9 +615,9 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             coordinates["TimelineArea"] = tight
             tx, ty, tw, th = tight
-            self._drawing.view_box = (tx, ty, tw, th)
-            self._drawing.width = tw
-            self._drawing.height = th
+            self.drawing.view_box = (tx, ty, tw, th)
+            self.drawing.width = tw
+            self.drawing.height = th
             self._content_bbox_svg = (tx, ty, tx + tw, ty + th)
 
         # Timeline view does not use overflow pages.

@@ -11,8 +11,9 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 import arrow
 import drawsvg
@@ -25,6 +26,21 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
     from shared.db_access import CalendarDB
     from visualizers.base import CoordinateDict, VisualizationResult
+
+
+class TokenStyle(Protocol):
+    """A resolved theme token: the merged style bag for one ``kind:name``.
+
+    Values come straight from theme YAML, so reads are typed ``Any`` and each
+    renderer applies its own fallback.  At runtime it is a plain ``dict``.
+    """
+
+    def get(self, key: str, default: Any = None, /) -> Any: ...
+    def __contains__(self, key: object, /) -> bool: ...
+    def __getitem__(self, key: str, /) -> Any: ...
+    def __iter__(self) -> Iterator[str]: ...
+    def __len__(self) -> int: ...
+    def keys(self) -> Iterable[str]: ...
 
 
 logger = logging.getLogger(__name__)
@@ -75,7 +91,16 @@ class BaseSVGRenderer(ABC):
         self._registered_pattern_ids: set[str] = set()
         # Per-render unified-theme token cache, populated at the top of
         # _render_content.  Maps "<kind>:<name>" → merged style dict.
-        self._tokens: dict[str, dict] = {}
+        self._tokens: dict[str, TokenStyle] = {}
+
+    @property
+    def drawing(self) -> drawsvg.Drawing:
+        """The page being drawn.  Only valid during a render pass."""
+        if self._drawing is None:
+            raise RuntimeError(
+                f"{type(self).__name__} has no drawing; render() creates it"
+            )
+        return self._drawing
 
     # =========================================================================
     # Unified-theme token cache
@@ -92,7 +117,7 @@ class BaseSVGRenderer(ABC):
             name: self._resolve_token(config, name, ctx) for name in self.TOKENS
         }
 
-    def _tk(self, token: str) -> dict:
+    def _tk(self, token: str) -> TokenStyle:
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
         return self._tokens.get(token, {})
 
@@ -135,7 +160,9 @@ class BaseSVGRenderer(ABC):
         Pattern elements are registered at most once per Drawing instance;
         call sites need not guard against duplicates.
         """
-        raw_svg = self._pattern_svg_cache.get(pattern_name) if pattern_name else None
+        if not pattern_name:
+            return None
+        raw_svg = self._pattern_svg_cache.get(pattern_name)
         if not raw_svg:
             return None
 
@@ -143,7 +170,7 @@ class BaseSVGRenderer(ABC):
         if pat_id in self._registered_pattern_ids:
             return pat_id
 
-        self._drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color)))
+        self.drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color)))
         self._registered_pattern_ids.add(pat_id)
         return pat_id
 
@@ -156,7 +183,7 @@ class BaseSVGRenderer(ABC):
         config: CalendarConfig,
         token: str,
         ctx: dict | None = None,
-    ) -> dict:
+    ) -> TokenStyle:
         """Resolve a UnifiedTheme token; returns ``{}`` when no theme is loaded.
 
         The returned dict carries the merged style bag for ``token`` (e.g.
@@ -233,7 +260,7 @@ class BaseSVGRenderer(ABC):
             ry=_r(rx),
             **extra,
         )
-        self._drawing.append(rect)
+        self.drawing.append(rect)
 
     def _draw_circle(
         self,
@@ -277,7 +304,7 @@ class BaseSVGRenderer(ABC):
             stroke_width=stroke_width,
             **extra,
         )
-        self._drawing.append(circle)
+        self.drawing.append(circle)
 
     def _draw_text(
         self,
@@ -353,7 +380,7 @@ class BaseSVGRenderer(ABC):
         if svg_markup:
             if combined_transform:
                 svg_markup = f'<g transform="{combined_transform}">{svg_markup}</g>'
-            self._drawing.append(drawsvg.Raw(svg_markup))
+            self.drawing.append(drawsvg.Raw(svg_markup))
 
     def _ensure_arrow_marker_def(
         self,
@@ -405,7 +432,7 @@ class BaseSVGRenderer(ABC):
         # coincides with the tip rather than the glyph's bounding box.
         s = float(size)
         class_attr = f' class="{css_class}"' if css_class else ""
-        self._drawing.append_def(
+        self.drawing.append_def(
             drawsvg.Raw(
                 f'<marker id="{marker_id}" markerUnits="userSpaceOnUse" '
                 f'viewBox="0 0 {s} {s}" '
@@ -445,7 +472,7 @@ class BaseSVGRenderer(ABC):
         end = f' marker-end="url(#{marker_end})"' if marker_end else ""
         cls = f' class="{css_class}"' if css_class else ""
 
-        self._drawing.append(
+        self.drawing.append(
             drawsvg.Raw(
                 f'<path d="{path_d}" fill="none" stroke="{stroke}" '
                 f'stroke-width="{stroke_width:.3f}" '
@@ -497,7 +524,7 @@ class BaseSVGRenderer(ABC):
             stroke_opacity=stroke_opacity,
             **extra,
         )
-        self._drawing.append(line)
+        self.drawing.append(line)
 
     def _draw_lines(
         self,
@@ -536,7 +563,7 @@ class BaseSVGRenderer(ABC):
         )
         for x1, y1, x2, y2 in line_list:
             group.append(drawsvg.Line(_r(x1), _r(y1), _r(x2), _r(y2)))
-        self._drawing.append(group)
+        self.drawing.append(group)
 
     def _draw_image(
         self,
@@ -569,7 +596,7 @@ class BaseSVGRenderer(ABC):
             embed=True,
             **extra,
         )
-        self._drawing.append(img)
+        self.drawing.append(img)
 
     # =========================================================================
     # Template method workflow
@@ -630,7 +657,7 @@ class BaseSVGRenderer(ABC):
         self._add_embedded_data(config, events)
 
         # Save main SVG
-        self._drawing.save_svg(config.outputfile)
+        self.drawing.save_svg(config.outputfile)
 
         # Render overflow page if requested and entries exist. The report
         # paginates, so it is worth as many pages as it took.
@@ -713,7 +740,7 @@ class BaseSVGRenderer(ABC):
                 if ts is not None:
                     css_content = ts.css
         if css_content and self._drawing is not None:
-            self._drawing.append_css(css_content)
+            self.drawing.append_css(css_content)
 
     def _shrink_drawing_to_content(self, coordinates: CoordinateDict) -> None:
         """Adjust SVG width/height/viewBox to tightly fit the content bounding box.
@@ -741,14 +768,14 @@ class BaseSVGRenderer(ABC):
         content_w = _r(max_x - min_x)
         content_h = _r(max_y - min_y)
         # Coordinates are already SVG-native; min_y is the SVG viewBox top edge.
-        self._drawing.view_box = (
+        self.drawing.view_box = (
             _r(min_x),
             _r(min_y),
             content_w,
             content_h,
         )
-        self._drawing.width = content_w
-        self._drawing.height = content_h
+        self.drawing.width = content_w
+        self.drawing.height = content_h
 
     def _add_desc(self, config: CalendarConfig):
         """
@@ -770,7 +797,7 @@ class BaseSVGRenderer(ABC):
 
         desc_text = "\n".join(desc_lines)
         desc_elem = drawsvg.Raw(f"<desc>{desc_text}</desc>")
-        self._drawing.append(desc_elem)
+        self.drawing.append(desc_elem)
 
     def _add_embedded_data(self, config: CalendarConfig, events: list) -> None:
         """Embed compressed CSV event data in a ``<metadata>`` element.
@@ -799,7 +826,7 @@ class BaseSVGRenderer(ABC):
             "</ecal:data>"
             "</metadata>"
         )
-        self._drawing.append(drawsvg.Raw(metadata))
+        self.drawing.append(drawsvg.Raw(metadata))
 
     # =========================================================================
     # Watermarks
@@ -983,7 +1010,7 @@ class BaseSVGRenderer(ABC):
         if transform:
             nested_svg = f'<g transform="{transform}">{nested_svg}</g>'
         nested = drawsvg.Raw(nested_svg)
-        self._drawing.append(nested)
+        self.drawing.append(nested)
 
     def _load_icon_svg_cache(self, db: CalendarDB) -> None:
         """Load icon SVG lookup from database (best-effort)."""
@@ -1238,7 +1265,7 @@ class BaseSVGRenderer(ABC):
         )
         if transform:
             nested_svg = f'<g transform="{transform}">{nested_svg}</g>'
-        self._drawing.append(drawsvg.Raw(nested_svg))
+        self.drawing.append(drawsvg.Raw(nested_svg))
         return True
 
     @staticmethod
@@ -1401,7 +1428,7 @@ class BaseSVGRenderer(ABC):
                     Y + (height * 0.7),
                     key,
                     _lbl_ts.font,
-                    config.day_name_font_size,
+                    config.day_name_font_size or _lbl_ts.size,
                     fill=_lbl_ts.color,
                     anchor="middle",
                     max_width=width,
