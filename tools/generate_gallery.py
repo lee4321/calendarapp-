@@ -56,6 +56,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ECALENDAR = REPO_ROOT / "ecalendar.py"
@@ -77,7 +78,7 @@ SVG_VIEWS = (
 
 # Views that are not themed SVG pages, but are still themed: text-mini emits
 # plain text and the excel views emit .xlsx, and all three take --theme.
-NONSVG_VIEWS = {
+NONSVG_VIEWS: dict[str, dict[str, Any]] = {
     "text-mini": {"themed": True, "ext": ".txt"},
     "excelheader": {"themed": True, "ext": ".xlsx"},
     "excelblockplan": {"themed": True, "ext": ".xlsx"},

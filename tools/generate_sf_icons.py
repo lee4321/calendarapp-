@@ -16,6 +16,7 @@ import argparse
 import csv
 import os
 import sys
+from typing import Any
 
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -85,7 +86,8 @@ def extract_glyph_svg(font: TTFont, gid: int, upm: int, font_size: float = FONT_
 def generate_icons(font_path: str, input_file: str, output_dir: str) -> None:
     """Read the CSV and generate one SVG per row."""
     font = TTFont(font_path)
-    upm = font["head"].unitsPerEm
+    head: Any = font["head"]  # fontTools table fields are untyped
+    upm = head.unitsPerEm
 
     os.makedirs(output_dir, exist_ok=True)
 

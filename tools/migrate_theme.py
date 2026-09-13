@@ -86,6 +86,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import yaml
+import yaml.resolver
 
 # ─── PyYAML dict-order preservation ─────────────────────────────────────────
 
@@ -495,7 +496,7 @@ def _convert_element_styles(src: dict[str, Any], *, fname: str) -> list[dict[str
 
 
 def _convert_axis_stanza(
-    axis: dict[str, Any],
+    axis: dict[str, Any] | None,
     timeline: dict[str, Any],
     *,
     fname: str,
