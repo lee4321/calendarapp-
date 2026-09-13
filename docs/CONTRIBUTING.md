@@ -34,6 +34,13 @@ The architecture reading order lives in `docs/architecture/README.md`
   the tables — the hand-written prose under each `### <command>` heading is
   left alone. New guide examples are executed by
   `uv run python tools/check_user_guide.py`.
+- Content filters (`--noevents`, `--nodurations`/`--durations`, `--milestones`,
+  `--WBS`, `--status`, `--country`, `--empty`, and the gated `--shade`,
+  `--includenotes`, `--overflow`) are defined once: register them with
+  `_add_content_filter_args()` in `cli/args.py` and wire them in
+  `_apply_content_filters()` in `cli/config_assembly.py`. The SVG views,
+  text-mini, excelblockplan and exportdata all go through both; never add a
+  per-command copy (`tests/test_content_filters.py` pins the per-view matrix).
 
 ## Layering
 

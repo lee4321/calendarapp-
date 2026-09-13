@@ -209,12 +209,12 @@ all subcommands and their option groups.
 | Help | `help` |
 
 **Argument groups (per visualizer subcommand):**
-- Database Options (`--database`, `--country`)
+- Database Options (`--database`)
 - Output Options (`--outputfile`, `--papersize`, `--orientation`, `--shrink`)
-- Layout Options (`--weekends`, `--header`, `--footer`, `--margin`, `--overflow`)
+- Layout Options (`--weekends`, `--header`, `--footer`, `--margin`)
 - Header/Footer text (`--headerleft`, `--headercenter`, `--headerright`, …)
 - Watermark Options (`--watermark`, `--watermark-rotation-angle`, `--imagemark`)
-- Content Filtering (`--noevents`, `--nodurations`, `--milestones`, `--WBS`)
+- Content Filtering (`--empty`, `--noevents`, `--nodurations`/`--durations`, `--milestones`, `--WBS`, `--status`, `--country`; gated per view: `--shade`, `--includenotes`, `--overflow`) — defined once in `_add_content_filter_args()` and shared with text-mini, excelblockplan and exportdata
 - Mini Calendar Options (`--mini-columns`, `--mini-rows`, `--mini-no-adjacent`, …)
 - Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`)
 - Fiscal Options (`--fiscal`, `--fiscal-colors`, `--fiscal-year-offset`)
@@ -262,7 +262,7 @@ dataclass, performing any necessary validation or transformation along the way.
 4. **Week numbers** — sets `config.include_week_numbers`.
 5. **Layout toggles** — header, footer, margin, overflow, shrink flags.
 6. **Paper size & orientation** — case-insensitive lookup with clear error on unknown name; sets `config.pageX/pageY`.
-7. **Display options** — events, durations, milestones, WBS, today-shading, country.
+7. **Display options** — today-shading and notes; the event filters (events, durations, milestones, WBS, status, country, `--empty`) go through `_apply_content_filters()`, which excelblockplan and exportdata also call directly.
 8. **Mini calendar options** — guarded with `is not None` so omitting a flag never clobbers a theme-set default.
 9. **Timeline options** — today-line geometry, opacity overrides.
 10. **Fiscal calendar** — type string and per-period colour flag.
