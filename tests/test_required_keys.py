@@ -8,13 +8,13 @@ import pytest
 
 from config.required_keys import (
     REQUIRED_KEYS,
-    RequiredKey,
     VISUALIZERS,
+    RequiredKey,
     check_all_visualizers,
     check_required_keys,
     format_missing_key_error,
 )
-from config.unified_theme import parse_theme, load_theme_file
+from config.unified_theme import load_theme_file, parse_theme
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 

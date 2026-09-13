@@ -15,7 +15,6 @@ from config.theme_engine import ThemeEngine
 from visualizers.factory import VisualizerFactory
 from visualizers.gantt.layout import GanttLayout
 
-
 #: Letter landscape in points.  A bare CalendarConfig has a zero-sized page
 #: (paper dimensions are loaded from the database at runtime), so any test
 #: that measures geometry has to set one.

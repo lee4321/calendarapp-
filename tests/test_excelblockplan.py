@@ -15,7 +15,6 @@ from visualizers.excelheader import (
     LABEL_COL_END,
 )
 
-
 # ── Stubs ─────────────────────────────────────────────────────────────────────
 
 
@@ -312,8 +311,9 @@ def test_excelblockplan_no_freeze_panes(tmp_path):
 
 def test_excelblockplan_default_output_filename(tmp_path, monkeypatch):
     """The CLI default output filename must be ExcelBlockplan.xlsx under output/."""
-    import ecalendar
     from pathlib import Path as _P
+
+    import ecalendar
 
     # The CLI looks up calendar.db relative to cwd; point it at the repo copy
     # so the run does not error out on a missing database.

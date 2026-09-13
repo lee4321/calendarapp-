@@ -22,8 +22,9 @@ The function can accept these keyword arguments from the CLI:
 Date formats: Any format parseable by dateutil (M/D/YYYY, YYYY-MM-DD, etc.)
 """
 
-import pandas
 from datetime import datetime, timedelta
+
+import pandas
 
 
 def generate_events(start_date=None, end_date=None, **kwargs):

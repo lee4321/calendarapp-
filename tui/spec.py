@@ -11,7 +11,6 @@ import argparse
 from dataclasses import dataclass, field
 from functools import lru_cache
 
-
 # Subcommands that take begin/end dates and the full option set.
 CALENDAR_VIEWS = [
     "weekly",

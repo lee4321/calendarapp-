@@ -10,7 +10,6 @@ from config.config import CalendarConfig
 from config.theme_engine import ThemeEngine
 from config.unified_theme import UnifiedTheme
 
-
 THEMES = ("basic", "SAMPLE", "default", "TJX", "minimal")
 
 

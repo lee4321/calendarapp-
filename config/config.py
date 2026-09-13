@@ -7,12 +7,13 @@ Sets default values that will be used unless overridden
 
 from __future__ import annotations
 
-import arrow
 import copy
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+import arrow
 
 
 def get_creation_date() -> str:

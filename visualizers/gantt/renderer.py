@@ -68,17 +68,17 @@ from visualizers.gantt.dependencies import (
     route_arrow,
     stub_route,
 )
-from visualizers.gantt.layout import plan_pages
 from visualizers.gantt.details import (
-    render_details_pages,
     KIND_CLIPPED_END,
-    KIND_OFFCHART_DEPENDENCY,
     KIND_CLIPPED_START,
     KIND_HIDDEN_HOLIDAY,
+    KIND_OFFCHART_DEPENDENCY,
     KIND_SNAPPED_EVENT,
     KIND_UNDRAWN,
     GanttException,
+    render_details_pages,
 )
+from visualizers.gantt.layout import plan_pages
 from visualizers.gantt.rows import build_rows
 
 if TYPE_CHECKING:

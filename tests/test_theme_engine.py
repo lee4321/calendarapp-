@@ -628,6 +628,7 @@ class TestStrokeDasharray:
     def test_svg_base_draw_rect_emits_dasharray(self):
         """stroke_dasharray should appear in generated SVG rectangle."""
         import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -648,6 +649,7 @@ class TestStrokeDasharray:
     def test_svg_base_draw_line_emits_dasharray(self):
         """stroke_dasharray should appear in generated SVG line."""
         import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -666,6 +668,7 @@ class TestStrokeDasharray:
     def test_svg_base_draw_lines_emits_dasharray(self):
         """stroke_dasharray should appear on the group in generated SVG."""
         import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -686,6 +689,7 @@ class TestStrokeDasharray:
     def test_none_dasharray_omitted_from_svg(self):
         """When stroke_dasharray is None, it should not appear in SVG output."""
         import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -704,8 +708,10 @@ class TestStrokeDasharray:
 
     def test_svg_base_draw_text_emits_transform_wrapper(self):
         """_draw_text should wrap generated glyphs when transform is provided."""
-        import drawsvg
         from unittest.mock import patch
+
+        import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -737,10 +743,12 @@ class TestStrokeDasharray:
 
     def test_render_text_watermark_passes_rotation_transform(self):
         """_render_text_watermark should pass rotate(...) for watermark text."""
-        import drawsvg
         from unittest.mock import patch
-        from renderers.svg_base import BaseSVGRenderer
+
+        import drawsvg
+
         from config.config import create_calendar_config
+        from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
             def _render_content(self, *a, **kw):
@@ -771,10 +779,12 @@ class TestStrokeDasharray:
 
     def test_render_text_watermark_stretch_mode_applies_scale_transform(self):
         """Stretch mode should apply a scale transform around page center."""
-        import drawsvg
         from unittest.mock import patch
-        from renderers.svg_base import BaseSVGRenderer
+
+        import drawsvg
+
         from config.config import create_calendar_config
+        from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
             def _render_content(self, *a, **kw):
@@ -808,8 +818,10 @@ class TestStrokeDasharray:
 
     def test_draw_text_applies_x_scale_when_max_width_exceeded(self):
         """_draw_text should inject an X-only scale transform when constrained."""
-        import drawsvg
         from unittest.mock import patch
+
+        import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
@@ -842,10 +854,12 @@ class TestStrokeDasharray:
 
     def test_render_decorations_day_name_uses_max_width(self):
         """Day-name labels should pass max_width so X scaling can be applied."""
-        import drawsvg
         from unittest.mock import patch
-        from renderers.svg_base import BaseSVGRenderer
+
+        import drawsvg
+
         from config.config import create_calendar_config
+        from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
             def _render_content(self, *a, **kw):
@@ -869,10 +883,12 @@ class TestStrokeDasharray:
 
     def test_render_image_watermark_passes_rotation_transform(self):
         """_render_image_watermark should pass rotate(...) to raster imagemarks."""
-        import drawsvg
         from unittest.mock import patch
-        from renderers.svg_base import BaseSVGRenderer
+
+        import drawsvg
+
         from config.config import create_calendar_config
+        from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):
             def _render_content(self, *a, **kw):
@@ -921,9 +937,11 @@ class TestStrokeDasharray:
 
     def test_day_box_renderer_uses_config_stroke_values(self):
         """_draw_day_box passes config stroke_color/opacity/width/dasharray to _draw_rect."""
+        from unittest.mock import patch
+
         import arrow
         import drawsvg
-        from unittest.mock import patch
+
         from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
         config = self._make_renderer_config(
@@ -960,9 +978,11 @@ class TestStrokeDasharray:
 
     def test_day_box_renderer_uses_config_stroke_defaults(self):
         """Default config stroke values propagate to _draw_rect."""
+        from unittest.mock import patch
+
         import arrow
         import drawsvg
-        from unittest.mock import patch
+
         from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
         config = self._make_renderer_config()
@@ -1187,9 +1207,11 @@ class TestStrokeDasharrayTimelineMini:
 
     def test_timeline_svg_contains_axis_dasharray(self):
         """Axis stroke-dasharray should appear in generated timeline SVG."""
-        from visualizers.timeline.renderer import TimelineRenderer
+        import os
+        import tempfile
+
         from shared.db_access import CalendarDB
-        import tempfile, os
+        from visualizers.timeline.renderer import TimelineRenderer
 
         config = create_calendar_config()
         config.start = "20260101"
@@ -1223,6 +1245,7 @@ class TestStrokeDasharrayTimelineMini:
     def test_mini_grid_line_svg_contains_dasharray(self):
         """Mini grid line stroke-dasharray should appear in generated SVG."""
         import drawsvg
+
         from renderers.svg_base import BaseSVGRenderer
 
         class _Stub(BaseSVGRenderer):

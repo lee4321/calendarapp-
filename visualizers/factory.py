@@ -26,16 +26,16 @@ class VisualizerFactory:
     def _ensure_registered(cls):
         """Lazily register default visualizers on first use."""
         if not cls._visualizers:
-            from visualizers.weekly.visualizer import WeeklyCalendarVisualizer
+            from visualizers.blockplan.visualizer import BlockPlanVisualizer
+            from visualizers.candybar.visualizer import CandybarVisualizer
+            from visualizers.compactplan.visualizer import CompactPlanVisualizer
+            from visualizers.gantt.visualizer import GanttVisualizer
             from visualizers.mini.visualizer import MiniCalendarVisualizer
             from visualizers.mini_icon.visualizer import MiniIconCalendarVisualizer
-            from visualizers.candybar.visualizer import CandybarVisualizer
+            from visualizers.pit.visualizer import PITVisualizer
             from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
             from visualizers.timeline.visualizer import TimelineVisualizer
-            from visualizers.blockplan.visualizer import BlockPlanVisualizer
-            from visualizers.gantt.visualizer import GanttVisualizer
-            from visualizers.compactplan.visualizer import CompactPlanVisualizer
-            from visualizers.pit.visualizer import PITVisualizer
+            from visualizers.weekly.visualizer import WeeklyCalendarVisualizer
 
             cls._visualizers = {
                 "weekly": WeeklyCalendarVisualizer,

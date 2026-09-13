@@ -7,7 +7,6 @@ import ecalendar
 from config.config import create_calendar_config, setfontsizes
 from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
 
-
 #: Minimal paper-size table; _apply_args_to_config only looks the name up.
 _PAPER_SIZES = {"Widescreen": (1056.0, 594.0), "Letter": (792.0, 612.0)}
 

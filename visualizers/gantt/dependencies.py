@@ -48,7 +48,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 from shared.predecessors import Link, parse_links_with_rejects
-from vendor.labella.renderer import lineTo as _lineTo, moveTo as _moveTo
+from vendor.labella.renderer import lineTo as _lineTo
+from vendor.labella.renderer import moveTo as _moveTo
 from visualizers.gantt.details import (
     KIND_OFFCHART_DEPENDENCY,
     KIND_UNPARSEABLE_PREDECESSOR,

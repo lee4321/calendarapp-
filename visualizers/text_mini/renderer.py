@@ -15,13 +15,15 @@ from typing import TYPE_CHECKING
 
 import arrow
 
+from config.config import weekend_style_starts_sunday
 from shared.date_utils import (
-    get_week_number,
     get_months_in_range,
+    get_week_number,
+)
+from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
 from shared.holiday_labels import format_holiday_label
-from config.config import weekend_style_starts_sunday
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

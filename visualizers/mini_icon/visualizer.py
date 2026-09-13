@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from visualizers.mini.visualizer import MiniCalendarVisualizer
 from visualizers.mini.layout import MiniCalendarLayout
+from visualizers.mini.visualizer import MiniCalendarVisualizer
 from visualizers.mini_icon.renderer import MiniIconRenderer
 
 if TYPE_CHECKING:

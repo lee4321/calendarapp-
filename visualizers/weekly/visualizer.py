@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from visualizers.base import BaseVisualizer, BaseLayout
+from visualizers.base import BaseLayout, BaseVisualizer
 from visualizers.weekly.layout import WeeklyCalendarLayout
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 

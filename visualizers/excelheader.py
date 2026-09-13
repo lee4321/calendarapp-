@@ -36,10 +36,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import arrow
-from PIL import ImageColor
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from PIL import ImageColor
 
 from shared.data_models import Event
 from shared.day_classifier import classify_days, day_rule_matches

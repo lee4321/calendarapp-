@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
 from test_gantt_marks import render, task
+
 from visualizers.gantt.details import (
     KIND_CLIPPED_END,
     KIND_HIDDEN_HOLIDAY,
@@ -14,7 +14,6 @@ from visualizers.gantt.details import (
     details_output_path,
     format_datekey,
 )
-
 
 # ── Small helpers ─────────────────────────────────────────────────────────
 

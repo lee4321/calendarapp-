@@ -11,17 +11,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from renderers.svg_base import _is_none_color
-from visualizers.mini.renderer import MiniCalendarRenderer
-from visualizers.mini.day_styles import DayStyle
 from config.config import (
-    squares,
-    darksquare,
-    darkcircles,
     circles,
-    squircles,
+    darkcircles,
+    darksquare,
     darksquircles,
+    squares,
+    squircles,
 )
+from renderers.svg_base import _is_none_color
+from visualizers.mini.day_styles import DayStyle
+from visualizers.mini.renderer import MiniCalendarRenderer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

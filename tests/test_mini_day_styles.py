@@ -1,7 +1,7 @@
 import pytest
 
 from config.config import create_calendar_config, setfontsizes
-from visualizers.mini.day_styles import DayStyleResolver, DayStyle
+from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 from visualizers.mini.renderer import MiniCalendarRenderer
 
 

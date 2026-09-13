@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import arrow
 
-from visualizers.base import BaseVisualizer, VisualizationResult, BaseLayout
+from visualizers.base import BaseLayout, BaseVisualizer, VisualizationResult
 from visualizers.mini.layout import MiniCalendarLayout
 from visualizers.text_mini.renderer import TextMiniCalendarRenderer
 

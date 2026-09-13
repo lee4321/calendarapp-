@@ -17,7 +17,6 @@ from visualizers.excelheader import (
     generate_excel_header,
 )
 
-
 # ── Stubs ─────────────────────────────────────────────────────────────────────
 
 

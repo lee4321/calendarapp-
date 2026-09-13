@@ -14,6 +14,7 @@ for themes that only target one visualizer (e.g. TJXweekly.yaml).
 
 from __future__ import annotations
 
+import sys
 from io import StringIO
 from pathlib import Path
 
@@ -26,14 +27,12 @@ from config.required_keys import (
 )
 from config.unified_theme import ThemeError, parse_theme
 
-import sys
-
 # Make the project root importable so we can use tools.migrate_theme.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tools.migrate_theme import convert_theme  # noqa: E402
-
 import yaml  # noqa: E402
+
+from tools.migrate_theme import convert_theme  # noqa: E402
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 

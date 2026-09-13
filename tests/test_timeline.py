@@ -10,12 +10,12 @@ import pytest
 from config.config import create_calendar_config, setfontsizes
 from renderers.glyph_cache import get_ink_extents
 from renderers.text_utils import string_width
-from shared.wbs_filter import wbs_group
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
-from visualizers.timeline.layout import TimelineLayout
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
+from shared.wbs_filter import wbs_group
+from visualizers.timeline.layout import TimelineLayout
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,

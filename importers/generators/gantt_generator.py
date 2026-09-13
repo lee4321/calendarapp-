@@ -40,8 +40,9 @@ lands on weekdays regardless of when it is generated.  The one Saturday
 row is placed by calendar offset on purpose.
 """
 
-import pandas
 from datetime import date, datetime, timedelta
+
+import pandas
 
 #: Anchor-relative float offsets, in business days, applied as
 #: (earliest_start, latest_start, earliest_finish, latest_finish) around a

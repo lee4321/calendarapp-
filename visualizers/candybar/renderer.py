@@ -21,13 +21,15 @@ from typing import TYPE_CHECKING
 import arrow
 
 from renderers.svg_base import _is_none_color
-from visualizers.mini.renderer import MiniCalendarRenderer
-from visualizers.mini.day_styles import DayStyleResolver
 from shared.date_utils import (
     format_arrow_date,
+)
+from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
 from visualizers.candybar.layout import compute_columns
+from visualizers.mini.day_styles import DayStyleResolver
+from visualizers.mini.renderer import MiniCalendarRenderer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig

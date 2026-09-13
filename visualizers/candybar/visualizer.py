@@ -12,9 +12,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from visualizers.base import BaseLayout, VisualizationResult
-from visualizers.mini.visualizer import MiniCalendarVisualizer
 from visualizers.candybar.layout import CandybarLayout
 from visualizers.candybar.renderer import CandybarRenderer
+from visualizers.mini.visualizer import MiniCalendarVisualizer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -85,6 +85,7 @@ class CandybarVisualizer(MiniCalendarVisualizer):
         the boundary days also pick up their events/holidays.
         """
         from datetime import datetime, timedelta
+
         from visualizers.candybar.layout import candybar_week_starts_sunday
 
         start_str = config.userstart or config.adjustedstart
