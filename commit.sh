@@ -2,8 +2,9 @@
 # Commit all recent changes with a message passed as an argument.
 # Usage: ./commit.sh "your commit message"
 #
-# The .githooks/pre-commit hook will auto-bump the CalVer version
-# in ecalendar.py if it is part of the commit.
+# The .githooks/pre-commit hook runs `uv check` and the test suite
+# (skip with --no-verify), then auto-bumps the CalVer version in
+# ecalendar.py if it is part of the commit.
 
 set -e
 
