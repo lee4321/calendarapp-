@@ -180,8 +180,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     - Header/Footer text      --headerleft, --headercenter, --headerright, …
     - Watermark Options       --watermark-text, --watermark-rotation-angle, --watermark-image
     - Content Filtering       --noevents, --nodurations (--durations on the
-                              mini family), --ignorecomplete, --milestones,
-                              --rollups, --WBS, --empty
+                              mini family), --milestones, --WBS, --empty
     - Mini Calendar Options   --mini-columns, --mini-rows, --mini-no-adjacent, …
     - Timeline Options        --today-line-length, --today-line-direction, …
     - Fiscal Options          --fiscal, --fiscal-colors, --fiscal-year-offset,
@@ -699,22 +698,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Exclude multi-day durations",
     )
     _ebp_content.add_argument(
-        "--ignorecomplete",
-        "-ic",
-        action="store_true",
-        help="Exclude 100%% complete items",
-    )
-    _ebp_content.add_argument(
         "--milestones",
         "-mo",
         action="store_true",
         help="Show only milestones",
-    )
-    _ebp_content.add_argument(
-        "--rollups",
-        "-ro",
-        action="store_true",
-        help="Show only rollup entries",
     )
     _ebp_content.add_argument(
         "--WBS",
@@ -770,22 +757,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Exclude multi-day durations",
     )
     _ed_content.add_argument(
-        "--ignorecomplete",
-        "-ic",
-        action="store_true",
-        help="Exclude 100%% complete items",
-    )
-    _ed_content.add_argument(
         "--milestones",
         "-mo",
         action="store_true",
         help="Show only milestones",
-    )
-    _ed_content.add_argument(
-        "--rollups",
-        "-ro",
-        action="store_true",
-        help="Show only rollup entries",
     )
     _ed_content.add_argument(
         "--WBS",
@@ -1169,22 +1144,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 help="Exclude multi-day durations",
             )
         content_group.add_argument(
-            "--ignorecomplete",
-            "-ic",
-            action="store_true",
-            help="Exclude 100%% complete items",
-        )
-        content_group.add_argument(
             "--milestones",
             "-mo",
             action="store_true",
             help="Show only milestones",
-        )
-        content_group.add_argument(
-            "--rollups",
-            "-ro",
-            action="store_true",
-            help="Show only rollup entries",
         )
         if view_parser in _includenotes_views:
             content_group.add_argument(
@@ -1277,22 +1240,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help="Include multi-day durations (excluded by default)",
     )
     _tm_content.add_argument(
-        "--ignorecomplete",
-        "-ic",
-        action="store_true",
-        help="Exclude 100%% complete items",
-    )
-    _tm_content.add_argument(
         "--milestones",
         "-mo",
         action="store_true",
         help="Show only milestones",
-    )
-    _tm_content.add_argument(
-        "--rollups",
-        "-ro",
-        action="store_true",
-        help="Show only rollup entries",
     )
     _tm_content.add_argument(
         "--WBS",

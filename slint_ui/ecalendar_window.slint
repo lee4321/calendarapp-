@@ -70,9 +70,7 @@ export component MainWindow inherits Window {
     in-out property <bool> shade: false;
     in-out property <bool> no_events: false;
     in-out property <bool> no_durations: false;
-    in-out property <bool> ignore_complete: false;
     in-out property <bool> milestones_only: false;
-    in-out property <bool> rollups_only: false;
     in-out property <bool> include_notes: false;
     in-out property <bool> overflow: false;
     in-out property <string> status: "";
@@ -408,9 +406,7 @@ export component MainWindow inherits Window {
                                 if root.cf_shade : CheckBox { text: "Shade today"; checked <=> root.shade; }
                                 CheckBox { text: "Exclude single-day events"; checked <=> root.no_events; }
                                 if root.cf_nodurations : CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
-                                CheckBox { text: "Ignore 100% complete"; checked <=> root.ignore_complete; }
                                 CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
-                                CheckBox { text: "Rollups only"; checked <=> root.rollups_only; }
                                 if root.cf_includenotes : CheckBox { text: "Include notes"; checked <=> root.include_notes; }
                                 if root.cf_overflow : CheckBox { text: "Overflow page"; checked <=> root.overflow; }
                                 Text { text: "Status filter  —  blank = active"; }

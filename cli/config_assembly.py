@@ -227,8 +227,8 @@ def _apply_args_to_config(
     5. Layout toggles        → header, footer, margin, overflow, shrink flags
     6. Paper size/orientation→ case-insensitive lookup; sets config.pageX/pageY;
                                raises ConfigError on unknown size
-    7. Display options       → events, durations, milestones, rollups, WBS,
-                               complete-filtering, today-shading, country
+    7. Display options       → events, durations, milestones, WBS,
+                               today-shading, country
     8. Simple field overrides→ mini / candybar / timeline / PIT / fiscal
                                options via _CLI_CONFIG_OVERRIDES (applied only
                                when explicitly given, and re-asserted after
@@ -326,9 +326,7 @@ def _apply_args_to_config(
         config.includedurations = bool(getattr(args, "durations", False))
     else:
         config.includedurations = not getattr(args, "nodurations", False)
-    config.ignorecomplete = getattr(args, "ignorecomplete", False)
     config.milestones = getattr(args, "milestones", False)
-    config.rollups = getattr(args, "rollups", False)
     config.include_notes = getattr(args, "includenotes", False)
     config.WBS = getattr(args, "WBS", config.WBS)
     config.country = getattr(args, "country", None)

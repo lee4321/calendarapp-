@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.5"
+__version__ = "26.09.13.6"
 
 import logging
 import sys
@@ -621,15 +621,12 @@ def run(argv: list[str] | None = None) -> int:
         # Blockplan-equivalent content filters
         _ebp_config.includeevents = not args.noevents
         _ebp_config.includedurations = not args.nodurations
-        _ebp_config.ignorecomplete = args.ignorecomplete
         _ebp_config.milestones = args.milestones
-        _ebp_config.rollups = args.rollups
         _ebp_config.WBS = args.WBS
         _ebp_config.status_filter = _parse_status_filter(getattr(args, "status", None))
         if args.empty:
             _ebp_config.includeevents = False
             _ebp_config.includedurations = False
-            _ebp_config.ignorecomplete = True
             _ebp_config.milestones = False
         calc_calendar_range(_ebp_config, args.begin, args.end)
         _ebp_db.load_python_holidays(
@@ -660,9 +657,7 @@ def run(argv: list[str] | None = None) -> int:
         _ed_config.country = args.country
         _ed_config.includeevents = not args.noevents
         _ed_config.includedurations = not args.nodurations
-        _ed_config.ignorecomplete = args.ignorecomplete
         _ed_config.milestones = args.milestones
-        _ed_config.rollups = args.rollups
         _ed_config.WBS = args.WBS
         _ed_config.status_filter = _parse_status_filter(getattr(args, "status", None))
         calc_calendar_range(_ed_config, args.begin, args.end)
@@ -767,7 +762,6 @@ def run(argv: list[str] | None = None) -> int:
             logger.info("Creating empty calendar (no events)")
             config.includeevents = False
             config.includedurations = False
-            config.ignorecomplete = True
             config.milestones = False
 
         # Store command line for SVG metadata

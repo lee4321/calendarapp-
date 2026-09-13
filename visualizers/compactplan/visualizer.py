@@ -24,9 +24,7 @@ class CompactPlanVisualizer(BaseVisualizer):
         return super().supported_options + [
             "noevents",
             "nodurations",
-            "ignorecomplete",
             "milestones",
-            "rollups",
             "WBS",
         ]
 
