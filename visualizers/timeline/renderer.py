@@ -2945,7 +2945,7 @@ class TimelineRenderer(BaseSVGRenderer):
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: CalendarDB,
+        db: CalendarDB | None,
     ) -> list[tuple[date, str]]:
         """Return the (date, label) ticks a band would draw."""
         from datetime import timedelta
@@ -3060,7 +3060,7 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_left: float,
         axis_right: float,
         axis_y: float,
-        db: CalendarDB,
+        db: CalendarDB | None,
         ticks: list[tuple[date, str]] | None = None,
         allowed_label_dates: set[date] | None = None,
     ) -> None:
@@ -3147,7 +3147,7 @@ class TimelineRenderer(BaseSVGRenderer):
         axis_top: float,
         axis_bottom: float,
         axis_x: float,
-        db: CalendarDB,
+        db: CalendarDB | None,
         ticks: list[tuple[date, str]] | None = None,
         allowed_label_dates: set[date] | None = None,
         label_side: Side = Side.SECONDARY,
