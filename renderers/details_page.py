@@ -78,7 +78,7 @@ def as_columns(specs: Sequence) -> list[DetailsColumn]:
     return columns
 
 
-def format_datekey(datekey: str) -> str:
+def format_datekey(datekey: str | None) -> str:
     """``20260202`` → ``2026-02-02``; anything else passes through."""
     text = str(datekey or "").strip()
     if len(text) == 8 and text.isdigit():
