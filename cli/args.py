@@ -1959,7 +1959,6 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     weekly_only = {"weekly"}
     mini_subcommands = {"mini", "mini-icon", "text-mini"}
     timeline_only = {"timeline"}
-    blockplan_only = {"blockplan"}
     week_number_views = {"weekly", "mini", "mini-icon", "text-mini"}
 
     print("\n" + "=" * 60)

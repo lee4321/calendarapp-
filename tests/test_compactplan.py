@@ -354,7 +354,7 @@ def test_renderer_produces_svg(tmp_path):
         _dur("Sprint 2", "20260323", "20260403", group="Team2"),
     ]
     renderer = _CaptureCompactPlanRenderer()
-    result = renderer.render(config, coords, events, _DummyDB())
+    renderer.render(config, coords, events, _DummyDB())
 
     assert output.exists()
     svg_text = output.read_text()

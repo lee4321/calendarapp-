@@ -91,7 +91,7 @@ def generate_icons(font_path: str, input_file: str, output_dir: str) -> None:
 
     with open(input_file, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
-        header = next(reader)  # skip header row
+        next(reader)  # skip header row
         count = 0
         errors = 0
         for row in reader:

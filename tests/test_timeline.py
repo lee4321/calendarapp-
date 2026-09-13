@@ -624,9 +624,6 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
     end = arrow.get("20260131", "YYYYMMDD")
     axis_left = 36.0
     axis_right = 324.0
-    area_x = 18.0
-    area_w = 324.0
-    area_h = 380.0
     axis_y = 240.0
 
     close_events = [
