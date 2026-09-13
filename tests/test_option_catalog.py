@@ -73,9 +73,9 @@ def test_regeneration_preserves_the_hand_written_prose():
     """Only tables are generated; the notes around them are not."""
     section = positional_section()
     for phrase in (
-        "Generates an Excel workbook",          # excelheader block
-        "The label columns are **not** frozen", # excelheader block
-        "Generates the same workbook skeleton", # excelblockplan block
+        "Generates an Excel workbook",          # excelblockplan block
+        "The label columns are **not** frozen", # excelblockplan block
+        "to generate an empty spreadsheet",     # excelblockplan block
     ):
         assert phrase in section
 

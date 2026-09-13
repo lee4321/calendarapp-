@@ -18,7 +18,7 @@
 generator. The CLI layer owns argument parsing, configuration assembly,
 database wiring, and dispatch to every subcommand — both the read-only
 inspection commands (themes, fonts, colors, …) and the SVG/Excel visualizer
-commands (weekly, mini, blockplan, excelheader, …).
+commands (weekly, mini, blockplan, excelblockplan, …).
 
 ---
 
@@ -82,9 +82,10 @@ __main__
         │                     └── _open_calendar_db()
         │                               └── _validate_database()
         │
-        ├── [excelheader]
+        ├── [excelblockplan / exportdata]
         │     ├── _open_calendar_db()
-        │     └── _resolve_palette_overrides()
+        │     ├── _apply_content_filters()
+        │     └── _resolve_palette_overrides()   (excelblockplan)
         │               └── _resolve_single_palette_ref()
         │
         └── [weekly / mini / mini-icon / candybar / text-mini / timeline / blockplan]
@@ -205,7 +206,7 @@ all subcommands and their option groups.
 |---|---|
 | Calendar visualizers | `weekly`, `mini`, `mini-icon`, `candybar`, `text-mini`, `timeline`, `blockplan` |
 | Inspection / listing | `themes`, `fonts`, `fontsheet`, `papersizes`, `patterns`, `icons`, `iconsheet`, `colors`, `colorsheet`, `palettes`, `palette` |
-| Output utilities | `excelheader` |
+| Output utilities | `excelblockplan`, `exportdata` |
 | Help | `help` |
 
 **Argument groups (per visualizer subcommand):**
@@ -349,7 +350,7 @@ in a single call.
 
 **Called by:** `run()` for every subcommand that requires database access
 (`papersizes`, `patterns`, `icons`, `iconsheet`, `colors`, `colorsheet`, `palettes`,
-`palette`, `excelheader`, and all calendar-visualizer commands).
+`palette`, `excelblockplan`, `exportdata`, and all calendar-visualizer commands).
 
 **Calls:** `_validate_database()`, `CalendarDB()`.
 
@@ -431,7 +432,7 @@ actual colour values fetched from the database.
 2. **Inline `palette:NAME:INDEX` references** — iterates all `dataclasses.fields(config)`,
    resolving any `str` value that starts with `"palette:"` via `_resolve_single_palette_ref()`.
 
-**Called by:** `run()` for both the `excelheader` and all calendar-visualizer paths,
+**Called by:** `run()` for both the `excelblockplan` and all calendar-visualizer paths,
 after the theme has been applied.
 
 **Calls:** `db.sample_palette_n()`, `db.get_palette()`, `_resolve_single_palette_ref()`.
@@ -597,9 +598,10 @@ to produce SVG or Excel output.
      colorsheet → _generate_colorsheet_svg  (HSV-sorted)
      palette → _generate_palette_svg
 7. Require begin/end dates for date-range commands
-8. Dispatch excelheader (early, before the full config pipeline):
-     open DB → create config → calc range → load holidays
-     → apply theme → resolve palettes → generate_excel_header
+8. Dispatch excelblockplan and exportdata (early, before the full config pipeline):
+     open DB → create config → _apply_content_filters → calc range
+     → load holidays → apply theme → resolve palettes → generate_excel_blockplan
+     (exportdata: filter_events → CSV)
 9. For calendar visualizers (weekly / mini / mini-icon / text-mini /
    timeline / blockplan):
      a. Open DB; load paper sizes
@@ -652,7 +654,7 @@ single place to trace the full execution path.
 | `WeeklyCalendarLayout` | `visualizers.weekly.layout` | Pre-computes page coordinates for weekly view |
 | `ThemeEngine` | `config.theme_engine` | Loads and applies YAML themes to config |
 | `load_catalog` / `iter_required_tokens` | `config.element_catalog` | Loader for the built-in `ec-*` → token catalog (`config/element_catalog.yaml`) consumed by `ThemeEngine._build_element_bindings_from_catalog`. Themes no longer ship element bindings. |
-| `generate_excel_header` | `visualizers.excelheader` | Produces the Excel workbook for `excelheader` |
+| `generate_excel_blockplan` | `visualizers.excelblockplan` | Produces the Excel workbook for `excelblockplan` |
 | `create_fiscal_calendar` / `build_fiscal_lookup` | `shared.fiscal_calendars` | Fiscal calendar computation |
 | `text_to_svg_group` | `renderers.glyph_cache` | Converts text to SVG glyph path group |
 | `get_font_codepoints` / `get_glyph` / `get_font_metrics` | `renderers.glyph_cache` | Per-glyph path extraction |
@@ -669,7 +671,7 @@ single place to trace the full execution path.
 
 - **Early-exit dispatch for read-only commands.** Listing commands (`themes`,
   `fonts`, `colors`, …) return before the expensive config-assembly pipeline.
-  `excelheader` also exits early because it does not need the full paper-size /
+  `excelblockplan` and `exportdata` also exit early because they do not need the full paper-size /
   weekly-layout machinery.
 
 - **Config-first, render-last.** The entire `CalendarConfig` is assembled and

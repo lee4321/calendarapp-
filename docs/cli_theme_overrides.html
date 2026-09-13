@@ -216,10 +216,10 @@ defines it, the CLI value is <strong>silently ignored</strong>.</p>
 </table>
 </div>
 <p class="small">
-  <strong>Excel views:</strong> <code>excelheader</code> and <code>excelblockplan</code> apply the
-  theme once, after their CLI assignments; none of their CLI options
+  <strong>Excel view:</strong> <code>excelblockplan</code> applies the
+  theme once, after its CLI assignments; none of its CLI options
   (<span class="opt">--weekends</span>, <span class="opt">--weekend-days</span>,
-  <span class="opt">--country</span>, content filters) map to theme-settable fields, so they have
+  <span class="opt">--country</span>, content filters) map to theme-settable fields, so it has
   no CLI/theme overlaps.
 </p>
 
@@ -261,7 +261,6 @@ warning; “Silent” = accepted with no feedback.</p>
     <tr><td>compactplan</td>
         <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span> (warned); <span class="opt">--shrink</span> (redundant)</td><td>Mixed</td>
         <td>No day grid / overflow page; compactplan always shrinks to content, so the flag adds nothing (and is spuriously warned).</td></tr>
-    <tr><td>excelheader</td><td>— none</td><td></td><td>All options are consumed.</td></tr>
     <tr><td>excelblockplan</td>
         <td><span class="opt">--includenotes</span></td><td>Silent</td>
         <td><code>config.include_notes</code> is set but never read by <code>generate_excel_blockplan()</code>; the Notes column is always emitted.</td></tr>

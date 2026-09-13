@@ -48,8 +48,8 @@ elements:
   ec-month-box:      { kind: box, token: cell,     scope: [candybar],                           description: "Candybar merged month-box rectangle" }
   ec-month-band:     { kind: box, token: cell,     scope: [candybar],                           description: "Candybar per-month day-cell band shade" }
   ec-weekend:        { kind: box, token: cell,     scope: [candybar],                           description: "Candybar weekend day-cell tint" }
-  ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelheader, gantt], description: "Lane / heading-column cell" }
-  ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelheader, gantt], description: "Time-band segment cell" }
+  ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelblockplan, gantt], description: "Lane / heading-column cell" }
+  ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelblockplan, gantt], description: "Time-band segment cell" }
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
   ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
   ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }

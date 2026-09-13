@@ -98,7 +98,7 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
     _resolve_single_palette_ref() and replaced with the resolved hex colour.
 
     Called by:
-        run() for both the excelheader path and all calendar-visualizer paths,
+        run() for both the excelblockplan path and all calendar-visualizer paths,
         after theme application is complete.
 
     Calls:

@@ -53,7 +53,7 @@ VISUALIZERS: frozenset[str] = frozenset({
     "blockplan",
     "gantt",
     "compactplan",
-    "excelheader",
+    "excelblockplan",
 })
 
 
@@ -61,7 +61,7 @@ VISUALIZERS: frozenset[str] = frozenset({
 _ALL: frozenset[str] = VISUALIZERS
 
 # SVG renderers (everything except XLSX and text-mini).
-_SVG: frozenset[str] = frozenset(VISUALIZERS - {"excelheader", "text-mini"})
+_SVG: frozenset[str] = frozenset(VISUALIZERS - {"excelblockplan", "text-mini"})
 
 
 @dataclass(frozen=True)
@@ -174,11 +174,13 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("compact_plan.legend_area_ratio", "setting", "float (0-1)",
                 frozenset({"compactplan"})),
 
-    # ── excelheader ──
-    RequiredKey("excelheader.font_name",        "setting", "str (system font name)",
-                frozenset({"excelheader"})),
-    RequiredKey("excelheader.font_size",        "setting", "int", frozenset({"excelheader"})),
-    RequiredKey("excelheader.band_row_height",  "setting", "float", frozenset({"excelheader"})),
+    # ── excelblockplan ──
+    RequiredKey("excelblockplan.font_name",       "setting", "str (system font name)",
+                frozenset({"excelblockplan"})),
+    RequiredKey("excelblockplan.font_size",       "setting", "int",
+                frozenset({"excelblockplan"})),
+    RequiredKey("excelblockplan.band_row_height", "setting", "float",
+                frozenset({"excelblockplan"})),
 
     # ── time_bands (catalog must exist; may be empty if no placements reference it) ──
     # (No required keys — time_bands is required only insofar as placement lists

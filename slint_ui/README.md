@@ -25,7 +25,7 @@ All 17 render/export subcommands, grouped by preview type:
 |---------|-------------|
 | **SVG image** | `weekly`, `mini`, `mini-icon`, `candybar`, `timeline`, `pit`, `blockplan`, `compactplan`, `palettesheet`, `iconsheet`, `patternsheet`, `colorsheet`, `fontsheet` |
 | **Text console** | `text-mini` (plain-text calendar), `exportdata` (CSV) |
-| **Status only** | `excelheader`, `excelblockplan` (binary `.xlsx` — path shown, no inline preview) |
+| **Status only** | `excelblockplan` (binary `.xlsx` — path shown, no inline preview) |
 
 The pure listing commands (`themes`, `papersizes`, `patterns`, `icons`,
 `colors`, `palettes`, `fonts`) are out of scope — they print reference tables

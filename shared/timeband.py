@@ -1,6 +1,6 @@
 """Shared timeband segment builder used by all visualizers with timebands.
 
-Visualizers (blockplan, compactplan, excelheader, …) all expose a list of
+Visualizers (blockplan, compactplan, excelblockplan, …) all expose a list of
 header bands whose unit type drives how segments are generated.  This module
 centralizes the segment generation logic so a single timeband definition can
 be reused across visualizations.

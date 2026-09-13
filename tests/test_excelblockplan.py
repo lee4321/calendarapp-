@@ -10,12 +10,13 @@ from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter
 
 from config.config import create_calendar_config
-from visualizers.excelblockplan import _EVENT_FIELD_MAP, generate_excel_blockplan
-from visualizers.excelheader import (
+from visualizers.excelblockplan import (
+    _EVENT_FIELD_MAP,
     CONTINUATION_COL,
     FIRST_DATE_COL,
     FIXED_COLUMNS,
     LABEL_COL_END,
+    generate_excel_blockplan,
 )
 
 # ── Stubs ─────────────────────────────────────────────────────────────────────
@@ -108,9 +109,9 @@ def _cfg(out_path: Path):
     c.adjustedend = "20260123"
     c.weekend_style = 0
     c.country = None
-    c.excelheader_font = "Calibri"
-    c.excelheader_font_size = 9
-    c.excelheader_top_time_bands = [{"label": "Month", "unit": "month"}]
+    c.excelblockplan_font = "Calibri"
+    c.excelblockplan_font_size = 9
+    c.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
     return c
 
 
@@ -248,7 +249,7 @@ def test_excelblockplan_holiday_overlays_duration_with_pattern(tmp_path):
     """Federal holidays must show through duration colour via a pattern fill."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelheader_federal_holiday_fill_color = "#FF0000"
+    cfg.excelblockplan_federal_holiday_fill_color = "#FF0000"
 
     class _DB(_BaseDB):
         EVENTS: ClassVar[list[dict]] = [
@@ -337,7 +338,7 @@ def test_excelblockplan_timeband_heading_right_aligned_in_merged_a_w(tmp_path):
     visually sits in column W."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelheader_top_time_bands = [{"label": "Month", "unit": "month"}]
+    cfg.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
     generate_excel_blockplan(cfg, _BaseDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
@@ -375,3 +376,212 @@ def test_excelblockplan_content_filters_exclude_events(tmp_path):
     assert ws.cell(row=data_row, column=8).value == "Duration"
     # No second data row
     assert ws.cell(row=data_row + 1, column=8).value in (None, "")
+
+
+# ── Sheet skeleton: timeband rows, column grid, day decoration ──────────────
+
+
+def _icon_band() -> dict:
+    return {
+        "label": "Events",
+        "unit": "icon",
+        "row_height": 14,
+        "icon_rules": [{"milestone": True, "icon": "diamond", "color": "#4472C4"}],
+    }
+
+
+def _weekend_cfg(out_path: Path):
+    """Mon Mar 2 – Sun Mar 15 2026 with the Saturday/Sunday columns shown."""
+    cfg = _cfg(out_path)
+    cfg.userstart = cfg.adjustedstart = "20260302"
+    cfg.userend = cfg.adjustedend = "20260315"
+    cfg.weekend_style = 1
+    cfg.weekend_days = [5, 6]
+    return cfg
+
+
+def test_excelblockplan_day_columns_follow_the_continuation_column(tmp_path):
+    """Date columns begin one past the continuation column, which is itself
+    one past the label block.  Derived from FIXED_COLUMNS so adding a label
+    column shifts the grid rather than breaking this test."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelblockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "D"}]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    assert len(FIXED_COLUMNS) == LABEL_COL_END
+    assert CONTINUATION_COL == LABEL_COL_END + 1
+    assert FIRST_DATE_COL == LABEL_COL_END + 2
+    assert ws.cell(row=1, column=FIRST_DATE_COL).value is not None
+    assert ws.cell(row=1, column=CONTINUATION_COL).value in ("", None)
+
+
+def test_excelblockplan_label_columns_follow_the_events_schema(tmp_path):
+    """Key label columns sit at fixed positions, and the schedule data elements
+    follow the original events-table block."""
+    out = tmp_path / "bp.xlsx"
+    generate_excel_blockplan(_cfg(out), _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+    headers = [ws.cell(row=2, column=c).value for c in range(1, LABEL_COL_END + 1)]
+
+    assert headers[0] == "id"
+    assert headers[7] == "name"
+    assert headers[22] == "tags"
+    assert headers[-1] == "custom5"
+    for field in ("source_id", "critical", "deadline", "cost", "successors"):
+        assert field in headers
+        assert headers.index(field) > headers.index("tags")
+
+
+def test_excelblockplan_day_column_width(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    generate_excel_blockplan(_cfg(out), _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+    assert ws.column_dimensions[get_column_letter(FIRST_DATE_COL)].width == 3.0
+
+
+def test_excelblockplan_multi_day_band_segments_are_merged(tmp_path):
+    """A month segment spanning several day columns is one merged cell."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month", "date_format": "MMM"}]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    assert any(
+        r.min_row == 1 and r.min_col == FIRST_DATE_COL and r.max_col > FIRST_DATE_COL
+        for r in ws.merged_cells.ranges
+    ), "expected a merged month segment starting at the first day column"
+
+
+def test_excelblockplan_holiday_shades_header_and_empty_day_cells(tmp_path):
+    """A federal holiday column is shaded in the column-header row and in a
+    data row whose own item falls on another day."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.theme_federal_holiday_color = "#FF0000"
+
+    class _DB(_BaseDB):
+        EVENTS: ClassVar[list[dict]] = [_event(eid=1, name="Kickoff", start="20260106")]
+        HOLIDAYS: ClassVar[dict[str, list[dict]]] = {
+            "20260119": [
+                {"displayname": "MLK Day", "icon": "us", "nonworkday": 1, "country": "US"}
+            ]
+        }
+        NONWORK_KEYS: ClassVar[set[str]] = {"20260119"}
+
+    generate_excel_blockplan(cfg, _DB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    holiday_col = FIRST_DATE_COL + 10  # Mon Jan 19 is the 11th visible weekday
+    for row in (2, 3):  # column-header row, then the Kickoff data row
+        cell = ws.cell(row=row, column=holiday_col)
+        assert cell.fill.fill_type == "solid", f"row {row}: {cell.fill.fill_type!r}"
+        assert cell.fill.start_color.rgb.upper() == "FFFF0000", f"row {row}"
+
+
+def test_excelblockplan_vertical_lines_become_right_borders(tmp_path):
+    """Theme vertical lines are drawn as right-cell borders on the day grid."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelblockplan_top_time_bands = [{"label": "Week", "unit": "week", "label_format": "W{week}"}]
+    cfg.excelblockplan_vertical_lines = [
+        {"band": "Week", "repeat": True, "align": "end", "color": "navy", "width": 2.0},
+    ]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    bordered = [
+        col for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 15)
+        if ws.cell(row=2, column=col).border.right.border_style not in (None, "none")
+    ]
+    assert bordered, "expected right borders from vertical_lines on the column-header row"
+
+
+def test_excelblockplan_weekends_excluded_when_style_zero(tmp_path):
+    """With weekend_style=0 no Saturday/Sunday columns are written."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.userstart = cfg.adjustedstart = "20260105"  # Mon
+    cfg.userend = cfg.adjustedend = "20260111"  # Sun
+    cfg.excelblockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "D"}]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    labels = [
+        ws.cell(row=1, column=col).value
+        for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 10)
+        if ws.cell(row=1, column=col).value is not None
+    ]
+    assert len(labels) == 5  # Mon Jan 5 – Fri Jan 9
+
+
+def test_excelblockplan_icon_band_marks_days_with_matching_events(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelblockplan_top_time_bands = [_icon_band()]
+
+    class _DB(_BaseDB):
+        EVENTS: ClassVar[list[dict]] = [
+            _event(eid=1, name="Release v2", start="20260112", milestone=True),
+        ]
+
+    generate_excel_blockplan(cfg, _DB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    event_col = FIRST_DATE_COL + 5  # Mon Jan 12 is the 6th visible weekday
+    assert ws.cell(row=1, column=event_col).value == "\u25cf"
+    assert ws.cell(row=1, column=event_col + 1).value in (None, "")
+
+
+def test_excelblockplan_icon_band_empty_without_events(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.excelblockplan_top_time_bands = [_icon_band()]
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    for col in range(FIRST_DATE_COL, FIRST_DATE_COL + 15):
+        assert ws.cell(row=1, column=col).value in (None, ""), f"column {col}"
+
+
+def test_excelblockplan_weekend_fill_applied_when_configured(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    cfg = _weekend_cfg(out)
+    cfg.excelblockplan_weekend_fill_color = "#DDDDDD"
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    saturday = ws.cell(row=2, column=FIRST_DATE_COL + 5)  # Sat Mar 7
+    assert saturday.fill.fill_type == "solid"
+    assert saturday.fill.start_color.rgb.upper() == "FFDDDDDD"
+
+
+def test_excelblockplan_weekend_fill_absent_without_config(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    generate_excel_blockplan(_weekend_cfg(out), _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+    assert ws.cell(row=2, column=FIRST_DATE_COL + 5).fill.fill_type is None
+
+
+def test_excelblockplan_empty_workbook_is_a_blank_template(tmp_path):
+    """With events and durations switched off (--empty) the sheet keeps its
+    timeband and column-header rows and has no data rows."""
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    cfg.includeevents = False
+    cfg.includedurations = False
+
+    class _DB(_BaseDB):
+        EVENTS: ClassVar[list[dict]] = [
+            _event(eid=1, name="Solo", start="20260108"),
+            _event(eid=2, name="Span", start="20260112", end="20260116"),
+        ]
+
+    generate_excel_blockplan(cfg, _DB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    assert ws.cell(row=1, column=1).value == "Month"  # timeband row
+    assert ws.cell(row=2, column=1).value == "id"  # column-header row
+    assert ws.max_row == 2

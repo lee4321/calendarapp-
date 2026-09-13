@@ -27,8 +27,8 @@ graduate to the shell at any time).
 **Home** has three columns:
 
 - **Calendar views** — `weekly`, `mini`, `mini-icon`, `candybar`, `text-mini`,
-  `timeline`, `pit`, `blockplan`, `gantt`, `compactplan`, `excelheader`,
-  `excelblockplan`, `exportdata`.
+  `timeline`, `pit`, `blockplan`, `gantt`, `compactplan`, `excelblockplan`,
+  `exportdata`.
 - **Reference sheets / listings** — the `*sheet` previews plus `themes`,
   `papersizes`, `patterns`, `icons`, `colors`, `palettes`, `fonts`.
 - **Data** — the **Import Hub** (see below).
@@ -70,8 +70,7 @@ for the module-level architecture.
 | `blockplan` | Generate a blockplan SVG. |
 | `gantt` | Generate a Gantt chart SVG: task table on the left, timescale on the right, with duration bars, percent-complete lines, milestones, rollup brackets and dependency arrows. Also writes a companion `_details.svg` listing every task plus anything the chart could not show faithfully. |
 | `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. Also writes its key as a companion `_key.svg`: the details listing, each row carrying the swatch or flag that ties it to the chart. |
-| `excelheader` | Generate an `.xlsx` workbook with timeband header rows and a project-planning template. |
-| `excelblockplan` | Generate an `.xlsx` workbook with the same timeband header rows as `excelheader` plus one row per event/duration in the range (with style-rule decoration and holiday overlays). |
+| `excelblockplan` | Generate an `.xlsx` workbook with blockplan-style timeband header rows plus one row per event/duration in the range (with style-rule decoration and holiday overlays). Pass `--empty` for a blank workbook with only the header rows, ready to use as a planning template. |
 | `themes` | List available themes. |
 | `papersizes` | List available paper sizes from DB. |
 | `patterns` | List available SVG day-box patterns from DB. |
@@ -117,11 +116,11 @@ PYTHONPATH=. uv run python ecalendar.py gantt 20260101 20260630 -th default -of 
 # Compact activities plan
 PYTHONPATH=. uv run python ecalendar.py compactplan 20260309 20260424 -th corporate -of compact.svg
 
-# Excel workbook with project-planning template
-PYTHONPATH=. uv run python ecalendar.py excelheader 20260101 20260630 -th corporate -of plan.xlsx
-
 # Excel workbook with blockplan-style data rows (events + durations, sorted by start date)
 PYTHONPATH=. uv run python ecalendar.py excelblockplan 20260101 20260630 -th corporate -of plan.xlsx
+
+# Empty Excel planning template: the same header rows, no event rows (--empty)
+PYTHONPATH=. uv run python ecalendar.py excelblockplan 20260101 20260630 -th corporate --empty -of template.xlsx
 
 # Export filtered events to CSV
 PYTHONPATH=. uv run python ecalendar.py exportdata 20260101 20261231 --milestones -o milestones.csv
@@ -168,8 +167,8 @@ table by hand.
 | `--candybar-weekend-fill` | `COLOR` | `candybar` | Shade Sat/Sun day cells with this color (default: no weekend shading) |  |
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Glyph color (default: #222222) (`iconsheet`: Stroke color for icons (default: #333333)) (`patternsheet`: Fill color for pattern tiles (default: #333333)) | `fontsheet`: default `#222222`; `iconsheet`, `patternsheet`: default `#333333` |
 | `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch columns per page (requires --paginate; default: 8) (`fontsheet`: Font columns per page (requires --paginate; default: 2). Ignored with --fullset, which is always a single column.) (`iconsheet`: Icon columns per page (requires --paginate; default: 8)) (`palettesheet`: Swatch columns per page (requires --paginate; default: 12)) |  |
-| `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. (`excelheader`: ISO 3166-1 alpha-2 country code(s) for holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries.) |  |
-| `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
+| `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. |  |
+| `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
 | `--date-placement` |  | `pit` | Where each event date is drawn: inline (a line inside the label box, with the name/notes — never collides; default), axis (opposite the axis at the marker — the ruler look, but dates collide when events cluster), or none. | choices `inline, axis, none` |
 | `--direction` |  | `pit`, `timeline` | Axis direction (default: horizontal). Note: --orientation remains the page-orientation flag (portrait/landscape). (`timeline`: Axis direction (default: horizontal). Vertical runs the axis top-to-bottom with labels to the right (primary) / left (secondary). Note: --orientation remains the page-orientation flag (portrait/landscape).) | choices `horizontal, vertical` |
 | `--durations`, `-du` |  | `candybar`, `mini`, `mini-icon`, `text-mini` | Include multi-day durations (excluded by default) | default `False` |
@@ -219,17 +218,17 @@ table by hand.
 | `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `timeline`, `weekly` | Exclude multi-day durations | default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Page orientation (default: landscape) | default `landscape`; choices `portrait, landscape` |
-| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `candybar`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fontsheet`, `gantt`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Output filename (always written under output/) (`colorsheet`: Output SVG path (default: output/colorsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. colorsheet_p01.svg).) (`excelblockplan`: Output .xlsx file name (always written under output/; default: output/ExcelBlockplan.xlsx)) (`excelheader`: Output .xlsx file name (always written under output/; default: output/excelheader.xlsx)) (`exportdata`: Output CSV file name (always written under output/; default: output/exportdata_YYYYMMDD.csv)) (`fontsheet`: Output file name and path (default: output/fontsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. fontsheet_p01.svg).) (`iconsheet`: Output file name and path (default: output/iconsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. iconsheet_p01.svg).) (`palettesheet`: Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named). With --paginate, a '_pNN' suffix is appended per page (e.g. palettesheet_p01.svg).) (`patternsheet`: Output file name and path (default: output/patternsheet.svg)) | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly`: default `ecalendar.svg` |
+| `--outputfile`, `-of` (`-o` for `exportdata`) | `PATH` | `blockplan`, `candybar`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fontsheet`, `gantt`, `iconsheet`, `mini`, `mini-icon`, `palettesheet`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Output filename (always written under output/) (`colorsheet`: Output SVG path (default: output/colorsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. colorsheet_p01.svg).) (`excelblockplan`: Output .xlsx file name (always written under output/; default: output/ExcelBlockplan.xlsx)) (`exportdata`: Output CSV file name (always written under output/; default: output/exportdata_YYYYMMDD.csv)) (`fontsheet`: Output file name and path (default: output/fontsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. fontsheet_p01.svg).) (`iconsheet`: Output file name and path (default: output/iconsheet.svg). With --paginate, a '_pNN' suffix is appended per page (e.g. iconsheet_p01.svg).) (`palettesheet`: Output file path (default: output/palettesheet.svg, or output/<NAME>.svg when a palette is named). With --paginate, a '_pNN' suffix is appended per page (e.g. palettesheet_p01.svg).) (`patternsheet`: Output file name and path (default: output/patternsheet.svg)) | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly`: default `ecalendar.svg` |
 | `--overflow`, `-x` |  | `weekly` | Create overflow page showing items | default `False` |
 | `--paginate` |  | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Split the colors across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every color is produced (the default). (`fontsheet`: Split the fonts across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every font is produced (the default).) (`iconsheet`: Split the icons across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows; without it a single SVG containing every icon is produced (the default).) (`palettesheet`: Split the swatches across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every palette is produced (the default). When every palette is rendered, each page is packed with as many complete palettes as fit; a palette is never split across pages.) | default `False` |
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Paper size (default: Widescreen). | default `Widescreen` |
-| `--quiet`, `-q` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | default `False` |
+| `--quiet`, `-q` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | default `False` |
 | `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch rows per page (requires --paginate; default: 10) (`fontsheet`: Font rows per page (requires --paginate; default: 10)) (`iconsheet`: Icon rows per page (requires --paginate; default: 10)) (`palettesheet`: Swatch rows per page — with no palette name this is the page's height budget for packing whole palettes (requires --paginate; default: 10)) |  |
 | `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | default `False` |
 | `--shrink` |  | `blockplan`, `candybar`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | default `False` |
 | `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch box width in points (the height scales with it to keep the sheet's aspect ratio; the label/spacing gaps are unchanged). Requires --paginate; default: 110. (`fontsheet`: Sample text size in points; entry heights follow it. Requires --paginate; default: 16.) (`iconsheet`: Icon cell size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 24.) (`palettesheet`: Swatch box size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 80.) |  |
 | `--status` | `LIST` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include (active, draft, cancelled, archived, on-hold). Use 'all' for no filter. Default: active. |  |
-| `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`, `excelheader`: Theme name or path to .yaml theme file) |  |
+| `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`: Theme name or path to .yaml theme file) |  |
 | `--tick-interval` | `DAYS` | `pit` | For --tick-unit interval, days between ticks (default: 1). |  |
 | `--tick-label-format` | `FMT` | `pit` | Arrow date format for tick labels (e.g. 'MMM D'). For week/interval units the timeband label is used when omitted. |  |
 | `--tick-length` | `POINTS` | `pit` | Half-length of each axis tick mark, per side (default: 5.0). |  |
@@ -239,14 +238,14 @@ table by hand.
 | `--today-line` |  | `pit` | Draw the today line (default: on). |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
-| `--verbose`, `-v` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | default `0` |
+| `--verbose`, `-v` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | default `0` |
 | `--watermark-image`, `-wi` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark image file |  |
 | `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise coordinates) |  |
 | `--watermark-text`, `-wt` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
 | `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
-| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `timeline`, `weekly` | Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification. Defaults to Sat/Sun when weekends are shown. (`excelblockplan`, `excelheader`: Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification.) |  |
-| `--weekends`, `-we` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `excelheader`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start (`excelblockplan`, `excelheader`: Weekend style: 0=work week only (default), 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start) | default `0`; choices `0, 1, 2, 3, 4` |
+| `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `gantt`, `timeline`, `weekly` | Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification. Defaults to Sat/Sun when weekends are shown. (`excelblockplan`: Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification.) |  |
+| `--weekends`, `-we` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Weekend style: 0=work week only, 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start (`excelblockplan`: Weekend style: 0=work week only (default), 1=full week Sunday start, 2=half weekends Sunday start, 3=full week Monday start, 4=half weekends Monday start) | default `0`; choices `0, 1, 2, 3, 4` |
 | `--weeknumbers`, `-wn` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Show week numbers | default `False` |
 
 ## Positional Arguments by Command
@@ -265,38 +264,6 @@ table by hand.
 | `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
 | `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
-### `excelheader`
-
-| Name | Required | Description | Choices |
-|---|---|---|---|
-| `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
-| `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
-
-Generates an Excel workbook (`.xlsx`) using the shared blockplan-style layout:
-columns A–AS carry all 45 events-table field names in schema order (`id`,
-`status`, `priority`, `wbs`, `rollup`, `milestone`, `percent_complete`, `name`,
-`effort`, `duration`, `start_date`, `end_date`, `earliest_start_date`,
-`latest_start_date`, `earliest_end_date`, `latest_end_date`, `predecessors`,
-`resource_names`, `resource_group`, `notes`, `icon`, `color`, `tags`, then the
-schedule data elements: `source_id`, `critical`, `start_time`, `end_time`,
-`duration_text`, `effort_text`, `actual_start_date`, `actual_start_time`,
-`actual_end_date`, `actual_end_time`, `deadline`, `start_variance`,
-`finish_variance`, `fixed_cost`, `cost`, `percent_work_complete`, `successors`,
-`custom1`–`custom5`), column AT is reserved for the continuation marker (used by
-`excelblockplan`), and one column per visible day starts at column AU. Timeband
-rows place their heading label in the last label column with segment values
-starting at the first date column. After the column-header row, `excelheader`
-writes 100 empty data rows decorated with holiday shading and vertical-line
-borders so the workbook can be used as a planning template. Timeband
-configuration uses `excelheader.top_time_bands` and
-`excelheader.vertical_lines` from the active theme.
-
-The label columns are **not** frozen — with the full events-table column set
-they are far wider than a screen, and freezing them would push the calendar
-grid out of view. `excelheader` freezes the timeband rows only;
-`excelblockplan` sets no freeze pane at all, since its rows are independent
-records rather than a grid you scroll within.
-
 ### `excelblockplan`
 
 | Name | Required | Description | Choices |
@@ -304,13 +271,36 @@ records rather than a grid you scroll within.
 | `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
 | `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
-Generates the same workbook skeleton as `excelheader` but populates the data
-rows with one record per event/duration sourced from the events table. The
-command-line surface mirrors `blockplan` so the same filter flags work:
+Generates an Excel workbook (`.xlsx`) with blockplan-style timeband header
+rows, a column-header row, and one data row per event/duration sourced from
+the events table. Columns A–AS carry all 45 events-table field names in
+schema order (`id`, `status`, `priority`, `wbs`, `rollup`, `milestone`,
+`percent_complete`, `name`, `effort`, `duration`, `start_date`, `end_date`,
+`earliest_start_date`, `latest_start_date`, `earliest_end_date`,
+`latest_end_date`, `predecessors`, `resource_names`, `resource_group`,
+`notes`, `icon`, `color`, `tags`, then the schedule data elements:
+`source_id`, `critical`, `start_time`, `end_time`, `duration_text`,
+`effort_text`, `actual_start_date`, `actual_start_time`, `actual_end_date`,
+`actual_end_time`, `deadline`, `start_variance`, `finish_variance`,
+`fixed_cost`, `cost`, `percent_work_complete`, `successors`,
+`custom1`–`custom5`), column AT holds the continuation marker, and one column
+per visible day starts at column AU. Timeband rows place their heading label
+in the last label column with segment values starting at the first date
+column.
+
+**Empty spreadsheet:** pass `--empty` to generate an empty spreadsheet — the
+timeband and column-header rows (with holiday shading and vertical lines) but
+no event or duration rows — ready to fill in as a project-planning template.
+
+The command-line surface mirrors `blockplan` so the same filter flags work:
 `--theme`, `--weekends`, `--weekend-days`, `--country`, `--noevents`,
-`--nodurations`, `--milestones`,
-`--WBS`, `--status`, `--empty`. (There is no `--includenotes` — the
-Notes column is always emitted.)
+`--nodurations`, `--milestones`, `--WBS`, `--status`, `--empty`. (There is no
+`--includenotes` — the Notes column is always emitted.)
+
+The label columns are **not** frozen, and no freeze pane is set at all — with
+the full events-table column set the label block is far wider than a screen,
+and the rows are independent records meant for sorting and filtering rather
+than a grid you scroll within.
 
 Data-row behavior:
 
@@ -333,11 +323,9 @@ Data-row behavior:
   an Excel `lightUp` pattern that combines the holiday colour (foreground
   stripes) with the data colour (background) so both stay visible.
 
-Default output path: `output/ExcelBlockplan.xlsx`. Configure via
-`excelblockplan.top_time_bands`, `excelblockplan.vertical_lines` and the
-matching `excelblockplan.*` colour/font keys in the active theme — these
-fall back to the corresponding `excelheader.*` keys when unset, so a single
-theme can style both views consistently.
+Default output path: `output/ExcelBlockplan.xlsx`. Configure via the
+`excelblockplan:` section of the active theme (`top_bands`, `vertical_lines`,
+fonts and colours) — see [ExcelBlockplan Subcommand](#excelblockplan-subcommand).
 
 #### `blockplan` rendering behavior
 
@@ -397,7 +385,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
 
 | Name | Required | Description | Choices |
 |---|---|---|---|
-| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, candybar, text-mini, timeline, pit, blockplan, gantt, compactplan, excelheader, excelblockplan, themes, papersizes, patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes, palettesheet, fonts, fontsheet, exportdata |
+| `subcommand` | yes | Subcommand to show help for | weekly, mini, mini-icon, candybar, text-mini, timeline, pit, blockplan, gantt, compactplan, excelblockplan, themes, papersizes, patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes, palettesheet, fonts, fontsheet, exportdata |
 
 ### `mini`
 
@@ -1133,7 +1121,7 @@ text_mini:       # glyph-set declarations
 timeline:        # tick_label_format, geometry, today_date
 compact_plan:    # axis-relative geometry, band references
 blockplan:       # swimlane name list, label_column_ratio, lane policy
-excelheader:     # XLSX-specific config (deliberate exception, see §10.4)
+excelblockplan:  # XLSX-specific config (deliberate exception, see §10.4)
 time_bands:      # shared band catalog (referenced by placement lists)
 style_rules:     # the only styling section
 ```
@@ -1282,7 +1270,7 @@ style_rules:
 
 #### Time Bands: Shared Catalog
 
-Timebands across `blockplan`, `compact_plan`, and `excelheader` reference a single catalog under the top-level `time_bands:` map. Each visualizer's placement list is a list of catalog keys, optionally with inline geometry overrides. Segments are built by one shared builder (`shared/timeband.py`), and `show_every` merging goes through one shared function, so a catalog entry reads the same wherever it is placed; `blockplan` and `compact_plan` both honour per-placement `row_height` and `show_every`, and both draw `icon` and `holiday` bands.
+Timebands across `blockplan`, `compact_plan`, and `excelblockplan` reference a single catalog under the top-level `time_bands:` map. Each visualizer's placement list is a list of catalog keys, optionally with inline geometry overrides. Segments are built by one shared builder (`shared/timeband.py`), and `show_every` merging goes through one shared function, so a catalog entry reads the same wherever it is placed; `blockplan` and `compact_plan` both honour per-placement `row_height` and `show_every`, and both draw `icon` and `holiday` bands.
 
 ```yaml
 time_bands:
@@ -1304,13 +1292,13 @@ blockplan:
 compact_plan:
   bands: [fiscal_quarter, month]
 
-excelheader:
+excelblockplan:
   top_bands: [fiscal_quarter, month]
   band_fonts:
     fiscal_quarter: { excel_font_name: "Arial Narrow", excel_font_size: 10 }
 ```
 
-Band styling lives in `style_rules` keyed by `select.band: <catalog_key>`. ExcelHeader's `band_fonts` map and `vertical_lines` list are XLSX-only exceptions that do not flow through `style_rules` (they map to Excel cell formatting, not SVG primitives).
+Band styling lives in `style_rules` keyed by `select.band: <catalog_key>`. ExcelBlockplan's `band_fonts` map and `vertical_lines` list are XLSX-only exceptions that do not flow through `style_rules` (they map to Excel cell formatting, not SVG primitives).
 
 ### CSS Element Catalog
 
@@ -1980,35 +1968,26 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_blockplan_palette_name` | `blockplan.palette_name` | `str | None` | `None` | palette name |
 
 
-#### `excelheader`
+#### `excelblockplan`
 
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
-| `excelheader_band_row_height` | `excelheader.band_row_height` | `float` | `18.0` | default timeband row height in points |
-| `excelheader_font` | `excelheader.font_name` | `str` | `'Calibri'` | system-installed Excel font for all cells |
-| `excelheader_font_size` | `excelheader.font_size` | `int` | `9` | default font size in points |
-| `excelheader_header_heading_fill_color` | `excelheader.header_heading_fill_color` | `str` | `'none'` | heading cell (A:E) background color |
-| `excelheader_header_label_align_h` | `excelheader.header_label_align_h` | `str` | `'left'` | heading cell alignment: left \| center \| right |
-| `excelheader_header_label_color` | `excelheader.header_label_color` | `str` | `'black'` | heading cell label color |
-| `excelheader_timeband_fill_color` | `excelheader.timeband_fill_color` | `str` | `'none'` | default segment fill color |
-| `excelheader_timeband_fill_palette` | `excelheader.timeband_fill_palette` | `list[str]` | `[]` | palette names cycling across segments |
-| `excelheader_timeband_label_color` | `excelheader.timeband_label_color` | `str` | `'black'` | default segment label color |
-| `excelheader_top_time_bands` | `excelheader.top_time_bands` | `list[dict]` | see default | timeband rows; same schema as blockplan.top_time_bands |
-| `excelheader_vertical_line_color` | `excelheader.vertical_line_color` | `str` | `'red'` | default vertical line color |
-| `excelheader_vertical_line_dasharray` | `excelheader.vertical_line_dasharray` | `str \| None` | `None` | default vertical line dash pattern |
-| `excelheader_vertical_line_fill_color` | `excelheader.vertical_line_fill_color` | `str` | `'none'` | default column fill color |
-| `excelheader_vertical_line_fill_opacity` | `excelheader.vertical_line_fill_opacity` | `float` | `0.2` | default column fill opacity |
-| `excelheader_vertical_line_opacity` | `excelheader.vertical_line_opacity` | `float` | `0.9` | default vertical line opacity |
-| `excelheader_vertical_line_width` | `excelheader.vertical_line_width` | `float` | `1.5` | default vertical line width |
-| `excelheader_vertical_lines` | `excelheader.vertical_lines` | `list[dict]` | `[]` | vertical lines rendered as right-cell borders |
-
-
-#### `excelblockplan`
-
-The dedicated `excelblockplan_*` theme fields were removed in 2026-07 —
-the exporter never read them. Styling for the data-sheet variant follows
-the `excelheader` settings (fonts, band placement, holiday colors), which
-both Excel exports share.
+| `excelblockplan_band_row_height` | `excelblockplan.band_row_height` | `float` | `18.0` | default timeband row height in points |
+| `excelblockplan_company_holiday_fill_color` | `excelblockplan.company_holiday_fill_color` | `str \| None` | `None` | company non-workday fill; unset uses `colors.company_holiday.color` |
+| `excelblockplan_federal_holiday_fill_color` | `excelblockplan.federal_holiday_fill_color` | `str \| None` | `None` | federal holiday fill; unset uses `colors.federal_holiday.color` |
+| `excelblockplan_font` | `excelblockplan.font_name` | `str` | `'Calibri'` | system-installed Excel font for all cells |
+| `excelblockplan_font_size` | `excelblockplan.font_size` | `int` | `9` | default font size in points |
+| `excelblockplan_header_heading_fill_color` | `excelblockplan.header_heading_fill_color` | `str` | `'none'` | timeband heading cell background color |
+| `excelblockplan_header_label_align_h` | `excelblockplan.header_label_align_h` | `str` | `'right'` | timeband heading alignment: left \| center \| right |
+| `excelblockplan_header_label_color` | `excelblockplan.header_label_color` | `str` | `'black'` | timeband heading label color |
+| `excelblockplan_timeband_fill_color` | `excelblockplan.timeband_fill_color` | `str` | `'none'` | default segment fill color |
+| `excelblockplan_timeband_fill_palette` | `excelblockplan.timeband_fill_palette` | `list[str]` | `[]` | palette names cycling across segments |
+| `excelblockplan_timeband_label_color` | `excelblockplan.timeband_label_color` | `str` | `'black'` | default segment label color |
+| `excelblockplan_top_time_bands` | `excelblockplan.top_bands` | `list[dict]` | see default | timeband rows; references into the `time_bands:` catalog |
+| `excelblockplan_vertical_line_color` | `excelblockplan.vertical_line_color` | `str` | `'red'` | default vertical line color |
+| `excelblockplan_vertical_line_width` | `excelblockplan.vertical_line_width` | `float` | `1.5` | default vertical line width |
+| `excelblockplan_vertical_lines` | `excelblockplan.vertical_lines` | `list[dict]` | `[]` | vertical lines rendered as right-cell borders |
+| `excelblockplan_weekend_fill_color` | `excelblockplan.weekend_fill_color` | `str \| None` | `None` | weekend day-column fill; unset leaves weekends unshaded |
 
 
 
@@ -2397,7 +2376,7 @@ blockplan:
 compact_plan:
   bands: [fiscal_quarter, month, flags]
 
-excelheader:
+excelblockplan:
   top_bands: [fiscal_quarter, month, flags]
   band_fonts:
     fiscal_quarter: { excel_font_name: "Arial Narrow", excel_font_size: 10 }
@@ -2447,7 +2426,7 @@ style_rules:
 
 > **`countup` unit:** Each visible day cell shows the number of counting-days elapsed since `start_date`. The value is **0** on the start day itself, **positive** for days after it (days elapsed), and **negative** for days before it (days prior to the origin). Use `label_format: "D+{n}"` for a project-day-style label. The same `skip_weekends` / `skip_nonworkdays` options apply.
 
-> **`icon` unit:** Per-day glyph row instead of labeled segments. Each visible day gets one cell; rules in `icon_rules` are matched against the events on that day (and, optionally, the day's non-workday class), and any matching icon is drawn in the cell. Icons are deduplicated by name per day. Supported by `blockplan`, `compactplan`, `excelheader`, `excelblockplan`, and `timeline`. In `excelheader`/`excelblockplan` the icon is rendered as a centred filled bullet (`●`) coloured to the rule's `color`; the SVG visualizers render the actual icon glyph from the `icons` table. The icon-band heading cell still respects the band's `label`, so put a column-label like `"Flags"` on the band itself.
+> **`icon` unit:** Per-day glyph row instead of labeled segments. Each visible day gets one cell; rules in `icon_rules` are matched against the events on that day (and, optionally, the day's non-workday class), and any matching icon is drawn in the cell. Icons are deduplicated by name per day. Supported by `blockplan`, `compactplan`, `excelblockplan`, and `timeline`. In `excelblockplan` the icon is rendered as a centred filled bullet (`●`) coloured to the rule's `color`; the SVG visualizers render the actual icon glyph from the `icons` table. The icon-band heading cell still respects the band's `label`, so put a column-label like `"Flags"` on the band itself.
 >
 > Each entry in `icon_rules` is a dict. The only required key is `icon` (an icon name from the `icons` table — run `ecalendar.py icons` to list, `ecalendar.py iconsheet` to preview). Add one or more match keys to filter which events trigger the icon:
 >
@@ -2541,7 +2520,7 @@ Per-visualizer non-styling surfaces:
 - `timeline` — `timeline.tick_label_format`, axis/callout/lane geometry, `today_date` / `today_label_text` content references.
 - `blockplan` — swimlane and timeband lists, `label_column_ratio`, lane match policy, vertical-line and band declarations (visual styling lives in `style_rules`, e.g. `apply_to: box:vline`).
 - `compactplan` — axis-relative duration/legend geometry.
-- `excelheader` — XLSX-specific band schema (`band_fonts`) and `vertical_lines`. These are **not** reached by `style_rules`: they map to Excel cell formatting and cell borders, not SVG primitives. See "Vertical Lines → Cell Right Borders" below.
+- `excelblockplan` — XLSX-specific band schema (`band_fonts`) and `vertical_lines`. These are **not** reached by `style_rules`: they map to Excel cell formatting and cell borders, not SVG primitives. See "Vertical Lines → Cell Right Borders" below.
 
 Shared non-styling sections:
 
@@ -3341,26 +3320,34 @@ The `ec-*` classes the Gantt emits — usable from an external stylesheet — ar
 `ec-float-bar`, `ec-rollup-bracket`, `ec-dependency-arrow`, `ec-milestone-marker`,
 `ec-band-cell`, `ec-tick-label`, `ec-today-line`, and `ec-grid-line`.
 
-## ExcelHeader Subcommand
+## ExcelBlockplan Subcommand
 
-The `excelheader` subcommand generates an Excel workbook (`.xlsx`) containing timeband rows in the top rows of a worksheet, followed by a fixed column-header row and 100 blank data rows. It is intended as a ready-to-use project planning template.
+The `excelblockplan` subcommand generates an Excel workbook (`.xlsx`) containing timeband rows in the top rows of a worksheet, a fixed column-header row, and one row per event or duration in the date range. The column layout and data-row behavior are described under [`excelblockplan`](#excelblockplan) in Positional Arguments.
+
+An empty spreadsheet can be generated by using the `--empty` filter: the workbook keeps its timeband and column-header rows (with holiday shading and vertical lines) but has no event or duration rows, so it can be used as a ready-to-fill project planning template.
 
 ### Usage
 
 ```bash
-ecalendar.py excelheader START_DATE END_DATE [options]
-ecalendar.py excelheader 20260101 20260630 --theme corporate --weekends 0 --country US
+ecalendar.py excelblockplan START_DATE END_DATE [options]
+ecalendar.py excelblockplan 20260101 20260630 --theme corporate --weekends 0 --country US
+ecalendar.py excelblockplan 20260101 20260630 --theme corporate --empty -of template.xlsx
 ```
 
 ### Options
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
-| `--outputfile` | `-of` | `output/excelheader.xlsx` | Destination `.xlsx` path |
+| `--outputfile` | `-of` | `output/ExcelBlockplan.xlsx` | Destination `.xlsx` path |
 | `--theme` | `-th` | none | Theme name or `.yaml` path |
 | `--weekends` | `-we` | `0` | Weekend style (0 = workweek only, 1–4 = include weekends) |
 | `--weekend-days` |  | — | Comma-separated ISO weekday list (`0=Mon..6=Sun`) overriding the implicit Sat/Sun pair |
-| `--country` | `-cc` | none | ISO 3166-1 alpha-2 country code(s) for government holidays. Comma-separated (e.g. `US,CA,GB`) for multi-country merging. |
+| `--country` | `-cc` | US, CA | ISO 3166-1 alpha-2 country code(s) for government holidays. Comma-separated (e.g. `US,CA,GB`) for multi-country merging. |
+| `--empty` | `-e` | — | Empty spreadsheet: header rows only, no event or duration rows |
+| `--noevents` / `--nodurations` | `-ne` / `-nd` | — | Leave out single-day events / multi-day durations |
+| `--milestones` | `-mo` | — | Only milestone rows |
+| `--WBS` |  | — | WBS filter expression |
+| `--status` |  | `active` | Event statuses to include (`all` for no filter) |
 | `--database` | `-db` | `calendar.db` | SQLite database path |
 | `--verbose` | `-v` | — | Increase verbosity (`-v`, `-vv`, `-vvv`) |
 | `--quiet` | `-q` | — | Suppress output path echo |
@@ -3368,20 +3355,21 @@ ecalendar.py excelheader 20260101 20260630 --theme corporate --weekends 0 --coun
 ### Workbook Layout
 
 ```
-Columns A–E  : Activity  |  Effort  |  Duration  |  Scheduled Start  |  Scheduled End
-Columns F+   : one column per visible calendar day (width = 3 characters)
-Rows 1..N    : timeband rows — one per entry in excelheader.top_time_bands
-Row  N+1     : column-header row with the A–E labels
-Rows N+2..   : 100 empty data rows for project tracking
+Columns A–AS : one label column per events-table field, in schema order
+Column  AT   : continuation marker for durations running past the visible range
+Columns AU+  : one column per visible calendar day (width = 3 characters)
+Rows 1..N    : timeband rows — one per entry in excelblockplan.top_bands
+Row  N+1     : column-header row with the label names
+Rows N+2..   : one row per event/duration, ordered by start date (none with --empty)
 ```
 
 
 ### Timeband Configuration
 
-ExcelHeader's bands are *references* into the shared top-level `time_bands:` catalog. Per-band geometry overrides (`row_height`, `show_every`) can go inline; per-band Excel-font overrides live in `excelheader.band_fonts` keyed by catalog name (deliberate exception — Excel uses system-installed fonts that aren't in the ecalendar font registry, so the XLSX side keeps its own narrow font slot):
+The workbook's bands are *references* into the shared top-level `time_bands:` catalog. Per-band geometry overrides (`row_height`, `show_every`) can go inline; per-band Excel-font overrides live in `excelblockplan.band_fonts` keyed by catalog name (deliberate exception — Excel uses system-installed fonts that aren't in the ecalendar font registry, so the XLSX side keeps its own narrow font slot):
 
 ```yaml
-excelheader:
+excelblockplan:
   font_name: "Calibri"           # workbook-wide default font
   font_size: 9                   # workbook-wide default size in points
   band_row_height: 18
@@ -3440,24 +3428,24 @@ time_bands:
         icon: star
         color: "#E74C3C"
 
-excelheader:
+excelblockplan:
   top_bands: [events]
 ```
 
 ### Excel Font Settings
 
-Global font settings for the workbook are configured under the `excelheader` section (uses system-installed fonts, not the ecalendar font registry):
+Global font settings for the workbook are configured under the `excelblockplan` section (uses system-installed fonts, not the ecalendar font registry):
 
 ```yaml
-excelheader:
+excelblockplan:
   font_name: "Calibri"   # default font for all cells
   font_size: 9           # default font size in points
 ```
 
-Per-band font overrides live in `excelheader.band_fonts`, keyed by the catalog name (a deliberate XLSX-only exception — SVG renderers go through `text:band_label` in `style_rules` instead):
+Per-band font overrides live in `excelblockplan.band_fonts`, keyed by the catalog name (a deliberate XLSX-only exception — SVG renderers go through `text:band_label` in `style_rules` instead):
 
 ```yaml
-excelheader:
+excelblockplan:
   band_fonts:
     fiscal_quarter:
       excel_font_name: "Arial Narrow"
@@ -3474,11 +3462,11 @@ Each visible day column is checked against government holidays (via the `holiday
 Holiday shading is applied in:
 - **Date/dow band cells** — the individual day segment cell is shaded and its label replaced with the emoji.
 - **Column-header row** — holiday columns are shaded.
-- **All 100 data rows** — holiday columns are shaded throughout.
+- **Data rows** — holiday columns are shaded in every event/duration row; where a cell already carries an event icon or duration colour, the holiday colour is combined with it as an Excel `lightUp` pattern so both stay visible.
 
 ### Vertical Lines → Cell Right Borders
 
-ExcelHeader keeps its own list of vertical lines under `excelheader.vertical_lines` (independent of the blockplan's `style_rules`-driven vertical lines). Each entry is translated to a right-side border on the corresponding date columns. The border is applied to the column-header row and all 100 data rows.
+The workbook keeps its own list of vertical lines under `excelblockplan.vertical_lines` (independent of the blockplan's `style_rules`-driven vertical lines). Each entry is translated to a right-side border on the corresponding date columns. The border is applied to the column-header row and to the data-row day cells that carry an event, a duration or holiday shading.
 
 | `align` value | Border position |
 |---|---|
@@ -3486,10 +3474,10 @@ ExcelHeader keeps its own list of vertical lines under `excelheader.vertical_lin
 | `"start"` | Right border on the first column of the segment |
 | `"center"` | Right border on the middle column of the segment |
 
-Border style: `medium` (width > 1.5 pt) or `thin` (≤ 1.5 pt). Color from `color` key or `excelheader.vertical_line_color`.
+Border style: `medium` (width > 1.5 pt) or `thin` (≤ 1.5 pt). Color from `color` key or `excelblockplan.vertical_line_color`.
 
 ```yaml
-excelheader:
+excelblockplan:
   vertical_lines:
     - band: "Month"
       repeat: true

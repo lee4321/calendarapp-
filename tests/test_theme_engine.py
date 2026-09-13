@@ -1419,7 +1419,7 @@ class TestFontReferenceScanner:
 
     def test_excel_sections_are_skipped(self):
         """Excel output uses system-installed fonts, not FONT_REGISTRY."""
-        data = {"excelheader": {"band_fonts": {"q": {"excel_font_name": "Calibri"}}}}
+        data = {"excelblockplan": {"band_fonts": {"q": {"excel_font_name": "Calibri"}}}}
         assert find_unregistered_fonts(data) == []
 
     def test_registered_fonts_report_clean(self):

@@ -50,7 +50,7 @@ flowchart LR
     CC --> REND
     UT -.tokens.-> BASE
     REND --> BASE --> OUT["SVG file(s)<br/>(+ _overflow / _details pages)"]
-    RUN --> XLS["visualizers/excelheader.py<br/>excelblockplan.py → XLSX"]
+    RUN --> XLS["visualizers/excelblockplan.py → XLSX"]
     RUN --> SHEETS["visualizers/sheets.py<br/>palette/color/font/icon/pattern sheets"]
 ```
 

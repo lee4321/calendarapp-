@@ -263,7 +263,7 @@ gantt:
   # the column-header row together want more than 75% of the content
   # height, every chrome row is scaled down proportionally — no band is
   # dropped, and the task body always keeps positive height.
-excelheader:
+excelblockplan:
   font_name: Calibri
   font_size: 9
   band_row_height: 18.0
@@ -279,7 +279,7 @@ time_bands:
   # Shared catalog of band definitions.  Visualizers do not define bands
   # inline; they *reference* these by name from their own `top_bands` /
   # `bottom_bands` / `bands` lists, so one definition serves blockplan,
-  # compactplan, excelheader and gantt alike.
+  # compactplan, excelblockplan and gantt alike.
   #
   # `unit` picks the segmentation: date | week | month | year | interval |
   # fiscal_quarter | fiscal_period | icon.  Label text comes from

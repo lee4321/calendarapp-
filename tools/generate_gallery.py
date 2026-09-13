@@ -77,10 +77,9 @@ SVG_VIEWS = (
 )
 
 # Views that are not themed SVG pages, but are still themed: text-mini emits
-# plain text and the excel views emit .xlsx, and all three take --theme.
+# plain text and excelblockplan emits .xlsx, and both take --theme.
 NONSVG_VIEWS: dict[str, dict[str, Any]] = {
     "text-mini": {"themed": True, "ext": ".txt"},
-    "excelheader": {"themed": True, "ext": ".xlsx"},
     "excelblockplan": {"themed": True, "ext": ".xlsx"},
 }
 
@@ -97,8 +96,7 @@ AXIS_VIEWS = {
 AXIS_DIRECTIONS = ("horizontal", "vertical")
 
 
-# Views that register the "Content Filtering" argument group.  excelheader is
-# a page-furniture view with no event content, so it takes none of them.
+# Views that register the "Content Filtering" argument group.
 FILTERABLE_VIEWS = frozenset(SVG_VIEWS) | {"text-mini", "excelblockplan"}
 
 # Mini calendars are day-per-cell grids where a duration paints a run of cells

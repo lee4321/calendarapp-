@@ -49,7 +49,7 @@ SUBCOMMAND_META: dict[str, dict[str, object]] = {
     "blockplan":   {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "gantt":       {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
     "compactplan": {"ext": ".svg",  "accepts_theme": True,  "output_dir": "output"},
-    "excelheader": {"ext": ".xlsx", "accepts_theme": True,  "output_dir": "output"},
+    "excelblockplan": {"ext": ".xlsx", "accepts_theme": True, "output_dir": "output"},
 }
 
 

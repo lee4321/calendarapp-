@@ -132,7 +132,7 @@ blockplan:
     - name: Other
   top_bands: []
   bottom_bands: []
-excelheader:
+excelblockplan:
   font_name: Calibri
   font_size: 9
   band_row_height: 18.0

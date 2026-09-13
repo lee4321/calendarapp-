@@ -7,7 +7,7 @@ cannot drift from the CLI they document:
 * the per-command tables under "Positional Arguments by Command".
 
 The positional section is **not** wholly generated: each ``### <command>``
-block carries hand-written prose (the excelheader column layout, the
+block carries hand-written prose (the excelblockplan column layout, the
 freeze-pane rationale, per-view flag notes) that no parser knows about.  Only
 the markdown table inside each block is replaced; the prose around it is left
 exactly as written.

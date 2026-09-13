@@ -464,7 +464,7 @@ blockplan:
       row_height: 14
     - band: month
       row_height: 14
-excelheader:
+excelblockplan:
   font_name: Calibri
   font_size: 9
 gantt:

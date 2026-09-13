@@ -536,7 +536,7 @@ def _open_calendar_db(db_path: str) -> CalendarDB:
     Called by:
         run() for every subcommand that needs database access: papersizes,
         patterns, patternsheet, icons, iconsheet, colors, colorsheet, palettes,
-        palettesheet, excelheader, and all calendar-visualizer commands.
+        palettesheet, excelblockplan, exportdata, and all calendar-visualizer commands.
 
     Calls:
         _validate_database() → CalendarDB()

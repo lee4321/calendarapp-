@@ -133,8 +133,8 @@ def _to_output_dir_path(filename: str) -> str:
 
     Called by:
         run() when setting config.outputfile for calendar-visualizer commands,
-        and when resolving --outputfile for the excelheader/excelblockplan
-        workbooks and the exportdata CSV.
+        and when resolving --outputfile for the excelblockplan workbook and
+        the exportdata CSV.
 
     Raises:
         ConfigError: If *filename* has no usable basename.
@@ -280,7 +280,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     Subcommands registered
     ──────────────────────
     Calendar visualizers : weekly, mini, mini-icon, text-mini, timeline, blockplan
-    Output utilities     : excelheader
+    Output utilities     : excelblockplan, exportdata
     Inspection / listing : themes, fonts, fontsheet, papersizes, patterns,
                            patternsheet, icons, iconsheet, colors, colorsheet,
                            palettes, palettesheet
@@ -358,10 +358,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         "compactplan",
         help="Generate a SVG compressed activities timeline",
     )
-    excelheader = sub.add_parser(
-        "excelheader",
-        help="Generate an Excel workbook with blockplan-style timeband header rows",
-    )
     excelblockplan = sub.add_parser(
         "excelblockplan",
         help=(
@@ -418,7 +414,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "blockplan",
             "gantt",
             "compactplan",
-            "excelheader",
             "excelblockplan",
             "themes",
             "papersizes",
@@ -453,7 +448,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         blockplan,
         gantt,
         compactplan,
-        excelheader,
         excelblockplan,
         exportdata,
     ):
@@ -690,66 +684,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         ),
     )
 
-    # excelheader subcommand arguments
-    excelheader.add_argument(
-        "--outputfile",
-        "-of",
-        type=str,
-        default=None,
-        metavar="PATH",
-        help=(
-            "Output .xlsx file name (always written under output/; "
-            "default: output/excelheader.xlsx)"
-        ),
-    )
-    excelheader.add_argument(
-        "--theme",
-        "-th",
-        type=str,
-        default=None,
-        metavar="THEME",
-        help="Theme name or path to .yaml theme file",
-    )
-    excelheader.add_argument(
-        "--weekends",
-        "-we",
-        type=int,
-        default=0,
-        choices=[0, 1, 2, 3, 4],
-        help=(
-            "Weekend style: "
-            "0=work week only (default), "
-            "1=full week Sunday start, "
-            "2=half weekends Sunday start, "
-            "3=full week Monday start, "
-            "4=half weekends Monday start"
-        ),
-    )
-    excelheader.add_argument(
-        "--weekend-days",
-        type=str,
-        default=None,
-        metavar="DAYS",
-        help=(
-            "Comma-separated ISO weekday list (0=Mon..6=Sun) marking "
-            "non-working days for holiday/weekend classification."
-        ),
-    )
-    excelheader.add_argument(
-        "--country",
-        "-cc",
-        type=str,
-        default=None,
-        metavar="CODE",
-        help=(
-            "ISO 3166-1 alpha-2 country code(s) for holidays. "
-            "Accepts a single code (e.g. US) or a comma-separated list "
-            "(e.g. US,CA,GB) to include holidays from multiple countries."
-        ),
-    )
-
-    # excelblockplan subcommand arguments — mirror excelheader plus the
-    # shared content filters, so users get parity with the SVG blockplan view.
+    # excelblockplan subcommand arguments — output, theme and weekend options
+    # plus the shared content filters, for parity with the SVG blockplan view.
     excelblockplan.add_argument(
         "--outputfile",
         "-of",
@@ -898,7 +834,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         blockplan,
         gantt,
         compactplan,
-        excelheader,
         excelblockplan,
         papers,
         patterns,
@@ -1681,7 +1616,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         blockplan,
         gantt,
         compactplan,
-        excelheader,
         excelblockplan,
         themes,
         papers,
