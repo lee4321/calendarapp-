@@ -65,9 +65,11 @@ class StyleResult:
     None means "not overridden — use the renderer or theme default."
     """
 
-    # Fill — list value is allowed for vertical_line rules so callers can
-    # cycle a per-rule color sequence across matched segments.
-    fill_color: str | list | None = None
+    # Fill.  ``fill_color`` is always one color.  A rule whose ``fill`` is a
+    # list also sets ``fill_colors``, which vertical_line rules cycle across
+    # matched band segments; ``fill_color`` is then its first entry.
+    fill_color: str | None = None
+    fill_colors: list[str] | None = None
     fill_opacity: float | None = None
     # Pattern (day_box)
     pattern: str | None = None
@@ -99,7 +101,7 @@ class StyleResult:
         return all(
             v is None
             for v in (
-                self.fill_color, self.fill_opacity,
+                self.fill_color, self.fill_colors, self.fill_opacity,
                 self.pattern, self.pattern_color, self.pattern_opacity,
                 self.stroke_color, self.stroke_width, self.stroke_opacity,
                 self.stroke_dasharray, self.icon, self.icon_color,
@@ -178,8 +180,9 @@ class StyleResult:
 
     def merge(self, other: StyleResult) -> None:
         """Layer non-None fields from other on top of self (later rules win)."""
-        if other.fill_color is not None:
+        if other.fill_color is not None or other.fill_colors is not None:
             self.fill_color = other.fill_color
+            self.fill_colors = other.fill_colors
         if other.fill_opacity is not None:
             self.fill_opacity = other.fill_opacity
         if other.pattern is not None:
@@ -395,12 +398,12 @@ def _matches_event_fields(select: dict, event: Event) -> bool | None:
     return True
 
 
-def _build_style_result(rule_style: dict, *, keep_fill_list: bool = False) -> StyleResult:
+def _build_style_result(rule_style: dict) -> StyleResult:
     """Build a StyleResult from a rule's style: mapping.
 
-    A list ``fill`` is kept whole only with *keep_fill_list*, for
-    vertical_line rules that cycle colors across band segments.  Every other
-    target draws one color, so it gets the list's first non-empty entry.
+    A list ``fill`` sets ``fill_colors`` for vertical_line rules to cycle
+    across band segments, and ``fill_color`` to its first non-empty entry,
+    which is what every other target draws.
     """
     sr = StyleResult()
 
@@ -414,10 +417,9 @@ def _build_style_result(rule_style: dict, *, keep_fill_list: bool = False) -> St
     if fill_key is not None:
         raw = rule_style[fill_key]
         if isinstance(raw, list):
-            if keep_fill_list:
-                sr.fill_color = list(raw)
-            else:
-                sr.fill_color = next((str(c) for c in raw if c), None)
+            colors = [str(c) for c in raw if c]
+            sr.fill_color = colors[0] if colors else None
+            sr.fill_colors = colors
         else:
             sr.fill_color = _str_or_none(raw)
     if "fill_opacity" in rule_style:
@@ -707,10 +709,7 @@ class StyleEngine:
                 if day_match is False:
                     continue
 
-            out.append((
-                rule_index,
-                _build_style_result(rule.get("style") or {}, keep_fill_list=True),
-            ))
+            out.append((rule_index, _build_style_result(rule.get("style") or {})))
 
         return out
 
