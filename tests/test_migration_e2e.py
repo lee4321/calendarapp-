@@ -29,9 +29,9 @@ from config.unified_theme import ThemeError, parse_theme
 # Make the project root importable so we can use tools.migrate_theme.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import yaml  # noqa: E402
+import yaml
 
-from tools.migrate_theme import convert_theme  # noqa: E402
+from tools.migrate_theme import convert_theme
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 

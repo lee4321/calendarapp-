@@ -11,8 +11,8 @@ import yaml
 # Make tools/ importable as a package.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from config.theme_engine import find_unregistered_fonts  # noqa: E402
-from tools.validate_theme import main  # noqa: E402
+from config.theme_engine import find_unregistered_fonts
+from tools.validate_theme import main
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 

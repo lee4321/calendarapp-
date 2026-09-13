@@ -35,7 +35,7 @@ from shared.labella_layout import (
     layout_callouts as _layout_callouts_shared,
 )
 from shared.labella_layout import (
-    partition_for_both as _partition_for_both,  # noqa: F401 - re-exported for tests
+    partition_for_both as _partition_for_both,
 )
 from shared.labella_layout import (
     resolve_font_path as _resolve_font_path,

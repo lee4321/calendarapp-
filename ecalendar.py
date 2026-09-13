@@ -10,7 +10,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.1"
+__version__ = "26.09.13.2"
 
 import logging
 import sys
@@ -39,14 +39,14 @@ logger = logging.getLogger(__name__)
 # The private names are re-exported here because tests and downstream
 # tooling historically reach them via `ecalendar.<name>`.
 
-from cli.args import (  # noqa: E402,F401
+from cli.args import (
     _create_argument_parser,
     _expand_sanitized_atfiles,
     _parse_atfile_lines,
     _print_subcommand_help,
     _to_output_dir_path,
 )
-from cli.config_assembly import (  # noqa: E402,F401
+from cli.config_assembly import (
     _apply_args_to_config,
     _apply_text_options,
     _configure_logging,
@@ -57,18 +57,18 @@ from cli.config_assembly import (  # noqa: E402,F401
     _validate_database,
     replace_template_vars,
 )
-from cli.errors import CalendarError, ConfigError, DatabaseError  # noqa: E402,F401
-from cli.exportdata import (  # noqa: E402,F401
+from cli.errors import CalendarError, ConfigError, DatabaseError
+from cli.exportdata import (
     _event_to_row,
     _events_to_csv_string,
     _fmt_date,
     _write_exportdata_csv,
 )
-from config.palette_resolver import (  # noqa: E402,F401
+from config.palette_resolver import (
     _resolve_palette_overrides,
     _resolve_single_palette_ref,
 )
-from visualizers.sheets import (  # noqa: E402,F401
+from visualizers.sheets import (
     _generate_all_palettes_svg,
     _generate_colorsheet_svg,
     _generate_fontsheet_svg,
