@@ -353,7 +353,7 @@ class PITRenderer(BaseSVGRenderer):
         band: dict,
         start: arrow.Arrow,
         end: arrow.Arrow,
-        db: CalendarDB,
+        db: CalendarDB | None,
     ) -> list[tuple[date, date, str]]:
         """Return (start, end_exclusive, label) tick segments for one band.
 

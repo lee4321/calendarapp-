@@ -407,7 +407,7 @@ class GanttRenderer(BaseSVGRenderer):
         start: date,
         end: date,
         days: list[date],
-        db: CalendarDB,
+        db: CalendarDB | None,
     ) -> dict[tuple[str, int], list[BandSegment]]:
         """Build every band's segments once, over the whole date range.
 
