@@ -85,7 +85,7 @@ _FILL_REPLACE_RE = re.compile(
 def resolve_marker(
     event: Event,
     *,
-    config: CalendarConfig = None,           # kept for signature stability
+    config: CalendarConfig | None = None,    # kept for signature stability
     icon_svg_map: dict[str, str] | None = None, # ignored — axis uses shapes
     style_result: StyleResult | None = None,  # ignored — axis uses shapes
 ) -> MarkerSpec:
