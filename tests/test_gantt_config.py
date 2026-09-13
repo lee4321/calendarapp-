@@ -166,11 +166,10 @@ def test_gantt_accepts_the_shared_content_filters():
 
     parser = _create_argument_parser("out.svg")
     args = parser.parse_args(
-        ["gantt", "20260907", "20261231", "--milestones", "--ignorecomplete",
-         "--status", "all", "--weekends", "1", "--includenotes"]
+        ["gantt", "20260907", "20261231", "--milestones", "--status", "all",
+         "--weekends", "1", "--includenotes"]
     )
     assert args.milestones is True
-    assert args.ignorecomplete is True
     assert args.weekends == 1
 
 

@@ -437,8 +437,6 @@ class CalendarConfig:
     includeevents: bool = True
     includedurations: bool = True
     milestones: bool = False
-    rollups: bool = False  # True keeps only rollup items (--rollups)
-    ignorecomplete: bool = False
     WBS: str = ""
     _wbs_filter: Any = field(default=None, repr=False)
     _wbs_filter_raw: str = field(default="", repr=False)

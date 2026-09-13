@@ -43,9 +43,7 @@ class WeeklyCalendarVisualizer(BaseVisualizer):
             "shade",
             "noevents",
             "nodurations",
-            "ignorecomplete",
             "milestones",
-            "rollups",
             "includenotes",
         ]
 

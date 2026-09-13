@@ -191,7 +191,6 @@ table by hand.
 | `--headercenter`, `-hc` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Center header text |  |
 | `--headerleft`, `-hl` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Left header text |  |
 | `--headerright`, `-hr` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Right header text |  |
-| `--ignorecomplete`, `-ic` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude 100%% complete items | default `False` |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `gantt`, `pit`, `timeline`, `weekly` | Show notes with event names | default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
 | `--label-icon-gap` | `POINTS` | `pit` | Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0). |  |
@@ -225,7 +224,6 @@ table by hand.
 | `--paginate` |  | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Split the colors across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every color is produced (the default). (`fontsheet`: Split the fonts across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every font is produced (the default).) (`iconsheet`: Split the icons across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows; without it a single SVG containing every icon is produced (the default).) (`palettesheet`: Split the swatches across multiple printable SVG pages instead of one large sheet. Enables --columns/--rows/--sized; without it a single SVG containing every palette is produced (the default). When every palette is rendered, each page is packed with as many complete palettes as fit; a palette is never split across pages.) | default `False` |
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Paper size (default: Widescreen). | default `Widescreen` |
 | `--quiet`, `-q` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `excelheader`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | default `False` |
-| `--rollups`, `-ro` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Show only rollup entries | default `False` |
 | `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch rows per page (requires --paginate; default: 10) (`fontsheet`: Font rows per page (requires --paginate; default: 10)) (`iconsheet`: Icon rows per page (requires --paginate; default: 10)) (`palettesheet`: Swatch rows per page — with no palette name this is the page's height budget for packing whole palettes (requires --paginate; default: 10)) |  |
 | `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | default `False` |
 | `--shrink` |  | `blockplan`, `candybar`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | default `False` |
@@ -310,7 +308,7 @@ Generates the same workbook skeleton as `excelheader` but populates the data
 rows with one record per event/duration sourced from the events table. The
 command-line surface mirrors `blockplan` so the same filter flags work:
 `--theme`, `--weekends`, `--weekend-days`, `--country`, `--noevents`,
-`--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`,
+`--nodurations`, `--milestones`,
 `--WBS`, `--status`, `--empty`. (There is no `--includenotes` — the
 Notes column is always emitted.)
 
@@ -541,7 +539,7 @@ The `corporate` theme ships with both enabled as a demonstration.
 | `--candybar-weekend-fill` | `COLOR` | Shade Sat/Sun day cells (default: no weekend shading). |
 | `--candybar-month-shading` |  | Tint day cells per month (alternating bands; theme sets colors). |
 
-Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--durations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
+Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--durations`, `--milestones`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
 
 ### `palettesheet`
 
@@ -587,7 +585,7 @@ By default every font goes into a single SVG. Pass `--paginate` to split them ac
 | `START_DATE` | no | Start date in YYYYMMDD format (will be adjusted to full week) |  |
 | `END_DATE` | no | End date in YYYYMMDD format (will be adjusted to full week) |  |
 
-Exports filtered events and durations as a CSV file matching the schema consumed by `importers/import_events.py`. Supports the standard content filters (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`, `--status`) and `--country` for selecting which government holidays accompany the event rows. By default only `status='active'` events are exported — pass `--status all` or a specific list (e.g. `--status active,draft`) to widen the result. The `--outputfile` short form is `-o` (not `-of`); the default path is `output/exportdata_YYYYMMDD.csv` based on the run date.
+Exports filtered events and durations as a CSV file matching the schema consumed by `importers/import_events.py`. Supports the standard content filters (`--noevents`, `--nodurations`, `--milestones`, `--WBS`, `--status`) and `--country` for selecting which government holidays accompany the event rows. By default only `status='active'` events are exported — pass `--status all` or a specific list (e.g. `--status active,draft`) to widen the result. The `--outputfile` short form is `-o` (not `-of`); the default path is `output/exportdata_YYYYMMDD.csv` based on the run date.
 
 The exported CSV includes every column of the `events` table that round-trips back through the importer: `task_name`, `status`, `start_date`, `finish_date`, `earliest_start_date`, `latest_start_date`, `earliest_end_date`, `latest_end_date`, `priority`, `wbs`, `rollup`, `milestone`, `percent_complete`, `effort`, `duration`, `predecessors`, `resource_names`, `resource_group`, `notes`, `icon`, `color`, `tags`.
 
@@ -2621,8 +2619,6 @@ These flags are shared with other visualizers and apply identically to `pit`:
 |---|---|---|
 | `--noevents` | `-ne` | Exclude regular (non-milestone) events |
 | `--milestones` | `-ms` | Include milestone events |
-| `--rollups` | `-ro` | Include rollup events |
-| `--ignorecomplete` | `-ic` | Skip events marked 100% complete |
 | `--includenotes` | `-in` | Render the Notes field as a second label line |
 | `--WBS` | | WBS filter expression (prefix-based, comma-separated, `!` excludes) |
 | `--empty` | `-e` | Render with no events (blank axis) |
@@ -3084,8 +3080,8 @@ uv run python ecalendar.py gantt 20260202 20260430 --weekends 1 -of gantt_7day.s
 # Milestones only, on a wide sheet, corporate theme
 uv run python ecalendar.py gantt 20260101 20261231 --milestones -th corporate -ps Tabloid --orientation landscape -of milestones.svg
 
-# Drop finished work and any single-day events; keep the multi-day bars
-uv run python ecalendar.py gantt 20260202 20260731 --ignorecomplete --noevents -of gantt_open.svg
+# Drop single-day events; keep the multi-day bars
+uv run python ecalendar.py gantt 20260202 20260731 --noevents -of gantt_bars.svg
 
 # Fiscal-quarter aware run against the NRF 4-5-4 retail calendar
 uv run python ecalendar.py gantt 20260202 20260731 --fiscal nrf-454 -of gantt_fiscal.svg
@@ -3278,8 +3274,6 @@ These flags are shared with the other plan views and apply identically to `gantt
 | `--noevents` | `-ne` | Exclude single-day events |
 | `--nodurations` | `-nd` | Exclude multi-day durations |
 | `--milestones` | `-mo` | Show only milestones |
-| `--rollups` | `-ro` | Show only rollup entries |
-| `--ignorecomplete` | `-ic` | Exclude 100% complete items |
 | `--includenotes` | `-notes` | Show notes with event names |
 | `--WBS` | | WBS filter expression (comma-separated, `!` excludes) |
 | `--status` | | Event status filter (`active` by default; `all` for everything) |

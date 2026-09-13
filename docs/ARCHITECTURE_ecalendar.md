@@ -214,7 +214,7 @@ all subcommands and their option groups.
 - Layout Options (`--weekends`, `--header`, `--footer`, `--margin`, `--overflow`)
 - Header/Footer text (`--headerleft`, `--headercenter`, `--headerright`, …)
 - Watermark Options (`--watermark`, `--watermark-rotation-angle`, `--imagemark`)
-- Content Filtering (`--noevents`, `--nodurations`, `--ignorecomplete`, `--milestones`, `--rollups`, `--WBS`)
+- Content Filtering (`--noevents`, `--nodurations`, `--milestones`, `--WBS`)
 - Mini Calendar Options (`--mini-columns`, `--mini-rows`, `--mini-no-adjacent`, …)
 - Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`)
 - Fiscal Options (`--fiscal`, `--fiscal-colors`, `--fiscal-year-offset`)
@@ -262,7 +262,7 @@ dataclass, performing any necessary validation or transformation along the way.
 4. **Week numbers** — sets `config.include_week_numbers`.
 5. **Layout toggles** — header, footer, margin, overflow, shrink flags.
 6. **Paper size & orientation** — case-insensitive lookup with clear error on unknown name; sets `config.pageX/pageY`.
-7. **Display options** — events, durations, milestones, rollups, WBS, complete filtering, today-shading, country.
+7. **Display options** — events, durations, milestones, WBS, today-shading, country.
 8. **Mini calendar options** — guarded with `is not None` so omitting a flag never clobbers a theme-set default.
 9. **Timeline options** — today-line geometry, opacity overrides.
 10. **Fiscal calendar** — type string and per-period colour flag.

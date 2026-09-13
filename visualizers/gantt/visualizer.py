@@ -19,9 +19,7 @@ class GanttVisualizer(BaseVisualizer):
         return super().supported_options + [
             "noevents",
             "nodurations",
-            "ignorecomplete",
             "milestones",
-            "rollups",
             "includenotes",
             "WBS",
         ]

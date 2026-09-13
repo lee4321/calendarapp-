@@ -37,9 +37,7 @@ def filter_events(events: list[dict], config: CalendarConfig) -> list[dict]:
       always excluded — they are rendered as day-box decorations, not event rows.
     * ``config.status_filter`` — keep only events whose ``Status`` is in the
       set. ``None`` means "all statuses". Default is ``{'active'}``.
-    * ``config.ignorecomplete`` — skip items with ``Percent_Complete == 1``.
     * ``config.milestones``     — keep **only** items where ``Milestone`` is truthy.
-    * ``config.rollups``        — keep **only** items where ``Rollup`` is truthy.
     * ``config.WBS``            — WBS pattern filter (``WBSFilter`` expression).
     * ``config.includeevents``  — skip single-day items when ``False``.
     * ``config.includedurations`` — skip multi-day items when ``False``.
@@ -73,11 +71,7 @@ def filter_events(events: list[dict], config: CalendarConfig) -> list[dict]:
                 continue
 
         # --- config-level content filters ---
-        if config.ignorecomplete and ev.get("Percent_Complete") == 1:
-            continue
         if config.milestones and not ev.get("Milestone"):
-            continue
-        if config.rollups and not ev.get("Rollup"):
             continue
         if wbs_compiled and not wbs_compiled.matches(ev.get("WBS")):
             continue

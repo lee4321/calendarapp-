@@ -144,9 +144,7 @@ FIELDS: list[tuple[str, str, str]] = [
     ("shade", "--shade", "flag"),
     ("no_events", "--noevents", "flag"),
     ("no_durations", "--nodurations", "flag"),
-    ("ignore_complete", "--ignorecomplete", "flag"),
     ("milestones_only", "--milestones", "flag"),
-    ("rollups_only", "--rollups", "flag"),
     ("include_notes", "--includenotes", "flag"),
     ("overflow", "--overflow", "flag"),
     ("status", "--status", "value"),
@@ -443,8 +441,8 @@ class EcalendarApp:
             return flag in flags
 
         content_flags = {
-            "--noevents", "--nodurations", "--ignorecomplete", "--milestones",
-            "--rollups", "--WBS", "--status", "--empty", "--shade",
+            "--noevents", "--nodurations", "--milestones", "--WBS",
+            "--status", "--empty", "--shade",
             "--includenotes", "--overflow",
         }
 

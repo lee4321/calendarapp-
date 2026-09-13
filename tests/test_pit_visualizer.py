@@ -321,7 +321,7 @@ def test_pit_leader_end_stub_zero_is_pure_bezier(tmp_path):
 
 
 def test_pit_applies_content_filter_flags(tmp_path):
-    """--milestones and --ignorecomplete filter the events PIT draws.
+    """--milestones filters the events PIT draws; completion never does.
 
     Events go through PITVisualizer.generate(), the path that applies
     filter_events(); calling the renderer directly would skip the filters.
@@ -341,16 +341,15 @@ def test_pit_applies_content_filter_flags(tmp_path):
         """(events rendered, callouts in the SVG) for one run."""
         config = _make_config(tmp_path / name)
         config.milestones = filtered
-        config.ignorecomplete = filtered
         result = PITVisualizer().generate(config, _EventsDB())
         svg = Path(config.outputfile).read_text(encoding="utf-8")
         return result.event_count, svg.count("ec-pit-callout-group")
 
     # Unfiltered, every event gets a callout.
     assert drawn("all", filtered=False) == (3, 3)
-    # Filtered, only the pending milestone is left: "Shipped" is complete
-    # and "Review" is not a milestone.
-    assert drawn("filtered", filtered=True) == (1, 1)
+    # Filtered, both milestones are left: "Review" is not a milestone, and
+    # "Shipped" is drawn even though it is 100% complete.
+    assert drawn("filtered", filtered=True) == (2, 2)
 
 
 def test_pit_notes_rendered_when_include_notes(tmp_path):

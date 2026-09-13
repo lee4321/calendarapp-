@@ -262,9 +262,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             if t.notes and t.notes in ("HOLIDAY", "USFederal", "CanFED"):
                 continue
 
-            if config.ignorecomplete and t.percent_complete == 1:
-                continue
-
             if config.milestones and t.milestone:  # noqa: SIM114 - configured apart from events
                 if t.datekey in days_to_print:
                     rows_on_days, had_overflow = self._place_event_and_notes(
