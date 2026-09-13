@@ -207,7 +207,7 @@ class BaseSVGRenderer(ABC):
         h: float,
         *,
         fill: str = "none",
-        stroke: str = "none",
+        stroke: str | None = "none",
         fill_opacity: float = 1.0,
         stroke_opacity: float = 1.0,
         stroke_width: float = 1,

@@ -200,10 +200,13 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 config.mini_cell_bold_font if style.bold
                 else (day_text.get("font") or config.mini_cell_font)
             )
-            font_size = float(
-                day_text.get("size") if day_text.get("size") is not None
-                else config.mini_cell_font_size
-            )
+            token_size = day_text.get("size")
+            if token_size is None:
+                assert config.mini_cell_font_size is not None, (
+                    "setfontsizes() must run before mini-icon renders"
+                )
+                token_size = config.mini_cell_font_size
+            font_size = float(token_size)
             text_y = cy + (font_size / 3)
             self._draw_text(
                 cx, text_y, display_text,

@@ -27,6 +27,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _title_header_heights(config: CalendarConfig) -> tuple[float, float]:
+    """Heights reserved for a month's title row and weekday header row.
+
+    setfontsizes() sets both font sizes before layout runs.
+    """
+    title, header = config.mini_title_font_size, config.mini_header_font_size
+    assert title is not None and header is not None, (
+        "setfontsizes() must run before mini layout"
+    )
+    return title * 1.8, header * 1.8
+
+
 class MiniCalendarLayout(BaseLayout):
     """
     Layout calculator for mini calendar grid-of-months.
@@ -117,8 +129,7 @@ class MiniCalendarLayout(BaseLayout):
         else:
             day_col_width = month_width / days_per_week
 
-        title_height = config.mini_title_font_size * 1.8
-        header_height = config.mini_header_font_size * 1.8
+        title_height, header_height = _title_header_heights(config)
 
         # Height available per row of months (after subtracting inter-row gaps)
         available_per_row = (content_height - (rows - 1) * gap) / max(rows, 1)
@@ -238,8 +249,7 @@ class MiniCalendarLayout(BaseLayout):
         # Vertical allocation — cell height is provided by the caller when
         # the height constraint is tighter than the square-cell width
         # constraint; otherwise default to square cells (height == width).
-        title_height = config.mini_title_font_size * 1.8
-        header_height = config.mini_header_font_size * 1.8
+        title_height, header_height = _title_header_heights(config)
         if cell_height is None:
             cell_height = day_col_width  # Square cells: height == width
 
