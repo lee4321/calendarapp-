@@ -661,8 +661,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 heading_color = band.get("label_color") or tk_heading.get("color") or _heading_text_style.color
                 heading_opacity = float(
-                    band.get("label_opacity")
-                    if band.get("label_opacity") is not None
+                    label_opacity_value
+                    if (label_opacity_value := band.get("label_opacity")) is not None
                     else (
                         tk_heading.get("opacity")
                         if tk_heading.get("opacity") is not None
@@ -740,8 +740,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 "font_color"
             ) or tk_band_label.get("color") or _label_text_style.color
             band_label_opacity = float(
-                band.get("font_opacity")
-                if band.get("font_opacity") is not None
+                font_opacity_value
+                if (font_opacity_value := band.get("font_opacity")) is not None
                 else (
                     tk_band_label.get("opacity")
                     if tk_band_label.get("opacity") is not None
@@ -768,8 +768,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
             heading_color = band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color
             heading_opacity = float(
-                band.get("label_opacity")
-                if band.get("label_opacity") is not None
+                label_opacity_value
+                if (label_opacity_value := band.get("label_opacity")) is not None
                 else (
                     tk_heading.get("opacity")
                     if tk_heading.get("opacity") is not None
