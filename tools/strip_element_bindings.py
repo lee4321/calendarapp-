@@ -38,6 +38,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import yaml
+import yaml.resolver
 
 from config.element_catalog import load_catalog
 

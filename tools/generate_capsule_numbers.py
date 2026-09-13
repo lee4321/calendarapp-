@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 from dataclasses import dataclass
+from typing import Any
 
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -190,7 +191,8 @@ def generate_icons(
         shape: 'circle', 'square', or 'both'.
     """
     font = TTFont(font_path)
-    upm = font["head"].unitsPerEm
+    head: Any = font["head"]  # fontTools table fields are untyped
+    upm = head.unitsPerEm
 
     # Pre-extract all glyphs
     all_gid_lists = [MID_GIDS, CLEFT_GIDS, CRIGHT_GIDS, SLEFT_GIDS, SRIGHT_GIDS]
