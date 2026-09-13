@@ -15,8 +15,8 @@ from visualizers.base import (
 from visualizers.factory import VisualizerFactory
 
 __all__ = [
-    "BaseVisualizer",
     "BaseLayout",
+    "BaseVisualizer",
     "VisualizationResult",
     "Visualizer",
     "VisualizerFactory",

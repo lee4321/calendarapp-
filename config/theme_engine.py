@@ -717,7 +717,7 @@ class ThemeEngine:
                 )
 
         try:
-            with open(path, "r") as f:
+            with open(path) as f:
                 self._theme_data = yaml.safe_load(f) or {}
         except yaml.YAMLError as e:
             raise ThemeError(f"Invalid YAML in theme file '{path}': {e}")

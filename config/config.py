@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Event Calendar configuration file
 Sets default values that will be used unless overridden

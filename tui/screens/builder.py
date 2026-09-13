@@ -62,10 +62,9 @@ class BuilderScreen(Screen):
 
             for group in self.cmd.groups:
                 slug = "tab-" + group.lower().replace(" ", "-").replace("/", "-")
-                with TabPane(group, id=slug):
-                    with VerticalScroll():
-                        for spec in self.cmd.options_in(group):
-                            yield ArgField(spec, db_path=self._db_path)
+                with TabPane(group, id=slug), VerticalScroll():
+                    for spec in self.cmd.options_in(group):
+                        yield ArgField(spec, db_path=self._db_path)
 
         yield Static("", id="builder-cmd")
         with Horizontal(id="builder-actions"):

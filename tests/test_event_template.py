@@ -47,7 +47,7 @@ def test_no_two_headers_target_the_same_column(headers):
 
 
 def test_mandatory_columns_present(headers):
-    assert MANDATORY_COLUMNS <= set(headers)
+    assert set(headers) >= MANDATORY_COLUMNS
 
 
 def test_has_a_data_dictionary_sheet():

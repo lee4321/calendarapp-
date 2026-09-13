@@ -489,14 +489,14 @@ def load_theme_file(path: str | Path) -> UnifiedTheme:
 
 
 __all__ = [
+    "DEFINE_KINDS",
+    "RETIRED_SECTIONS",
+    "SELECTOR_KEYS",
+    "TOKEN_KINDS",
+    "VALID_SECTIONS",
     "Rule",
     "ThemeError",
     "UnifiedTheme",
     "load_theme_file",
     "parse_theme",
-    "VALID_SECTIONS",
-    "RETIRED_SECTIONS",
-    "DEFINE_KINDS",
-    "TOKEN_KINDS",
-    "SELECTOR_KEYS",
 ]

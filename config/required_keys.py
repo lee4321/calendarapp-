@@ -389,8 +389,8 @@ def format_missing_key_error(
 __all__ = [
     "BASIC_YAML_PATH",
     "REQUIRED_KEYS",
-    "RequiredKey",
     "VISUALIZERS",
+    "RequiredKey",
     "check_all_visualizers",
     "check_required_keys",
     "format_missing_key_error",

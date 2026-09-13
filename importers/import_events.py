@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 import_events.py - Import XLSX/CSV event files into calendar.db
 

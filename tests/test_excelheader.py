@@ -105,7 +105,7 @@ def test_excelheader_day_columns_follow_the_continuation_column(tmp_path):
     generate_excel_header(config, _DummyDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
-    assert LABEL_COL_END == len(FIXED_COLUMNS)
+    assert len(FIXED_COLUMNS) == LABEL_COL_END
     assert CONTINUATION_COL == LABEL_COL_END + 1
     assert FIRST_DATE_COL == LABEL_COL_END + 2
     # The date-band row should have a value in the first date column.

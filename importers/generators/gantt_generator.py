@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 gantt_generator.py - Gantt test-data generator for import_events.py
 

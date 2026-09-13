@@ -10,7 +10,7 @@ from visualizers.weekly.renderer import WeeklyCalendarRenderer
 from visualizers.weekly.visualizer import WeeklyCalendarVisualizer
 
 __all__ = [
-    "WeeklyCalendarVisualizer",
     "WeeklyCalendarLayout",
     "WeeklyCalendarRenderer",
+    "WeeklyCalendarVisualizer",
 ]

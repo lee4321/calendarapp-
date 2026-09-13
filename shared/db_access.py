@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Database access layer for calendar application.
 Provides SQLite access to calendar.db for events, holidays, and special days.
