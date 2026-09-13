@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.7"
+__version__ = "26.09.13.8"
 
 import logging
 import sys
@@ -161,11 +161,12 @@ def run(argv: list[str] | None = None) -> int:
 
     7.  Require begin/end dates; error if absent.
 
-    8.  Dispatch excelheader (before the full config pipeline — it does not
-        need paper sizes or the weekly layout engine):
-          _open_calendar_db → create config → calc_calendar_range
-          → load_python_holidays → apply theme → _resolve_palette_overrides
-          → generate_excel_header
+    8.  Dispatch excelblockplan and exportdata (before the full config
+        pipeline — they need neither paper sizes nor the weekly layout engine):
+          _open_calendar_db → create config → _apply_content_filters
+          → calc_calendar_range → load_python_holidays → apply theme
+          → _resolve_palette_overrides → generate_excel_blockplan
+          (exportdata: filter_events → _write_exportdata_csv)
 
     9.  For calendar visualizers (weekly / mini / mini-icon / text-mini /
         timeline / blockplan):
@@ -559,7 +560,7 @@ def run(argv: list[str] | None = None) -> int:
                 print(page_path)
         return 0
 
-    # Calendar views and excelheader require date args
+    # Calendar views, excelblockplan and exportdata require date args
     if not args.begin or not args.end:
         parser.error("START_DATE and END_DATE are required")
 
@@ -570,41 +571,6 @@ def run(argv: list[str] | None = None) -> int:
         parse_date(args.end, "end")
     except InvalidDateError as e:
         parser.error(f"{e}. Dates must be in YYYYMMDD format (e.g. 20260301).")
-
-    # excelheader — Excel workbook with timeband header rows
-    if args.command == "excelheader":
-        from visualizers.excelheader import generate_excel_header
-
-        _eh_db = _open_calendar_db(args.database)
-        _eh_config = create_calendar_config()
-        _eh_config.weekend_style = args.weekends
-        _eh_wd = getattr(args, "weekend_days", None)
-        if _eh_wd:
-            _eh_config.weekend_days = _parse_weekend_days(_eh_wd)
-        _eh_config.country = args.country
-        _eh_config.userstart = args.begin
-        _eh_config.userend = args.end
-        calc_calendar_range(_eh_config, args.begin, args.end)
-        _eh_db.load_python_holidays(
-            _eh_config.country, _eh_config.adjustedstart, _eh_config.adjustedend
-        )
-        if getattr(args, "theme", None):
-            from config.theme_engine import ThemeEngine
-
-            _eh_te = ThemeEngine()
-            _eh_te.load(args.theme)
-            _eh_te.apply(_eh_config)
-            _resolve_palette_overrides(_eh_config, _eh_db)
-        out_path = (
-            Path(_to_output_dir_path(args.outputfile))
-            if args.outputfile
-            else Path("output") / "excelheader.xlsx"
-        )
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        generate_excel_header(_eh_config, _eh_db, out_path)
-        if not args.quiet:
-            print(out_path)
-        return 0
 
     # excelblockplan — Excel workbook with timeband header + event/duration rows
     if args.command == "excelblockplan":

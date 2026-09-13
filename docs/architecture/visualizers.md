@@ -102,12 +102,13 @@ palette-cycled legend. Shares `shared/timeband.py` segment building with
 blockplan and the same nwd-fill helpers (kept per-visualizer: different
 config namespaces).
 
-## excelheader / excelblockplan — XLSX exports
+## excelblockplan — XLSX export
 
-Not SVG: `visualizers/excelheader.py` writes a project-planning workbook
-template (bands, heading rows); `excelblockplan.py` writes data rows
-(events + durations sorted by start). Both read config directly — no
-layout/renderer split. Verified by the completeness probes in `tests/`.
+Not SVG: `visualizers/excelblockplan.py` writes the workbook — timeband
+heading rows, the column-header row, then data rows (events + durations
+sorted by start; none with `--empty`, which leaves an empty planning
+template). It reads config directly — no layout/renderer split. Verified by
+the completeness probes in `tests/`.
 
 ## sheets — inspection previews
 

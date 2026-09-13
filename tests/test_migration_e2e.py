@@ -47,7 +47,7 @@ SPECIALIZED_THEMES: dict[str, set[str]] = {
     "TJXtimeline":    {"timeline"},
     "TJXblockplan":   {"blockplan"},
     "TJXcompactplan": {"compactplan"},
-    "TJXexcelheader": {"excelheader"},
+    "TJXexcelblockplan": {"excelblockplan"},
 }
 
 

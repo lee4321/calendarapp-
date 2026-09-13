@@ -5,8 +5,8 @@ Unified Slint UI front-end for ecalendar.py.
 A single native window drives every render/export subcommand of the CLI:
 the 9 SVG visualizers (weekly, mini, mini-icon, candybar, text-mini, timeline,
 pit, blockplan, compactplan), the 5 SVG "sheets" (palettesheet, iconsheet,
-patternsheet, colorsheet, fontsheet), and the 3 exporters (excelheader,
-excelblockplan, exportdata).
+patternsheet, colorsheet, fontsheet), and the 2 exporters (excelblockplan,
+exportdata).
 
 Design
 ------
@@ -78,7 +78,6 @@ COMMANDS: list[tuple[str, str]] = [
     ("patternsheet", "Grid preview of day-box patterns."),
     ("colorsheet", "Grid preview of named colors."),
     ("fontsheet", "Sample sheet of registered fonts."),
-    ("excelheader", "Excel workbook: blockplan-style timeband header."),
     ("excelblockplan", "Excel workbook: timeband header + one row per item."),
     ("exportdata", "Export filtered events/durations as CSV."),
 ]
@@ -102,7 +101,6 @@ OUTPUT: dict[str, tuple[str, str]] = {
     "patternsheet": ("patternsheet_preview.svg", "image"),
     "colorsheet": ("colorsheet_preview.svg", "image"),
     "fontsheet": ("fontsheet_preview.svg", "image"),
-    "excelheader": ("excelheader_preview.xlsx", "status"),
     "excelblockplan": ("excelblockplan_preview.xlsx", "status"),
     "exportdata": ("exportdata_preview.csv", "text"),
 }

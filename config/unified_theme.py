@@ -67,7 +67,7 @@ VALID_SECTIONS: frozenset[str] = frozenset({
     "compact_plan",
     "blockplan",
     "gantt",
-    "excelheader",
+    "excelblockplan",
     "time_bands",
     "style_rules",
     "element_overrides",
@@ -84,6 +84,10 @@ RETIRED_SECTIONS: frozenset[str] = frozenset({
     "axis",
     "swimlane_rules",
 })
+
+# Sections that moved to a new name.  A theme still using the old name gets a
+# hard parse error naming the replacement.
+RENAMED_SECTIONS: dict[str, str] = {"excelheader": "excelblockplan"}
 
 # Recognized define: kinds.  Every define-rule must use one of these.
 DEFINE_KINDS: frozenset[str] = frozenset({"text", "box", "line", "icon"})
@@ -358,6 +362,12 @@ def _check_section_names(raw: dict[str, Any], *, origin: str) -> None:
     for key in raw:
         if key in VALID_SECTIONS:
             continue
+        if key in RENAMED_SECTIONS:
+            raise ThemeError(
+                f"{origin}: section '{key}' was renamed to "
+                f"'{RENAMED_SECTIONS[key]}'; rename it, or run "
+                "`uv run python tools/migrate_theme.py` to convert this theme."
+            )
         if key in RETIRED_SECTIONS:
             raise ThemeError(
                 f"{origin}: legacy section '{key}' is no longer supported; "
@@ -483,6 +493,7 @@ def load_theme_file(path: str | Path) -> UnifiedTheme:
 
 __all__ = [
     "DEFINE_KINDS",
+    "RENAMED_SECTIONS",
     "RETIRED_SECTIONS",
     "SELECTOR_KEYS",
     "TOKEN_KINDS",

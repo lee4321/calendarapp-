@@ -24,7 +24,6 @@ CALENDAR_VIEWS = [
     "blockplan",
     "gantt",
     "compactplan",
-    "excelheader",
     "excelblockplan",
     "exportdata",
 ]

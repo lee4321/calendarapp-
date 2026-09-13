@@ -75,7 +75,7 @@ flowchart LR
     E --> W["weekly / mini / candybar<br/>(events placed on days)"]
     E --> T["timeline / pit<br/>(callouts + duration lanes)"]
     E --> B["blockplan / compactplan<br/>(swimlanes / activity bands)"]
-    E --> X["excelheader / excelblockplan<br/>exportdata CSV"]
+    E --> X["excelblockplan XLSX<br/>exportdata CSV"]
     CLS --> W
     CLS --> B
 ```

@@ -49,11 +49,12 @@ Transformations performed
   8.  blockplan.swimlanes[i].match → apply_to: lane rule with the same predicates.
   9.  axis: stanza dissolved per design §8.2.
  10.  Timeband catalog: blockplan.top_time_bands + .bottom_time_bands +
-        compact_plan.time_bands + excelheader.top_time_bands are deduplicated
+        compact_plan.time_bands + excelblockplan.top_time_bands are deduplicated
         by structural keys; a top-level time_bands map is emitted; placement
         lists become lists of references.  Per-band styling lifts into
         style_rules on box:band / text:band_label, keyed by select.band.
-        excel_font_name / excel_font_size move into excelheader.band_fonts.
+        excel_font_name / excel_font_size move into excelblockplan.band_fonts;
+        a legacy `excelheader` section is emitted as `excelblockplan`.
  11.  Nested style.text sub-bags inside content rules are flattened into peer
         rules with apply_to: text:<role> using the role-to-target table.
  12.  Section-purpose comments per design §11.5 are emitted at the top of every
@@ -214,13 +215,13 @@ SECTION_COMMENTS: dict[str, str] = {
     "compact_plan": (
         "compactplan non-styling config: axis-relative duration/legend geometry."
     ),
-    "excelheader": (
+    "excelblockplan": (
         "XLSX-only config: band-row geometry, system-font names per band\n"
         "(deliberate exception, not style_rules), and Excel cell-border\n"
         "vertical lines."
     ),
     "time_bands": (
-        "Shared band catalog referenced by blockplan / compactplan / excelheader\n"
+        "Shared band catalog referenced by blockplan / compactplan / excelblockplan\n"
         "placement lists. See design §10."
     ),
     "style_rules": (
@@ -252,7 +253,7 @@ SECTION_ORDER: list[str] = [
     "timeline_durations",
     "compact_plan",
     "blockplan",
-    "excelheader",
+    "excelblockplan",
     "time_bands",
     "style_rules",
 ]
@@ -815,13 +816,13 @@ def _convert_timebands(
     *,
     blockplan: dict[str, Any] | None,
     compact_plan: dict[str, Any] | None,
-    excelheader: dict[str, Any] | None,
+    excelblockplan: dict[str, Any] | None,
     catalog: _TimebandCatalog,
 ) -> tuple[
     dict[str, list[dict[str, Any] | str]],  # blockplan placements
     list[dict[str, Any] | str] | None,        # compact_plan.bands
-    list[dict[str, Any] | str] | None,        # excelheader.top_bands
-    dict[str, dict[str, Any]],                  # excelheader.band_fonts
+    list[dict[str, Any] | str] | None,        # excelblockplan.top_bands
+    dict[str, dict[str, Any]],                  # excelblockplan.band_fonts
     list[dict[str, Any]],                       # style_rules entries for band styling
 ]:
     """Walk every legacy band list, deduplicate into the catalog, return refs."""
@@ -890,9 +891,9 @@ def _convert_timebands(
 
     excel_placements: list[dict[str, Any] | str] | None = None
     excel_band_fonts: dict[str, dict[str, Any]] = {}
-    if isinstance(excelheader, dict):
-        bands = excelheader.get("top_time_bands") or []
-        ep = _process_list(bands, "excelheader")
+    if isinstance(excelblockplan, dict):
+        bands = excelblockplan.get("top_time_bands") or []
+        ep = _process_list(bands, "excelblockplan")
         if ep:
             excel_placements = ep
         # Move excel_font_name / excel_font_size into band_fonts keyed by catalog
@@ -974,13 +975,15 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
 
     # 8. Blockplan — split swimlane visuals out, then keep the rest (sans timebands)
     blockplan_in = src.get("blockplan") if isinstance(src.get("blockplan"), dict) else None
-    excelheader_in = src.get("excelheader") if isinstance(src.get("excelheader"), dict) else None
+    # The excel section was once spelled `excelheader`; either spelling migrates.
+    excel_src = src.get("excelblockplan", src.get("excelheader"))
+    excel_in = excel_src if isinstance(excel_src, dict) else None
     compact_in = src.get("compact_plan") if isinstance(src.get("compact_plan"), dict) else None
 
     # 9. Timeband catalog consolidation (design §10)
     catalog = _TimebandCatalog()
     bp_placements, cp_placements, ex_placements, ex_band_fonts, band_style_rules = _convert_timebands(
-        blockplan=blockplan_in, compact_plan=compact_in, excelheader=excelheader_in, catalog=catalog,
+        blockplan=blockplan_in, compact_plan=compact_in, excelblockplan=excel_in, catalog=catalog,
     )
     style_rules.extend(band_style_rules)
 
@@ -998,17 +1001,17 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
             bp_out[dst_key] = refs
         out["blockplan"] = bp_out
 
-    if excelheader_in is not None:
-        eh_out: OrderedDict[str, Any] = OrderedDict()
-        for k, v in excelheader_in.items():
+    if excel_in is not None:
+        excel_out: OrderedDict[str, Any] = OrderedDict()
+        for k, v in excel_in.items():
             if k == "top_time_bands":
                 continue
-            eh_out[k] = v
+            excel_out[k] = v
         if ex_placements is not None:
-            eh_out["top_bands"] = ex_placements
+            excel_out["top_bands"] = ex_placements
         if ex_band_fonts:
-            eh_out["band_fonts"] = ex_band_fonts
-        out["excelheader"] = eh_out
+            excel_out["band_fonts"] = ex_band_fonts
+        out["excelblockplan"] = excel_out
 
     if compact_in is not None and cp_placements is not None:
         # _strip_dead_keys removes superseded-by-style_rules and unread keys;
@@ -1040,7 +1043,7 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     # Warn on unrecognized retired sections (we silently drop most legacy bits;
     # this is a last-chance signal).
     for k in src:
-        if k in RETIRED_SECTIONS or k in SECTION_ORDER or k == "base":
+        if k in RETIRED_SECTIONS or k in SECTION_ORDER or k in ("base", "excelheader"):
             continue
         _warn(f"unknown top-level key '{k}' carried through unchanged", fname=fname)
         out[k] = src[k]

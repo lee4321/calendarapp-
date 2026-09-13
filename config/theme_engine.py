@@ -463,26 +463,24 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("candybar.month_box", "stroke"): "candybar_month_box_stroke",
     ("candybar.month_box", "opacity"): "candybar_month_box_opacity",
     ("timeline", "connector_stroke_dasharray"): "timeline_connector_stroke_dasharray",
-    # ExcelHeader
-    ("excelheader", "font_name"): "excelheader_font",
-    ("excelheader", "font_size"): "excelheader_font_size",
-    ("excelheader", "top_time_bands"): "excelheader_top_time_bands",
-    ("excelheader", "vertical_lines"): "excelheader_vertical_lines",
-    ("excelheader", "vertical_line_color"): "excelheader_vertical_line_color",
-    ("excelheader", "vertical_line_width"): "excelheader_vertical_line_width",
-    ("excelheader", "band_row_height"): "excelheader_band_row_height",
-    ("excelheader", "header_heading_fill_color"): "excelheader_header_heading_fill_color",
-    ("excelheader", "header_label_color"): "excelheader_header_label_color",
-    ("excelheader", "header_label_align_h"): "excelheader_header_label_align_h",
-    ("excelheader", "timeband_fill_color"): "excelheader_timeband_fill_color",
-    ("excelheader", "timeband_fill_palette"): "excelheader_timeband_fill_palette",
-    ("excelheader", "timeband_label_color"): "excelheader_timeband_label_color",
+    # ExcelBlockplan
+    ("excelblockplan", "font_name"): "excelblockplan_font",
+    ("excelblockplan", "font_size"): "excelblockplan_font_size",
+    ("excelblockplan", "top_time_bands"): "excelblockplan_top_time_bands",
+    ("excelblockplan", "vertical_lines"): "excelblockplan_vertical_lines",
+    ("excelblockplan", "vertical_line_color"): "excelblockplan_vertical_line_color",
+    ("excelblockplan", "vertical_line_width"): "excelblockplan_vertical_line_width",
+    ("excelblockplan", "band_row_height"): "excelblockplan_band_row_height",
+    ("excelblockplan", "header_heading_fill_color"): "excelblockplan_header_heading_fill_color",
+    ("excelblockplan", "header_label_color"): "excelblockplan_header_label_color",
+    ("excelblockplan", "header_label_align_h"): "excelblockplan_header_label_align_h",
+    ("excelblockplan", "timeband_fill_color"): "excelblockplan_timeband_fill_color",
+    ("excelblockplan", "timeband_fill_palette"): "excelblockplan_timeband_fill_palette",
+    ("excelblockplan", "timeband_label_color"): "excelblockplan_timeband_label_color",
     # Non-workday highlighting
-    ("excelheader", "federal_holiday_fill_color"): "excelheader_federal_holiday_fill_color",
-    ("excelheader", "company_holiday_fill_color"): "excelheader_company_holiday_fill_color",
-    ("excelheader", "weekend_fill_color"): "excelheader_weekend_fill_color",
-    # ExcelBlockplan — mirrors excelheader keys; None values fall back to the
-    # excelheader_* equivalents at render time.
+    ("excelblockplan", "federal_holiday_fill_color"): "excelblockplan_federal_holiday_fill_color",
+    ("excelblockplan", "company_holiday_fill_color"): "excelblockplan_company_holiday_fill_color",
+    ("excelblockplan", "weekend_fill_color"): "excelblockplan_weekend_fill_color",
     # Stripped in Phase 2 (no consumers): vertical_line_dasharray /
     # vertical_line_opacity / vertical_line_fill_color /
     # vertical_line_fill_opacity (XLSX borders are color+style only),
@@ -547,11 +545,10 @@ VALID_SECTIONS = frozenset(
         "layout",
         "blockplan",
         "gantt",
-        "excelheader",
         "excelblockplan",
         "compact_plan",
         # Shared band catalog referenced by blockplan / compactplan /
-        # excelheader placement lists (design §10).
+        # excelblockplan placement lists (design §10).
         "time_bands",
         # New unified theme format sections
         "text_styles",
@@ -582,7 +579,7 @@ _NEW_FORMAT_SECTIONS = frozenset({"style_rules"})
 
 # Sections whose font names refer to system-installed fonts (Excel output),
 # not to FONT_REGISTRY.
-FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelheader", "excelblockplan"})
+FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelblockplan"})
 
 
 def is_font_key(key: Any) -> bool:
@@ -1211,7 +1208,7 @@ class ThemeEngine:
         ("blockplan",    "bottom_bands",  "blockplan_bottom_time_bands"),
         ("gantt",        "top_bands",     "gantt_top_time_bands"),
         ("gantt",        "bottom_bands",  "gantt_bottom_time_bands"),
-        ("excelheader",  "top_bands",     "excelheader_top_time_bands"),
+        ("excelblockplan", "top_bands",   "excelblockplan_top_time_bands"),
         ("timeline",     "top_bands",     "timeline_top_time_bands"),
         ("timeline",     "bottom_bands",  "timeline_bottom_time_bands"),
     )
@@ -1986,6 +1983,13 @@ class ThemeEngine:
                         "`element_overrides:` section for per-theme tweaks.  "
                         "Run tools/strip_element_bindings.py to convert this theme."
                     )
+
+        if "excelheader" in self._theme_data:
+            raise ThemeError(
+                "the excelheader section is now excelblockplan (the excelheader "
+                "command was removed) — rename the section, or run "
+                "tools/migrate_theme.py to convert this theme"
+            )
 
         weekly = self._theme_data.get("weekly", {}) or {}
         if isinstance(weekly, dict) and "overflow" in weekly:

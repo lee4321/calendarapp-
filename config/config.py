@@ -1291,11 +1291,11 @@ class CalendarConfig:
     compactplan_company_holiday_icon: str | None = None
     compactplan_weekend_icon: str | None = None
 
-    # ── ExcelHeader ───────────────────────────────────────────────────────────
-    # Settings for the excelheader subcommand (Excel workbook output).
-    excelheader_font: str = "Calibri"  # System-installed Excel font for all cells
-    excelheader_font_size: int = 9  # Font size in points
-    excelheader_top_time_bands: list[dict[str, Any]] = field(
+    # ── ExcelBlockplan ────────────────────────────────────────────────────────
+    # Settings for the excelblockplan subcommand (Excel workbook output).
+    excelblockplan_font: str = "Calibri"  # System-installed Excel font for all cells
+    excelblockplan_font_size: int = 9  # Font size in points
+    excelblockplan_top_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
             {
                 "label": "Fiscal Quarter",
@@ -1352,28 +1352,22 @@ class CalendarConfig:
             },
         ]
     )
-    excelheader_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
-    excelheader_vertical_line_color: str = "red"
-    excelheader_vertical_line_width: float = 1.5
-    excelheader_band_row_height: float = 18.0
-    excelheader_header_heading_fill_color: str = "none"
-    excelheader_header_label_color: str = "black"
-    excelheader_header_label_align_h: str = "left"  # left | center | right
-    excelheader_timeband_fill_color: str = "none"
-    excelheader_timeband_fill_palette: list[str] = field(default_factory=list)
-    excelheader_timeband_label_color: str = "black"
-    # Non-workday highlighting for excelheader timeband cells.  None → fall
+    excelblockplan_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
+    excelblockplan_vertical_line_color: str = "red"
+    excelblockplan_vertical_line_width: float = 1.5
+    excelblockplan_band_row_height: float = 18.0
+    excelblockplan_header_heading_fill_color: str = "none"
+    excelblockplan_header_label_color: str = "black"
+    excelblockplan_header_label_align_h: str = "right"  # left | center | right
+    excelblockplan_timeband_fill_color: str = "none"
+    excelblockplan_timeband_fill_palette: list[str] = field(default_factory=list)
+    excelblockplan_timeband_label_color: str = "black"
+    # Non-workday highlighting for the day columns.  None → fall
     # back to the global `theme_federal_holiday_color` / `theme_company_holiday_color`
     # so the existing behaviour is preserved when a theme does not opt in.
-    excelheader_federal_holiday_fill_color: str | None = None
-    excelheader_company_holiday_fill_color: str | None = None
-    excelheader_weekend_fill_color: str | None = None
-
-    # ── ExcelBlockplan ────────────────────────────────────────────────────────
-    # Settings for the excelblockplan subcommand. Mirrors excelheader_* but
-    # populates one row per event/duration instead of leaving the body blank.
-    # All fields default to None so the excelheader_* equivalents are used
-    # whenever a theme has only set the shared excelheader keys.
+    excelblockplan_federal_holiday_fill_color: str | None = None
+    excelblockplan_company_holiday_fill_color: str | None = None
+    excelblockplan_weekend_fill_color: str | None = None
 
     # Default icon shown when an event's icon name cannot be found in the icons table
     default_missing_icon: str | None = None

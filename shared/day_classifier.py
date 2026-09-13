@@ -9,7 +9,7 @@ Returns the set of non-workday classes that apply to a date:
 
 A date can belong to multiple classes; callers pick how to rank them.
 
-This module is the single source of truth used by blockplan, excelheader,
+This module is the single source of truth used by blockplan, excelblockplan,
 and (optionally) other visualizers so non-workday styling stays consistent.
 """
 from __future__ import annotations
