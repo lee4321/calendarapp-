@@ -231,6 +231,66 @@ def test_blockplan_vertical_line_style_from_style_rules(tmp_path):
     assert styled[0]["stroke_dasharray"] == "5,2"
 
 
+def test_blockplan_band_style_rule_sets_band_cell_stroke(tmp_path):
+    output = tmp_path / "blockplan_band_stroke.svg"
+    config = _base_config(output)
+    config.userstart = "20260202"
+    config.userend = "20260210"
+    config.adjustedstart = "20260202"
+    config.adjustedend = "20260210"
+    config.blockplan_top_time_bands = [
+        {"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1},
+        {"label": "Week", "unit": "week", "show_every": 1},
+    ]
+    config.blockplan_bottom_time_bands = []
+    config.theme_style_rules = [
+        {
+            "name": "date band outline",
+            "apply_to": "box:band",
+            "select": {"band": "date"},
+            "style": {"stroke": "orange", "stroke_width": 2.5, "stroke_opacity": 0.4, "dasharray": "3,1"},
+        }
+    ]
+    coords = BlockPlanLayout().calculate(config)
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+
+    styled = [kw for kw in renderer.rect_calls if kw.get("stroke") == "orange"]
+    # One heading cell (Date only — Week matches no rule) plus Date's segment cells.
+    assert [kw["css_class"] for kw in styled].count("ec-heading-cell") == 1
+    assert [kw["css_class"] for kw in styled].count("ec-band-cell") > 1
+    for kw in styled:
+        assert kw["stroke_width"] == 2.5
+        assert kw["stroke_opacity"] == 0.4
+        assert kw["stroke_dasharray"] == "3,1"
+
+
+def test_blockplan_band_stroke_color_beats_band_style_rule(tmp_path):
+    output = tmp_path / "blockplan_band_stroke_color.svg"
+    config = _base_config(output)
+    config.userstart = "20260202"
+    config.userend = "20260210"
+    config.adjustedstart = "20260202"
+    config.adjustedend = "20260210"
+    config.blockplan_top_time_bands = [
+        {"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "stroke_color": "purple"},
+    ]
+    config.blockplan_bottom_time_bands = []
+    config.theme_style_rules = [
+        {"apply_to": "box:band", "select": {"band": "date"}, "style": {"stroke": "orange", "stroke_width": 2.5}},
+    ]
+    coords = BlockPlanLayout().calculate(config)
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+
+    band_cells = [kw for kw in renderer.rect_calls if kw.get("stroke") == "purple"]
+    assert band_cells
+    assert all(kw["stroke_width"] == 2.5 for kw in band_cells)
+    assert not [kw for kw in renderer.rect_calls if kw.get("stroke") == "orange"]
+
+
 def test_blockplan_vertical_line_value_match_is_case_insensitive(tmp_path):
     output = tmp_path / "blockplan_vline_ci.svg"
     config = _base_config(output)
