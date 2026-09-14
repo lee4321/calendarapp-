@@ -1361,3 +1361,53 @@ def test_a_continuation_arrow_is_no_taller_than_its_bar(tmp_path):
     assert bar.continues
     (arrow,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-continuation-icon"]
     assert arrow["size"] <= 5.0
+
+
+def test_a_bar_that_starts_early_gets_a_before_arrow_at_its_left_edge(tmp_path):
+    renderer, _, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260201", "20260320")],
+        compactplan_duration_line_width=5.0,
+        continuation_icon_height=10.0,
+        show_continuation_icon=True,
+    )
+
+    assert bar.starts_early
+    assert not bar.continues
+    (arrow,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-continuation-icon"]
+    assert arrow["icon_name"] == "arrow-left"
+    assert arrow["anchor"] == "start"
+    assert abs(arrow["x"] - bar.x1) < 1e-6
+    assert arrow["size"] <= 5.0
+
+
+def test_a_bar_that_starts_on_the_timeline_gets_no_before_arrow(tmp_path):
+    renderer, _, (bar,) = _render_bars(tmp_path, [_dur("Build", "20260309", "20260320")], show_continuation_icon=True)
+
+    assert not bar.starts_early
+    assert not [c for c in renderer.icon_calls if c.get("css_class") == "ec-continuation-icon"]
+
+
+def test_an_early_bars_start_date_fits_beside_its_arrow(tmp_path):
+    renderer, config, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260201", "20260320")],
+        compactplan_duration_show_start_date=True,
+        compactplan_duration_line_width=10.0,
+        compactplan_duration_date_column_ratio=0.3,
+        show_continuation_icon=True,
+    )
+
+    x1, mid_x1, _, _ = renderer._bar_columns(bar, config)
+    arrow_w = min(renderer._continuation_icon_style(config, before=True)[1], 10.0)
+    (start,) = _texts(renderer, "ec-duration-date")
+    assert start["text"] == "2/1"
+    assert abs(start["x"] - (x1 + arrow_w + mid_x1) / 2.0) < 1e-6
+
+
+def test_key_explains_the_before_arrow_only_when_a_bar_starts_early(tmp_path):
+    renderer, _, _ = _render(tmp_path, [_dur("Short", "20260309", "20260313", group="A")])
+    assert "activity began earlier" not in renderer.key_texts()
+
+    renderer, _, _ = _render(tmp_path, [_dur("Early", "20260201", "20260313", group="A")])
+    assert "activity began earlier" in renderer.key_texts()

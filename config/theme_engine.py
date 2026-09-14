@@ -324,6 +324,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "legend_swatch_width"): "compactplan_legend_swatch_width",
     ("compact_plan", "show_holiday_list"): "compactplan_show_holiday_list",
     ("compact_plan", "continuation_legend_text"): "compactplan_continuation_legend_text",
+    ("compact_plan", "continuation_before_legend_text"): "compactplan_continuation_before_legend_text",
     ("compact_plan", "show_axis_legend"): "compactplan_show_axis_legend",
     ("compact_plan", "legend_axis_text"): "compactplan_legend_axis_text",
     # Non-workday highlighting for date/dow timeband cells
