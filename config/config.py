@@ -1047,6 +1047,9 @@ class CalendarConfig:
     blockplan_duration_stroke_opacity: float = 0.9
     blockplan_duration_stroke_dasharray: str | None = None
     blockplan_duration_bar_height: float = 8.0
+    # Space (pt) between duration bars in adjacent rows; bars shrink below
+    # duration_bar_height to keep it.  None = bars may fill 95% of the row.
+    blockplan_duration_row_gap: float | None = None
     blockplan_duration_icon_visible: bool = False
     blockplan_duration_show_start_date: bool = False
     blockplan_duration_show_end_date: bool = False

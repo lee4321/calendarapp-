@@ -1910,6 +1910,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_band_row_height` | `blockplan.band_row_height` | `float` | `10.0` | band row height |
 | `blockplan_bottom_time_bands` | `blockplan.bottom_time_bands` | `list[dict]` | `[]` | time-band rows rendered below swimlanes; same structure as top_time_bands |
 | `blockplan_duration_bar_height` | `blockplan.duration_bar_height` | `float` | `8.0` | duration bar height |
+| `blockplan_duration_row_gap` | `blockplan.duration_row_gap` | `float \| None` | `None` | space (pt) between duration bars in stacked rows; bars shrink below `duration_bar_height` to keep it. null = bars fill up to 95% of the row |
 | `blockplan_duration_color` | `blockplan.duration_color` | `str` | `'navy'` | duration color |
 | `blockplan_duration_date_color` | `blockplan.duration_date_color` | `str \| None` | `None` | start/end date label color; null = duration_color |
 | `blockplan_duration_date_font` | `blockplan.duration_date_font` | `str` | `'RobotoCondensed-LightItalic'` | date label font |
