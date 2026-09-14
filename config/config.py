@@ -940,6 +940,10 @@ class CalendarConfig:
             "khaki",
         ]
     )
+    # Leading WBS segments that group duration bars: a group's bars share one
+    # blockplan_palette color and its rollups are packed in rows above the
+    # group's other bars.  0 disables grouping (event color, then priority).
+    blockplan_wbs_group_depth: int = 2
     blockplan_top_time_bands: list[dict[str, Any]] = field(
         default_factory=lambda: [
             {

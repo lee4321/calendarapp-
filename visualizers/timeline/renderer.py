@@ -26,7 +26,7 @@ from shared.icon_band import compute_icon_band_days
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
-from shared.wbs_filter import wbs_group, wbs_sort_key
+from shared.wbs_filter import wbs_group, wbs_group_colors, wbs_sort_key
 from visualizers.timeline.labella_adapter import (
     layout_callouts as _labella_layout_callouts,
 )
@@ -967,21 +967,7 @@ class TimelineRenderer(BaseSVGRenderer):
             or [_notes_style.color or config.timeline_notes_text_font_color]
         )
 
-        ordered = sorted(
-            events,
-            key=lambda e: (
-                e.start,
-                e.end,
-                e.priority,
-                e.task_name.lower() if e.task_name else "",
-            ),
-        )
-        colors: dict[str, str] = {}
-        for event in ordered:
-            group = wbs_group(event.wbs, depth)
-            if group not in colors:
-                colors[group] = palette[len(colors) % len(palette)]
-        return colors
+        return wbs_group_colors(events, depth, palette)
 
     @staticmethod
     def _order_durations(

@@ -187,6 +187,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "lane_match_mode"): "blockplan_lane_match_mode",
     ("blockplan", "palette"): "blockplan_palette",
     ("blockplan", "palette_name"): "theme_blockplan_palette_name",
+    ("blockplan", "wbs_group_depth"): "blockplan_wbs_group_depth",
     ("blockplan", "top_time_bands"): "blockplan_top_time_bands",
     ("blockplan", "bottom_time_bands"): "blockplan_bottom_time_bands",
     ("blockplan", "swimlanes"): "blockplan_swimlanes",

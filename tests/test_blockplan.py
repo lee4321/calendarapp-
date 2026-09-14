@@ -10,6 +10,7 @@ from config.config import (
     create_sample_blockplan_swimlanes_from_wbs,
     setfontsizes,
 )
+from shared.data_models import Event
 from visualizers.blockplan.layout import BlockPlanLayout
 from visualizers.blockplan.renderer import BlockPlanRenderer
 
@@ -289,6 +290,74 @@ def test_blockplan_band_stroke_color_beats_band_style_rule(tmp_path):
     assert band_cells
     assert all(kw["stroke_width"] == 2.5 for kw in band_cells)
     assert not [kw for kw in renderer.rect_calls if kw.get("stroke") == "orange"]
+
+
+def _wbs_dur(name, start, end, wbs, *, rollup=False, color=None):
+    return {"Task_Name": name, "Start": start, "End": end, "WBS": wbs, "Rollup": rollup, "Color": color, "Priority": 1}
+
+
+def _row_by_name(events, depth):
+    placed = BlockPlanRenderer._duration_rows([Event.from_dict(e) for e in events], 0.0, 100.0, depth)
+    return {event.task_name: row for event, row in placed}
+
+
+def test_blockplan_rollup_sits_above_its_wbs_family():
+    events = [
+        _wbs_dur("one a", "20260202", "20260213", "NP.1.1"),
+        _wbs_dur("phase one", "20260202", "20260227", "NP.1", rollup=True),
+        _wbs_dur("one b", "20260216", "20260220", "NP.1.2"),
+        _wbs_dur("phase two", "20260302", "20260327", "NP.2", rollup=True),
+        _wbs_dur("two a", "20260302", "20260313", "NP.2.1"),
+    ]
+    rows = _row_by_name(events, 2)
+    assert rows["phase one"] == 0
+    assert rows["phase two"] == 0
+    assert min(rows["one a"], rows["one b"], rows["two a"]) >= 1
+
+    # Without grouping, date order puts the shorter child first.
+    flat = _row_by_name(events, 0)
+    assert flat["one a"] == 0
+    assert flat["phase one"] == 1
+
+
+def test_blockplan_family_root_leads_even_without_rollup_flag():
+    """The bar whose WBS is the family code leads; a child that does not
+    overlap it is still kept in a row below it."""
+    events = [
+        _wbs_dur("three early", "20260302", "20260306", "NP.3.1"),
+        _wbs_dur("phase three", "20260310", "20260320", "NP.3"),
+    ]
+    rows = _row_by_name(events, 2)
+    assert rows["phase three"] == 0
+    assert rows["three early"] == 1
+
+
+def _wbs_render_fills(tmp_path, depth):
+    config = _base_config(tmp_path / f"blockplan_wbs_{depth}.svg")
+    config.userstart = config.adjustedstart = "20260202"
+    config.userend = config.adjustedend = "20260331"
+    config.blockplan_palette = ["red", "green", "blue"]
+    config.blockplan_wbs_group_depth = depth
+    events = [
+        _wbs_dur("phase one", "20260202", "20260227", "NP.1", rollup=True),
+        _wbs_dur("one a", "20260202", "20260213", "NP.1.1", color="skyblue"),
+        _wbs_dur("phase two", "20260302", "20260327", "NP.2", rollup=True),
+        _wbs_dur("two a", "20260302", "20260313", "NP.2.1", color="steelblue"),
+        _wbs_dur("loose", "20260309", "20260313", None, color="gold"),
+    ]
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, BlockPlanLayout().calculate(config), events=events, db=_DummyDB())
+    return sorted(kw["fill"] for kw in renderer.rect_calls if kw.get("css_class") == "ec-duration-bar")
+
+
+def test_blockplan_durations_in_a_wbs_family_share_a_palette_color(tmp_path):
+    # Families take palette colors in date order; a bar with no WBS keeps its own color.
+    assert _wbs_render_fills(tmp_path, 2) == ["gold", "green", "green", "red", "red"]
+
+
+def test_blockplan_wbs_group_depth_zero_keeps_event_colors(tmp_path):
+    fills = _wbs_render_fills(tmp_path, 0)
+    assert {"skyblue", "steelblue", "gold"} <= set(fills)
 
 
 def test_blockplan_vertical_line_value_match_is_case_insensitive(tmp_path):
