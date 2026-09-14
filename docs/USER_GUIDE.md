@@ -2408,6 +2408,10 @@ style_rules:
     select: { band: month }
     style: { fill: [lightblue, lightyellow] }   # list cycles across segments
 
+  - apply_to: box:band
+    select: { band: week }
+    style: { stroke: navy, stroke_width: 0.5, dasharray: "2,2" }   # borders this band's cells
+
   - apply_to: text:band_label
     select: { band: month }
     style: { color: navy }

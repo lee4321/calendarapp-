@@ -43,7 +43,7 @@ from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day, day_rule_matches
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import DayContext, StyleEngine, StyleResult
+from shared.rule_engine import DayContext, StyleEngine, StyleResult, _build_style_result
 from shared.timeband import (
     BandSegment as _BandSegment,
 )
@@ -429,8 +429,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
         font_size = float(band.get("font_size") or self._tk("text:band_label").get("size"))
         return font_size * 1.01
 
-    def _resolve_box_band_fill(self, band: dict[str, Any]) -> Any:
-        """Return the fill from a matching ``box:band`` style_rule, or None.
+    def _band_rule_styles(self, band: dict[str, Any]) -> list[dict[str, Any]]:
+        """Style mappings of the ``box:band`` style_rules selecting *band*, in rule order.
 
         Bands can be referenced by either the time-band ``unit`` (e.g.
         ``fiscal_quarter``) or the human-readable ``label`` (e.g.
@@ -439,25 +439,58 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         engine = getattr(self, "_style_engine", None)
         if engine is None:
-            return None
+            return []
         label = str(band.get("label") or "").strip()
         unit = str(band.get("unit") or "").strip()
         candidates = {s.lower() for s in (label, unit) if s}
         if label:
             candidates.add(label.lower().replace(" ", "_"))
         if not candidates:
-            return None
+            return []
+        styles = []
         for rule in engine._applicable_rules("band"):
             select = rule.get("select") or {}
             sel_band = str(select.get("band") or "").strip().lower()
-            if not sel_band or sel_band not in candidates:
-                continue
-            style = rule.get("style") or {}
+            if sel_band and sel_band in candidates:
+                styles.append(rule.get("style") or {})
+        return styles
+
+    def _resolve_box_band_fill(self, band: dict[str, Any]) -> Any:
+        """Return the fill from the first matching ``box:band`` style_rule that sets one, or None."""
+        for style in self._band_rule_styles(band):
             if "fill" in style:
                 return style["fill"]
             if "fill_color" in style:
                 return style["fill_color"]
         return None
+
+    def _band_stroke(
+        self,
+        config: CalendarConfig,
+        band: dict[str, Any],
+    ) -> tuple[str, float, float, str | None]:
+        """Stroke attrs for one band's heading and segment cells.
+
+        Starts from :meth:`_timeband_stroke`.  Each of ``stroke``,
+        ``stroke_width``, ``stroke_opacity`` and ``dasharray`` set by a
+        matching ``box:band`` style_rule replaces it — the first rule that
+        sets an attribute wins, as for fill.  A ``stroke_color`` on the band
+        itself still wins for color.
+        """
+        color, width, opacity, dasharray = self._timeband_stroke(config)
+        for style in reversed(self._band_rule_styles(band)):
+            sr = _build_style_result(style)
+            if sr.stroke_color is not None:
+                color = sr.stroke_color
+            if sr.stroke_width is not None:
+                width = sr.stroke_width
+            if sr.stroke_opacity is not None:
+                opacity = sr.stroke_opacity
+            if sr.stroke_dasharray is not None:
+                dasharray = sr.stroke_dasharray
+        if "stroke_color" in band:
+            color = band["stroke_color"]
+        return color, width, opacity, dasharray
 
     @staticmethod
     def _resolve_color_list(
@@ -619,8 +652,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 # Heading cell (left column — same as regular bands).
                 _heading_cell_style = config.get_box_style("ec-heading-cell")
                 heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
-                tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
-                stroke = band.get("stroke_color", tb_color)
+                stroke, tb_width, tb_opacity, tb_dasharray = self._band_stroke(config, band)
                 self._draw_rect(
                     left_x,
                     y_top,
@@ -749,8 +781,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
             )
             heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
-            tb_color, tb_width, tb_opacity, tb_dasharray = self._timeband_stroke(config)
-            stroke = band.get("stroke_color", tb_color)
+            stroke, tb_width, tb_opacity, tb_dasharray = self._band_stroke(config, band)
 
             # Left heading cell
             self._draw_rect(
