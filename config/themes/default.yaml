@@ -87,15 +87,15 @@ weekly:
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
-  icon_set: squares
-  cell_font: JuliaMono-Regular
-  cell_bold_font: JuliaMono-Regular
+  icon_set: squircles
+  cell_font: OfficinaSans-Book
+  cell_bold_font: OfficinaSans-Book
   cell_font_size: null
-  title_font: JuliaMono-Regular
+  title_font: OfficinaSans-Book
   title_font_size: null
   title_format: MMMM YYYY
   title_color: navy
-  header_font: JuliaMono-Regular
+  header_font: OfficinaSans-Book
   header_font_size: null
   header_color: grey
   day_number_glyphs: null
@@ -163,7 +163,7 @@ text_mini:
   month_gap: 4
   week_number_digits: null
   day_number_digits: null
-  event_symbols: [⯍, ⯏, 🟈, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐, 🞿, 🞭, 🞹, ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐, ❖, ◊, ⯪, ⯫, ꥟, 𜱃, 𜱪, 𜱩, 𜸂, "\U0001cecf", 🟙, 🝴, "\U0001fa54", 🮻, 🯀, 🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633", ⟠, ⨷, ✢, ✨, ❂]
+  event_symbols: [⯍, ⟠, ⨷, ✢, 🞭, 🞹, 🮻, 🯀, 🞿, 🟈, ❖, ◊, 𜱪, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐,   ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐,  ⯪, ⯫, ꥟, 𜱃,  𜱩, 𜸂, ⯏, "\U0001cecf", 🟙, 🝴, "\U0001fa54",  🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633",  ✨, ❂]
   milestone_symbols: [🄰, 🄱, 🄲, 🄳, 🄴, 🄵, 🄶, 🄷, 🄸, 🄹, 🄺, 🄻, 🄼, 🄽, 🄾, 🄿, 🅀, 🅁, 🅂, 🅃, 🅄, 🅅, 🅆, 🅇, 🅈, 🅉]
   holiday_symbols: [🅰, 🅱, 🅲, 🅳, 🅴, 🅵, 🅶, 🅷, 🅸, 🅹, 🅺, 🅻, 🅼, 🅽, 🅾, 🅿, 🆀, 🆁, 🆂, 🆃, 🆄, 🆅, 🆆, 🆇, 🆈, 🆉]
   nonworkday_symbols: [𝒂, 𝒃, 𝒄, 𝒅, 𝒆, 𝒇, 𝒈, 𝒉, 𝒊, 𝒋, 𝒌, 𝒍, 𝒎, 𝒏, 𝒐, 𝒑, 𝒒, 𝒓, 𝒔, 𝒕, 𝒖, 𝒗, 𝒘, 𝒙, 𝒚, 𝒛]
@@ -172,14 +172,14 @@ text_mini:
 candybar:
   show_week_numbers: true
   cell_width: 0            # 0 = square cells (width == row height)
-  weeknum_col_ratio: 0.6   # week-number column width / day-cell width
+  weeknum_col_ratio: 1.0   # week-number column width / day-cell width
   month_col_ratio: 1.6     # month-box column width / day-cell width
   grid_lines: true
   grid_line_color: lightgrey
   day_color: black
   weekend_fill: null        # Sat/Sun day-cell tint (null = off)
-  weekend_opacity: 0.15
-  month_shading: false       # alternate day-cell tint per month
+  weekend_opacity: 0.25
+  month_shading: true       # alternate day-cell tint per month
   month_shade_opacity: 0.12
   month_label_side: right
   month_format: MMM
@@ -207,11 +207,11 @@ timeline:
   holiday_icon_size: 10.0
   # null keeps each flag's own colors
   holiday_icon_color: null
-  holiday_icon_y_offset: 4.0
+  holiday_icon_y_offset: 5.0
   # print each holiday's date under its icon
   show_holiday_dates: true
   # null follows timeline.date_format
-  holiday_date_format: null
+  holiday_date_format: M/D
   holiday_date_font_size: null
   holiday_date_color: null
   # axis-to-tick-date distance; null = 1.5 label heights
@@ -264,7 +264,7 @@ timeline_events:
   # "labella" keeps the force-solved placement centred on the date
   placement: packed
   # clear space between two rows of boxes; null follows timeline.labella.layer_gap
-  row_gap: null
+  row_gap: 10
   # clear space between two boxes sharing a row
   box_gap: 2.0
   # inner border kept clear on all four sides of a box
@@ -384,6 +384,7 @@ pit:
     icon_size: null            # null = match event-name font size
     icon_gap: 4.0
   label_palette: Pastel1
+
 compact_plan:
   # conditions that color duration bars, first match wins; a bar none
   # matches takes its resource group's palette color below.  e.g.
@@ -416,12 +417,13 @@ compact_plan:
   # marks a government holiday's date/dow band cell; each closed
   # country's own flag takes its place, so this shows only when a
   # holiday carries no flag
-  federal_holiday_icon: flag-duotone
+  federal_holiday_icon: null
   bands:
     - date_range
     - week
     - date
   legend_area_ratio: 0.25
+
 blockplan:
   background_color: none
   grid_color: grey
@@ -436,7 +438,7 @@ blockplan:
   band_row_height: 10.0
   fiscal_year_start_month: 2
   week_start: 0
-  show_unmatched_lane: true
+  show_unmatched_lane: false
   unmatched_lane_name: Other
   lane_match_mode: first
   header_font: OfficinaSans-Book
@@ -464,7 +466,7 @@ blockplan:
   lane_label_align_h: right
   lane_label_align_v: middle
   lane_label_rotation: 0
-  lane_split_ratio: 0.5
+  lane_split_ratio: 0.25
   event_show_date: true
   event_date_font: OfficinaSans-Book
   event_date_font_size: null
@@ -475,15 +477,15 @@ blockplan:
   vertical_line_width: 1.5
   vertical_line_dasharray: null
   vertical_line_opacity: 0.85
-  vertical_line_fill_color: none
-  vertical_line_fill_opacity: 0.2
+  vertical_line_fill_color: grey
+  vertical_line_fill_opacity: 0.5
   duration_date_font: OfficinaSans-Book
   duration_fill_opacity: 0.35
-  duration_stroke_color: null
+  duration_stroke_color: black
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.9
   duration_stroke_dasharray: null
-  duration_bar_height: 8.0
+  duration_bar_height: 12
   duration_icon_visible: true
   name_text:
     font_name: OfficinaSans-Book
@@ -505,14 +507,28 @@ blockplan:
     - khaki
   swimlanes:
     - name: Engineering
-    - name: Operations
+  #  - name: Operations
   top_bands:
     - band: fiscal_quarter
-      row_height: 24
+      row_height: 18
+      stroke_color: black
     - band: month_2
       row_height: 18
+      stroke_color: grey
     - band: date
-      row_height: 18
+      row_height: 12
+      stroke_color: grey
+    - band: dow
+      row_height: 12
+      stroke_color: grey
+    - band: holiday
+      row_height: 12
+      stroke_color: grey
+      # An icon band sizes its heading from the row height unless told
+      # otherwise, which would print "Holidays" smaller than the labels
+      # stacked above it.
+      # label_font_size: 10
+
 gantt:
   # dependency arrowhead; none to omit
   arrow_marker_end: arrow-head
@@ -595,7 +611,7 @@ time_bands:
     unit: holiday
     label: Holidays
     # true hides observances that do not close the office
-    nonworkdays_only: false
+    nonworkdays_only: true
   dow:
     unit: date
     label: DoW
@@ -966,7 +982,7 @@ style_rules:
   - name: blockplan_vline_0
     apply_to: box:vline
     select:
-      band: Sprint
+      band: Month
       repeat: true
     style:
       align: end
