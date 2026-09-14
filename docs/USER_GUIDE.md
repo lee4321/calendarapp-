@@ -1948,6 +1948,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_header_label_color` | `blockplan.header_label_color` | `str` | `'black'` | header label color |
 | `blockplan_header_label_opacity` | `blockplan.header_label_opacity` | `float` | `1.0` | heading cell label text opacity |
 | `blockplan_label_column_ratio` | `blockplan.label_column_ratio` | `float` | `0.16` | label column ratio |
+| `blockplan_band_label_column_ratio` | `blockplan.band_label_column_ratio` | `float \| None` | `None` | width of the time-band name cells as a share of the area width; null = `label_column_ratio`. The timeline starts after the wider of the two columns, so the narrower cells leave blank space on their left |
 | `blockplan_lane_heading_fill_color` | `blockplan.lane_heading_fill_color` | `str` | `'none'` | lane heading fill color |
 | `blockplan_lane_label_align_h` | `blockplan.lane_label_align_h` | `str` | `'left'` | left \| center \| right |
 | `blockplan_lane_label_align_v` | `blockplan.lane_label_align_v` | `str` | `'middle'` | top \| middle \| bottom |

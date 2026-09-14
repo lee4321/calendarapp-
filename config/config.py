@@ -925,6 +925,8 @@ class CalendarConfig:
     blockplan_timeband_line_opacity: float | None = None
     blockplan_timeband_line_dasharray: str | None = None
     blockplan_label_column_ratio: float = 0.16
+    # Width of the time-band name cells; None = same as label_column_ratio.
+    blockplan_band_label_column_ratio: float | None = None
     blockplan_fiscal_year_start_month: int = 10
     blockplan_week_start: int = 0  # 0=Monday
     blockplan_show_unmatched_lane: bool = True

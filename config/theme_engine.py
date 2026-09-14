@@ -180,6 +180,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "timeband_line_opacity"): "blockplan_timeband_line_opacity",
     ("blockplan", "timeband_line_dasharray"): "blockplan_timeband_line_dasharray",
     ("blockplan", "label_column_ratio"): "blockplan_label_column_ratio",
+    ("blockplan", "band_label_column_ratio"): "blockplan_band_label_column_ratio",
     ("blockplan", "fiscal_year_start_month"): "blockplan_fiscal_year_start_month",
     ("blockplan", "week_start"): "blockplan_week_start",
     ("blockplan", "show_unmatched_lane"): "blockplan_show_unmatched_lane",

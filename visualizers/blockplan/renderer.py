@@ -12,8 +12,11 @@ Page anatomy (top to bottom):
     │ heading    │  bottom time bands                       │
     └────────────┴──────────────────────────────────────────┘
 
-The left heading column occupies ``blockplan_label_column_ratio`` of the
-width; everything right of it is the timeline area, where X positions
+The swimlane label cells occupy ``blockplan_label_column_ratio`` of the
+width and the band heading cells ``blockplan_band_label_column_ratio``
+(default: the same).  The timeline starts after the wider of the two and
+each set of cells ends where it starts; everything right of that is the
+timeline area, where X positions
 come from `_boundary_x()`: each *visible* day (see
 ``shared.date_utils.visible_days``) gets an equal slice, so hidden
 weekends take no space.
@@ -252,12 +255,19 @@ class BlockPlanRenderer(BaseSVGRenderer):
         bottom_bands = list(getattr(config, "blockplan_bottom_time_bands", []) or [])
         swimlanes = list(getattr(config, "blockplan_swimlanes", []) or [])
 
-        label_col_w = min(
-            area_w * 0.45,
-            max(80.0, area_w * float(config.blockplan_label_column_ratio)),
-        )
+        def _label_col_w(ratio: float) -> float:
+            return min(area_w * 0.45, max(80.0, area_w * ratio))
+
+        lane_label_w = _label_col_w(float(config.blockplan_label_column_ratio))
+        band_ratio = config.blockplan_band_label_column_ratio
+        band_label_w = lane_label_w if band_ratio is None else _label_col_w(float(band_ratio))
+        # Bands and lanes share one timeline: it starts after the wider label
+        # column, and each set of label cells ends where it starts.
+        label_col_w = max(lane_label_w, band_label_w)
         timeline_x = area_x + label_col_w
         timeline_w = max(1.0, area_w - label_col_w)
+        band_left_x = timeline_x - band_label_w
+        lane_left_x = timeline_x - lane_label_w
 
         # Heights — cap combined band heights so swimlane region always has positive height
         top_bands_h = max(
@@ -287,7 +297,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 start=start,
                 end=end,
                 visible_days=visible_days,
-                left_x=area_x,
+                left_x=band_left_x,
                 timeline_x=timeline_x,
                 timeline_w=timeline_w,
                 top_y=area_y,
@@ -336,7 +346,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             start=start,
             end=end,
             visible_days=visible_days,
-            left_x=area_x,
+            left_x=lane_left_x,
             timeline_x=timeline_x,
             timeline_w=timeline_w,
             top_y=lanes_top,
@@ -363,7 +373,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 start=start,
                 end=end,
                 visible_days=visible_days,
-                left_x=area_x,
+                left_x=band_left_x,
                 timeline_x=timeline_x,
                 timeline_w=timeline_w,
                 top_y=lanes_bottom,

@@ -1610,3 +1610,32 @@ def test_blockplan_duration_row_gap_unset_keeps_95_percent_row_fill(tmp_path):
     bars = _stacked_duration_bars(tmp_path, row_gap=None)
     row_h = bars[1]["y"] - bars[0]["y"]
     assert bars[0]["h"] == pytest.approx(row_h * 0.95)
+
+
+def _heading_cells(tmp_path, band_ratio):
+    """Render with one top band and one lane; return (band heading rect, lane heading rect, area)."""
+    config = _base_config(tmp_path / "blockplan_band_label_col.svg")
+    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
+    config.blockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
+    config.blockplan_label_column_ratio = 0.3
+    config.blockplan_band_label_column_ratio = band_ratio
+    coords = BlockPlanLayout().calculate(config)
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+    band_cell, lane_cell = (c for c in renderer.rect_calls if c.get("css_class") == "ec-heading-cell")
+    return band_cell, lane_cell, coords["BlockPlanArea"]
+
+
+def test_blockplan_band_label_column_ratio_sizes_band_cells_separately(tmp_path):
+    band_cell, lane_cell, (area_x, _y, area_w, _h) = _heading_cells(tmp_path, band_ratio=0.15)
+    assert lane_cell["x"] == pytest.approx(area_x)
+    # Both widths clear the 80pt minimum on this 792pt-wide page.
+    assert lane_cell["w"] == pytest.approx(area_w * 0.3)
+    assert band_cell["w"] == pytest.approx(area_w * 0.15)
+    # Both columns end where the shared timeline starts.
+    assert band_cell["x"] + band_cell["w"] == pytest.approx(lane_cell["x"] + lane_cell["w"])
+
+
+def test_blockplan_band_label_column_ratio_unset_matches_lane_column(tmp_path):
+    band_cell, lane_cell, _area = _heading_cells(tmp_path, band_ratio=None)
+    assert (band_cell["x"], band_cell["w"]) == pytest.approx((lane_cell["x"], lane_cell["w"]))
