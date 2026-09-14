@@ -503,5 +503,7 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
 def test_a_fill_list_on_a_day_rule_shades_with_its_first_color():
     config = _config()
     config.theme_style_rules = [{"apply_to": "day_box", "select": {}, "style": {"fill": ["red", "blue"]}}]
-    style = DayStyleResolver(config, _StubDB()).resolve("20260914", [])
+    # A fixed past weekday: on today's date the current-day highlight
+    # replaces the rule's fill.
+    style = DayStyleResolver(config, _StubDB()).resolve("20260115", [])
     assert style.shade_color == "red"
