@@ -1265,6 +1265,7 @@ class CalendarConfig:
     # compactplan continuation icon (the line only clips on its "after" end).
     # Only the key's text for it remains compactplan-specific.
     compactplan_continuation_legend_text: str = "activity continues"
+    compactplan_continuation_before_legend_text: str = "activity began earlier"
     compactplan_show_axis_legend: bool = True  # explain the axis in the key's symbols
     compactplan_legend_axis_text: str = "timeline"  # meaning beside the axis sample
 

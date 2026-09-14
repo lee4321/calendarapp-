@@ -305,6 +305,7 @@ class _PlacedDuration:
     x2: float
     row_y: float
     continues: bool = False  # True when the event extends beyond the timeline end date
+    starts_early: bool = False  # True when the event begins before the timeline start date
     icon_name: str | None = None  # icon drawn at the start (left) of the line
     style: StyleResult | None = None
 
@@ -324,6 +325,8 @@ class _ChartKey:
         assigned_colors: The colors the assignment hands out, in its
             order: each color rule's, then each group's palette color in
             slot order.  The key ranks its rows by these.
+        early_starts: Whether any bar was drawn with a "before" arrow,
+            having begun before the timeline's start.
     """
 
     listing: list[tuple[Any, Event]]
@@ -332,6 +335,7 @@ class _ChartKey:
     visible_days: list[date]
     continuations: bool
     assigned_colors: tuple[str, ...] = ()
+    early_starts: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -517,16 +521,19 @@ class CompactPlanRenderer(BaseSVGRenderer):
         for p in placed:
             self._draw_bar_content(p, dur_icon_h, config)
 
-        # Continuation icons — drawn at the clamped right edge of any duration
-        # line whose event extends beyond the timeline end date.
+        # Continuation icons — at the clamped ends of any duration line whose
+        # event runs past the timeline: an "after" arrow ending at its right
+        # edge, a "before" arrow starting at its left.
         show_continuation = bool(config.show_continuation_icon)
         has_continuations = any(p.continues for p in placed)
-        if show_continuation and has_continuations:
+        has_early_starts = any(p.starts_early for p in placed)
+        if show_continuation:
             for p in placed:
+                bar_h = float(self._bar_stroke(p, config)["stroke_width"])
                 if p.continues:
-                    self._draw_continuation_icon(
-                        config, p.x2, p.row_y, p.color, max_size=float(self._bar_stroke(p, config)["stroke_width"])
-                    )
+                    self._draw_continuation_icon(config, p.x2, p.row_y, p.color, max_size=bar_h)
+                if p.starts_early:
+                    self._draw_continuation_icon(config, p.x1, p.row_y, p.color, max_size=bar_h, before=True)
 
         # Milestones
         for m in milestones:
@@ -551,6 +558,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             visible_days=visible_days,
             continuations=show_continuation and has_continuations,
             assigned_colors=(*self._color_rules.colors, *group_color_map.values()),
+            early_starts=show_continuation and has_early_starts,
         )
 
         # ------------------------------------------------------------------
@@ -900,6 +908,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         row_occupancy: list[list[tuple[float, float]]] = []
 
         placed: list[_PlacedDuration] = []
+        first_day = min(day_x) if day_x else None
 
         for evt_idx, evt in enumerate(sorted_durations):
             start_d = self._parse_date(evt.start)
@@ -908,6 +917,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 continue
 
             x1 = self._date_to_x(start_d, day_x, timeline_x, px_per_day)
+            starts_early = first_day is not None and start_d < first_day
             x2_raw = self._date_to_x(end_d, day_x, timeline_x, px_per_day) + px_per_day
             continues = x2_raw > timeline_x_end
             x2 = min(x2_raw, timeline_x_end)
@@ -955,6 +965,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     x2=x2,
                     row_y=row_y,
                     continues=continues,
+                    starts_early=starts_early,
                     icon_name=icon_name,
                     style=_sr,
                 )
@@ -1314,7 +1325,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
 
         if config.compactplan_duration_show_start_date:
-            draw_date(p.event.start, x1, mid_x1)
+            start_left = x1
+            if p.starts_early and config.show_continuation_icon:
+                start_left += min(self._continuation_icon_style(config, before=True)[1], bar_h)
+            draw_date(p.event.start, start_left, mid_x1)
         if config.compactplan_duration_show_end_date:
             end_right = x2
             if p.continues and config.show_continuation_icon:
@@ -1400,16 +1414,23 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return center_y + (-top / probe) * size / 2.0
 
     @staticmethod
-    def _continuation_icon_style(config: CalendarConfig) -> tuple[str, float, str]:
-        """``(icon, size, configured color)`` of the continuation icon.
+    def _continuation_icon_style(config: CalendarConfig, *, before: bool = False) -> tuple[str, float, str]:
+        """``(icon, size, configured color)`` of a continuation icon.
 
         Theme `icon:continuation` (bound to ec-continuation-icon) takes
         precedence; each field falls back to the global continuation_*
-        config keys when the theme is silent.  Compactplan only clips its
-        "after" end, so it reads continuation_icon_after.
+        config keys when the theme is silent.  The theme's single icon name
+        is the "after" arrow's; the *before* arrow always reads
+        continuation_icon_before, as blockplan's does.  Size and color are
+        shared by both.
         """
         style = config.get_icon_style("ec-continuation-icon")
-        name = str(style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right"))
+        if before:
+            name = resolve_continuation_icon(config.continuation_icon_before, "horizontal", "arrow-left")
+        else:
+            name = str(
+                style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right")
+            )
         size = float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))
         color = (style.color or config.continuation_icon_color or "").strip()
         return name, size, color
@@ -1417,18 +1438,21 @@ class CompactPlanRenderer(BaseSVGRenderer):
     def _draw_continuation_icon(
         self,
         config: CalendarConfig,
-        right_x: float,
+        x: float,
         center_y: float,
         bar_color: str | None,
         max_size: float | None = None,
+        *,
+        before: bool = False,
     ) -> None:
-        """Draw the continuation icon ending at *right_x*, centred on *center_y*.
+        """Draw a continuation icon centred on *center_y*: the "after" arrow
+        ending at *x*, or the *before* arrow starting at it.
 
         On a bar it contrast-swaps against *bar_color* like the start
         icons do; standing alone (``bar_color`` None) it takes the
         configured color, else the legend text's.
         """
-        name, size, configured = self._continuation_icon_style(config)
+        name, size, configured = self._continuation_icon_style(config, before=before)
         if max_size is not None:
             size = min(size, max_size)
         if bar_color is None:
@@ -1437,10 +1461,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
             color = _resolve_icon_on_bar(style_override=None, configured=configured, bar_color=bar_color)
         self._draw_icon_svg(
             name,
-            right_x,
+            x,
             self._icon_baseline(center_y, size),
             size,
-            anchor="end",
+            anchor="start" if before else "end",
             color=color,
             css_class="ec-continuation-icon",
         )
@@ -1627,9 +1651,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
     def _key_column_width(self, config: CalendarConfig, key: _ChartKey) -> float:
         """Width of the key page's mark column, in points."""
         swatch = float(config.compactplan_legend_swatch_width)
+        arrow = 1.0 + self._continuation_icon_style(config)[1]
         if key.continuations:
             # A continuing bar's arrow is drawn past the swatch's end.
-            swatch += 1.0 + self._continuation_icon_style(config)[1]
+            swatch += arrow
+        if key.early_starts:
+            # An early bar's arrow is drawn before the swatch's start.
+            swatch += arrow
         widths = [
             swatch,
             float(config.compactplan_milestone_flag_width) + 2.0,
@@ -1675,11 +1703,18 @@ class CompactPlanRenderer(BaseSVGRenderer):
         continuation arrow, painted as the chart painted them."""
 
         def draw(x: float, baseline: float, width: float, size: float) -> None:
-            length = min(width, float(config.compactplan_legend_swatch_width))
             center_y = baseline - size * 0.3
             stroke = self._bar_stroke(p, config)
             # A bar never outgrows the row it keys.
             stroke["stroke_width"] = min(float(stroke["stroke_width"]), size)
+            if p.starts_early and config.show_continuation_icon:
+                # The "before" arrow leads the swatch, never covering its color.
+                bar_h = float(stroke["stroke_width"])
+                self._draw_continuation_icon(config, x, center_y, p.color, max_size=bar_h, before=True)
+                lead = 1.0 + min(self._continuation_icon_style(config, before=True)[1], bar_h)
+                x += lead
+                width -= lead
+            length = min(width, float(config.compactplan_legend_swatch_width))
             self._draw_swatch(x, center_y, length, stroke)
             # As on the chart, the start icon is no taller than its bar.
             icon_h = min(self._duration_icon_height(config), float(stroke["stroke_width"]))
@@ -1750,6 +1785,19 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """The chart's symbols the key explains, as ``(mark, meaning)``."""
         swatch_w = float(config.compactplan_legend_swatch_width)
         symbols: list[tuple[RowMark, str]] = []
+
+        if key.early_starts:
+
+            def began_earlier(x: float, baseline: float, width: float, size: float) -> None:
+                # Where the arrow sits before an activity's swatch above.
+                self._draw_continuation_icon(config, x, baseline - size * 0.3, None, max_size=size * 1.25, before=True)
+
+            symbols.append(
+                (
+                    began_earlier,
+                    str(config.compactplan_continuation_before_legend_text or "activity began earlier"),
+                )
+            )
 
         if key.continuations:
 

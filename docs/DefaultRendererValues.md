@@ -752,27 +752,27 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `compactplan/renderer.py:497`, `compactplan/renderer.py:1782` |
-| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `compactplan/renderer.py:499`, `compactplan/renderer.py:1784` |
-| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `compactplan/renderer.py:500`, `compactplan/renderer.py:1785` |
-| `ec-continuation-icon` | `color` | `#555555` | `style.color or config.continuation_icon_color or ""` | `compactplan/renderer.py:1414` |
-| `ec-continuation-icon` | `icon` | `arrow-right` | `str(style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right"))` | `compactplan/renderer.py:1412` |
-| `ec-continuation-icon` | `size` | `10` | `float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))` | `compactplan/renderer.py:1413` |
-| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `rule.stroke_dasharray if rule.stroke_dasharray is not None else (theme.dasharray or None)` | `compactplan/renderer.py:1228` |
-| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity` | `compactplan/renderer.py:1230` |
-| `ec-duration-icon` | `color` | `#555555` | `str(config.get_icon_style("ec-duration-icon").color or "")` | `compactplan/renderer.py:1260` |
-| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.compactplan_duration_icon_height)` | `compactplan/renderer.py:1241` |
-| `ec-event-name` | `color` | `#333333` | `str(config.get_text_style("ec-event-name").color or "#595959")` | `compactplan/renderer.py:1107`, `compactplan/renderer.py:1734` |
-| `ec-event-name` | `opacity` | `1` | `float(_name_style.opacity)` | `compactplan/renderer.py:1108` |
-| `ec-label` | `color` | `#888888` | `str(_band_text_style.color or "black")` | `compactplan/renderer.py:624` |
-| `ec-label` | `opacity` | `1` | `float(_band_text_style.opacity)` | `compactplan/renderer.py:625` |
-| `ec-legend-text` | `color` | *depends on the item being drawn* | `configured or str(config.get_text_style("ec-legend-text").color or "#595959")` | `compactplan/renderer.py:1435` |
-| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `compactplan/renderer.py:655` |
-| `ec-separator` | `dasharray` | *unset* | `_sep_style.dasharray` | `compactplan/renderer.py:658` |
-| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:657` |
-| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:656` |
+| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `compactplan/renderer.py:501`, `compactplan/renderer.py:1830` |
+| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `compactplan/renderer.py:503`, `compactplan/renderer.py:1832` |
+| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `compactplan/renderer.py:504`, `compactplan/renderer.py:1833` |
+| `ec-continuation-icon` | `color` | `#555555` | `style.color or config.continuation_icon_color or ""` | `compactplan/renderer.py:1435` |
+| `ec-continuation-icon` | `icon` | `arrow-right` | `str( style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right") )` | `compactplan/renderer.py:1432` |
+| `ec-continuation-icon` | `size` | `10` | `float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))` | `compactplan/renderer.py:1434` |
+| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `rule.stroke_dasharray if rule.stroke_dasharray is not None else (theme.dasharray or None)` | `compactplan/renderer.py:1239` |
+| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity` | `compactplan/renderer.py:1241` |
+| `ec-duration-icon` | `color` | `#555555` | `str(config.get_icon_style("ec-duration-icon").color or "")` | `compactplan/renderer.py:1271` |
+| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.compactplan_duration_icon_height)` | `compactplan/renderer.py:1252` |
+| `ec-event-name` | `color` | `#333333` | `str(config.get_text_style("ec-event-name").color or "#595959")` | `compactplan/renderer.py:1118`, `compactplan/renderer.py:1769` |
+| `ec-event-name` | `opacity` | `1` | `float(_name_style.opacity)` | `compactplan/renderer.py:1119` |
+| `ec-label` | `color` | `#888888` | `str(_band_text_style.color or "black")` | `compactplan/renderer.py:632` |
+| `ec-label` | `opacity` | `1` | `float(_band_text_style.opacity)` | `compactplan/renderer.py:633` |
+| `ec-legend-text` | `color` | *depends on the item being drawn* | `configured or str(config.get_text_style("ec-legend-text").color or "#595959")` | `compactplan/renderer.py:1459` |
+| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `compactplan/renderer.py:663` |
+| `ec-separator` | `dasharray` | *unset* | `_sep_style.dasharray` | `compactplan/renderer.py:666` |
+| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:665` |
+| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:664` |
 
-<details><summary>Settings (59)</summary>
+<details><summary>Settings (61)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -784,6 +784,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `compact_plan.company_holiday_fill_color` | `compactplan_company_holiday_fill_color` | *unset* |
 | `compact_plan.company_holiday_fill_opacity` | `compactplan_company_holiday_fill_opacity` | *unset* |
 | `compact_plan.company_holiday_icon` | `compactplan_company_holiday_icon` | *unset* |
+| `compact_plan.continuation_before_legend_text` | `compactplan_continuation_before_legend_text` | `activity began earlier` |
 | `compact_plan.continuation_legend_text` | `compactplan_continuation_legend_text` | `activity continues` |
 | `compact_plan.duration_date_color` | `compactplan_duration_date_color` | *unset* |
 | `compact_plan.duration_date_column_ratio` | `compactplan_duration_date_column_ratio` | `0.04` |
@@ -824,6 +825,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `compact_plan.weekend_fill_opacity` | `compactplan_weekend_fill_opacity` | *unset* |
 | `compact_plan.weekend_icon` | `compactplan_weekend_icon` | *unset* |
 | `continuation.icon_after` | `continuation_icon_after` | `arrow-right` |
+| `continuation.icon_before` | `continuation_icon_before` | `arrow-left` |
 | `continuation.icon_color` | `continuation_icon_color` | *unset* |
 | `continuation.icon_height` | `continuation_icon_height` | `8` |
 | `mini_details.column_widths` | `mini_details_column_widths` | `[0.16, 0.52, 0.1, 0.1, 0.12]` |

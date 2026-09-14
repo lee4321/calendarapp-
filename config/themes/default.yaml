@@ -420,6 +420,7 @@ compact_plan:
   duration_date_color: null
   duration_name_color: null
   continuation_legend_text: activity continues
+  continuation_before_legend_text: activity began earlier
   continuation_section_gap: 4.0
   show_axis_legend: true
   legend_axis_text: timeline
