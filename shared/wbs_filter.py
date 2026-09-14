@@ -14,8 +14,9 @@ implicitly appending "**".
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 
 def _normalize_segments(value: str) -> list[str]:
@@ -151,3 +152,26 @@ def wbs_group(wbs: str | None, depth: int) -> str:
     if depth <= 0:
         return ""
     return ".".join(_wbs_segments(wbs)[:depth])
+
+
+def wbs_group_colors(events: Iterable[Any], depth: int, palette: Sequence[str]) -> dict[str, str]:
+    """One palette color per WBS group, assigned in date order.
+
+    Groups are the first ``depth`` segments of each item's WBS
+    (:func:`wbs_group`).  Items are visited by (start, end, priority, name),
+    so a group takes the palette entry its earliest item would have taken,
+    wrapping when there are more groups than colors.  Returns ``{}`` when
+    ``depth`` is 0 or the palette is empty.
+    """
+    if depth <= 0 or not palette:
+        return {}
+    ordered = sorted(
+        events,
+        key=lambda e: (e.start, e.end, e.priority, e.task_name.lower() if e.task_name else ""),
+    )
+    colors: dict[str, str] = {}
+    for event in ordered:
+        group = wbs_group(event.wbs, depth)
+        if group not in colors:
+            colors[group] = palette[len(colors) % len(palette)]
+    return colors

@@ -164,6 +164,9 @@ compact_plan:
     - date_range
     - week
 blockplan:
+  # leading WBS segments that make a duration family: one palette color,
+  # rollups packed above the rest; 0 = color by event color / priority
+  wbs_group_depth: 2
   fiscal_year_start_month: 2
   week_start: 0
   label_column_ratio: 0.1

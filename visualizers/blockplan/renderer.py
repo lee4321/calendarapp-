@@ -53,6 +53,7 @@ from shared.timeband import (
 from shared.timeband import (
     group_segments as _group_band_segments,
 )
+from shared.wbs_filter import wbs_group, wbs_group_colors, wbs_sort_key
 
 
 def _blockplan_style_rules(config: CalendarConfig) -> list:
@@ -329,6 +330,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
         # ── swimlanes ─────────────────────────────────────────────────────────
         event_objects = [Event.from_dict(e) for e in events]
+        self._duration_group_colors = self._wbs_group_colors(config, event_objects)
         lane_events = self._assign_events_to_lanes(config, event_objects, swimlanes)
         self._draw_swimlanes(
             config=config,
@@ -1209,26 +1211,81 @@ class BlockPlanRenderer(BaseSVGRenderer):
         return result
 
     @staticmethod
-    def _duration_rows(events: list[Event], lane_top: float, lane_bottom: float) -> list[tuple[Event, int]]:
-        """Greedy row packing for duration bars: first row whose last
-        bar ended before this one starts (dates compare as YYYYMMDD
-        strings).  Returns (event, row_index) pairs; row count drives
-        the per-row height in `_draw_lane_durations`."""
+    def _wbs_group_colors(config: CalendarConfig, events: list[Event]) -> dict[str, str]:
+        """One ``blockplan_palette`` color per WBS group of the page's duration bars.
+
+        Built once per page over every lane, so a family keeps its color
+        across swimlanes.  Bars without a WBS are left out and keep the
+        event-color / priority assignment.  ``{}`` when grouping is off.
+        """
+        depth = int(config.blockplan_wbs_group_depth or 0)
+        palette = config.blockplan_palette or [config.get_text_style("ec-event-name").color]
+        grouped = [e for e in events if e.is_duration and (e.wbs or "").strip()]
+        return wbs_group_colors(grouped, depth, palette)
+
+    @staticmethod
+    def _duration_rows(
+        events: list[Event],
+        lane_top: float,
+        lane_bottom: float,
+        wbs_group_depth: int = 0,
+    ) -> list[tuple[Event, int]]:
+        """Row packing for duration bars: each bar takes the first row
+        where it overlaps no bar (dates compare as YYYYMMDD strings).
+        Returns (event, row_index) pairs; row count drives the per-row
+        height in `_draw_lane_durations`.
+
+        With ``wbs_group_depth`` 0 bars are placed in date order.  Above 0,
+        bars sharing their first ``wbs_group_depth`` WBS segments form a
+        family, placed in WBS order (numeric, WBS-less bars last).  A
+        family's leaders — its rollups, or the bar whose WBS is the family
+        code — go first, and its other bars are kept in rows below every
+        leader, so the root reads as the family's header.  Rows skipped
+        for that stay open to other families.
+        """
         if not events:
             return []
-        ordered = sorted(events, key=lambda e: (e.start, e.end, e.priority, e.task_name.lower()))
-        last_end: list[str] = []
+
+        def date_key(e: Event) -> tuple:
+            return (e.start, e.end, e.priority, e.task_name.lower())
+
+        groups: dict[int, str] = {}
+        if wbs_group_depth > 0:
+            groups = {id(e): wbs_group(e.wbs, wbs_group_depth) for e in events}
+
+        def is_leader(e: Event) -> bool:
+            group = groups.get(id(e), "")
+            return bool(group) and (bool(e.rollup) or (e.wbs or "").strip() == group)
+
+        if groups:
+            ordered = sorted(
+                events,
+                key=lambda e: (
+                    0 if groups[id(e)] else 1,
+                    wbs_sort_key(groups[id(e)]),
+                    0 if is_leader(e) else 1,
+                    wbs_sort_key(e.wbs),
+                    date_key(e),
+                ),
+            )
+        else:
+            ordered = sorted(events, key=date_key)
+
+        row_spans: list[list[tuple[str, str]]] = []
+        leader_rows: dict[str, int] = {}
         placed: list[tuple[Event, int]] = []
         for event in ordered:
-            row = 0
-            while row < len(last_end):
-                if event.start > last_end[row]:
-                    break
+            group = groups.get(id(event), "")
+            row = leader_rows.get(group, -1) + 1 if group and not is_leader(event) else 0
+            while row < len(row_spans) and any(
+                event.start <= span_end and span_start <= event.end for span_start, span_end in row_spans[row]
+            ):
                 row += 1
-            if row == len(last_end):
-                last_end.append(event.end)
-            else:
-                last_end[row] = event.end
+            while len(row_spans) <= row:
+                row_spans.append([])
+            row_spans[row].append((event.start, event.end))
+            if is_leader(event):
+                leader_rows[group] = max(leader_rows.get(group, -1), row)
             placed.append((event, row))
         return placed
 
@@ -1380,7 +1437,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 # each type needs so items from different types never overlap.
                 # When only one type is present, it gets the full lane.
                 if durations and events:
-                    dur_placed = self._duration_rows(durations, lane_top, lane_bottom)
+                    dur_placed = self._duration_rows(
+                        durations, lane_top, lane_bottom, int(config.blockplan_wbs_group_depth or 0)
+                    )
                     dur_row_count = max((r for _, r in dur_placed), default=0) + 1
                     evt_row_count = max((r for _, r in self._event_rows(events)), default=0) + 1
                     shared_row_h = lane_h / (dur_row_count + evt_row_count)
@@ -1509,7 +1568,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         if not events:
             return
-        rows = self._duration_rows(events, top, bottom)
+        rows = self._duration_rows(events, top, bottom, int(config.blockplan_wbs_group_depth or 0))
         max_row = max((r for _, r in rows), default=0)
         row_count = max(1, max_row + 1)
         row_h = (bottom - top) / row_count
@@ -1544,7 +1603,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _event_name_style = config.get_text_style("ec-event-name")
             _event_notes_style = config.get_text_style("ec-event-notes")
             _palette = config.blockplan_palette or [_event_name_style.color]
-            color = event.color if event.color else _palette[event.priority % len(_palette)]
+            _group_colors: dict[str, str] = getattr(self, "_duration_group_colors", {})
+            _group_color = _group_colors.get(wbs_group(event.wbs, int(config.blockplan_wbs_group_depth or 0)))
+            color = _group_color or event.color or _palette[event.priority % len(_palette)]
             _style_engine = getattr(self, "_style_engine", None)
             _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
