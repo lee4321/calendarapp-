@@ -1302,6 +1302,7 @@ def test_a_long_name_is_cut_to_fit_the_middle_column(tmp_path):
 
 def test_bar_content_is_no_taller_than_the_bar_and_centred_on_it(tmp_path):
     from config.config import get_font_path
+    from renderers.text_utils import text_center_baseline
 
     renderer, _, (bar,) = _render_bars(
         tmp_path,
@@ -1317,7 +1318,7 @@ def test_bar_content_is_no_taller_than_the_bar_and_centred_on_it(tmp_path):
     for call in texts:
         assert call["font_size"] <= 6.0
         path = get_font_path(call["font_name"])
-        assert abs(call["y"] - renderer._text_center_baseline(bar.row_y, path, call["font_size"])) < 1e-6
+        assert abs(call["y"] - text_center_baseline(bar.row_y, path, call["font_size"])) < 1e-6
     (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert abs(icon["y"] - renderer._icon_baseline(bar.row_y, icon["size"])) < 1e-6
 

@@ -162,6 +162,43 @@ def test_blockplan_without_swimlanes_draws_one_unlabeled_lane(tmp_path):
         assert label not in renderer.text_values
 
 
+def test_blockplan_duration_text_is_vertically_centred_on_the_bar(tmp_path):
+    """Start/end dates, task name and icon all centre on the bar's middle."""
+    from config.config import get_font_path
+    from renderers.text_utils import text_center_baseline
+
+    output = tmp_path / "blockplan_dur_dates.svg"
+    config = _base_config(output)
+    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
+    config.blockplan_duration_show_start_date = True
+    config.blockplan_duration_show_end_date = True
+    config.blockplan_duration_icon_visible = True
+    coords = BlockPlanLayout().calculate(config)
+
+    events = [
+        {
+            "Task_Name": "Sprint Build",
+            "Start": "20260112",
+            "End": "20260227",
+            "Resource_Group": "dev",
+            "Icon": "rocket",
+        }
+    ]
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events, _DummyIconDB())
+
+    (bar,) = [r for r in renderer.rect_calls if r.get("css_class") == "ec-duration-bar"]
+    center_y = bar["y"] + bar["h"] / 2.0
+    texts = [c for c in renderer.text_calls if c.get("css_class") in ("ec-duration-date", "ec-event-name")]
+    assert sorted(c["css_class"] for c in texts) == ["ec-duration-date", "ec-duration-date", "ec-event-name"]
+    for call in texts:
+        expected = text_center_baseline(center_y, get_font_path(call["font"]), call["size"])
+        assert abs(call["y"] - expected) < 1e-6
+    (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-event-icon"]
+    assert abs(icon["baseline_y"] - renderer._icon_baseline(center_y, icon["size"])) < 1e-6
+
+
 def test_blockplan_uses_user_date_range_for_timebands(tmp_path):
     output = tmp_path / "blockplan_user_bounds.svg"
     config = _base_config(output)

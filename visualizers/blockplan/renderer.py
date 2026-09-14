@@ -37,7 +37,7 @@ import drawsvg
 
 from config.config import get_font_path, resolve_continuation_icon
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
-from renderers.text_utils import string_width
+from renderers.text_utils import string_width, text_center_baseline
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day, day_rule_matches
@@ -1706,7 +1706,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_dur_date = self._tk("text:duration_date")
             if has_dates:
                 date_font_size = float(tk_dur_date.get("size"))
-                date_baseline_y = y + bar_h - float(config.blockplan_duration_date_inset)
                 date_color = (
                     config.blockplan_duration_date_color
                     if config.blockplan_duration_date_color is not None
@@ -1723,6 +1722,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     _dur_date_font_path = get_font_path(date_font)
                 except Exception:
                     _dur_date_font_path = ""
+                # Dates sit vertically centred on the bar.
+                bar_center_y = y + bar_h / 2.0
+                date_baseline_y = (
+                    text_center_baseline(bar_center_y, _dur_date_font_path, date_font_size)
+                    if _dur_date_font_path
+                    else bar_center_y + date_font_size * 0.35
+                )
             dur_text_color = tk_event_name.get("color") or _event_name_style.color
             dur_notes_color = (
                 config.blockplan_notes_text_font_color
@@ -1750,7 +1756,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             # The loop values are bound as defaults so the helper can only
             # ever see this iteration's duration.
             def _draw_icon_and_text(
-                baseline_y: float,
+                center_y: float,
                 font_size: float,
                 max_w: float,
                 *,
@@ -1764,7 +1770,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _dur_name_font=_dur_name_font,
                 dur_text_color=dur_text_color,
             ) -> None:
-                """Draw icon (if show_icon) + task name on a single baseline row."""
+                """Draw icon (if show_icon) + task name, both vertically centred on *center_y*."""
+                try:
+                    baseline_y = text_center_baseline(center_y, get_font_path(_dur_name_font), font_size)
+                except Exception:
+                    baseline_y = center_y + font_size * 0.35
                 if show_icon:
                     icon_size = font_size
                     try:
@@ -1793,17 +1803,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         / 2.0
                     )
                     draw_x = max(x0, group_x0)
+                    icon_baseline_y = self._icon_baseline(center_y, icon_size)
                     icon_transform = None
                     if icon_scale_x < 1.0:
                         icon_transform = (
-                            f"translate({draw_x:.4f} {baseline_y:.4f}) "
+                            f"translate({draw_x:.4f} {icon_baseline_y:.4f}) "
                             f"scale({icon_scale_x:.6f} 1) "
-                            f"translate({-draw_x:.4f} {-baseline_y:.4f})"
+                            f"translate({-draw_x:.4f} {-icon_baseline_y:.4f})"
                         )
                     icon_drawn = self._draw_icon_svg(
                         event_icon_to_draw,
                         draw_x,
-                        baseline_y,
+                        icon_baseline_y,
                         icon_size,
                         anchor="start",
                         color=event_icon_color,
@@ -1841,10 +1852,19 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     )
 
             if weekly_style_with_notes:
-                _draw_icon_and_text(y + (bar_h * 0.42), notes_font_size, w - 4)
+                # Name centred in the bar's upper half, notes in its lower half.
+                _draw_icon_and_text(y + (bar_h * 0.25), notes_font_size, w - 4)
+                _notes_size = float(tk_event_notes.get("size"))
+                _notes_center_y = y + (bar_h * 0.75)
+                try:
+                    _notes_baseline_y = text_center_baseline(
+                        _notes_center_y, get_font_path(_dur_notes_font_name), _notes_size
+                    )
+                except Exception:
+                    _notes_baseline_y = _notes_center_y + _notes_size * 0.35
                 self._draw_text(
                     x0 + (w / 2.0),
-                    y + (bar_h * 0.80),
+                    _notes_baseline_y,
                     str(event.notes),
                     _dur_notes_font_name,
                     float(tk_event_notes.get("size")),
@@ -1855,12 +1875,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
             else:
                 _draw_icon_and_text(
-                    y + (bar_h * 0.80),
+                    y + (bar_h / 2.0),
                     float(tk_event_name.get("size")),
                     w - 4,
                 )
 
-            # --- Date row (outside bar, below rectangle) — shared for both layout modes ---
+            # --- Start/end dates at the bar's ends — shared for both layout modes ---
             if has_dates:
                 show_start = config.blockplan_duration_show_start_date
                 show_end = config.blockplan_duration_show_end_date
