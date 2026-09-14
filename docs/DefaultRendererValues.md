@@ -548,61 +548,62 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `box:band` | `dasharray` | *unset* | `tk_band.get("dasharray") or config.blockplan_timeband_line_dasharray or config.blockplan_grid_dasharray` | `blockplan/renderer.py:398` |
-| `box:band` | `fill_opacity` | *unset* | `self._tk("box:band").get("fill_opacity")` | `blockplan/renderer.py:857` |
-| `box:band` | `stroke` | `grey` | `tk_band.get("stroke") or config.blockplan_timeband_line_color or config.blockplan_grid_color` | `blockplan/renderer.py:386` |
-| `box:band` | `stroke_opacity` | *unset* | `tk_band.get("stroke_opacity")` | `blockplan/renderer.py:392` |
-| `box:band` | `stroke_width` | *unset* | `tk_band.get("stroke_width")` | `blockplan/renderer.py:387` |
-| `box:duration` | `dasharray` | *unset* | `config.blockplan_duration_stroke_dasharray if config.blockplan_duration_stroke_dasharray is not None else (tk_dur_box.get("dasharray") or _dur_bar_st…` | `blockplan/renderer.py:1638` |
-| `box:duration` | `fill_opacity` | `0.35` | `tk_dur_box.get("fill_opacity") if tk_dur_box.get("fill_opacity") is not None else config.blockplan_duration_fill_opacity` | `blockplan/renderer.py:1641`, `blockplan/renderer.py:1642` |
-| `box:duration` | `stroke` | `#AAAAAA` | `config.blockplan_duration_stroke_color if config.blockplan_duration_stroke_color is not None else (tk_dur_box.get("stroke") or _dur_bar_style.color)` | `blockplan/renderer.py:1633` |
-| `box:duration` | `stroke_opacity` | `0.9` | `tk_dur_box.get("stroke_opacity") if tk_dur_box.get("stroke_opacity") is not None else float(config.blockplan_duration_stroke_opacity)` | `blockplan/renderer.py:1646`, `blockplan/renderer.py:1647` |
-| `box:duration` | `stroke_width` | `1` | `tk_dur_box.get("stroke_width") if tk_dur_box.get("stroke_width") is not None else float(config.blockplan_duration_stroke_width)` | `blockplan/renderer.py:1651`, `blockplan/renderer.py:1652` |
-| `line:grid` | `color` | `grey` | `tk_grid.get("color") or config.blockplan_grid_color` | `blockplan/renderer.py:411` |
-| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or config.blockplan_grid_dasharray` | `blockplan/renderer.py:414` |
-| `line:grid` | `opacity` | `0.6` | `tk_grid.get("opacity") if tk_grid.get("opacity") is not None else config.blockplan_grid_opacity` | `blockplan/renderer.py:413` |
-| `line:grid` | `width` | `1` | `tk_grid.get("width") if tk_grid.get("width") is not None else config.blockplan_grid_line_width` | `blockplan/renderer.py:412` |
-| `text:band_label` | `color` | *depends on the item being drawn* | `band.get("font_color") or tk_band_label.get("color") or _label_text_style.color` | `blockplan/renderer.py:749` |
-| `text:band_label` | `font` | *depends on the item being drawn* | `band.get("font") or tk_band_label.get("font") or _label_text_style.font` | `blockplan/renderer.py:759` |
-| `text:band_label` | `opacity` | *depends on the item being drawn* | `float( font_opacity_value if (font_opacity_value := band.get("font_opacity")) is not None else ( tk_band_label.get("opacity") if tk_band_label.get("o…` | `blockplan/renderer.py:754`, `blockplan/renderer.py:755` |
-| `text:band_label` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_band_label.get("size"))` | `blockplan/renderer.py:429`, `blockplan/renderer.py:765` |
-| `text:duration_date` | `color` | `#666666` | `config.blockplan_duration_date_color if config.blockplan_duration_date_color is not None else (tk_dur_date.get("color") or _dur_date_style.color)` | `blockplan/renderer.py:1718` |
-| `text:duration_date` | `font` | `RobotoCondensed-Light` | `config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font` | `blockplan/renderer.py:1721` |
-| `text:duration_date` | `size` | `8.64` ¹ | `float(tk_dur_date.get("size"))` | `blockplan/renderer.py:1714` |
-| `text:event_date` | `color` | `#666666` | `tk_event_date.get("color") or _evt_date_style.color` | `blockplan/renderer.py:2097` |
-| `text:event_date` | `font` | `RobotoCondensed-Light` | `tk_event_date.get("font") or _evt_date_style.font` | `blockplan/renderer.py:2008` |
-| `text:event_date` | `size` | `8.64` ¹ | `float(tk_event_date.get("size") or max(6.0, event_size * 0.9))` | `blockplan/renderer.py:1988` |
-| `text:event_name` | `color` | `#333333` | `tk_event_name.get("color") or _event_name_style.color` | `blockplan/renderer.py:1738`, `blockplan/renderer.py:2080` |
-| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_event_name.get("font") or _event_name_style.font` | `blockplan/renderer.py:1749`, `blockplan/renderer.py:1991` |
-| `text:event_name` | `size` | `9.72` / `11.88` (differs by call site) ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:1885`, `blockplan/renderer.py:1986`, `blockplan/renderer.py:2245` |
-| `text:event_notes` | `color` | `#666666` | `config.blockplan_notes_text_font_color if config.blockplan_notes_text_font_color is not None else (tk_event_notes.get("color") or _event_notes_style.…` | `blockplan/renderer.py:1742`, `blockplan/renderer.py:2002` |
-| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font` | `blockplan/renderer.py:1745`, `blockplan/renderer.py:1997` |
-| `text:event_notes` | `size` | `8.26` ¹ | `float(tk_event_notes.get("size"))` | `blockplan/renderer.py:1616`, `blockplan/renderer.py:1863`, `blockplan/renderer.py:1876` +1 |
-| `text:heading` | `color` | *depends on the item being drawn* | `band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color` | `blockplan/renderer.py:674`, `blockplan/renderer.py:773` |
-| `text:heading` | `font` | *depends on the item being drawn* | `band.get("label_font") or tk_heading.get("font") or _heading_text_style.font` | `blockplan/renderer.py:670`, `blockplan/renderer.py:766` |
-| `text:heading` | `opacity` | *depends on the item being drawn* | `float( label_opacity_value if (label_opacity_value := band.get("label_opacity")) is not None else ( tk_heading.get("opacity") if tk_heading.get("opac…` | `blockplan/renderer.py:679`, `blockplan/renderer.py:680`, `blockplan/renderer.py:778` +1 |
-| `text:heading` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_heading.get("size"))` | `blockplan/renderer.py:672`, `blockplan/renderer.py:772` |
-| `text:swimlane_label` | `color` | *depends on the item being drawn* | `lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color` | `blockplan/renderer.py:2302` |
-| `text:swimlane_label` | `font` | `RobotoCondensed-Bold` | `tk_swimlane_label.get("font") or _lane_label_style.font` | `blockplan/renderer.py:2303` |
-| `text:swimlane_label` | `size` | `11.88` ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:2245` |
+| `box:band` | `dasharray` | *unset* | `tk_band.get("dasharray") or config.blockplan_timeband_line_dasharray or config.blockplan_grid_dasharray` | `blockplan/renderer.py:408` |
+| `box:band` | `fill_opacity` | *unset* | `self._tk("box:band").get("fill_opacity")` | `blockplan/renderer.py:867` |
+| `box:band` | `stroke` | `grey` | `tk_band.get("stroke") or config.blockplan_timeband_line_color or config.blockplan_grid_color` | `blockplan/renderer.py:396` |
+| `box:band` | `stroke_opacity` | *unset* | `tk_band.get("stroke_opacity")` | `blockplan/renderer.py:402` |
+| `box:band` | `stroke_width` | *unset* | `tk_band.get("stroke_width")` | `blockplan/renderer.py:397` |
+| `box:duration` | `dasharray` | *unset* | `config.blockplan_duration_stroke_dasharray if config.blockplan_duration_stroke_dasharray is not None else (tk_dur_box.get("dasharray") or _dur_bar_st…` | `blockplan/renderer.py:1648` |
+| `box:duration` | `fill_opacity` | `0.35` | `tk_dur_box.get("fill_opacity") if tk_dur_box.get("fill_opacity") is not None else config.blockplan_duration_fill_opacity` | `blockplan/renderer.py:1651`, `blockplan/renderer.py:1652` |
+| `box:duration` | `stroke` | `#AAAAAA` | `config.blockplan_duration_stroke_color if config.blockplan_duration_stroke_color is not None else (tk_dur_box.get("stroke") or _dur_bar_style.color)` | `blockplan/renderer.py:1643` |
+| `box:duration` | `stroke_opacity` | `0.9` | `tk_dur_box.get("stroke_opacity") if tk_dur_box.get("stroke_opacity") is not None else float(config.blockplan_duration_stroke_opacity)` | `blockplan/renderer.py:1656`, `blockplan/renderer.py:1657` |
+| `box:duration` | `stroke_width` | `1` | `tk_dur_box.get("stroke_width") if tk_dur_box.get("stroke_width") is not None else float(config.blockplan_duration_stroke_width)` | `blockplan/renderer.py:1661`, `blockplan/renderer.py:1662` |
+| `line:grid` | `color` | `grey` | `tk_grid.get("color") or config.blockplan_grid_color` | `blockplan/renderer.py:421` |
+| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or config.blockplan_grid_dasharray` | `blockplan/renderer.py:424` |
+| `line:grid` | `opacity` | `0.6` | `tk_grid.get("opacity") if tk_grid.get("opacity") is not None else config.blockplan_grid_opacity` | `blockplan/renderer.py:423` |
+| `line:grid` | `width` | `1` | `tk_grid.get("width") if tk_grid.get("width") is not None else config.blockplan_grid_line_width` | `blockplan/renderer.py:422` |
+| `text:band_label` | `color` | *depends on the item being drawn* | `band.get("font_color") or tk_band_label.get("color") or _label_text_style.color` | `blockplan/renderer.py:759` |
+| `text:band_label` | `font` | *depends on the item being drawn* | `band.get("font") or tk_band_label.get("font") or _label_text_style.font` | `blockplan/renderer.py:769` |
+| `text:band_label` | `opacity` | *depends on the item being drawn* | `float( font_opacity_value if (font_opacity_value := band.get("font_opacity")) is not None else ( tk_band_label.get("opacity") if tk_band_label.get("o…` | `blockplan/renderer.py:764`, `blockplan/renderer.py:765` |
+| `text:band_label` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_band_label.get("size"))` | `blockplan/renderer.py:439`, `blockplan/renderer.py:775` |
+| `text:duration_date` | `color` | `#666666` | `config.blockplan_duration_date_color if config.blockplan_duration_date_color is not None else (tk_dur_date.get("color") or _dur_date_style.color)` | `blockplan/renderer.py:1728` |
+| `text:duration_date` | `font` | `RobotoCondensed-Light` | `config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font` | `blockplan/renderer.py:1731` |
+| `text:duration_date` | `size` | `8.64` ¹ | `float(tk_dur_date.get("size"))` | `blockplan/renderer.py:1724` |
+| `text:event_date` | `color` | `#666666` | `tk_event_date.get("color") or _evt_date_style.color` | `blockplan/renderer.py:2107` |
+| `text:event_date` | `font` | `RobotoCondensed-Light` | `tk_event_date.get("font") or _evt_date_style.font` | `blockplan/renderer.py:2018` |
+| `text:event_date` | `size` | `8.64` ¹ | `float(tk_event_date.get("size") or max(6.0, event_size * 0.9))` | `blockplan/renderer.py:1998` |
+| `text:event_name` | `color` | `#333333` | `tk_event_name.get("color") or _event_name_style.color` | `blockplan/renderer.py:1748`, `blockplan/renderer.py:2090` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_event_name.get("font") or _event_name_style.font` | `blockplan/renderer.py:1759`, `blockplan/renderer.py:2001` |
+| `text:event_name` | `size` | `9.72` / `11.88` (differs by call site) ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:1895`, `blockplan/renderer.py:1996`, `blockplan/renderer.py:2255` |
+| `text:event_notes` | `color` | `#666666` | `config.blockplan_notes_text_font_color if config.blockplan_notes_text_font_color is not None else (tk_event_notes.get("color") or _event_notes_style.…` | `blockplan/renderer.py:1752`, `blockplan/renderer.py:2012` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font` | `blockplan/renderer.py:1755`, `blockplan/renderer.py:2007` |
+| `text:event_notes` | `size` | `8.26` ¹ | `float(tk_event_notes.get("size"))` | `blockplan/renderer.py:1626`, `blockplan/renderer.py:1873`, `blockplan/renderer.py:1886` +1 |
+| `text:heading` | `color` | *depends on the item being drawn* | `band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color` | `blockplan/renderer.py:684`, `blockplan/renderer.py:783` |
+| `text:heading` | `font` | *depends on the item being drawn* | `band.get("label_font") or tk_heading.get("font") or _heading_text_style.font` | `blockplan/renderer.py:680`, `blockplan/renderer.py:776` |
+| `text:heading` | `opacity` | *depends on the item being drawn* | `float( label_opacity_value if (label_opacity_value := band.get("label_opacity")) is not None else ( tk_heading.get("opacity") if tk_heading.get("opac…` | `blockplan/renderer.py:689`, `blockplan/renderer.py:690`, `blockplan/renderer.py:788` +1 |
+| `text:heading` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_heading.get("size"))` | `blockplan/renderer.py:682`, `blockplan/renderer.py:782` |
+| `text:swimlane_label` | `color` | *depends on the item being drawn* | `lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color` | `blockplan/renderer.py:2312` |
+| `text:swimlane_label` | `font` | `RobotoCondensed-Bold` | `tk_swimlane_label.get("font") or _lane_label_style.font` | `blockplan/renderer.py:2313` |
+| `text:swimlane_label` | `size` | `11.88` ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:2255` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-band-cell` | `fill` | `none` | `_band_cell_style.fill` | `blockplan/renderer.py:743` |
-| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `blockplan/renderer.py:1233`, `blockplan/renderer.py:1622` |
-| `ec-event-name` | `font` | `RobotoCondensed-Light` | `_event_name_style.font` | `blockplan/renderer.py:1787` |
-| `ec-heading-cell` | `fill` | `none` | `_heading_cell_style.fill` | `blockplan/renderer.py:654`, `blockplan/renderer.py:783` |
-| `ec-vline` | `color` | *depends on the item being drawn* | `sr.stroke_color if sr.stroke_color is not None else _vline_style.color` | `blockplan/renderer.py:1038` |
-| `ec-vline` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray` | `blockplan/renderer.py:1041` |
-| `ec-vline` | `opacity` | *depends on the item being drawn* | `float(sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity)` | `blockplan/renderer.py:1040` |
-| `ec-vline` | `width` | *depends on the item being drawn* | `float(sr.stroke_width if sr.stroke_width is not None else _vline_style.width)` | `blockplan/renderer.py:1039` |
-| `ec-vline-fill` | `fill` | *depends on the item being drawn* | `sample_sr.fill_colors if sample_sr.fill_colors is not None else sample_sr.fill_color if sample_sr.fill_color is not None else _vline_fill_style.fill` | `blockplan/renderer.py:993` |
-| `ec-vline-fill` | `fill_opacity` | *depends on the item being drawn* | `sample_sr.fill_opacity if sample_sr.fill_opacity is not None else float(_vline_fill_style.fill_opacity)` | `blockplan/renderer.py:996` |
+| `ec-band-cell` | `fill` | `none` | `_band_cell_style.fill` | `blockplan/renderer.py:753` |
+| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `blockplan/renderer.py:1243`, `blockplan/renderer.py:1632` |
+| `ec-event-name` | `font` | `RobotoCondensed-Light` | `_event_name_style.font` | `blockplan/renderer.py:1797` |
+| `ec-heading-cell` | `fill` | `none` | `_heading_cell_style.fill` | `blockplan/renderer.py:664`, `blockplan/renderer.py:793` |
+| `ec-vline` | `color` | *depends on the item being drawn* | `sr.stroke_color if sr.stroke_color is not None else _vline_style.color` | `blockplan/renderer.py:1048` |
+| `ec-vline` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray` | `blockplan/renderer.py:1051` |
+| `ec-vline` | `opacity` | *depends on the item being drawn* | `float(sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity)` | `blockplan/renderer.py:1050` |
+| `ec-vline` | `width` | *depends on the item being drawn* | `float(sr.stroke_width if sr.stroke_width is not None else _vline_style.width)` | `blockplan/renderer.py:1049` |
+| `ec-vline-fill` | `fill` | *depends on the item being drawn* | `sample_sr.fill_colors if sample_sr.fill_colors is not None else sample_sr.fill_color if sample_sr.fill_color is not None else _vline_fill_style.fill` | `blockplan/renderer.py:1003` |
+| `ec-vline-fill` | `fill_opacity` | *depends on the item being drawn* | `sample_sr.fill_opacity if sample_sr.fill_opacity is not None else float(_vline_fill_style.fill_opacity)` | `blockplan/renderer.py:1006` |
 
-<details><summary>Settings (63)</summary>
+<details><summary>Settings (64)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
+| `blockplan.band_label_column_ratio` | `blockplan_band_label_column_ratio` | *unset* |
 | `blockplan.bottom_time_bands` | `blockplan_bottom_time_bands` | `[]` |
 | `blockplan.company_holiday_fill_color` | `blockplan_company_holiday_fill_color` | *unset* |
 | `blockplan.company_holiday_fill_opacity` | `blockplan_company_holiday_fill_opacity` | *unset* |
