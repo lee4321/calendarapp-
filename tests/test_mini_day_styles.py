@@ -24,6 +24,10 @@ class _StubDB(FakeCalendarDB):
 def _config():
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
+    # The resolver shades whichever daykey equals date.today() last, over every
+    # other layer; off here so the hardcoded daykeys below never collide with
+    # the real date the suite runs on.
+    config.shade_current_day = False
     return setfontsizes(config)
 
 
