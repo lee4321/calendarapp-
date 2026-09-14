@@ -34,7 +34,7 @@ continuation:
   icon_before: arrow-left
   icon_after: arrow-right
   icon_height: 8.0
-  icon_color: null
+  icon_color: black
 overflow:
   icon: warningtriangle
   color: red
@@ -158,6 +158,7 @@ mini_details:
     - 0.1
     - 0.12
   output_suffix: _details
+
 text_mini:
   cell_width: 2
   month_gap: 4
@@ -516,7 +517,7 @@ blockplan:
     - plum
     - khaki
   swimlanes:
-    - name: Engineering
+  #  - name: Engineering
   #  - name: Operations
   top_bands:
     - band: fiscal_quarter
