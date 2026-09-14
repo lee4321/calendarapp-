@@ -26,9 +26,8 @@ from renderers.details_page import (
     details_output_path,
     numbered_page_path,
 )
-from renderers.glyph_cache import get_pil_font
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
-from renderers.text_utils import fit_lines, shrinktext, string_width
+from renderers.text_utils import fit_lines, shrinktext, string_width, text_center_baseline
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
@@ -1393,7 +1392,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         x, anchor = (left, "start") if truncate else ((left + right) / 2.0, "middle")
         self._draw_text(
             x,
-            self._text_center_baseline(center_y, font_path, size),
+            text_center_baseline(center_y, font_path, size),
             text,
             font_name,
             size,
@@ -1401,17 +1400,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
             anchor=anchor,
             css_class=css_class,
         )
-
-    @staticmethod
-    def _text_center_baseline(center_y: float, font_path: str, size: float) -> float:
-        """Baseline that centres a line of capitals and figures on *center_y*.
-
-        Measured from the font's own cap height, so the ink -- not the
-        em box with its descender room -- sits in the middle of the bar.
-        """
-        probe = 100
-        top = get_pil_font(font_path, probe).getbbox("H", anchor="ls")[1]
-        return center_y + (-top / probe) * size / 2.0
 
     @staticmethod
     def _continuation_icon_style(config: CalendarConfig, *, before: bool = False) -> tuple[str, float, str]:

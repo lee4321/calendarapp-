@@ -611,7 +611,6 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `blockplan.duration_date_color` | `blockplan_duration_date_color` | *unset* |
 | `blockplan.duration_date_font` | `blockplan_duration_date_font` | `RobotoCondensed-Light` |
 | `blockplan.duration_date_format` | `blockplan_duration_date_format` | `MMM D` |
-| `blockplan.duration_date_inset` | `blockplan_duration_date_inset` | `2` |
 | `blockplan.duration_fill_opacity` | `blockplan_duration_fill_opacity` | `0.35` |
 | `blockplan.duration_icon_visible` | `blockplan_duration_icon_visible` | `false` |
 | `blockplan.duration_show_end_date` | `blockplan_duration_show_end_date` | `false` |

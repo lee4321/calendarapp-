@@ -30,6 +30,17 @@ def string_width(text: str, font_path: str, font_size: float) -> float:
     return font.getlength(text)
 
 
+def text_center_baseline(center_y: float, font_path: str, size: float) -> float:
+    """Baseline that centres a line of capitals and figures on *center_y*.
+
+    Measured from the font's own cap height, so the ink -- not the
+    em box with its descender room -- sits in the middle of a bar.
+    """
+    probe = 100
+    top = _get_font(font_path, probe).getbbox("H", anchor="ls")[1]
+    return center_y + (-top / probe) * size / 2.0
+
+
 def fittext(
     text: str,
     desired_width: float,
