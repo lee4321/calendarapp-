@@ -221,6 +221,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "duration_stroke_opacity"): "blockplan_duration_stroke_opacity",
     ("blockplan", "duration_stroke_dasharray"): "blockplan_duration_stroke_dasharray",
     ("blockplan", "duration_bar_height"): "blockplan_duration_bar_height",
+    ("blockplan", "duration_row_gap"): "blockplan_duration_row_gap",
     ("blockplan", "duration_icon_visible"): "blockplan_duration_icon_visible",
     ("blockplan", "duration_show_start_date"): "blockplan_duration_show_start_date",
     ("blockplan", "duration_show_end_date"): "blockplan_duration_show_end_date",

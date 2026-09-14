@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -1578,3 +1579,34 @@ def test_blockplan_band_can_override_the_theme_alignment(tmp_path):
     renderer.render(config, coords, [], _BlockPlanFlagDB())
 
     assert _heading_call(renderer, "Holidays")["anchor"] == "start"
+
+
+def _stacked_duration_bars(tmp_path, row_gap):
+    """Render three overlapping durations (three rows) in one lane; return bar rects top-down."""
+    config = _base_config(tmp_path / "blockplan_row_gap.svg")
+    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
+    config.blockplan_lane_split_ratio = 0.0
+    config.blockplan_duration_bar_height = 500.0  # far taller than a row
+    config.blockplan_duration_row_gap = row_gap
+    coords = BlockPlanLayout().calculate(config)
+    events = [
+        {"Task_Name": f"Bar {i}", "Start": "20260106", "End": "20260120", "Priority": 1, "Resource_Group": "dev"}
+        for i in range(3)
+    ]
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=events, db=_DummyDB())
+    bars = sorted((c for c in renderer.rect_calls if c.get("css_class") == "ec-duration-bar"), key=lambda c: c["y"])
+    assert len(bars) == 3
+    return bars
+
+
+def test_blockplan_duration_row_gap_sets_space_between_stacked_bars(tmp_path):
+    bars = _stacked_duration_bars(tmp_path, row_gap=6.0)
+    for upper, lower in pairwise(bars):
+        assert lower["y"] - (upper["y"] + upper["h"]) == pytest.approx(6.0)
+
+
+def test_blockplan_duration_row_gap_unset_keeps_95_percent_row_fill(tmp_path):
+    bars = _stacked_duration_bars(tmp_path, row_gap=None)
+    row_h = bars[1]["y"] - bars[0]["y"]
+    assert bars[0]["h"] == pytest.approx(row_h * 0.95)

@@ -1583,6 +1583,13 @@ class BlockPlanRenderer(BaseSVGRenderer):
         max_row = max((r for _, r in rows), default=0)
         row_count = max(1, max_row + 1)
         row_h = (bottom - top) / row_count
+        # Bars are centred in their rows, so the space between adjacent rows'
+        # bars is row_h - bar_h.  A configured row gap caps bar_h to keep it.
+        row_gap = config.blockplan_duration_row_gap
+        if row_gap is None:
+            bar_h = min(float(config.blockplan_duration_bar_height), row_h * 0.95)
+        else:
+            bar_h = max(0.5, min(float(config.blockplan_duration_bar_height), row_h - max(0.0, float(row_gap))))
 
         for event, row in rows:
             try:
@@ -1602,7 +1609,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
             has_notes = bool(event.notes and str(event.notes).strip())
             weekly_style_with_notes = bool(config.include_notes and has_notes)
 
-            bar_h = min(float(config.blockplan_duration_bar_height), row_h * 0.95)
             tk_event_name = self._tk("text:event_name")
             tk_event_notes = self._tk("text:event_notes")
             tk_dur_box = self._tk("box:duration")
