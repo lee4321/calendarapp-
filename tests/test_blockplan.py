@@ -136,6 +136,32 @@ def test_blockplan_renderer_renders_bands_and_lanes(tmp_path):
     assert renderer.line_calls
 
 
+def test_blockplan_without_swimlanes_draws_one_unlabeled_lane(tmp_path):
+    """No swimlanes configured → no lane labels, and every item is drawn even
+    when the theme's swimlane_rules route to lanes that don't exist."""
+    output = tmp_path / "blockplan_no_lanes.svg"
+    config = _base_config(output)
+    config.blockplan_swimlanes = create_calendar_config().blockplan_swimlanes
+    assert config.blockplan_swimlanes == []
+    config.theme_swimlane_rules = [
+        {"apply_to": "lane", "select": {"resource_group": ["dev"]}, "style": {"swimlane": "Engineering"}},
+    ]
+    coords = BlockPlanLayout().calculate(config)
+
+    events = [
+        {"Task_Name": "Sprint Build", "Start": "20260112", "End": "20260128", "Resource_Group": "dev"},
+        {"Task_Name": "Go/No-Go", "Start": "20260202", "End": "20260202", "Resource_Group": "ops"},
+    ]
+
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events, _DummyDB())
+
+    assert "Sprint Build" in renderer.text_values
+    assert "Go/No-Go" in renderer.text_values
+    for label in ("Engineering", "Operations", "Quality", "All Items", "Lane"):
+        assert label not in renderer.text_values
+
+
 def test_blockplan_uses_user_date_range_for_timebands(tmp_path):
     output = tmp_path / "blockplan_user_bounds.svg"
     config = _base_config(output)
