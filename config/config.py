@@ -1209,6 +1209,16 @@ class CalendarConfig:
     compactplan_show_duration_icons: bool = True
     compactplan_duration_icon_list: str = "darksquare"  # key into ICON_SETS
     compactplan_duration_icon_height: float = 8.0
+    # Each bar is three columns: start date | icon + name | end date.  The
+    # date columns are each duration_date_column_ratio of the bar's width and
+    # the icon and name are fitted to the middle one.  A color left None
+    # takes black or white, whichever reads against the bar.
+    compactplan_duration_show_start_date: bool = False
+    compactplan_duration_show_end_date: bool = False
+    compactplan_duration_date_format: str = "M/D"
+    compactplan_duration_date_column_ratio: float = 0.04
+    compactplan_duration_date_color: str | None = None
+    compactplan_duration_name_color: str | None = None
     compactplan_palette: list[str] = field(
         default_factory=lambda: [
             "#92d050",

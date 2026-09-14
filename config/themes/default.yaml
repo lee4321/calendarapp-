@@ -410,6 +410,15 @@ compact_plan:
   duration_icon_list: darksquare
   duration_icon_height: 8.0
   duration_icon_color: null
+  # each bar is three columns: start date | icon + name | end date; the
+  # date columns are each this fraction of the bar's width
+  duration_show_start_date: true
+  duration_show_end_date: true
+  duration_date_format: M/D
+  duration_date_column_ratio: 0.04
+  # null → black or white, whichever reads against the bar
+  duration_date_color: null
+  duration_name_color: null
   continuation_legend_text: activity continues
   continuation_section_gap: 4.0
   show_axis_legend: true
