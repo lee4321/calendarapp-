@@ -445,7 +445,6 @@ blockplan:
   timeband_line_width: null
   timeband_line_opacity: null
   timeband_line_dasharray: null
-  label_column_ratio: 0.08
   band_row_height: 10.0
   fiscal_year_start_month: 2
   week_start: 0
@@ -470,6 +469,7 @@ blockplan:
     - lightskyblue
   timeband_fill_palette: accent
   timeband_fill_opacity: 1.0
+  label_column_ratio: 0.05
   lane_heading_fill_color: none
   lane_label_font: OfficinaSans-Book
   lane_label_font_size: null
@@ -496,7 +496,8 @@ blockplan:
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.9
   duration_stroke_dasharray: null
-  duration_bar_height: 12
+  duration_bar_height: 14
+  duration_row_gap: 3
   duration_icon_visible: true
   name_text:
     font_name: OfficinaSans-Book
@@ -521,10 +522,10 @@ blockplan:
   #  - name: Operations
   top_bands:
     - band: fiscal_quarter
-      row_height: 18
+      row_height: 12
       stroke_color: black
     - band: month_2
-      row_height: 18
+      row_height: 12
       stroke_color: grey
     - band: date
       row_height: 12
@@ -1007,11 +1008,18 @@ style_rules:
   - name: blockplan_vline_1
     apply_to: box:vline
     select:
-      band: PI
-      value: PI 11
+      band: DoW
+      repeat: true
     style:
       align: end
       stroke: navy
+      fill: 
+        - '#727472'
+        - '#B2FFFF' 
+        - '#0095B6' 
+        - '#36454F' 
+        - '#001C3D'
+      fill_opacity: 0.2
       stroke_width: 1.0
       dasharray: 8,2
   - name: Route Engineering
