@@ -620,14 +620,14 @@ def test_key_is_written_to_its_own_page(tmp_path):
 
 
 def test_chart_page_carries_no_key(tmp_path):
-    """Nothing of the key -- group names, task names, the symbols -- is
-    drawn on the chart itself any more."""
+    """Nothing of the key -- group names, the symbols -- is drawn on the
+    chart itself any more.  (A bar carries its own task name.)"""
     renderer, _, _ = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
 
     chart = " ".join(renderer.chart_texts())
     assert "Team1" not in chart
-    assert "Sprint 1" not in chart
     assert "timeline" not in chart
+    assert "Key" not in chart
 
 
 def test_no_key_page_when_the_legend_is_off(tmp_path):
@@ -809,7 +809,7 @@ def test_a_long_key_continues_onto_further_pages(tmp_path):
 
 def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
     """With no key beneath it the chart's viewBox ends at its own ink --
-    which, for the lowest bar, is its start icon, taller than the bar."""
+    which, for the lowest bar, includes its start icon."""
     import re
 
     renderer, _, output = _render(
@@ -823,8 +823,20 @@ def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
     view_box = match.group(1)
     _, top, _, height = (float(v) for v in view_box.split())
     lowest = max(p.row_y for p in renderer._chart_key.placed.values())
-    icon_h = renderer._duration_icon_height(renderer._config)
+    icon_h = min(renderer._duration_icon_height(renderer._config), renderer._config.compactplan_duration_line_width)
     assert top + height >= lowest + icon_h / 2.0
+
+
+def test_a_start_icon_is_no_taller_than_its_bar(tmp_path):
+    renderer, _, _ = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260309", "20260320")],
+        compactplan_duration_line_width=5.0,
+        compactplan_duration_icon_height=8.0,
+    )
+
+    (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
+    assert icon["size"] == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -1176,3 +1188,176 @@ class TestColorRuleEngine:
         assert not engine
         assert engine.assign(self._event()) is None
         assert "no color" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Bar columns: start date | icon + name | end date
+# ---------------------------------------------------------------------------
+
+
+class _BarTextRenderer(_IconCaptureRenderer):
+    """Records each text's position, font and class."""
+
+    def __init__(self):
+        super().__init__()
+        self.text_calls: list[dict] = []
+
+    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
+        self.text_calls.append(
+            {"x": x, "y": y, "text": str(text), "font_name": font_name, "font_size": font_size, **kwargs}
+        )
+        super()._draw_text(x, y, text, font_name, font_size, **kwargs)
+
+
+def _render_bars(tmp_path, events, **overrides):
+    output = tmp_path / "compact.svg"
+    config = _base_config(output)
+    config.compactplan_show_legend = False
+    for key, value in overrides.items():
+        setattr(config, key, value)
+    renderer = _BarTextRenderer()
+    renderer.render(config, CompactPlanLayout().calculate(config), events, _IconDB())
+    assert renderer._chart_key is not None
+    placed = sorted(renderer._chart_key.placed.values(), key=lambda p: p.event.start)
+    return renderer, config, placed
+
+
+def _texts(renderer, css_class):
+    return [c for c in renderer.text_calls if c.get("css_class") == css_class]
+
+
+def test_a_bars_date_columns_are_each_four_percent_of_it_by_default(tmp_path):
+    renderer, config, (bar,) = _render_bars(tmp_path, [_dur("Build", "20260309", "20260320")])
+
+    x1, mid_x1, mid_x2, x2 = renderer._bar_columns(bar, config)
+    assert (x1, x2) == (bar.x1, bar.x2)
+    assert abs((mid_x1 - x1) - 0.04 * (x2 - x1)) < 1e-9
+    assert abs((x2 - mid_x2) - (mid_x1 - x1)) < 1e-9
+
+
+def test_bar_dates_are_off_unless_the_theme_turns_them_on(tmp_path):
+    renderer, _, _ = _render_bars(tmp_path, [_dur("Build", "20260309", "20260320")])
+
+    assert not _texts(renderer, "ec-duration-date")
+
+
+def test_bar_dates_are_centred_in_their_columns(tmp_path):
+    renderer, config, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260309", "20260320")],
+        compactplan_duration_show_start_date=True,
+        compactplan_duration_show_end_date=True,
+        compactplan_duration_line_width=10.0,
+        compactplan_duration_date_column_ratio=0.2,
+    )
+
+    x1, mid_x1, mid_x2, x2 = renderer._bar_columns(bar, config)
+    dates = {c["text"]: c for c in _texts(renderer, "ec-duration-date")}
+    assert set(dates) == {"3/9", "3/20"}
+    assert dates["3/9"]["anchor"] == "middle"
+    assert abs(dates["3/9"]["x"] - (x1 + mid_x1) / 2.0) < 1e-6
+    assert abs(dates["3/20"]["x"] - (mid_x2 + x2) / 2.0) < 1e-6
+
+
+def test_a_date_too_wide_for_its_column_is_left_out(tmp_path):
+    renderer, _, _ = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260309", "20260310")],
+        compactplan_duration_show_start_date=True,
+        compactplan_duration_date_format="MMMM D, YYYY",
+    )
+
+    assert not _texts(renderer, "ec-duration-date")
+
+
+def test_the_icon_and_name_start_the_middle_column(tmp_path):
+    renderer, config, (bar,) = _render_bars(
+        tmp_path, [_dur("Build", "20260309", "20260320")], compactplan_duration_line_width=10.0
+    )
+
+    _, mid_x1, _, _ = renderer._bar_columns(bar, config)
+    (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
+    assert abs(icon["x"] - mid_x1) < 1e-6
+    (name,) = _texts(renderer, "ec-event-name")
+    assert name["text"] == "Build"
+    assert abs(name["x"] - (mid_x1 + icon["size"] + 1.5)) < 1e-6
+
+
+def test_a_long_name_is_cut_to_fit_the_middle_column(tmp_path):
+    from config.config import get_font_path
+    from renderers.text_utils import string_width
+
+    long_name = "An extraordinarily long activity name that cannot possibly fit"
+    renderer, config, (bar,) = _render_bars(
+        tmp_path, [_dur(long_name, "20260309", "20260310")], compactplan_duration_line_width=10.0
+    )
+
+    _, _, mid_x2, _ = renderer._bar_columns(bar, config)
+    (name,) = _texts(renderer, "ec-event-name")
+    assert name["text"].endswith("…")
+    assert long_name.startswith(name["text"][:-1].rstrip())
+    width = string_width(name["text"], get_font_path(name["font_name"]), name["font_size"])
+    assert name["x"] + width <= mid_x2 + 1e-6
+
+
+def test_bar_content_is_no_taller_than_the_bar_and_centred_on_it(tmp_path):
+    from config.config import get_font_path
+
+    renderer, _, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260309", "20260320")],
+        compactplan_name_text_font_size=8.0,
+        compactplan_duration_line_width=6.0,
+        compactplan_duration_show_start_date=True,
+        compactplan_duration_date_column_ratio=0.2,
+    )
+
+    texts = _texts(renderer, "ec-event-name") + _texts(renderer, "ec-duration-date")
+    assert len(texts) == 2
+    for call in texts:
+        assert call["font_size"] <= 6.0
+        path = get_font_path(call["font_name"])
+        assert abs(call["y"] - renderer._text_center_baseline(bar.row_y, path, call["font_size"])) < 1e-6
+    (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
+    assert abs(icon["y"] - renderer._icon_baseline(bar.row_y, icon["size"])) < 1e-6
+
+
+def test_a_continuing_bars_end_date_fits_beside_its_arrow(tmp_path):
+    renderer, config, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260413", "20260515")],
+        compactplan_duration_show_end_date=True,
+        compactplan_duration_line_width=10.0,
+        compactplan_duration_date_column_ratio=0.3,
+        show_continuation_icon=True,
+    )
+
+    assert bar.continues
+    _, _, mid_x2, x2 = renderer._bar_columns(bar, config)
+    arrow_w = min(renderer._continuation_icon_style(config)[1], config.compactplan_duration_line_width)
+    (end,) = _texts(renderer, "ec-duration-date")
+    assert end["text"] == "5/15"
+    assert abs(end["x"] - (mid_x2 + x2 - arrow_w) / 2.0) < 1e-6
+
+
+def test_bar_text_reads_against_its_bar(tmp_path):
+    renderer, _, _ = _render_bars(
+        tmp_path, [_dur("Build", "20260309", "20260320", color="navy")], compactplan_duration_line_width=10.0
+    )
+
+    (name,) = _texts(renderer, "ec-event-name")
+    assert name["fill"] == "white"
+
+
+def test_a_continuation_arrow_is_no_taller_than_its_bar(tmp_path):
+    renderer, _, (bar,) = _render_bars(
+        tmp_path,
+        [_dur("Build", "20260413", "20260515")],
+        compactplan_duration_line_width=5.0,
+        continuation_icon_height=10.0,
+        show_continuation_icon=True,
+    )
+
+    assert bar.continues
+    (arrow,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-continuation-icon"]
+    assert arrow["size"] <= 5.0

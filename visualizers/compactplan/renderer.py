@@ -26,10 +26,11 @@ from renderers.details_page import (
     details_output_path,
     numbered_page_path,
 )
+from renderers.glyph_cache import get_pil_font
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
-from renderers.text_utils import string_width
+from renderers.text_utils import fit_lines, shrinktext, string_width
 from shared.data_models import Event
-from shared.date_utils import visible_days
+from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
@@ -57,6 +58,12 @@ _MILESTONE_ICON_HEADER_CLEARANCE = 1.0
 
 # Clear space between the ink of two adjacent duration rows.
 _DURATION_ROW_GAP = 1.5
+
+# A bar's text: the clear space between its start icon and name, and the
+# smallest a date or name may shrink to fit its column before the name is
+# cut short (a date that still does not fit is left out).
+_BAR_ICON_GAP = 1.5
+_BAR_MIN_FONT_SIZE = 3.0
 
 # Clear space between the top of the activity band and the lowest
 # milestone pennant, so labels never land on a duration bar.
@@ -505,12 +512,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 css_class="ec-duration-bar",
             )
 
-        # Start icons — one unique icon at the left (start-date) end of each duration line.
-        # Each duration gets its own icon by index, cycling through the configured list.
+        # Bar content — three columns per bar: start date | icon + name | end date.
         dur_icon_h = self._duration_icon_height(config)
-        if config.compactplan_show_duration_icons and dur_icon_h > 0:
-            for p in placed:
-                self._draw_start_icon(p, p.x1, p.row_y, dur_icon_h, config)
+        for p in placed:
+            self._draw_bar_content(p, dur_icon_h, config)
 
         # Continuation icons — drawn at the clamped right edge of any duration
         # line whose event extends beyond the timeline end date.
@@ -519,7 +524,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if show_continuation and has_continuations:
             for p in placed:
                 if p.continues:
-                    self._draw_continuation_icon(config, p.x2, p.row_y, p.color)
+                    self._draw_continuation_icon(
+                        config, p.x2, p.row_y, p.color, max_size=float(self._bar_stroke(p, config)["stroke_width"])
+                    )
 
         # Milestones
         for m in milestones:
@@ -555,7 +562,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # the top of the header bands to the lowest ink below the axis.
         # ------------------------------------------------------------------
         if config.shrink_to_content:
-            chart_bottom = self._chart_bottom(config, placed, max_content_y, axis_y, dur_icon_h)
+            chart_bottom = self._chart_bottom(config, placed, max_content_y, axis_y)
             content_w = round(area_w, 4)
             content_h = round(max(1.0, chart_bottom - bands_y), 4)
             vb_x = round(area_x, 4)
@@ -882,16 +889,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         icon_list: list[str] = ICON_SETS.get(list_name, []) if show_dur_icons else []
 
         # Rows must clear whatever is actually drawn on them.  The configured
-        # spacing is a request, not a licence to overlap: a 5pt bar carrying an
-        # 8pt start icon needs more than the 6pt default, or consecutive rows
-        # collide and the icons of one row sit on the bar of the next.
-        ink_h = line_w
-        if icon_list:
-            ink_h = max(
-                ink_h,
-                float(config.get_icon_style("ec-duration-icon").size or config.compactplan_duration_icon_height),
-            )
-        lane_spacing = max(float(config.compactplan_lane_spacing), ink_h + _DURATION_ROW_GAP)
+        # spacing is a request, not a licence to overlap.  A bar's start icon
+        # and text are capped at its height, so the bar is a row's ink.
+        lane_spacing = max(float(config.compactplan_lane_spacing), line_w + _DURATION_ROW_GAP)
 
         # Sort by start date for deterministic placement and stable icon assignment.
         sorted_durations = sorted(durations, key=lambda e: e.start)
@@ -1273,6 +1273,133 @@ class CompactPlanRenderer(BaseSVGRenderer):
         )
 
     @staticmethod
+    def _bar_columns(p: _PlacedDuration, config: CalendarConfig) -> tuple[float, float, float, float]:
+        """A bar's column edges: ``(x1, middle start, middle end, x2)``.
+
+        The start and end date columns are each
+        ``compactplan_duration_date_column_ratio`` of the bar's width -- the
+        same width whether or not a date is shown in them -- and the middle
+        column, holding the icon and name, takes the rest.
+        """
+        ratio = min(max(float(config.compactplan_duration_date_column_ratio), 0.0), 0.5)
+        date_w = (p.x2 - p.x1) * ratio
+        return p.x1, p.x1 + date_w, p.x2 - date_w, p.x2
+
+    def _draw_bar_content(self, p: _PlacedDuration, icon_h: float, config: CalendarConfig) -> None:
+        """Fill a bar's three columns, each centred on the bar's centre line.
+
+        Dates and name are sized to the bar's height, then shrunk to fit
+        their column; a name that still does not fit is cut short, a date
+        is left out.  A continuing bar's arrow takes the end of the end
+        column, so its date fits beside it.
+        """
+        x1, mid_x1, mid_x2, x2 = self._bar_columns(p, config)
+        stroke = self._bar_stroke(p, config)
+        bar_h = float(stroke["stroke_width"])
+        font_name = self._resolve_font(config.compactplan_name_text_font_name, config)
+        font_size = min(float(config.compactplan_name_text_font_size or 8.0), bar_h)
+        try:
+            font_path = get_font_path(font_name)
+        except KeyError:
+            font_path = ""
+
+        def draw_date(value: str, left: float, right: float) -> None:
+            day = self._parse_date(value)
+            if day is None or not font_path:
+                return
+            label = format_arrow_date(arrow.get(day), str(config.compactplan_duration_date_format))
+            color = config.compactplan_duration_date_color or _contrast_color(stroke["stroke"])
+            self._draw_fitted_text(
+                label, left, right, p.row_y, font_name, font_path, font_size, color, "ec-duration-date", truncate=False
+            )
+
+        if config.compactplan_duration_show_start_date:
+            draw_date(p.event.start, x1, mid_x1)
+        if config.compactplan_duration_show_end_date:
+            end_right = x2
+            if p.continues and config.show_continuation_icon:
+                end_right -= min(self._continuation_icon_style(config)[1], bar_h)
+            draw_date(p.event.end, mid_x2, end_right)
+
+        text_x = mid_x1
+        icon_size = min(icon_h, bar_h, mid_x2 - mid_x1)
+        if config.compactplan_show_duration_icons and p.icon_name and icon_size > 0:
+            self._draw_start_icon(p, mid_x1, p.row_y, icon_size, config)
+            text_x += icon_size + _BAR_ICON_GAP
+        if font_path:
+            color = config.compactplan_duration_name_color or _contrast_color(stroke["stroke"])
+            self._draw_fitted_text(
+                (p.event.task_name or "").strip(),
+                text_x,
+                mid_x2,
+                p.row_y,
+                font_name,
+                font_path,
+                font_size,
+                color,
+                "ec-event-name",
+                truncate=True,
+            )
+
+    def _draw_fitted_text(
+        self,
+        text: str,
+        left: float,
+        right: float,
+        center_y: float,
+        font_name: str,
+        font_path: str,
+        font_size: float,
+        color: str,
+        css_class: str,
+        *,
+        truncate: bool,
+    ) -> None:
+        """Draw *text* between *left* and *right*, centred on *center_y*.
+
+        The text shrinks toward :data:`_BAR_MIN_FONT_SIZE` to fit; past that
+        it is cut short with an ellipsis when *truncate* (a name, drawn from
+        *left*), else not drawn (a date, centred in its column).
+        """
+        width = right - left
+        if not text or width <= 0:
+            return
+        size = shrinktext(text, width, font_path, font_size, min_fontsize=_BAR_MIN_FONT_SIZE)
+
+        def measure(s: str) -> float:
+            return string_width(s, font_path, size)
+
+        if measure(text) > width:
+            if not truncate:
+                return
+            lines = fit_lines(text, width, 1, measure)
+            text = lines[0] if lines else ""
+            if not text or measure(text) > width:
+                return
+        x, anchor = (left, "start") if truncate else ((left + right) / 2.0, "middle")
+        self._draw_text(
+            x,
+            self._text_center_baseline(center_y, font_path, size),
+            text,
+            font_name,
+            size,
+            fill=color,
+            anchor=anchor,
+            css_class=css_class,
+        )
+
+    @staticmethod
+    def _text_center_baseline(center_y: float, font_path: str, size: float) -> float:
+        """Baseline that centres a line of capitals and figures on *center_y*.
+
+        Measured from the font's own cap height, so the ink -- not the
+        em box with its descender room -- sits in the middle of the bar.
+        """
+        probe = 100
+        top = get_pil_font(font_path, probe).getbbox("H", anchor="ls")[1]
+        return center_y + (-top / probe) * size / 2.0
+
+    @staticmethod
     def _continuation_icon_style(config: CalendarConfig) -> tuple[str, float, str]:
         """``(icon, size, configured color)`` of the continuation icon.
 
@@ -1358,21 +1485,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
         placed: list[_PlacedDuration],
         content_bottom: float,
         axis_y: float,
-        dur_icon_h: float,
     ) -> float:
-        """Lowest ink the chart drew: its bars, their icons, the axis.
+        """Lowest ink the chart drew: its bars and the axis.
 
-        Start and continuation icons are taller than the bar they ride
-        and centred on it, so the bottom row's icons reach past the
-        bar's own edge; a viewBox ending at the bar would clip them.
+        A bar's icons and text are capped at its height, so nothing on
+        the bottom row reaches past the bar's own edge.
         """
         bottom = content_bottom
         if placed:
             half = float(config.compactplan_duration_line_width) / 2.0
-            if config.compactplan_show_duration_icons and any(p.icon_name for p in placed):
-                half = max(half, dur_icon_h / 2.0)
-            if config.show_continuation_icon and any(p.continues for p in placed):
-                half = max(half, self._continuation_icon_style(config)[1] / 2.0)
             bottom = max(bottom, max(p.row_y for p in placed) + half)
         if config.compactplan_show_axis:
             bottom = max(bottom, axis_y + float(config.compactplan_axis_width) / 2.0)
@@ -1560,7 +1681,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
             # A bar never outgrows the row it keys.
             stroke["stroke_width"] = min(float(stroke["stroke_width"]), size)
             self._draw_swatch(x, center_y, length, stroke)
-            icon_h = min(self._duration_icon_height(config), size * 1.25)
+            # As on the chart, the start icon is no taller than its bar.
+            icon_h = min(self._duration_icon_height(config), float(stroke["stroke_width"]))
             if config.compactplan_show_duration_icons and icon_h > 0:
                 self._draw_start_icon(p, x, center_y, icon_h, config)
             if p.continues and config.show_continuation_icon:
@@ -1569,7 +1691,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     self._key_arrow_end(config, x, width, size),
                     center_y,
                     p.color,
-                    max_size=size * 1.25,
+                    max_size=float(stroke["stroke_width"]),
                 )
 
         return draw
