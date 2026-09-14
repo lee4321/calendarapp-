@@ -251,8 +251,6 @@ class BlockPlanRenderer(BaseSVGRenderer):
         top_bands = list(getattr(config, "blockplan_top_time_bands", []) or [])
         bottom_bands = list(getattr(config, "blockplan_bottom_time_bands", []) or [])
         swimlanes = list(getattr(config, "blockplan_swimlanes", []) or [])
-        if not swimlanes:
-            swimlanes = [{"name": "All Items", "match": {}}]
 
         label_col_w = min(
             area_w * 0.45,
@@ -1152,7 +1150,20 @@ class BlockPlanRenderer(BaseSVGRenderer):
         in the optional unmatched lane
         (``blockplan_show_unmatched_lane`` / ``blockplan_unmatched_lane_name``).
         Each returned dict: {name, lane (the def), events, durations}.
+
+        With no lane defs there are no swimlanes: every item goes into a
+        single unlabeled lane and ``swimlane_rules`` routing is skipped.
         """
+        if not lanes:
+            return [
+                {
+                    "name": "",
+                    "lane": {},
+                    "events": [e for e in events if not e.is_duration and config.includeevents],
+                    "durations": [e for e in events if e.is_duration and config.includedurations],
+                }
+            ]
+
         result: list[dict[str, Any]] = []
         for lane in lanes:
             name = str(lane.get("name", "Lane")).strip() or "Lane"

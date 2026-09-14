@@ -1002,16 +1002,8 @@ class CalendarConfig:
         ]
     )
     blockplan_bottom_time_bands: list[dict[str, Any]] = field(default_factory=list)
-    blockplan_swimlanes: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {
-                "name": "Engineering",
-                "match": {"resource_groups": ["engineering", "dev"]},
-            },
-            {"name": "Operations", "match": {"resource_groups": ["operations", "ops"]}},
-            {"name": "Quality", "match": {"resource_groups": ["quality", "qa"]}},
-        ]
-    )
+    # Empty → no swimlanes: one unlabeled lane holds every item.
+    blockplan_swimlanes: list[dict[str, Any]] = field(default_factory=list)
     blockplan_header_font_size: float | None = None
     blockplan_header_label_color: str = "black"
     blockplan_header_label_opacity: float = 1.0
