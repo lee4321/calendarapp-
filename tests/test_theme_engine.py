@@ -179,12 +179,21 @@ class TestThemeEngineApply:
         engine.apply(config)
         return engine, config
 
-    def test_corporate_theme_applies_header_color(self):
-        _, config = self._load_builtin("corporate")
-        assert config.header_left_font_color == "midnightblue"
+    # header.*.font_color and weekly.day_box.number_color only feed the
+    # no-style_rules fallback styles, so no shipped theme sets them; check the
+    # mapping with inline theme data instead.
+    def test_header_center_color_maps_to_config(self):
+        engine = ThemeEngine()
+        engine._theme_data = {"header": {"center": {"font_color": "midnightblue"}}}
+        config = create_calendar_config()
+        engine.apply(config)
+        assert config.header_center_font_color == "midnightblue"
 
-    def test_dark_theme_applies_day_box_color(self):
-        _, config = self._load_builtin("dark")
+    def test_day_box_number_color_maps_to_config(self):
+        engine = ThemeEngine()
+        engine._theme_data = {"weekly": {"day_box": {"number_color": "whitesmoke"}}}
+        config = create_calendar_config()
+        engine.apply(config)
         assert config.day_box_number_color == "whitesmoke"
 
     def test_vibrant_theme_applies_event_color(self):
@@ -208,7 +217,6 @@ class TestThemeEngineApply:
 
     def test_watermark_styling_applied(self):
         _, config = self._load_builtin("dark")
-        assert config.watermark_color == "dimgrey"
         assert config.watermark_opacity == 0.15
         assert config.watermark_rotation_angle == 0.0
         assert config.watermark_image_rotation_angle == 0.0

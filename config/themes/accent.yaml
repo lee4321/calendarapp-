@@ -11,35 +11,17 @@ base:
 header:
   font_family: Roboto-Bold
   font_color: palette:Accent:4
-  left:
-    font_color: palette:Accent:4
-  center:
-    font_color: palette:Accent:4
-  right:
-    font_family: Roboto-BoldItalic
-    font_color: palette:Accent:4
 footer:
   font_family: RobotoCondensed-Light
   font_color: palette:Accent:7
-  left:
-    font_color: palette:Accent:4
-  center:
-    font_color: palette:Accent:4
-  right:
-    font_family: Roboto-BoldItalic
-    font_color: palette:Accent:4
 events:
   icon_color: palette:Accent:4
   item_placement_order:
     - milestones
     - events
     - durations
-durations:
-  icon_color: palette:Accent:4
-  stroke_dasharray: null
 watermark:
   text: null
-  color: palette:Accent:1
   font_family: Roboto-Bold
   opacity: 0.15
   font_size: null
@@ -48,7 +30,6 @@ watermark:
   image_rotation_angle: 0.0
 overflow:
   icon: send-backward
-  color: orange
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -70,31 +51,14 @@ colors:
     c: palette:Accent:1
     d: palette:Accent:7
 weekly:
-  day_names:
-    font_family: RobotoCondensed-Bold
-    font_color: palette:Accent:4
   week_numbers:
-    font_family: RobotoCondensed-Bold
-    font_color: palette:Accent:7
     label_format: W{num:02d}
   day_box:
     stroke_color: palette:Accent:7
     stroke_opacity: 0.2
     stroke_width: 2
     stroke_dasharray: null
-    fill_color: palette:Accent:0
-    fill_opacity: 0.15
-    number_font: Roboto-Bold
-    number_color: palette:Accent:4
-    icon_color: palette:Accent:4
-    font_color: palette:Accent:7
     hash_pattern_opacity: 0.2
-  name_text:
-    font_name: RobotoCondensed-Regular
-    font_color: palette:Accent:7
-  notes_text:
-    font_name: RobotoCondensed-Italic
-    font_color: palette:Accent:6
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
@@ -102,13 +66,9 @@ mini_calendar:
   cell_font: JuliaMono-Regular
   cell_bold_font: Roboto-Bold
   cell_font_size: null
-  title_font: Roboto-Bold
   title_font_size: null
   title_format: MMMM YYYY
-  title_color: palette:Accent:4
-  header_font: JuliaMono-Regular
   header_font_size: null
-  header_color: palette:Accent:7
   day_number_glyphs: null
   day_number_digits: null
   day_color: palette:Accent:7
@@ -122,20 +82,12 @@ mini_calendar:
   milestone_stroke_width: 1.0
   milestone_stroke_opacity: 1.0
   current_day_color: palette:Accent:2
-  week_number_font: JuliaMono-Regular
   week_number_font_size: null
-  week_number_color: palette:Accent:7
   week_number_label_format: W{num}
   grid_line_color: lightgrey
   grid_line_width: 0.25
   grid_line_opacity: 0.5
   grid_line_dasharray: null
-  cell_box_stroke_dasharray: null
-  strikethrough_stroke_dasharray: null
-  hash_line_dasharray: null
-  duration_bar_stroke_dasharray: null
-  duration_bar_stroke_opacity: null
-  day_box: null
   # event / holiday / special-day icons in a day cell's corners, drawn
   # alongside the day number rather than in place of it: up to four, filled
   # top-right first and then clockwise
@@ -143,19 +95,9 @@ mini_calendar:
   event_icon_opacity: 0.6     # keeps the day number legible underneath
 mini_details:
   title_text: Event Details
-  title_font: RobotoCondensed-Bold
   title_font_size: null
-  title_color: palette:Accent:4
-  header_font: RobotoCondensed-Bold
-  header_font_size: null
-  header_color: palette:Accent:7
   name_text:
-    font_name: RobotoCondensed-Light
     font_color: palette:Accent:7
-  notes_text:
-    font_name: RobotoCondensed-Italic
-    font_color: palette:Accent:6
-  separator_stroke_dasharray: null
   headers:
     - Start Date
     - Name / Description
@@ -187,7 +129,6 @@ candybar:
   month_col_ratio: 1.6     # month-box column width / day-cell width
   grid_lines: true
   grid_line_color: lightgrey
-  day_color: black
   weekend_fill: null        # Sat/Sun day-cell tint (null = off)
   weekend_opacity: 0.15
   month_shading: false       # alternate day-cell tint per month
@@ -198,7 +139,6 @@ candybar:
     font: RobotoCondensed-Bold
     color: teal
     opacity: 1.0
-    bold: false
     anchor: middle
     rotation: 0
   month_box:
@@ -231,9 +171,6 @@ timeline:
   tick_label_gap: null
   # the whole distance; wins over the gap
   tick_label_offset_y: null
-  background_color: ''
-  axis_color: palette:Accent:3
-  axis_opacity: 0.9
   axis_width: 2
   tick_color: palette:Accent:1
   date_format: MMM D
@@ -242,22 +179,14 @@ timeline:
   today_label_text: Today
   today_label_offset_y: 10.0
   today_line_color: palette:Accent:5
-  today_label_color: palette:Accent:3
   marker_stroke_color: palette:Accent:4
   marker_stroke_width: 1.0
   marker_radius: 4.2
   icon_size: 10.0
   duration_offset_y: 44.0
   duration_lane_gap_y: 8.0
-  label_stroke_width: 1.0
   label_fill_opacity: 0.0
-  axis_stroke_dasharray: null
-  tick_stroke_dasharray: null
-  today_line_dasharray: null
-  label_stroke_dasharray: null
-  duration_bar_stroke_dasharray: null
   connector_stroke_dasharray: null
-  duration_bracket_stroke_dasharray: null
   top_colors:
     - palette:Accent:4
     - palette:Accent:0
@@ -279,7 +208,6 @@ timeline:
     font_color: palette:Accent:1
   date:
     font_family: Roboto-Bold
-    font_color: palette:Accent:3
 timeline_events:
   box_width: 150
   # how point-event boxes are placed: "packed" puts each box's leading
@@ -361,12 +289,8 @@ pit:
     marker_end_size: 5.0
   leader_primary:
     color: "palette:PuBuGn:5"
-    marker_end_size: 6.0
   leader_secondary:
     color: "palette:Accent:2"
-    dasharray: "3,2"
-    marker_start: "none"
-    marker_start_size: 3.0
   today_line:
     show: true
     color: "palette:Accent:1"
@@ -389,11 +313,9 @@ pit:
   label:
     stroke_color: "#cccccc"
     stroke_width: 0.5
-    stroke_dasharray: null
     fill_color: "palette:PuBuGn:1"
     fill_opacity: 0.85
     pattern: null
-    pattern_opacity: 0.12
     text_color: "#1b1f24"
     corner_radius: 2.0
     padding_x: 6.0
@@ -403,17 +325,10 @@ pit:
   label_palette: PuBuGn
 compact_plan:
   palette_name: Accent
-  axis_color: darkgrey
-  axis_dasharray: 2,5
-  text:
-    font_color: '#333333'
-  milestone_color: '#333333'
   bands:
     - date_range
     - week
-  legend_area_ratio: 0.25
 blockplan:
-  background_color: none
   grid_color: palette:Accent:7
   grid_opacity: 0.4
   grid_line_width: 1.0
@@ -423,54 +338,33 @@ blockplan:
   timeband_line_opacity: null
   timeband_line_dasharray: null
   label_column_ratio: 0.1
-  band_row_height: 10.0
   fiscal_year_start_month: 1
   week_start: 0
   show_unmatched_lane: true
   unmatched_lane_name: Other
   lane_match_mode: first
-  header_font: RobotoCondensed-Bold
   header_font_size: null
   header_label_color: palette:Accent:4
   header_label_opacity: 1.0
   header_label_align_h: right
-  header_heading_fill_color: none
-  band_font: RobotoCondensed-Bold
   band_font_size: null
-  timeband_label_color: palette:Accent:7
-  timeband_label_opacity: 1.0
-  timeband_fill_color: none
   timeband_fill_palette:
     - accent
   timeband_fill_opacity: 1.0
-  lane_heading_fill_color: none
-  lane_label_font: RobotoCondensed-Bold
   lane_label_font_size: null
-  lane_label_color: palette:Accent:4
   lane_label_align_h: right
   lane_label_align_v: middle
   lane_label_rotation: 0
   event_show_date: false
-  event_date_font: RobotoCondensed-Light
   event_date_font_size: null
-  event_date_color: palette:Accent:7
   event_date_format: YYYY-MM-DD
   marker_radius: 2.0
-  vertical_line_color: palette:Accent:5
-  vertical_line_width: 1.5
-  vertical_line_dasharray: null
-  vertical_line_opacity: 0.85
-  vertical_line_fill_color: none
-  vertical_line_fill_opacity: 0.2
   duration_fill_opacity: 0.35
   duration_stroke_color: null
   duration_stroke_width: 1.0
   duration_stroke_opacity: 0.9
   duration_stroke_dasharray: null
   duration_bar_height: 8.0
-  name_text:
-    font_name: RobotoCondensed-Light
-    font_color: palette:Accent:4
   palette:
     - palette:Accent:4
     - palette:Accent:0
@@ -527,22 +421,6 @@ style_rules:
       visualizer: timeline
     style:
       opacity: 0.25
-  - name: base font — papersize override
-    apply_to: text:base
-    select:
-      papersize:
-        - letter
-        - ledger
-    style:
-      size: 18
-  - name: base font — papersize override
-    apply_to: text:base
-    select:
-      papersize:
-        - 3x5
-        - 5x8
-    style:
-      size: 8
   - name: define text:heading
     define: text
     as: heading
@@ -786,19 +664,6 @@ style_rules:
     style:
       fill: none
       stroke: none
-  - name: define box:swimlane_content
-    define: box
-    as: swimlane_content
-    style:
-      fill: none
-      stroke: none
-  - name: define box:swimlane_heading
-    define: box
-    as: swimlane_heading
-    style:
-      fill: '#fafafa'
-      stroke: lightgrey
-      stroke_width: 0.5
   - name: define box:vline
     define: box
     as: vline
@@ -818,13 +683,6 @@ style_rules:
     style:
       font: Roboto-Regular
       size: 7
-      color: black
-  - name: define text:base
-    define: text
-    as: base
-    style:
-      font: Roboto-Regular
-      size: 9
       color: black
   - name: define text:duration_date
     define: text
@@ -868,13 +726,6 @@ style_rules:
       font: RobotoCondensed-Light
       size: 8
       color: '#333333'
-  - name: define text:milestone_label
-    define: text
-    as: milestone_label
-    style:
-      font: Roboto-Regular
-      size: 7
-      color: black
   - name: define text:swimlane_label
     define: text
     as: swimlane_label

@@ -13,6 +13,7 @@ CLI arguments always override theme values.
 
 from __future__ import annotations
 
+import functools
 import logging
 from collections.abc import Iterator
 from pathlib import Path
@@ -294,7 +295,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan.name_text", "font_name"): "compactplan_name_text_font_name",
     ("compact_plan.name_text", "font_size"): "compactplan_name_text_font_size",
     ("compact_plan.notes_text", "font_name"): "compactplan_notes_text_font_name",
-    ("compact_plan.notes_text", "font_size"): "compactplan_notes_text_font_size",
     ("compact_plan", "show_axis"): "compactplan_show_axis",
     ("compact_plan", "axis_width"): "compactplan_axis_width",
     ("compact_plan", "axis_padding"): "compactplan_axis_padding",
@@ -590,6 +590,136 @@ _NEW_FORMAT_SECTIONS = frozenset({"style_rules"})
 # not to FONT_REGISTRY.
 FONT_VALIDATION_SKIP_SECTIONS = frozenset({"excelblockplan"})
 
+# Papersize-conditioned `size_rule` lists, per section: (rule key, config
+# field).  For single-field sections, 'font_size' sets that field; for
+# multi-field sections a generic 'font_size' applies to every field.
+_SIZE_RULE_TARGETS: dict[str, list[tuple[str, str]]] = {
+    "header.left": [("font_size", "header_left_font_size")],
+    "header.center": [("font_size", "header_center_font_size")],
+    "header.right": [("font_size", "header_right_font_size")],
+    "footer.left": [("font_size", "footer_left_font_size")],
+    "footer.center": [("font_size", "footer_center_font_size")],
+    "footer.right": [("font_size", "footer_right_font_size")],
+    "weekly.day_names": [("font_size", "day_name_font_size")],
+    "weekly.week_numbers": [("font_size", "week_number_font_size")],
+    "events": [("font_size", "event_text_font_size")],
+    "mini_calendar": [
+        ("cell_font_size", "mini_cell_font_size"),
+        ("title_font_size", "mini_title_font_size"),
+        ("header_font_size", "mini_header_font_size"),
+        ("week_number_font_size", "mini_week_number_font_size"),
+    ],
+    "mini_details": [
+        ("title_font_size", "mini_details_title_font_size"),
+    ],
+    "blockplan": [
+        ("header_font_size", "blockplan_header_font_size"),
+        ("band_font_size", "blockplan_band_font_size"),
+        ("lane_label_font_size", "blockplan_lane_label_font_size"),
+    ],
+}
+
+# `colors:` keys read by ThemeEngine._apply_color_maps().  months /
+# fiscal_periods / resource_groups are free-form maps, read whole.
+_COLOR_KEYS = frozenset(
+    {
+        "months",
+        "fiscal_periods",
+        "resource_groups",
+        "hash_lines",
+        "group_colors",
+        "month_palette",
+        "fiscal_palette",
+        "group_palette",
+        "federal_holiday.color",
+        "federal_holiday.opacity",
+        "federal_holiday.alpha",
+        "company_holiday.color",
+        "company_holiday.opacity",
+        "company_holiday.alpha",
+    }
+)
+
+# `colors.mini_calendar` keys -> theme override fields.  title_color /
+# header_color / week_number_color were dropped in the Phase 2 strip pass —
+# no renderer reads them post-migration (text:month_title / text:label /
+# text:week_number tokens cover those styling slots).
+_MINI_COLOR_FIELDS: dict[str, str] = {
+    "day_color": "theme_mini_day_color",
+    "adjacent_month_color": "theme_mini_adjacent_month_color",
+    "holiday_color": "theme_mini_holiday_color",
+    "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
+    "milestone_color": "theme_mini_milestone_color",
+    "current_day_color": "theme_mini_current_day_color",
+}
+
+# Sub-keys of the nested `pit:` blocks that ThemeEngine._apply_pit_blocks()
+# reads.  Keep in step with that method: find_unconsumed_keys() trusts this
+# table, so a key read there but missing here is reported as dead.
+_PIT_BLOCK_KEYS: dict[str, frozenset[str]] = {
+    "axis": frozenset(
+        {"color", "width", "marker_start", "marker_start_size", "marker_end", "marker_end_size", "marker_size"}
+    ),
+    "date_text": frozenset({"color", "font_name", "font_size", "offset", "placement"}),
+    "leader": frozenset(
+        {
+            "color",
+            "width",
+            "dasharray",
+            "opacity",
+            "linecap",
+            "linejoin",
+            "marker_start",
+            "marker_start_size",
+            "marker_end",
+            "marker_end_size",
+            "end_stub",
+        }
+    ),
+    "leader_primary": frozenset({"color"}),
+    "leader_secondary": frozenset({"color"}),
+    "today_line": frozenset(
+        {
+            "show",
+            "color",
+            "width",
+            "dasharray",
+            "opacity",
+            "linecap",
+            "linejoin",
+            "label",
+            "label_color",
+            "label_font_name",
+            "label_font_size",
+            "label_position",
+            "marker_start",
+            "marker_start_size",
+            "marker_end",
+            "marker_end_size",
+        }
+    ),
+    "arrow_head": frozenset({"color"}),
+    "label": frozenset(
+        {
+            "stroke_color",
+            "stroke_width",
+            "fill_color",
+            "fill_opacity",
+            "pattern",
+            "text_color",
+            "corner_radius",
+            "padding_x",
+            "padding_y",
+            "icon_size",
+            "icon_gap",
+        }
+    ),
+}
+
+# Sections consumed as a whole (rule lists, catalogs, override maps); their
+# inner keys are validated by their own parsers, not by find_unconsumed_keys.
+_WHOLESALE_SECTIONS = frozenset({"style_rules", "swimlane_rules", "element_overrides", "time_bands"})
+
 
 def is_font_key(key: Any) -> bool:
     """True if ``key`` names a theme setting whose value is a FONT_REGISTRY name.
@@ -734,6 +864,13 @@ class ThemeEngine:
                 "Theme '%s' has unknown sections: %s",
                 self._theme_name,
                 unknown,
+            )
+
+        for key_path in find_unconsumed_keys(self._theme_data):
+            logger.warning(
+                "Theme '%s' key '%s' is not read by any visualizer and has no effect",
+                self._theme_name,
+                key_path,
             )
 
         for font_path, font in find_unregistered_fonts(self._theme_data):
@@ -921,34 +1058,8 @@ class ThemeEngine:
         generic 'font_size' is provided, it applies to all font-size fields in
         that section.
         """
-        section_targets: dict[str, list[tuple[str, str]]] = {
-            "header.left": [("font_size", "header_left_font_size")],
-            "header.center": [("font_size", "header_center_font_size")],
-            "header.right": [("font_size", "header_right_font_size")],
-            "footer.left": [("font_size", "footer_left_font_size")],
-            "footer.center": [("font_size", "footer_center_font_size")],
-            "footer.right": [("font_size", "footer_right_font_size")],
-            "weekly.day_names": [("font_size", "day_name_font_size")],
-            "weekly.week_numbers": [("font_size", "week_number_font_size")],
-            "events": [("font_size", "event_text_font_size")],
-            "mini_calendar": [
-                ("cell_font_size", "mini_cell_font_size"),
-                ("title_font_size", "mini_title_font_size"),
-                ("header_font_size", "mini_header_font_size"),
-                ("week_number_font_size", "mini_week_number_font_size"),
-            ],
-            "mini_details": [
-                ("title_font_size", "mini_details_title_font_size"),
-            ],
-            "blockplan": [
-                ("header_font_size", "blockplan_header_font_size"),
-                ("band_font_size", "blockplan_band_font_size"),
-                ("lane_label_font_size", "blockplan_lane_label_font_size"),
-            ],
-        }
-
         papersize = getattr(config, "papersize", "")
-        for section_path, targets in section_targets.items():
+        for section_path, targets in _SIZE_RULE_TARGETS.items():
             rule = self._resolve_size_rule_match(section_path, papersize)
             if rule is None:
                 continue
@@ -1558,21 +1669,8 @@ class ThemeEngine:
             if val is not None:
                 setattr(config, config_field, val)
 
-        # Mini calendar theme color overrides
-        # title_color / header_color / week_number_color were dropped in
-        # the Phase 2 strip pass — no renderer reads them post-migration
-        # (text:month_title / text:label / text:week_number tokens cover
-        # those styling slots).
         mc = colors.get("mini_calendar", {})
         if isinstance(mc, dict):
-            _MINI_COLOR_FIELDS = {
-                "day_color": "theme_mini_day_color",
-                "adjacent_month_color": "theme_mini_adjacent_month_color",
-                "holiday_color": "theme_mini_holiday_color",
-                "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
-                "milestone_color": "theme_mini_milestone_color",
-                "current_day_color": "theme_mini_current_day_color",
-            }
             for yaml_key, config_field in _MINI_COLOR_FIELDS.items():
                 if yaml_key in mc:
                     setattr(config, config_field, mc[yaml_key])
@@ -2037,3 +2135,57 @@ class ThemeEngine:
         swimlane_rules = self._theme_data.get("swimlane_rules")
         if isinstance(swimlane_rules, list):
             config.theme_swimlane_rules = swimlane_rules
+
+
+@functools.cache
+def _consumed_theme_paths() -> frozenset[str]:
+    """Every dotted theme key path that ThemeEngine.apply() reads."""
+    paths: set[str] = {"theme.name", "theme.version", "theme.description", "base.font_size", "base.size_rule"}
+    for section_path, key in THEME_TO_CONFIG_MAP:
+        paths.add(f"{section_path}.{key}")
+        # _resolve_value() cascade: parent section, then base.
+        top, _, rest = section_path.partition(".")
+        if rest:
+            paths.add(f"{top}.{key}")
+        paths.add(f"base.{key}")
+    paths.update(f"{section}.size_rule" for section in _SIZE_RULE_TARGETS)
+    paths.update(f"layout.margin.{side}" for side in ("top", "right", "bottom", "left"))
+    paths.update(f"colors.{key}" for key in _COLOR_KEYS)
+    paths.update(f"colors.mini_calendar.{key}" for key in _MINI_COLOR_FIELDS)
+    for block, keys in _PIT_BLOCK_KEYS.items():
+        paths.update(f"pit.{block}.{key}" for key in keys)
+    paths.update(f"{section}.{key}" for section, key, _ in ThemeEngine._BAND_PLACEMENTS)
+    return frozenset(paths)
+
+
+def find_unconsumed_keys(data: Any) -> list[str]:
+    """Return the dotted paths of theme keys that nothing reads.
+
+    A key is consumed when THEME_TO_CONFIG_MAP reads it (directly or through
+    the parent-section / base cascade), or one of the dedicated handlers
+    does (size_rule, layout.margin, colors, the pit sub-blocks, band
+    placement lists).  A consumed key is not descended into, so structured
+    values (margin dicts, tick lists) count as one key.  Unknown top-level
+    sections are left to the section check, and wholesale sections
+    (style_rules, time_bands, ...) to their own parsers.
+    """
+    if not isinstance(data, dict):
+        return []
+    consumed = _consumed_theme_paths()
+    found: list[str] = []
+
+    def walk(node: Any, path: str) -> None:
+        if path in consumed:
+            return
+        if isinstance(node, dict) and node:
+            for key, value in node.items():
+                walk(value, f"{path}.{key}")
+        else:
+            found.append(path)
+
+    for section, body in data.items():
+        if section not in VALID_SECTIONS or section in _WHOLESALE_SECTIONS or not isinstance(body, dict):
+            continue
+        for key, value in body.items():
+            walk(value, f"{section}.{key}")
+    return found

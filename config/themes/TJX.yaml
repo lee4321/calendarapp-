@@ -17,12 +17,8 @@ events:
   icon_color: blue
   item_placement_order:
     - priority
-durations:
-  icon_color: navy
-  stroke_dasharray: null
 watermark:
   text: null
-  color: blue
   font_family: PlaywriteDEGrund-VariableFont_wght
   opacity: 0.5
   font_size: null
@@ -37,7 +33,6 @@ continuation:
   icon_color: white
 overflow:
   icon: warningtriangle
-  color: red
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'
@@ -59,32 +54,17 @@ colors:
     c: red
     d: grey
 weekly:
-  day_names:
-    font_family: PlaywriteDEGrund-VariableFont_wght
-    font_color: black
   week_numbers:
-    font_family: PlaywriteDEGrund-VariableFont_wght
-    font_color: yellow
     label_format: W{num:02d}
   day_box:
     stroke_color: black
     stroke_opacity: 0.5
     stroke_width: 1
     stroke_dasharray: null
-    fill_color: null
-    fill_opacity: 0.25
-    number_font: PlaywriteDEGrund-VariableFont_wght
-    number_color: null
-    icon_color: red
-    font_color: black
     hash_pattern_opacity: 0.1
   name_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: black
     font_size: 18
   notes_text:
-    font_name: AlumniSansPinstripe-Italic
-    font_color: grey
     font_size: 14
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
@@ -93,13 +73,9 @@ mini_calendar:
   cell_font: JuliaMono-Regular
   cell_bold_font: Caveat-Bold
   cell_font_size: 48
-  title_font: Caveat-Bold
   title_font_size: 18
   title_format: MMMM YYYY
-  title_color: navy
-  header_font: JuliaMono-Regular
   header_font_size: 12
-  header_color: grey
   day_number_glyphs: null
   day_number_digits: null
   day_color: black
@@ -113,9 +89,7 @@ mini_calendar:
   milestone_stroke_width: 1.0
   milestone_stroke_opacity: 1.0
   current_day_color: black
-  week_number_font: JuliaMono-Regular
   week_number_font_size: 12
-  week_number_color: Blue
   week_number_label_format: W{num}
   grid_lines: true
   grid_line_color: grey
@@ -126,12 +100,6 @@ mini_calendar:
   month_outline_width: 0.75
   month_outline_opacity: 0.6
   month_outline_dasharray: null
-  cell_box_stroke_dasharray: null
-  strikethrough_stroke_dasharray: null
-  hash_line_dasharray: null
-  duration_bar_stroke_dasharray: null
-  duration_bar_stroke_opacity: null
-  day_box: null
   # event / holiday / special-day icons in a day cell's corners, drawn
   # alongside the day number rather than in place of it: up to four, filled
   # top-right first and then clockwise
@@ -139,19 +107,9 @@ mini_calendar:
   event_icon_opacity: 0.6     # keeps the day number legible underneath
 mini_details:
   title_text: Event Details
-  title_font: RobotoCondensed-Bold
   title_font_size: null
-  title_color: navy
-  header_font: RobotoCondensed-Bold
-  header_font_size: null
-  header_color: grey
   name_text:
-    font_name: RobotoCondensed-Light
     font_color: black
-  notes_text:
-    font_name: RobotoCondensed-LightItalic
-    font_color: darkgrey
-  separator_stroke_dasharray: null
   headers:
     - Start Date
     - Name / Description
@@ -202,9 +160,6 @@ timeline:
   tick_label_gap: null
   # the whole distance; wins over the gap
   tick_label_offset_y: null
-  background_color: none
-  axis_color: lightgrey
-  axis_opacity: 0.9
   axis_width: 3
   tick_color: grey
   date_format: M/D
@@ -213,24 +168,15 @@ timeline:
   today_label_text: Today
   today_label_offset_y: 10.0
   today_line_color: grey
-  today_label_color: grey
   marker_stroke_color: ''
   marker_stroke_width: 1.0
   marker_radius: 4.0
   icon_size: 14
-  event_axis_padding: 24.0
   duration_offset_y: 20.0
   duration_lane_gap_y: 20.0
   duration_icon_visible: true
-  label_stroke_width: 1.0
   label_fill_opacity: 0.25
-  axis_stroke_dasharray: null
-  tick_stroke_dasharray: null
-  today_line_dasharray: null
-  label_stroke_dasharray: null
-  duration_bar_stroke_dasharray: null
   connector_stroke_dasharray: 4 2
-  duration_bracket_stroke_dasharray: null
   top_colors:
     - deepskyblue
     - gold
@@ -263,7 +209,6 @@ timeline:
     font_size: 14
   date:
     font_family: PlaywriteDEGrund-VariableFont_wght
-    font_color: grey
   ticks:
     - unit: month
       label_format: MMM D
@@ -318,9 +263,6 @@ timeline_durations:
   date_color: black
 compact_plan:
   palette: null
-  axis_color: '#7f7f7f'
-  axis_dasharray: 4.0,1.0
-  milestone_color: black
   header_bottom_y: 8
   band_row_height: 10.0
   federal_holiday_fill_color: tomato
@@ -332,20 +274,14 @@ compact_plan:
   federal_holiday_icon: us
   text:
     font_name: RobotoCondensed-Light
-    font_color: black
-    font_opacity: 1.0
-  axis_opacity: 0.5
   axis_padding: 5.0
   axis_width: 1.0
   show_axis: false
   duration_line_width: 9.0
-  duration_opacity: 1.0
-  duration_stroke_dasharray: null
   lane_spacing: 9.0
   show_duration_icons: true
   duration_icon_list: darksquare
   duration_icon_height: 8.0
-  duration_icon_color: white
   palette_name: null
   milestone_flag_height: 9.0
   milestone_flag_width: 7.0
@@ -353,42 +289,25 @@ compact_plan:
   show_milestone_labels: false
   name_text:
     font_name: RobotoCondensed-Light
-    font_color: '#595959'
-    font_opacity: 1.0
   show_legend: true
   legend_swatch_width: 10.0
   continuation_legend_text: activity continues
-  continuation_section_gap: 4.0
   bands:
     - band: month_2
       row_height: 25
     - date_range
     - dow_2
-  legend_area_ratio: 0.25
 blockplan:
-  background_color: none
   grid_color: black
   grid_opacity: 1.0
   grid_line_width: 1.0
   grid_dasharray: null
-  timeband_fill_color:
-    - iron
-    - ivory
-    - old silver
-    - nickel
-    - honeydew
-    - smoke
-    - bubbles
-    - bondi blue
-    - anti-flash white
-    - roman silver
   timeband_fill_opacity: 1.0
   timeband_line_color: black
   timeband_line_width: 0.75
   timeband_line_opacity: 1.0
   timeband_line_dasharray: null
   label_column_ratio: 0.05
-  band_row_height: 40.0
   fiscal_year_start_month: 2
   week_start: 0
   duration_date_font_size: 8
@@ -398,20 +317,14 @@ blockplan:
   show_unmatched_lane: false
   unmatched_lane_name: Other
   lane_match_mode: first
-  header_font: PlaywriteDEGrund-VariableFont_wght
   header_font_size: 11
   header_label_color: Green
   header_label_opacity: 1.0
   header_label_align_h: right
-  header_heading_fill_color: none
-  band_font: PlaywriteDEGrund-VariableFont_wght
   band_font_size: 14
-  timeband_label_opacity: 1.0
   company_holiday_fill_color: gold
   weekend_fill_color: '#E8E8E8'
-  lane_heading_fill_color: none
   lane_label_font_size: 14
-  lane_label_color: Red
   lane_label_align_h: center
   lane_label_align_v: middle
   lane_label_rotation: -90
@@ -434,9 +347,6 @@ blockplan:
   duration_stroke_dasharray: null
   duration_bar_height: 40
   duration_icon_visible: true
-  name_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: grey
   notes_text:
     font_name: PlaywriteDEGrund-VariableFont_wght
     font_color: grey
@@ -445,9 +355,7 @@ blockplan:
   duration_date_format: M/D
   duration_date_color: Black
   event_show_date: false
-  event_date_font: PlaywriteDEGrund-VariableFont_wght
   event_date_font_size: null
-  event_date_color: Black
   event_date_format: MM/DD
   marker_radius: 2.0
   top_bands:
@@ -538,23 +446,6 @@ style_rules:
       visualizer: timeline
     style:
       opacity: 0.75
-  - name: base font — papersize override
-    apply_to: text:base
-    select:
-      papersize:
-        - letter
-        - ledger
-        - tabloid
-    style:
-      size: 14
-  - name: base font — papersize override
-    apply_to: text:base
-    select:
-      papersize:
-        - 3x5
-        - 5x8
-    style:
-      size: 12
   - name: define text:heading
     define: text
     as: heading
@@ -1023,19 +914,6 @@ style_rules:
     style:
       fill: none
       stroke: none
-  - name: define box:swimlane_content
-    define: box
-    as: swimlane_content
-    style:
-      fill: none
-      stroke: none
-  - name: define box:swimlane_heading
-    define: box
-    as: swimlane_heading
-    style:
-      fill: '#fafafa'
-      stroke: lightgrey
-      stroke_width: 0.5
   - name: define box:vline
     define: box
     as: vline
@@ -1055,13 +933,6 @@ style_rules:
     style:
       font: Roboto-Regular
       size: 7
-      color: black
-  - name: define text:base
-    define: text
-    as: base
-    style:
-      font: Roboto-Regular
-      size: 9
       color: black
   - name: define text:duration_date
     define: text
@@ -1098,13 +969,6 @@ style_rules:
       font: RobotoCondensed-Light
       size: 8
       color: '#666666'
-  - name: define text:milestone_label
-    define: text
-    as: milestone_label
-    style:
-      font: Roboto-Regular
-      size: 7
-      color: black
   - name: define text:swimlane_label
     define: text
     as: swimlane_label

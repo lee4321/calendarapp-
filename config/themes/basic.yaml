@@ -117,14 +117,12 @@ timeline_events:
   # share of a box's inner width given to the icon / date column
   icon_column_ratio: 0.15
 compact_plan:
-  legend_area_ratio: 0.25
   bands:
     - date_range
 blockplan:
   fiscal_year_start_month: 1
   week_start: 0
   label_column_ratio: 0.1
-  band_row_height: 12.0
   lane_match_mode: first
   show_unmatched_lane: true
   unmatched_lane_name: Other
@@ -164,13 +162,6 @@ time_bands:
     label: Date Range
     label_format: '{start} – {end}'
 style_rules:
-  - name: define text:base
-    define: text
-    as: base
-    style:
-      font: Roboto-Regular
-      size: 9
-      color: black
   - name: define text:heading
     define: text
     as: heading
@@ -283,13 +274,6 @@ style_rules:
       font: Roboto-Regular
       size: 7
       color: black
-  - name: define text:milestone_label
-    define: text
-    as: milestone_label
-    style:
-      font: Roboto-Regular
-      size: 7
-      color: black
   - name: define box:default
     define: box
     as: default
@@ -357,19 +341,6 @@ style_rules:
       fill: none
       stroke: grey
       stroke_width: 0.5
-  - name: define box:swimlane_heading
-    define: box
-    as: swimlane_heading
-    style:
-      fill: '#fafafa'
-      stroke: lightgrey
-      stroke_width: 0.5
-  - name: define box:swimlane_content
-    define: box
-    as: swimlane_content
-    style:
-      fill: none
-      stroke: none
   - name: define box:band
     define: box
     as: band
@@ -377,12 +348,6 @@ style_rules:
       fill: none
       stroke: lightgrey
       stroke_width: 0.5
-  - name: define box:band_heading
-    define: box
-    as: band_heading
-    style:
-      fill: none
-      stroke: none
   - name: define line:grid
     define: line
     as: grid

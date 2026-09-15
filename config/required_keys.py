@@ -140,7 +140,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("blockplan.fiscal_year_start_month", "setting", "int", frozenset({"blockplan"})),
     RequiredKey("blockplan.week_start", "setting", "int", frozenset({"blockplan"})),
     RequiredKey("blockplan.label_column_ratio", "setting", "float", frozenset({"blockplan"})),
-    RequiredKey("blockplan.band_row_height", "setting", "float", frozenset({"blockplan"})),
     RequiredKey("blockplan.lane_match_mode", "setting", "first | all", frozenset({"blockplan"})),
     RequiredKey("blockplan.show_unmatched_lane", "setting", "bool", frozenset({"blockplan"})),
     RequiredKey("blockplan.unmatched_lane_name", "setting", "str", frozenset({"blockplan"})),
@@ -153,8 +152,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("gantt.row_height", "setting", "float", frozenset({"gantt"})),
     RequiredKey("gantt.header_row_height", "setting", "float", frozenset({"gantt"})),
     RequiredKey("gantt.band_row_height", "setting", "float", frozenset({"gantt"})),
-    # ── compact_plan ──
-    RequiredKey("compact_plan.legend_area_ratio", "setting", "float (0-1)", frozenset({"compactplan"})),
     # ── excelblockplan ──
     RequiredKey("excelblockplan.font_name", "setting", "str (system font name)", frozenset({"excelblockplan"})),
     RequiredKey("excelblockplan.font_size", "setting", "int", frozenset({"excelblockplan"})),
@@ -164,7 +161,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     # reference it.  Placement references are validated by the parser.)
     # ── style_rules tokens ──
     # Text tokens required by SVG renderers
-    RequiredKey("style_rules:text:base", "token", "text token", _SVG),
     RequiredKey("style_rules:text:heading", "token", "text token", _SVG),
     RequiredKey("style_rules:text:body", "token", "text token", _SVG),
     RequiredKey("style_rules:text:caption", "token", "text token", _SVG),
@@ -183,9 +179,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("style_rules:text:fiscal_label", "token", "text token", frozenset({"weekly", "blockplan"})),
     RequiredKey("style_rules:text:swimlane_label", "token", "text token", frozenset({"blockplan"})),
     RequiredKey("style_rules:text:band_label", "token", "text token", frozenset({"blockplan", "compactplan"})),
-    RequiredKey(
-        "style_rules:text:milestone_label", "token", "text token", frozenset({"timeline", "blockplan", "compactplan"})
-    ),
     # Box tokens
     RequiredKey("style_rules:box:default", "token", "box token", _SVG),
     RequiredKey("style_rules:box:cell", "token", "box token", _SVG),
@@ -196,8 +189,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("style_rules:box:duration", "token", "box token", _SVG),
     RequiredKey("style_rules:box:milestone", "token", "box token", frozenset({"timeline", "blockplan", "compactplan"})),
     RequiredKey("style_rules:box:vline", "token", "box token", frozenset({"blockplan"})),
-    RequiredKey("style_rules:box:swimlane_heading", "token", "box token", frozenset({"blockplan"})),
-    RequiredKey("style_rules:box:swimlane_content", "token", "box token", frozenset({"blockplan"})),
     RequiredKey("style_rules:box:band", "token", "box token", frozenset({"blockplan", "compactplan"})),
     # Line tokens
     RequiredKey("style_rules:line:grid", "token", "line token", _SVG),
@@ -247,7 +238,7 @@ def check_required_keys(
 
     Scoping is lazy per design §11.2: a key is only checked when its
     ``used_by`` set includes the active visualizer.  This means a weekly
-    render does not need ``compact_plan.legend_area_ratio`` and vice
+    render does not need ``mini_calendar.title_format`` and vice
     versa.
     """
     missing: list[RequiredKey] = []

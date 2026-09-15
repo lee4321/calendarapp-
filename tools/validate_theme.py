@@ -54,7 +54,7 @@ from config.required_keys import (
     check_required_keys,
     format_missing_key_error,
 )
-from config.theme_engine import find_unregistered_fonts
+from config.theme_engine import find_unconsumed_keys, find_unregistered_fonts
 from config.unified_theme import ThemeError, parse_theme
 
 
@@ -198,6 +198,11 @@ def main(argv: list[str] | None = None) -> int:
         for font_path, font in unregistered:
             print(f"  {font!r} at {font_path}", file=sys.stderr)
         print(file=sys.stderr)
+
+    # Keys no visualizer reads look like working settings to anyone copying
+    # from the theme; warn so they get removed.
+    for key_path in find_unconsumed_keys(raw):
+        print(f"  warn  {key_path} is not read by any visualizer; remove it")
 
     # Warn about catalog tokens that fell back to defaults.
     fallback = _tokens_missing_for_catalog(theme, requested)

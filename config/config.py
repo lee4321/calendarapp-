@@ -1196,7 +1196,6 @@ class CalendarConfig:
     compactplan_name_text_font_name: str | None = None
     compactplan_name_text_font_size: float | None = None
     compactplan_notes_text_font_name: str | None = None
-    compactplan_notes_text_font_size: float | None = None
     compactplan_show_axis: bool = True
     compactplan_axis_width: float = 1.75
     compactplan_axis_padding: float = 4.0
