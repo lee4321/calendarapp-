@@ -14,25 +14,9 @@ layout:
     right: 0.5in
     bottom: 0.5in
     left: 0.5in
-header:
-  left:
-    text: '{theme.name}'
-  center:
-    text: '{calendar.range}'
-  right:
-    text: '{today}'
-footer:
-  left:
-    text: ''
-  center:
-    text: ''
-  right:
-    text: p. {page}
 events:
   item_placement_order:
     - priority
-durations:
-  stroke_dasharray: null
 watermark:
   text: ''
   rotation_angle: 45.0
@@ -66,7 +50,6 @@ mini_calendar:
   icon_set: squares
   title_format: MMMM YYYY
   week_number_label_format: W{num}
-  icon_set: squares
   show_adjacent: true          # render leading/trailing adjacent-month days
   circle_milestones: true      # circle day numbers that carry a milestone
   # current_day_color: red     # highlight color for today's day number
@@ -159,7 +142,6 @@ timeline_events:
   # share of a box's inner width given to the icon / date column
   icon_column_ratio: 0.15
 compact_plan:
-  legend_area_ratio: 0.28
   bands:
     - date_range
     - week
@@ -170,17 +152,28 @@ blockplan:
   fiscal_year_start_month: 2
   week_start: 0
   label_column_ratio: 0.1
-  band_row_height: 12.0
   lane_match_mode: first
   show_unmatched_lane: true
   unmatched_lane_name: Other
+  # Per-lane colors: fill_color tints the heading cell, label_color the lane
+  # name, timeline_fill_color the lane's content area.
   swimlanes:
     - name: Engineering
+      fill_color: '#dceaff'
+      label_color: navy
     - name: Design
+      fill_color: '#e7defb'
+      label_color: indigo
     - name: QA
       split_ratio: 0.0
+      fill_color: '#ffe1de'
+      label_color: firebrick
     - name: Operations
+      fill_color: '#fff3d8'
+      label_color: darkgoldenrod
     - name: Other
+      fill_color: '#f0f0f0'
+      label_color: dimgrey
   top_bands:
     - fiscal_quarter
     - month
@@ -270,13 +263,11 @@ excelblockplan:
   font_name: Calibri
   font_size: 9
   band_row_height: 18.0
+  # A placement may set its own excel_font_name / excel_font_size; bands
+  # without them use font_name / font_size above.
   top_bands:
-    - fiscal_quarter
+    - { band: fiscal_quarter, excel_font_name: Calibri, excel_font_size: 10 }
     - month
-  band_fonts:
-    fiscal_quarter:
-      excel_font_name: Calibri
-      excel_font_size: 10
   vertical_lines: []
 time_bands:
   # Shared catalog of band definitions.  Visualizers do not define bands
@@ -307,21 +298,6 @@ time_bands:
     label: Date Range
     label_format: '{start} – {end}'
 style_rules:
-  # Per-visualizer token override example: timeline duration-bar fill opacity.
-  # (Bars in other visualizers read the shared ec-duration-bar element style.)
-  # - name: timeline duration-bar fill opacity
-  #   apply_to: line:duration_bar
-  #   select:
-  #     visualizer: timeline
-  #   style:
-  #     opacity: 0.75
-  - name: define text:base
-    define: text
-    as: base
-    style:
-      font: FiraSans-Light
-      size: 9
-      color: black
   - name: define text:heading
     define: text
     as: heading
@@ -434,13 +410,6 @@ style_rules:
       font: FiraSans-Light
       size: 7
       color: black
-  - name: define text:milestone_label
-    define: text
-    as: milestone_label
-    style:
-      font: Roboto-Bold
-      size: 7
-      color: navy
   - name: text:heading — small paper
     apply_to: text:heading
     select:
@@ -520,19 +489,6 @@ style_rules:
       fill: none
       stroke: grey
       stroke_width: 0.5
-  - name: define box:swimlane_heading
-    define: box
-    as: swimlane_heading
-    style:
-      fill: '#f4f4f4'
-      stroke: grey
-      stroke_width: 0.5
-  - name: define box:swimlane_content
-    define: box
-    as: swimlane_content
-    style:
-      fill: none
-      stroke: none
   - name: define box:band
     define: box
     as: band
@@ -541,12 +497,6 @@ style_rules:
       stroke: grey
       stroke_width: 0.5
       stroke_opacity: 0.5
-  - name: define box:band_heading
-    define: box
-    as: band_heading
-    style:
-      fill: none
-      stroke: none
   - name: define line:grid
     define: line
     as: grid
@@ -651,25 +601,15 @@ style_rules:
     style:
       stroke: crimson
       stroke_width: 1.5
-  - name: priority 1 — event name
-    apply_to: text:event_name
-    select:
-      priority: 1
-    style:
-      color: crimson
-      weight: bold
   - name: completed items — visual fade
     apply_to:
       - box:event
       - box:duration
-      - text:event_name
     select:
       percent_complete:
         min: 100
     style:
       fill: '#f4f4f4'
-      color: grey
-      italic: true
   - name: critical milestone — marker
     apply_to: icon:milestone
     select:
@@ -678,13 +618,6 @@ style_rules:
       icon: flag
       color: red
       size: 14
-  - name: critical milestone — label
-    apply_to: text:milestone_label
-    select:
-      priority_min: 1
-    style:
-      color: red
-      weight: bold
   - name: month band — segment fill
     apply_to: box:band
     select:
@@ -710,66 +643,6 @@ style_rules:
       stroke_width: 1.0
       stroke_opacity: 0.33
       dasharray: 5,5
-  - name: Engineering — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Engineering
-    style:
-      fill: '#dceaff'
-  - name: Engineering — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Engineering
-    style:
-      color: navy
-  - name: Design — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Design
-    style:
-      fill: '#e7defb'
-  - name: Design — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Design
-    style:
-      color: indigo
-  - name: QA — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: QA
-    style:
-      fill: '#ffe1de'
-  - name: QA — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: QA
-    style:
-      color: firebrick
-  - name: Operations — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Operations
-    style:
-      fill: '#fff3d8'
-  - name: Operations — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Operations
-    style:
-      color: darkgoldenrod
-  - name: Other — heading
-    apply_to: box:swimlane_heading
-    select:
-      swimlane: Other
-    style:
-      fill: '#f0f0f0'
-  - name: Other — label
-    apply_to: text:swimlane_label
-    select:
-      swimlane: Other
-    style:
-      color: dimgrey
   - name: route engineering tasks
     apply_to: lane
     select:

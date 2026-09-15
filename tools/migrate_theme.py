@@ -29,7 +29,7 @@ Transformations performed
       line_styles.<n>   → style_rules: define: line,  as: <n>
       icon_styles.<n>   → style_rules: define: icon,  as: <n>
   2.  Embedded size_rules on a text style → flat style_rules with select.papersize
-      base.size_rule                       → style_rules on text:base
+      (base.size_rule / base.font_size stay in base — the theme engine reads them)
   3.  element_styles.<ec-name>: { foo_style: bar } → style_rules entry
         apply_to: element, select.element, style.use
   4.  apply_to: day_box        → apply_to: box:day
@@ -40,12 +40,10 @@ Transformations performed
         fill_color       → fill
         stroke_color     → stroke
         stroke_dasharray → dasharray
-        timeline_fill_color → fill on box:swimlane_content
         font_size        → size  (inside size_rule and embedded size_rules)
   6.  swimlane_rules entries → style_rules with apply_to: lane, style.swimlane
-  7.  blockplan.swimlanes[i].(fill_color / timeline_fill_color / label_*) →
-        style_rules entries on box:swimlane_heading / box:swimlane_content /
-        text:swimlane_label, keyed by select.swimlane = lane name.
+  7.  blockplan.swimlanes[i].(fill_color / timeline_fill_color / label_*) stay
+        on the lane — the blockplan renderer reads them there.
   8.  blockplan.swimlanes[i].match → apply_to: lane rule with the same predicates.
   9.  axis: stanza dissolved per design §8.2.
  10.  Timeband catalog: blockplan.top_time_bands + .bottom_time_bands +
@@ -53,7 +51,7 @@ Transformations performed
         by structural keys; a top-level time_bands map is emitted; placement
         lists become lists of references.  Per-band styling lifts into
         style_rules on box:band / text:band_label, keyed by select.band.
-        excel_font_name / excel_font_size move into excelblockplan.band_fonts;
+        excel_font_name / excel_font_size stay on the excelblockplan placement;
         a legacy `excelheader` section is emitted as `excelblockplan`.
  11.  Nested style.text sub-bags inside content rules are flattened into peer
         rules with apply_to: text:<role> using the role-to-target table.
@@ -239,6 +237,8 @@ RETIRED_SECTIONS: set[str] = {
 # Keys that survive on the "base" section after migration.
 BASE_RETAINED_KEYS: set[str] = {
     "font_family",
+    "font_size",
+    "size_rule",
     "default_missing_icon",
 }
 
@@ -577,25 +577,6 @@ def _convert_axis_stanza(
     return rules
 
 
-def _convert_base_size_rule(base: dict[str, Any]) -> list[dict[str, Any]]:
-    sr_list = base.get("size_rule") if isinstance(base, dict) else None
-    if not sr_list:
-        return []
-    rules = []
-    for sr in sr_list:
-        when = sr.get("when", {})
-        body = {("size" if k == "font_size" else k): v for k, v in sr.items() if k != "when"}
-        rules.append(
-            {
-                "name": "base font — papersize override",
-                "apply_to": "text:base",
-                "select": when,
-                "style": body,
-            }
-        )
-    return rules
-
-
 def _flatten_text_subbag(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Per design §9.12: nested style.text → peer rules with apply_to: text:<role>."""
     out: list[dict[str, Any]] = []
@@ -683,53 +664,14 @@ def _convert_swimlane_rules(rules: list[Any]) -> list[dict[str, Any]]:
     return out
 
 
-def _convert_swimlane_visuals(swimlanes: list[Any], *, fname: str) -> list[dict[str, Any]]:
-    """Per design §9.9: lift swimlane visual props into style_rules entries."""
+def _convert_swimlane_routing(swimlanes: list[Any]) -> list[dict[str, Any]]:
+    """Turn each lane's legacy ``match:`` block into an ``apply_to: lane`` rule."""
     out: list[dict[str, Any]] = []
     for lane in swimlanes or []:
         if not isinstance(lane, dict):
             continue
         lane_name = lane.get("name")
-        if not lane_name:
-            continue
-        select = {"swimlane": lane_name}
-        if lane.get("fill_color") not in (None, "none"):
-            out.append(
-                {
-                    "name": f"swimlane {lane_name} — heading",
-                    "apply_to": "box:swimlane_heading",
-                    "select": select,
-                    "style": {"fill": lane["fill_color"]},
-                }
-            )
-        if lane.get("timeline_fill_color") not in (None, "none"):
-            out.append(
-                {
-                    "name": f"swimlane {lane_name} — content",
-                    "apply_to": "box:swimlane_content",
-                    "select": select,
-                    "style": {"fill": lane["timeline_fill_color"]},
-                }
-            )
-        label_style: dict[str, Any] = {}
-        if lane.get("label_color") is not None:
-            label_style["color"] = lane["label_color"]
-        if lane.get("label_align_h") is not None:
-            label_style["align_h"] = lane["label_align_h"]
-        if lane.get("label_align_v") is not None:
-            label_style["align_v"] = lane["label_align_v"]
-        if lane.get("label_rotation") is not None:
-            label_style["rotation"] = lane["label_rotation"]
-        if label_style:
-            out.append(
-                {
-                    "name": f"swimlane {lane_name} — label",
-                    "apply_to": "text:swimlane_label",
-                    "select": select,
-                    "style": label_style,
-                }
-            )
-        if isinstance(lane.get("match"), dict):
+        if lane_name and isinstance(lane.get("match"), dict):
             out.append(
                 {
                     "name": f"route to swimlane {lane_name}",
@@ -741,18 +683,14 @@ def _convert_swimlane_visuals(swimlanes: list[Any], *, fname: str) -> list[dict[
     return out
 
 
-def _strip_swimlane_visuals(swimlanes: list[Any]) -> list[dict[str, Any]]:
-    """Keep only structural keys (name, split_ratio) on each lane."""
-    out: list[dict[str, Any]] = []
-    for lane in swimlanes or []:
-        if not isinstance(lane, dict):
-            continue
-        keep = {}
-        for k in ("name", "split_ratio"):
-            if k in lane:
-                keep[k] = lane[k]
-        out.append(keep)
-    return out
+def _strip_swimlane_match(swimlanes: list[Any]) -> list[dict[str, Any]]:
+    """Drop each lane's legacy ``match:`` block.
+
+    Lane visuals (fill_color, timeline_fill_color, label_color, label_align_h,
+    label_align_v, label_rotation) stay on the lane — the blockplan renderer
+    reads them there, and no style_rules selector binds a lane name.
+    """
+    return [{k: v for k, v in lane.items() if k != "match"} for lane in swimlanes or [] if isinstance(lane, dict)]
 
 
 # ─── Timeband catalog (design §10) ──────────────────────────────────────────
@@ -852,7 +790,6 @@ def _convert_timebands(
     dict[str, list[dict[str, Any] | str]],  # blockplan placements
     list[dict[str, Any] | str] | None,  # compact_plan.bands
     list[dict[str, Any] | str] | None,  # excelblockplan.top_bands
-    dict[str, dict[str, Any]],  # excelblockplan.band_fonts
     list[dict[str, Any]],  # style_rules entries for band styling
 ]:
     """Walk every legacy band list, deduplicate into the catalog, return refs."""
@@ -868,7 +805,9 @@ def _convert_timebands(
                 continue
             key = catalog.ingest(b)
             ref: dict[str, Any] | str
-            geo = {gk: b[gk] for gk in _BAND_GEOMETRY_KEYS if gk in b}
+            # Excel font overrides stay on the placement, where excelblockplan reads them.
+            placement_keys = (*_BAND_GEOMETRY_KEYS, *(_BAND_XLSX_KEYS if visualizer == "excelblockplan" else ()))
+            geo = {gk: b[gk] for gk in placement_keys if gk in b}
             if geo:
                 geo_with_band = OrderedDict([("band", key)])
                 for k, v in geo.items():
@@ -928,22 +867,12 @@ def _convert_timebands(
             compact_placements = cp
 
     excel_placements: list[dict[str, Any] | str] | None = None
-    excel_band_fonts: dict[str, dict[str, Any]] = {}
     if isinstance(excelblockplan, dict):
-        bands = excelblockplan.get("top_time_bands") or []
-        ep = _process_list(bands, "excelblockplan")
+        ep = _process_list(excelblockplan.get("top_time_bands"), "excelblockplan")
         if ep:
             excel_placements = ep
-        # Move excel_font_name / excel_font_size into band_fonts keyed by catalog
-        for b in bands:
-            if not isinstance(b, dict):
-                continue
-            xfont = {k: b[k] for k in _BAND_XLSX_KEYS if k in b}
-            if xfont:
-                key = catalog.ingest(b)
-                excel_band_fonts[key] = xfont
 
-    return blockplan_placements, compact_placements, excel_placements, excel_band_fonts, style_rules
+    return blockplan_placements, compact_placements, excel_placements, style_rules
 
 
 # ─── Top-level converter ────────────────────────────────────────────────────
@@ -958,13 +887,13 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     if isinstance(src.get("theme"), dict):
         out["theme"] = dict(src["theme"])
 
-    # 2. base — strip size_rule (becomes style_rules), keep retained keys
+    # 2. base — keep retained keys (font_size / size_rule are read by the
+    #    theme engine directly)
     if isinstance(src.get("base"), dict):
         base_raw = src["base"]
         kept = {k: v for k, v in base_raw.items() if k in BASE_RETAINED_KEYS}
         if kept:
             out["base"] = kept
-        style_rules.extend(_convert_base_size_rule(base_raw))
 
     # 3. layout / header / footer / events / durations / watermark / fiscal / colors
     #    Non-styling content carries through; styling lifts into style_rules.
@@ -1027,7 +956,7 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
 
     # 9. Timeband catalog consolidation (design §10)
     catalog = _TimebandCatalog()
-    bp_placements, cp_placements, ex_placements, ex_band_fonts, band_style_rules = _convert_timebands(
+    bp_placements, cp_placements, ex_placements, band_style_rules = _convert_timebands(
         blockplan=blockplan_in,
         compact_plan=compact_in,
         excelblockplan=excel_in,
@@ -1041,8 +970,8 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
             if k in ("top_time_bands", "bottom_time_bands", "time_bands"):
                 continue
             if k == "swimlanes":
-                style_rules.extend(_convert_swimlane_visuals(v, fname=fname))
-                bp_out["swimlanes"] = _strip_swimlane_visuals(v)
+                style_rules.extend(_convert_swimlane_routing(v))
+                bp_out["swimlanes"] = _strip_swimlane_match(v)
                 continue
             bp_out[k] = v
         for dst_key, refs in bp_placements.items():
@@ -1057,8 +986,6 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
             excel_out[k] = v
         if ex_placements is not None:
             excel_out["top_bands"] = ex_placements
-        if ex_band_fonts:
-            excel_out["band_fonts"] = ex_band_fonts
         out["excelblockplan"] = excel_out
 
     if compact_in is not None and cp_placements is not None:
