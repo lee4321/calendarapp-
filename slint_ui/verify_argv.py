@@ -34,7 +34,12 @@ def _resolve(output_name: str, paginate: bool) -> Path | None:
     if paginate:
         stem = output_name[:-4] if output_name.endswith(".svg") else output_name
         candidates += [ROOT / "output" / f"{stem}_p01.svg"]
-    candidates += [ROOT / "output" / output_name, ROOT / output_name]
+    # A visualization writes its own run folder, output/<stem>/.
+    candidates += [
+        ROOT / "output" / Path(output_name).stem / output_name,
+        ROOT / "output" / output_name,
+        ROOT / output_name,
+    ]
     for c in candidates:
         if c.exists():
             return c

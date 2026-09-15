@@ -355,10 +355,15 @@ def run_job(job: Job) -> Result:
         text=True,
         cwd=REPO_ROOT,
     )
-    # A run can emit more than the named file (e.g. weekly overflow pages,
-    # paginated sheets, mini/gantt detail sheets); every extra shares the base
-    # stem.  Every view is asked for an output/ path, so one glob covers them.
-    produced = sorted(OUTPUT_DIR.glob(f"{stem}*"))
+    # A visualization writes its own run folder, output/<stem>/, holding the
+    # chart, any extra pages, its details document, CSV and icons.  The
+    # non-visualization views (the excel workbook) still write flat files
+    # sharing the base stem.
+    folder = OUTPUT_DIR / stem
+    if folder.is_dir():
+        produced = sorted(p for p in folder.iterdir() if p.is_file())
+    else:
+        produced = sorted(p for p in OUTPUT_DIR.glob(f"{stem}*") if p.is_file())
     return Result(
         job=job,
         returncode=proc.returncode,
@@ -413,7 +418,7 @@ def write_index(results: list[Result], stamp: str, args: argparse.Namespace) -> 
                 parts.append(f"<pre class='meta'>{html.escape(res.output[-500:])}</pre>")
             else:
                 for path in res.files:
-                    href = html.escape(path.name)
+                    href = html.escape(path.relative_to(OUTPUT_DIR).as_posix())
                     if path.suffix == ".svg":
                         parts.append(f"<a href='{href}'><img src='{href}'></a>")
                     parts.append(f"<div class='name'><a href='{href}'>{href}</a></div>")

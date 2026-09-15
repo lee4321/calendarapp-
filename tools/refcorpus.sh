@@ -31,7 +31,7 @@ render_all() {
   local dest="$1"
   rm -rf "$dest"
   mkdir -p "$dest"
-  rm -f output/refcorpus_*
+  rm -rf output/refcorpus_*
 
   for th in "${THEMES[@]}"; do
     render_one weekly      20260101 20260331 "refcorpus_weekly_${th}.svg"      -th "$th"
@@ -48,7 +48,7 @@ render_all() {
   render_one text-mini 20260101 20261231 "refcorpus_text_mini.txt"
 
   mv output/refcorpus_* "$dest"/
-  echo "Rendered $(ls "$dest" | wc -l | tr -d ' ') files into $dest"
+  echo "Rendered $(find "$dest" -type f | wc -l | tr -d ' ') files into $dest"
 }
 
 # Strip the <desc>...</desc> block (contains creation timestamp and argv,
@@ -59,24 +59,25 @@ normalized() {
 
 check() {
   render_all "$CHECK_DIR"
-  local fail=0
-  for ref in "$CORPUS_DIR"/*; do
-    local base new
-    base="$(basename "$ref")"
-    new="$CHECK_DIR/$base"
+  local fail=0 ref rel new
+  # Each visualization writes a run folder, so compare the trees file by file.
+  while IFS= read -r -d '' ref; do
+    rel="${ref#"$CORPUS_DIR"/}"
+    new="$CHECK_DIR/$rel"
     if [[ ! -f "$new" ]]; then
-      echo "MISSING  $base"
+      echo "MISSING  $rel"
       fail=1
     elif ! diff -q <(normalized "$ref") <(normalized "$new") >/dev/null; then
-      echo "DIFFERS  $base"
+      echo "DIFFERS  $rel"
       fail=1
     fi
-  done
-  for new in "$CHECK_DIR"/*; do
-    [[ -f "$CORPUS_DIR/$(basename "$new")" ]] || { echo "EXTRA    $(basename "$new")"; fail=1; }
-  done
+  done < <(find "$CORPUS_DIR" -type f -print0 | sort -z)
+  while IFS= read -r -d '' new; do
+    rel="${new#"$CHECK_DIR"/}"
+    [[ -f "$CORPUS_DIR/$rel" ]] || { echo "EXTRA    $rel"; fail=1; }
+  done < <(find "$CHECK_DIR" -type f -print0 | sort -z)
   if [[ "$fail" -eq 0 ]]; then
-    echo "Corpus check PASSED ($(ls "$CORPUS_DIR" | wc -l | tr -d ' ') files identical modulo <desc>)"
+    echo "Corpus check PASSED ($(find "$CORPUS_DIR" -type f | wc -l | tr -d ' ') files identical modulo <desc>)"
   else
     echo "Corpus check FAILED"
   fi

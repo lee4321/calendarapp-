@@ -209,6 +209,53 @@ def test_to_output_dir_path_rejects_a_pathname_with_no_basename():
             ecalendar._to_output_dir_path(pathname)
 
 
+def test_to_run_paths_gives_each_run_its_own_folder():
+    paths = ecalendar._to_run_paths("nested/path/chart.svg")
+    assert paths.folder == Path("output/chart")
+    assert paths.main == Path("output/chart/chart.svg")
+    assert paths.page(1) == paths.main
+    assert paths.page(2) == Path("output/chart/chart_p2.svg")
+    assert paths.markdown == Path("output/chart/chart.md")
+    assert paths.csv == Path("output/chart/chart.csv")
+    assert paths.icons_dir == Path("output/chart/icons")
+    assert paths.icon("../../escape.svg") == Path("output/chart/icons/escape.svg")
+
+
+def test_to_run_paths_rejects_a_pathname_with_no_basename():
+    for pathname in (".", "..", "/", "   "):
+        with pytest.raises(ConfigError):
+            ecalendar._to_run_paths(pathname)
+
+
+def test_run_paths_prepare_clears_only_what_a_run_writes(tmp_path):
+    from shared.run_paths import RunPaths
+
+    paths = RunPaths.for_output("chart.svg", root=tmp_path)
+    (paths.folder / "icons").mkdir(parents=True)
+    for name in (
+        "chart.svg",
+        "chart_p3.svg",
+        "chart.md",
+        "chart.csv",
+        "chart_details.svg",
+        "icons/x.svg",
+        "notes.txt",
+        "chart_backup.svg",
+    ):
+        (paths.folder / name).write_text("x")
+
+    paths.prepare()
+
+    assert sorted(p.name for p in paths.folder.rglob("*")) == ["chart_backup.svg", "notes.txt"]
+
+
+def test_slugify_keeps_icon_filenames_safe():
+    from shared.run_paths import slugify
+
+    assert slugify("../Arrow Bar/Right!") == "arrow-bar-right"
+    assert slugify("   ") == "icon"
+
+
 def test_blockplan_parser_accepts_dates():
     parser = ecalendar._create_argument_parser("calendar.svg")
     args = parser.parse_args(["blockplan", "20260101", "20260131"])

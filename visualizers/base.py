@@ -98,6 +98,9 @@ class VisualizationResult:
     event_count: int = 0
     overflow_count: int = 0
     warnings: list[str] = field(default_factory=list)
+    # The run folder and every file the run left in it (set by the CLI).
+    output_dir: str = ""
+    files: list[str] = field(default_factory=list)
 
 
 @runtime_checkable
