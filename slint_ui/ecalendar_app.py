@@ -144,7 +144,6 @@ FIELDS: list[tuple[str, str, str]] = [
     ("no_durations", "--nodurations", "flag"),
     ("milestones_only", "--milestones", "flag"),
     ("include_notes", "--includenotes", "flag"),
-    ("overflow", "--overflow", "flag"),
     ("status", "--status", "value"),
     ("wbs", "--WBS", "value"),
     # Week numbers
@@ -157,7 +156,6 @@ FIELDS: list[tuple[str, str, str]] = [
     ("mini_title_format", "--mini-title-format", "value"),
     ("mini_no_adjacent", "--mini-no-adjacent", "flag"),
     ("mini_grid_lines", "--mini-grid-lines", "flag"),
-    ("mini_details", "--mini-details", "flag"),
     ("mini_icon_set", "--mini-icon-set", "value"),
     # Candybar
     ("candybar_row_height", "--candybar-row-height", "value"),
@@ -454,7 +452,6 @@ class EcalendarApp:
             "--empty",
             "--shade",
             "--includenotes",
-            "--overflow",
         }
 
         w.command_hint = hint
@@ -474,7 +471,6 @@ class EcalendarApp:
         w.cf_empty = has("--empty")
         w.cf_shade = has("--shade")
         w.cf_nodurations = has("--nodurations")
-        w.cf_overflow = has("--overflow")
         w.cf_includenotes = has("--includenotes")
         w.show_weeknum = has("--weeknumbers")
         w.show_mini = has("--mini-columns")

@@ -39,7 +39,6 @@ class WeeklyCalendarVisualizer(BaseVisualizer):
             "weeknumbers",
             "week_number_mode",
             "week1_start",
-            "overflow",
             "shade",
             "noevents",
             "nodurations",

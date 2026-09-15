@@ -5,7 +5,7 @@ The days a chart shows can carry government holidays and company special
 days.  :func:`holiday_special_rows` collapses them into one row per named
 entry -- a holiday recurring across several days becomes a single row
 labelled with the range it covers -- for the details document's holiday
-table (and, until it is retired, the SVG details page).
+table.
 """
 
 from __future__ import annotations

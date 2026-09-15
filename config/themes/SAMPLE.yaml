@@ -115,21 +115,6 @@ mini_calendar:
   # top-right first and then clockwise
   event_icon_scale: 0.25      # fraction of the cell's shorter side
   event_icon_opacity: 0.6     # keeps the day number legible underneath
-mini_details:
-  output_suffix: _details
-  title_text: Event Details
-  headers:
-    - Start Date
-    - Name / Description
-    - Milestone
-    - Days
-    - Group
-  column_widths:
-    - 0.16
-    - 0.52
-    - 0.1
-    - 0.1
-    - 0.12
 text_mini:
   cell_width: 2
   month_gap: 4
@@ -274,8 +259,6 @@ gantt:
   arrow_linejoin: round
   show_today_line: true
   today_date: null          # YYYYMMDD to fix "today"; null = the wall clock
-  show_details: true        # write the companion <output>_details.svg
-  details_title_text: Gantt Details
   # ── Task table ──────────────────────────────────────────────────────────
   # Column keys: field, header, width (renormalized), align, max_lines,
   # truncate, render (text|icon), icon, format, date_format, indent.

@@ -391,36 +391,6 @@ def test_renderer_draws_duration_lines(tmp_path):
     assert non_axis, "Expected duration line(s)"
 
 
-def test_renderer_legend_present_when_enabled(tmp_path):
-    output = tmp_path / "compact.svg"
-    config = _base_config(output)
-    config.compactplan_show_legend = True
-
-    coords = CompactPlanLayout().calculate(config)
-    events = [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
-
-    renderer = _CaptureCompactPlanRenderer()
-    renderer.render(config, coords, events, _DummyDB())
-
-    # Legend text contains the group name
-    assert any("Team1" in v for v in renderer.text_values)
-
-
-def test_renderer_legend_absent_when_disabled(tmp_path):
-    output = tmp_path / "compact.svg"
-    config = _base_config(output)
-    config.compactplan_show_legend = False
-
-    coords = CompactPlanLayout().calculate(config)
-    events = [_dur("Sprint 1", "20260309", "20260320", group="Team1")]
-
-    renderer = _CaptureCompactPlanRenderer()
-    renderer.render(config, coords, events, _DummyDB())
-
-    # Without legend, "Team1" should not appear in text renders
-    assert not any("Team1" in v for v in renderer.text_values)
-
-
 def test_renderer_milestone_at_correct_x(tmp_path):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
@@ -449,25 +419,6 @@ def test_renderer_milestone_label_rendered(tmp_path):
     renderer.render(config, coords, events, _DummyDB())
 
     assert any("Go Live" in v for v in renderer.text_values)
-
-
-def test_renderer_legend_entries_match_groups(tmp_path):
-    output = tmp_path / "compact.svg"
-    config = _base_config(output)
-    config.compactplan_show_legend = True
-
-    coords = CompactPlanLayout().calculate(config)
-    events = [
-        _dur("Task A", "20260309", "20260313", group="Alpha"),
-        _dur("Task B", "20260316", "20260320", group="Beta"),
-    ]
-
-    renderer = _CaptureCompactPlanRenderer()
-    renderer.render(config, coords, events, _DummyDB())
-
-    legend_texts = " ".join(renderer.text_values)
-    assert "Alpha" in legend_texts
-    assert "Beta" in legend_texts
 
 
 def test_renderer_empty_events_no_crash(tmp_path):
@@ -570,27 +521,8 @@ def test_icon_band_row_rects_unclassed_by_default():
 
 
 # ---------------------------------------------------------------------------
-# Key page (<output>_key.svg)
+# What the chart drew, for the run's details document
 # ---------------------------------------------------------------------------
-
-
-class _PageCaptureRenderer(_CaptureCompactPlanRenderer):
-    """Records which drawing -- chart or key page -- each text landed on."""
-
-    def __init__(self):
-        super().__init__()
-        self.texts_by_drawing: list[tuple[int, str]] = []
-
-    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
-        self.texts_by_drawing.append((id(self._drawing), str(text)))
-        super()._draw_text(x, y, text, font_name, font_size, **kwargs)
-
-    def chart_texts(self) -> list[str]:
-        # render() leaves the chart's drawing in place once the key is done.
-        return [t for d, t in self.texts_by_drawing if d == id(self._drawing)]
-
-    def key_texts(self) -> list[str]:
-        return [t for d, t in self.texts_by_drawing if d != id(self._drawing)]
 
 
 class _HolidayDB(_DummyDB):
@@ -605,73 +537,42 @@ def _render(tmp_path, events, db=None, **overrides):
     config = _base_config(output)
     for key, value in overrides.items():
         setattr(config, key, value)
-    renderer = _PageCaptureRenderer()
+    renderer = _CaptureCompactPlanRenderer()
     result = renderer.render(config, CompactPlanLayout().calculate(config), events, db or _DummyDB())
     return renderer, result, output
 
 
-def test_key_is_written_to_its_own_page(tmp_path):
-    renderer, result, _output = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
+def _names_by_color_rank(renderer):
+    """Event names in the details document's color_rank order."""
+    from renderers.markdown_details import ordered_event_views
 
-    assert (tmp_path / "compact_key.svg").exists()
-    assert result.page_count == 2
-    assert "Sprint 1" in renderer.key_texts()
-    assert "Team1" in renderer.key_texts()
+    config = renderer._config
+    config.details_md_sort = ["color_rank", "start_date"]
+    return [view.task_name for view in ordered_event_views(renderer.details_record, config)]
+
+
+def _notes(renderer):
+    return {note.event.task_name: note for note in renderer.details_record.events}
+
+
+def test_the_chart_writes_no_companion_page(tmp_path):
+    _, result, _ = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
+
+    assert result.page_count == 1
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["compact.svg"]
 
 
 def test_chart_page_carries_no_key(tmp_path):
     """Nothing of the key -- group names, the symbols -- is drawn on the
-    chart itself any more.  (A bar carries its own task name.)"""
+    chart itself.  (A bar carries its own task name.)"""
     renderer, _, _ = _render(tmp_path, [_dur("Sprint 1", "20260309", "20260320", group="Team1")])
 
-    chart = " ".join(renderer.chart_texts())
+    chart = " ".join(renderer.text_values)
     assert "Team1" not in chart
     assert "timeline" not in chart
-    assert "Key" not in chart
 
 
-def test_no_key_page_when_the_legend_is_off(tmp_path):
-    _, result, _ = _render(
-        tmp_path,
-        [_dur("Sprint 1", "20260309", "20260320", group="Team1")],
-        compactplan_show_legend=False,
-    )
-
-    assert not (tmp_path / "compact_key.svg").exists()
-    assert result.page_count == 1
-
-
-def test_no_key_page_for_an_empty_chart(tmp_path):
-    """The symbols alone explain nothing, so an empty chart gets no key."""
-    _, result, _ = _render(tmp_path, [])
-
-    assert not (tmp_path / "compact_key.svg").exists()
-    assert result.page_count == 1
-
-
-def test_key_lists_the_details_page_columns(tmp_path):
-    """The key is the shared details listing: its columns, its cells."""
-    renderer, _, _ = _render(
-        tmp_path,
-        [
-            _dur("Build", "20260309", "20260320", group="Dev"),
-            _milestone("Go Live", "20260325", group="Ops"),
-        ],
-    )
-
-    texts = renderer.key_texts()
-    for heading in ("Key", "Start Date", "Name / Description", "Milestone", "Priority", "Group"):
-        assert heading in texts
-    assert "2026-03-09" in texts
-    assert "End: 2026-03-20" in texts  # a duration's end rides under its name
-    assert "True" in texts  # the milestone column
-
-
-def _key_names(renderer, names):
-    return [t for t in renderer.key_texts() if t in names]
-
-
-def test_key_lists_bars_by_group_assignment_then_start_date(tmp_path):
+def test_rows_rank_by_group_assignment_then_start_date(tmp_path):
     """Rows of one color sit together: groups in palette order (sorted
     names), each by start date; milestones, which take no color
     assignment, follow."""
@@ -685,15 +586,10 @@ def test_key_lists_bars_by_group_assignment_then_start_date(tmp_path):
         ],
     )
 
-    assert _key_names(renderer, {"A early", "A late", "B early", "Launch"}) == [
-        "A early",
-        "A late",
-        "B early",
-        "Launch",
-    ]
+    assert _names_by_color_rank(renderer) == ["A early", "A late", "B early", "Launch"]
 
 
-def test_key_lists_color_rule_matches_first_in_rule_order(tmp_path):
+def test_rows_rank_color_rule_matches_first_in_rule_order(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
         [
@@ -708,18 +604,13 @@ def test_key_lists_color_rule_matches_first_in_rule_order(tmp_path):
         ],
     )
 
-    assert _key_names(renderer, {"Plain", "Blue team", "Urgent", "Urgent early"}) == [
-        "Urgent early",
-        "Urgent",  # rule 0, by start date
-        "Blue team",  # rule 1
-        "Plain",  # the default, resource-group assignment
-    ]
+    assert _names_by_color_rank(renderer) == ["Urgent early", "Urgent", "Blue team", "Plain"]
 
 
-def test_key_clusters_rows_by_the_color_each_bar_was_drawn_in(tmp_path):
-    """An event's own Color is part of the default assignment: its row
-    joins whichever rows share that color -- a palette slot's, or, for a
-    color the assignment never hands out, its own cluster after them."""
+def test_rows_cluster_by_the_color_each_bar_was_drawn_in(tmp_path):
+    """An event's own Color joins whichever rows share that color -- a
+    palette slot's, or, for a color the assignment never hands out, its own
+    cluster after them."""
     renderer, _, _ = _render(
         tmp_path,
         [
@@ -732,20 +623,13 @@ def test_key_clusters_rows_by_the_color_each_bar_was_drawn_in(tmp_path):
         compactplan_palette=["#0000aa", "#0000bb"],
     )
 
-    names = {"Own early", "Beta own", "Alpha plain", "Looks Beta", "Beta plain"}
-    assert _key_names(renderer, names) == [
-        "Alpha plain",  # Alpha's palette color
-        "Looks Beta",
-        "Beta plain",  # Beta's palette color, by start date
-        "Own early",
-        "Beta own",  # a color only events carry
-    ]
+    assert _names_by_color_rank(renderer) == ["Alpha plain", "Looks Beta", "Beta plain", "Own early", "Beta own"]
 
 
-def test_key_swatch_carries_the_bar_color(tmp_path):
-    """Color attribution survives the move: each activity's row paints a
-    swatch in the color its bar was drawn in."""
-    _render(
+def test_each_bar_records_the_color_it_was_drawn_in(tmp_path):
+    from renderers.details_record import mark
+
+    renderer, _, _ = _render(
         tmp_path,
         [
             _dur("Alpha work", "20260309", "20260320", group="A", color="#123456"),
@@ -753,63 +637,63 @@ def test_key_swatch_carries_the_bar_color(tmp_path):
         ],
     )
 
-    key_svg = (tmp_path / "compact_key.svg").read_text()
-    assert 'style="stroke:#123456;' in key_svg
-    assert 'style="stroke:#abcdef;' in key_svg
-    assert key_svg.count('class="ec-legend-swatch"') >= 2
+    notes = _notes(renderer)
+    assert (notes["Alpha work"].assigned_color, notes["Alpha work"].color_source) == ("#123456", "event color")
+    assert mark("bar", "#123456") in notes["Alpha work"].icons
+    assert notes["Beta work"].assigned_color == "#abcdef"
 
 
-def test_key_swatch_takes_the_palette_color_of_its_group(tmp_path):
+def test_a_bar_records_the_palette_color_of_its_group(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
         [_dur("Build", "20260309", "20260320", group="Dev")],
         compactplan_palette=["#0a0b0c"],
     )
 
-    assert 'style="stroke:#0a0b0c;' in (tmp_path / "compact_key.svg").read_text()
+    note = _notes(renderer)["Build"]
+    assert (note.assigned_color, note.color_source) == ("#0a0b0c", "group palette")
     # ...the same color the bar was drawn in on the chart.
     assert any(kw.get("stroke") == "#0a0b0c" for kw in renderer.line_kwargs)
 
 
-def test_key_marks_a_milestone_with_its_flag_color(tmp_path):
-    _render(tmp_path, [_milestone("Go Live", "20260316", color="#fedcba")])
-
-    key_svg = (tmp_path / "compact_key.svg").read_text()
-    assert "#fedcba" in key_svg
-
-
-def test_key_lists_the_holidays_on_the_axis(tmp_path):
+def test_a_color_rule_is_recorded_as_the_bars_source(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
-        [_dur("Build", "20260309", "20260320", group="Dev")],
-        db=_HolidayDB(),
+        [_dur("Urgent", "20260309", "20260320", group="Dev") | {"Priority": 5}],
+        compactplan_color_rules=[{"select": {"priority": 5}, "color": "#aa0000"}],
     )
 
-    texts = renderer.key_texts()
-    assert "US - Founders Day" in texts
-    assert "Federal Holiday" in texts
+    note = _notes(renderer)["Urgent"]
+    assert (note.assigned_color, note.color_source) == ("#aa0000", "color rule")
 
 
-def test_key_explains_continuation_only_when_a_bar_continues(tmp_path):
+def test_a_milestone_records_its_flag_in_its_color(tmp_path):
+    from renderers.details_record import mark
+
+    renderer, _, _ = _render(tmp_path, [_milestone("Go Live", "20260316", color="#fedcba")])
+
+    assert mark("flag", "#fedcba", "milestone") in _notes(renderer)["Go Live"].icons
+
+
+def test_the_record_keeps_the_days_on_the_axis(tmp_path):
+    renderer, _, _ = _render(tmp_path, [_dur("Build", "20260309", "20260320", group="Dev")], db=_HolidayDB())
+
+    assert "20260316" in renderer.details_record.visible_daykeys
+
+
+def test_symbols_explain_continuation_only_when_a_bar_continues(tmp_path):
     renderer, _, _ = _render(tmp_path, [_dur("Short", "20260309", "20260313", group="A")])
-    assert "activity continues" not in renderer.key_texts()
-    assert "timeline" in renderer.key_texts()
+    meanings = [symbol.meaning for symbol in renderer.details_record.symbols]
+    assert "activity continues" not in meanings
+    assert "timeline" in meanings
 
     renderer, _, _ = _render(tmp_path, [_dur("Long", "20260401", "20260515", group="A")])
-    assert "activity continues" in renderer.key_texts()
-
-
-def test_a_long_key_continues_onto_further_pages(tmp_path):
-    events = [_dur(f"Task {n}", "20260309", "20260313", group=f"G{n % 4}") for n in range(120)]
-    _, result, _ = _render(tmp_path, events)
-
-    assert (tmp_path / "compact_key_p2.svg").exists()
-    assert result.page_count >= 3
+    assert "activity continues" in [symbol.meaning for symbol in renderer.details_record.symbols]
 
 
 def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
-    """With no key beneath it the chart's viewBox ends at its own ink --
-    which, for the lowest bar, includes its start icon."""
+    """The chart's viewBox ends at its own ink -- which, for the lowest
+    bar, includes its start icon."""
     import re
 
     renderer, _, output = _render(
@@ -820,9 +704,8 @@ def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
 
     match = re.search(r'viewBox="([^"]+)"', output.read_text())
     assert match is not None
-    view_box = match.group(1)
-    _, top, _, height = (float(v) for v in view_box.split())
-    lowest = max(p.row_y for p in renderer._chart_key.placed.values())
+    _, top, _, height = (float(v) for v in match.group(1).split())
+    lowest = max(p.row_y for p in renderer._placed_durations)
     icon_h = min(renderer._duration_icon_height(renderer._config), renderer._config.compactplan_duration_line_width)
     assert top + height >= lowest + icon_h / 2.0
 
@@ -908,11 +791,12 @@ def test_a_milestone_label_starts_past_its_icon(tmp_path):
     assert label["x"] > chart_icon["x"] + chart_icon["size"]
 
 
-def test_the_key_marks_a_milestone_with_the_icon_the_chart_drew(tmp_path):
+def test_the_record_keeps_the_milestone_icon_the_chart_drew(tmp_path):
     renderer = _render_milestone(tmp_path, _milestone_with_icon("diamond"))
 
-    # One on the chart, one in the key's mark column.
-    assert [c["icon_name"] for c in _milestone_icons(renderer)] == ["diamond", "diamond"]
+    # Drawn once, on the chart, and kept against its event for the details document.
+    assert [c["icon_name"] for c in _milestone_icons(renderer)] == ["diamond"]
+    assert [use.icon for use in renderer.details_record.events[0].icons] == ["diamond"]
 
 
 # ---------------------------------------------------------------------------
@@ -941,7 +825,6 @@ def _render_bands(tmp_path, bands, db=None):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
     config.compactplan_time_bands = bands
-    config.compactplan_show_legend = False  # the key's holiday rows draw flags too
     renderer = _IconCaptureRenderer()
     renderer.render(
         config,
@@ -1101,16 +984,6 @@ def test_a_rule_with_no_select_colors_every_bar(tmp_path):
     assert _bar_strokes(renderer) == {"#777777"}
 
 
-def test_the_key_swatch_shows_the_rule_color(tmp_path):
-    _render_colored(
-        tmp_path,
-        [_dur("Urgent", "20260309", "20260320", group="Dev") | {"Priority": 5}],
-        [{"select": {"priority": 5}, "color": "#aa0000"}],
-    )
-
-    assert 'style="stroke:#aa0000;' in (tmp_path / "compact_key.svg").read_text()
-
-
 def test_color_rules_load_from_a_theme(tmp_path):
     from config.config import CalendarConfig
     from config.theme_engine import ThemeEngine
@@ -1212,13 +1085,11 @@ class _BarTextRenderer(_IconCaptureRenderer):
 def _render_bars(tmp_path, events, **overrides):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    config.compactplan_show_legend = False
     for key, value in overrides.items():
         setattr(config, key, value)
     renderer = _BarTextRenderer()
     renderer.render(config, CompactPlanLayout().calculate(config), events, _IconDB())
-    assert renderer._chart_key is not None
-    placed = sorted(renderer._chart_key.placed.values(), key=lambda p: p.event.start)
+    placed = sorted(renderer._placed_durations, key=lambda p: p.event.start)
     return renderer, config, placed
 
 
@@ -1406,9 +1277,9 @@ def test_an_early_bars_start_date_fits_beside_its_arrow(tmp_path):
     assert abs(start["x"] - (x1 + arrow_w + mid_x1) / 2.0) < 1e-6
 
 
-def test_key_explains_the_before_arrow_only_when_a_bar_starts_early(tmp_path):
+def test_symbols_explain_the_before_arrow_only_when_a_bar_starts_early(tmp_path):
     renderer, _, _ = _render(tmp_path, [_dur("Short", "20260309", "20260313", group="A")])
-    assert "activity began earlier" not in renderer.key_texts()
+    assert "activity began earlier" not in [symbol.meaning for symbol in renderer.details_record.symbols]
 
     renderer, _, _ = _render(tmp_path, [_dur("Early", "20260201", "20260313", group="A")])
-    assert "activity began earlier" in renderer.key_texts()
+    assert "activity began earlier" in [symbol.meaning for symbol in renderer.details_record.symbols]

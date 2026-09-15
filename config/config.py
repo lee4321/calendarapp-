@@ -191,7 +191,6 @@ class CalendarConfig:
     mini_month_outline_dasharray: str | None = None
     mini_strikethrough_stroke_dasharray: str | None = None
     mini_hash_line_dasharray: str | None = None
-    mini_details_separator_stroke_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
@@ -392,31 +391,6 @@ class CalendarConfig:
     )
     text_mini_duration_fill: str = "⸬"
 
-    # Mini calendar details page
-    include_mini_details: bool = True
-    mini_details_output_suffix: str = "_details"
-    mini_details_title_text: str = "Event Details"
-    mini_details_title_font_size: float | None = None
-    # ── Mini details text styling — kept survivors only.
-    mini_details_text_font_color: str = "black"
-    mini_details_text_font_opacity: float = 1.0
-    mini_details_name_text_font_color: str = "black"
-    mini_details_name_text_font_size: float | None = None
-    mini_details_name_text_font_opacity: float = 1.0
-    mini_details_notes_text_font_size: float | None = None
-    mini_details_headers: list[str] = field(
-        default_factory=lambda: [
-            "Start Date",
-            "Name / Description",
-            "Milestone",
-            "Priority",
-            "Group",
-        ]
-    )
-    mini_details_column_widths: list[float] = field(default_factory=lambda: [0.16, 0.52, 0.10, 0.10, 0.12])
-    mini_details_events_section_text: str = "Events"
-    mini_details_holidays_section_text: str = "Holidays & Special Days"
-
     # Weekly week number settings
     week_number_mode: str = "iso"  # "iso" or "custom"
     week1_start: str = ""  # YYYYMMDD anchor for custom week 1
@@ -446,7 +420,6 @@ class CalendarConfig:
     shade_current_day: bool = True
     include_month_name: bool = True
     include_margin: bool = True
-    include_overflow: bool = False
     include_color_key: bool = False
 
     # Run details (theme `details:` section): the details document, icon
@@ -612,15 +585,6 @@ class CalendarConfig:
     # `box:overflow` rule.
     overflow_indicator_icon: str = "warningtriangle"
     overflow_indicator_color: str = "red"
-    # The companion overflow report, written beside the calendar through
-    # the shared details-page writer (see renderers/details_page.py).
-    overflow_title_text: str = "Overflow Events"
-    overflow_output_suffix: str = "_overflow"
-    # The companion details page, shared by every visualizer that writes
-    # one (see renderers/details_page.py).  Row text is sized here rather
-    # than taken from text:body, which the gantt chart's own 14pt-row
-    # table also reads and needs to stay small.
-    details_body_font_size: float | None = None
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
@@ -1228,10 +1192,6 @@ class CalendarConfig:
     # Today line — mirrors the PIT semantics exactly.
     gantt_show_today_line: bool = True
     gantt_today_date: str | None = None
-    # Companion details page.
-    include_gantt_details: bool = True
-    gantt_details_output_suffix: str = "_details"
-    gantt_details_title_text: str = "Gantt Details"
 
     # ── Compact Activities Plan ───────────────────────────────────────────────
     compactplan_time_bands: list[dict[str, Any]] = field(
@@ -1297,7 +1257,7 @@ class CalendarConfig:
     # Theme conditions that color duration bars: ordered {name, select, color}
     # rules, first match wins (shared.rule_engine.ColorRuleEngine).  A bar no
     # rule matches keeps the default: its own Color, else its resource group's
-    # palette color.  The key page lists bars in this assignment order.
+    # palette color.  The details document's color_rank sort follows this order.
     compactplan_color_rules: list[dict[str, Any]] = field(default_factory=list)
     compactplan_milestone_icon: str | None = None
     compactplan_milestone_flag_width: float = 7.0
@@ -1305,29 +1265,14 @@ class CalendarConfig:
     compactplan_show_milestone_labels: bool = True
     compactplan_header_bottom_y: float | None = None
 
-    # ── Key page ──────────────────────────────────────────────────────────────
-    # The key is a companion page (<output>_key.svg) written through the
-    # shared details-page writer: the same event listing as the mini details
-    # page (its columns and section names come from mini_details.*), with a
-    # leading column of swatches, flags and icons tying each row to the chart.
-    # Phase 2-style strip (Sep 2026) — the on-chart legend's layout fields
-    # went with it: legend_row_height/_column_split/_team_columns, key_top_y,
-    # show_milestone_list + milestone_list_*, holiday_list_* (milestones are
-    # always listed now, as on the details page).
-    compactplan_show_legend: bool = True  # write the key page
-    compactplan_key_title_text: str = "Key"
-    compactplan_key_output_suffix: str = "_key"
-    compactplan_key_symbols_section_text: str = "Symbols"
-    compactplan_legend_swatch_width: float = 18.0  # length of a bar's key swatch
-    compactplan_show_holiday_list: bool = True  # list holidays & special days
-
     # ── Continuation icon ─────────────────────────────────────────────────────
     # The global continuation_icon_after / _color / _height fields drive the
     # compactplan continuation icon (the line only clips on its "after" end).
-    # Only the key's text for it remains compactplan-specific.
+    # What its symbols mean -- listed in the run's details document -- is
+    # compactplan-specific.
     compactplan_continuation_legend_text: str = "activity continues"
     compactplan_continuation_before_legend_text: str = "activity began earlier"
-    compactplan_show_axis_legend: bool = True  # explain the axis in the key's symbols
+    compactplan_show_axis_legend: bool = True  # explain the axis among the document's symbols
     compactplan_legend_axis_text: str = "timeline"  # meaning beside the axis sample
 
     # Non-workday highlighting for date/dow timeband cells.  None → disabled.
@@ -1758,7 +1703,7 @@ class CalendarConfig:
             "ec-today-line": lambda: LineStyle(
                 color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray
             ),
-            "ec-separator": lambda: LineStyle(dasharray=self.mini_details_separator_stroke_dasharray),
+            "ec-separator": lambda: LineStyle(),
             "ec-connector": lambda: LineStyle(dasharray=self.timeline_connector_stroke_dasharray),
             "ec-vline": lambda: LineStyle(
                 color=self.blockplan_vertical_line_color,
@@ -2527,17 +2472,11 @@ _HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
     ("text:event_notes", "weekly", "weekly_notes_text_font_size"),
     # Fiscal label is shared between weekly and mini — no visualizer ctx.
     ("text:fiscal_label", None, "fiscal_period_label_font_size"),
-    # Companion details page, shared by every visualizer that writes one.
-    ("text:details_body", None, "details_body_font_size"),
     # Mini.
     ("text:day_number", "mini", "mini_cell_font_size"),
     ("text:month_title", "mini", "mini_title_font_size"),
     ("text:label", "mini", "mini_header_font_size"),
     ("text:week_number", "mini", "mini_week_number_font_size"),
-    # Mini details page.
-    ("text:heading", "mini", "mini_details_title_font_size"),
-    ("text:event_name", "mini", "mini_details_name_text_font_size"),
-    ("text:event_notes", "mini", "mini_details_notes_text_font_size"),
     # Timeline.
     ("text:event_name", "timeline", "timeline_name_text_font_size"),
     ("text:event_notes", "timeline", "timeline_notes_text_font_size"),
@@ -2730,14 +2669,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
         config.day_box_number_font_size * 0.7,
     )
 
-    # Companion details page. Its own size, because the token it would
-    # otherwise read -- text:body -- also sets the gantt chart's task-table
-    # text, and that table's rows are a fixed gantt_row_height.
-    config.details_body_font_size = _size(
-        "text:details_body",
-        _clamp(_clamp(h * 0.010, 7.0, 20.0) * scale, 7.0, 20.0),
-    )
-
     # Weekly text sizes
     config.weekly_name_text_font_size = _size(
         "text:event_name",
@@ -2770,23 +2701,6 @@ def setfontsizes(config: CalendarConfig) -> CalendarConfig:
     config.mini_week_number_font_size = _size(
         "text:week_number",
         _clamp(_clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-
-    # Mini details page font sizes
-    config.mini_details_title_font_size = _size(
-        "text:heading",
-        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-    config.mini_details_name_text_font_size = _size(
-        "text:event_name",
-        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-    config.mini_details_notes_text_font_size = _size(
-        "text:event_notes",
-        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
         visualizer="mini",
     )
 

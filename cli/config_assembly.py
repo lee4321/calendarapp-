@@ -138,8 +138,6 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("mini_title_format", "mini_title_format", "value"),
     ("mini_no_adjacent", "mini_show_adjacent", "disable"),
     ("mini_grid_lines", "mini_grid_lines", "enable"),
-    ("mini_details", "include_mini_details", "enable"),
-    ("no_mini_details", "include_mini_details", "disable"),
     ("mini_icon_set", "mini_icon_set", "value"),
     # Run details (every visualization)
     ("details_md", "include_details_markdown", "enable"),
@@ -321,9 +319,6 @@ def _apply_args_to_config(
     config.include_header = getattr(args, "header", False)
     config.include_footer = getattr(args, "footer", False)
     config.include_margin = getattr(args, "margin", False)
-
-    # Overflow page
-    config.include_overflow = getattr(args, "overflow", False)
 
     # Shrink SVG to content bounding box.
     # compactplan and candybar always shrink by default (candybar is a narrow

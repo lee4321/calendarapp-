@@ -170,7 +170,10 @@ SECTION_COMMENTS: dict[str, str] = {
     ),
     "weekly": ("Weekly visualizer non-styling config: week-number format, day-name\nformat."),
     "mini_calendar": ("Mini visualizer non-styling config: title format, layout dimensions,\nicon-set name."),
-    "mini_details": ("Mini-details non-styling config: column widths, header text,\noutput suffix."),
+    "details": (
+        "The run's details document, icon files and event CSV: table columns\n"
+        "(gantt.columns schema), section titles, icon size, CSV columns."
+    ),
     "text_mini": ("text-mini glyph-set declarations; not an SVG renderer."),
     "timeline": ("Timeline non-styling config: tick-label format, axis/callout/lane\ngeometry, today-line content."),
     "timeline_events": "Timeline event geometry (box width/height).",
@@ -205,11 +208,11 @@ SECTION_ORDER: list[str] = [
     "durations",
     "watermark",
     "overflow",
+    "details",
     "fiscal",
     "colors",
     "weekly",
     "mini_calendar",
-    "mini_details",
     "text_mini",
     "timeline",
     "timeline_events",
@@ -285,9 +288,50 @@ _DEAD_LEGACY_KEYS: dict[str, frozenset[str]] = {
             "milestone_list_date_color",
             "milestone_list_section_gap",
             "continuation_section_gap",
+            # The key page, replaced by the run's details document.
+            "show_legend",
+            "key_title_text",
+            "key_output_suffix",
+            "key_symbols_section_text",
+            "legend_swatch_width",
+            "show_holiday_list",
         }
     ),
 }
+
+
+#: The mini details page's five columns, in order, as details columns.  The
+#: page always filled them with these fields whatever its headers said.
+_MINI_DETAILS_FIELDS: tuple[dict[str, Any], ...] = (
+    {"field": "start_date", "date_format": "YYYY-MM-DD"},
+    {"field": "name"},
+    {"field": "milestone"},
+    {"field": "priority"},
+    {"field": "resource_group"},
+)
+
+
+def _convert_mini_details(data: Any) -> dict[str, Any] | None:
+    """A legacy ``mini_details:`` section as ``details:`` settings.
+
+    Headers carry over as column headers over the fields the page always
+    showed; widths are dropped (a Markdown table has none); the title, the
+    section titles and the enable switch keep their meaning.
+    """
+    if not isinstance(data, dict):
+        return None
+    markdown: dict[str, Any] = {}
+    headers = data.get("headers")
+    if isinstance(headers, list) and headers:
+        markdown["columns"] = [
+            {**spec, "header": str(header)} for spec, header in zip(_MINI_DETAILS_FIELDS, headers, strict=False)
+        ]
+    if "enable" in data:
+        markdown["enable"] = bool(data["enable"])
+    for key in ("title_text", "events_section_text", "holidays_section_text"):
+        if data.get(key):
+            markdown[key] = data[key]
+    return {"markdown": markdown} if markdown else None
 
 
 def _strip_dead_keys(section: str, data: Any) -> Any:
@@ -926,7 +970,6 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     for sec in (
         "weekly",
         "mini_calendar",
-        "mini_details",
         "text_mini",
         "timeline",
         "timeline_events",
@@ -937,6 +980,11 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
             stripped = _strip_dead_keys(sec, src[sec])
             if stripped is not None:
                 out[sec] = stripped
+
+    # 7a. The mini details page became the run's details document.
+    details_out = _convert_mini_details(src.get("mini_details"))
+    if details_out:
+        out["details"] = details_out
 
     # 7b. The overflow icon left weekly for the top level: every visualizer
     #     draws it now.  A legacy theme still spells it `weekly.overflow`,

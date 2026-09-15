@@ -64,11 +64,6 @@ layout:
     left: 0
     right: 0
     top: 0
-mini_details:
-  column_widths: [0.16, 0.52, 0.1, 0.1, 0.12]
-  headers: [Start Date, Name / Description, Milestone, Priority, Group]
-  output_suffix: _details
-  title_text: Event Details
 text_mini:
   cell_width: 2
   event_symbols: [⯍, ⯏, 🟈, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐, 🞿, 🞭, 🞹, ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐, ❖, ◊, ⯪, ⯫, ꥟, 𜱃, 𜱪, 𜱩, 𜸂, "\U0001cecf", 🟙, 🝴, "\U0001fa54", 🮻, 🯀, 🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633", ⟠, ⨷, ✢, ✨, ❂]

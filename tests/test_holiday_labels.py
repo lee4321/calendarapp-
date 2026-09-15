@@ -75,24 +75,25 @@ def test_text_mini_details_carry_the_country_code():
     assert by_text["nonworkday"] == ["Company Picnic"]
 
 
-def test_mini_details_page_carries_the_country_code():
-    from visualizers.mini.renderer import MiniCalendarRenderer
+def test_holiday_rows_carry_the_country_code():
+    from shared.holiday_listing import holiday_special_rows
 
     config = _config()
     config.country = "US,UA"
-    coords = {f"Cell_202607{d:02d}": (0.0, 0.0, 10.0, 10.0) for d in range(1, 32)}
-    rows = MiniCalendarRenderer._collect_holiday_special_rows(coords, config, _StubDB(_HOLIDAYS, _SPECIALS))
+    daykeys = [f"202607{d:02d}" for d in range(1, 32)]
+    rows = holiday_special_rows(daykeys, config, _StubDB(_HOLIDAYS, _SPECIALS))
     named = {r["name"]: r for r in rows}
 
     assert "UA - Ukrainian Statehood Day" in named
     assert "US - Independence Day" in named
     assert named["Company Picnic"]["kind"] == "Special Day"
+    assert named["US - Independence Day"]["country"] == "US"
 
 
-def test_mini_details_page_collapses_a_shared_name_onto_one_row():
+def test_holiday_rows_collapse_a_shared_name_onto_one_row():
     """The listing keys on the name, so a holiday both countries celebrate
     under the same name lists both codes rather than losing one."""
-    from visualizers.mini.renderer import MiniCalendarRenderer
+    from shared.holiday_listing import holiday_special_rows
 
     config = _config()
     config.country = "US,CA"
@@ -104,22 +105,24 @@ def test_mini_details_page_collapses_a_shared_name_onto_one_row():
             ]
         }
     )
-    coords = {"Cell_20260701": (0.0, 0.0, 10.0, 10.0)}
-    rows = MiniCalendarRenderer._collect_holiday_special_rows(coords, config, db)
+    rows = holiday_special_rows(["20260701"], config, db)
 
     assert [r["name"] for r in rows] == ["CA, US - New Year's Day"]
+    assert rows[0]["raw_name"] == "New Year's Day"
 
 
-def test_compactplan_key_carries_the_country_code():
-    """The compactplan key lists holidays through the shared listing."""
-    from renderers.event_listing import holiday_special_rows
+def test_the_details_document_lists_holidays_with_their_country_code(tmp_path):
+    from renderers.details_record import DetailsRecord
+    from renderers.markdown_details import build_markdown
+    from shared.holiday_listing import holiday_special_rows
+    from shared.run_paths import RunPaths
 
     config = _config()
     config.country = "US,UA"
     days = [date(2026, 7, 1) + timedelta(days=i) for i in range(31)]
     rows = holiday_special_rows((d.strftime("%Y%m%d") for d in days), config, _StubDB(_HOLIDAYS, _SPECIALS))
-    names = [row["name"] for row in rows]
+    text = build_markdown(DetailsRecord("mini"), config, RunPaths.for_output("c.svg", root=tmp_path), rows, {})
 
-    assert "UA - Ukrainian Statehood Day" in names
-    assert "US - Independence Day" in names
-    assert "Company Picnic" in names
+    assert "UA - Ukrainian Statehood Day" in text
+    assert "US - Independence Day" in text
+    assert "Company Picnic" in text

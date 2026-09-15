@@ -144,7 +144,6 @@ def test_extra_pages_are_written_and_counted(tmp_path):
         many_tasks(30),
         outputfile=str(output),
         gantt_row_height=40.0,  # forces only a few rows per page
-        include_gantt_details=False,
     )
     extra = renderer._extra_page_count
     assert extra >= 1
@@ -154,7 +153,7 @@ def test_extra_pages_are_written_and_counted(tmp_path):
 
 def test_a_chart_that_fits_writes_no_continuation_files(tmp_path):
     output = tmp_path / "chart.svg"
-    renderer = render([task()], outputfile=str(output), include_gantt_details=False)
+    renderer = render([task()], outputfile=str(output))
     assert renderer._extra_page_count == 0
     assert not (tmp_path / "chart_p2.svg").exists()
 
@@ -168,7 +167,6 @@ def test_horizontal_splitting_honors_the_minimum_day_width(tmp_path):
         end="20260731",
         outputfile=str(output),
         gantt_min_day_width=40.0,
-        include_gantt_details=False,
     )
     assert renderer._extra_page_count >= 1
 
@@ -181,7 +179,6 @@ def test_a_zero_minimum_day_width_never_splits_horizontally(tmp_path):
         end="20261231",
         outputfile=str(output),
         gantt_min_day_width=0.0,
-        include_gantt_details=False,
     )
     assert renderer._extra_page_count == 0
 
@@ -193,7 +190,6 @@ def test_each_page_repeats_the_column_headers(tmp_path):
         many_tasks(30),
         outputfile=str(output),
         gantt_row_height=40.0,
-        include_gantt_details=False,
     )
     pages = renderer._extra_page_count + 1
     headers = renderer.of_class(renderer.texts, "ec-column-header")
@@ -207,7 +203,6 @@ def test_rows_on_a_later_page_start_at_the_top_of_the_body(tmp_path):
         many_tasks(30),
         outputfile=str(output),
         gantt_row_height=40.0,
-        include_gantt_details=False,
     )
     config = create_calendar_config()
     config.pageX, config.pageY = 1000.0, 400.0

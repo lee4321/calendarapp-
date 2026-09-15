@@ -59,7 +59,6 @@ VALID_SECTIONS: frozenset[str] = frozenset(
         "colors",
         "weekly",
         "mini_calendar",
-        "mini_details",
         "text_mini",
         "candybar",
         "timeline",
@@ -93,6 +92,15 @@ RETIRED_SECTIONS: frozenset[str] = frozenset(
 # Sections that moved to a new name.  A theme still using the old name gets a
 # hard parse error naming the replacement.
 RENAMED_SECTIONS: dict[str, str] = {"excelheader": "excelblockplan"}
+
+# Sections whose feature was replaced by another.  A theme still carrying one
+# gets a hard parse error saying what to use instead.
+REPLACED_SECTIONS: dict[str, str] = {
+    "mini_details": (
+        "the companion details page was replaced by the run's details document; "
+        "configure it under `details:` (its columns go in details.markdown.columns)"
+    ),
+}
 
 # Recognized define: kinds.  Every define-rule must use one of these.
 DEFINE_KINDS: frozenset[str] = frozenset({"text", "box", "line", "icon"})
@@ -394,6 +402,11 @@ def _check_section_names(raw: dict[str, Any], *, origin: str) -> None:
                 f"'{RENAMED_SECTIONS[key]}'; rename it, or run "
                 "`uv run python tools/migrate_theme.py` to convert this theme."
             )
+        if key in REPLACED_SECTIONS:
+            raise ThemeError(
+                f"{origin}: section '{key}' is no longer supported: {REPLACED_SECTIONS[key]}; or run "
+                "`uv run python tools/migrate_theme.py` to convert this theme."
+            )
         if key in RETIRED_SECTIONS:
             raise ThemeError(
                 f"{origin}: legacy section '{key}' is no longer supported; "
@@ -513,6 +526,7 @@ def load_theme_file(path: str | Path) -> UnifiedTheme:
 __all__ = [
     "DEFINE_KINDS",
     "RENAMED_SECTIONS",
+    "REPLACED_SECTIONS",
     "RETIRED_SECTIONS",
     "SELECTOR_KEYS",
     "TOKEN_KINDS",

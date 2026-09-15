@@ -17,7 +17,6 @@ from config.config import (
     weekend_style_is_workweek,
     weekend_style_starts_sunday,
 )
-from renderers import event_listing
 from renderers.svg_base import BaseSVGRenderer, TokenStyle, _is_none_color
 from shared.date_utils import (
     format_arrow_date,
@@ -210,19 +209,6 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             self._draw_day_cell_foreground(config, x, y, w, h, day_num, style)
 
         return 0, []
-
-    def render(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        events: list,
-        db: CalendarDB,
-    ):
-        result = super().render(config, coordinates, events, db)
-        if config.include_mini_details:
-            # The listing paginates, so it is worth as many pages as it took.
-            result.page_count += self._render_details_svg(config, coordinates, events, db)
-        return result
 
     # =========================================================================
     # Month title
@@ -958,88 +944,3 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     def _index_events_by_day(events: list) -> dict[str, list]:
         """Build a dict mapping YYYYMMDD daykey to list of events on that day."""
         return _index_events_by_day(events)
-
-    # =========================================================================
-    # Details page (second SVG)
-    # =========================================================================
-
-    def _render_details_svg(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        events: list,
-        db: CalendarDB | None = None,
-    ) -> int:
-        """Render the companion details page; returns how many were written.
-
-        The range's events chronologically -- date, name over notes, and
-        whatever else the theme's columns ask for -- then the holidays
-        and special days the calendar shows.  Built through the shared
-        :class:`~renderers.details_page.DetailsPageWriter`, so it is the
-        same page the gantt details and weekly overflow companions are,
-        with mini's content in it.  Written next to the main output with
-        the ``mini_details_output_suffix`` suffix; ``--no-mini-details``
-        suppresses it.  The month-grid drawing is restored afterwards.
-        """
-        from renderers.details_page import (
-            DetailsPageWriter,
-            details_output_path,
-            numbered_page_path,
-        )
-
-        self._ensure_tokens(config)
-        saved_drawing = self._drawing
-
-        def page_path(number: int) -> str:
-            base = details_output_path(config.outputfile, config.mini_details_output_suffix)
-            return numbered_page_path(base, number)
-
-        writer = DetailsPageWriter(self, config, coordinates, page_path, config.mini_details_title_text)
-        columns = self._details_columns(config)
-
-        writer.section(config.mini_details_events_section_text, columns)
-        for event in self._details_sorted_events(events):
-            writer.row(
-                self._details_event_cells(event, len(columns)),
-                columns,
-                sub_line=(1, self._details_event_note(event)),
-            )
-
-        if db is not None:
-            extra_rows = self._collect_holiday_special_rows(coordinates, config, db)
-            if extra_rows:
-                writer.section(config.mini_details_holidays_section_text, columns)
-                for row in extra_rows:
-                    writer.row(
-                        event_listing.holiday_cells(row, len(columns)),
-                        columns,
-                        sub_line=(1, row.get("notes") or ""),
-                    )
-
-        pages = writer.finish()
-        self._drawing = saved_drawing
-        return pages
-
-    # The listing's content is shared with the compactplan key; these
-    # names stay so the details page reads as the renderer's own.
-    _details_columns = staticmethod(event_listing.details_columns)
-    _details_sorted_events = staticmethod(event_listing.sorted_events)
-    _details_event_cells = staticmethod(event_listing.event_cells)
-    _details_event_note = staticmethod(event_listing.event_note)
-
-    @staticmethod
-    def _collect_holiday_special_rows(
-        coordinates: CoordinateDict,
-        config: CalendarConfig,
-        db: CalendarDB,
-    ) -> list[dict]:
-        """The holiday + special-day rows for the days the grid shows.
-
-        Walks the primary day-cell coordinates so the result matches what's
-        visible on the calendar; see
-        :func:`renderers.event_listing.holiday_special_rows`.
-        """
-        # Primary daykeys only — adjacent-month cells share dates with their
-        # owning month elsewhere in the grid and should not double-count.
-        daykeys = [key[len("Cell_") :] for key in coordinates if key.startswith("Cell_") and not key.endswith("__adj")]
-        return event_listing.holiday_special_rows(daykeys, config, db)

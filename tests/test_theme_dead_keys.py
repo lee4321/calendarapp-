@@ -35,8 +35,8 @@ class TestFindUnconsumedKeys:
         assert find_unconsumed_keys({"timeline": {"background_color": "white"}}) == ["timeline.background_color"]
 
     def test_nested_unmapped_key_is_reported(self):
-        data = {"mini_details": {"notes_text": {"font_name": "Roboto-Regular", "font_size": 8}}}
-        assert find_unconsumed_keys(data) == ["mini_details.notes_text.font_name"]
+        data = {"details": {"markdown": {"title_text": "Details", "bogus": 1}}}
+        assert find_unconsumed_keys(data) == ["details.markdown.bogus"]
 
     def test_section_level_cascade_is_consumed(self):
         # header.font_family cascades into header.left / header.center.

@@ -132,11 +132,6 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("mini_calendar.title_format", "setting", "str (Arrow format)", frozenset({"mini", "mini-icon"})),
     RequiredKey("mini_calendar.week_number_label_format", "setting", "str", frozenset({"mini", "mini-icon"})),
     RequiredKey("mini_calendar.icon_set", "setting", "str", frozenset({"mini-icon"})),
-    # ── mini_details ──
-    RequiredKey("mini_details.output_suffix", "setting", "str", frozenset({"mini"})),
-    RequiredKey("mini_details.title_text", "setting", "str", frozenset({"mini"})),
-    RequiredKey("mini_details.headers", "setting", "list[str]", frozenset({"mini"})),
-    RequiredKey("mini_details.column_widths", "setting", "list[float]", frozenset({"mini"})),
     # ── text_mini ──
     RequiredKey("text_mini.cell_width", "setting", "int", frozenset({"text-mini"})),
     RequiredKey("text_mini.month_gap", "setting", "int", frozenset({"text-mini"})),

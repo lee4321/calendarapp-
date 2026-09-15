@@ -36,7 +36,17 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 
-from renderers.details_record import DRAWN_PARTIAL, split_reference
+from renderers.details_record import (
+    DRAWN_PARTIAL,
+    KIND_CLIPPED_END,
+    KIND_CLIPPED_START,
+    KIND_HIDDEN_HOLIDAY,
+    KIND_OFFCHART_DEPENDENCY,
+    KIND_SNAPPED_EVENT,
+    KIND_UNDRAWN,
+    DetailsException,
+    split_reference,
+)
 from renderers.svg_base import BaseSVGRenderer
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
@@ -68,16 +78,6 @@ from visualizers.gantt.dependencies import (
     resolve_dependencies,
     route_arrow,
     stub_route,
-)
-from visualizers.gantt.details import (
-    KIND_CLIPPED_END,
-    KIND_CLIPPED_START,
-    KIND_HIDDEN_HOLIDAY,
-    KIND_OFFCHART_DEPENDENCY,
-    KIND_SNAPPED_EVENT,
-    KIND_UNDRAWN,
-    GanttException,
-    render_details_pages,
 )
 from visualizers.gantt.layout import plan_pages
 from visualizers.gantt.rows import build_rows
@@ -198,9 +198,8 @@ class GanttRenderer(BaseSVGRenderer):
         if not days:
             return 0, []
 
-        self._exceptions = []
+        self._ensure_details_record(events)
         self._extra_page_count = 0
-        self._details_page_count = 0
         self._style_engine = StyleEngine(_gantt_style_rules(config))
 
         rows = build_rows(events, config)
@@ -242,16 +241,6 @@ class GanttRenderer(BaseSVGRenderer):
 
         self._extra_page_count = len(pages) - 1
 
-        if config.include_gantt_details:
-            self._details_page_count = render_details_pages(
-                self,
-                config,
-                coordinates,
-                rows,
-                columns,
-                self.exceptions,
-            )
-
         # The base class saves whatever is in _drawing as page 1.
         self._drawing = page_one_drawing
 
@@ -261,13 +250,11 @@ class GanttRenderer(BaseSVGRenderer):
         """Render, reporting every page written.
 
         The base class saves page 1 and counts it; the chart's
-        continuation pages and the companion details pages are written
-        during ``_render_content`` and added here, so ``page_count``
-        matches the number of files produced.
+        continuation pages are written during ``_render_content`` and
+        added here, so ``page_count`` matches the number of pages produced.
         """
         result = super().render(config, coordinates, events, db)
         result.page_count += getattr(self, "_extra_page_count", 0)
-        result.page_count += getattr(self, "_details_page_count", 0)
         return result
 
     def _plan_pages(
@@ -329,9 +316,10 @@ class GanttRenderer(BaseSVGRenderer):
         self._draw_dependencies(config, rows, anchors)
 
     @property
-    def exceptions(self) -> list[GanttException]:
-        """What the last render could not show faithfully (see details.py)."""
-        return list(getattr(self, "_exceptions", []))
+    def exceptions(self) -> list[DetailsException]:
+        """What the last render could not show faithfully (see renderers/details_record.py)."""
+        record = getattr(self, "details_record", None)
+        return list(record.exceptions) if record is not None else []
 
     def _note(
         self,
@@ -340,10 +328,7 @@ class GanttRenderer(BaseSVGRenderer):
         datekey: str = "",
         detail: str = "",
     ) -> None:
-        """Record one exception for the companion details page."""
-        if not hasattr(self, "_exceptions"):
-            self._exceptions = []
-        self._exceptions.append(GanttException(kind=kind, task=task, datekey=datekey, detail=detail))
+        """Record one exception for the run's details document."""
         ref, detail_text = split_reference(detail)
         self._note_exception(kind, task, datekey, ref=ref, detail=detail_text)
 

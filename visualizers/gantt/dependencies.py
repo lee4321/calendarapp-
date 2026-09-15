@@ -47,15 +47,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from shared.predecessors import Link, parse_links_with_rejects
-from vendor.labella.renderer import lineTo as _lineTo
-from vendor.labella.renderer import moveTo as _moveTo
-from visualizers.gantt.details import (
+from renderers.details_record import (
     KIND_OFFCHART_DEPENDENCY,
     KIND_UNPARSEABLE_PREDECESSOR,
     KIND_UNRESOLVED_PREDECESSOR,
-    GanttException,
+    DetailsException,
 )
+from shared.predecessors import Link, parse_links_with_rejects
+from vendor.labella.renderer import lineTo as _lineTo
+from vendor.labella.renderer import moveTo as _moveTo
 
 #: Distance the route stands off from a bar edge before turning, in points.
 DEFAULT_STUB = 4.0
@@ -153,7 +153,7 @@ class CrossPageReference:
     target_indexes: tuple[int, ...]
 
 
-def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Dependency], list[GanttException]]:
+def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Dependency], list[DetailsException]]:
     """Turn every row's predecessor cell into drawable dependencies.
 
     Args:
@@ -165,7 +165,7 @@ def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Depe
     Returns:
         ``(dependencies, exceptions)``.  Dependencies are produced for
         successors that are themselves drawn; everything that could not
-        be resolved is reported for the details page.
+        be resolved is reported in the run's details document.
     """
     by_source_id: dict[str, int] = {}
     for row in rows:
@@ -174,7 +174,7 @@ def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Depe
             by_source_id[source_id] = row.index
 
     dependencies: list[Dependency] = []
-    exceptions: list[GanttException] = []
+    exceptions: list[DetailsException] = []
 
     for row in rows:
         if row.index not in drawn_indices:
@@ -184,7 +184,8 @@ def resolve_dependencies(rows: list, drawn_indices: set[int]) -> tuple[list[Depe
 
         for token in rejects:
             exceptions.append(
-                GanttException(
+                DetailsException(
+                    visualizer="gantt",
                     kind=KIND_UNPARSEABLE_PREDECESSOR,
                     task=row.event.task_name,
                     detail=f"could not read {token!r}",
@@ -206,7 +207,7 @@ def _resolve_one(
     row,
     by_source_id: dict[str, int],
     drawn_indices: set[int],
-) -> tuple[Dependency | None, GanttException | None]:
+) -> tuple[Dependency | None, DetailsException | None]:
     """Resolve one link to a dependency, an exception, or both."""
     predecessor_index = by_source_id.get(link.ref)
 
@@ -220,13 +221,15 @@ def _resolve_one(
     stub = Dependency(row.index, None, link.type, link.ref)
 
     if predecessor_index is None:
-        return stub, GanttException(
+        return stub, DetailsException(
+            visualizer="gantt",
             kind=KIND_UNRESOLVED_PREDECESSOR,
             task=row.event.task_name,
             detail=f"no task carries source_id {link.ref!r}",
         )
 
-    return stub, GanttException(
+    return stub, DetailsException(
+        visualizer="gantt",
         kind=KIND_OFFCHART_DEPENDENCY,
         task=row.event.task_name,
         detail=f"predecessor {link.ref!r} is not on this page",

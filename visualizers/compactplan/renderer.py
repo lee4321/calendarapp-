@@ -2,15 +2,15 @@
 Compact Activities Plan SVG renderer.
 
 Renders a compressed timeline with duration lines above/below a central axis
-and milestone flag markers.  The key is a companion page written beside the
-chart (``<output>_key.svg``): the shared details listing, with each row
-carrying the swatch, icon or flag that ties it to what the chart drew.
+and milestone flag markers.  What each bar, flag and symbol stands for is
+recorded as the chart draws it and written to the run's details document
+(see :mod:`renderers.details_record`).
 """
 
 from __future__ import annotations
 
 from bisect import bisect_left
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
@@ -18,14 +18,6 @@ import arrow
 import drawsvg
 
 from config.config import get_font_path, resolve_continuation_icon
-from renderers import event_listing
-from renderers.details_page import (
-    DetailsColumn,
-    DetailsPageWriter,
-    RowMark,
-    details_output_path,
-    numbered_page_path,
-)
 from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import fit_lines, shrinktext, string_width, text_center_baseline
 from shared.data_models import Event
@@ -67,12 +59,6 @@ _BAR_MIN_FONT_SIZE = 3.0
 # Clear space between the top of the activity band and the lowest
 # milestone pennant, so labels never land on a duration bar.
 _MILESTONE_BAND_CLEARANCE = 3.0
-
-# The key page's mark column: its heading, the narrowest it may be (it
-# has to hold the heading), and the room the writer pads a cell with.
-_KEY_COLUMN_HEADING = "Key"
-_KEY_COLUMN_MIN_WIDTH = 20.0
-_KEY_COLUMN_PADDING = 8.0
 
 # ─── Color helpers (named + hex → RGB → luminance) ──────────────────────────
 # A small CSS-named-color → RGB table covering the values that turn up in the
@@ -208,11 +194,6 @@ def _resolve_icon_on_bar(
     return candidate
 
 
-def _color_key(color: str) -> str:
-    """A color as the key page groups it: ``Gold`` and ``gold`` are one."""
-    return str(color or "").strip().lower()
-
-
 def _resolve_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
 
@@ -309,34 +290,6 @@ class _PlacedDuration:
     style: StyleResult | None = None
 
 
-@dataclass(frozen=True)
-class _ChartKey:
-    """What the chart drew, kept for the key page written after it.
-
-    Attributes:
-        listing: Every event as passed in, beside the :class:`Event` the
-            chart read it as -- the listing reads the former, the marks
-            the latter.
-        placed: Drawn duration bars, by ``id()`` of their event.
-        milestones: ``id()`` of every milestone given a flag.
-        visible_days: The days on the axis, whose holidays the key lists.
-        continuations: Whether any bar was drawn continuing off the end.
-        assigned_colors: The colors the assignment hands out, in its
-            order: each color rule's, then each group's palette color in
-            slot order.  The key ranks its rows by these.
-        early_starts: Whether any bar was drawn with a "before" arrow,
-            having begun before the timeline's start.
-    """
-
-    listing: list[tuple[Any, Event]]
-    placed: dict[int, _PlacedDuration]
-    milestones: frozenset[int]
-    visible_days: list[date]
-    continuations: bool
-    assigned_colors: tuple[str, ...] = ()
-    early_starts: bool = False
-
-
 # ---------------------------------------------------------------------------
 # Renderer
 # ---------------------------------------------------------------------------
@@ -348,20 +301,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     # Entry point
     # ------------------------------------------------------------------
-
-    def render(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        events: list,
-        db: CalendarDB,
-    ):
-        self._chart_key: _ChartKey | None = None
-        result = super().render(config, coordinates, events, db)
-        if config.compactplan_show_legend and self._chart_key is not None:
-            # The key paginates, so it is worth as many pages as it took.
-            result.page_count += self._render_key_svg(config, coordinates, db)
-        return result
 
     def _render_content(
         self,
@@ -556,18 +495,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     max_label_x=area_x + area_w,
                 )
 
-        # The key -- what each bar, flag and symbol stands for -- is its own
-        # page, written after the chart (see render()).  Keep what it has
-        # to explain.
-        self._chart_key = _ChartKey(
-            listing=list(zip(events, evt_objects, strict=False)),
-            placed={id(p.event): p for p in placed},
-            milestones=frozenset(id(m) for m in milestones if self._parse_date(m.start) is not None),
-            visible_days=visible_days,
-            continuations=show_continuation and has_continuations,
-            assigned_colors=(*self._color_rules.colors, *group_color_map.values()),
-            early_starts=show_continuation and has_early_starts,
-        )
+        # The bars as placed, for callers that measure the chart.
+        self._placed_durations = placed
+        # What the chart's symbols mean, for the run's details document.
         self._note_key_symbols(config, show_continuation and has_early_starts, show_continuation and has_continuations)
 
         # ------------------------------------------------------------------
@@ -1595,321 +1525,6 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if config.compactplan_show_axis:
             bottom = max(bottom, axis_y + float(config.compactplan_axis_width) / 2.0)
         return bottom
-
-    # ------------------------------------------------------------------
-    # Key page (second SVG)
-    # ------------------------------------------------------------------
-
-    def _render_key_svg(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        db: CalendarDB | None,
-    ) -> int:
-        """Write the chart's key beside it; returns how many pages it took.
-
-        The key is the shared details listing -- the events the chart
-        drew, in color-assignment order (see :meth:`_key_row_order`), then
-        the holidays and special days on its axis -- with a leading column
-        of marks: each activity's bar in
-        miniature (its color, start icon and any continuation arrow),
-        each milestone's flag, each holiday's icon.  That column is what
-        keeps the listing a key: every row is tied to what it explains
-        on the chart.  A closing section explains the chart's symbols.
-
-        Built through the shared
-        :class:`~renderers.details_page.DetailsPageWriter`, so it is the
-        same page the other companions are; it paginates onto
-        ``_key_p2.svg`` rather than dropping rows.  The chart's drawing
-        is restored afterwards.
-        """
-        key = self._chart_key
-        if key is None:
-            return 0
-        saved_drawing = self._drawing
-
-        def page_path(number: int) -> str:
-            base = details_output_path(config.outputfile, config.compactplan_key_output_suffix)
-            return numbered_page_path(base, number)
-
-        writer = DetailsPageWriter(self, config, coordinates, page_path, config.compactplan_key_title_text)
-        mark_share = min(0.5, self._key_column_width(config, key) / max(1.0, writer.width))
-        mark_column = DetailsColumn(_KEY_COLUMN_HEADING, mark_share)
-        columns = [mark_column] + [
-            replace(column, width=column.width * (1.0 - mark_share)) for column in event_listing.details_columns(config)
-        ]
-        count = len(columns) - 1
-        name_column = 1 + event_listing.NAME_COLUMN
-
-        # Only what the chart drew: an event it had no mark for is not
-        # something its key can explain.
-        drawn = [
-            (event_listing.listing_dict(raw), evt)
-            for raw, evt in key.listing
-            if id(evt) in key.placed or id(evt) in key.milestones
-        ]
-        if drawn:
-            writer.section(config.mini_details_events_section_text, columns)
-            ranks = self._key_color_ranks(key)
-            for row, evt in sorted(drawn, key=lambda item: self._key_row_order(item, key, ranks)):
-                bar = key.placed.get(id(evt))
-                writer.row(
-                    [""] + event_listing.event_cells(row, count),
-                    columns,
-                    sub_line=(name_column, event_listing.event_note(row)),
-                    mark=(
-                        0,
-                        self._bar_mark(bar, config) if bar is not None else self._milestone_mark(evt, config),
-                    ),
-                )
-
-        holidays: list[dict] = []
-        if config.compactplan_show_holiday_list and db is not None:
-            holidays = event_listing.holiday_special_rows((d.strftime("%Y%m%d") for d in key.visible_days), config, db)
-        if holidays:
-            writer.section(config.mini_details_holidays_section_text, columns)
-            for row in holidays:
-                writer.row(
-                    [""] + event_listing.holiday_cells(row, count),
-                    columns,
-                    sub_line=(name_column, row.get("notes") or ""),
-                    mark=((0, self._holiday_mark(row["icon"], config)) if row["icon"] else None),
-                )
-
-        # The symbols explain marks on rows above; with no rows there is
-        # nothing for them to explain, and no key worth writing.
-        symbols = self._key_symbols(config, key)
-        if symbols and (drawn or holidays):
-            symbol_columns = [mark_column, DetailsColumn("Meaning", 1.0 - mark_share)]
-            writer.section(config.compactplan_key_symbols_section_text, symbol_columns)
-            for draw, text in symbols:
-                writer.row(["", text], symbol_columns, mark=(0, draw))
-
-        pages = writer.finish()
-        self._drawing = saved_drawing
-        return pages
-
-    @staticmethod
-    def _key_color_ranks(key: _ChartKey) -> dict[str, int]:
-        """Rank of each bar color on the key page, by assignment order.
-
-        The colors the assignment hands out come first, in its order --
-        each color rule's, then each resource group's palette color by
-        slot.  Any other color a bar was drawn in (its own ``Color``, a
-        style rule's ``fill_color``) follows, in order of first
-        appearance by start date.
-        """
-        ranks: dict[str, int] = {}
-        for color in key.assigned_colors:
-            ranks.setdefault(_color_key(color), len(ranks))
-        for bar in sorted(key.placed.values(), key=lambda p: (p.event.start, p.event.end)):
-            ranks.setdefault(_color_key(bar.color), len(ranks))
-        return ranks
-
-    @staticmethod
-    def _key_row_order(item: tuple[dict, Event], key: _ChartKey, ranks: dict[str, int]) -> tuple:
-        """Where an event's row falls on the key page.
-
-        Bars first, sorted by color assignment -- rows of one color sit
-        together, the colors in the order :meth:`_key_color_ranks` gives
-        them -- then by start date.  Milestones, which take no part in
-        the color assignment, follow by start date.
-        """
-        row, evt = item
-        bar = key.placed.get(id(evt))
-        if bar is not None:
-            return (0, ranks[_color_key(bar.color)], *event_listing.sort_key(row))
-        return (1, 0, *event_listing.sort_key(row))
-
-    def _key_column_width(self, config: CalendarConfig, key: _ChartKey) -> float:
-        """Width of the key page's mark column, in points."""
-        swatch = float(config.compactplan_legend_swatch_width)
-        arrow = 1.0 + self._continuation_icon_style(config)[1]
-        if key.continuations:
-            # A continuing bar's arrow is drawn past the swatch's end.
-            swatch += arrow
-        if key.early_starts:
-            # An early bar's arrow is drawn before the swatch's start.
-            swatch += arrow
-        widths = [
-            swatch,
-            float(config.compactplan_milestone_flag_width) + 2.0,
-            _KEY_COLUMN_MIN_WIDTH,
-        ]
-        if config.compactplan_show_duration_icons:
-            widths.append(self._duration_icon_height(config))
-        return max(widths) + _KEY_COLUMN_PADDING
-
-    def _draw_swatch(self, x: float, y: float, length: float, stroke: dict[str, Any]) -> None:
-        """A key swatch: a short run of *stroke* from *x*, centred on *y*.
-
-        Emitted as a raw <line> with inline style="..." so the color
-        survives any .ec-legend-swatch CSS rule in the SVG <style> block
-        (themes that bind ec-legend-swatch -> line:axis would otherwise
-        override the presentation attribute with the axis color via CSS
-        class specificity, hiding the per-bar color entirely).
-        """
-        parts = [
-            f"stroke:{stroke['stroke']}",
-            f"stroke-width:{stroke['stroke_width']}",
-        ]
-        if stroke.get("stroke_opacity") is not None:
-            parts.append(f"stroke-opacity:{stroke['stroke_opacity']}")
-        if stroke.get("stroke_dasharray"):
-            parts.append(f"stroke-dasharray:{stroke['stroke_dasharray']}")
-        self.drawing.append(
-            drawsvg.Raw(
-                f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{(x + length):.2f}" y2="{y:.2f}" '
-                f'style="{";".join(parts)}" class="ec-legend-swatch" />'
-            )
-        )
-
-    def _key_arrow_end(self, config: CalendarConfig, x: float, width: float, size: float) -> float:
-        """Right edge of a continuation arrow on the key: just past the
-        swatch's end, so the arrow never covers the color it continues."""
-        swatch = min(width, float(config.compactplan_legend_swatch_width))
-        arrow = min(self._continuation_icon_style(config)[1], size * 1.25)
-        return min(x + width, x + swatch + 1.0 + arrow)
-
-    def _bar_mark(self, p: _PlacedDuration, config: CalendarConfig) -> RowMark:
-        """An activity's bar in miniature: its stroke, start icon and any
-        continuation arrow, painted as the chart painted them."""
-
-        def draw(x: float, baseline: float, width: float, size: float) -> None:
-            center_y = baseline - size * 0.3
-            stroke = self._bar_stroke(p, config)
-            # A bar never outgrows the row it keys.
-            stroke["stroke_width"] = min(float(stroke["stroke_width"]), size)
-            if p.starts_early and config.show_continuation_icon:
-                # The "before" arrow leads the swatch, never covering its color.
-                bar_h = float(stroke["stroke_width"])
-                self._draw_continuation_icon(config, x, center_y, p.color, max_size=bar_h, before=True)
-                lead = 1.0 + min(self._continuation_icon_style(config, before=True)[1], bar_h)
-                x += lead
-                width -= lead
-            length = min(width, float(config.compactplan_legend_swatch_width))
-            self._draw_swatch(x, center_y, length, stroke)
-            # As on the chart, the start icon is no taller than its bar.
-            icon_h = min(self._duration_icon_height(config), float(stroke["stroke_width"]))
-            if config.compactplan_show_duration_icons and icon_h > 0:
-                self._draw_start_icon(p, x, center_y, icon_h, config)
-            if p.continues and config.show_continuation_icon:
-                self._draw_continuation_icon(
-                    config,
-                    self._key_arrow_end(config, x, width, size),
-                    center_y,
-                    p.color,
-                    max_size=float(stroke["stroke_width"]),
-                )
-
-        return draw
-
-    def _milestone_mark(self, evt: Event, config: CalendarConfig) -> RowMark:
-        """A milestone's flag in its color, or the icon the chart drew for it."""
-
-        def draw(x: float, baseline: float, width: float, size: float) -> None:
-            color, rule = self._milestone_style(evt, config)
-            icon_name = self._milestone_icon_name(evt, rule, config)
-            if icon_name:
-                self._draw_icon_svg(
-                    icon_name,
-                    x,
-                    baseline,
-                    min(size, width),
-                    anchor="start",
-                    color=rule.icon_color or color,
-                    css_class="ec-milestone-marker",
-                    box_token="box:milestone",
-                    box_ctx=self._event_ctx(evt),
-                )
-                return
-            flag_w = min(float(config.compactplan_milestone_flag_width), width - 1.0)
-            # The stem stands from just below the baseline to cap height,
-            # one point in so its foot tick stays inside the cell.
-            self._draw_flag_marker(
-                x + 1.0,
-                baseline + size * 0.15,
-                size,
-                max(1.0, flag_w),
-                color,
-                size * 0.6,
-            )
-
-        return draw
-
-    def _holiday_mark(self, icon: str, config: CalendarConfig) -> RowMark:
-        """A holiday or special day's own icon."""
-        color = str(config.get_text_style("ec-event-name").color or "#595959")
-
-        def draw(x: float, baseline: float, width: float, size: float) -> None:
-            self._draw_icon_svg(
-                icon,
-                x,
-                self._icon_baseline(baseline - size * 0.3, size),
-                min(size, width),
-                anchor="start",
-                color=color,
-                css_class="ec-legend-icon",
-            )
-
-        return draw
-
-    def _key_symbols(self, config: CalendarConfig, key: _ChartKey) -> list[tuple[RowMark, str]]:
-        """The chart's symbols the key explains, as ``(mark, meaning)``."""
-        swatch_w = float(config.compactplan_legend_swatch_width)
-        symbols: list[tuple[RowMark, str]] = []
-
-        if key.early_starts:
-
-            def began_earlier(x: float, baseline: float, width: float, size: float) -> None:
-                # Where the arrow sits before an activity's swatch above.
-                self._draw_continuation_icon(config, x, baseline - size * 0.3, None, max_size=size * 1.25, before=True)
-
-            symbols.append(
-                (
-                    began_earlier,
-                    str(config.compactplan_continuation_before_legend_text or "activity began earlier"),
-                )
-            )
-
-        if key.continuations:
-
-            def continuation(x: float, baseline: float, width: float, size: float) -> None:
-                # Where the arrow sits beside an activity's swatch above.
-                self._draw_continuation_icon(
-                    config,
-                    self._key_arrow_end(config, x, width, size),
-                    baseline - size * 0.3,
-                    None,
-                    max_size=size * 1.25,
-                )
-
-            symbols.append(
-                (
-                    continuation,
-                    str(config.compactplan_continuation_legend_text or "activity continues"),
-                )
-            )
-
-        if config.compactplan_show_axis_legend and config.compactplan_show_axis:
-
-            def axis(x: float, baseline: float, width: float, size: float) -> None:
-                style = config.get_line_style("ec-axis-line")
-                self._draw_swatch(
-                    x,
-                    baseline - size * 0.3,
-                    min(width, swatch_w),
-                    {
-                        "stroke": style.color,
-                        "stroke_width": min(float(config.compactplan_axis_width), size),
-                        "stroke_dasharray": style.dasharray or None,
-                        "stroke_opacity": style.opacity,
-                    },
-                )
-
-            symbols.append((axis, str(config.compactplan_legend_axis_text or "timeline")))
-
-        return symbols
 
     # ------------------------------------------------------------------
     # Helpers

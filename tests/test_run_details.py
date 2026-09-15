@@ -99,6 +99,17 @@ def test_exception_count_and_reference_split():
     assert split_reference("plain words: here") == ("", "plain words: here")
 
 
+def test_every_exception_kind_has_a_readable_label():
+    from renderers import details_record
+
+    kinds = [
+        value for name, value in vars(details_record).items() if name.startswith("KIND_") and name != "KIND_LABELS"
+    ]
+    assert kinds
+    assert all(kind in details_record.KIND_LABELS for kind in kinds)
+    assert details_record.DetailsException("gantt", "made_up_kind").issue == "Made up kind"
+
+
 def test_role_for_class():
     assert role_for_class("ec-milestone-marker") == "milestone"
     assert role_for_class("ec-weekend-icon") == "weekend"

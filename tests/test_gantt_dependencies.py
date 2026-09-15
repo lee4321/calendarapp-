@@ -5,6 +5,11 @@ from __future__ import annotations
 import pytest
 from test_gantt_marks import render, task
 
+from renderers.details_record import (
+    KIND_OFFCHART_DEPENDENCY,
+    KIND_UNPARSEABLE_PREDECESSOR,
+    KIND_UNRESOLVED_PREDECESSOR,
+)
 from shared.data_models import Event
 from visualizers.gantt.dependencies import (
     ARROW_STYLE_TARGET,
@@ -14,11 +19,6 @@ from visualizers.gantt.dependencies import (
     resolve_dependencies,
     route_arrow,
     stub_route,
-)
-from visualizers.gantt.details import (
-    KIND_OFFCHART_DEPENDENCY,
-    KIND_UNPARSEABLE_PREDECESSOR,
-    KIND_UNRESOLVED_PREDECESSOR,
 )
 from visualizers.gantt.rows import GanttRow
 

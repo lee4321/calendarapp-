@@ -37,7 +37,7 @@ Usage::
 
 The ecalendar content filters (``--empty``, ``--noevents``, ``--nodurations``,
 ``--milestones``, ``--shade``,
-``--includenotes``, ``--overflow``, ``--WBS``, ``--status``) are accepted here
+``--includenotes``, ``--WBS``, ``--status``) are accepted here
 and forwarded to every run, so a batch can be narrowed to one slice of the data
 and still be compared theme by theme.  ecalendar registers those flags per view,
 so each one is only passed to the views whose parser accepts it.
@@ -158,11 +158,6 @@ CONTENT_FILTERS = (
         "--includenotes",
         frozenset({"weekly", "timeline", "pit", "blockplan", "gantt", "compactplan"}),
         "Show notes with event names",
-    ),
-    Filter(
-        "--overflow",
-        frozenset({"weekly"}),
-        "Emit the weekly overflow page",
     ),
     Filter(
         "--WBS",

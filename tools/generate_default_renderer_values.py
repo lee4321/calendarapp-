@@ -64,7 +64,6 @@ SVG_VIEWS = ("weekly", "mini", "mini-icon", "candybar", "timeline", "pit", "bloc
 DOC_VIEWS = (*SVG_VIEWS, "text-mini", "excelblockplan")
 
 PAGE_FILE = "renderers/svg_base.py"
-DETAIL_FILES = ("renderers/details_page.py", "renderers/event_listing.py")
 OWN_FILE = {
     "weekly": "visualizers/weekly/renderer.py",
     "mini": "visualizers/mini/renderer.py",
@@ -80,7 +79,6 @@ OWN_FILE = {
 }
 # Views whose drawing goes through the shared mini renderer / details pages.
 MINI_FAMILY = ("mini-icon", "candybar")
-DETAIL_VIEWS = ("mini", "mini-icon", "candybar", "gantt", "compactplan")
 # Further modules whose config reads count toward a view's settings.
 EXTRA_SETTINGS_FILES = {"pit": ("visualizers/pit/layout.py",)}
 # Names a renderer binds the CalendarConfig to.
@@ -415,8 +413,6 @@ def settings_files(view: str) -> list[str]:
     files = [OWN_FILE[view], PAGE_FILE]
     if view in MINI_FAMILY:
         files.append(OWN_FILE["mini"])
-    if view in DETAIL_VIEWS:
-        files.extend(DETAIL_FILES)
     files.extend(f for f in EXTRA_SETTINGS_FILES.get(view, ()) if (ROOT / f).exists())
     return files
 
@@ -602,7 +598,7 @@ def build_document() -> str:
         configs = capture_configs(blank)
         catalog, with_rules, without_rules = element_styles(Path(tmp))
 
-    reads_by_file = {relative: extract_reads(relative) for relative in {*OWN_FILE.values(), PAGE_FILE, *DETAIL_FILES}}
+    reads_by_file = {relative: extract_reads(relative) for relative in {*OWN_FILE.values(), PAGE_FILE}}
     contexts = {view: token_context(view, configs[view]) for view in VIEW_DATES}
 
     def view_reads(view: str, relative: str) -> list[Read]:
@@ -704,15 +700,6 @@ def build_document() -> str:
         row for row in settings_read("weekly", settings_files("weekly"), page) if row["field"] in shared_fields
     ]
     out.extend(_settings_table(shared_rows, "Settings every SVG view reads"))
-    add("### Companion details pages")
-    add("")
-    add(f"The `_details.svg` / `_key.svg` pages written by {', '.join(DETAIL_VIEWS[:-1])} and {DETAIL_VIEWS[-1]}.")
-    add("")
-    detail_reads = [read for relative in DETAIL_FILES for read in view_reads("mini", relative)]
-    if any(read.kind == "token" for read in detail_reads):
-        out.extend(_token_table(detail_reads, computed, "mini"))
-    out.extend(_element_table(detail_reads))
-
     mini_groups = _group(view_reads("mini", OWN_FILE["mini"]))
     for view in DOC_VIEWS:
         config = configs[view]
