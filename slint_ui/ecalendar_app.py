@@ -585,7 +585,8 @@ class EcalendarApp:
     def _collect_outputs(self, output_name: str, since: float) -> list[Path]:
         stem = Path(output_name).stem
         suffix = Path(output_name).suffix
-        for base in (ROOT / "output", ROOT):
+        # A visualization writes its own run folder, output/<stem>/.
+        for base in (ROOT / "output" / stem, ROOT / "output", ROOT):
             if not base.is_dir():
                 continue
             found = [

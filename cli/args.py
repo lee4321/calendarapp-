@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from cli.errors import ConfigError
+from shared.run_paths import RunPaths
 
 
 def _prog_version() -> str:
@@ -147,6 +148,24 @@ def _to_output_dir_path(filename: str) -> str:
             "as 'chart.svg' (it is always written under output/)"
         )
     return str(Path("output") / name)
+
+
+def _to_run_paths(filename: str) -> RunPaths:
+    """
+    The run folder for a visualization's ``--outputfile``.
+
+    Each visualization run writes its own folder, ``output/<stem>/``,
+    holding the chart, its details document, its event CSV and its icons
+    (see :mod:`shared.run_paths`).  The name passes the same traversal
+    guard as :func:`_to_output_dir_path`, so only the basename is used.
+
+    Example:
+        ``_to_run_paths("../secret/cal.svg").main`` → ``output/cal/cal.svg``
+
+    Raises:
+        ConfigError: If *filename* has no usable basename.
+    """
+    return RunPaths.for_output(Path(_to_output_dir_path(filename)).name)
 
 
 class _EventCalendarParser(argparse.ArgumentParser):

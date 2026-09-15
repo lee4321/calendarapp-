@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.13.9"
+__version__ = "26.09.14.0"
 
 import logging
 import sys
@@ -44,6 +44,7 @@ from cli.args import (  # noqa: E402,F401
     _parse_atfile_lines,
     _print_subcommand_help,
     _to_output_dir_path,
+    _to_run_paths,
 )
 from cli.config_assembly import (  # noqa: E402,F401
     _apply_args_to_config,
@@ -674,10 +675,12 @@ def run(argv: list[str] | None = None) -> int:
         if view_type == "weekly":
             config.CalendarCoord = WeeklyCalendarLayout().calculate(config)
 
-        # Set output file (always under output/).
+        # Set output file: every visualization run writes its own folder,
+        # output/<stem>/ (see shared/run_paths.py).
         output_name = args.outputfile or default_output
-        Path("output").mkdir(parents=True, exist_ok=True)
-        config.outputfile = _to_output_dir_path(output_name)
+        run_paths = _to_run_paths(output_name)
+        config.run_paths = run_paths
+        config.outputfile = str(run_paths.main)
 
         # Store command line for SVG metadata
         config.command_line = " ".join(argv if argv else sys.argv)
@@ -732,12 +735,16 @@ def run(argv: list[str] | None = None) -> int:
             if was_set and opt_name not in visualizer.supported_options:
                 logger.warning(f"{flag} is not supported for '{view_type}' visualization and will be ignored")
 
-        # Generate the visualization
+        # Generate the visualization into a fresh run folder
+        run_paths.prepare()
         result = visualizer.generate(config, db)
+        result.output_dir = str(run_paths.folder)
+        result.files = [str(path) for path in run_paths.files()]
 
         logger.info(
             f"Calendar generated: {result.output_path} ({result.event_count} events, {result.overflow_count} overflow)"
         )
+        logger.info("Run folder %s: %s", run_paths.folder, ", ".join(Path(f).name for f in result.files))
         return 0
 
     except InvalidDateError as e:

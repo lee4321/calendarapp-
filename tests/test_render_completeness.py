@@ -19,6 +19,7 @@ file.  Visual regression testing is a separate concern.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -39,16 +40,18 @@ THEMES_DIR = REPO_ROOT / "config" / "themes"
 #                  its --outputfile through ecalendar._to_output_dir_path,
 #                  which strips any directory component and forces output to
 #                  ``output/<basename>`` — the excel workbooks included.
+#   run_folder:   True for visualizations, which write ``output/<stem>/``
+#                  (see shared/run_paths.py) rather than a flat file.
 SUBCOMMAND_META: dict[str, dict[str, object]] = {
-    "weekly": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "mini": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "mini-icon": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "candybar": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "text-mini": {"ext": ".txt", "accepts_theme": False, "output_dir": "output"},
-    "timeline": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "blockplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "gantt": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
-    "compactplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output"},
+    "weekly": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "mini": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "mini-icon": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "candybar": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "text-mini": {"ext": ".txt", "accepts_theme": False, "output_dir": "output", "run_folder": True},
+    "timeline": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "blockplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "gantt": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
+    "compactplan": {"ext": ".svg", "accepts_theme": True, "output_dir": "output", "run_folder": True},
     "excelblockplan": {"ext": ".xlsx", "accepts_theme": True, "output_dir": "output"},
 }
 
@@ -91,7 +94,11 @@ def test_subcommand_renders(
     theme_tag = theme or "default"
     basename = f"_completeness_{subcommand}_{theme_tag}{meta['ext']}"
 
-    if meta["output_dir"]:
+    run_folder = REPO_ROOT / str(meta["output_dir"]) / Path(basename).stem
+    if meta.get("run_folder"):
+        actual_output = run_folder / basename
+        outputfile_arg = basename
+    elif meta["output_dir"]:
         actual_output = REPO_ROOT / str(meta["output_dir"]) / basename
         outputfile_arg = basename
     else:
@@ -129,3 +136,5 @@ def test_subcommand_renders(
         assert actual_output.stat().st_size > 0, f"{label} produced an empty output file"
     finally:
         actual_output.unlink(missing_ok=True)
+        if meta.get("run_folder"):
+            shutil.rmtree(run_folder, ignore_errors=True)

@@ -96,6 +96,9 @@ class CalendarConfig:
 
     # Output file
     outputfile: str = ""
+    # The run folder the CLI writes into (shared.run_paths.RunPaths).  None
+    # when a caller renders straight to ``outputfile``, as tests do.
+    run_paths: Any = None
 
     # Calendar date range (calculated from user input)
     adjustedstart: str = ""
