@@ -48,7 +48,6 @@ class MiniCalendarVisualizer(BaseVisualizer):
             "weeknumbers",
             "week_number_mode",
             "week1_start",
-            "mini_details",
             "shrink",
         ]
 

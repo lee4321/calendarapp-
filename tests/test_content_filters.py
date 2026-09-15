@@ -28,7 +28,6 @@ _FILTER_FLAGS = frozenset(
         "--includenotes",
         "--WBS",
         "--status",
-        "--overflow",
         "--country",
     }
 )
@@ -39,7 +38,7 @@ _MINI = _COMMON | {"--empty", "--shade", "--durations"}
 
 #: The per-view gating: which filter flags each subcommand registers.
 _EXPECTED = {
-    "weekly": _PLAN | {"--shade", "--overflow"},
+    "weekly": _PLAN | {"--shade"},
     "timeline": _PLAN,
     "blockplan": _PLAN,
     "gantt": _PLAN,

@@ -280,9 +280,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("gantt", "arrow_linejoin"): "gantt_arrow_linejoin",
     ("gantt", "show_today_line"): "gantt_show_today_line",
     ("gantt", "today_date"): "gantt_today_date",
-    ("gantt", "show_details"): "include_gantt_details",
-    ("gantt", "details_title_text"): "gantt_details_title_text",
-    ("gantt", "details_output_suffix"): "gantt_details_output_suffix",
     # Run details (every visualization): the details document, icon files
     # and event CSV written into the run folder.  The column lists use the
     # gantt.columns schema and are checked by _check_details_columns().
@@ -342,13 +339,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "milestone_flag_height"): "compactplan_milestone_flag_height",
     ("compact_plan", "show_milestone_labels"): "compactplan_show_milestone_labels",
     ("compact_plan", "header_bottom_y"): "compactplan_header_bottom_y",
-    # The key page
-    ("compact_plan", "show_legend"): "compactplan_show_legend",
-    ("compact_plan", "key_title_text"): "compactplan_key_title_text",
-    ("compact_plan", "key_output_suffix"): "compactplan_key_output_suffix",
-    ("compact_plan", "key_symbols_section_text"): "compactplan_key_symbols_section_text",
-    ("compact_plan", "legend_swatch_width"): "compactplan_legend_swatch_width",
-    ("compact_plan", "show_holiday_list"): "compactplan_show_holiday_list",
+    # What the chart's symbols mean, listed in the run's details document
     ("compact_plan", "continuation_legend_text"): "compactplan_continuation_legend_text",
     ("compact_plan", "continuation_before_legend_text"): "compactplan_continuation_before_legend_text",
     ("compact_plan", "show_axis_legend"): "compactplan_show_axis_legend",
@@ -368,8 +359,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # top-level `overflow:` section in theme YAMLs)
     ("overflow", "icon"): "overflow_indicator_icon",
     ("overflow", "color"): "overflow_indicator_color",
-    ("overflow", "title_text"): "overflow_title_text",
-    ("overflow", "output_suffix"): "overflow_output_suffix",
     # Continuation icons (global — shared by timeline / blockplan / compact_plan)
     ("continuation", "show"): "show_continuation_icon",
     ("continuation", "icon_before"): "continuation_icon_before",
@@ -425,23 +414,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "week_number_font_size"): "mini_week_number_font_size",
     ("mini_calendar", "week_number_label_format"): "mini_week_number_label_format",
     # mini_calendar.day_box.hash_rules removed — use style_rules instead
-    # Mini details page — kept survivors only.  Phase 2 stripped
-    # title_color/_font + header_color/_font, plus the text/name_text/notes_text
-    # alignment + name fields with no readers.
-    ("mini_details", "enable"): "include_mini_details",
-    ("mini_details", "title_text"): "mini_details_title_text",
-    ("mini_details", "title_font_size"): "mini_details_title_font_size",
-    ("mini_details.text", "font_color"): "mini_details_text_font_color",
-    ("mini_details.text", "font_opacity"): "mini_details_text_font_opacity",
-    ("mini_details.name_text", "font_color"): "mini_details_name_text_font_color",
-    ("mini_details.name_text", "font_size"): "mini_details_name_text_font_size",
-    ("mini_details.name_text", "font_opacity"): "mini_details_name_text_font_opacity",
-    ("mini_details.notes_text", "font_size"): "mini_details_notes_text_font_size",
-    ("mini_details", "events_section_text"): "mini_details_events_section_text",
-    ("mini_details", "holidays_section_text"): "mini_details_holidays_section_text",
-    ("mini_details", "headers"): "mini_details_headers",
-    ("mini_details", "column_widths"): "mini_details_column_widths",
-    ("mini_details", "output_suffix"): "mini_details_output_suffix",
     # Text mini calendar
     ("text_mini", "cell_width"): "text_mini_cell_width",
     ("text_mini", "month_gap"): "text_mini_month_gap",
@@ -465,10 +437,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
         "mini_calendar",
         "duration_bar_stroke_opacity",
     ): "mini_duration_bar_stroke_opacity",
-    (
-        "mini_details",
-        "separator_stroke_dasharray",
-    ): "mini_details_separator_stroke_dasharray",
     # Candybar (vertical year-strip)
     ("candybar", "row_height"): "candybar_row_height",
     ("candybar", "cell_width"): "candybar_cell_width",
@@ -570,10 +538,10 @@ VALID_SECTIONS = frozenset(
         "watermark",
         "continuation",
         "overflow",
+        "details",
         "colors",
         "mini_calendar",
         "fiscal",
-        "mini_details",
         "text_mini",
         "candybar",
         "layout",
@@ -634,14 +602,28 @@ _SIZE_RULE_TARGETS: dict[str, list[tuple[str, str]]] = {
         ("header_font_size", "mini_header_font_size"),
         ("week_number_font_size", "mini_week_number_font_size"),
     ],
-    "mini_details": [
-        ("title_font_size", "mini_details_title_font_size"),
-    ],
     "blockplan": [
         ("header_font_size", "blockplan_header_font_size"),
         ("band_font_size", "blockplan_band_font_size"),
         ("lane_label_font_size", "blockplan_lane_label_font_size"),
     ],
+}
+
+#: Keys of the companion SVG pages the run's details document replaced.  A
+#: theme still carrying one is an error that names `details:` instead.
+_RETIRED_PAGE_KEYS: dict[str, frozenset[str]] = {
+    "gantt": frozenset({"show_details", "details_title_text", "details_output_suffix"}),
+    "compact_plan": frozenset(
+        {
+            "show_legend",
+            "key_title_text",
+            "key_output_suffix",
+            "key_symbols_section_text",
+            "legend_swatch_width",
+            "show_holiday_list",
+        }
+    ),
+    "overflow": frozenset({"title_text", "output_suffix"}),
 }
 
 # `colors:` keys read by ThemeEngine._apply_color_maps().  months /
@@ -2152,6 +2134,27 @@ class ThemeEngine:
                 "the excelheader section is now excelblockplan (the excelheader "
                 "command was removed) — rename the section, or run "
                 "tools/migrate_theme.py to convert this theme"
+            )
+
+        if "mini_details" in self._theme_data:
+            raise ThemeError(
+                "mini_details: the companion details page was replaced by the run's details document -- "
+                "configure it under `details:` (its columns go in details.markdown.columns), or run "
+                "tools/migrate_theme.py to convert this theme"
+            )
+
+        retired = sorted(
+            f"{section}.{key}"
+            for section, keys in _RETIRED_PAGE_KEYS.items()
+            if isinstance(self._theme_data.get(section), dict)
+            for key in keys
+            if key in self._theme_data[section]
+        )
+        if retired:
+            raise ThemeError(
+                f"{', '.join(retired)}: the companion details, key and overflow pages were replaced by "
+                "the run's details document -- configure it under `details:` (markdown, icons, csv), "
+                "or run tools/migrate_theme.py to convert this theme"
             )
 
         weekly = self._theme_data.get("weekly", {}) or {}

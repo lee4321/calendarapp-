@@ -44,8 +44,9 @@ _PAGE_FLAGS: dict[str, list[str]] = {"weekly": ["--overflow"]}
 
 
 def capture(view: str, argv: list[str]) -> dict:
+    from renderers.details_page import DetailsPageWriter, as_columns  # ty: ignore[unresolved-import]
+
     import ecalendar
-    from renderers.details_page import DetailsPageWriter, as_columns
 
     sections: list[dict] = []
     original = (DetailsPageWriter.section, DetailsPageWriter.row, DetailsPageWriter.note)

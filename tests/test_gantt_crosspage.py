@@ -11,12 +11,12 @@ from __future__ import annotations
 import pytest
 from test_gantt_marks import render, task
 
+from renderers.details_record import KIND_OFFCHART_DEPENDENCY
 from visualizers.gantt.dependencies import (
     Dependency,
     assign_cross_page_references,
     icon_for_number,
 )
-from visualizers.gantt.details import KIND_OFFCHART_DEPENDENCY
 
 FAMILIES = ["circle-", "darkcircle-", "square-"]
 
@@ -181,7 +181,7 @@ def test_the_reference_is_reported_with_its_icon(tmp_path):
 
     entries = [e for e in renderer.exceptions if e.kind == KIND_OFFCHART_DEPENDENCY]
     assert len(entries) == 1
-    assert entries[0].detail.startswith("circle-1: ")
+    assert entries[0].ref == "circle-1"
     assert "t0" in entries[0].detail  # names the far end
     assert entries[0].task == "t11"
 

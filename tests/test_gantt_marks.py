@@ -12,7 +12,7 @@ import pytest
 from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
-from visualizers.gantt.details import (
+from renderers.details_record import (
     KIND_CLIPPED_END,
     KIND_CLIPPED_START,
     KIND_HIDDEN_HOLIDAY,
@@ -116,12 +116,6 @@ def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None
     config.include_header = False
     config.include_footer = False
     config.gantt_show_today_line = False
-    # _render_content writes the companion details page to disk, so a caller
-    # that never named an outputfile would land it in the cwd as bare
-    # ``_details.svg``. Callers that assert on the page (test_gantt_details)
-    # pass a tmp_path outputfile; for everyone else the page is off.
-    if "outputfile" not in config_overrides:
-        config.include_gantt_details = False
     for key, value in config_overrides.items():
         setattr(config, key, value)
     config = setfontsizes(config)

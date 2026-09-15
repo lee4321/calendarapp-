@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.14.0"
+__version__ = "26.09.14.1"
 
 import logging
 import sys
@@ -701,7 +701,7 @@ def run(argv: list[str] | None = None) -> int:
             logger.warning(warning)
 
         # Warn about SVG layout options not applicable to text-only output.
-        # Options with per-view effects (--shade, --monthnames, --overflow,
+        # Options with per-view effects (--shade, --monthnames,
         # --shrink, --weekend-days, --includenotes, --nodurations) are gated
         # at the parser level instead — a view that never reads them does not
         # accept them (docs/cli_theme_overrides.html, Appendix A).

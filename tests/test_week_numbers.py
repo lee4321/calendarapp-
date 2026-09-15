@@ -32,41 +32,6 @@ class _CaptureRenderer(WeeklyCalendarRenderer):
         pass
 
 
-class _MiniDetailsRenderer(MiniCalendarRenderer):
-    def __init__(self):
-        super().__init__()
-        self.text_calls = []
-        self.saved_paths = []
-
-    def _create_drawing(self, config):
-        class _StubDrawing:
-            def __init__(self, owner):
-                self._owner = owner
-
-            def append(self, _):
-                return None
-
-            def append_title(self, _):
-                return None
-
-            def save_svg(self, path):
-                self._owner.saved_paths.append(path)
-
-        return _StubDrawing(self)
-
-    def _add_desc(self, config):
-        return None
-
-    def _render_decorations(self, config, coordinates, **kwargs):
-        return None
-
-    def _draw_text(self, x, y, text, font_name, font_size, **kwargs):
-        self.text_calls.append(text)
-
-    def _draw_line(self, *args, **kwargs):
-        return None
-
-
 def _base_config():
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
@@ -220,29 +185,3 @@ def test_fiscal_period_end_label_applied():
     _draw_extras(renderer, config, oneday)
 
     assert "ENDP1" in renderer.text_calls
-
-
-def test_mini_details_svg_generated():
-    config = _base_config()
-    config.include_mini_details = True
-    config.outputfile = "mini.svg"
-
-    renderer = _MiniDetailsRenderer()
-    renderer._render_details_svg(
-        config,
-        coordinates={},
-        events=[
-            {
-                "Start": "20260101",
-                "End": "20260103",
-                "Task_Name": "Task A",
-                "Milestone": False,
-                "Priority": 1,
-                "Resource_Group": "B",
-                "Notes": "Note",
-            }
-        ],
-    )
-
-    assert any("Event Details" in text for text in renderer.text_calls)
-    assert renderer.saved_paths and renderer.saved_paths[0].endswith("_details.svg")

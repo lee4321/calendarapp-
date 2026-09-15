@@ -661,17 +661,13 @@ class BaseSVGRenderer(ABC):
         # Save main SVG
         self.drawing.save_svg(config.outputfile)
 
-        # Render overflow page if requested and entries exist. The report
-        # paginates, so it is worth as many pages as it took.
-        page_count = 1
-        if config.include_overflow and overflow_entries:
-            page_count += self._render_overflow_svg(config, coordinates, overflow_entries)
-
+        # What the chart could not show goes into the run's details
+        # document, beside everything else it drew.
         self._write_run_details(config, db)
 
         return VisualizationResult(
             output_path=config.outputfile,
-            page_count=page_count,
+            page_count=1,
             event_count=len(events),
             overflow_count=overflow_count,
         )
@@ -1268,11 +1264,17 @@ class BaseSVGRenderer(ABC):
         name = self.DETAILS_VISUALIZER or getattr(self, "TOKEN_VISUALIZER", None)
         return str(name or type(self).__name__.removesuffix("Renderer").lower())
 
+    def _ensure_details_record(self, events: Iterable[Any]) -> DetailsRecord:
+        """The render record, started here when a caller draws without :meth:`render`."""
+        record = getattr(self, "details_record", None)
+        if record is None:
+            record = DetailsRecord(self._details_visualizer(), events)
+            self.details_record = record
+        return record
+
     @property
     def _details(self) -> DetailsRecord | None:
-        """The render record, or None while a companion page is drawn."""
-        if getattr(self, "_details_capture_suspended", False):
-            return None
+        """The render record, when one is being kept."""
         return getattr(self, "details_record", None)
 
     def _details_note(self, event: Any) -> EventNote | None:
@@ -1565,68 +1567,6 @@ class BaseSVGRenderer(ABC):
                     max_width=width,
                     css_class="ec-label",
                 )
-
-    # =========================================================================
-    # Overflow page (separate SVG)
-    # =========================================================================
-
-    #: The overflow report's columns, as ``(heading, width fraction)``.
-    #: An entry names the item that did not fit, its span, and the day box
-    #: it was pushed out of -- which is the one to go and look at.
-    _OVERFLOW_COLUMNS: tuple[tuple[str, float], ...] = (
-        ("Event", 0.44),
-        ("Start", 0.16),
-        ("End", 0.16),
-        ("Overflowed on", 0.24),
-    )
-
-    def _render_overflow_svg(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        overflow_entries: list,
-    ) -> int:
-        """Write the overflow report beside the calendar; returns page count.
-
-        Built through the same :class:`~renderers.details_page.DetailsPageWriter`
-        as the gantt details page, so the two read alike.  The page exists
-        to say what the calendar could not show, so it paginates onto
-        ``_overflow_p2.svg`` rather than dropping the rows that run past
-        the bottom.
-
-        Leaves the caller's drawing restored.
-        """
-        from renderers.details_page import (
-            DetailsPageWriter,
-            details_output_path,
-            format_datekey,
-            numbered_page_path,
-        )
-
-        saved_drawing = self._drawing
-
-        def page_path(number: int) -> str:
-            base = details_output_path(config.outputfile, config.overflow_output_suffix)
-            return numbered_page_path(base, number)
-
-        writer = DetailsPageWriter(self, config, coordinates, page_path, config.overflow_title_text)
-        columns = list(self._OVERFLOW_COLUMNS)
-        writer.section("Overflow", columns)
-        for entry in overflow_entries:
-            writer.row(
-                [
-                    entry.task_name or "",
-                    format_datekey(entry.start),
-                    format_datekey(entry.end),
-                    format_datekey(entry.datekey),
-                ],
-                columns,
-            )
-        pages = writer.finish()
-
-        logger.info("Overflow page saved to: %s", page_path(1))
-        self._drawing = saved_drawing
-        return pages
 
     # =========================================================================
     # Abstract method for subclasses

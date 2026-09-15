@@ -240,7 +240,6 @@ def _add_content_filter_args(
     empty_help: str | None = "Create blank calendar (no events)",
     shade: bool = False,
     includenotes: bool = False,
-    overflow: bool = False,
 ) -> None:
     """
     Register the "Content Filtering" group on one subcommand parser.
@@ -261,7 +260,6 @@ def _add_content_filter_args(
         empty_help:   Help text for --empty, or None to leave the flag out.
         shade:        Register --shade (day-grid views).
         includenotes: Register --includenotes (views that draw a notes line).
-        overflow:     Register --overflow (weekly only).
     """
     group = parser.add_argument_group("Content Filtering")
     if empty_help is not None:
@@ -332,13 +330,6 @@ def _add_content_filter_args(
             "Use 'all' for no filter. Default: active."
         ),
     )
-    if overflow:
-        group.add_argument(
-            "--overflow",
-            "-x",
-            action="store_true",
-            help="Create overflow page showing items",
-        )
     group.add_argument(
         "--country",
         "-cc",
@@ -379,7 +370,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     Options that a view's renderer never reads are not registered on that
     view's parser (per-view audit: docs/cli_theme_overrides.html, Appendix A).
-    E.g. --monthnames and --overflow are weekly-only, --shade exists only on
+    E.g. --monthnames is weekly-only, --shade exists only on
     the day-grid views, and pit has no --nodurations (it always drops
     multi-day durations).  The mini family (mini, mini-icon, text-mini, and
     candybar, which reuses the mini day-cell engine) drops durations by default
@@ -1113,8 +1104,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Watermark image file",
         )
 
-        # Content filtering (day-grid views additionally get --shade; weekly
-        # alone gets --overflow)
+        # Content filtering (day-grid views additionally get --shade)
         durations: Literal["optout", "optin", "none"] = "optout"
         if view_parser in _durations_optin_views:
             durations = "optin"
@@ -1125,11 +1115,10 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             durations=durations,
             shade=view_parser in _shade_views,
             includenotes=view_parser in _includenotes_views,
-            overflow=view_parser is weekly,
         )
 
     # text-mini: weekends + content filtering only (no SVG layout,
-    # header/footer, watermark, shade, overflow; its renderer also never
+    # header/footer, watermark, shade; its renderer also never
     # reads weekend_days or include_notes)
     _tm_layout = text_mini.add_argument_group("Layout Options")
     _tm_layout.add_argument(
@@ -1222,27 +1211,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     )
 
     # Candybar-specific options (vertical year-strip)
-    # The details page is written by the mini renderer, which candybar and
-    # mini-icon both subclass, so all three take the same pair of flags.
-    # It is on by default; --mini-details is still worth having so a CLI
-    # "on" can beat a theme's `mini_details.enable: false`.
-    for _dt_group in (
-        mini_group,
-        mini_icon_group,
-        candybar.add_argument_group("Mini Calendar Options"),
-    ):
-        _dt_details = _dt_group.add_mutually_exclusive_group()
-        _dt_details.add_argument(
-            "--mini-details",
-            action="store_true",
-            help="Write the companion details page (on by default)",
-        )
-        _dt_details.add_argument(
-            "--no-mini-details",
-            action="store_true",
-            help="Suppress the companion details page",
-        )
-
     candybar_group = candybar.add_argument_group("Candybar Options")
     candybar_group.add_argument(
         "--candybar-row-height",

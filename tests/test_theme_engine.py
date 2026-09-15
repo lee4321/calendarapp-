@@ -355,31 +355,6 @@ class TestThemeEngineApply:
         assert config.margin_bottom == 12.0
         assert config.margin_left == 18.0
 
-    def test_mini_details_theme_applied(self):
-        theme_data = {
-            "theme": {"name": "MiniDetails"},
-            "mini_details": {
-                "title_text": "Details",
-                "name_text": {"font_color": "purple"},
-                "headers": ["Start", "Name"],
-                "column_widths": [0.4, 0.6],
-                "output_suffix": "_more",
-            },
-        }
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump(theme_data, f)
-            f.flush()
-            engine = ThemeEngine()
-            engine.load(f.name)
-            config = create_calendar_config()
-            engine.apply(config)
-
-        assert config.mini_details_title_text == "Details"
-        assert config.mini_details_name_text_font_color == "purple"
-        assert config.mini_details_headers == ["Start", "Name"]
-        assert config.mini_details_column_widths == [0.4, 0.6]
-        assert config.mini_details_output_suffix == "_more"
-
     def test_timeline_theme_applied(self):
         theme_data = {
             "theme": {"name": "Timeline"},

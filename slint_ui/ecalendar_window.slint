@@ -72,7 +72,6 @@ export component MainWindow inherits Window {
     in-out property <bool> no_durations: false;
     in-out property <bool> milestones_only: false;
     in-out property <bool> include_notes: false;
-    in-out property <bool> overflow: false;
     in-out property <string> status: "";
     in-out property <string> wbs: "";
 
@@ -87,7 +86,6 @@ export component MainWindow inherits Window {
     in-out property <string> mini_title_format: "";
     in-out property <bool> mini_no_adjacent: false;
     in-out property <bool> mini_grid_lines: false;
-    in-out property <bool> mini_details: false;
     in-out property <string> mini_icon_set: "(default)";
 
     // ===== Candybar =====
@@ -173,7 +171,6 @@ export component MainWindow inherits Window {
     in property <bool> cf_empty: true;
     in property <bool> cf_shade: true;
     in property <bool> cf_nodurations: true;
-    in property <bool> cf_overflow: true;
     in property <bool> cf_includenotes: true;
     in property <bool> show_weeknum: false;
     in property <bool> show_mini: false;
@@ -407,7 +404,6 @@ export component MainWindow inherits Window {
                                 if root.cf_nodurations : CheckBox { text: "Exclude durations"; checked <=> root.no_durations; }
                                 CheckBox { text: "Milestones only"; checked <=> root.milestones_only; }
                                 if root.cf_includenotes : CheckBox { text: "Include notes"; checked <=> root.include_notes; }
-                                if root.cf_overflow : CheckBox { text: "Overflow page"; checked <=> root.overflow; }
                                 Text { text: "Status filter  —  blank = active"; }
                                 LineEdit { text <=> root.status; placeholder-text: "active,draft,… or all"; }
                                 Text { text: "WBS filter"; }
@@ -444,7 +440,6 @@ export component MainWindow inherits Window {
                                 if root.mini_has_title_format : LineEdit { text <=> root.mini_title_format; placeholder-text: "blank = MMM YY"; }
                                 CheckBox { text: "Hide adjacent-month days"; checked <=> root.mini_no_adjacent; }
                                 if root.show_mini_extra : CheckBox { text: "Draw grid lines"; checked <=> root.mini_grid_lines; }
-                                if root.show_mini_extra : CheckBox { text: "Also emit details SVG"; checked <=> root.mini_details; }
                                 if root.show_miniicon : Text { text: "Icon set (day numbers)"; }
                                 if root.show_miniicon : ComboBox {
                                     model: ["(default)", "squares", "darksquare", "darkcircles", "circles", "squircles", "darksquircles"];
