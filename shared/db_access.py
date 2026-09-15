@@ -477,6 +477,8 @@ class CalendarDB:
                 """
                 SELECT
                     id as ID,
+                    user_id as User_ID,
+                    import_id as Import_ID,
                     status as Status,
                     priority as Priority,
                     wbs as WBS,

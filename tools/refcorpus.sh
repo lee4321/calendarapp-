@@ -42,6 +42,7 @@ render_all() {
     render_one blockplan   20260101 20261231 "refcorpus_blockplan_${th}.svg"   -th "$th"
     render_one compactplan 20260309 20260424 "refcorpus_compactplan_${th}.svg" -th "$th"
     render_one pit         20260101 20261231 "refcorpus_pit_${th}.svg"         -th "$th"
+    render_one gantt       20260101 20260331 "refcorpus_gantt_${th}.svg"       -th "$th"
   done
   # text-mini has no theme support; render once
   render_one text-mini 20260101 20261231 "refcorpus_text_mini.txt"
