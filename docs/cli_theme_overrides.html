@@ -233,14 +233,14 @@ warning; “Silent” = accepted with no feedback.</p>
   <tbody>
     <tr><td>weekly</td><td>— none</td><td></td><td>All options are consumed.</td></tr>
     <tr><td rowspan="3">mini / mini-icon</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--overflow</span></td><td>Warned</td>
-        <td><code>include_month_name</code> is read only by the weekly renderer; the mini renderer always reports 0 overflow entries.</td></tr>
+        <td><span class="opt">--monthnames</span></td><td>Warned</td>
+        <td><code>include_month_name</code> is read only by the weekly renderer.</td></tr>
     <tr><td><span class="opt">--includenotes</span></td><td>Silent</td>
-        <td><code>include_notes</code> is never read by the mini family — the grid never shows notes, and the <span class="opt">--mini-details</span> page always shows them.</td></tr>
+        <td><code>include_notes</code> is never read by the mini family — the grid never shows notes, and the run's details document always lists them.</td></tr>
     <tr><td><span class="opt">--weekend-days</span></td><td>Silent</td>
         <td>Only consumed via <code>config.get_weekend_days()</code> in <code>shared/day_classifier.py</code>, which the mini family does not use.</td></tr>
     <tr><td>candybar</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--overflow</span> (warned); <span class="opt">--includenotes</span>, <span class="opt">--weekend-days</span> (silent)</td><td>Mixed</td>
+        <td><span class="opt">--monthnames</span> (warned); <span class="opt">--includenotes</span>, <span class="opt">--weekend-days</span> (silent)</td><td>Mixed</td>
         <td>Same reasons as mini (candybar reuses the mini renderer/day-style engine). Note <span class="opt">--shade</span> and <span class="opt">--fiscal-colors</span> <em>do</em> work on candybar via the shared day-style resolver.</td></tr>
     <tr><td rowspan="2">text-mini</td>
         <td><span class="opt">--mini-title-format</span></td><td>Silent</td>
@@ -248,19 +248,19 @@ warning; “Silent” = accepted with no feedback.</p>
     <tr><td><span class="opt">--includenotes</span>, <span class="opt">--weekend-days</span></td><td>Silent</td>
         <td>Neither field is read by the text-mini renderer.</td></tr>
     <tr><td>timeline</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
-        <td>Timeline draws no day grid or overflow page. (<span class="opt">--weekends</span>/<span class="opt">--weekend-days</span> <em>do</em> affect timeline via the day classifier.)</td></tr>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span></td><td>Warned</td>
+        <td>Timeline draws no day grid. (<span class="opt">--weekends</span>/<span class="opt">--weekend-days</span> <em>do</em> affect timeline via the day classifier.)</td></tr>
     <tr><td rowspan="2">pit</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
-        <td>No day grid / overflow page.</td></tr>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span></td><td>Warned</td>
+        <td>No day grid.</td></tr>
     <tr><td><span class="opt">--nodurations</span>, <span class="opt">--weekend-days</span></td><td>Silent</td>
         <td>PIT drops multi-day durations unconditionally, so <span class="opt">--nodurations</span> is a no-op; PIT performs no weekend classification.</td></tr>
     <tr><td>blockplan</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span></td><td>Warned</td>
-        <td>No day grid / overflow page.</td></tr>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span></td><td>Warned</td>
+        <td>No day grid.</td></tr>
     <tr><td>compactplan</td>
-        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span>, <span class="opt">--overflow</span> (warned); <span class="opt">--shrink</span> (redundant)</td><td>Mixed</td>
-        <td>No day grid / overflow page; compactplan always shrinks to content, so the flag adds nothing (and is spuriously warned).</td></tr>
+        <td><span class="opt">--monthnames</span>, <span class="opt">--shade</span> (warned); <span class="opt">--shrink</span> (redundant)</td><td>Mixed</td>
+        <td>No day grid; compactplan always shrinks to content, so the flag adds nothing (and is spuriously warned).</td></tr>
     <tr><td>excelblockplan</td>
         <td><span class="opt">--includenotes</span></td><td>Silent</td>
         <td><code>config.include_notes</code> is set but never read by <code>generate_excel_blockplan()</code>; the Notes column is always emitted.</td></tr>

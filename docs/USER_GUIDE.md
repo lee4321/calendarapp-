@@ -68,8 +68,8 @@ for the module-level architecture.
 | `timeline` | Generate a timeline SVG. |
 | `pit` | Generate a Points-in-Time SVG (clean axis + marker-per-event + bezier leaders). |
 | `blockplan` | Generate a blockplan SVG. |
-| `gantt` | Generate a Gantt chart SVG: task table on the left, timescale on the right, with duration bars, percent-complete lines, milestones, rollup brackets and dependency arrows. Also writes a companion `_details.svg` listing every task plus anything the chart could not show faithfully. |
-| `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. Also writes its key as a companion `_key.svg`: the details listing, each row carrying the swatch or flag that ties it to the chart. |
+| `gantt` | Generate a Gantt chart SVG: task table on the left, timescale on the right, with duration bars, percent-complete lines, milestones, rollup brackets and dependency arrows. |
+| `compactplan` | Generate a compressed activities timeline SVG showing durations as colored lines above/below a central axis, grouped by resource group. |
 | `excelblockplan` | Generate an `.xlsx` workbook with blockplan-style timeband header rows plus one row per event/duration in the range (with style-rule decoration and holiday overlays). Pass `--empty` for a blank workbook with only the header rows, ready to use as a planning template. |
 | `themes` | List available themes. |
 | `papersizes` | List available paper sizes from DB. |
@@ -86,14 +86,105 @@ for the module-level architecture.
 | `exportdata` | Export filtered events/durations as a CSV compatible with `importers/import_events.py`. |
 | `help` | Show valid configurable values for a subcommand. |
 
+## Run Output
+
+Every visualization run writes its own folder under `output/`, named after
+the output file:
+
+```
+output/gantt202609141530/
+  gantt202609141530.svg        the chart (continuation pages: _p2.svg, _p3.svg, ...)
+  gantt202609141530.md         the details document
+  gantt202609141530.csv        the events the run included
+  icons/                       one SVG per icon or mark the chart drew
+```
+
+`--outputfile chart.svg` writes `output/chart/chart.svg` and the files beside
+it; any directory in the name is discarded. Re-running into the same folder
+first removes what a run writes there (the chart, its pages, the document,
+the CSV and `icons/`) and leaves anything else alone. `text-mini` writes its
+`.txt`, document and CSV the same way. The utilities (`excelblockplan`,
+`exportdata` and the sheets) still write single files directly under
+`output/`.
+
+### The details document
+
+`<stem>.md` is a Markdown document describing what the chart shows. It
+replaced the companion SVG pages -- the gantt details page, the weekly
+overflow page, the mini family's details page and the compactplan key --
+and lists everything they did:
+
+| Section | Holds |
+|---|---|
+| Events | Every event the run was given, one row each, in the columns `details.markdown.columns` names: any `events` table column, plus what the chart assigned it (see below) |
+| Color Key | Every color the chart handed out: a swatch, the color, what it was assigned to, where it came from (a style rule, a color rule, a group palette, the event's own color ...) and how many events carry it |
+| Icons & Symbols | Every file in `icons/`: the icon or mark, its name and color, the role it plays (milestone, duration start, continuation, holiday, overflow ...) and what it means |
+| Exceptions | Everything the chart could not show faithfully: items that did not fit their day, bars clipped at the range edge, events moved off a hidden weekend, dependencies drawn on another page, labels with no room, lanes past the page, items no swimlane took, icons a day cell had no corner for, names shortened to fit |
+| Holidays & Special Days | The holidays and company special days on the days the chart shows, one row per name, government holidays with their country code |
+
+Icons are image links into `icons/`, so the document shows its icons in
+GitHub, VS Code, Obsidian and most other Markdown viewers.
+
+#### Render-derived event fields
+
+Besides every `events` column (`name`, `start_date`, `end_date`, `wbs`,
+`resource_group`, `notes`, `source_id`, `custom1` ...), an Events column may
+name what the chart did with the event:
+
+| Field | Value |
+|---|---|
+| `marker` | The event's key mark: its bar or flag in its color (or a swatch of its assigned color), then every icon drawn for it |
+| `icons` | Every icon and mark drawn for the event, in draw order |
+| `icon` | The first icon drawn for it |
+| `event_icon` | The `events.icon` value, as text |
+| `assigned_color` | The color it was drawn in, as a swatch and its name |
+| `color_source` | Where that color came from |
+| `category` | `event`, `milestone` or `duration` |
+| `lane` | Its swimlane (blockplan) |
+| `drawn` | `yes`, `partial` (clipped, or partly overflowed) or `no` |
+| `page` | The chart page its row is on (gantt) |
+| `ref` / `link_ref` | Cross-page dependency reference icons (gantt) |
+| `exceptions` | How many exception rows concern it |
+| `continues_before` / `continues_after` | Whether it was clipped at the range edge |
+| `color_rank` | For `sort`: the color assignment order |
+
+#### The event CSV
+
+`<stem>.csv` has one row per event the run was given, in the Events table's
+order. By default its columns are the `exportdata` set, so it re-imports
+through `importers/import_events.py`, followed by the render columns
+`assigned_color`, `color_source`, `icons` (`;`-separated names), `category`,
+`lane`, `drawn`, `page` and `exceptions`; the importer ignores columns it
+does not know. `details.csv.columns` may instead list columns in the same
+schema as the document's.
+
+#### Icon files
+
+Each distinct icon and color the chart drew is written once, as
+`icons/<icon>--<color>.svg`, recolored exactly as the chart painted it.
+Every file is the same square size (`details.icons.size`, default 16), so
+icons line up in the document's tables. Marks drawn as geometry -- a bar, a
+color swatch, a milestone pennant, a rollup bracket -- get `mark-*` files.
+
+#### Command-line switches
+
+| Flag | Effect |
+|---|---|
+| `--details-md` / `--no-details-md` | Write / skip the details document |
+| `--icons` / `--no-icons` | Write / skip the icon files (the document then names icons instead of showing them) |
+| `--csv` / `--no-csv` | Write / skip the event CSV |
+
+All three are on by default, and the flags beat a theme's `enable:` either
+way. See [Run Details](#run-details-global-theme-section) for the theme keys.
+
 ## Common Workflows
 
 ```bash
 # Weekly calendar for a date range
 PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 -th corporate -of weekly.svg
 
-# Mini calendar with week numbers and details page
-PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --weeknumbers --mini-details -of mini.svg
+# Mini calendar with week numbers (output/mini/: mini.svg, mini.md, mini.csv, icons/)
+PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --weeknumbers -of mini.svg
 
 # Mini-icon calendar with squircle day-number icons, 4 columns, landscape
 PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 -mis squircles --mini-columns 4 -o landscape -of mini_icon.svg
@@ -110,7 +201,7 @@ PYTHONPATH=. uv run python ecalendar.py timeline 20260101 20261231 -tll 120 -tld
 # Blockplan view
 PYTHONPATH=. uv run python ecalendar.py blockplan 20260101 20261231 -th corporate -of blockplan.svg
 
-# Gantt chart: task table + bars + dependency arrows, plus chart_details.svg
+# Gantt chart: task table + bars + dependency arrows, plus its details document
 PYTHONPATH=. uv run python ecalendar.py gantt 20260101 20260630 -th default -of chart.svg
 
 # Compact activities plan
@@ -363,16 +454,15 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
   - A bar no rule matches keeps the **default assignment, by resource group**: the event's own `Color` if it has one, else its group's color from `compact_plan.palette` (or the database palette named by `compact_plan.palette_name`). Groups take palette slots in sorted name order, wrapping when there are more groups than colors; ungrouped bars sort first. Every group present keeps its slot even when rules color all its bars, so adding a rule never reshuffles the other groups' colors.
   - A theme condition beats the event's own `Color` (that `Color` is part of the default it replaces). A `style_rules` entry with `apply_to: duration` and `fill_color` still layers over everything, as it does in every view.
 - **Duration start icons**: when `compact_plan.show_duration_icons` is `true` (the default), an icon is drawn at the start (left) end of every duration line. Icons are handed out per duration, in start-date order, by cycling through the named icon list (`compact_plan.duration_icon_list`, default `"darksquare"` — numbered squares). The icon takes a style rule's `icon_color`, else the theme's `icon:duration` color, else the bar color — and whichever it gets is swapped for black or white when it matches the bar color, so the glyph never disappears into its own bar. `compact_plan.duration_icon_height` controls the icon size in points (default `8.0`). Available icon lists are `darksquare`, `squares`, `darkcircles`, `circles`, `squircles`, and `darksquircles`; all are defined in `config/config.py` as `ICON_SETS`.
-- Milestone markers are drawn on the axis at the milestone date: a stem standing up from the axis, topped by a pennant or an icon. Icon priority: a style rule's `icon` → `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme; with none of those, or a name not in the `icons` table, the built-in pennant is drawn. An icon takes the pennant's place at the stem tip, sized to the flag height (capped at one label line), in the milestone's color — the event's `Color`, a style rule's `fill_color`, or the `ec-milestone-marker` color — unless a style rule sets `icon_color`; a theme can halo it with a `box:milestone` rule. If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker. The key page marks each milestone's row with the same icon or flag.
+- Milestone markers are drawn on the axis at the milestone date: a stem standing up from the axis, topped by a pennant or an icon. Icon priority: a style rule's `icon` → `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme; with none of those, or a name not in the `icons` table, the built-in pennant is drawn. An icon takes the pennant's place at the stem tip, sized to the flag height (capped at one label line), in the milestone's color — the event's `Color`, a style rule's `fill_color`, or the `ec-milestone-marker` color — unless a style rule sets `icon_color`; a theme can halo it with a `box:milestone` rule. If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker. In the details document, the milestone's Key cell carries the same icon or flag.
 - Column header time bands come from `compact_plan.bands`, a list of keys into the shared [`time_bands:` catalog](#time-bands-shared-catalog) (optionally with per-placement overrides, e.g. `- band: week` + `row_height: 30`). Supported units: `week`, `month`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon`, and `holiday` — one cell per visible day carrying each holiday's own country flag, uncolored, with `nonworkdays_only: true` hiding observances that do not close the office (the same band blockplan and gantt draw). Each band may set its own `row_height` (else `compact_plan.band_row_height`, default `22`; the label size follows the row unless `compact_plan.text.font_size` is set) and `show_every: N` to draw every N segments as one cell labelled by its first — `date`/`dow` cells never merge across a week boundary (`week_start`, default Monday), exactly as in blockplan. Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
 - The layout is content-first and always shrunk: the axis is fixed at the vertical centre of the content area, duration rows are placed around it, then the header bands float `compact_plan.header_bottom_y` pts above the topmost row. The SVG viewBox is trimmed to exactly the rendered content — from the top of the header bands to the lowest ink below the axis (the bottom row's bar or the icons riding on it) — producing the smallest possible output.
-- **The key is its own page.** Nothing but the chart is drawn on the chart page; the key is written beside it as `<output>_key.svg` (continuing onto `_key_p2.svg`, `_key_p3.svg`, … when it runs long). It is the same page as the mini calendar's companion details page — built by the shared details-page writer, with the same columns (`mini_details.headers` / `mini_details.column_widths`) and section names (`mini_details.events_section_text` / `holidays_section_text`) — plus a leading **Key** column that ties every row to the chart:
-  - **Events**: every duration and milestone the chart drew, **sorted by color assignment, then start date** — rows of one color sit together, the colors in the order they are handed out: each `color_rules` entry's in the theme's order, then each resource group's palette color by slot, then any color only events carry (their own `Color`, or a style rule's `fill_color`) in order of first appearance. Milestones, which take no color assignment, follow by start date. Each row shows its start date, name (notes and end date on a second line), milestone flag, priority and group. An activity's Key cell is its bar in miniature — a swatch in the exact color, width, dash and opacity its bar was drawn with, its start icon, and the continuation arrow if the bar runs off the end — so the color attribution the old legend gave is kept row by row. A milestone's Key cell is its flag, in its marker color.
-  - **Holidays & Special Days** (controlled by `compact_plan.show_holiday_list`, default `true`): the holidays and company special days on the axis, one row per name (a name recurring over several days is collapsed into a date range, government holidays carry their country code), each with its own icon.
-  - **Symbols**: what the continuation arrow (`compact_plan.continuation_legend_text`, default `"activity continues"`; listed only when a bar continues) and the axis (`compact_plan.legend_axis_text`, default `"timeline"`; listed when `show_axis` and `show_axis_legend` are on) mean.
-  - `compact_plan.show_legend: false` writes no key page. `key_title_text` (default `"Key"`), `key_output_suffix` (default `"_key"`) and `key_symbols_section_text` (default `"Symbols"`) name the page, its file and its last section; `legend_swatch_width` (default `18`) sets the swatch length. The key's text is styled like the other details pages (`text:heading`, `text:label`, `text:details_body`, `text:event_date`, `text:event_name`, `text:event_notes`; rows band with `ec-row-band`).
-  - The on-chart legend's layout keys — `key_top_y`, `legend_column_split`, `legend_team_columns`, `legend_row_height`, `show_milestone_list`, `milestone_list_*`, `holiday_list_*` — no longer have anything to lay out and are ignored. Milestones are always listed, as on the details page.
-- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line, beside the bar's swatch on the key page, and in the key's Symbols section. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
+- **The key is the details document.** Nothing but the chart is drawn on the chart page. What each bar, flag and symbol means is written to the run's [details document](#the-details-document), which carries everything the key page did:
+  - Each activity's **Key** cell (`marker`) is its bar in miniature: a mark in the exact color it was drawn in, its start icon, and the continuation arrows if it runs off either end. A milestone's is its flag or icon in its marker color. Its **Color** cell names the color, and its **Color Key** row says where it came from: a `color_rules` entry, the resource group's palette slot, the event's own `Color`, or a style rule's `fill_color`.
+  - Sort the Events table with `details.markdown.sort: [color_rank, start_date]` to list rows as the key did: rows of one color together, the colors in the order they are handed out (each `color_rules` entry's in the theme's order, then each resource group's palette color by slot, then any color only events carry), with milestones, which take no color assignment, last.
+  - The **Icons & Symbols** table explains the continuation arrows (`compact_plan.continuation_before_legend_text`, default `"activity began earlier"`, and `continuation_legend_text`, default `"activity continues"`, each listed only when a bar needs it) and the axis (`compact_plan.legend_axis_text`, default `"timeline"`, listed when `show_axis` and `show_axis_legend` are on).
+  - A bar name shortened to fit, or a date left out for want of room, is listed under **Exceptions**.
+- **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line and listed in the details document's Icons & Symbols table. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
 - The chart's text areas (band headers, milestone labels) support independent font name, font size, color, and opacity settings in the theme via the `compact_plan` section.
 - `--shade` highlights the current day column when today falls within the date range.
 - `--weekends` controls whether weekend columns are included in the x-axis day list (same as all other commands).
@@ -412,39 +502,12 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - If none of those overrides apply, the day number uses the base day-number color, resolved by one chain shared with `mini-icon` and `candybar` (highest priority first): the `text:day_number` token from `style_rules`, then an `ec-day-number` entry in `element_overrides`, then `colors.mini_calendar.day_color`, then `mini_calendar.day_color` (default `black`).
 - `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
 
-#### The mini details page
+#### Details
 
-`mini`, `mini-icon` and `candybar` write `<output>_details.svg` beside the
-calendar, in two sections: the range's events chronologically, then the
-holidays and special days the calendar shows. Each event is a two-line
-row — its name over its notes, with a multi-day event's end date appended
-to that sub-line, since only a multi-day event has one worth stating.
-
-Columns come from `mini_details.headers` and `mini_details.column_widths`,
-which are normalized to span the page once. Give the two lists different
-lengths and both fall back to the defaults together, rather than leaving
-the wrong heading over every column. The first column takes
-`text:event_date`, the second `text:event_name`; a theme asking for fewer
-columns gets the leading ones, and one asking for more gets blanks.
-
-| Theme key | Type | Default | Explanation |
-|---|---|---|---|
-| `mini_details.enable` | `bool` | `true` | Write the page |
-| `mini_details.title_text` | `str` | `"Event Details"` | Page title |
-| `mini_details.events_section_text` | `str` | `"Events"` | First section heading |
-| `mini_details.holidays_section_text` | `str` | `"Holidays & Special Days"` | Second section heading |
-| `mini_details.output_suffix` | `str` | `"_details"` | Filename suffix |
-| `mini_details.headers` | `list[str]` | five columns | Column headings |
-| `mini_details.column_widths` | `list[float]` | `[0.16, 0.52, 0.10, 0.10, 0.12]` | Relative widths |
-
-The page is on by default; `--no-mini-details` suppresses it, and
-`--mini-details` turns it back on over a theme's `enable: false`. All three
-views take both flags — they share the renderer that writes the page.
-
-It is drawn by the
-[shared details-page writer](#the-companion-details-page-shared), so it
-carries that page's banding and typography and continues onto
-`<output>_details_p2.svg` rather than truncating at the bottom.
+`mini`, `mini-icon` and `candybar` list the range's events, the icons each
+day carries and the holidays and special days the grid shows in the run's
+[details document](#the-details-document). A day cell has four corners for
+icons; an icon it had no corner for is listed under **Exceptions**.
 
 ### `mini-icon`
 
@@ -455,7 +518,7 @@ carries that page's banding and typography and continues onto
 
 #### `mini-icon` day rendering behavior
 
-`mini-icon` is a variant of `mini` that replaces plain day-number text with SVG icon images drawn at 80 % of the cell height. Everything else — grid layout, month rows/columns, holidays, events, milestones, week numbers, adjacent-month cells, pattern decorations, and the optional details page — behaves identically to `mini`.
+`mini-icon` is a variant of `mini` that replaces plain day-number text with SVG icon images drawn at 80 % of the cell height. Everything else — grid layout, month rows/columns, holidays, events, milestones, week numbers, adjacent-month cells, pattern decorations, and the details document — behaves identically to `mini`.
 
 **Icon selection priority (highest → lowest):**
 
@@ -478,7 +541,7 @@ carries that page's banding and typography and continues onto
 **Layout auto-scaling:** The grid always fits all requested rows within the available content area. When the width-derived square-cell size would cause the bottom rows to overflow the page (common in landscape orientation with many rows), the cell height is reduced to fit — cells become slightly shorter than wide but remain visually compact.
 
 **Inherited `mini` options** — all flags and config fields that apply to `mini` also apply to `mini-icon`, including:
-`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-details`, `--mini-title-format`, `--shade`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
+`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-title-format`, `--shade`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
 
 ### `candybar`
 
@@ -671,30 +734,14 @@ In weekly, day-box cells are drawn first, events and durations are placed into t
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
 - Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
 
-#### The overflow page
+#### Overflow
 
 The icon in the day-number row says *that* something was left out; the
-overflow page says *what*. `--overflow` / `-x` writes
-`<output>_overflow.svg` beside the calendar, listing every event and
-duration that could not be placed:
-
-| Column | Holds |
-|---|---|
-| Event | The task name |
-| Start | First day of its span |
-| End | Last day of its span |
-| Overflowed on | The day box it was pushed out of — the one to go and look at |
-
-The page is only written when something actually overflowed, so its
-absence after an `-x` run means everything fitted.
-
-It shares the [gantt details page](#the-details-page)'s format — the same
-chrome, title, section heading, column rules and row banding — and, like
-it, paginates rather than truncating (`<output>_overflow_p2.svg`, …). A
-report that quietly dropped its last few lines would be reporting a
-truncation by truncating. See
-[Details Page](#details-page-global-theme-section) for the shared
-format's theme keys.
+run's [details document](#the-details-document) says *what*. Every event
+and duration that could not be placed is an **Exceptions** row ("Did not
+fit in its day") naming the item, its span and the day box it was pushed
+out of -- the one to go and look at. The item's own Events row says whether
+it was drawn at all (`drawn: no`) or only in part (`partial`).
 
 ### `pit`
 
@@ -752,10 +799,9 @@ Wherever a view lists holidays alongside their dates, the holiday name is prefix
 | Listing | Where |
 |---|---|
 | `text-mini` details | the `Holidays` section under the calendars |
-| `mini` / `mini-icon` / `candybar` details page | the `Federal Holiday` rows (`--mini-details`) |
-| `compactplan` key page | the `Federal Holiday` rows of `<output>_key.svg` |
+| Details document | the `Federal Holiday` rows of every visualization's Holidays & Special Days table |
 
-The mini details page and the compactplan key collapse a holiday that recurs across visible days into one row, and a holiday that several countries celebrate under the same name into one row listing every code (`CA, US - New Year's Day`).
+The details document collapses a holiday that recurs across visible days into one row, and a holiday that several countries celebrate under the same name into one row listing every code (`CA, US - New Year's Day`).
 
 Company special days come from the `specialdays` table rather than a government holiday calendar, carry no country code, and are never prefixed.
 
@@ -1115,11 +1161,11 @@ durations:       # geometry / placement
 watermark:       # watermark text and rotation
 continuation:    # icons for durations clipped by the visible range
 overflow:        # icon marking a box that could not hold its contents
+details:         # the run's details document, icon files and event CSV
 fiscal:          # label_format, year_offset
 colors:          # palette name references; holiday structural attrs
 weekly:          # weekly format strings
 mini_calendar:   # mini title_format, layout dims, icon_set name
-mini_details:    # column widths, header text, output_suffix
 text_mini:       # glyph-set declarations
 timeline:        # tick_label_format, geometry, today_date
 compact_plan:    # axis-relative geometry, band references
@@ -1480,7 +1526,7 @@ continuation:
 - **`compact_plan`** is horizontal-only and only clips its trailing
   end, so it reads `icon_after` and ignores `icon_before`. It also has
   its own compactplan-scoped `continuation_legend_text` key for the
-  row that explains the arrow in its key page's Symbols section (see the
+  row that explains the arrow in its details document's Icons & Symbols table (see the
   `compactplan` rendering section).
 - **`blockplan`** is horizontal-only and uses both `icon_before` and
   `icon_after` to mark duration bars whose underlying event extends
@@ -1513,22 +1559,16 @@ than quietly ignored — move the two keys up one level.
 |---|---|---|---|
 | `overflow.icon` | `str` | `"warningtriangle"` | Glyph name, resolved through the `icons` table |
 | `overflow.color` | `str` | `"red"` | Icon color |
-| `overflow.title_text` | `str` | `"Overflow Events"` | Title on the weekly overflow page |
-| `overflow.output_suffix` | `str` | `"_overflow"` | Filename suffix for that page |
 | *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | Optional halo (fill / stroke / padding) painted behind the icon. See "Style Rules" → Box Properties. |
 
 ```yaml
 overflow:
   icon: warningtriangle
   color: red
-  title_text: Overflow Events
-  output_suffix: _overflow
 ```
 
-The last two keys belong to the weekly overflow **page** (see
-[`weekly` → The overflow page](#the-overflow-page)) rather than to the
-icon; they sit here so everything the overflow feature owns is in one
-block.
+What did not fit is listed in the run's
+[details document](#the-details-document).
 
 `overflow.icon` names the glyph in every visualizer; a `define
 icon:overflow` token supplies its color (and size, where the visualizer
@@ -1570,49 +1610,63 @@ through.
 Only `timeline`, `blockplan` and `compactplan` used to paint one, so
 `weekly`, `mini`, `mini-icon`, `candybar`, `gantt` and `pit` rendered
 pale text on white under a dark theme. The ground is laid when a page is
-created, so continuation pages and companion details pages get it on the
-same terms as the chart.
+created, so continuation pages get it on the same terms as the chart.
 
-#### The companion details page (shared)
+#### Run Details (global theme section)
 
-Every view that writes a second document beside its chart writes the same
-page: the [gantt details page](#the-details-page), the
-[weekly overflow report](#the-overflow-page), the
-[mini / mini-icon / candybar event listing](#the-mini-details-page), and
-the [compactplan key](#compactplan-rendering-behavior). One writer draws
-all four — page chrome, a centered title, then sections of a heading, a
-column-header row, a rule, and banded rows — continued onto as many pages
-as the rows need. The compactplan key lists what the mini listing does,
-through the same code, and adds a column of marks (a bar's swatch, a
-milestone's flag, a holiday's icon) drawn into each row.
+The `details:` section configures the run's
+[details document, icon files and event CSV](#run-output). It applies to
+every visualization.
 
-It has no theme block of its own. What belongs to the *format* is themed
-through the vocabulary that already existed for it:
-
-| What | Themed by | Notes |
-|---|---|---|
-| Row banding | `ec-row-band` | The element class the gantt chart's own task table bands with, so a chart and its listing stripe alike. Paint it `none` to switch banding off. Defaults to grey at 0.25 opacity |
-| Row text | `text:details_body` | Its own token, because `text:body` also sets the gantt chart's task-table text and that table's rows are a fixed `gantt.row_height`. Size scales with the paper; everything else falls through to `text:body` |
-| Title | `text:heading` | |
-| Section headings and column headers | `text:label` | |
-| The rule under a header row | `ec-separator` | Including its dash pattern |
-| An event's notes sub-line | `text:event_notes` | Only the mini listing and the compactplan key draw one |
-| The page ground | `ec-background` | Every SVG page paints one — see [Page background](#page-background) |
-
-What belongs to a *page* stays with the view that owns it — its title, its
-filename suffix, its columns:
-
-| | Title | Suffix | On/off |
+| Theme key | Type | Default | Explanation |
 |---|---|---|---|
-| gantt | `gantt.details_title_text` | `gantt.details_output_suffix` | `gantt.show_details` |
-| weekly | `overflow.title_text` | `overflow.output_suffix` | `--overflow` (off by default) |
-| mini family | `mini_details.title_text` | `mini_details.output_suffix` | `mini_details.enable`, `--mini-details` / `--no-mini-details` |
-| compactplan | `compact_plan.key_title_text` | `compact_plan.key_output_suffix` | `compact_plan.show_legend` |
+| `details.markdown.enable` | `bool` | `true` | Write `<stem>.md` |
+| `details.markdown.title_text` | `str` | `"Calendar Details"` | Document title |
+| `details.markdown.sections` | `list[str]` | `[events, colors, symbols, exceptions, holidays]` | The sections to write, in order |
+| `details.markdown.events_section_text`, `colors_section_text`, `symbols_section_text`, `exceptions_section_text`, `holidays_section_text` | `str` | `Events`, `Color Key`, `Icons & Symbols`, `Exceptions`, `Holidays & Special Days` | Section headings |
+| `details.markdown.empty_exceptions_text` | `str` | `"Every item was drawn as scheduled."` | Written when nothing was an exception |
+| `details.markdown.empty_cell_text` | `str` | `""` | Written in an empty cell |
+| `details.markdown.icon_mode` | `file` / `name` / `none` | `file` | Show icons as images, as names, or not at all |
+| `details.markdown.color_mode` | `swatch` / `hex` / `name` | `swatch` | Show colors as a swatch and code, as code, or as plain text |
+| `details.markdown.group_by` | `str` | `none` | One Events sub-table per value of a field (`category`, `lane`, `resource_group`, `assigned_color` ...) |
+| `details.markdown.sort` | `list[str]` | `[start_date, end_date, name]` | Events order, in the vocabulary of `gantt.sort`, plus `color_rank` |
+| `details.markdown.columns` | `list[column]` | 15 columns | The Events table |
+| `details.markdown.exception_columns` | `list[column]` | Issue, Task, Date, Ref, Detail | The Exceptions table, over `visualizer`, `kind`, `issue`, `task`, `date`, `start`, `end`, `ref`, `detail` |
+| `details.markdown.holiday_columns` | `list[column]` | Icon, Date, Name, Kind, Non-work, Notes | The holidays table, over `date`, `start_date`, `end_date`, `name`, `raw_name`, `kind`, `country`, `nonworkday`, `notes`, `icon`, `icons`, `company`, `language`, `fullday`, `starthour`, `endhour`, `tags` |
+| `details.icons.enable` | `bool` | `true` | Write `icons/` |
+| `details.icons.size` | `float` | `16` | Width and height of every icon file |
+| `details.csv.enable` | `bool` | `true` | Write `<stem>.csv` |
+| `details.csv.columns` | `exportdata` / `list[column]` | `exportdata` | The CSV's columns |
+| `details.csv.render_columns` | `bool` | `true` | Append the render columns |
 
-A band is drawn behind its own row's text — including a two-line row's
-sub-line — and every page opens on an unbanded row, so a table continued
-onto a second page does not put the stripe on the other foot.
+Every column list uses the [`gantt.columns` schema](#theme-reference):
+`field`, `header`, `align` (the table's alignment row), `format`,
+`date_format`, `render: icon` with `icon`, `indent` (WBS depth), `max_lines`
+(above 1 keeps line breaks) and `max_chars` (shorten with an ellipsis).
+`width` is accepted and ignored, so a `gantt.columns` list pastes in
+unchanged. A column naming a field its table does not have is a theme error
+that lists the valid fields.
 
+```yaml
+details:
+  markdown:
+    columns:
+      - { field: marker,         header: Key, align: center }
+      - { field: name,           header: Task, indent: true }
+      - { field: start_date,     header: Start, date_format: YYYY-MM-DD }
+      - { field: assigned_color, header: Color }
+    sort: [color_rank, start_date]
+  icons: { size: 20 }
+  csv: { columns: exportdata }
+```
+
+The pages the document replaced took their settings from `mini_details:`,
+`gantt.show_details` / `details_title_text` / `details_output_suffix`,
+`compact_plan.show_legend` / `key_*` / `legend_swatch_width` /
+`show_holiday_list` and `overflow.title_text` / `output_suffix`. A theme
+still carrying any of them is rejected with a message naming `details:`;
+`tools/migrate_theme.py` moves a `mini_details:` section's headers into
+`details.markdown.columns`.
 
 ### Complete Theme Key Reference
 
@@ -1629,7 +1683,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 > **What actually gets drawn when a theme leaves a value unset.** The config defaults below are only part of the answer: style tokens fall back through per-view chains in the renderers, and element styles depend on whether the theme has a `style_rules:` section. [Default Renderer Values](DefaultRendererValues.md) lists the resulting values for every visualization, generated from the code by `tools/generate_default_renderer_values.py`:
 >
 > - [How a missing value is resolved](DefaultRendererValues.md#how-a-missing-value-is-resolved), including the text sizes computed from the page size
-> - Shared: [page chrome](DefaultRendererValues.md#page-chrome) and [companion details pages](DefaultRendererValues.md#companion-details-pages)
+> - Shared: [page chrome](DefaultRendererValues.md#page-chrome)
 > - Per visualization: [weekly](DefaultRendererValues.md#weekly), [mini](DefaultRendererValues.md#mini), [mini-icon](DefaultRendererValues.md#mini-icon), [candybar](DefaultRendererValues.md#candybar), [timeline](DefaultRendererValues.md#timeline), [pit](DefaultRendererValues.md#pit), [blockplan](DefaultRendererValues.md#blockplan), [gantt](DefaultRendererValues.md#gantt), [compactplan](DefaultRendererValues.md#compactplan), [text-mini](DefaultRendererValues.md#text-mini), [excelblockplan](DefaultRendererValues.md#excelblockplan)
 > - [Element style defaults](DefaultRendererValues.md#appendix-element-style-defaults) for every `ec-*` class, with and without `style_rules:`
 
@@ -1735,13 +1789,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_day_number_glyphs` | `mini_calendar.day_number_glyphs` | `list[str] \| None` | `None` | Optional explicit glyphs for day numbers 1-31 in SVG mini calendars |
 | `mini_day_number_digits` | `mini_calendar.day_number_digits` | `list[str] \| None` | `None` | Optional digit glyph substitutions for SVG mini day numbers |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `mini_calendar.day_box.hash_rules`. Mini renderer reads the same top-level `style_rules` filtered by `apply_to: day_box`. |
-| `mini_details_*_font_size` | `mini_details.size_rule` | `` | `` | Per-papersize mini-details font sizes |
-| `mini_details_column_widths` | `mini_details.column_widths` | `list[float]` | `field(default_factory=lambda: [0.16, 0.52, 0.1, 0.1, 0.12])` | column widths |
-| `mini_details_headers` | `mini_details.headers` | `list[str]` | `field(default_factory=lambda: ['Start Date', 'Name / Description', 'Milestone...` | headers |
-| `mini_details_output_suffix` | `mini_details.output_suffix` | `str` | `'_details'` | output suffix |
-| `mini_details_separator_stroke_dasharray` | `mini_details.separator_stroke_dasharray` | `str | None` | `None` | separator stroke dasharray |
-| `mini_details_title_font_size` | `mini_details.title_font_size` | `float | None` | `None` | title font size |
-| `mini_details_title_text` | `mini_details.title_text` | `str` | `'Event Details'` | title text |
 | `mini_duration_bar_stroke_opacity` | `mini_calendar.duration_bar_stroke_opacity` | `float` | `0.7` | duration bar stroke opacity |
 | `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell (also enabled by `--mini-grid-lines`) |
 | `mini_grid_line_color` | `mini_calendar.grid_line_color` | `str` | `'lightgrey'` | mini grid line stroke color |
@@ -2991,8 +3038,8 @@ adds the three things a schedule review needs: **dependencies**, **progress**, a
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Every run also writes a companion **details page** (`<output>_details.svg`) — see
-[The details page](#the-details-page) below.
+Every run also writes a [details document](#the-details-document) — see
+[What the details document reports](#what-the-details-document-reports) below.
 
 ### Usage examples
 
@@ -3064,7 +3111,7 @@ The `--weekends` style decides the shape of the axis, not just its shading:
 
 Country holidays are always columns and always shaded, so adding `--country` never
 changes the width of the chart. The one casualty is a holiday that falls on a hidden
-weekend — it has no column to shade, so it is reported on the details page instead.
+weekend — it has no column to shade, so it is reported in the details document instead.
 
 A single-day event landing on a hidden weekend is drawn on the **next working day** with a
 marker icon (`arrow-left-circle` by default), and likewise reported.
@@ -3105,7 +3152,7 @@ cannot be drawn, so the link is *numbered* instead and the number appears at bot
 
 So ⑦ beside a stub on page 1 is the same link as ⑦ in the reference column on page 3.
 Numbers are drawn from `circle-1`…`circle-100`, then `darkcircle-`, then `square-` —
-300 references before numbering degrades. All of them are listed on the details page with
+300 references before numbering degrades. All of them are listed in the details document's Exceptions table with
 their icon name.
 
 A reference matching **no** task, or a predecessor cell that cannot be parsed, has no far
@@ -3124,7 +3171,7 @@ If your export has no predecessor data, no arrows are drawn and nothing else cha
 | Rollup bracket | `rollup` rows | A downward-facing bracket over the row's own dates; no progress line or float bars. Omitted when the row has no dates — children are never consulted |
 | Milestone | `milestone` rows | A filled diamond anchored on `end_date` |
 | Deadline | `deadline` | A themed icon in the task's row |
-| Continuation icon | bars crossing `START_DATE` / `END_DATE` | Drawn inside the clipped edge, and reported on the details page |
+| Continuation icon | bars crossing `START_DATE` / `END_DATE` | Drawn inside the clipped edge, and reported in the details document |
 | Today line | wall clock, or `gantt.today_date` | Same semantics as the `pit` view: suppressed when outside the range |
 
 ### Stacking the timescale
@@ -3167,13 +3214,11 @@ Pages run row-major, so following one task's bar across the date range means tur
 consecutive pages. Continuation files are named `<output>_p2.svg`, `<output>_p3.svg`, and
 so on.
 
-### The details page
+### What the details document reports
 
-Every run writes `<output>_details.svg` alongside the chart; set
-`gantt.show_details: false` in a theme to suppress it. It has two sections:
-
-1. **Tasks** — every row in chart order, through the same columns as the chart's table.
-2. **Exceptions** — one line per item the chart could not show faithfully:
+The run's [details document](#the-details-document) lists every task, with the
+`page` its row is on and the cross-page `ref` icons it carries, and, under
+**Exceptions**, one line per item the chart could not show faithfully:
 
 | Reported | Why |
 |---|---|
@@ -3186,13 +3231,9 @@ Every run writes `<output>_details.svg` alongside the chart; set
 | Predecessor does not match any task | No task carries that `source_id` |
 | Predecessor could not be parsed | The cell's syntax was not understood |
 
-The exception log paginates rather than truncating (`<output>_details_p2.svg`, …) — a
-report that quietly dropped its last few lines would defeat the purpose.
-
-Both tables are drawn by the shared details-page writer, so they carry the row
-banding and typography described under
-[Details Page](#details-page-global-theme-section). A column's `align` from
-`gantt.columns` applies to the listing as well as to the chart's own table.
+A cross-page dependency's numbered icon is in the Ref column. A column list written
+for `gantt.columns` pastes into `details.markdown.columns` unchanged, to list the
+tasks exactly as the chart's own table does.
 
 ### Inherited content-filter flags
 
@@ -3249,8 +3290,6 @@ fully annotated set; `config/themes/default.yaml` shows a working configuration 
 | `arrow_linecap` / `arrow_linejoin` | `round` | Leader stroke joins |
 | `show_today_line` | `true` | Draw the today line |
 | `today_date` | `null` | Fix "today" at a `YYYYMMDD` date for a forward-dated review |
-| `show_details` | `true` | Write the companion `_details.svg` page |
-| `details_title_text` | `Gantt Details` | Title on the companion page |
 
 Bars, milestones and arrows are styled through `style_rules` like every other element:
 

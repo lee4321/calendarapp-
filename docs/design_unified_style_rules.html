@@ -1649,7 +1649,7 @@ as the loader and converter, never describing a state that doesn't exist in the 
       <td><code class="inline">weekly.day_box</code> is gone. Its content is a <code class="inline">define: box, as: day</code> rule (with optional <code class="inline">select.visualizer: weekly</code> overrides). Overflow icon name remains as non-styling config; overflow color/size moves to <code class="inline">icon:overflow</code>.</td>
     </tr>
     <tr>
-      <td><code class="inline">mini</code> exposes <code class="inline">mini_calendar.*</code>, <code class="inline">mini_details.*</code></td>
+      <td><code class="inline">mini</code> exposes <code class="inline">mini_calendar.*</code></td>
       <td>Format strings (<code class="inline">title_format</code>) and layout dimensions stay. Cell/title/header styling moves to scoped <code class="inline">style_rules</code> (e.g. <code class="inline">apply_to: text:mini_title, select: { visualizer: mini }</code>).</td>
     </tr>
     <tr>
@@ -2528,7 +2528,7 @@ configuration. The catalog (one entry per top-level section):</p>
     <tr><td><code class="inline">watermark</code></td><td>Watermark text content and rotation; styling lives in <code class="inline">style_rules</code>.</td></tr>
     <tr><td><code class="inline">weekly</code></td><td>Weekly visualizer non-styling config: week-number format, day-name format, overflow icon name.</td></tr>
     <tr><td><code class="inline">mini_calendar</code></td><td>Mini visualizer non-styling config: title format, layout dimensions, icon-set name.</td></tr>
-    <tr><td><code class="inline">mini_details</code></td><td>Mini-details non-styling config: column widths, header text, output suffix.</td></tr>
+    <tr><td><code class="inline">details</code></td><td>The run's details document, icon files and event CSV: table columns (gantt.columns schema), section titles, icon size, CSV columns.</td></tr>
     <tr><td><code class="inline">text_mini</code></td><td>text-mini glyph-set declarations; not an SVG renderer.</td></tr>
     <tr><td><code class="inline">timeline</code></td><td>Timeline non-styling config: tick-label format, axis/callout/lane geometry, today-line content.</td></tr>
     <tr><td><code class="inline">blockplan</code></td><td>Blockplan non-styling config: swimlane name list, label-column ratio, lane match policy, fiscal-year start.</td></tr>

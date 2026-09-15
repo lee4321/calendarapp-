@@ -1,6 +1,7 @@
 # Run Folder, Markdown Details & Event CSV — Implementation Plan
 
-Status: proposed (revised 2026-09-14)
+Status: implemented (2026-09-14, branch `markdown-details`). Beyond the plan, compactplan's
+`show_legend` and `legend_swatch_width` (key-page only) were retired too.
 
 ## 1. Goal
 

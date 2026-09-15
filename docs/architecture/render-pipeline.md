@@ -34,8 +34,8 @@ sequenceDiagram
     fact->>rend: render(config, coordinates, events, db)
     rend->>rend: _populate_tokens(config)  # TOKENS → self._tokens
     rend->>rend: _render_content(): day boxes → events/durations → chrome
-    rend-->>run: VisualizationResult (+ overflow entries)
-    run->>rend: overflow page → <name>_overflow.svg (if any)
+    rend->>rend: _write_run_details(): <stem>.md, <stem>.csv, icons/
+    rend-->>run: VisualizationResult
 ```
 
 Points worth knowing:
@@ -51,6 +51,8 @@ Points worth knowing:
   duration clamping use those).
 - **Events arrive as dicts** from `CalendarDB` and are normalized to
   `shared.data_models.Event` (`from_dict` maps the PascalCase DB columns).
-- **Overflow**: weekly emits events that didn't fit as a separate
-  `_overflow.svg` table page; mini/candybar route extra content to the
-  `_details` page instead; blockplan/timeline never overflow.
+- **Run details**: while a renderer draws, it fills a render record
+  (`renderers/details_record.py`) -- every event, the icons and marks it
+  drew for each, assigned colors, and every exception (weekly overflow,
+  clipped bars, unplaced labels ...). `renderers/run_details.py` writes the
+  run folder's details document, event CSV and icon files from it.
