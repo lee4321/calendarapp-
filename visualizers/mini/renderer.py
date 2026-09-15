@@ -191,6 +191,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             day_num = int(daykey[6:8])
             cell_render_state.append((x, y, w, h, day_num, style))
 
+        self._note_grid_days(
+            config,
+            (key[len("Cell_") :] for key in coordinates if key.startswith("Cell_") and not key.endswith("__adj")),
+            events_by_day,
+        )
+
         # Pass 3a: day-cell backgrounds (shade, SVG patterns, hash, grid lines)
         for x, y, w, h, _day_num, style in cell_render_state:
             self._draw_day_cell_background(config, x, y, w, h, style)
@@ -659,6 +665,22 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     # Drawing helpers
     # =========================================================================
 
+    def _note_grid_days(self, config: CalendarConfig, daykeys, events_by_day: dict[str, list]) -> None:
+        """Record the days the grid shows, and every event on one of them."""
+        daykeys = list(daykeys)
+        self._note_visible_days(daykeys)
+        for daykey in daykeys:
+            for event in events_by_day.get(daykey, []):
+                self._note_drawn(event)
+        self._note_color(config.theme_federal_holiday_color, "Federal holiday", "colors.federal_holiday")
+        self._note_color(config.theme_company_holiday_color, "Company holiday", "colors.company_holiday")
+
+    def _day_icon_scope(self, icon):
+        """The render-record scope a corner icon is drawn in: its event's or holiday's."""
+        if icon.event is not None:
+            return self._event_scope(icon.event)
+        return self._holiday_scope(icon.holiday)
+
     # _draw_circle() is inherited from BaseSVGRenderer.
 
     #: Corner order for a cell's icons: top-right first, then clockwise.
@@ -688,6 +710,16 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         underneath — a cell that shows only an icon has lost the one thing
         every cell has to say, which is what these used to do.
         """
+        from renderers.details_record import KIND_ICON_DROPPED
+
+        for dropped in style.dropped_icons(len(self._ICON_CORNERS)):
+            self._note_exception(
+                KIND_ICON_DROPPED,
+                (dropped.event or {}).get("Task_Name") or dropped.holiday or "",
+                style.daykey,
+                detail=f"{dropped.name}: the day's four corners were taken",
+                event=dropped.event,
+            )
         icons = style.corner_icons(len(self._ICON_CORNERS))
         if not icons:
             return
@@ -704,19 +736,21 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         for icon, (fx, fy) in zip(icons, self._ICON_CORNERS, strict=False):
             cx = x + pad + (size / 2.0) if fx == 0 else x + w - pad - (size / 2.0)
             cy = y + pad + (size / 2.0) if fy == 0 else y + h - pad - (size / 2.0)
-            self._draw_icon_svg(
-                icon.name,
-                cx,
-                self._icon_baseline(cy, size),
-                size,
-                anchor="middle",
-                color=default_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=default_color,
-                css_class="ec-event-icon",
-                opacity=opacity,
-            )
+            with self._day_icon_scope(icon):
+                self._draw_icon_svg(
+                    icon.name,
+                    cx,
+                    self._icon_baseline(cy, size),
+                    size,
+                    anchor="middle",
+                    color=default_color,
+                    fallback_name=config.default_missing_icon,
+                    fallback_size=config.default_missing_icon_size,
+                    fallback_color=default_color,
+                    css_class="ec-event-icon",
+                    opacity=opacity,
+                    details_role="holiday" if icon.event is None else None,
+                )
 
     def _draw_mini_hash_lines(
         self,
@@ -843,6 +877,12 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             except Exception:
                 pass
             event_styles[id(event)] = (color, sr)
+            note = self._details_note(event)
+            if note is not None:
+                note.assigned_color = color
+                note.color_source = "style rule" if sr.fill_color else "group palette"
+            with self._event_scope(event):
+                self._note_mark("bar", color)
 
         # Build a day -> list of (color, StyleResult) per overlapping duration.
         bars_by_day: dict[str, list[tuple[str, StyleResult]]] = {}

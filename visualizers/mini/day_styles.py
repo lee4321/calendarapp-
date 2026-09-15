@@ -71,6 +71,9 @@ class DayIcon:
 
     name: str
     rank: int = ICON_RANK_EVENT
+    #: The event row or holiday name the icon marks, for the run details.
+    event: dict | None = field(default=None, compare=False)
+    holiday: str | None = field(default=None, compare=False)
 
 
 @dataclass
@@ -113,6 +116,9 @@ class DayStyle:
     # Leading/trailing month indicator
     is_adjacent_month: bool = False
 
+    # The day this style is for (YYYYMMDD), so what it drops can be reported.
+    daykey: str = ""
+
     # SVG pattern decorations
     hash_decorations: list[HashDecoration] = field(default_factory=list)
 
@@ -122,7 +128,14 @@ class DayStyle:
     # Fiscal period start label (e.g. "P1", "Q1 FY26 P1") — None if not a period start
     fiscal_period_label: str | None = None
 
-    def add_icon(self, name: str | None, rank: int = ICON_RANK_EVENT) -> None:
+    def add_icon(
+        self,
+        name: str | None,
+        rank: int = ICON_RANK_EVENT,
+        *,
+        event: dict | None = None,
+        holiday: str | None = None,
+    ) -> None:
         """Record one icon for this day, ignoring blanks and duplicates.
 
         A day often draws the same glyph from two sources — a company
@@ -134,7 +147,7 @@ class DayStyle:
         text = str(name).strip()
         if not text or any(icon.name == text for icon in self.icons):
             return
-        self.icons.append(DayIcon(text, rank))
+        self.icons.append(DayIcon(text, rank, event, holiday))
 
     def corner_icons(self, limit: int) -> list[DayIcon]:
         """The icons to draw, highest rank first, capped at ``limit``.
@@ -145,6 +158,11 @@ class DayStyle:
         """
         ordered = sorted(self.icons, key=lambda i: -i.rank)
         return ordered[: max(0, limit)]
+
+    def dropped_icons(self, limit: int) -> list[DayIcon]:
+        """The icons :meth:`corner_icons` leaves out for want of a corner."""
+        ordered = sorted(self.icons, key=lambda i: -i.rank)
+        return ordered[max(0, limit) :]
 
 
 class DayStyleResolver:
@@ -178,7 +196,7 @@ class DayStyleResolver:
         Returns:
             Merged DayStyle for this day
         """
-        style = DayStyle(is_adjacent_month=is_adjacent)
+        style = DayStyle(is_adjacent_month=is_adjacent, daykey=daykey)
 
         if is_adjacent:
             style.text_color = self._config.theme_mini_adjacent_month_color or self._config.mini_adjacent_month_color
@@ -262,6 +280,7 @@ class DayStyleResolver:
             style.add_icon(
                 holiday.get("icon") or holiday.get("displayiconid"),
                 ICON_RANK_HOLIDAY,
+                holiday=holiday.get("displayname") or holiday.get("name"),
             )
 
     def _apply_special_days(self, style: DayStyle, special_days: list[dict]) -> None:
@@ -285,7 +304,7 @@ class DayStyleResolver:
                 with contextlib.suppress(ValueError, TypeError):
                     style.hash_pattern = int(pattern)
 
-            style.add_icon(sd.get("icon"), ICON_RANK_SPECIAL_DAY)
+            style.add_icon(sd.get("icon"), ICON_RANK_SPECIAL_DAY, holiday=sd.get("name"))
 
     def _apply_events(self, style: DayStyle, events: list[dict]) -> None:
         """Apply event-driven styling."""
@@ -305,7 +324,7 @@ class DayStyleResolver:
                 # A milestone outranks a plain event, so it takes the earlier
                 # corner — but it no longer displaces the events sharing its
                 # day, and two milestones no longer displace each other.
-                style.add_icon(event.get("Icon"), ICON_RANK_MILESTONE)
+                style.add_icon(event.get("Icon"), ICON_RANK_MILESTONE, event=event)
 
             # Resource group coloring
             rg = (event.get("Resource_Group") or "").upper()
@@ -318,7 +337,7 @@ class DayStyleResolver:
             # gets a corner now — a second event no longer overwrites the
             # first, and a milestone no longer suppresses them.
             if not event.get("Milestone"):
-                style.add_icon(event.get("Icon"), ICON_RANK_EVENT)
+                style.add_icon(event.get("Icon"), ICON_RANK_EVENT, event=event)
 
             # Bold for high-priority events
             priority = event.get("Priority") or 0

@@ -1,0 +1,3339 @@
+{
+ "gantt": {
+  "argv": [
+   "gantt",
+   "20260101",
+   "20260331",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Tasks",
+    "columns": [
+     "Ref",
+     "ID",
+     "Task Name",
+     "Status",
+     "Pri",
+     "WBS",
+     "Roll",
+     "MS",
+     "%",
+     "Effort",
+     "Duration",
+     "Start",
+     "Finish",
+     "Resources",
+     "Group",
+     "Notes",
+     "Deadline"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "",
+       "",
+       "NimbusPay Modernization",
+       "active",
+       "0",
+       "NP",
+       "Yes",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/02/26",
+       "Fr 07/31/26",
+       "",
+       "",
+       "Full program rollup spanning discovery through production rollout",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Discovery & Requirements",
+       "active",
+       "0",
+       "NP.1",
+       "Yes",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/02/26",
+       "Fr 02/27/26",
+       "",
+       "",
+       "Requirements elicitation and scoping phase",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Project Kickoff",
+       "active",
+       "0",
+       "NP.1",
+       "",
+       "Yes",
+       "0%",
+       "",
+       "",
+       "Mo 02/02/26",
+       "Mo 02/02/26",
+       "",
+       "Product",
+       "All-hands kickoff and charter walkthrough",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Requirements Sign-off",
+       "active",
+       "0",
+       "NP.1",
+       "",
+       "Yes",
+       "0%",
+       "",
+       "",
+       "Fr 02/27/26",
+       "Fr 02/27/26",
+       "",
+       "Product",
+       "Steering committee approves requirements baseline",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Stakeholder Interviews",
+       "active",
+       "1",
+       "NP.1.1",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/02/26",
+       "Fr 02/13/26",
+       "",
+       "Product",
+       "Discovery sessions with finance, ops, and support leaders",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Business Requirements Workshop",
+       "active",
+       "1",
+       "NP.1.2",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/09/26",
+       "Fr 02/13/26",
+       "",
+       "Product",
+       "Capture and prioritize functional requirements",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Regulatory Compliance Review",
+       "active",
+       "1",
+       "NP.1.3",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/09/26",
+       "Fr 02/20/26",
+       "",
+       "Security",
+       "PCI DSS and SOC2 scope assessment",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Legacy System Audit",
+       "active",
+       "2",
+       "NP.1.4",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/02/26",
+       "Fr 02/20/26",
+       "",
+       "Backend",
+       "Catalog current services and data flows",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "User Research Sessions",
+       "active",
+       "2",
+       "NP.1.5",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/09/26",
+       "Fr 02/20/26",
+       "",
+       "UX",
+       "Contextual inquiries with merchant operators",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Non-functional Requirements Draft",
+       "active",
+       "2",
+       "NP.1.6",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/16/26",
+       "Fr 02/27/26",
+       "",
+       "Backend",
+       "Throughput, latency, and availability targets",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Architecture & Design",
+       "active",
+       "0",
+       "NP.2",
+       "Yes",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/23/26",
+       "Fr 03/13/26",
+       "",
+       "",
+       "System, API, data, and UX design",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Architecture Review Board",
+       "active",
+       "1",
+       "NP.2",
+       "",
+       "Yes",
+       "0%",
+       "",
+       "",
+       "Fr 03/13/26",
+       "Fr 03/13/26",
+       "",
+       "Backend",
+       "Cross-team review and approval",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Architecture Vision Workshop",
+       "active",
+       "1",
+       "NP.2.1",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/23/26",
+       "Fr 02/27/26",
+       "",
+       "Backend",
+       "Set north-star architecture and constraints",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "System Architecture Spec",
+       "active",
+       "1",
+       "NP.2.2",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 02/23/26",
+       "Fr 03/06/26",
+       "",
+       "Backend",
+       "Service decomposition and runtime topology",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "API Contract Design",
+       "active",
+       "2",
+       "NP.2.3",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/02/26",
+       "Fr 03/13/26",
+       "",
+       "Backend",
+       "OpenAPI specs for payments and identity surfaces",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Data Model Design",
+       "active",
+       "2",
+       "NP.2.4",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/02/26",
+       "Fr 03/13/26",
+       "",
+       "Backend",
+       "Ledger schema and event sourcing patterns",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "UX Wireframes",
+       "active",
+       "2",
+       "NP.2.5",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/02/26",
+       "Fr 03/13/26",
+       "",
+       "UX",
+       "Low-fidelity flows for primary personas",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Visual Design System",
+       "active",
+       "2",
+       "NP.2.6",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/09/26",
+       "Fr 03/13/26",
+       "",
+       "UX",
+       "Component library and tokens",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Security Threat Model",
+       "active",
+       "1",
+       "NP.2.7",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/02/26",
+       "Fr 03/13/26",
+       "",
+       "Security",
+       "STRIDE analysis on new attack surface",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Development Sprints",
+       "active",
+       "0",
+       "NP.3",
+       "Yes",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 06/05/26",
+       "",
+       "",
+       "Four iterative build sprints",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Sprint 1 Planning",
+       "active",
+       "1",
+       "NP.3.S1",
+       "",
+       "Yes",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Mo 03/16/26",
+       "",
+       "Product",
+       "Backlog refinement for auth and API foundation",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Sprint 1 Review",
+       "active",
+       "1",
+       "NP.3.S1",
+       "",
+       "Yes",
+       "0%",
+       "",
+       "",
+       "Fr 04/03/26",
+       "Fr 04/03/26",
+       "",
+       "Product",
+       "Sprint outcomes accepted",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Sprint 1 Demo",
+       "active",
+       "2",
+       "NP.3.S1",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Fr 04/03/26",
+       "Fr 04/03/26",
+       "",
+       "Product",
+       "Stakeholder demo of authentication flow",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Identity Service Build",
+       "active",
+       "1",
+       "NP.3.S1.1",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 04/03/26",
+       "",
+       "Backend",
+       "OIDC issuer, user store, and token service",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Auth Web Implementation",
+       "active",
+       "2",
+       "NP.3.S1.2",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 04/03/26",
+       "",
+       "Frontend",
+       "Sign-in, MFA, and account recovery screens",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Mobile Auth Module",
+       "active",
+       "2",
+       "NP.3.S1.3",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 04/03/26",
+       "",
+       "Mobile",
+       "iOS and Android biometric login",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "CI/CD Pipeline Setup",
+       "active",
+       "1",
+       "NP.3.S1.4",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 03/27/26",
+       "",
+       "DevOps",
+       "Build, test, and artifact promotion stages",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "QA & Testing",
+       "active",
+       "0",
+       "NP.4",
+       "Yes",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 06/19/26",
+       "",
+       "",
+       "Verification, validation, and quality gates",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "QA Test Plan",
+       "active",
+       "2",
+       "NP.4.1",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/16/26",
+       "Fr 03/27/26",
+       "",
+       "QA",
+       "Strategy, coverage matrix, and entry/exit criteria",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "",
+       "",
+       "Unit Test Buildout",
+       "active",
+       "2",
+       "NP.4.2",
+       "",
+       "",
+       "0%",
+       "",
+       "",
+       "Mo 03/30/26",
+       "Fr 05/01/26",
+       "",
+       "QA",
+       "Component-level coverage with mocks",
+       ""
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Exceptions",
+    "columns": [
+     "Task",
+     "Date",
+     "Ref",
+     "Issue",
+     "Detail"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "Sprint 1 Demo",
+       "2026-04-03",
+       "—",
+       "Not drawn — every day of the span is hidden",
+       "every day of the span is hidden"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Identity Service Build",
+       "2026-04-03",
+       "—",
+       "Bar continues past the end of the range",
+       "ends 20260403, after the range"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Auth Web Implementation",
+       "2026-04-03",
+       "—",
+       "Bar continues past the end of the range",
+       "ends 20260403, after the range"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Mobile Auth Module",
+       "2026-04-03",
+       "—",
+       "Bar continues past the end of the range",
+       "ends 20260403, after the range"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Unit Test Buildout",
+       "2026-05-01",
+       "—",
+       "Bar continues past the end of the range",
+       "ends 20260501, after the range"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     }
+    ],
+    "notes": []
+   }
+  ]
+ },
+ "weekly": {
+  "argv": [
+   "weekly",
+   "20260101",
+   "20260331",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Overflow",
+    "columns": [
+     "Event",
+     "Start",
+     "End",
+     "Overflowed on"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "Stakeholder Interviews",
+       "2026-02-02",
+       "2026-02-13",
+       "2026-02-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Legacy System Audit",
+       "2026-02-02",
+       "2026-02-20",
+       "2026-02-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Regulatory Compliance Review",
+       "2026-02-09",
+       "2026-02-20",
+       "2026-02-09"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "User Research Sessions",
+       "2026-02-09",
+       "2026-02-20",
+       "2026-02-09"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Non-functional Requirements Draft",
+       "2026-02-16",
+       "2026-02-27",
+       "2026-02-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Architecture Vision Workshop",
+       "2026-02-23",
+       "2026-02-27",
+       "2026-02-23"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "System Architecture Spec",
+       "2026-02-23",
+       "2026-03-06",
+       "2026-02-23"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Requirements Sign-off",
+       "2026-02-27",
+       "2026-02-27",
+       "2026-02-27"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "API Contract Design",
+       "2026-03-02",
+       "2026-03-13",
+       "2026-03-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Data Model Design",
+       "2026-03-02",
+       "2026-03-13",
+       "2026-03-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Security Threat Model",
+       "2026-03-02",
+       "2026-03-13",
+       "2026-03-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "UX Wireframes",
+       "2026-03-02",
+       "2026-03-13",
+       "2026-03-02"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Visual Design System",
+       "2026-03-09",
+       "2026-03-13",
+       "2026-03-09"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Sprint 1 Planning",
+       "2026-03-16",
+       "2026-03-16",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "CI/CD Pipeline Setup",
+       "2026-03-16",
+       "2026-03-27",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "QA Test Plan",
+       "2026-03-16",
+       "2026-03-27",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Auth Web Implementation",
+       "2026-03-16",
+       "2026-04-03",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Identity Service Build",
+       "2026-03-16",
+       "2026-04-03",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Mobile Auth Module",
+       "2026-03-16",
+       "2026-04-03",
+       "2026-03-16"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Unit Test Buildout",
+       "2026-03-30",
+       "2026-05-01",
+       "2026-03-30"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Sprint 1 Demo",
+       "2026-04-03",
+       "2026-04-03",
+       "2026-04-03"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     },
+     {
+      "cells": [
+       "Sprint 1 Review",
+       "2026-04-03",
+       "2026-04-03",
+       "2026-04-03"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": false
+     }
+    ],
+    "notes": []
+   }
+  ]
+ },
+ "mini": {
+  "argv": [
+   "mini",
+   "20260101",
+   "20261231",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Events",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-02-02",
+       "Project Kickoff",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "All-hands kickoff and charter walkthrough",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-27",
+       "Requirements Sign-off",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves requirements baseline",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-13",
+       "Architecture Review Board",
+       "True",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Cross-team review and approval",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-16",
+       "Sprint 1 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Backlog refinement for auth and API foundation",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Stakeholder demo of authentication flow",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-06",
+       "Sprint 2 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan core features sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Demo of charge and ledger flows",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-27",
+       "Sprint 3 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan integration sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Integration demo",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "Sprint 4 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan hardening sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Code Freeze",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Only release-critical changes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Sprint 4 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "QA Sign-off",
+       "True",
+       "",
+       "QA"
+      ],
+      "sub_line": "All quality gates met",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-26",
+       "UAT Sign-off",
+       "True",
+       "",
+       "Stakeholders"
+      ],
+      "sub_line": "Business stakeholders accept the release",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-10",
+       "Operations Readiness Review",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Ops team certifies platform readiness",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Go/No-Go Decision",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves launch",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Training Sign-off",
+       "True",
+       "",
+       "Training"
+      ],
+      "sub_line": "Org confirms readiness to adopt",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-20",
+       "Canary Deployment 5%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Limited rollout to opt-in cohort",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-22",
+       "Production Rollout 25%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Expand traffic share after canary",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-24",
+       "Production Rollout 100%",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Full traffic on new platform",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-27",
+       "Go-Live Event",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Public launch announcement",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-31",
+       "Project Closeout",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Retrospective and benefits handoff",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Holidays & Special Days",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-01-01",
+       "US, CA - New Year's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-01-19",
+       "US - Martin Luther King Jr. Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-02",
+       "US - Groundhog Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-16",
+       "US - Washington's Birthday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-17",
+       "US - Saint Patrick's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "CA - Good Friday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "CA - Victoria Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-25",
+       "US - Memorial Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "US - Juneteenth National Independence Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-01",
+       "CA - Canada Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-03",
+       "US - Independence Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "US - Labor Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "CA - Labour Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-30",
+       "CA - National Day for Truth and Reconciliation",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12",
+       "US - Columbus Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12 – 2026-11-26",
+       "CA, US - Thanksgiving Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "US - Veterans Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "CA - Remembrance Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-25",
+       "US, CA - Christmas Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-28",
+       "CA - Boxing Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   }
+  ]
+ },
+ "mini-icon": {
+  "argv": [
+   "mini-icon",
+   "20260101",
+   "20261231",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Events",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-02-02",
+       "Project Kickoff",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "All-hands kickoff and charter walkthrough",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-27",
+       "Requirements Sign-off",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves requirements baseline",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-13",
+       "Architecture Review Board",
+       "True",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Cross-team review and approval",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-16",
+       "Sprint 1 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Backlog refinement for auth and API foundation",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Stakeholder demo of authentication flow",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-06",
+       "Sprint 2 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan core features sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Demo of charge and ledger flows",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-27",
+       "Sprint 3 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan integration sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Integration demo",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "Sprint 4 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan hardening sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Code Freeze",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Only release-critical changes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Sprint 4 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "QA Sign-off",
+       "True",
+       "",
+       "QA"
+      ],
+      "sub_line": "All quality gates met",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-26",
+       "UAT Sign-off",
+       "True",
+       "",
+       "Stakeholders"
+      ],
+      "sub_line": "Business stakeholders accept the release",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-10",
+       "Operations Readiness Review",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Ops team certifies platform readiness",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Go/No-Go Decision",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves launch",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Training Sign-off",
+       "True",
+       "",
+       "Training"
+      ],
+      "sub_line": "Org confirms readiness to adopt",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-20",
+       "Canary Deployment 5%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Limited rollout to opt-in cohort",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-22",
+       "Production Rollout 25%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Expand traffic share after canary",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-24",
+       "Production Rollout 100%",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Full traffic on new platform",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-27",
+       "Go-Live Event",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Public launch announcement",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-31",
+       "Project Closeout",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Retrospective and benefits handoff",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Holidays & Special Days",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-01-01",
+       "US, CA - New Year's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-01-19",
+       "US - Martin Luther King Jr. Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-02",
+       "US - Groundhog Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-16",
+       "US - Washington's Birthday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-17",
+       "US - Saint Patrick's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "CA - Good Friday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "CA - Victoria Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-25",
+       "US - Memorial Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "US - Juneteenth National Independence Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-01",
+       "CA - Canada Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-03",
+       "US - Independence Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "US - Labor Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "CA - Labour Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-30",
+       "CA - National Day for Truth and Reconciliation",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12",
+       "US - Columbus Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12 – 2026-11-26",
+       "CA, US - Thanksgiving Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "US - Veterans Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "CA - Remembrance Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-25",
+       "US, CA - Christmas Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-28",
+       "CA - Boxing Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   }
+  ]
+ },
+ "candybar": {
+  "argv": [
+   "candybar",
+   "20260101",
+   "20261231",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Events",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-02-02",
+       "Project Kickoff",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "All-hands kickoff and charter walkthrough",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-27",
+       "Requirements Sign-off",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves requirements baseline",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-13",
+       "Architecture Review Board",
+       "True",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Cross-team review and approval",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-16",
+       "Sprint 1 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Backlog refinement for auth and API foundation",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Stakeholder demo of authentication flow",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "Sprint 1 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-06",
+       "Sprint 2 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan core features sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Demo of charge and ledger flows",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-24",
+       "Sprint 2 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-27",
+       "Sprint 3 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan integration sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Demo",
+       "",
+       "2",
+       "Product"
+      ],
+      "sub_line": "Integration demo",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-15",
+       "Sprint 3 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "Sprint 4 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan hardening sprint",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Code Freeze",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Only release-critical changes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-05",
+       "Sprint 4 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "QA Sign-off",
+       "True",
+       "",
+       "QA"
+      ],
+      "sub_line": "All quality gates met",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-26",
+       "UAT Sign-off",
+       "True",
+       "",
+       "Stakeholders"
+      ],
+      "sub_line": "Business stakeholders accept the release",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-10",
+       "Operations Readiness Review",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Ops team certifies platform readiness",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Go/No-Go Decision",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Steering committee approves launch",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-17",
+       "Training Sign-off",
+       "True",
+       "",
+       "Training"
+      ],
+      "sub_line": "Org confirms readiness to adopt",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-20",
+       "Canary Deployment 5%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Limited rollout to opt-in cohort",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-22",
+       "Production Rollout 25%",
+       "True",
+       "1",
+       "Ops"
+      ],
+      "sub_line": "Expand traffic share after canary",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-24",
+       "Production Rollout 100%",
+       "True",
+       "",
+       "Ops"
+      ],
+      "sub_line": "Full traffic on new platform",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-27",
+       "Go-Live Event",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Public launch announcement",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-31",
+       "Project Closeout",
+       "True",
+       "",
+       "Product"
+      ],
+      "sub_line": "Retrospective and benefits handoff",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Holidays & Special Days",
+    "columns": [
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "2026-01-01 – 2027-01-01",
+       "US, CA - New Year's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-01-19",
+       "US - Martin Luther King Jr. Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-02",
+       "US - Groundhog Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-14",
+       "US - Valentine's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-02-16",
+       "US - Washington's Birthday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-03-17",
+       "US - Saint Patrick's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-04-03",
+       "CA - Good Friday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-10",
+       "US - Mother's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-18",
+       "CA - Victoria Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-05-25",
+       "US - Memorial Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-19",
+       "US - Juneteenth National Independence Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-06-21",
+       "US - Father's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-01",
+       "CA - Canada Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-03",
+       "US - Independence Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-07-04",
+       "US - Independence Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "US - Labor Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-07",
+       "CA - Labour Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-09-30",
+       "CA - National Day for Truth and Reconciliation",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12",
+       "US - Columbus Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-12 – 2026-11-26",
+       "CA, US - Thanksgiving Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-10-31",
+       "US - Halloween",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "US - Veterans Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-11-11",
+       "CA - Remembrance Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-25",
+       "US, CA - Christmas Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-26",
+       "CA - Boxing Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     },
+     {
+      "cells": [
+       "2026-12-28",
+       "CA - Boxing Day (observed)",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 1,
+      "mark": false
+     }
+    ],
+    "notes": []
+   }
+  ]
+ },
+ "compactplan": {
+  "argv": [
+   "compactplan",
+   "20260309",
+   "20260424",
+   "-th",
+   "default"
+  ],
+  "sections": [
+   {
+    "title": "Events",
+    "columns": [
+     "Key",
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "",
+       "2026-02-02",
+       "NimbusPay Modernization",
+       "",
+       "",
+       ""
+      ],
+      "sub_line": "Full program rollup spanning discovery through production rollout | End: 2026-07-31",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-02-23",
+       "Architecture & Design",
+       "",
+       "",
+       ""
+      ],
+      "sub_line": "System, API, data, and UX design | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "Development Sprints",
+       "",
+       "",
+       ""
+      ],
+      "sub_line": "Four iterative build sprints | End: 2026-06-05",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "QA & Testing",
+       "",
+       "",
+       ""
+      ],
+      "sub_line": "Verification, validation, and quality gates | End: 2026-06-19",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-02",
+       "API Contract Design",
+       "",
+       "2",
+       "Backend"
+      ],
+      "sub_line": "OpenAPI specs for payments and identity surfaces | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-02",
+       "Data Model Design",
+       "",
+       "2",
+       "Backend"
+      ],
+      "sub_line": "Ledger schema and event sourcing patterns | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-02",
+       "Security Threat Model",
+       "",
+       "1",
+       "Security"
+      ],
+      "sub_line": "STRIDE analysis on new attack surface | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-02",
+       "UX Wireframes",
+       "",
+       "2",
+       "UX"
+      ],
+      "sub_line": "Low-fidelity flows for primary personas | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-09",
+       "Visual Design System",
+       "",
+       "2",
+       "UX"
+      ],
+      "sub_line": "Component library and tokens | End: 2026-03-13",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "CI/CD Pipeline Setup",
+       "",
+       "1",
+       "DevOps"
+      ],
+      "sub_line": "Build, test, and artifact promotion stages | End: 2026-03-27",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "Auth Web Implementation",
+       "",
+       "2",
+       "Frontend"
+      ],
+      "sub_line": "Sign-in, MFA, and account recovery screens | End: 2026-04-03",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "Identity Service Build",
+       "",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "OIDC issuer, user store, and token service | End: 2026-04-03",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "Mobile Auth Module",
+       "",
+       "2",
+       "Mobile"
+      ],
+      "sub_line": "iOS and Android biometric login | End: 2026-04-03",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "QA Test Plan",
+       "",
+       "2",
+       "QA"
+      ],
+      "sub_line": "Strategy, coverage matrix, and entry/exit criteria | End: 2026-03-27",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-30",
+       "Unit Test Buildout",
+       "",
+       "2",
+       "QA"
+      ],
+      "sub_line": "Component-level coverage with mocks | End: 2026-05-01",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Integration Test Buildout",
+       "",
+       "2",
+       "QA"
+      ],
+      "sub_line": "Service-to-service contract tests | End: 2026-05-15",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Internal API Gateway",
+       "",
+       "2",
+       "DevOps"
+      ],
+      "sub_line": "Routing, auth, and rate limiting | End: 2026-04-17",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Account Management UI",
+       "",
+       "2",
+       "Frontend"
+      ],
+      "sub_line": "Merchant dashboard for accounts and balances | End: 2026-04-24",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Ledger Service Build",
+       "",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Double-entry ledger with idempotent writes | End: 2026-04-24",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Mobile Payments Flow",
+       "",
+       "2",
+       "Mobile"
+      ],
+      "sub_line": "Tap-to-pay and receipt screens | End: 2026-04-24",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Payments Service Build",
+       "",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Charge, refund, and dispute APIs | End: 2026-04-24",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-13",
+       "Architecture Review Board",
+       "True",
+       "1",
+       "Backend"
+      ],
+      "sub_line": "Cross-team review and approval",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-03-16",
+       "Sprint 1 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Backlog refinement for auth and API foundation",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-03",
+       "Sprint 1 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-06",
+       "Sprint 2 Planning",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Plan core features sprint",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-24",
+       "Sprint 2 Review",
+       "True",
+       "1",
+       "Product"
+      ],
+      "sub_line": "Sprint outcomes accepted",
+      "name_column": 2,
+      "mark": true
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Holidays & Special Days",
+    "columns": [
+     "Key",
+     "Start Date",
+     "Name / Description",
+     "Milestone",
+     "Priority",
+     "Group"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "",
+       "2026-03-17",
+       "US - Saint Patrick's Day",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 2,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "2026-04-03",
+       "CA - Good Friday",
+       "",
+       "",
+       "Federal Holiday"
+      ],
+      "sub_line": "",
+      "name_column": 2,
+      "mark": true
+     }
+    ],
+    "notes": []
+   },
+   {
+    "title": "Symbols",
+    "columns": [
+     "Key",
+     "Meaning"
+    ],
+    "rows": [
+     {
+      "cells": [
+       "",
+       "activity began earlier"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "activity continues"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": true
+     },
+     {
+      "cells": [
+       "",
+       "timeline"
+      ],
+      "sub_line": "",
+      "name_column": null,
+      "mark": true
+     }
+    ],
+    "notes": []
+   }
+  ]
+ }
+}

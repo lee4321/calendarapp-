@@ -189,6 +189,8 @@ ROLE_MEANINGS: dict[str, str] = {
     "deadline": "Deadline",
     "link_ref": "Dependency on another page",
     "offchart": "Predecessor is not on the chart",
+    "axis": "Timeline axis",
+    "dot": "Event marker",
     "snapped": "Moved to the next working day",
     "symbol": "Symbol",
 }

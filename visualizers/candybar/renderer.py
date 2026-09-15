@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 class CandybarRenderer(MiniCalendarRenderer):
     """Renderer for the candybar year-strip."""
 
+    DETAILS_VISUALIZER = "candybar"
+
     def _render_content(
         self,
         config: CalendarConfig,
@@ -65,6 +67,8 @@ class CandybarRenderer(MiniCalendarRenderer):
             day_events = events_by_day.get(daykey, [])
             style = resolver.resolve(daykey, day_events, is_adjacent=False)
             cell_state.append((x, y, w, h, daykey, style))
+
+        self._note_grid_days(config, (state[4] for state in cell_state), events_by_day)
 
         # Pass 1 — month box fills (behind everything in the right column)
         self._draw_month_boxes(config, coordinates, fills_only=True)
