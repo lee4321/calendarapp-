@@ -73,6 +73,12 @@ class Event:
     custom3: str | None = None
     custom4: str | None = None
     custom5: str | None = None
+    # Database bookkeeping: the row's primary key and provenance.  Listed
+    # so every `events` column can be named in a table column; the `id`
+    # column resolves to ``db_id`` (``id`` would shadow the builtin).
+    db_id: int | None = None
+    user_id: int | None = None
+    import_id: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> Event:
@@ -131,6 +137,9 @@ class Event:
             custom3=data.get("Custom3"),
             custom4=data.get("Custom4"),
             custom5=data.get("Custom5"),
+            db_id=data.get("ID"),
+            user_id=data.get("User_ID"),
+            import_id=data.get("Import_ID"),
         )
 
     @property
