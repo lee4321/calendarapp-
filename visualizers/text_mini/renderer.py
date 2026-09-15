@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import arrow
 
 from config.config import weekend_style_starts_sunday
+from renderers.details_record import DetailsRecord, IconUse
 from shared.date_utils import (
     get_months_in_range,
     get_week_number,
@@ -60,6 +61,10 @@ class TextMiniCalendarRenderer:
         events: list[dict],
         db: CalendarDB,
     ) -> Path:
+        # What the grid marks, for the run's details document and CSV: each
+        # symbol is recorded as a text icon on the event or day it marks.
+        self.details_record = DetailsRecord("text-mini", events)
+        self.details_record.visible_daykeys = list(self._iter_daykeys(config))
         content = self._build_text(config, events, db)
         out_path = Path(config.outputfile)
         out_path.write_text(content, encoding="utf-8")
@@ -234,6 +239,9 @@ class TextMiniCalendarRenderer:
             else:
                 symbol = next(event_symbols)
             event_symbol_map[id(event)] = symbol
+            self._note_symbol(
+                event, symbol, "milestone" if event.get("Milestone") else "duration" if is_duration else "event"
+            )
 
             if is_duration:
                 duration_entries.append((symbol, start, end))
@@ -298,6 +306,7 @@ class TextMiniCalendarRenderer:
                 holiday = holidays[0]
                 symbol = next(holiday_symbols)
                 self._set_symbol(symbol_map, daykey, symbol, 100)
+                self._note_day_symbol(holiday.get("displayname"), symbol, "holiday")
                 details.append(
                     DetailEntry(
                         symbol,
@@ -315,6 +324,7 @@ class TextMiniCalendarRenderer:
                 if sd.get("nonworkday"):
                     symbol = next(nonwork_symbols)
                     self._set_symbol(symbol_map, daykey, symbol, 90)
+                    self._note_day_symbol(sd.get("name"), symbol, "nonworkday")
                     details.append(
                         DetailEntry(
                             symbol,
@@ -335,6 +345,21 @@ class TextMiniCalendarRenderer:
                     self._set_symbol(symbol_map, daykey, label, 20)
 
         return symbol_map, details
+
+    def _note_symbol(self, event: dict, symbol: str, role: str) -> None:
+        """Record *symbol* as the text icon marking *event*."""
+        record = getattr(self, "details_record", None)
+        if record is None:
+            return
+        note = record.note_for(event)
+        note.add_icon(IconUse(symbol, None, role))
+        note.mark_drawn()
+
+    def _note_day_symbol(self, name: str | None, symbol: str, role: str) -> None:
+        """Record *symbol* as the text icon marking the holiday *name*."""
+        record = getattr(self, "details_record", None)
+        if record is not None and name:
+            record.record_icon(IconUse(symbol, None, role), str(name))
 
     @staticmethod
     def _symbol_order_key(event: dict) -> tuple[str, str, str]:

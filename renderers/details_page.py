@@ -112,6 +112,9 @@ class DetailsPageWriter:
         title_text: str,
     ):
         self._renderer = renderer
+        # The render record keeps what the chart drew, not what this page
+        # redraws to list it; finish() turns recording back on.
+        renderer._details_capture_suspended = True
         self._config = config
         self._coordinates = coordinates
         self._page_path = page_path
@@ -229,6 +232,7 @@ class DetailsPageWriter:
         """Write the last page; returns how many pages were produced."""
         if self._page_number:
             self._save_page()
+        self._renderer._details_capture_suspended = False
         return self._pages_written
 
     def _save_page(self) -> None:

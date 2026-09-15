@@ -283,6 +283,31 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("gantt", "show_details"): "include_gantt_details",
     ("gantt", "details_title_text"): "gantt_details_title_text",
     ("gantt", "details_output_suffix"): "gantt_details_output_suffix",
+    # Run details (every visualization): the details document, icon files
+    # and event CSV written into the run folder.  The column lists use the
+    # gantt.columns schema and are checked by _check_details_columns().
+    ("details.markdown", "enable"): "include_details_markdown",
+    ("details.markdown", "title_text"): "details_md_title_text",
+    ("details.markdown", "sections"): "details_md_sections",
+    ("details.markdown", "events_section_text"): "details_md_events_section_text",
+    ("details.markdown", "colors_section_text"): "details_md_colors_section_text",
+    ("details.markdown", "symbols_section_text"): "details_md_symbols_section_text",
+    ("details.markdown", "exceptions_section_text"): "details_md_exceptions_section_text",
+    ("details.markdown", "holidays_section_text"): "details_md_holidays_section_text",
+    ("details.markdown", "empty_exceptions_text"): "details_md_empty_exceptions_text",
+    ("details.markdown", "empty_cell_text"): "details_md_empty_cell_text",
+    ("details.markdown", "icon_mode"): "details_md_icon_mode",
+    ("details.markdown", "color_mode"): "details_md_color_mode",
+    ("details.markdown", "group_by"): "details_md_group_by",
+    ("details.markdown", "sort"): "details_md_sort",
+    ("details.markdown", "columns"): "details_md_columns",
+    ("details.markdown", "exception_columns"): "details_md_exception_columns",
+    ("details.markdown", "holiday_columns"): "details_md_holiday_columns",
+    ("details.icons", "enable"): "include_details_icons",
+    ("details.icons", "size"): "details_icons_size",
+    ("details.csv", "enable"): "include_details_csv",
+    ("details.csv", "columns"): "details_csv_columns",
+    ("details.csv", "render_columns"): "details_csv_render_columns",
     # Compact Activities Plan
     ("compact_plan", "time_bands"): "compactplan_time_bands",
     ("compact_plan", "band_row_height"): "compactplan_band_row_height",
@@ -1129,6 +1154,39 @@ class ThemeEngine:
         if any_side:
             config.include_margin = True
 
+    def _check_details_columns(self) -> None:
+        """Raise ThemeError when a ``details:`` column names an unknown field.
+
+        The details document exists to be complete, so a misspelt field is
+        an error naming the valid ones -- not a column that stays empty.
+        ``details.csv.columns`` may instead be the string ``exportdata``.
+        """
+        from renderers.details_fields import EXCEPTION_FIELDS, HOLIDAY_FIELDS, event_fields, invalid_fields
+
+        checks: tuple[tuple[str, str, frozenset[str] | tuple[str, ...]], ...] = (
+            ("details.markdown", "columns", event_fields()),
+            ("details.markdown", "exception_columns", EXCEPTION_FIELDS),
+            ("details.markdown", "holiday_columns", HOLIDAY_FIELDS),
+            ("details.csv", "columns", event_fields()),
+        )
+        for section, key, valid in checks:
+            node = self._get_theme_node(section)
+            if not isinstance(node, dict) or key not in node or node[key] is None:
+                continue
+            value = node[key]
+            where = f"{section}.{key}"
+            if section == "details.csv" and isinstance(value, str):
+                if value.strip().lower() != "exportdata":
+                    raise ThemeError(f"Theme: {where} must be 'exportdata' or a list of column entries; got {value!r}")
+                continue
+            if not isinstance(value, list):
+                raise ThemeError(f"Theme: {where} must be a list of column entries")
+            bad = invalid_fields(value, valid)
+            if bad:
+                raise ThemeError(
+                    f"Theme: {where} names unknown field(s): {', '.join(bad)}. Valid fields: {', '.join(sorted(valid))}"
+                )
+
     def apply(self, config: CalendarConfig) -> CalendarConfig:
         """
         Apply theme overrides to a CalendarConfig instance.
@@ -1170,6 +1228,8 @@ class ThemeEngine:
 
         # Raise on old hash_rules / swimlanes.match keys that should have been migrated.
         self._check_deprecated_rule_keys()
+        # Raise on a run-details column naming a field no row carries.
+        self._check_details_columns()
 
         # Load unified style_rules and swimlane_rules.
         self._load_rule_lists(config)

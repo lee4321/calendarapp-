@@ -213,6 +213,26 @@ class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
         return super()._metavar_formatter(action, default_metavar)
 
 
+def _add_run_details_args(parser: argparse.ArgumentParser) -> None:
+    """
+    Register the "Run Details" group on one visualization parser.
+
+    A visualization run writes a details document, one icon file per icon
+    it drew, and an event CSV into its folder (theme ``details:`` section).
+    Each is on by default; the ``--x`` / ``--no-x`` pair lets the command
+    line beat a theme either way.  ``cli.config_assembly`` applies them.
+    """
+    group = parser.add_argument_group("Run Details")
+    for flag, what in (
+        ("details-md", "the Markdown details document"),
+        ("icons", "one SVG per icon the chart drew"),
+        ("csv", "the event CSV"),
+    ):
+        pair = group.add_mutually_exclusive_group()
+        pair.add_argument(f"--{flag}", action="store_true", help=f"Write {what} into the run folder (on by default)")
+        pair.add_argument(f"--no-{flag}", action="store_true", help=f"Do not write {what}")
+
+
 def _add_content_filter_args(
     parser: argparse.ArgumentParser,
     *,
@@ -856,6 +876,22 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         default=False,
         help="Show every glyph in the font instead of the three fixed sample rows",
     )
+
+    # Run details: every visualization writes its details document, icon
+    # files and event CSV into its run folder.
+    for view_parser in (
+        weekly,
+        mini,
+        mini_icon,
+        candybar,
+        text_mini,
+        timeline,
+        pit,
+        blockplan,
+        gantt,
+        compactplan,
+    ):
+        _add_run_details_args(view_parser)
 
     # Database options
     for view_parser in (

@@ -168,8 +168,10 @@ table by hand.
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Glyph color (default: #222222) (`iconsheet`: Stroke color for icons (default: #333333)) (`patternsheet`: Fill color for pattern tiles (default: #333333)) | `fontsheet`: default `#222222`; `iconsheet`, `patternsheet`: default `#333333` |
 | `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch columns per page (requires --paginate; default: 8) (`fontsheet`: Font columns per page (requires --paginate; default: 2). Ignored with --fullset, which is always a single column.) (`iconsheet`: Icon columns per page (requires --paginate; default: 8)) (`palettesheet`: Swatch columns per page (requires --paginate; default: 12)) |  |
 | `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. |  |
+| `--csv` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write the event CSV into the run folder (on by default) | default `False` |
 | `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
 | `--date-placement` |  | `pit` | Where each event date is drawn: inline (a line inside the label box, with the name/notes — never collides; default), axis (opposite the axis at the marker — the ruler look, but dates collide when events cluster), or none. | choices `inline, axis, none` |
+| `--details-md` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write the Markdown details document into the run folder (on by default) | default `False` |
 | `--direction` |  | `pit`, `timeline` | Axis direction (default: horizontal). Note: --orientation remains the page-orientation flag (portrait/landscape). (`timeline`: Axis direction (default: horizontal). Vertical runs the axis top-to-bottom with labels to the right (primary) / left (secondary). Note: --orientation remains the page-orientation flag (portrait/landscape).) | choices `horizontal, vertical` |
 | `--durations`, `-du` |  | `candybar`, `mini`, `mini-icon`, `text-mini` | Include multi-day durations (excluded by default) | default `False` |
 | `--embed-data` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed source event data (CSV) inside SVG metadata | default `False` |
@@ -190,6 +192,7 @@ table by hand.
 | `--headercenter`, `-hc` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Center header text |  |
 | `--headerleft`, `-hl` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Left header text |  |
 | `--headerright`, `-hr` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Right header text |  |
+| `--icons` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write one SVG per icon the chart drew into the run folder (on by default) | default `False` |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `gantt`, `pit`, `timeline`, `weekly` | Show notes with event names | default `False` |
 | `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
 | `--label-icon-gap` | `POINTS` | `pit` | Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0). |  |
@@ -211,6 +214,9 @@ table by hand.
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
 | `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Format string for month title (default: MMM YY) |  |
 | `--monthnames`, `-mn` |  | `weekly` | Show month names on calendar | default `False` |
+| `--no-csv` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write the event CSV | default `False` |
+| `--no-details-md` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write the Markdown details document | default `False` |
+| `--no-icons` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write one SVG per icon the chart drew | default `False` |
 | `--no-mini-details` |  | `candybar`, `mini`, `mini-icon` | Suppress the companion details page | default `False` |
 | `--no-tick-labels` |  | `pit` | Draw tick marks but no tick labels. |  |
 | `--no-ticks` |  | `pit` | Suppress axis tick marks and labels. |  |
