@@ -27,6 +27,63 @@ watermark:
   image_rotation_angle: 0.0
 overflow:
   icon: warningtriangle
+details:
+  # Run details: every visualization writes a folder under output/ holding
+  # the chart, this details document, one icon file per icon it drew, and
+  # an event CSV.  Column lists use the gantt.columns schema (field, header,
+  # align, max_lines, render, icon, format, date_format, indent; width is
+  # accepted and ignored).
+  markdown:
+    enable: true
+    title_text: Calendar Details
+    sections: [events, colors, symbols, exceptions, holidays]
+    events_section_text: Events
+    colors_section_text: Color Key
+    symbols_section_text: Icons & Symbols
+    exceptions_section_text: Exceptions
+    holidays_section_text: Holidays & Special Days
+    empty_exceptions_text: Every item was drawn as scheduled.
+    empty_cell_text: ''
+    icon_mode: file        # file | name | none
+    color_mode: swatch     # swatch | hex | name
+    group_by: none         # none, or a field: category, lane, resource_group ...
+    sort: [start_date, end_date, name]
+    columns:
+      - { field: source_id,        header: ID,        align: right }
+      - { field: marker,           header: Key,       align: center }
+      - { field: name,             header: Task Name, indent: true }
+      - { field: category,         header: Type }
+      - { field: status,           header: Status }
+      - { field: priority,         header: Pri,       align: right }
+      - { field: wbs,              header: WBS }
+      - { field: percent_complete, header: '%',       align: right, format: '{:.0%}' }
+      - { field: start_date,       header: Start,     date_format: YYYY-MM-DD }
+      - { field: end_date,         header: Finish,    date_format: YYYY-MM-DD }
+      - { field: resource_names,   header: Resources }
+      - { field: resource_group,   header: Group }
+      - { field: assigned_color,   header: Color }
+      - { field: notes,            header: Notes,     max_lines: 3 }
+      - { field: drawn,            header: Drawn }
+    exception_columns:
+      - { field: issue,  header: Issue }
+      - { field: task,   header: Task }
+      - { field: date,   header: Date, date_format: YYYY-MM-DD }
+      - { field: ref,    header: Ref }
+      - { field: detail, header: Detail }
+    holiday_columns:
+      - { field: icons,      header: Icon, align: center }
+      - { field: date,       header: Date }
+      - { field: name,       header: Name }
+      - { field: kind,       header: Kind }
+      - { field: nonworkday, header: Non-work }
+      - { field: notes,      header: Notes }
+  icons:
+    enable: true
+    size: 16               # every icon file is size x size
+  csv:
+    enable: true
+    columns: exportdata    # exportdata (re-importable), or a column list
+    render_columns: true   # append assigned color, icons, lane, drawn ...
 fiscal:
   label_format: '{prefix}{period_short}'
   end_label_format: '{period_short} End'

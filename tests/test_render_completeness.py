@@ -19,6 +19,7 @@ file.  Visual regression testing is a separate concern.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -134,6 +135,16 @@ def test_subcommand_renders(
         assert result.returncode == 0, f"{label} exited {result.returncode}.\nstderr:\n{result.stderr}"
         assert actual_output.exists(), f"{label} produced no output file at {actual_output}"
         assert actual_output.stat().st_size > 0, f"{label} produced an empty output file"
+        if meta.get("run_folder"):
+            stem = Path(basename).stem
+            document = run_folder / f"{stem}.md"
+            assert document.exists(), f"{label} wrote no details document"
+            assert (run_folder / f"{stem}.csv").exists(), f"{label} wrote no event CSV"
+            links = re.findall(r"!\[[^\]]*\]\((icons/[^)]+)\)", document.read_text(encoding="utf-8"))
+            for link in links:
+                assert (run_folder / link).is_file(), f"{label} links a missing icon file {link}"
+            icon_files = {f"icons/{p.name}" for p in (run_folder / "icons").glob("*.svg")}
+            assert icon_files <= set(links), f"{label} wrote icons its document never shows"
     finally:
         actual_output.unlink(missing_ok=True)
         if meta.get("run_folder"):

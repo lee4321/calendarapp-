@@ -60,6 +60,9 @@ VISUALIZERS: frozenset[str] = frozenset(
 # All-visualizer used_by set (every renderer needs the key).
 _ALL: frozenset[str] = VISUALIZERS
 
+# Visualizations that write a run folder (everything except the XLSX export).
+_RUN: frozenset[str] = frozenset(VISUALIZERS - {"excelblockplan"})
+
 # SVG renderers (everything except XLSX and text-mini).
 _SVG: frozenset[str] = frozenset(VISUALIZERS - {"excelblockplan", "text-mini"})
 
@@ -111,6 +114,18 @@ REQUIRED_KEYS: tuple[RequiredKey, ...] = (
     RequiredKey("colors.group_palette", "setting", "str (DB palette name)", _SVG),
     # ── overflow ──
     RequiredKey("overflow.icon", "setting", "str", _SVG, "Glyph marking a box that could not hold its contents"),
+    # ── details (run folder: details document, icon files, event CSV) ──
+    RequiredKey(
+        "details.markdown.columns",
+        "setting",
+        "list[column]",
+        _RUN,
+        "Events table columns, in the gantt.columns schema",
+    ),
+    RequiredKey("details.markdown.exception_columns", "setting", "list[column]", _RUN, "Exceptions table columns"),
+    RequiredKey("details.markdown.holiday_columns", "setting", "list[column]", _RUN, "Holidays table columns"),
+    RequiredKey("details.icons.size", "setting", "float", _RUN, "Width and height of every icon file"),
+    RequiredKey("details.csv.columns", "setting", "'exportdata' | list[column]", _RUN, "Event CSV columns"),
     # ── weekly ──
     RequiredKey("weekly.week_numbers.label_format", "setting", "str", frozenset({"weekly"})),
     # ── mini_calendar / mini / mini-icon ──

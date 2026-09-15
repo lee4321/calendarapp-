@@ -26,6 +26,7 @@ from config.config import (
     weekend_style_is_workweek,
     weekend_style_starts_sunday,
 )
+from renderers.details_record import DRAWN_PARTIAL
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
 from shared.data_models import Event
@@ -263,46 +264,37 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             if t.notes and t.notes in ("HOLIDAY", "USFederal", "CanFED"):
                 continue
 
-            if config.milestones and t.milestone:  # noqa: SIM114 - configured apart from events
-                if t.datekey in days_to_print:
-                    rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
-                    if had_overflow:
-                        overflow_count += 1
-                        overflow_entries.append(
-                            OverflowEntry(
-                                start=t.start,
-                                end=t.end,
-                                task_name=t.task_name or "",
-                                datekey=t.datekey,
-                            )
-                        )
+            placed = False
+            had_overflow = False
+            # Everything drawn for t -- its icons, its bar -- belongs to t
+            # in the render record.
+            with self._event_scope(t):
+                if config.milestones and t.milestone:  # noqa: SIM114 - configured apart from events
+                    if t.datekey in days_to_print:
+                        rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
+                        placed = True
 
-            elif (daystart == dayend) and config.includeevents and (t.task_name and t.task_name.strip()):
-                if t.datekey in days_to_print:
-                    rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
-                    if had_overflow:
-                        overflow_count += 1
-                        overflow_entries.append(
-                            OverflowEntry(
-                                start=t.start,
-                                end=t.end,
-                                task_name=t.task_name or "",
-                                datekey=t.datekey,
-                            )
-                        )
+                elif (daystart == dayend) and config.includeevents and (t.task_name and t.task_name.strip()):
+                    if t.datekey in days_to_print:
+                        rows_on_days, had_overflow = self._place_event_and_notes(config, rows_on_days, t, t.datekey)
+                        placed = True
 
-            elif (daystart != dayend) and config.includedurations:
-                rows_on_days, had_overflow = self._place_duration(config, days_to_print, rows_on_days, t, t.datekey)
-                if had_overflow:
-                    overflow_count += 1
-                    overflow_entries.append(
-                        OverflowEntry(
-                            start=t.start,
-                            end=t.end,
-                            task_name=t.task_name or "",
-                            datekey=t.datekey,
-                        )
+                elif (daystart != dayend) and config.includedurations:
+                    rows_on_days, had_overflow = self._place_duration(config, days_to_print, rows_on_days, t, t.datekey)
+                    placed = True
+
+            if placed and had_overflow:
+                overflow_count += 1
+                overflow_entries.append(
+                    OverflowEntry(
+                        start=t.start,
+                        end=t.end,
+                        task_name=t.task_name or "",
+                        datekey=t.datekey,
                     )
+                )
+            elif placed:
+                self._note_drawn(t)
 
         return rows_on_days, overflow_count, overflow_entries
 
@@ -350,6 +342,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         days_to_print, rows_on_days = self._build_day_boxes(
             config, coordinates, db, adjustedstart, adjustedend, events_by_day
         )
+        self._note_visible_days(days_to_print)
 
         rows_on_days, overflow_count, overflow_entries = self._place_all_events(
             config, event_objects, days_to_print, rows_on_days
@@ -903,14 +896,16 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             drawn_icons.add(icon_name)
             if next_x + icon_size > available_right:
                 break  # ran out of room
-            self._draw_icon_svg(
-                icon_name,
-                next_x,
-                icon_baseline_y,
-                icon_size,
-                color=icon_color,
-                css_class="ec-event-icon",
-            )
+            with self._holiday_scope(_name):
+                self._draw_icon_svg(
+                    icon_name,
+                    next_x,
+                    icon_baseline_y,
+                    icon_size,
+                    color=icon_color,
+                    css_class="ec-event-icon",
+                    details_role="holiday",
+                )
             next_x += icon_size + icon_gap
 
         # 4. Holiday name — drawn ONLY when a single marking exists and
@@ -1123,6 +1118,11 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if group and group in _rg_colors:
             textcolor = _rg_colors[group]
             iconcolor = textcolor
+            note = self._details_note(t)
+            if note is not None:
+                note.assigned_color = textcolor
+                note.color_source = "resource group"
+            self._note_color(textcolor, t.resource_group or group, "resource group")
 
         ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
         name_font, name_size, name_color, _ = ev_style.text_override(
@@ -1484,6 +1484,22 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         actual_end_date = arrow.get(t.end).date()
         continues_left = actual_start_date < first_visible_date
         continues_right = actual_end_date > last_visible_date
+
+        bar_fill = rect_kwargs.get("fill")
+        note = self._details_note(t)
+        if note is not None:
+            note.assigned_color = str(bar_fill) if bar_fill else None
+            note.color_source = "style rule" if dur_style.fill_color else "theme"
+            note.continues_before = note.continues_before or continues_left
+            note.continues_after = note.continues_after or continues_right
+        self._note_color(
+            bar_fill,
+            "Style rule" if dur_style.fill_color else "Duration bar",
+            (note.color_source if note else None) or "theme",
+        )
+        self._note_mark("bar", bar_fill)
+        if continues_left or continues_right:
+            self._note_drawn(t, DRAWN_PARTIAL)
         cont_icon_left = "arrow-left"
         cont_icon_right = "arrow-right"
         cont_size = icon_size
@@ -1563,6 +1579,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     cont_left_x,
                     cont_baseline_y,
                     cont_size,
+                    details_role="continuation_before",
                     anchor="start",
                     color=icon_color,
                     fallback_name=config.default_missing_icon,
@@ -1593,6 +1610,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     cont_right_x,
                     cont_baseline_y,
                     cont_size,
+                    details_role="continuation_after",
                     anchor="end",
                     color=icon_color,
                     fallback_name=config.default_missing_icon,

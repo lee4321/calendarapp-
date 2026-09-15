@@ -15,11 +15,10 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from renderers.details_page import DetailsColumn, format_datekey
-from shared.holiday_labels import format_holiday_label
+from shared.holiday_listing import _holiday_icon, holiday_special_rows  # noqa: F401  (re-exported)
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
-    from shared.db_access import CalendarDB
 
 #: Columns of the listing when the theme names none, or names headers
 #: and widths that do not pair up.
@@ -164,91 +163,3 @@ def holiday_cells(row: dict, count: int) -> list[str]:
         cells[NAME_COLUMN] = row["name"]
     cells[-1] = row["kind"]
     return cells
-
-
-def holiday_special_rows(
-    daykeys: Iterable[str],
-    config: CalendarConfig,
-    db: CalendarDB,
-) -> list[dict]:
-    """The deduplicated holiday + special-day entries for *daykeys*.
-
-    A holiday or special day that recurs across several of the days is
-    collapsed into a single row labelled with the date range it covers.
-    Each row is ``{date_label, name, kind, notes, icon}``; ``icon`` is the
-    first icon the entry carried, or ``""``.
-    """
-    daykeys = sorted(set(daykeys))
-    if not daykeys:
-        return []
-
-    def date_label(first: str, last: str) -> str:
-        if first == last:
-            return format_datekey(first)
-        return f"{format_datekey(first)} – {format_datekey(last)}"
-
-    # name → {"first": daykey, "last": daykey, "notes": str, ...}
-    holidays_seen: dict[str, dict[str, str]] = {}
-    specials_seen: dict[str, dict[str, str]] = {}
-
-    for dk in daykeys:
-        for h in db.get_holidays_for_date(dk, config.country) or []:
-            name = (h.get("displayname") or h.get("name") or "").strip()
-            if not name:
-                continue
-            entry = holidays_seen.setdefault(
-                name,
-                {"first": dk, "last": dk, "notes": "", "countries": "", "icon": ""},
-            )
-            entry["last"] = dk
-            entry["icon"] = entry["icon"] or _holiday_icon(h)
-            # Countries drive the name prefix below rather than the notes
-            # column: the same holiday name recurs across countries (both
-            # the US and Canada have a New Year's Day), and this listing
-            # keys on the name, so the code has to sit beside it to tell
-            # the collapsed rows apart.
-            country = (h.get("country") or "").strip()
-            if country and country not in entry["countries"].split(", "):
-                entry["countries"] = f"{entry['countries']}, {country}" if entry["countries"] else country
-        for sd in db.get_special_days_for_date(dk) or []:
-            name = (sd.get("name") or "").strip()
-            if not name:
-                continue
-            entry = specials_seen.setdefault(
-                name,
-                {
-                    "first": dk,
-                    "last": dk,
-                    "notes": (sd.get("notes") or "").strip(),
-                    "icon": str(sd.get("icon") or "").strip(),
-                },
-            )
-            entry["last"] = dk
-
-    rows: list[dict] = []
-    for name, info in sorted(holidays_seen.items(), key=lambda kv: kv[1]["first"]):
-        rows.append(
-            {
-                "date_label": date_label(info["first"], info["last"]),
-                "name": format_holiday_label(name, info["countries"]),
-                "kind": "Federal Holiday",
-                "notes": info["notes"],
-                "icon": info["icon"],
-            }
-        )
-    for name, info in sorted(specials_seen.items(), key=lambda kv: kv[1]["first"]):
-        rows.append(
-            {
-                "date_label": date_label(info["first"], info["last"]),
-                "name": name,
-                "kind": "Special Day",
-                "notes": info["notes"],
-                "icon": info["icon"],
-            }
-        )
-    return rows
-
-
-def _holiday_icon(holiday: dict) -> str:
-    """The icon a holiday row names, under whichever column carries it."""
-    return str(holiday.get("icon") or holiday.get("displayicon") or holiday.get("displayiconid") or "").strip()

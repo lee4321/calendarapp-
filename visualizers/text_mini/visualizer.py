@@ -42,6 +42,12 @@ class TextMiniCalendarVisualizer(BaseVisualizer):
         renderer = TextMiniCalendarRenderer()
         output_path = renderer.render(config, events, db)
 
+        run_paths = getattr(config, "run_paths", None)
+        if run_paths is not None:
+            from renderers.run_details import write_run_details
+
+            write_run_details(renderer.details_record, config, db, run_paths)
+
         return VisualizationResult(
             output_path=str(output_path),
             page_count=1,

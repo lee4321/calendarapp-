@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 
+from renderers.details_record import DRAWN_PARTIAL, split_reference
 from renderers.svg_base import BaseSVGRenderer
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
@@ -214,6 +215,7 @@ class GanttRenderer(BaseSVGRenderer):
         # band segments are.
         self._holiday_days = compute_holiday_band_days(days, db, config)
         self._log_hidden_holidays(config, start, end, days, db)
+        self._note_visible_days(day.strftime("%Y%m%d") for day in days)
 
         pages = self._plan_pages(config, coordinates, rows, days)
         self._build_link_graph(config, rows, pages)
@@ -303,6 +305,10 @@ class GanttRenderer(BaseSVGRenderer):
         """Draw one page: its slice of rows over its slice of the axis."""
         page_days = days[page.day_start : page.day_end]
         page_rows = rows[page.row_start : page.row_end]
+        for row in page_rows:
+            note = self._details_note(row.event)
+            if note is not None and note.page is None:
+                note.page = page.number
         if not page_days:
             return
 
@@ -338,6 +344,8 @@ class GanttRenderer(BaseSVGRenderer):
         if not hasattr(self, "_exceptions"):
             self._exceptions = []
         self._exceptions.append(GanttException(kind=kind, task=task, datekey=datekey, detail=detail))
+        ref, detail_text = split_reference(detail)
+        self._note_exception(kind, task, datekey, ref=ref, detail=detail_text)
 
     # ── Geometry helpers ──────────────────────────────────────────────────
 
@@ -843,6 +851,7 @@ class GanttRenderer(BaseSVGRenderer):
                         icon_size,
                         anchor="middle",
                         css_class="ec-event-icon",
+                        details_role=column.field,
                     )
                 continue
 
@@ -933,13 +942,14 @@ class GanttRenderer(BaseSVGRenderer):
         row_h = max(float(config.gantt_row_height), 1.0)
 
         for row in rows:
-            anchor = self._draw_row_marks(
-                config,
-                row,
-                axis,
-                table_y + (row.index - row_offset) * row_h,
-                row_h,
-            )
+            with self._event_scope(row.event):
+                anchor = self._draw_row_marks(
+                    config,
+                    row,
+                    axis,
+                    table_y + (row.index - row_offset) * row_h,
+                    row_h,
+                )
             if anchor is not None:
                 anchors[row.index] = anchor
         return anchors
@@ -1013,6 +1023,14 @@ class GanttRenderer(BaseSVGRenderer):
             return None
 
         fill = self._bar_fill(config, event, style)
+        note = self._details_note(event)
+        if note is not None:
+            note.assigned_color = fill
+            note.color_source = "style rule" if style.fill_color else ("event color" if event.color else "theme")
+        if style.fill_color:
+            self._note_color(fill, "Style rule", "style rule")
+        elif not event.color:
+            self._note_color(fill, "Duration bar", "theme")
 
         # Float windows sit under the bar at reduced opacity (answer 67).
         self._draw_float_bars(config, event, axis, bar_y, bar_h, fill)
@@ -1033,8 +1051,13 @@ class GanttRenderer(BaseSVGRenderer):
             css_class="ec-duration-bar",
         )
 
+        self._note_mark("bar", fill)
         self._draw_progress(config, event, geometry, bar_y, bar_h, style)
         self._draw_continuations(config, geometry, bar_y, bar_h)
+        if note is not None and (geometry.clipped_start or geometry.clipped_end):
+            note.continues_before = note.continues_before or geometry.clipped_start
+            note.continues_after = note.continues_after or geometry.clipped_end
+            note.mark_drawn(DRAWN_PARTIAL)
 
         if geometry.clipped_start:
             self._note(
@@ -1061,6 +1084,7 @@ class GanttRenderer(BaseSVGRenderer):
                 bar_h,
                 anchor="middle",
                 css_class="ec-event-icon",
+                details_role="snapped",
             )
             self._note(
                 KIND_SNAPPED_EVENT,
@@ -1145,6 +1169,7 @@ class GanttRenderer(BaseSVGRenderer):
                 bar_h,
                 anchor="middle",
                 css_class="ec-continuation-icon",
+                details_role="continuation_before",
             )
         if geometry.clipped_end:
             self._draw_icon_svg(
@@ -1154,6 +1179,7 @@ class GanttRenderer(BaseSVGRenderer):
                 bar_h,
                 anchor="middle",
                 css_class="ec-continuation-icon",
+                details_role="continuation_after",
             )
 
     def _draw_rollup_bracket(
@@ -1194,6 +1220,7 @@ class GanttRenderer(BaseSVGRenderer):
             stroke_dasharray=style.stroke_dasharray,
             css_class="ec-rollup-bracket",
         )
+        self._note_mark("bracket", color, "rollup")
 
         return RowAnchor(left=geometry.x, right=right, y=(top + foot) / 2)
 
@@ -1257,6 +1284,7 @@ class GanttRenderer(BaseSVGRenderer):
             size,
             anchor="middle",
             css_class="ec-event-icon",
+            details_role="deadline",
         )
 
     def _bar_fill(self, config: CalendarConfig, event, style: StyleResult) -> str:
@@ -1346,6 +1374,9 @@ class GanttRenderer(BaseSVGRenderer):
             for target_index in reference.target_indexes:
                 self._reference_marks.setdefault(target_index, []).append(reference.icon)
                 target = by_index.get(target_index)
+                note = self._details_note(target.event) if target is not None else None
+                if note is not None and reference.icon not in note.refs:
+                    note.refs.append(reference.icon)
                 self._note(
                     KIND_OFFCHART_DEPENDENCY,
                     target.event.task_name if target else "",
@@ -1396,14 +1427,16 @@ class GanttRenderer(BaseSVGRenderer):
                 route = stub_route(successor, length=DEFAULT_STUB * 3)
                 self._draw_arrow(config, route, style)
                 tail_x, tail_y = route.points[0]
-                self._draw_icon_svg(
-                    config.gantt_offchart_dep_icon,
-                    tail_x,
-                    self._icon_baseline(tail_y, DEFAULT_STUB * 2),
-                    DEFAULT_STUB * 2,
-                    anchor="middle",
-                    css_class="ec-event-icon",
-                )
+                with self._event_scope(row.event if row is not None else None):
+                    self._draw_icon_svg(
+                        config.gantt_offchart_dep_icon,
+                        tail_x,
+                        self._icon_baseline(tail_y, DEFAULT_STUB * 2),
+                        DEFAULT_STUB * 2,
+                        anchor="middle",
+                        css_class="ec-event-icon",
+                        details_role="offchart",
+                    )
                 continue
 
             predecessor = anchors.get(dependency.predecessor_index)
@@ -1447,14 +1480,16 @@ class GanttRenderer(BaseSVGRenderer):
             head_dir=+1,
         )
         self._draw_arrow(config, route, style)
-        self._draw_icon_svg(
-            reference.icon,
-            source.right + length + DEFAULT_STUB,
-            self._icon_baseline(source.y, DEFAULT_STUB * 2),
-            DEFAULT_STUB * 2,
-            anchor="middle",
-            css_class="ec-event-icon",
-        )
+        with self._event_scope(row.event if row is not None else None):
+            self._draw_icon_svg(
+                reference.icon,
+                source.right + length + DEFAULT_STUB,
+                self._icon_baseline(source.y, DEFAULT_STUB * 2),
+                DEFAULT_STUB * 2,
+                anchor="middle",
+                css_class="ec-event-icon",
+                details_role="link_ref",
+            )
 
     def _draw_arrow(
         self,

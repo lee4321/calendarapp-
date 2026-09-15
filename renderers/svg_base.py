@@ -12,13 +12,23 @@ import os
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 import arrow
 import drawsvg
 
+from renderers.details_record import (
+    DRAWN_YES,
+    DetailsRecord,
+    EventNote,
+    IconUse,
+    mark,
+    role_for_class,
+)
 from renderers.glyph_cache import text_to_svg_group
+from renderers.icon_export import icon_color_style, icon_viewbox, minify_svg_markup, strip_svg_wrapper
 from renderers.svg_patterns import pattern_def_id, pattern_def_xml
 from renderers.text_utils import shrinktext, string_width
 
@@ -638,8 +648,12 @@ class BaseSVGRenderer(ABC):
         # Render common elements (headers, footers)
         self._render_decorations(config, coordinates)
 
-        # Render visualization-specific content
+        # Render visualization-specific content, keeping a record of what
+        # was drawn for the run's details document, CSV and icon files.
+        self.details_record = DetailsRecord(self._details_visualizer(), events)
+        self._icon_owners: list[EventNote | str] = []
         overflow_count, overflow_entries = self._render_content(config, coordinates, events, db)
+        self._record_overflow(overflow_entries)
 
         # Embed event data if requested
         self._add_embedded_data(config, events)
@@ -652,6 +666,8 @@ class BaseSVGRenderer(ABC):
         page_count = 1
         if config.include_overflow and overflow_entries:
             page_count += self._render_overflow_svg(config, coordinates, overflow_entries)
+
+        self._write_run_details(config, db)
 
         return VisualizationResult(
             output_path=config.outputfile,
@@ -1017,20 +1033,12 @@ class BaseSVGRenderer(ABC):
         and internal whitespace runs collapse to a single space — safe here
         because the fragments carry no significant text nodes.
         """
-        markup = BaseSVGRenderer._SVG_COMMENT_RE.sub("", markup)
-        markup = re.sub(r">\s+<", "><", markup)
-        markup = re.sub(r"\s+", " ", markup)
-        return markup.strip()
+        return minify_svg_markup(markup)
 
     @staticmethod
     def _strip_svg_wrapper(svg_markup: str) -> str:
         """Return minified inner SVG content without XML/DOCTYPE/<svg> wrapper."""
-        inner = re.sub(r"<\?xml[^>]*\?>", "", svg_markup, flags=re.IGNORECASE)
-        inner = re.sub(r"<!DOCTYPE[^>]*>", "", inner, flags=re.IGNORECASE)
-        inner = re.sub(r"<svg[^>]*>", "", inner, count=1, flags=re.IGNORECASE)
-        if "</svg>" in inner:
-            inner = inner.rsplit("</svg>", 1)[0]
-        return BaseSVGRenderer._minify_svg_markup(inner)
+        return strip_svg_wrapper(svg_markup)
 
     @staticmethod
     def _event_ctx(event) -> dict:
@@ -1173,9 +1181,15 @@ class BaseSVGRenderer(ABC):
         box_token: str | None = None,
         box_ctx: dict | None = None,
         opacity: float = 1.0,
+        details_role: str | None = None,
     ) -> bool:
         """
         Draw an icon from the DB icon cache at text-like baseline coordinates.
+
+        Every icon drawn is kept in the render record for the run details,
+        under the event or holiday whose scope is open (see
+        :meth:`_event_scope`).  Its role there comes from ``css_class``
+        unless ``details_role`` names one.
 
         If icon_name is specified but not found in the cache and fallback_name is
         provided, the fallback icon is drawn with fallback_color instead — at
@@ -1193,8 +1207,10 @@ class BaseSVGRenderer(ABC):
             True if an icon was drawn, else False.
         """
         svg_markup = self._resolve_icon_svg(icon_name)
+        drawn_name = icon_name
         if svg_markup is None and icon_name and str(icon_name).strip() and fallback_name:
             svg_markup = self._resolve_icon_svg(fallback_name)
+            drawn_name = fallback_name
             color = fallback_color
             if fallback_size is not None and fallback_size > 0:
                 size = float(fallback_size)
@@ -1222,16 +1238,11 @@ class BaseSVGRenderer(ABC):
         # and height are always set to `size` (the caller's display size), and
         # the SVG renderer scales the viewBox content to fit — correctly
         # handling icons whose coordinate system is 48×48 or any other value.
-        vb_match = re.search(
-            r'viewBox=["\'][\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)["\']',
-            svg_markup,
-            re.IGNORECASE,
-        )
-        viewbox = f"0 0 {vb_match.group(1)} {vb_match.group(2)}" if vb_match else "0 0 24 24"
+        viewbox = icon_viewbox(svg_markup)
 
         inner = self._strip_svg_wrapper(svg_markup)
 
-        style_attr = f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
+        style_attr = icon_color_style(color)
         class_attr = f' class="{css_class}"' if css_class else ""
         opacity_attr = f' opacity="{opacity:.3f}"' if opacity < 1.0 else ""
         nested_svg = (
@@ -1242,7 +1253,142 @@ class BaseSVGRenderer(ABC):
         if transform:
             nested_svg = f'<g transform="{transform}">{nested_svg}</g>'
         self.drawing.append(drawsvg.Raw(nested_svg))
+        self._record_icon(drawn_name, color, css_class, details_role)
         return True
+
+    # =========================================================================
+    # Render record: what the chart drew, for the run details
+    # =========================================================================
+
+    #: The visualizer name the run details report.  None falls back to
+    #: ``TOKEN_VISUALIZER``, then to the class name.
+    DETAILS_VISUALIZER: ClassVar[str | None] = None
+
+    def _details_visualizer(self) -> str:
+        name = self.DETAILS_VISUALIZER or getattr(self, "TOKEN_VISUALIZER", None)
+        return str(name or type(self).__name__.removesuffix("Renderer").lower())
+
+    @property
+    def _details(self) -> DetailsRecord | None:
+        """The render record, or None while a companion page is drawn."""
+        if getattr(self, "_details_capture_suspended", False):
+            return None
+        return getattr(self, "details_record", None)
+
+    def _details_note(self, event: Any) -> EventNote | None:
+        """*event*'s note in the render record, when one is being kept."""
+        record = self._details
+        return record.note_for(event) if record is not None and event is not None else None
+
+    @contextmanager
+    def _event_scope(self, event: Any) -> Iterator[EventNote | None]:
+        """Attribute every icon and mark drawn inside to *event*."""
+        note = self._details_note(event)
+        if note is None:
+            yield None
+            return
+        owners = self.__dict__.setdefault("_icon_owners", [])
+        owners.append(note)
+        try:
+            yield note
+        finally:
+            owners.pop()
+
+    @contextmanager
+    def _holiday_scope(self, name: str | None) -> Iterator[None]:
+        """Attribute every icon drawn inside to the holiday *name*."""
+        if self._details is None or not name:
+            yield None
+            return
+        owners = self.__dict__.setdefault("_icon_owners", [])
+        owners.append(str(name))
+        try:
+            yield None
+        finally:
+            owners.pop()
+
+    def _record_icon(
+        self,
+        icon_name: str | None,
+        color: str | None,
+        css_class: str | None,
+        role: str | None = None,
+    ) -> None:
+        record = self._details
+        if record is None or not icon_name or not str(icon_name).strip():
+            return
+        use = IconUse(str(icon_name).strip().lower(), color or None, role or role_for_class(css_class))
+        self._record_use(record, use)
+
+    def _record_use(self, record: DetailsRecord, use: IconUse) -> None:
+        owners = getattr(self, "_icon_owners", None) or []
+        owner = owners[-1] if owners else None
+        record.record_icon(use, owner)
+        if isinstance(owner, EventNote):
+            owner.mark_drawn()
+
+    def _note_mark(self, kind: str, color: str | None, role: str | None = None) -> None:
+        """Record a mark drawn as geometry -- a bar, a flag -- for the open scope."""
+        record = self._details
+        if record is not None:
+            self._record_use(record, mark(kind, str(color) if color else None, role))
+
+    def _note_drawn(self, event: Any, drawn: str = DRAWN_YES) -> None:
+        """Record that *event* was drawn (or only partly, or not at all)."""
+        note = self._details_note(event)
+        if note is not None:
+            note.mark_drawn(drawn)
+
+    def _note_color(self, color: str | None, label: str, source: str) -> None:
+        record = self._details
+        if record is not None:
+            record.add_color(color, label, source)
+
+    def _note_visible_days(self, daykeys: Iterable[str]) -> None:
+        record = self._details
+        if record is not None:
+            record.visible_daykeys = sorted({str(day) for day in daykeys})
+
+    def _note_exception(self, kind: str, task: str = "", datekey: str = "", **fields: Any) -> None:
+        record = self._details
+        if record is not None:
+            record.add_exception(kind, task, datekey, **fields)
+
+    def _record_overflow(self, overflow_entries: list | None) -> None:
+        """Report every item the render could not fit in its day."""
+        from renderers.details_record import DRAWN_NO, DRAWN_PARTIAL, KIND_OVERFLOW
+
+        record = self._details
+        if record is None:
+            return
+        for entry in overflow_entries or []:
+            start, end = str(entry.start or ""), str(entry.end or "")
+            note = record.find(entry.task_name or "", start, end)
+            if note is not None:
+                note.mark_drawn(DRAWN_NO if start[:8] == end[:8] else DRAWN_PARTIAL)
+            record.add_exception(
+                KIND_OVERFLOW,
+                entry.task_name or "",
+                entry.datekey or "",
+                start=start,
+                end=end,
+                event=note.event if note is not None else None,
+            )
+
+    def _write_run_details(self, config: CalendarConfig, db: CalendarDB | None) -> None:
+        """Write the run's icon files, details document and event CSV."""
+        run_paths = getattr(config, "run_paths", None)
+        record = getattr(self, "details_record", None)
+        if run_paths is None or record is None:
+            return
+        if not hasattr(self, "_icon_svg_map") and db is not None:
+            self._load_icon_svg_cache(db)
+        if not hasattr(self, "_icon_svg_map"):
+            self._icon_svg_map = {}
+
+        from renderers.run_details import write_run_details
+
+        write_run_details(record, config, db, run_paths, resolve_markup=self._resolve_icon_svg)
 
     @staticmethod
     def _icon_baseline(center_y: float, size: float) -> float:

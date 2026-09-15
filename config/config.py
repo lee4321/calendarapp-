@@ -448,6 +448,69 @@ class CalendarConfig:
     include_margin: bool = True
     include_overflow: bool = False
     include_color_key: bool = False
+
+    # Run details (theme `details:` section): the details document, icon
+    # files and event CSV every visualization run writes into its folder.
+    # Table columns use the gantt.columns schema (renderers/table_columns).
+    include_details_markdown: bool = True
+    details_md_title_text: str = "Calendar Details"
+    details_md_sections: list[str] = field(
+        default_factory=lambda: ["events", "colors", "symbols", "exceptions", "holidays"]
+    )
+    details_md_events_section_text: str = "Events"
+    details_md_colors_section_text: str = "Color Key"
+    details_md_symbols_section_text: str = "Icons & Symbols"
+    details_md_exceptions_section_text: str = "Exceptions"
+    details_md_holidays_section_text: str = "Holidays & Special Days"
+    details_md_empty_exceptions_text: str = "Every item was drawn as scheduled."
+    details_md_empty_cell_text: str = ""
+    details_md_icon_mode: str = "file"  # file | name | none
+    details_md_color_mode: str = "swatch"  # swatch | hex | name
+    details_md_group_by: str = "none"
+    details_md_sort: list[str] = field(default_factory=lambda: ["start_date", "end_date", "name"])
+    details_md_columns: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"field": "source_id", "header": "ID", "align": "right"},
+            {"field": "marker", "header": "Key", "align": "center"},
+            {"field": "name", "header": "Task Name", "indent": True},
+            {"field": "category", "header": "Type"},
+            {"field": "status", "header": "Status"},
+            {"field": "priority", "header": "Pri", "align": "right"},
+            {"field": "wbs", "header": "WBS"},
+            {"field": "percent_complete", "header": "%", "align": "right", "format": "{:.0%}"},
+            {"field": "start_date", "header": "Start", "date_format": "YYYY-MM-DD"},
+            {"field": "end_date", "header": "Finish", "date_format": "YYYY-MM-DD"},
+            {"field": "resource_names", "header": "Resources"},
+            {"field": "resource_group", "header": "Group"},
+            {"field": "assigned_color", "header": "Color"},
+            {"field": "notes", "header": "Notes", "max_lines": 3},
+            {"field": "drawn", "header": "Drawn"},
+        ]
+    )
+    details_md_exception_columns: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"field": "issue", "header": "Issue"},
+            {"field": "task", "header": "Task"},
+            {"field": "date", "header": "Date", "date_format": "YYYY-MM-DD"},
+            {"field": "ref", "header": "Ref"},
+            {"field": "detail", "header": "Detail"},
+        ]
+    )
+    details_md_holiday_columns: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"field": "icons", "header": "Icon", "align": "center"},
+            {"field": "date", "header": "Date"},
+            {"field": "name", "header": "Name"},
+            {"field": "kind", "header": "Kind"},
+            {"field": "nonworkday", "header": "Non-work"},
+            {"field": "notes", "header": "Notes"},
+        ]
+    )
+    include_details_icons: bool = True
+    details_icons_size: float = 16.0
+    include_details_csv: bool = True
+    details_csv_columns: Any = "exportdata"  # "exportdata" | list of column entries
+    details_csv_render_columns: bool = True
     include_notes: bool = False
     include_week_numbers: bool = False
     include_day_names: bool = True

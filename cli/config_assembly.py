@@ -141,6 +141,13 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("mini_details", "include_mini_details", "enable"),
     ("no_mini_details", "include_mini_details", "disable"),
     ("mini_icon_set", "mini_icon_set", "value"),
+    # Run details (every visualization)
+    ("details_md", "include_details_markdown", "enable"),
+    ("no_details_md", "include_details_markdown", "disable"),
+    ("icons", "include_details_icons", "enable"),
+    ("no_icons", "include_details_icons", "disable"),
+    ("csv", "include_details_csv", "enable"),
+    ("no_csv", "include_details_csv", "disable"),
     # Candybar
     ("candybar_row_height", "candybar_row_height", "value"),
     ("candybar_cell_width", "candybar_cell_width", "value"),

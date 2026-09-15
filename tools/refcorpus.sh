@@ -51,10 +51,10 @@ render_all() {
   echo "Rendered $(find "$dest" -type f | wc -l | tr -d ' ') files into $dest"
 }
 
-# Strip the <desc>...</desc> block (contains creation timestamp and argv,
-# which legitimately differ between runs).
+# Strip the <desc>...</desc> block and the details document's Generated
+# line (creation timestamp and argv legitimately differ between runs).
 normalized() {
-  perl -0pe 's/<desc>.*?<\/desc>//gs' "$1"
+  perl -0pe 's/<desc>.*?<\/desc>//gs; s/^- \*\*Generated:\*\*.*$//mg' "$1"
 }
 
 check() {
