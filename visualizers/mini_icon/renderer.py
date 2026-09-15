@@ -53,6 +53,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
     circles, duration bars, details page, etc.) are inherited unchanged.
     """
 
+    DETAILS_VISUALIZER = "mini-icon"
+
     def _get_day_icon_name(self, day_num: int, config: CalendarConfig) -> str | None:
         """Return the icon name for *day_num* from the configured icon set."""
         icon_set_name = getattr(config, "mini_icon_set", "squares")
@@ -196,6 +198,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
             fallback_name=config.default_missing_icon,
             fallback_size=config.default_missing_icon_size,
             fallback_color=text_color,
+            details_role="day_number",
         )
 
         # Fallback: if the icon was not found in the DB, render the day number

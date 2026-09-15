@@ -258,6 +258,8 @@ class TimelineRenderer(BaseSVGRenderer):
         # milestones and bars match instead of each layout cycling its own
         # palette independently.
         group_colors = self._wbs_group_colors(config, list(point_events) + list(duration_events))
+        for group, group_color in group_colors.items():
+            self._note_color(group_color, group, "wbs group")
 
         # Compute the axis geometry for the chosen orientation. axis_origin
         # is the (x, y) where the 1-D idealPos=0 maps in absolute SVG. For
@@ -427,10 +429,12 @@ class TimelineRenderer(BaseSVGRenderer):
 
         if orient is Orientation.HORIZONTAL:
             for duration in durations:
-                self._draw_duration_connectors(config, duration, axis_y, duration_limit)
+                with self._event_scope(duration.event):
+                    self._draw_duration_connectors(config, duration, axis_y, duration_limit)
         else:
             for duration in durations:
-                self._draw_duration_connectors_vertical(config, duration, axis_origin[0], _vertical_room(duration))
+                with self._event_scope(duration.event):
+                    self._draw_duration_connectors_vertical(config, duration, axis_origin[0], _vertical_room(duration))
 
         # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
         # → (axis_x, axis_bottom).
@@ -583,12 +587,14 @@ class TimelineRenderer(BaseSVGRenderer):
 
         # Pass 2: draw all boxes, markers, and text on top.
         for callout in callouts:
-            self._draw_callout(config, callout, axis_y)
+            with self._event_scope(callout.event):
+                self._draw_callout(config, callout, axis_y)
         for duration in durations:
-            if duration.orientation is Orientation.VERTICAL:
-                self._draw_duration_vertical(config, duration, axis_origin[0], _vertical_room(duration))
-            else:
-                self._draw_duration(config, duration, axis_y, duration_limit)
+            with self._event_scope(duration.event):
+                if duration.orientation is Orientation.VERTICAL:
+                    self._draw_duration_vertical(config, duration, axis_origin[0], _vertical_room(duration))
+                else:
+                    self._draw_duration(config, duration, axis_y, duration_limit)
 
         # Timebands: top bands stack above the timeline area; bottom bands
         # stack below it. Only drawn when declared in the theme.
@@ -1376,6 +1382,37 @@ class TimelineRenderer(BaseSVGRenderer):
         per_point = max(1e-6, ascent + descent)
         return max(4.0, min(size, cell_h / per_point))
 
+    def _note_duration(self, item: TimelineDuration) -> None:
+        """Record a drawn duration bar: its color, and whether it was clipped."""
+        from renderers.details_record import DRAWN_PARTIAL
+
+        note = self._details_note(item.event)
+        if note is None:
+            return
+        style = item.style or StyleResult()
+        note.assigned_color = item.color
+        note.color_source = "style rule" if style.fill_color else "timeline palette"
+        self._note_mark("bar", item.color)
+        if item.continues_left or item.continues_right:
+            note.continues_before = note.continues_before or item.continues_left
+            note.continues_after = note.continues_after or item.continues_right
+            note.mark_drawn(DRAWN_PARTIAL)
+
+    def _note_lane_clipped(self, item: TimelineDuration) -> None:
+        """Report a bar whose lane ran past the page, so it was not drawn."""
+        from renderers.details_record import DRAWN_NO, KIND_LANE_CLIPPED
+
+        self._note_exception(
+            KIND_LANE_CLIPPED,
+            item.event.task_name or "",
+            str(item.event.start)[:8],
+            start=str(item.event.start)[:8],
+            end=str(item.event.end)[:8],
+            detail="its lane runs past the page; only the leader is drawn",
+            event=item.event,
+        )
+        self._note_drawn(item.event, DRAWN_NO)
+
     def _draw_callout(
         self,
         config: CalendarConfig,
@@ -1412,6 +1449,16 @@ class TimelineRenderer(BaseSVGRenderer):
                 max(8.0, float(config.timeline_icon_size)),
                 item.color,
             )
+            from renderers.details_record import DRAWN_PARTIAL, KIND_LABEL_UNPLACED
+
+            self._note_exception(
+                KIND_LABEL_UNPLACED,
+                item.event.task_name or "",
+                str(item.event.start)[:8],
+                detail="no room for its label box; only the axis dot is drawn",
+                event=item.event,
+            )
+            self._note_drawn(item.event, DRAWN_PARTIAL)
             return
 
         _callout_style = config.get_box_style("ec-callout-box")
@@ -1433,6 +1480,11 @@ class TimelineRenderer(BaseSVGRenderer):
             **rect_kwargs,
         )
         self._draw_callout_contents(config, item, _sr)
+        note = self._details_note(item.event)
+        if note is not None:
+            note.assigned_color = item.color
+            note.color_source = "style rule" if _sr.fill_color else "timeline palette"
+            note.mark_drawn()
 
     def _draw_callout_contents(
         self,
@@ -1713,6 +1765,7 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         _probe_y, _probe_h = self._duration_bar_y(config, item, axis_y)
         if not self._duration_fits(_probe_y + self._duration_row_extent(config), limit):
+            self._note_lane_clipped(item)
             return
 
         _title_size, _notes_size, date_size, bar_h = self._duration_metrics(config)
@@ -1746,6 +1799,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-duration-bar",
             **rect_kwargs,
         )
+        self._note_duration(item)
 
         # Start marker on the main axis.  The end date gets none: the bar's
         # own right edge already stands on it, and a dot out on the axis
@@ -1785,6 +1839,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor="start",
                     color=cont_color,
                     css_class="ec-duration-icon",
+                    details_role="continuation_before",
                 )
             if item.continues_right:
                 self._draw_icon_svg(
@@ -1799,6 +1854,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor="end",
                     color=cont_color,
                     css_class="ec-duration-icon",
+                    details_role="continuation_after",
                 )
 
         self._draw_duration_contents(
@@ -2393,6 +2449,7 @@ class TimelineRenderer(BaseSVGRenderer):
         """
         _near_x, _thickness, _sign = self._duration_bar_x(config, item, axis_x)
         if not self._duration_fits(abs(_near_x + _sign * _thickness - axis_x), limit):
+            self._note_lane_clipped(item)
             return
 
         _title_size, _notes_size, date_size, bar_thickness = self._duration_metrics(config)
@@ -2433,6 +2490,7 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-duration-bar",
             **rect_kwargs,
         )
+        self._note_duration(item)
 
         # Start marker on the main axis, at the bar's start y — the end
         # date has none, for the reason given in :py:meth:`_draw_duration`.
@@ -2471,6 +2529,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor="middle",
                     color=cont_color,
                     css_class="ec-duration-icon",
+                    details_role="continuation_before",
                 )
             if item.continues_right:
                 self._draw_icon_svg(
@@ -2485,6 +2544,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     anchor="middle",
                     color=cont_color,
                     css_class="ec-duration-icon",
+                    details_role="continuation_after",
                 )
 
         self._draw_duration_contents_vertical(config, item, bar_x, bar_y, bar_thickness, bar_h, _sr)

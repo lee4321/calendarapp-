@@ -120,6 +120,19 @@ class PITRenderer(BaseSVGRenderer):
         # PIT never tries to place a multi-day event.
         point_events = [e for e in event_objs if not e.is_duration]
         dropped = len(event_objs) - len(point_events)
+        from renderers.details_record import KIND_MULTI_DAY_SKIPPED
+
+        for skipped in event_objs:
+            if skipped.is_duration:
+                self._note_exception(
+                    KIND_MULTI_DAY_SKIPPED,
+                    skipped.task_name or "",
+                    str(skipped.start)[:8],
+                    start=str(skipped.start)[:8],
+                    end=str(skipped.end)[:8],
+                    detail="use the timeline visualizer for durations",
+                    event=skipped,
+                )
         if dropped:
             import logging
 
@@ -807,6 +820,12 @@ class PITRenderer(BaseSVGRenderer):
                 size=m_size,
                 color=color,
             )
+            note = self._details_note(ev)
+            if note is not None:
+                note.assigned_color = color
+                note.color_source = "event color" if ev.color else "theme"
+            with self._event_scope(ev):
+                self._note_mark("diamond" if ev.milestone else "dot", color, "milestone" if ev.milestone else "event")
 
             # Resolve label-box style (per-rule > global theme > defaults).
             eff_label_stroke = label_ovr.get("stroke_color") or default_label_stroke
@@ -873,6 +892,13 @@ class PITRenderer(BaseSVGRenderer):
                     color=color,
                     strip_svg_wrapper=self._strip_svg_wrapper,
                 )
+                label_icon_name = (
+                    sr.icon
+                    or ev.icon
+                    or (config.pit_default_milestone_icon if ev.milestone else config.pit_default_event_icon)
+                )
+                with self._event_scope(ev):
+                    self._record_icon(label_icon_name, color, None, "milestone" if ev.milestone else "event")
                 # Push the name right so it clears the icon.
                 shift = label_icon_sz + label_icon_gp
                 name_tx = tx + shift

@@ -415,6 +415,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
+        self._note_visible_days(day.strftime("%Y%m%d") for day in visible_days)
+        for rule_color in self._color_rules.colors:
+            self._note_color(rule_color, "Color rule", "compact_plan.color_rules")
+        for group, group_color in group_color_map.items():
+            self._note_color(group_color, group or "(no group)", "group palette")
 
         placed = self._place_durations(
             durations,
@@ -514,11 +519,13 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 **self._bar_stroke(p, config),
                 css_class="ec-duration-bar",
             )
+            self._note_bar(p)
 
         # Bar content — three columns per bar: start date | icon + name | end date.
         dur_icon_h = self._duration_icon_height(config)
         for p in placed:
-            self._draw_bar_content(p, dur_icon_h, config)
+            with self._event_scope(p.event):
+                self._draw_bar_content(p, dur_icon_h, config)
 
         # Continuation icons — at the clamped ends of any duration line whose
         # event runs past the timeline: an "after" arrow ending at its right
@@ -529,23 +536,25 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if show_continuation:
             for p in placed:
                 bar_h = float(self._bar_stroke(p, config)["stroke_width"])
-                if p.continues:
-                    self._draw_continuation_icon(config, p.x2, p.row_y, p.color, max_size=bar_h)
-                if p.starts_early:
-                    self._draw_continuation_icon(config, p.x1, p.row_y, p.color, max_size=bar_h, before=True)
+                with self._event_scope(p.event):
+                    if p.continues:
+                        self._draw_continuation_icon(config, p.x2, p.row_y, p.color, max_size=bar_h)
+                    if p.starts_early:
+                        self._draw_continuation_icon(config, p.x1, p.row_y, p.color, max_size=bar_h, before=True)
 
         # Milestones
         for m in milestones:
-            self._draw_milestone(
-                m,
-                day_x,
-                px_per_day,
-                axis_y,
-                config,
-                label_lane=milestone_lanes.get(id(m), 0),
-                stem_base_h=ms_stem_base,
-                max_label_x=area_x + area_w,
-            )
+            with self._event_scope(m):
+                self._draw_milestone(
+                    m,
+                    day_x,
+                    px_per_day,
+                    axis_y,
+                    config,
+                    label_lane=milestone_lanes.get(id(m), 0),
+                    stem_base_h=ms_stem_base,
+                    max_label_x=area_x + area_w,
+                )
 
         # The key -- what each bar, flag and symbol stands for -- is its own
         # page, written after the chart (see render()).  Keep what it has
@@ -559,6 +568,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             assigned_colors=(*self._color_rules.colors, *group_color_map.values()),
             early_starts=show_continuation and has_early_starts,
         )
+        self._note_key_symbols(config, show_continuation and has_early_starts, show_continuation and has_continuations)
 
         # ------------------------------------------------------------------
         # REFIT — override the viewBox to the actual rendered vertical extent.
@@ -850,6 +860,55 @@ class CompactPlanRenderer(BaseSVGRenderer):
     # Group color / icon assignment
     # ------------------------------------------------------------------
 
+    def _note_bar(self, p: _PlacedDuration) -> None:
+        """Record a placed bar: its color, where the color came from, its clipping."""
+        from renderers.details_record import DRAWN_PARTIAL
+
+        note = self._details_note(p.event)
+        if note is None:
+            return
+        engine = getattr(self, "_color_rules", None)
+        if p.style is not None and p.style.fill_color:
+            source = "style rule"
+        elif engine and engine.assign(p.event) is not None:
+            source = "color rule"
+        elif p.event.color:
+            source = "event color"
+        else:
+            source = "group palette"
+        note.assigned_color = p.color
+        note.color_source = source
+        note.continues_before = note.continues_before or p.starts_early
+        note.continues_after = note.continues_after or p.continues
+        with self._event_scope(p.event):
+            self._note_mark("bar", p.color)
+        if p.starts_early or p.continues:
+            note.mark_drawn(DRAWN_PARTIAL)
+
+    def _note_key_symbols(self, config: CalendarConfig, early_starts: bool, continuations: bool) -> None:
+        """Record the chart's symbols, each with the meaning the key gives it."""
+        from renderers.details_record import IconUse, mark
+
+        record = self._details
+        if record is None:
+            return
+        legend_color = str(config.get_text_style("ec-legend-text").color or "#595959")
+        if early_starts:
+            name, _size, configured = self._continuation_icon_style(config, before=True)
+            record.add_symbol(
+                IconUse(name.strip().lower(), configured or legend_color, "continuation_before"),
+                str(config.compactplan_continuation_before_legend_text or "activity began earlier"),
+            )
+        if continuations:
+            name, _size, configured = self._continuation_icon_style(config)
+            record.add_symbol(
+                IconUse(name.strip().lower(), configured or legend_color, "continuation_after"),
+                str(config.compactplan_continuation_legend_text or "activity continues"),
+            )
+        if config.compactplan_show_axis_legend and config.compactplan_show_axis:
+            axis = config.get_line_style("ec-axis-line")
+            record.add_symbol(mark("bar", axis.color, "axis"), str(config.compactplan_legend_axis_text or "timeline"))
+
     def _assign_group_colors(self, events: list[Event], config: CalendarConfig) -> dict[str, str]:
         palette: list[str] = list(config.compactplan_palette) or ["steelblue"]
         groups = sorted({(e.resource_group or "").strip() for e in events if e.is_duration and not e.milestone})
@@ -1106,6 +1165,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             )
         else:
             self._draw_flag_marker(x, axis_y, stem_h, flag_w, color, pennant_h)
+            self._note_mark("flag", color, "milestone")
 
         # Milestone label
         if config.compactplan_show_milestone_labels and evt.task_name:
@@ -1303,6 +1363,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         is left out.  A continuing bar's arrow takes the end of the end
         column, so its date fits beside it.
         """
+        from renderers.details_record import KIND_DATE_OMITTED, KIND_NAME_TRUNCATED
+
         x1, mid_x1, mid_x2, x2 = self._bar_columns(p, config)
         stroke = self._bar_stroke(p, config)
         bar_h = float(stroke["stroke_width"])
@@ -1319,9 +1381,17 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 return
             label = format_arrow_date(arrow.get(day), str(config.compactplan_duration_date_format))
             color = config.compactplan_duration_date_color or _contrast_color(stroke["stroke"])
-            self._draw_fitted_text(
+            status = self._draw_fitted_text(
                 label, left, right, p.row_y, font_name, font_path, font_size, color, "ec-duration-date", truncate=False
             )
+            if status == "omitted":
+                self._note_exception(
+                    KIND_DATE_OMITTED,
+                    p.event.task_name or "",
+                    str(value)[:8],
+                    detail=f"{label} did not fit its bar",
+                    event=p.event,
+                )
 
         if config.compactplan_duration_show_start_date:
             start_left = x1
@@ -1341,7 +1411,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             text_x += icon_size + _BAR_ICON_GAP
         if font_path:
             color = config.compactplan_duration_name_color or _contrast_color(stroke["stroke"])
-            self._draw_fitted_text(
+            status = self._draw_fitted_text(
                 (p.event.task_name or "").strip(),
                 text_x,
                 mid_x2,
@@ -1353,6 +1423,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 "ec-event-name",
                 truncate=True,
             )
+            if status != "drawn" and (p.event.task_name or "").strip():
+                self._note_exception(
+                    KIND_NAME_TRUNCATED,
+                    p.event.task_name or "",
+                    str(p.event.start)[:8],
+                    detail="shortened to fit its bar" if status == "truncated" else "no room on its bar",
+                    event=p.event,
+                )
 
     def _draw_fitted_text(
         self,
@@ -1367,28 +1445,33 @@ class CompactPlanRenderer(BaseSVGRenderer):
         css_class: str,
         *,
         truncate: bool,
-    ) -> None:
+    ) -> str:
         """Draw *text* between *left* and *right*, centred on *center_y*.
 
         The text shrinks toward :data:`_BAR_MIN_FONT_SIZE` to fit; past that
         it is cut short with an ellipsis when *truncate* (a name, drawn from
         *left*), else not drawn (a date, centred in its column).
+
+        Returns ``"drawn"``, ``"truncated"`` or ``"omitted"``, so the caller
+        can report what the bar could not show.
         """
         width = right - left
         if not text or width <= 0:
-            return
+            return "omitted"
         size = shrinktext(text, width, font_path, font_size, min_fontsize=_BAR_MIN_FONT_SIZE)
 
         def measure(s: str) -> float:
             return string_width(s, font_path, size)
 
+        shortened = False
         if measure(text) > width:
             if not truncate:
-                return
+                return "omitted"
             lines = fit_lines(text, width, 1, measure)
             text = lines[0] if lines else ""
             if not text or measure(text) > width:
-                return
+                return "omitted"
+            shortened = True
         x, anchor = (left, "start") if truncate else ((left + right) / 2.0, "middle")
         self._draw_text(
             x,
@@ -1400,6 +1483,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             anchor=anchor,
             css_class=css_class,
         )
+        return "truncated" if shortened else "drawn"
 
     @staticmethod
     def _continuation_icon_style(config: CalendarConfig, *, before: bool = False) -> tuple[str, float, str]:
@@ -1455,6 +1539,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             anchor="start" if before else "end",
             color=color,
             css_class="ec-continuation-icon",
+            details_role="continuation_before" if before else "continuation_after",
         )
 
     def _milestone_style(self, evt: Event, config: CalendarConfig) -> tuple[str, StyleResult]:

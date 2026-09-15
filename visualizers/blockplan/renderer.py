@@ -339,7 +339,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
         # ── swimlanes ─────────────────────────────────────────────────────────
         event_objects = [Event.from_dict(e) for e in events]
         self._duration_group_colors = self._wbs_group_colors(config, event_objects)
+        for group, group_color in self._duration_group_colors.items():
+            self._note_color(group_color, group, "wbs group")
+        self._note_visible_days(day.strftime("%Y%m%d") for day in visible_days)
         lane_events = self._assign_events_to_lanes(config, event_objects, swimlanes)
+        self._note_lanes(event_objects, lane_events, swimlanes)
         self._draw_swimlanes(
             config=config,
             lane_defs=lane_events,
@@ -1144,6 +1148,69 @@ class BlockPlanRenderer(BaseSVGRenderer):
         priority_max = match.get("priority_max")
         return not (priority_max is not None and event.priority > int(priority_max))
 
+    def _note_lanes(
+        self,
+        events: list[Event],
+        lane_events: list[dict[str, Any]],
+        swimlanes: list[dict[str, Any]],
+    ) -> None:
+        """Record each item's lane, and report every item no lane took."""
+        from renderers.details_record import KIND_UNASSIGNED_LANE
+
+        record = self._details
+        if record is None:
+            return
+        placed: set[int] = set()
+        for lane in lane_events:
+            name = str(lane.get("name") or "")
+            for event in [*lane["events"], *lane["durations"]]:
+                placed.add(id(event))
+                note = record.note_for(event)
+                if name and name not in (note.lane or "").split(", "):
+                    note.lane = f"{note.lane}, {name}" if note.lane else name
+        if not swimlanes:
+            return
+        for event in events:
+            if id(event) not in placed:
+                record.add_exception(
+                    KIND_UNASSIGNED_LANE,
+                    event.task_name or "",
+                    str(event.start)[:8],
+                    detail="no swimlane matched it, and the unmatched lane is off",
+                    event=event,
+                )
+
+    def _note_lane_bar(
+        self,
+        event: Event,
+        color: str,
+        style: StyleResult,
+        group_color: str | None,
+        continues_left: bool,
+        continues_right: bool,
+    ) -> None:
+        """Record a drawn duration bar: its color, its source, and its clipping."""
+        from renderers.details_record import DRAWN_PARTIAL
+
+        note = self._details_note(event)
+        if note is None:
+            return
+        note.assigned_color = color
+        if style.fill_color:
+            note.color_source = "style rule"
+        elif group_color:
+            note.color_source = "wbs group"
+        elif event.color:
+            note.color_source = "event color"
+        else:
+            note.color_source = "palette"
+        with self._event_scope(event):
+            self._note_mark("bar", color)
+        if continues_left or continues_right:
+            note.continues_before = note.continues_before or continues_left
+            note.continues_after = note.continues_after or continues_right
+            note.mark_drawn(DRAWN_PARTIAL)
+
     def _assign_events_to_lanes(
         self,
         config: CalendarConfig,
@@ -1681,6 +1748,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
 
             continues_left = ev_start < start
             continues_right = ev_end > end
+            self._note_lane_bar(event, color, _sr, _group_color, continues_left, continues_right)
             if (continues_left or continues_right) and bool(getattr(config, "show_continuation_icon", True)):
                 cont_h = min(
                     float(getattr(config, "continuation_icon_height", 8.0)),
@@ -1689,34 +1757,37 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 cont_color_cfg = getattr(config, "continuation_icon_color", None)
                 cont_color = cont_color_cfg if cont_color_cfg else color
                 cont_baseline = y + bar_h * 0.5 + cont_h * 0.3
-                if continues_left:
-                    self._draw_icon_svg(
-                        resolve_continuation_icon(
-                            getattr(config, "continuation_icon_before", None),
-                            "horizontal",
-                            "arrow-left",
-                        ),
-                        x0,
-                        cont_baseline,
-                        cont_h,
-                        anchor="start",
-                        color=cont_color,
-                        css_class="ec-duration-icon",
-                    )
-                if continues_right:
-                    self._draw_icon_svg(
-                        resolve_continuation_icon(
-                            getattr(config, "continuation_icon_after", None),
-                            "horizontal",
-                            "arrow-right",
-                        ),
-                        x0 + w,
-                        cont_baseline,
-                        cont_h,
-                        anchor="end",
-                        color=cont_color,
-                        css_class="ec-duration-icon",
-                    )
+                with self._event_scope(event):
+                    if continues_left:
+                        self._draw_icon_svg(
+                            resolve_continuation_icon(
+                                getattr(config, "continuation_icon_before", None),
+                                "horizontal",
+                                "arrow-left",
+                            ),
+                            x0,
+                            cont_baseline,
+                            cont_h,
+                            anchor="start",
+                            color=cont_color,
+                            css_class="ec-duration-icon",
+                            details_role="continuation_before",
+                        )
+                    if continues_right:
+                        self._draw_icon_svg(
+                            resolve_continuation_icon(
+                                getattr(config, "continuation_icon_after", None),
+                                "horizontal",
+                                "arrow-right",
+                            ),
+                            x0 + w,
+                            cont_baseline,
+                            cont_h,
+                            anchor="end",
+                            color=cont_color,
+                            css_class="ec-duration-icon",
+                            details_role="continuation_after",
+                        )
             has_dates = bool(config.blockplan_duration_show_start_date or config.blockplan_duration_show_end_date)
             _dur_date_style = config.get_text_style("ec-duration-date")
             tk_dur_date = self._tk("text:duration_date")
@@ -1827,21 +1898,23 @@ class BlockPlanRenderer(BaseSVGRenderer):
                             f"scale({icon_scale_x:.6f} 1) "
                             f"translate({-draw_x:.4f} {-icon_baseline_y:.4f})"
                         )
-                    icon_drawn = self._draw_icon_svg(
-                        event_icon_to_draw,
-                        draw_x,
-                        icon_baseline_y,
-                        icon_size,
-                        anchor="start",
-                        color=event_icon_color,
-                        fallback_name=config.default_missing_icon,
-                        fallback_size=config.default_missing_icon_size,
-                        fallback_color=event_icon_color,
-                        transform=icon_transform,
-                        css_class="ec-event-icon",
-                        box_token="box:duration",
-                        box_ctx=self._event_ctx(event),
-                    )
+                    with self._event_scope(event):
+                        icon_drawn = self._draw_icon_svg(
+                            event_icon_to_draw,
+                            draw_x,
+                            icon_baseline_y,
+                            icon_size,
+                            anchor="start",
+                            color=event_icon_color,
+                            fallback_name=config.default_missing_icon,
+                            fallback_size=config.default_missing_icon_size,
+                            fallback_color=event_icon_color,
+                            transform=icon_transform,
+                            css_class="ec-event-icon",
+                            box_token="box:duration",
+                            box_ctx=self._event_ctx(event),
+                            details_role="duration",
+                        )
                     text_x = draw_x + effective_icon_w + gap if icon_drawn else x0 + (w / 2.0)
                     self._draw_text(
                         text_x,
@@ -2127,20 +2200,22 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 name_baseline = y_center + (event_size * 0.35)
                 notes_baseline = None
             if ev_icon_to_draw:
-                marker_drawn = self._draw_icon_svg(
-                    ev_icon_to_draw,
-                    x,
-                    name_baseline,
-                    icon_size,
-                    anchor="start",
-                    color=ev_icon_color,
-                    fallback_name=config.default_missing_icon,
-                    fallback_size=config.default_missing_icon_size,
-                    fallback_color="red",
-                    css_class="ec-event-icon",
-                    box_token="box:milestone" if getattr(event, "milestone", False) else "box:event",
-                    box_ctx=self._event_ctx(event),
-                )
+                with self._event_scope(event):
+                    marker_drawn = self._draw_icon_svg(
+                        ev_icon_to_draw,
+                        x,
+                        name_baseline,
+                        icon_size,
+                        anchor="start",
+                        color=ev_icon_color,
+                        fallback_name=config.default_missing_icon,
+                        fallback_size=config.default_missing_icon_size,
+                        fallback_color="red",
+                        css_class="ec-event-icon",
+                        box_token="box:milestone" if getattr(event, "milestone", False) else "box:event",
+                        box_ctx=self._event_ctx(event),
+                        details_role="milestone" if getattr(event, "milestone", False) else "event",
+                    )
 
             if not marker_drawn:
                 _circle = drawsvg.Circle(
@@ -2152,6 +2227,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     class_="ec-milestone-marker",
                 )
                 self.drawing.append(_circle)
+                with self._event_scope(event):
+                    self._note_mark("dot", event_color, "milestone" if event.milestone else "event")
             marker_extent = icon_size if marker_drawn else icon_r
             label_x = x + marker_extent + 2.0
             max_width = max(8.0, (timeline_x + timeline_w) - x - 6)
