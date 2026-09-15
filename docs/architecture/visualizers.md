@@ -11,7 +11,8 @@ Class-inheritance exceptions are noted below.
 Grid of day boxes, one column per weekday (weekend style 0–4 drives which
 columns exist and whether weekend boxes are half-width). Events render as
 text lines inside their day box; multi-day durations as bars spanning
-boxes; what doesn't fit goes to the `_overflow.svg` table page. Day
+boxes; what doesn't fit is marked on its day and reported in the run's
+details document. Day
 decoration (fills, hash lines, DB pattern tiles, holiday titles, fiscal
 period labels) resolves per day through StyleEngine content rules +
 `box:cell`/`line:hash` tokens.
@@ -22,8 +23,8 @@ Months in a column/row arrangement (`--mini-columns/rows`). Day styling is
 centralized in `day_styles.DayStyleResolver` → a `DayStyle` record per
 cell (shade, circle, strikethrough, icon, pattern). Rendering is
 three-pass per cell — background, duration bars, foreground — so bars sit
-under day numbers. Optional second page: `_render_details_svg`
-(`--mini-details`).
+under day numbers. Corner icons past the fourth are reported as
+exceptions in the run's details document.
 
 ## mini-icon — mini with glyph day numbers
 
@@ -36,7 +37,7 @@ loaded into the DB icon table).
 `CandybarRenderer(MiniCalendarRenderer)`: one row per ISO week, month
 names in merged boxes on the side (rotatable), optional weekend
 suppression. Reuses the entire mini decoration engine (day styles, tokens
-under the `mini` visualizer ctx) and the mini details page.
+under the `mini` visualizer ctx).
 
 ## text-mini — plain-text month grid
 
@@ -73,8 +74,7 @@ in `visualizers/gantt/renderer.py`'s module docstring. Split across small
 modules: `columns.py` (the task table's column model, resolution and
 wrap/truncate), `rows.py` (WBS-numeric ordering and indentation),
 `bars.py` (bar geometry on the visible-day axis), `dependencies.py` (link
-resolution and curved-leader routing), `details.py` (the companion
-`_details.svg` page and the exception log), `layout.py` (page frame plus
+resolution and curved-leader routing), `layout.py` (page frame plus
 `plan_pages`).
 
 Two things shape everything else. First, the axis is a list of *visible*
@@ -92,8 +92,8 @@ PIT construction — perpendicular stub, `hCurveBetween` cubic, arrowhead
 as an `orient="auto"` SVG marker — so the two views draw connectors the
 same way. Anything the chart cannot
 show faithfully — a clipped bar, an event moved off a hidden weekend, an
-off-chart predecessor — is recorded as a `GanttException` and listed on
-the details page instead of being silently dropped.
+off-chart predecessor — is recorded in the render record and listed in
+the run's details document instead of being silently dropped.
 
 ## compactplan — dense activity plan
 

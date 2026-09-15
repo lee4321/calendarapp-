@@ -36,7 +36,7 @@ The architecture reading order lives in `docs/architecture/README.md`
   `uv run python tools/check_user_guide.py`.
 - Content filters (`--noevents`, `--nodurations`/`--durations`, `--milestones`,
   `--WBS`, `--status`, `--country`, `--empty`, and the gated `--shade`,
-  `--includenotes`, `--overflow`) are defined once: register them with
+  `--includenotes`) are defined once: register them with
   `_add_content_filter_args()` in `cli/args.py` and wire them in
   `_apply_content_filters()` in `cli/config_assembly.py`. The SVG views,
   text-mini, excelblockplan and exportdata all go through both; never add a

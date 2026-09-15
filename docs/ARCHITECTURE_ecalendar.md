@@ -188,10 +188,23 @@ the local `output/` directory.
 
 **Example:** `_to_output_dir_path("../secret/calendar.svg")` → `"output/calendar.svg"`
 
-**Called by:** `run()` when setting `config.outputfile` for calendar visualizer commands.
+**Called by:** `_to_run_paths()`, and `run()` for the excelblockplan workbook and the exportdata CSV.
 
 **Why it exists:** Prevents path-traversal: all generated output is confined to
 the `output/` subdirectory regardless of what the user supplies to `--outputfile`.
+
+---
+
+### `_to_run_paths(filename) → RunPaths`
+
+**Purpose:** The run folder for a visualization's `--outputfile`: `output/<stem>/`
+holding the chart, its continuation pages, the details document, the event CSV and
+`icons/` (see `shared/run_paths.py`).
+
+**Example:** `_to_run_paths("../secret/cal.svg").main` → `output/cal/cal.svg`
+
+**Called by:** `run()` when setting `config.run_paths` and `config.outputfile` for
+visualization commands; `run_paths.prepare()` clears what an earlier run left there.
 
 ---
 
@@ -215,7 +228,7 @@ all subcommands and their option groups.
 - Layout Options (`--weekends`, `--header`, `--footer`, `--margin`)
 - Header/Footer text (`--headerleft`, `--headercenter`, `--headerright`, …)
 - Watermark Options (`--watermark`, `--watermark-rotation-angle`, `--imagemark`)
-- Content Filtering (`--empty`, `--noevents`, `--nodurations`/`--durations`, `--milestones`, `--WBS`, `--status`, `--country`; gated per view: `--shade`, `--includenotes`, `--overflow`) — defined once in `_add_content_filter_args()` and shared with text-mini, excelblockplan and exportdata
+- Content Filtering (`--empty`, `--noevents`, `--nodurations`/`--durations`, `--milestones`, `--WBS`, `--status`, `--country`; gated per view: `--shade`, `--includenotes`) — defined once in `_add_content_filter_args()` and shared with text-mini, excelblockplan and exportdata
 - Mini Calendar Options (`--mini-columns`, `--mini-rows`, `--mini-no-adjacent`, …)
 - Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`)
 - Fiscal Options (`--fiscal`, `--fiscal-colors`, `--fiscal-year-offset`)
