@@ -10,7 +10,48 @@ through the layout/renderer pipeline the calendar visualizers use.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class SheetChrome:
+    """Colours for a reference sheet's own furniture, not its subject.
+
+    The swatches, glyphs, icons and pattern tiles a sheet exists to show keep
+    whatever colour they are given -- only the page around them lives here:
+    background, headings, captions, rules and swatch frames.
+
+    These sheets take no ``--theme``: unlike the calendar visualizers they are
+    standalone SVG-string builders with no CalendarConfig in reach, so this is
+    a declared default surface rather than a live theme binding. It replaces
+    the ~25 literals that were scattered through the builders, and is the one
+    place to bind if the sheet subcommands ever gain a theme flag.
+    """
+
+    page_background: str = "white"
+    title: str = "#222"
+    subtitle: str = "#666"
+    caption: str = "#555"
+    rule: str = "#ddd"
+    font_label: str = "#888"
+    muted: str = "#ccc"
+    unavailable: str = "#bbb"
+    swatch_stroke: str = "#bbbbbb"
+    swatch_frame_stroke: str = "#cccccc"
+    swatch_backing: str = "white"
+    #: Swatch label ink, picked by luminance so it stays readable on any fill.
+    label_on_dark: str = "white"
+    label_on_light: str = "#222"
+    #: Defaults for the subject itself when a caller names no colour.
+    glyph: str = "#222222"
+    icon: str = "#333333"
+    pattern: str = "#333333"
+
+
+#: Module-level default. Builders read this; a caller wanting different
+#: furniture constructs its own SheetChrome and the builders take it.
+CHROME = SheetChrome()
 
 
 def _hex_hsv_sort_key(color: str) -> tuple:
@@ -71,7 +112,7 @@ def _swatch_value_labels(cx: float, cy: float, red: int, green: int, blue: int) 
     """
     hex_color = f"#{red:02X}{green:02X}{blue:02X}"
     luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-    text_color = "white" if luminance < 128 else "#222"
+    text_color = CHROME.label_on_dark if luminance < 128 else CHROME.label_on_light
     return [
         f'  <text x="{cx}" y="{cy - 2}"'
         f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
@@ -90,7 +131,7 @@ def _swatch_name_label(cx: float, baseline_y: float, name: str) -> str:
     return (
         f'  <text x="{cx}" y="{baseline_y}"'
         f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-        f' fill="#555" text-anchor="middle">{_xml_escape(name.lower())}</text>'
+        f' fill="{CHROME.caption}" text-anchor="middle">{_xml_escape(name.lower())}</text>'
     )
 
 
@@ -174,17 +215,17 @@ def _sheet_header_lines(svg_w: float, svg_h: float, header: str, subtitle: str, 
     fontsheet sits its title 4 pt lower than the swatch sheets).
     """
     subtitle_tspan = (
-        f'  <tspan font-size="18" font-weight="normal" font-style="normal" fill="#666">{_xml_escape(subtitle)}</tspan>'
+        f'  <tspan font-size="18" font-weight="normal" font-style="normal" fill="{CHROME.subtitle}">{_xml_escape(subtitle)}</tspan>'
         if subtitle
         else ""
     )
     return [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="{CHROME.page_background}"/>',
         f'  <text x="{_SHEET_MARGIN}" y="{_SHEET_MARGIN + title_dy}"'
         f' font-family="Helvetica, Arial, sans-serif"'
-        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
+        f' font-size="26" font-weight="bold" font-style="italic" fill="{CHROME.title}">'
         f"{_xml_escape(header)}{subtitle_tspan}</text>",
     ]
 
@@ -237,7 +278,7 @@ def _render_swatch_page(
 
         lines.append(
             f'  <rect x="{x}" y="{y}" width="{box_w}" height="{box_h}"'
-            f' fill="{fill}" stroke="#bbbbbb" stroke-width="0.5"/>'
+            f' fill="{fill}" stroke="{CHROME.swatch_stroke}" stroke-width="0.5"/>'
         )
         # Hex value + RGB triplet centred inside the swatch
         lines.extend(_swatch_value_labels(cx, y + box_h // 2, red, green, blue))
@@ -396,9 +437,9 @@ def _palette_section_lines(
     lines = [
         f'  <text x="{_SHEET_MARGIN}" y="{title_y + 28}"'
         f' font-family="Helvetica, Arial, sans-serif" font-size="22"'
-        f' font-weight="bold" font-style="italic" fill="#222">'
+        f' font-weight="bold" font-style="italic" fill="{CHROME.title}">'
         f'{_xml_escape(name)}  <tspan font-size="16" font-weight="normal"'
-        f' font-style="normal" fill="#666">({n} colors)</tspan></text>'
+        f' font-style="normal" fill="{CHROME.subtitle}">({n} colors)</tspan></text>'
     ]
 
     for i, (col_name, fill, red, green, blue) in enumerate(swatches):
@@ -408,7 +449,7 @@ def _palette_section_lines(
         y = grid_y + row * cell_h
         cx = x + box // 2
         lines.append(
-            f'  <rect x="{x}" y="{y}" width="{box}" height="{box}" fill="{fill}" stroke="#bbbbbb" stroke-width="0.5"/>'
+            f'  <rect x="{x}" y="{y}" width="{box}" height="{box}" fill="{fill}" stroke="{CHROME.swatch_stroke}" stroke-width="0.5"/>'
         )
         # Hex + RGB inside the swatch (same as the colorsheet)
         lines.extend(_swatch_value_labels(cx, y + box // 2, red, green, blue))
@@ -468,7 +509,7 @@ def _render_palette_sections_page(
     lines: list[str] = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="{CHROME.page_background}"/>',
     ]
 
     y_cursor = _SHEET_MARGIN
@@ -559,7 +600,7 @@ def _generate_all_palettes_svg(
     lines: list[str] = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="{CHROME.page_background}"/>',
     ]
 
     y_cursor = _SHEET_MARGIN
@@ -719,7 +760,7 @@ def _render_font_fullset(
         x_start:       Left margin x-coordinate in local space.
         content_width: Maximum line width before wrapping.
         font_size:     Render size in points.
-        color:         SVG fill colour for all paths (e.g. ``"#222222"``).
+        color:         SVG fill colour for all paths (default ``CHROME.glyph``).
 
     Returns:
         A tuple of (path_element_strings, total_rendered_height).
@@ -845,12 +886,12 @@ def _render_fontsheet_page(
         for font_name, _font_path, path_elems, content_h in pre:
             entry_content_h = max(content_h, ROW_H)
             lines.append(
-                f'  <line x1="{MARGIN}" y1="{y}" x2="{PAGE_W - MARGIN}" y2="{y}" stroke="#ddd" stroke-width="1"/>'
+                f'  <line x1="{MARGIN}" y1="{y}" x2="{PAGE_W - MARGIN}" y2="{y}" stroke="{CHROME.rule}" stroke-width="1"/>'
             )
             lines.append(
                 f'  <text x="{MARGIN}" y="{y + LABEL_H - 4}"'
                 f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-                f' font-weight="bold" fill="#888">{font_name}</text>'
+                f' font-weight="bold" fill="{CHROME.font_label}">{font_name}</text>'
             )
             y_content = y + LABEL_H
             if path_elems:
@@ -862,7 +903,7 @@ def _render_fontsheet_page(
                 lines.append(
                     f'  <text x="{MARGIN}" y="{baseline}"'
                     f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
-                    f' fill="#ccc" font-style="italic">(no glyphs)</text>'
+                    f' fill="{CHROME.muted}" font-style="italic">(no glyphs)</text>'
                 )
             y += LABEL_H + entry_content_h + ENTRY_PAD
 
@@ -885,11 +926,13 @@ def _render_fontsheet_page(
             x_col = MARGIN + col * (COL_W + COL_GAP)
             y = MARGIN + TITLE_H + row * ENTRY_H
             x_right = x_col + COL_W
-            lines.append(f'  <line x1="{x_col}" y1="{y}" x2="{x_right}" y2="{y}" stroke="#ddd" stroke-width="1"/>')
+            lines.append(
+                f'  <line x1="{x_col}" y1="{y}" x2="{x_right}" y2="{y}" stroke="{CHROME.rule}" stroke-width="1"/>'
+            )
             lines.append(
                 f'  <text x="{x_col}" y="{y + LABEL_H - 4}"'
                 f' font-family="Helvetica, Arial, sans-serif" font-size="11"'
-                f' font-weight="bold" fill="#888">{font_name}</text>'
+                f' font-weight="bold" fill="{CHROME.font_label}">{font_name}</text>'
             )
             y_row = y + LABEL_H
             for sample in SAMPLE_ROWS:
@@ -902,13 +945,13 @@ def _render_fontsheet_page(
                         lines.append(
                             f'  <text x="{x_col}" y="{baseline}"'
                             f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
-                            f' fill="#ccc" font-style="italic">(no glyphs)</text>'
+                            f' fill="{CHROME.muted}" font-style="italic">(no glyphs)</text>'
                         )
                 except Exception:
                     lines.append(
                         f'  <text x="{x_col}" y="{baseline}"'
                         f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
-                        f' fill="#bbb" font-style="italic">(not renderable)</text>'
+                        f' fill="{CHROME.unavailable}" font-style="italic">(not renderable)</text>'
                     )
                 y_row += ROW_H
 
@@ -919,7 +962,7 @@ def _render_fontsheet_page(
 def _generate_fontsheet_svg(
     font_registry: dict,
     output_path: Path,
-    color: str = "#222222",
+    color: str = CHROME.glyph,
     title: str = "Fonts",
     fullset: bool = False,
     paginate: bool = False,
@@ -973,7 +1016,7 @@ def _generate_fontsheet_svg(
         font_registry: Dict of ``{font_name: font_path}`` to render.
         output_path:   Destination path for the generated SVG (page suffix
                        added automatically when more than one page is produced).
-        color:         Glyph fill colour (default ``"#222222"``).
+        color:         Glyph fill colour (default ``CHROME.glyph``).
         title:         SVG title string.
         fullset:       When True, renders every mapped codepoint per font.
         paginate:      When True, split fonts across ``columns × rows`` pages.
@@ -1013,7 +1056,7 @@ def _generate_fontsheet_svg(
 def _generate_iconsheet_svg(
     icons: list[dict],
     output_path: Path,
-    color: str = "#333333",
+    color: str = CHROME.icon,
     title: str = "Icons",
     paginate: bool = False,
     columns: int = 8,
@@ -1068,7 +1111,7 @@ def _generate_iconsheet_svg(
                      Assumed already sorted by name.
         output_path: Destination path for the generated SVG (page suffix added
                      automatically when more than one page is produced).
-        color:       Stroke/fill colour applied to icons (default ``"#333333"``).
+        color:       Stroke/fill colour applied to icons (default ``CHROME.icon``).
         title:       SVG title string used as the header in single-sheet mode
                      (paginated headers are derived from the first/last icon
                      name on each page).
@@ -1111,17 +1154,17 @@ def _generate_iconsheet_svg(
         svg_h = MARGIN + TITLE_H + page_rows * CELL_H - GAP_Y + MARGIN
 
         count_tspan = (
-            f'  <tspan font-size="18" font-weight="normal" font-style="normal" fill="#666">({page_n} icons)</tspan>'
+            f'  <tspan font-size="18" font-weight="normal" font-style="normal" fill="{CHROME.subtitle}">({page_n} icons)</tspan>'
             if show_count
             else ""
         )
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
             f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">',
-            f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+            f'  <rect width="{svg_w}" height="{svg_h}" fill="{CHROME.page_background}"/>',
             f'  <text x="{MARGIN}" y="{MARGIN + 36}"'
             f' font-family="Helvetica, Arial, sans-serif"'
-            f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
+            f' font-size="26" font-weight="bold" font-style="italic" fill="{CHROME.title}">'
             f"{_xml_escape(header)}{count_tspan}</text>",
         ]
 
@@ -1182,7 +1225,7 @@ def _generate_iconsheet_svg(
             lines.append(
                 f'  <text x="{x + ICON_SIZE // 2}" y="{label_y}"'
                 f' font-family="Helvetica, Arial, sans-serif" font-size="9"'
-                f' fill="#555" text-anchor="middle">{_xml_escape(name)}</text>'
+                f' fill="{CHROME.caption}" text-anchor="middle">{_xml_escape(name)}</text>'
             )
 
         lines.append("</svg>")
@@ -1213,7 +1256,7 @@ def _generate_iconsheet_svg(
 def _generate_patternsheet_svg(
     patterns: list[tuple[str, str]],
     output_path: Path,
-    color: str = "#333333",
+    color: str = CHROME.icon,
     title: str = "Patterns",
 ) -> None:
     """
@@ -1236,7 +1279,7 @@ def _generate_patternsheet_svg(
     Args:
         patterns:    List of (name, svg) tuples (raw SVG markup).
         output_path: Destination path for the generated SVG.
-        color:       Fill color applied to pattern tiles (default ``"#333333"``).
+        color:       Fill color applied to pattern tiles (default ``CHROME.icon``).
         title:       SVG title string.
     """
     import math
@@ -1302,7 +1345,7 @@ def _generate_patternsheet_svg(
 
         body.append(
             f'  <rect x="{x}" y="{y}" width="{SWATCH_SIZE}" height="{SWATCH_SIZE}"'
-            f' fill="white" stroke="#cccccc" stroke-width="1"/>'
+            f' fill="{CHROME.swatch_backing}" stroke="{CHROME.swatch_frame_stroke}" stroke-width="1"/>'
         )
         body.append(f'  <rect x="{x}" y="{y}" width="{SWATCH_SIZE}" height="{SWATCH_SIZE}" fill="url(#{pat_id})"/>')
 
@@ -1310,7 +1353,7 @@ def _generate_patternsheet_svg(
         body.append(
             f'  <text x="{x + SWATCH_SIZE // 2}" y="{label_y}"'
             f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
-            f' fill="#555" text-anchor="middle">{name}</text>'
+            f' fill="{CHROME.caption}" text-anchor="middle">{name}</text>'
         )
 
     lines = [
@@ -1319,15 +1362,15 @@ def _generate_patternsheet_svg(
         f' xmlns:xlink="http://www.w3.org/1999/xlink"'
         f' width="{svg_w}" height="{svg_h}"'
         f' viewBox="0 0 {svg_w} {svg_h}">',
-        f'  <rect width="{svg_w}" height="{svg_h}" fill="white"/>',
+        f'  <rect width="{svg_w}" height="{svg_h}" fill="{CHROME.page_background}"/>',
         "  <defs>",
         *defs,
         "  </defs>",
         f'  <text x="{MARGIN}" y="{MARGIN + 36}"'
         f' font-family="Helvetica, Arial, sans-serif"'
-        f' font-size="26" font-weight="bold" font-style="italic" fill="#222">'
+        f' font-size="26" font-weight="bold" font-style="italic" fill="{CHROME.title}">'
         f'{title}  <tspan font-size="18" font-weight="normal" font-style="normal"'
-        f' fill="#666">({n} patterns)</tspan></text>',
+        f' fill="{CHROME.subtitle}">({n} patterns)</tspan></text>',
         *body,
         "</svg>",
     ]
