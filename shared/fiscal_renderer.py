@@ -83,6 +83,45 @@ def format_fiscal_period_label(
         return f"{prefix}{fiscal_info.period_short_name}".strip()
 
 
+def period_label_days(
+    fiscal_lookup: dict[str, FiscalPeriodInfo] | None,
+    weekend_style: int,
+) -> dict[str, FiscalPeriodInfo]:
+    """Map daykey -> period info for every period label that should be drawn.
+
+    A period's label belongs on its ``is_period_start`` day, but that day is
+    not always rendered: NRF periods begin on a Sunday and a workweek-only
+    calendar draws no Sunday, so the label would simply vanish. When the start
+    day is hidden the label falls forward to the period's first visible day.
+    The weekly renderer does the same thing inline for its Monday-start
+    layouts, one day at a time; this walks forward instead, so a period that
+    opens on a Saturday is caught too.
+
+    A period whose start day is outside *fiscal_lookup* — the calendar range
+    opens part-way through it — gets no label, which is what the callers did
+    before this fell the labels forward.
+    """
+    if not fiscal_lookup:
+        return {}
+
+    from config.config import weekend_style_is_workweek
+
+    workweek_only = weekend_style_is_workweek(weekend_style)
+    labels: dict[str, FiscalPeriodInfo] = {}
+    pending: dict[tuple[int, int], FiscalPeriodInfo] = {}
+    for daykey in sorted(fiscal_lookup):
+        info = fiscal_lookup[daykey]
+        ident = (info.fiscal_year, info.fiscal_period)
+        if info.is_period_start:
+            pending[ident] = info
+        if ident not in pending:
+            continue
+        if workweek_only and date(int(daykey[:4]), int(daykey[4:6]), int(daykey[6:8])).weekday() >= 5:
+            continue
+        labels[daykey] = pending.pop(ident)
+    return labels
+
+
 def format_fiscal_period_end_label(
     fiscal_info: FiscalPeriodInfo,
     config: CalendarConfig,
