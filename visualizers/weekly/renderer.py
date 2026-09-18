@@ -608,8 +608,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if config.shade_current_day:
             today = arrow.now().format("YYYYMMDD")
             if today == oneday_str:
-                fill_color = "lightblue"
-                fill_opacity = 0.25
+                # Same surface the mini calendar uses, rather than a second
+                # hardcoded "lightblue" that no theme could reach.
+                fill_color = config.theme_mini_current_day_color or config.mini_current_day_color
+                fill_opacity = config.get_box_style("ec-day-box").fill_opacity
 
         return fill_color, fill_opacity
 

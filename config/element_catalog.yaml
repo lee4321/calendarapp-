@@ -51,6 +51,8 @@ elements:
   ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelblockplan, gantt], description: "Lane / heading-column cell" }
   ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelblockplan, gantt], description: "Time-band segment cell" }
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
+  ec-fiscal-band:    { kind: box, token: fiscal_band,     scope: [timeline],                   description: "Timeline fiscal period / quarter band segment" }
+  ec-fiscal-band-alt: { kind: box, token: fiscal_band_alt, scope: [timeline],                  description: "Timeline fiscal band segment, alternating shade" }
   ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
   ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }
   ec-pit-label-pattern: { kind: box, token: default, scope: [pit],                              description: "PIT pattern-fill overlay rect on a callout label box" }

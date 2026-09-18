@@ -41,16 +41,6 @@ if TYPE_CHECKING:
 #: row of callout boxes.
 _AXIS_LABEL_MARGIN = 2.0
 
-#: Alternating fill for the fiscal period / quarter band rows, and the opacity
-#: they are drawn at.  Unlike the ``time_bands:`` rows beside them -- which take
-#: ``fill_color`` / ``alt_fill_color`` from the theme catalog -- fiscal rows have
-#: no theme surface of their own, so these are the only values available.  Both
-#: rows are off by default (``timeline_show_fiscal_periods`` /
-#: ``_quarters``), which is why the gap has gone unnoticed; giving them one
-#: needs a way to express an alternating *pair*, which a single BoxStyle cannot.
-_FISCAL_BAND_ALT_FILLS = ("#e8eaf0", "#d4d8e8")
-_FISCAL_BAND_FILL_OPACITY = 0.6
-
 
 def _timeline_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
@@ -2706,6 +2696,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return _day_classes.get(day_, frozenset())
 
         _band_text_style = config.get_text_style("ec-label")
+        _sep_style = config.get_line_style("ec-separator")
         tk_band_label = self._tk("text:label")
         text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
         text_opacity = float(
@@ -2745,8 +2736,9 @@ class TimelineRenderer(BaseSVGRenderer):
                     sep_y,
                     axis_right,
                     sep_y,
-                    stroke="#cccccc",
-                    stroke_width=0.5,
+                    stroke=_sep_style.color,
+                    stroke_width=_sep_style.width,
+                    stroke_opacity=_sep_style.opacity,
                     css_class="ec-separator",
                 )
                 row_y += row_h
@@ -2830,8 +2822,9 @@ class TimelineRenderer(BaseSVGRenderer):
                 sep_y,
                 axis_right,
                 sep_y,
-                stroke="#cccccc",
-                stroke_width=0.5,
+                stroke=_sep_style.color,
+                stroke_width=_sep_style.width,
+                stroke_opacity=_sep_style.opacity,
                 css_class="ec-separator",
             )
             row_y += row_h
@@ -3594,7 +3587,10 @@ class TimelineRenderer(BaseSVGRenderer):
         if config.timeline_show_fiscal_periods:
             rows.append(build_fiscal_period_segments(start_date, end_date, config))
 
-        alt_colors = _FISCAL_BAND_ALT_FILLS
+        # Alternating band shades come from the catalog so a theme can set
+        # them; ec-fiscal-band / -alt carry fill, opacity, stroke and width.
+        _fb_styles = (config.get_box_style("ec-fiscal-band"), config.get_box_style("ec-fiscal-band-alt"))
+        _fb_classes = ("ec-fiscal-band", "ec-fiscal-band-alt")
         label_color = config.get_line_style("ec-axis-tick").color
 
         for row_idx, segments in enumerate(rows):
@@ -3608,17 +3604,17 @@ class TimelineRenderer(BaseSVGRenderer):
                 x2 = min(x2, axis_right)
                 if x2 <= x1:
                     continue
-                fill = alt_colors[seg_idx % 2]
+                _fb = _fb_styles[seg_idx % 2]
                 self._draw_rect(
                     x1,
                     row_top,
                     x2 - x1,
                     band_h,
-                    fill=fill,
-                    fill_opacity=_FISCAL_BAND_FILL_OPACITY,
-                    stroke="#aaaaaa",
-                    stroke_width=0.5,
-                    css_class="ec-callout-box",
+                    fill=_fb.fill,
+                    fill_opacity=_fb.fill_opacity,
+                    stroke=_fb.stroke,
+                    stroke_width=_fb.stroke_width,
+                    css_class=_fb_classes[seg_idx % 2],
                 )
                 cx = (x1 + x2) / 2.0
                 cy = row_top + band_h / 2.0 + label_size * 0.35
@@ -3675,7 +3671,10 @@ class TimelineRenderer(BaseSVGRenderer):
             self._axis_label_clearance(config, start, end) or (self._axis_tick_height(config) + label_size * 1.5)
         )
 
-        alt_colors = _FISCAL_BAND_ALT_FILLS
+        # Alternating band shades come from the catalog so a theme can set
+        # them; ec-fiscal-band / -alt carry fill, opacity, stroke and width.
+        _fb_styles = (config.get_box_style("ec-fiscal-band"), config.get_box_style("ec-fiscal-band-alt"))
+        _fb_classes = ("ec-fiscal-band", "ec-fiscal-band-alt")
         label_color = config.get_line_style("ec-axis-tick").color
         font_name = self._tk("text:event_date").get("font") or config.timeline_date_font
 
@@ -3689,16 +3688,17 @@ class TimelineRenderer(BaseSVGRenderer):
                 y2 = min(y2, axis_bottom)
                 if y2 <= y1:
                     continue
+                _fb = _fb_styles[seg_idx % 2]
                 self._draw_rect(
                     col_x,
                     y1,
                     band_w,
                     y2 - y1,
-                    fill=alt_colors[seg_idx % 2],
-                    fill_opacity=_FISCAL_BAND_FILL_OPACITY,
-                    stroke="#aaaaaa",
-                    stroke_width=0.5,
-                    css_class="ec-callout-box",
+                    fill=_fb.fill,
+                    fill_opacity=_fb.fill_opacity,
+                    stroke=_fb.stroke,
+                    stroke_width=_fb.stroke_width,
+                    css_class=_fb_classes[seg_idx % 2],
                 )
                 self._note_side_ink(col_x, col_x + band_w)
                 cx = col_x + band_w / 2.0
@@ -3758,6 +3758,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return _day_classes.get(day_, frozenset())
 
         _band_text_style = config.get_text_style("ec-label")
+        _sep_style = config.get_line_style("ec-separator")
         tk_band_label = self._tk("text:label")
         text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
         text_opacity = float(
@@ -3792,8 +3793,9 @@ class TimelineRenderer(BaseSVGRenderer):
                     axis_top,
                     col_x,
                     axis_bottom,
-                    stroke="#cccccc",
-                    stroke_width=0.5,
+                    stroke=_sep_style.color,
+                    stroke_width=_sep_style.width,
+                    stroke_opacity=_sep_style.opacity,
                     css_class="ec-separator",
                 )
                 self._note_side_ink(col_x, col_x + col_w)
@@ -3892,8 +3894,9 @@ class TimelineRenderer(BaseSVGRenderer):
                 axis_top,
                 sep_x,
                 axis_bottom,
-                stroke="#cccccc",
-                stroke_width=0.5,
+                stroke=_sep_style.color,
+                stroke_width=_sep_style.width,
+                stroke_opacity=_sep_style.opacity,
                 css_class="ec-separator",
             )
             self._note_side_ink(col_x, col_x + col_w)
