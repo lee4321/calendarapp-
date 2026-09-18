@@ -367,8 +367,8 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > **What is actually left of Part 3** is therefore a much smaller question than
 > §3.2–§3.4 describe: *which text and box elements still lack a `text:` / `box:`
 > token binding?* §3.1 now carries that re-measurement (2026-09-18): 25 text
-> draws passed no opacity and 8 a hardcoded literal; blockplan and mini were
-> plumbed on 2026-09-18, leaving 11 and 7. None of it needs a new config field.
+> draws passed no opacity and 8 a hardcoded literal. All of it was plumbed on
+> 2026-09-18 with no new config field; only box styling (§3.3–§3.4) remains.
 
 ### 3.1 Gap Summary Matrix
 
@@ -397,21 +397,29 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 >
 > | Renderer | text draws (themeable/literal/absent) | rect `fill_opacity` | rect `fill` | `text_override` sites |
 > |---|---|---|---|---|
-> | Weekly | 6 / 0 / 5 of 11 | 3 / 0 / 0 of 3 | 3 / 0 / 0 | 4 |
-> | Mini | **6 / 1 / 0** of 7 | 2 / 0 / 3 of 5 | 2 / 3 / 0 | 0 |
-> | Timeline | 7 / 6 / 3 of 16 | 3 / 4 / 0 of 7 | 7 / 0 / 0 | 7 |
-> | Blockplan | **13 / 0 / 0** of 13 | 3 / 0 / 4 of 7 | 7 / 0 / 0 | 6 |
-> | Compactplan | 2 / 0 / 1 of 3 | 1 / 0 / 0 of 1 | 1 / 0 / 0 | 1 |
-> | Chrome (header/footer/watermark) | 1 / 0 / 2 of 3 | 1 / 0 / 1 of 2 | 2 / 0 / 0 | — |
+> | Weekly | 11 / 0 / 0 of 11 | 3 / 0 / 0 of 3 | 3 / 0 / 0 | 4 |
+> | Mini | 6 / 1 / 0 of 7 | 2 / 0 / 3 of 5 | 2 / 3 / 0 | 0 |
+> | Timeline | 16 / 0 / 0 of 16 | 3 / 4 / 0 of 7 | 7 / 0 / 0 | 7 |
+> | Blockplan | 13 / 0 / 0 of 13 | 3 / 0 / 4 of 7 | 7 / 0 / 0 | 6 |
+> | Compactplan | 3 / 0 / 0 of 3 | 1 / 0 / 0 of 1 | 1 / 0 / 0 | 1 |
+> | Chrome (header/footer/watermark) | 3 / 0 / 0 of 3 | 1 / 0 / 1 of 2 | 2 / 0 / 0 | — |
 >
-> **Blockplan and mini were plumbed 2026-09-18** (bold rows). Blockplan's six
-> `text_override()` calls now pass an `opacity=` base and use the value they
-> return; mini's four unstyled draws read their own token, and its fiscal-period
-> label's hardcoded `0.85` became the default behind `text:fiscal_label`. Mini's
-> remaining literal is the outlined day number's `0.15`, which is the outline
-> effect itself rather than a missing hook. Both were verified byte-identical
-> against the refcorpus, and a probe theme confirmed the new keys move 91, 12 and
-> 12 draws — the plumbing is live, not dead.
+> **Text opacity was plumbed end to end on 2026-09-18** — absent 25 → 0,
+> literal 8 → 1. Draws that already consulted a style rule use the opacity
+> `text_override()` was returning and discarding; the rest read their element's
+> token, or its `TextStyle` where no token exists (timeline's holiday dates) or
+> where the renderer resolves no tokens at all (compactplan, and the shared
+> chrome, whose element styles are uniform across visualizers in a way a
+> per-subclass token lookup would not be). Timeline's six hardcoded literals
+> keep their values as defaults behind `text:label` / `text:today_label`.
+> `BaseSVGRenderer._tk_opacity()` and `_tk_opacity_default()` carry the two
+> fallback shapes.
+>
+> The single remaining literal is mini's outlined day number (`0.15`), which is
+> the outline effect itself, not a missing hook. Every step held the refcorpus
+> byte-identical, and probe themes confirmed the new keys move real draws
+> (91 blockplan, 77 weekly, 55 timeline, 49 compactplan, 12 mini) — live
+> plumbing, not dead keys.
 >
 > **Revised verdicts** (↑ / ↓ mark a change from the 2026-07 row):
 >
@@ -419,7 +427,7 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > |---|:---:|:---:|:---:|:---:|:---:|
 > | font_name / font_size / font_color | All | All | All | All | All |
 > | background_color | All ↑ | Partial ↑ | All ↑ | All ↑ | All ↑ |
-> | font_opacity | Partial ↑ | Partial | Partial ↑ | Partial | Partial ↓ |
+> | font_opacity | **All** ↑ | All but the outline effect ↑ | **All** ↑ | **All** ↑ | **All** ↑ |
 > | background_opacity | All ↑ | Partial ↑ | Partial ↑ | Partial ↑ | All ↑ |
 >
 > Notes on the two rows that did not simply improve:
@@ -434,13 +442,12 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > - **Timeline has the most hardcoded literals** — 6 text draws and 4 rect
 >   opacities — so it looks well covered by count but has the most fixed values.
 >
-> **The remaining work**, then, is not §3.2–§3.4's ~96 fields. After the
-> 2026-09-18 pass it is **11 text draws that pass no opacity** (5 Weekly,
-> 3 Timeline, 1 Compactplan, 2 Chrome) and **7 carrying a hardcoded literal**
-> (6 Timeline, 1 Mini — the outline effect, which should stay) — plus 4 literal
-> rect opacities in Timeline and 3 rect draws in Mini with no themeable fill.
-> Timeline is now the largest remaining item. No new config field is required
-> for any of it.
+> **Part 3's font-opacity goal (§3.2, "Priority 1") is met** — by routing draws
+> through the existing rule and token layer, with **zero new config fields**
+> against the ~96 the section proposed. What is left of §3.3–§3.4 is *box*
+> styling, not text: 4 literal rect opacities in Timeline and 3 rect draws in
+> Mini with no themeable fill. `background_opacity` for those regions is the
+> only row of the matrix still short.
 
 
 Currently, text elements across visualizers support these decoration properties unevenly:
