@@ -15,8 +15,6 @@ dependencies = [
     "fonttools>=4.50.0",
     "holidays>=0.92",
     "intervaltree>=3.1.0",
-    "textual>=8.2.7",
-    "slint>=1.17.0b2",
 ]
 
 [dependency-groups]

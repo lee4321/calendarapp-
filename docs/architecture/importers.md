@@ -36,9 +36,6 @@ Each importer supplies only its column mapping, `transform_row()`,
 - **import_specialdays.py** → `specialdays` table; adds country/language
   defaulting and boolean parsing (`parse_bool`).
 
-The TUI (`tui/importers_spec.py`) drives the same CLIs; keep flag surfaces
-stable or update the spec alongside.
-
 Historical note: `import_holidays.py` was deleted 2026-07 — it targeted a
 `government` table that no longer exists; government holidays load at
 render time from the `holidays` package (see data-model.md).

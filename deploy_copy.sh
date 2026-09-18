@@ -8,7 +8,7 @@
 #   uv run python ecalendar.py --help
 # The first run creates the virtualenv from pyproject.toml + uv.lock.
 #
-# Deliberately excluded: tests/, tools/, tui/, "db utils/", docs,
+# Deliberately excluded: tests/, tools/, "db utils/", docs,
 # SVG/txt outputs, sample import data (importers/*.csv, palettes.txt,
 # importers/calendar.db), backups, caches.
 
@@ -30,15 +30,13 @@ echo "3.14" > "$DEST/.python-version"
 cp "$SRC/calendar.db" "$DEST/"
 
 # --- Python packages: code files only, keep directory structure -----------
-# slint_ui (the GUI) also needs its *.slint markup, loaded relative to the
-# module file at runtime; importers ship code only — their input files
-# (CSVs, icon folders) are supplied by the user via CLI arguments.
-for pkg in cli config shared renderers visualizers vendor importers slint_ui; do
+# Importers ship code only — their input files (CSVs, icon folders) are
+# supplied by the user via CLI arguments.
+for pkg in cli config shared renderers visualizers vendor importers; do
   rsync -a --prune-empty-dirs \
     --exclude='__pycache__/' \
     --include='*/' \
     --include='*.py' \
-    --include='*.slint' \
     --exclude='*' \
     "$SRC/$pkg/" "$DEST/$pkg/"
 done
