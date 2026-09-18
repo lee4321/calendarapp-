@@ -137,6 +137,17 @@ class BaseSVGRenderer(ABC):
         value = self._tk(token).get("opacity")
         return float(value if value is not None else style.opacity)
 
+    def _tk_opacity_default(self, token: str, default: float) -> float:
+        """Opacity for *token*, falling back to a caller-supplied constant.
+
+        For draws that historically hardcoded an opacity and have no text
+        style of their own to inherit from: the constant stays the default so
+        shipped themes render exactly as before, while a theme that sets the
+        token now wins.
+        """
+        value = self._tk(token).get("opacity")
+        return float(value if value is not None else default)
+
     def _measure(self, text: str, font: str, size: float) -> float:
         """Width of *text*, resolving the font name to its registered path.
 
@@ -1561,6 +1572,7 @@ class BaseSVGRenderer(ABC):
                     _ts.font,
                     getattr(config, f"{prefix}_font_size"),
                     fill=_ts.color,
+                    fill_opacity=_ts.opacity,
                     anchor=anchor,
                     css_class=css,
                 )
@@ -1573,6 +1585,7 @@ class BaseSVGRenderer(ABC):
                     _lbl_ts.font,
                     config.day_name_font_size or _lbl_ts.size,
                     fill=_lbl_ts.color,
+                    fill_opacity=_lbl_ts.opacity,
                     anchor="middle",
                     max_width=width,
                     css_class="ec-label",

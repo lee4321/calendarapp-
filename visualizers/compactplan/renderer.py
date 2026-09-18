@@ -1312,7 +1312,17 @@ class CompactPlanRenderer(BaseSVGRenderer):
             label = format_arrow_date(arrow.get(day), str(config.compactplan_duration_date_format))
             color = config.compactplan_duration_date_color or _contrast_color(stroke["stroke"])
             status = self._draw_fitted_text(
-                label, left, right, p.row_y, font_name, font_path, font_size, color, "ec-duration-date", truncate=False
+                label,
+                left,
+                right,
+                p.row_y,
+                font_name,
+                font_path,
+                font_size,
+                color,
+                "ec-duration-date",
+                truncate=False,
+                opacity=config.get_text_style("ec-duration-date").opacity,
             )
             if status == "omitted":
                 self._note_exception(
@@ -1352,6 +1362,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 color,
                 "ec-event-name",
                 truncate=True,
+                opacity=config.get_text_style("ec-event-name").opacity,
             )
             if status != "drawn" and (p.event.task_name or "").strip():
                 self._note_exception(
@@ -1375,6 +1386,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         css_class: str,
         *,
         truncate: bool,
+        opacity: float = 1.0,
     ) -> str:
         """Draw *text* between *left* and *right*, centred on *center_y*.
 
@@ -1410,6 +1422,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
             font_name,
             size,
             fill=color,
+            fill_opacity=opacity,
             anchor=anchor,
             css_class=css_class,
         )
