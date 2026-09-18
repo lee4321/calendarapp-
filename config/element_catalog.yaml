@@ -61,6 +61,8 @@ elements:
   ec-grid-line:      { kind: line, token: grid,      scope: [all],                              description: "Cell / grid boundary" }
   ec-axis-line:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Timeline / blockplan axis" }
   ec-axis-tick:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Axis tick mark" }
+  ec-month-tick:     { kind: line, token: month_tick,   scope: [timeline],                        description: "Month boundary tick, drawn fainter than the axis tick" }
+  ec-today-marker:   { kind: line, token: today_marker, scope: [timeline],                        description: "Timeline today marker, drawn fainter than the today line" }
   ec-today-line:     { kind: line, token: today,     scope: [all],                              description: "Today indicator vertical line" }
   ec-separator:      { kind: line, token: separator, scope: [all],                              description: "Section / row separator" }
   ec-connector:      { kind: line, token: grid,      scope: [timeline],                         description: "Dependency / callout connector line" }

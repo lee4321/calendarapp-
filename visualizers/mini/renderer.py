@@ -541,7 +541,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 cx,
                 cy,
                 radius,
-                stroke=style.circle_color,
+                stroke=style.circle_color or _ls_milestone.color,
                 fill=style.circle_fill or "none",
                 stroke_width=float(
                     tk_milestone.get("stroke_width")
@@ -568,13 +568,14 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             box_w = tw + 2 * box_pad
             box_h = font_size * 1.2
             box_y_svg = text_y - box_h + font_size * 0.2
+            _day_box_style = config.get_box_style("ec-day-box")
             self._draw_rect(
                 box_x,
                 box_y_svg,
                 box_w,
                 box_h,
                 fill="none",
-                stroke=style.box_color,
+                stroke=style.box_color or _day_box_style.stroke,
                 stroke_width=0.75,
                 stroke_dasharray=config.get_box_style("ec-cell").stroke_dasharray or None,
                 css_class="ec-day-box",

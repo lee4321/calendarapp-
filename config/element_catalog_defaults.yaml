@@ -62,6 +62,11 @@ line:
   axis:      { color: "#AAAAAA", width: 2.0, opacity: 0.9 }
   today:     { color: "#FF4444", width: 1.5, opacity: 1.0 }
   separator: { color: "#CCCCCC", width: 0.5, opacity: 0.5 }
+  # Month ticks and the today marker are drawn deliberately fainter than
+  # the axis / today line they take their colour from; those strengths
+  # were hardcoded in the timeline renderer until 2026-09-18.
+  month_tick:   { color: "#AAAAAA", width: 1.0, opacity: 0.35 }
+  today_marker: { color: "#FF4444", width: 1.0, opacity: 0.55 }
 
 icon:
   event:     { color: "#333333", size: 10 }

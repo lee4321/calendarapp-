@@ -95,11 +95,16 @@ class DayStyle:
 
     # Box / border
     boxed: bool = False  # Draw border around day number
-    box_color: str = "black"
+    # None = take the stroke from the ec-day-box element style. Nothing
+    # assigns box_color today, so a literal default here was the colour every
+    # boxed day number actually got, with no way for a theme to reach it.
+    box_color: str | None = None
 
     # Circle (milestone)
     circled: bool = False  # Draw circle around day number
-    circle_color: str = "navy"
+    # None = take the stroke from the ec-milestone-marker line style; the
+    # milestone branch below sets this explicitly whenever it circles a day.
+    circle_color: str | None = None
     circle_fill: str | None = None  # Circle fill (None = no fill)
 
     # Icons drawn in the cell's corners. The day number / day glyph is always
@@ -206,7 +211,7 @@ class DayStyleResolver:
 
         if is_adjacent:
             style.text_color = self._config.theme_mini_adjacent_month_color or self._config.mini_adjacent_month_color
-            style.text_opacity = 0.4
+            style.text_opacity = self._config.mini_adjacent_month_opacity
             return style
 
         holidays = self._db.get_holidays_for_date(daykey, self._config.country)
@@ -218,7 +223,7 @@ class DayStyleResolver:
             if fiscal_info:
                 if self._config.fiscal_use_period_colors:
                     style.shade_color = get_fiscal_period_color(fiscal_info, self._config)
-                    style.shade_opacity = 0.50
+                    style.shade_opacity = self._config.mini_fiscal_period_opacity
                 label_info = self._fiscal_label_days.get(daykey)
                 if self._config.fiscal_show_period_labels and label_info is not None:
                     from shared.fiscal_renderer import format_fiscal_period_label
@@ -248,7 +253,7 @@ class DayStyleResolver:
             today_key = date.today().strftime("%Y%m%d")
             if daykey == today_key:
                 style.shade_color = self._config.theme_mini_current_day_color or self._config.mini_current_day_color
-                style.shade_opacity = 0.25
+                style.shade_opacity = self._config.mini_current_day_opacity
 
         return style
 
@@ -281,7 +286,7 @@ class DayStyleResolver:
 
         if any(h.get("nonworkday") for h in holidays):
             style.shade_color = self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
-            style.shade_opacity = 0.2
+            style.shade_opacity = self._config.mini_nonworkday_fill_opacity
 
         for holiday in holidays:
             style.add_icon(
@@ -304,7 +309,7 @@ class DayStyleResolver:
                 style.shade_color = (
                     self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
                 )
-                style.shade_opacity = 0.25
+                style.shade_opacity = self._config.mini_special_nonworkday_opacity
 
             pattern = sd.get("pattern", 0)
             if pattern:

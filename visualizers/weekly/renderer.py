@@ -599,10 +599,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         elif config.fiscal_use_period_colors and config.fiscal_lookup:
             fiscal_info = config.fiscal_lookup.get(oneday_str)
             fill_color = get_fiscal_period_color(fiscal_info, config) if fiscal_info else _monthcolors[month]
-            fill_opacity = 0.50
+            fill_opacity = config.weekly_month_shade_opacity
         else:
             fill_color = _monthcolors[month]
-            fill_opacity = 0.50
+            fill_opacity = config.weekly_month_shade_opacity
 
         # Shade current day if option enabled (applied last, overrides above)
         if config.shade_current_day:
@@ -1450,8 +1450,8 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         dur_style = style_engine.evaluate_event(t)
 
         rect_kwargs = dur_style.rect_overrides(
-            fill="lightsteelblue",
-            stroke="white",
+            fill=config.weekly_duration_fill_color,
+            stroke=config.weekly_duration_stroke_color,
             stroke_width=0.5,
             stroke_dasharray=_ls_dur.dasharray or None,
         )
