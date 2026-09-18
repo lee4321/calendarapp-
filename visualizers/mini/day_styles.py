@@ -178,6 +178,12 @@ class DayStyleResolver:
     def __init__(self, config: CalendarConfig, db: CalendarDB):
         self._config = config
         self._db = db
+        # Which day carries each fiscal period's label. Computed once: an NRF
+        # period opens on a Sunday, which a workweek-only mini never draws, so
+        # the label falls forward to the period's first visible day.
+        from shared.fiscal_renderer import period_label_days
+
+        self._fiscal_label_days = period_label_days(config.fiscal_lookup, config.weekend_style)
 
     def resolve(
         self,
@@ -213,10 +219,11 @@ class DayStyleResolver:
                 if self._config.fiscal_use_period_colors:
                     style.shade_color = get_fiscal_period_color(fiscal_info, self._config)
                     style.shade_opacity = 0.50
-                if self._config.fiscal_show_period_labels and fiscal_info.is_period_start:
+                label_info = self._fiscal_label_days.get(daykey)
+                if self._config.fiscal_show_period_labels and label_info is not None:
                     from shared.fiscal_renderer import format_fiscal_period_label
 
-                    style.fiscal_period_label = format_fiscal_period_label(fiscal_info, self._config)
+                    style.fiscal_period_label = format_fiscal_period_label(label_info, self._config)
 
         # Layer 1: Government holidays
         self._apply_holidays(style, holidays)

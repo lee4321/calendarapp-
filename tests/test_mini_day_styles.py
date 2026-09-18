@@ -511,3 +511,47 @@ def test_a_fill_list_on_a_day_rule_shades_with_its_first_color():
     # replaces the rule's fill.
     style = DayStyleResolver(config, _StubDB()).resolve("20260115", [])
     assert style.shade_color == "red"
+
+
+def _fiscal_config(weekend_style):
+    """A mini config with an NRF 4-5-4 lookup over calendar year 2026."""
+    from datetime import date
+
+    from shared.fiscal_calendars import build_fiscal_lookup, create_fiscal_calendar
+
+    config = _config()
+    config.weekend_style = weekend_style
+    config.fiscal_lookup = build_fiscal_lookup(create_fiscal_calendar("nrf-454"), date(2026, 1, 1), date(2026, 12, 31))
+    return config
+
+
+def test_fiscal_period_label_falls_forward_when_its_start_day_is_hidden():
+    """NRF periods open on a Sunday, which a workweek-only mini never draws.
+
+    Without the fall-forward the label was simply dropped, so `--fiscal` on a
+    default mini produced output identical to no fiscal calendar at all.
+    """
+    resolver = DayStyleResolver(_fiscal_config(weekend_style=0), _StubDB())
+    # 2026-01-04 is the Sunday that opens NRF period 1; 01-05 is the Monday.
+    assert resolver.resolve("20260104", []).fiscal_period_label is None
+    assert resolver.resolve("20260105", []).fiscal_period_label
+
+
+def test_fiscal_period_label_stays_on_the_start_day_when_weekends_render():
+    """Weekend-showing styles are untouched: the label keeps its real start day."""
+    resolver = DayStyleResolver(_fiscal_config(weekend_style=1), _StubDB())
+    assert resolver.resolve("20260104", []).fiscal_period_label
+    assert resolver.resolve("20260105", []).fiscal_period_label is None
+
+
+def test_every_fiscal_period_is_labelled_exactly_once_either_way():
+    from shared.fiscal_renderer import period_label_days
+
+    lookup = _fiscal_config(weekend_style=0).fiscal_lookup
+    starts = sum(1 for info in lookup.values() if info.is_period_start)
+    for weekend_style in (0, 1, 2, 3, 4):
+        labelled = period_label_days(lookup, weekend_style)
+        assert len(labelled) == starts, weekend_style
+        # One label per (fiscal year, period), never two for the same period.
+        idents = {(i.fiscal_year, i.fiscal_period) for i in labelled.values()}
+        assert len(idents) == starts, weekend_style
