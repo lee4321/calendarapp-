@@ -2233,7 +2233,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         color=ev_icon_color,
                         fallback_name=config.default_missing_icon,
                         fallback_size=config.default_missing_icon_size,
-                        fallback_color="red",
+                        fallback_color=config.default_missing_icon_color,
                         css_class="ec-event-icon",
                         box_token="box:milestone" if getattr(event, "milestone", False) else "box:event",
                         box_ctx=self._event_ctx(event),
