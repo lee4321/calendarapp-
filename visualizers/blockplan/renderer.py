@@ -161,24 +161,24 @@ def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tu
 
     Returns ``(icon_name, color)`` or ``None``.  Priority:
     federal_holiday → company_holiday → weekend.  The icon colour reuses
-    the matching fill colour (or a default "#333333" when none is set).
+    the matching fill colour (or config.nonworkday_fill_color when none is set).
     """
     if not classes:
         return None
     if "federal_holiday" in classes and config.blockplan_federal_holiday_icon:
         return (
             config.blockplan_federal_holiday_icon,
-            config.blockplan_federal_holiday_fill_color or "#333333",
+            config.blockplan_federal_holiday_fill_color or config.nonworkday_fill_color,
         )
     if "company_holiday" in classes and config.blockplan_company_holiday_icon:
         return (
             config.blockplan_company_holiday_icon,
-            config.blockplan_company_holiday_fill_color or "#333333",
+            config.blockplan_company_holiday_fill_color or config.nonworkday_fill_color,
         )
     if "weekend" in classes and config.blockplan_weekend_icon:
         return (
             config.blockplan_weekend_icon,
-            config.blockplan_weekend_fill_color or "#333333",
+            config.blockplan_weekend_fill_color or config.nonworkday_fill_color,
         )
     return None
 
