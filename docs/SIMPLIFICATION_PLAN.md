@@ -367,7 +367,7 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > **What is actually left of Part 3** is therefore a much smaller question than
 > §3.2–§3.4 describe: *which text and box elements still lack a `text:` / `box:`
 > token binding?* §3.1 now carries that re-measurement (2026-09-18): 25 text
-> draws pass no opacity and 12 pass a hardcoded literal, and routing those
+> draws pass no opacity and 8 pass a hardcoded literal, and routing those
 > through `text_override()` needs no new config field.
 
 ### 3.1 Gap Summary Matrix
@@ -383,7 +383,7 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > | Piece | Supplies |
 > |---|---|
 > | `TextStyle` (`config/styles.py:14`) | `font`, `size`, `color`, **`opacity`** |
-> | `BoxStyle` (`config/styles.py:27`) | `fill`, **`fill_opacity`**, `stroke`, `stroke_opacity` |
+> | `BoxStyle` (`config/styles.py:28`) | `fill`, **`fill_opacity`**, `stroke`, `stroke_opacity` |
 > | `RuleEngine.text_override()` (`shared/rule_engine.py:152`) | all four text properties from a style rule |
 > | `RuleEngine.rect_overrides()` (`shared/rule_engine.py:126`) | fill, fill_opacity, stroke, stroke_width, stroke_opacity, dasharray |
 > | `_draw_text(..., fill_opacity=)` / `_draw_rect(**rect_kwargs)` | accept them at the draw layer |
@@ -427,9 +427,11 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 >
 > **The remaining work**, then, is not §3.2–§3.4's ~96 fields. It is: route the
 > **25 text draws that pass no opacity at all** (5 Weekly, 4 Mini, 3 Timeline,
-> 10 Blockplan, 1 Compactplan, 2 Chrome) and the **12 hardcoded literals**
-> through `text_override()` / the token bag, starting with Blockplan (10 absent)
-> and Mini (0 rule-layer adoption). No new config field is required for any of it.
+> 10 Blockplan, 1 Compactplan, 2 Chrome) and the **8 text draws carrying a
+> hardcoded literal** (2 Mini, 6 Timeline) through `text_override()` / the token
+> bag — plus 4 literal rect opacities in Timeline. Start with Blockplan (10
+> absent) and Mini (0 rule-layer adoption). No new config field is required for
+> any of it.
 
 
 Currently, text elements across visualizers support these decoration properties unevenly:
