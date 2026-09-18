@@ -366,10 +366,71 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 >
 > **What is actually left of Part 3** is therefore a much smaller question than
 > §3.2–§3.4 describe: *which text and box elements still lack a `text:` / `box:`
-> token binding?* The gap matrix in §3.1 should be re-measured against the token
-> layer before any of it is picked up — the "None"/"Partial" columns predate it.
+> token binding?* §3.1 now carries that re-measurement (2026-09-18): 25 text
+> draws pass no opacity and 12 pass a hardcoded literal, and routing those
+> through `text_override()` needs no new config field.
 
 ### 3.1 Gap Summary Matrix
+
+> **Re-measured 2026-09-18 against the token / style-rule layer.** The original
+> matrix (kept below for comparison) predates it. Two things changed: the
+> *capability* gap is closed — every one of the six properties is now expressible
+> without a new `CalendarConfig` field — and what remains is per-call-site
+> plumbing, which is a much smaller and differently shaped job.
+>
+> **The mechanism that now exists**
+>
+> | Piece | Supplies |
+> |---|---|
+> | `TextStyle` (`config/styles.py:14`) | `font`, `size`, `color`, **`opacity`** |
+> | `BoxStyle` (`config/styles.py:27`) | `fill`, **`fill_opacity`**, `stroke`, `stroke_opacity` |
+> | `RuleEngine.text_override()` (`shared/rule_engine.py:152`) | all four text properties from a style rule |
+> | `RuleEngine.rect_overrides()` (`shared/rule_engine.py:126`) | fill, fill_opacity, stroke, stroke_width, stroke_opacity, dasharray |
+> | `_draw_text(..., fill_opacity=)` / `_draw_rect(**rect_kwargs)` | accept them at the draw layer |
+> | `renderers/css_generator.py:79,86` | emits `fill-opacity` from `TextStyle.opacity` and `BoxStyle.fill_opacity` |
+>
+> **Method (reproducible).** For each renderer, every `self._draw_text(` and
+> `self._draw_rect(` call site was parsed and its `fill_opacity=` / `fill=`
+> argument classified as *themeable* (a variable, token read, style-rule result,
+> or a splatted `**rect_kwargs` from `rect_overrides()`), *literal* (a hardcoded
+> number or quoted colour), or *absent*.
+>
+> | Renderer | text draws (themeable/literal/absent) | rect `fill_opacity` | rect `fill` | `text_override` sites |
+> |---|---|---|---|---|
+> | Weekly | 6 / 0 / 5 of 11 | 3 / 0 / 0 of 3 | 3 / 0 / 0 | 4 |
+> | Mini | 1 / 2 / 4 of 7 | 2 / 0 / 3 of 5 | 2 / 3 / 0 | 0 |
+> | Timeline | 7 / 6 / 3 of 16 | 3 / 4 / 0 of 7 | 7 / 0 / 0 | 7 |
+> | Blockplan | 3 / 0 / 10 of 13 | 3 / 0 / 4 of 7 | 7 / 0 / 0 | 6 |
+> | Compactplan | 2 / 0 / 1 of 3 | 1 / 0 / 0 of 1 | 1 / 0 / 0 | 1 |
+> | Chrome (header/footer/watermark) | 1 / 0 / 2 of 3 | 1 / 0 / 1 of 2 | 2 / 0 / 0 | — |
+>
+> **Revised verdicts** (↑ / ↓ mark a change from the 2026-07 row):
+>
+> | Property | Weekly | Mini | Timeline | Blockplan | Compactplan |
+> |---|:---:|:---:|:---:|:---:|:---:|
+> | font_name / font_size / font_color | All | All | All | All | All |
+> | background_color | All ↑ | Partial ↑ | All ↑ | All ↑ | All ↑ |
+> | font_opacity | Partial ↑ | Partial | Partial ↑ | Partial | Partial ↓ |
+> | background_opacity | All ↑ | Partial ↑ | Partial ↑ | Partial ↑ | All ↑ |
+>
+> Notes on the two rows that did not simply improve:
+>
+> - **Compactplan font_opacity was "All", now Partial (2 of 3).** The 2026-07 row
+>   was optimistic, or a third text draw has been added since.
+> - **Mini is the least converted renderer**: 0 `text_override` sites, 2 of its 7
+>   text draws carry a hardcoded literal opacity, and 3 of its 5 rect fills are
+>   literal colours. It runs its own decoration engine (`style.text_opacity`,
+>   `style.shade_opacity`) rather than the shared rule layer. Candybar and gantt
+>   likewise have 0 `text_override` sites.
+> - **Timeline has the most hardcoded literals** — 6 text draws and 4 rect
+>   opacities — so it looks well covered by count but has the most fixed values.
+>
+> **The remaining work**, then, is not §3.2–§3.4's ~96 fields. It is: route the
+> **25 text draws that pass no opacity at all** (5 Weekly, 4 Mini, 3 Timeline,
+> 10 Blockplan, 1 Compactplan, 2 Chrome) and the **12 hardcoded literals**
+> through `text_override()` / the token bag, starting with Blockplan (10 absent)
+> and Mini (0 rule-layer adoption). No new config field is required for any of it.
+
 
 Currently, text elements across visualizers support these decoration properties unevenly:
 
