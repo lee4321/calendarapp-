@@ -51,6 +51,11 @@ box:
   swimlane_heading:  { fill: "none",      stroke: "none" }
   swimlane_content:  { fill: "none",      stroke: "none" }
   band:              { fill: "none",      stroke: "none" }
+  # Timeline fiscal period / quarter bands alternate between these two so
+  # adjacent periods stay readable; both were hardcoded in the renderer
+  # until 2026-09-18.
+  fiscal_band:       { fill: "#E8EAF0",   fill_opacity: 0.6, stroke: "#AAAAAA", stroke_width: 0.5 }
+  fiscal_band_alt:   { fill: "#D4D8E8",   fill_opacity: 0.6, stroke: "#AAAAAA", stroke_width: 0.5 }
 
 line:
   grid:      { color: "#CCCCCC", width: 0.5, opacity: 0.5 }

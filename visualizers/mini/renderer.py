@@ -768,12 +768,13 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             lines.append((x + w * frac, y, x + w, y + h * (1 - frac)))
 
         if lines:
+            _hash_style = config.get_line_style("ec-hash-line")
             self._draw_lines(
                 lines,
-                stroke="lightgrey",
-                stroke_width=0.3,
-                stroke_opacity=0.5,
-                stroke_dasharray=config.get_line_style("ec-hash-line").dasharray or None,
+                stroke=_hash_style.color,
+                stroke_width=_hash_style.width,
+                stroke_opacity=_hash_style.opacity,
+                stroke_dasharray=_hash_style.dasharray or None,
                 css_class="ec-hash-line",
             )
 
