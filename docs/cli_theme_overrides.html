@@ -77,7 +77,9 @@
   CLI arguments first, then applies the theme <em>twice</em> (before and after
   <code>setfontsizes()</code>). After the second theme pass,
   <code>_reapply_post_theme_cli_overrides()</code> re-asserts only a small hand-picked set of CLI
-  flags. Consequence: <span class="badge cli">CLI wins</span> only for that re-asserted set;
+  flags. <strong>As of 2026-09-18 that re-asserted set covers every overlapping option
+  (see the note in section 2); the consequence described below is historical.</strong>
+  Consequence: <span class="badge cli">CLI wins</span> only for that re-asserted set;
   for every other overlapping option the <span class="badge theme">theme wins</span> whenever the
   loaded theme defines the same key — the explicit CLI value is silently discarded. This
   contradicts the theme engine's documented contract
@@ -106,6 +108,18 @@ apply, so an explicit CLI value always takes effect.</p>
 </div>
 
 <h2>2&nbsp;&nbsp;Overlapping options where the theme wins</h2>
+<div class="note">
+  <strong>Superseded 2026-09-18 — this section documents a defect that has since been fixed.</strong>
+  Every one of the 31 options listed below now takes effect from the CLI. The simple
+  CLI&rarr;config assignments route through <code>_CLI_CONFIG_OVERRIDES</code> in
+  <code>cli/config_assembly.py</code> (applied once up front, then re-asserted by
+  <code>_reapply_post_theme_cli_overrides()</code> after the final theme apply), and
+  <span class="opt">--watermark-text</span> / <span class="opt">--watermark-rotation-angle</span>
+  are re-asserted explicitly. The <span class="badge theme">Theme wins</span> verdicts in the
+  tables below are therefore <em>historical</em>, not current behaviour.
+  <code>tests/test_cli_theme_precedence.py</code> guards the fix.
+  Sections 1 and 3 and the appendices were not re-audited on this date.
+</div>
 <p>These options write to a field the theme can also set, but they are <em>not</em> re-asserted
 after the second theme apply. They work normally when the theme omits the key; when the theme
 defines it, the CLI value is <strong>silently ignored</strong>.</p>
