@@ -1468,7 +1468,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill_opacity=_callout_style.fill_opacity,
             stroke=item.color,
             stroke_width=_callout_style.stroke_width,
-            stroke_opacity=0.95,
+            stroke_opacity=_callout_style.stroke_opacity,
             stroke_dasharray=_callout_style.stroke_dasharray or None,
         )
         self._draw_rect(
@@ -1740,7 +1740,7 @@ class TimelineRenderer(BaseSVGRenderer):
             end_y,
             stroke=item.color,
             stroke_width=0.9,
-            stroke_opacity=0.8,
+            stroke_opacity=_dur_bar_style.opacity,
             stroke_dasharray=_dur_bar_style.dasharray or None,
             css_class="ec-connector",
         )
@@ -1790,7 +1790,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill_opacity=(_tk_bar_opacity if _tk_bar_opacity is not None else _dur_bar_style.opacity),
             stroke=item.color,
             stroke_width=0.9,
-            stroke_opacity=0.9,
+            stroke_opacity=_dur_bar_style.opacity,
             stroke_dasharray=_dur_bar_style.dasharray or None,
         )
         self._draw_rect(
@@ -2424,7 +2424,7 @@ class TimelineRenderer(BaseSVGRenderer):
             item.start_y,
             stroke=item.color,
             stroke_width=0.9,
-            stroke_opacity=0.8,
+            stroke_opacity=_dur_bar_style.opacity,
             stroke_dasharray=_dur_bar_style.dasharray or None,
             css_class="ec-connector",
         )
@@ -2481,7 +2481,7 @@ class TimelineRenderer(BaseSVGRenderer):
             fill_opacity=(_tk_bar_opacity if _tk_bar_opacity is not None else _dur_bar_style.opacity),
             stroke=item.color,
             stroke_width=0.9,
-            stroke_opacity=0.9,
+            stroke_opacity=_dur_bar_style.opacity,
             stroke_dasharray=_dur_bar_style.dasharray or None,
         )
         self._draw_rect(
@@ -3231,7 +3231,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 y,
                 stroke=_tick_style.color,
                 stroke_width=1.0,
-                stroke_opacity=0.35,
+                stroke_opacity=config.get_line_style("ec-month-tick").opacity,
                 stroke_dasharray=_tick_style.dasharray or None,
                 css_class="ec-axis-tick",
             )
@@ -3526,7 +3526,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 axis_y + tick_h,
                 stroke=_tick_style.color,
                 stroke_width=1.0,
-                stroke_opacity=0.35,
+                stroke_opacity=config.get_line_style("ec-month-tick").opacity,
                 stroke_dasharray=_tick_style.dasharray or None,
                 css_class="ec-axis-tick",
             )
@@ -4042,7 +4042,7 @@ class TimelineRenderer(BaseSVGRenderer):
             y,
             stroke=_today_line_style.color,
             stroke_width=1.0,
-            stroke_opacity=0.55,
+            stroke_opacity=config.get_line_style("ec-today-marker").opacity,
             stroke_dasharray=_today_line_style.dasharray or None,
             css_class="ec-today-line",
         )
@@ -4141,7 +4141,7 @@ class TimelineRenderer(BaseSVGRenderer):
             line_bottom,
             stroke=_today_line_style.color,
             stroke_width=1.0,
-            stroke_opacity=0.55,
+            stroke_opacity=config.get_line_style("ec-today-marker").opacity,
             stroke_dasharray=_today_line_style.dasharray or None,
             css_class="ec-today-line",
         )

@@ -396,6 +396,17 @@ class CalendarConfig:
     week1_start: str = ""  # YYYYMMDD anchor for custom week 1
     mini_current_day_color: str = "lightblue"  # Current day shade color
 
+    # Day-cell shade strengths. These were hardcoded in
+    # visualizers/mini/day_styles.py until 2026-09-18; a theme sets them
+    # through `colors.mini_calendar.*_opacity`. Holidays and company special
+    # days share nonworkday_fill_color but have always shaded at different
+    # strengths, so both values are kept rather than reconciled here.
+    mini_adjacent_month_opacity: float = 0.4
+    mini_fiscal_period_opacity: float = 0.50
+    mini_current_day_opacity: float = 0.25
+    mini_nonworkday_fill_opacity: float = 0.2
+    mini_special_nonworkday_opacity: float = 0.25
+
     # Theme-overridable mini calendar fields (None = use mini_* defaults above)
     theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
@@ -590,6 +601,13 @@ class CalendarConfig:
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
     # _font_size set), weekly_name_text_alignment, and
     # weekly_notes_text_alignment — none had readers post-Phase-1.
+    # Day-box month shade and duration-bar base colours. Hardcoded in
+    # visualizers/weekly/renderer.py until 2026-09-18; the bar colours are the
+    # values a style rule starts from, so a rule still overrides them.
+    weekly_month_shade_opacity: float = 0.50
+    weekly_duration_fill_color: str = "lightsteelblue"
+    weekly_duration_stroke_color: str = "white"
+
     weekly_name_text_font_name: str = Fonts.RC_LIGHT
     weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None

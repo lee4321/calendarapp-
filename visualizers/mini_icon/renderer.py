@@ -159,7 +159,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 cx,
                 cy,
                 radius,
-                stroke=style.circle_color,
+                stroke=style.circle_color or config.get_line_style("ec-milestone-marker").color,
                 fill=style.circle_fill or "none",
                 stroke_width=float(
                     milestone_icon.get("stroke_width")

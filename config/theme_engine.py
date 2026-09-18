@@ -71,6 +71,9 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # plus name_text_alignment + notes_text_alignment (no readers).
     ("weekly.name_text", "font_name"): "weekly_name_text_font_name",
     ("weekly.name_text", "font_color"): "weekly_name_text_font_color",
+    ("weekly", "month_shade_opacity"): "weekly_month_shade_opacity",
+    ("weekly", "duration_fill_color"): "weekly_duration_fill_color",
+    ("weekly", "duration_stroke_color"): "weekly_duration_stroke_color",
     ("weekly.name_text", "font_size"): "weekly_name_text_font_size",
     ("weekly.name_text", "font_opacity"): "weekly_name_text_font_opacity",
     ("weekly.notes_text", "font_name"): "weekly_notes_text_font_name",
@@ -658,6 +661,18 @@ _MINI_COLOR_FIELDS: dict[str, str] = {
     "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
     "milestone_color": "theme_mini_milestone_color",
     "current_day_color": "theme_mini_current_day_color",
+}
+
+# `colors.mini_calendar` opacity keys -> the shade-strength fields the mini
+# day-style resolver reads.  Unlike the colors above these map straight onto
+# the live field (there is no CLI source to defer to), so a theme value wins
+# outright.
+_MINI_OPACITY_FIELDS: dict[str, str] = {
+    "adjacent_month_opacity": "mini_adjacent_month_opacity",
+    "fiscal_period_opacity": "mini_fiscal_period_opacity",
+    "current_day_opacity": "mini_current_day_opacity",
+    "nonworkday_fill_opacity": "mini_nonworkday_fill_opacity",
+    "special_nonworkday_opacity": "mini_special_nonworkday_opacity",
 }
 
 # Sub-keys of the nested `pit:` blocks that ThemeEngine._apply_pit_blocks()
@@ -1716,6 +1731,9 @@ class ThemeEngine:
             for yaml_key, config_field in _MINI_COLOR_FIELDS.items():
                 if yaml_key in mc:
                     setattr(config, config_field, mc[yaml_key])
+            for yaml_key, config_field in _MINI_OPACITY_FIELDS.items():
+                if yaml_key in mc:
+                    setattr(config, config_field, float(mc[yaml_key]))
 
     # ─── New unified theme format support ─────────────────────────────────
 
@@ -2215,6 +2233,7 @@ def _consumed_theme_paths() -> frozenset[str]:
     paths.update(f"layout.margin.{side}" for side in ("top", "right", "bottom", "left"))
     paths.update(f"colors.{key}" for key in _COLOR_KEYS)
     paths.update(f"colors.mini_calendar.{key}" for key in _MINI_COLOR_FIELDS)
+    paths.update(f"colors.mini_calendar.{key}" for key in _MINI_OPACITY_FIELDS)
     for block, keys in _PIT_BLOCK_KEYS.items():
         paths.update(f"pit.{block}.{key}" for key in keys)
     paths.update(f"{section}.{key}" for section, key, _ in ThemeEngine._BAND_PLACEMENTS)
