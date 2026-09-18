@@ -8,6 +8,9 @@ base:
   default_missing_icon_size: null
   font_family: RobotoCondensed-Regular
   default_missing_icon: star-dashed
+  # Ink for that stand-in. It flags an event naming an icon the icons
+  # table does not have, so it stays an alert colour by default.
+  default_missing_icon_color: red
 header:
   font_family: Roboto-Bold
   font_color: palette:Accent:4

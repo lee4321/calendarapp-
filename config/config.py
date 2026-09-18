@@ -1413,6 +1413,12 @@ class CalendarConfig:
     # visualizer would have drawn — which is right when the substitute should
     # sit in the same hole, and wrong when it should be conspicuous.
     default_missing_icon_size: float | None = None
+    # Ink for that stand-in. It marks a data problem — an event naming an icon
+    # the icons table does not have — so it defaults to an alert colour rather
+    # than inheriting the ink of whatever it replaced, which would let the
+    # substitution pass unnoticed. Set `base.default_missing_icon_color` in a
+    # theme to tune it.
+    default_missing_icon_color: str = "red"
 
     # Watermark text
     watermark_text: str = ""

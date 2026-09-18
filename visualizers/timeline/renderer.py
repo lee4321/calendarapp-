@@ -2568,7 +2568,7 @@ class TimelineRenderer(BaseSVGRenderer):
         effective_color = color
         if icon_name and self._resolve_icon_svg(icon_name) is None:
             effective_icon = "position-align"
-            effective_color = "red"
+            effective_color = config.default_missing_icon_color
 
         icon_found = self._resolve_icon_svg(effective_icon) is not None
 
