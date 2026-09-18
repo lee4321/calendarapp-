@@ -1800,10 +1800,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 )
                 date_fmt = config.blockplan_duration_date_format
                 date_font = config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font
-                date_font, _, date_color, _ = _sr.text_override(
+                date_font, _, date_color, date_opacity = _sr.text_override(
                     "duration_start_date",
                     font=date_font,
                     color=date_color,
+                    opacity=self._tk_opacity("text:duration_date", _dur_date_style),
                 )
                 try:
                     _dur_date_font_path = get_font_path(date_font)
@@ -1825,15 +1826,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _dur_notes_font_name = (
                 config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font
             )
-            _dur_name_font, _, dur_text_color, _ = _sr.text_override(
+            _dur_name_font, _, dur_text_color, dur_text_opacity = _sr.text_override(
                 "duration_name",
                 font=tk_event_name.get("font") or _event_name_style.font,
                 color=dur_text_color,
+                opacity=self._tk_opacity("text:event_name", _event_name_style),
             )
-            _dur_notes_font_name, _, dur_notes_color, _ = _sr.text_override(
+            _dur_notes_font_name, _, dur_notes_color, dur_notes_opacity = _sr.text_override(
                 "duration_notes",
                 font=_dur_notes_font_name,
                 color=dur_notes_color,
+                opacity=self._tk_opacity("text:event_notes", _event_notes_style),
             )
             show_icon = bool(config.blockplan_duration_icon_visible) and bool(event.icon)
             event_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
@@ -1856,6 +1859,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _event_name_style=_event_name_style,
                 _dur_name_font=_dur_name_font,
                 dur_text_color=dur_text_color,
+                dur_text_opacity=dur_text_opacity,
             ) -> None:
                 """Draw icon (if show_icon) + task name, both vertically centred on *center_y*."""
                 try:
@@ -1923,6 +1927,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         _dur_name_font,
                         font_size,
                         fill=dur_text_color,
+                        fill_opacity=dur_text_opacity,
                         anchor="start" if icon_drawn else "middle",
                         max_width=max(8.0, x0 + w - text_x - 2),
                         css_class="ec-event-name",
@@ -1935,6 +1940,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         _dur_name_font,
                         font_size,
                         fill=dur_text_color,
+                        fill_opacity=dur_text_opacity,
                         anchor="middle",
                         max_width=max(8.0, max_w),
                         css_class="ec-event-name",
@@ -1958,6 +1964,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     _dur_notes_font_name,
                     float(tk_event_notes.get("size")),
                     fill=dur_notes_color,
+                    fill_opacity=dur_notes_opacity,
                     anchor="middle",
                     max_width=max(8.0, w - 4),
                     css_class="ec-event-notes",
@@ -2013,6 +2020,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         date_font,
                         date_font_size,
                         fill=date_color,
+                        fill_opacity=date_opacity,
                         anchor="start",
                         max_width=None if both else half_w,
                         transform=xform,
@@ -2034,6 +2042,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                         date_font,
                         date_font_size,
                         fill=date_color,
+                        fill_opacity=date_opacity,
                         anchor="end",
                         max_width=None if both else half_w,
                         transform=xform,
@@ -2164,20 +2173,23 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
                 event_color = _sr.fill_color
-            ev_name_font, _, ev_name_color, _ev_name_opacity = _sr.text_override(
+            ev_name_font, _, ev_name_color, ev_name_opacity = _sr.text_override(
                 "event_name",
                 font=_evt_name_font,
                 color=event_color,
+                opacity=self._tk_opacity("text:event_name", _evt_name_style),
             )
-            ev_notes_font, _, ev_notes_color, _ = _sr.text_override(
+            ev_notes_font, _, ev_notes_color, ev_notes_opacity = _sr.text_override(
                 "event_notes",
                 font=_event_notes_font_name,
                 color=_event_notes_color,
+                opacity=self._tk_opacity("text:event_notes", _evt_notes_style),
             )
-            ev_date_font, _, ev_date_color, _ = _sr.text_override(
+            ev_date_font, _, ev_date_color, ev_date_opacity = _sr.text_override(
                 "event_date",
                 font=_evt_date_font,
                 color=tk_event_date.get("color") or _evt_date_style.color,
+                opacity=self._tk_opacity("text:event_date", _evt_date_style),
             )
             ev_icon_to_draw = _sr.icon if _sr.icon is not None else event.icon
             ev_icon_color = _sr.icon_color or event_color
@@ -2240,6 +2252,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     ev_date_font,
                     date_size,
                     fill=ev_date_color,
+                    fill_opacity=ev_date_opacity,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-date",
@@ -2252,6 +2265,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     ev_name_font,
                     event_size,
                     fill=ev_name_color,
+                    fill_opacity=ev_name_opacity,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",
@@ -2263,6 +2277,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     ev_notes_font,
                     notes_size,
                     fill=ev_notes_color,
+                    fill_opacity=ev_notes_opacity,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-notes",
@@ -2275,6 +2290,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     ev_name_font,
                     event_size,
                     fill=ev_name_color,
+                    fill_opacity=ev_name_opacity,
                     anchor="start",
                     max_width=max_width,
                     css_class="ec-event-name",
@@ -2388,6 +2404,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
         _lane_label_style = config.get_text_style("ec-heading")
         label_color = lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color
         label_font = tk_swimlane_label.get("font") or _lane_label_style.font
+        # Lane labels take the band-heading token's opacity; a per-lane
+        # label_opacity would mirror band.label_opacity if one is ever wanted.
+        label_opacity = self._tk_opacity("text:swimlane_label", _lane_label_style)
         max_width = max(8.0, lane_bottom - lane_top - 10.0) if cross_axis else max(8.0, right_x - left_x - 10.0)
         for i, line in enumerate(lines):
             y = first_baseline + (i * line_gap)
@@ -2398,6 +2417,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 label_font,
                 fs,
                 fill=label_color,
+                fill_opacity=label_opacity,
                 anchor=anchor,
                 max_width=max_width,
                 transform=xform,
