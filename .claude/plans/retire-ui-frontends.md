@@ -48,7 +48,7 @@ linkify-it-py  uc-micro-py  platformdirs  typing-extensions
 | `docs/changelog.md` | top | needs a new entry |
 
 **Deliberately left alone** — dated records of what was true when written:
-`docs/MarkdownDetailsPlan.md`, `docs/archive/CONSOLIDATION_PLAN.md`,
+`docs/archive/MarkdownDetailsPlan.md`, `docs/archive/CONSOLIDATION_PLAN.md`,
 `docs/archive/textualUI.html`, `.claude/plans/uv-check-cleanup.md`.
 
 No tests reference either package; ruff and `uv check` currently lint both, so
