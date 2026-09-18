@@ -1599,10 +1599,11 @@ class TimelineRenderer(BaseSVGRenderer):
             return
         _event_date_style = config.get_text_style("ec-event-date")
         tk_event_date = self._tk("text:event_date")
-        date_font, _, date_color, _ = _sr.text_override(
+        date_font, _, date_color, date_opacity = _sr.text_override(
             "event_date",
             font=(_event_date_style.font or tk_event_date.get("font") or config.timeline_date_font),
             color=(_event_date_style.color or tk_event_date.get("color") or event_text_color),
+            opacity=self._tk_opacity("text:event_date", _event_date_style),
         )
         date_path = self._safe_font_path(date_font)
         fitted_date = self._cell_font_size(row_h, date_path, date_size)
@@ -1613,6 +1614,7 @@ class TimelineRenderer(BaseSVGRenderer):
             date_font,
             fitted_date,
             fill=date_color,
+            fill_opacity=date_opacity,
             anchor="start",
             max_width=col1_w,
             css_class="ec-event-date",
@@ -3234,7 +3236,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     font_name,
                     label_size,
                     fill=tk_event_date.get("color") or _tick_style.color,
-                    fill_opacity=0.8,
+                    fill_opacity=self._tk_opacity_default("text:label", 0.8),
                     anchor=anchor,
                     css_class="ec-label",
                 )
@@ -3404,6 +3406,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 font_name,
                 date_size,
                 fill=date_color,
+                fill_opacity=_date_style.opacity,
                 anchor="middle",
                 css_class="ec-holiday-date",
             )
@@ -3531,7 +3534,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
                     fill=self._tk("text:event_date").get("color") or _tick_style.color,
-                    fill_opacity=0.8,
+                    fill_opacity=self._tk_opacity_default("text:label", 0.8),
                     anchor="middle",
                     css_class="ec-label",
                 )
@@ -3609,7 +3612,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     self._tk("text:event_date").get("font") or config.timeline_date_font,
                     label_size,
                     fill=label_color,
-                    fill_opacity=0.9,
+                    fill_opacity=self._tk_opacity_default("text:label", 0.9),
                     anchor="middle",
                     max_width=x2 - x1 - 4.0,
                     css_class="ec-label",
@@ -3690,7 +3693,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     font_name,
                     label_size,
                     fill=label_color,
-                    fill_opacity=0.9,
+                    fill_opacity=self._tk_opacity_default("text:label", 0.9),
                     anchor="middle",
                     max_width=(y2 - y1) - 4.0,
                     transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
@@ -3961,6 +3964,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 font_name,
                 date_size,
                 fill=date_color,
+                fill_opacity=_date_style.opacity,
                 anchor="start" if side is Side.PRIMARY else "end",
                 css_class="ec-holiday-date",
             )
@@ -4047,7 +4051,7 @@ class TimelineRenderer(BaseSVGRenderer):
             font_name,
             label_size,
             fill=tk_today_label.get("color") or _today_label_style.color,
-            fill_opacity=0.85,
+            fill_opacity=self._tk_opacity_default("text:today_label", 0.85),
             anchor=anchor,
             css_class="ec-today-label",
         )
@@ -4136,7 +4140,7 @@ class TimelineRenderer(BaseSVGRenderer):
             tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font,
             label_size,
             fill=tk_today_label.get("color") or _today_label_style.color,
-            fill_opacity=0.85,
+            fill_opacity=self._tk_opacity_default("text:today_label", 0.85),
             anchor="middle",
             css_class="ec-today-label",
         )

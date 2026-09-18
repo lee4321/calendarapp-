@@ -707,6 +707,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             label_font,
             label_font_size,
             fill=label_color,
+            fill_opacity=self._tk_opacity("text:fiscal_label", _ts_fiscal),
             css_class="ec-fiscal-label",
         )
         return label_width
@@ -783,6 +784,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             wn_font,
             wn_size,
             fill=wn_color,
+            fill_opacity=self._tk_opacity("text:week_number", _ts_wn),
             anchor=anchor,
             css_class="ec-week-number",
         )
@@ -934,6 +936,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             ht_font,
             fontsize,
             fill=ht_color,
+            fill_opacity=self._tk_opacity("text:holiday_title", _ts_ht),
             anchor="start",
             css_class="ec-holiday-title",
         )
@@ -1021,6 +1024,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             dn_font,
             dn_size,
             fill=dn_color,
+            fill_opacity=self._tk_opacity("text:day_number", _ts_dn),
             anchor="end",
             css_class="ec-day-number",
         )
@@ -1270,11 +1274,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             _ts_notes = config.get_text_style("ec-event-notes")
                             tk_notes = self._tk("text:event_notes")
                             _ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
-                            n_font, n_size, n_color, _ = _ev_style.text_override(
+                            n_font, n_size, n_color, n_opacity = _ev_style.text_override(
                                 "event_notes",
                                 font=tk_notes.get("font") or _ts_notes.font,
                                 font_size=(tk_notes.get("size")),
                                 color=tk_notes.get("color") or _ts_notes.color,
+                                opacity=self._tk_opacity("text:event_notes", _ts_notes),
                             )
                             self._draw_text(
                                 notes_x,
@@ -1283,6 +1288,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                                 n_font,
                                 n_size,
                                 fill=n_color,
+                                fill_opacity=n_opacity,
                                 max_width=notes_max_w,
                                 css_class="ec-event-notes",
                             )
