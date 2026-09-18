@@ -477,7 +477,7 @@ class PITRenderer(BaseSVGRenderer):
         if not bands:
             return
 
-        default_tick_color = config.theme_pit_tick_color or config.theme_pit_axis_color or "#666666"
+        default_tick_color = config.theme_pit_tick_color or config.theme_pit_axis_color or config.pit_tick_color
         default_tick_len = float(config.pit_tick_length)
         default_show_labels = bool(config.pit_show_tick_labels)
         default_label_size = float(
@@ -702,7 +702,7 @@ class PITRenderer(BaseSVGRenderer):
 
         # Pre-compute shared (non-per-rule) styling values once.
         # Leader defaults — per-rule overrides are applied inside the loop.
-        global_leader_color = config.theme_pit_leader_color or "#555555"
+        global_leader_color = config.theme_pit_leader_color or config.pit_leader_color
         global_leader_width = float(config.pit_leader_stroke_width)
         global_leader_opacity = float(config.pit_leader_stroke_opacity)
         global_leader_dasharray = config.pit_leader_stroke_dasharray
@@ -711,13 +711,13 @@ class PITRenderer(BaseSVGRenderer):
         leader_arrow_color = config.theme_pit_arrow_head_color or global_leader_color
 
         # Marker defaults
-        dot_color_default = config.theme_pit_dot_color or "#2d5fae"
-        ms_color_default = config.theme_pit_milestone_color or "#c0392b"
+        dot_color_default = config.theme_pit_dot_color or config.pit_dot_color
+        ms_color_default = config.theme_pit_milestone_color or config.pit_milestone_color
         marker_size = float(config.pit_marker_size)
         dot_size = float(config.pit_dot_radius) * 2.0
 
         # Label-box defaults (per-rule can override)
-        default_label_stroke = config.theme_pit_label_stroke_color or "#444444"
+        default_label_stroke = config.theme_pit_label_stroke_color or config.pit_label_stroke_color
         default_label_sw = float(config.pit_label_stroke_width)
         default_label_rx = float(config.pit_label_corner_radius)
         default_label_pattern = config.theme_pit_label_pattern
@@ -728,14 +728,14 @@ class PITRenderer(BaseSVGRenderer):
         notes_font = config.pit_notes_text_font_name or config.timeline_notes_text_font_name or "Roboto-Regular"
         name_size = float(config.pit_name_text_font_size or 11.0)
         notes_size = float(config.pit_notes_text_font_size or name_size * 0.85)
-        name_color = config.theme_pit_label_text_color or "#1b1f24"
-        notes_color = config.theme_pit_label_text_color or "#5a6470"
+        name_color = config.theme_pit_label_text_color or config.pit_name_text_color
+        notes_color = config.theme_pit_label_text_color or config.pit_notes_text_color
         pad_x = float(config.pit_label_padding_x)
         pad_y = float(config.pit_label_padding_y)
         show_notes = bool(config.include_notes)
 
         # Date-label style
-        date_color = config.theme_pit_date_text_color or "#444444"
+        date_color = config.theme_pit_date_text_color or config.pit_date_text_color
         date_font = config.theme_pit_date_text_font_name or config.pit_name_text_font_name or "Roboto-Regular"
         date_size = float(config.theme_pit_date_text_font_size or (name_size * 0.85))
         date_offset = float(config.pit_date_text_offset)
@@ -993,7 +993,7 @@ class PITRenderer(BaseSVGRenderer):
         axis_end: tuple[float, float],
     ) -> None:
         """Draw the main axis line, with optional marker-start/end."""
-        color = config.theme_pit_axis_color or "#333333"
+        color = config.theme_pit_axis_color or config.pit_axis_color
         width = float(config.pit_axis_stroke_width)
         arrow_color = config.theme_pit_arrow_head_color or color
 
@@ -1051,9 +1051,13 @@ class PITRenderer(BaseSVGRenderer):
         pos = pos_for_day(today_arrow)
 
         # Today line stroke vocabulary — theme overrides → config defaults.
-        color = config.theme_pit_today_line_color or getattr(config, "timeline_today_line_color", None) or "#c00000"
-        width = float(config.theme_pit_today_line_width or 1.0)
-        opacity = float(config.theme_pit_today_line_opacity or 0.85)
+        color = (
+            config.theme_pit_today_line_color
+            or getattr(config, "timeline_today_line_color", None)
+            or config.pit_today_line_color
+        )
+        width = float(config.theme_pit_today_line_width or config.pit_today_line_width)
+        opacity = float(config.theme_pit_today_line_opacity or config.pit_today_line_opacity)
         dasharray = config.theme_pit_today_line_dasharray or config.pit_leader_stroke_dasharray or "4,2"
         linecap = config.theme_pit_today_line_linecap or "round"
         linejoin = config.theme_pit_today_line_linejoin or "round"

@@ -249,17 +249,17 @@ def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tu
     if "federal_holiday" in classes and config.compactplan_federal_holiday_icon:
         return (
             config.compactplan_federal_holiday_icon,
-            config.compactplan_federal_holiday_fill_color or "#333333",
+            config.compactplan_federal_holiday_fill_color or config.nonworkday_fill_color,
         )
     if "company_holiday" in classes and config.compactplan_company_holiday_icon:
         return (
             config.compactplan_company_holiday_icon,
-            config.compactplan_company_holiday_fill_color or "#333333",
+            config.compactplan_company_holiday_fill_color or config.nonworkday_fill_color,
         )
     if "weekend" in classes and config.compactplan_weekend_icon:
         return (
             config.compactplan_weekend_icon,
-            config.compactplan_weekend_fill_color or "#333333",
+            config.compactplan_weekend_fill_color or config.nonworkday_fill_color,
         )
     return None
 
@@ -568,7 +568,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """
         font_name = self._resolve_font(getattr(config, "compactplan_text_font_name", None), config)
         _band_text_style = config.get_text_style("ec-label")
-        text_color = str(_band_text_style.color or "black")
+        text_color = str(_band_text_style.color)
         text_opacity = float(_band_text_style.opacity)
         _sep_style = config.get_line_style("ec-separator")
         _events: list[Event] = events or []
@@ -823,7 +823,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         record = self._details
         if record is None:
             return
-        legend_color = str(config.get_text_style("ec-legend-text").color or "#595959")
+        legend_color = str(config.get_text_style("ec-legend-text").color)
         if early_starts:
             name, _size, configured = self._continuation_icon_style(config, before=True)
             record.add_symbol(
@@ -1105,7 +1105,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 getattr(config, "compactplan_name_text_font_name", None), config, italic=True
             )
             font_size = float(getattr(config, "compactplan_name_text_font_size", None) or 8.0)
-            label_color = str(_name_style.color or "#595959")
+            label_color = str(_name_style.color)
             label_opacity = float(_name_style.opacity)
             label_font, _, label_color, label_opacity = _sr.text_override(
                 "event_name",
@@ -1472,7 +1472,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         if max_size is not None:
             size = min(size, max_size)
         if bar_color is None:
-            color = configured or str(config.get_text_style("ec-legend-text").color or "#595959")
+            color = configured or str(config.get_text_style("ec-legend-text").color)
         else:
             color = _resolve_icon_on_bar(style_override=None, configured=configured, bar_color=bar_color)
         self._draw_icon_svg(

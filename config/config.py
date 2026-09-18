@@ -918,6 +918,29 @@ class CalendarConfig:
 
     # Theme overrides (None → use module defaults). All color slots accept
     # CSS / hex / "palette:NAME:INDEX" via _resolve_palette_overrides.
+    # PIT base colours and today-line strengths. Each theme_pit_* field below
+    # overrides its partner here; until 2026-09-18 the partner was a literal
+    # inlined in visualizers/pit/renderer.py, so no theme could change the
+    # value a default render actually used.
+    # Nonworkday tint shared by the blockplan and compactplan day axes, and
+    # the gantt duration-bar fill. All three were inlined as `or "<literal>"`
+    # fallbacks in their renderers until 2026-09-18.
+    nonworkday_fill_color: str = "#333333"
+    gantt_bar_fill_color: str = "#888888"
+
+    pit_axis_color: str = "#333333"
+    pit_tick_color: str = "#666666"
+    pit_leader_color: str = "#555555"
+    pit_dot_color: str = "#2d5fae"
+    pit_milestone_color: str = "#c0392b"
+    pit_label_stroke_color: str = "#444444"
+    pit_name_text_color: str = "#1b1f24"
+    pit_notes_text_color: str = "#5a6470"
+    pit_date_text_color: str = "#444444"
+    pit_today_line_color: str = "#c00000"
+    pit_today_line_width: float = 1.0
+    pit_today_line_opacity: float = 0.85
+
     theme_pit_axis_color: str | None = None
     theme_pit_tick_color: str | None = None
     theme_pit_date_text_color: str | None = None

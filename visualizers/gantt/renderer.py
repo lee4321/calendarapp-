@@ -92,7 +92,6 @@ if TYPE_CHECKING:
 _CELL_PAD = 2.0
 
 #: Fallback bar fill when neither a rule, the event, nor the theme says.
-_DEFAULT_BAR_FILL = "#888888"
 
 #: Horizontal gap between two flags sharing one holiday-band day cell.
 _HOLIDAY_FLAG_GAP = 1.0
@@ -409,7 +408,7 @@ class GanttRenderer(BaseSVGRenderer):
             return
 
         style = config.get_box_style("ec-cell")
-        fill = style.fill or "#000000"
+        fill = style.fill
         opacity = float(style.fill_opacity if style.fill_opacity is not None else 0.08)
 
         for index, day in enumerate(days):
@@ -580,7 +579,7 @@ class GanttRenderer(BaseSVGRenderer):
                 seg_w,
                 font,
                 font_size,
-                token.get("color") or "black",
+                token.get("color") or config.get_text_style("ec-tick-label").color,
                 align="center",
                 css_class="ec-tick-label",
             )
@@ -898,7 +897,7 @@ class GanttRenderer(BaseSVGRenderer):
             body_y,
             axis.left_of(index),
             body_y + body_h,
-            stroke=token.get("color") or "#FF4444",
+            stroke=token.get("color") or config.get_line_style("ec-today-line").color,
             stroke_width=float(token.get("width") or 1.5),
             stroke_opacity=float(token.get("opacity") or 1.0),
             stroke_dasharray=token.get("dasharray"),
@@ -1188,7 +1187,7 @@ class GanttRenderer(BaseSVGRenderer):
             return None
 
         token = self._tk("line:axis")
-        color = style.stroke_color or token.get("color") or "black"
+        color = style.stroke_color or token.get("color") or config.get_line_style("ec-axis-line").color
         width = float(style.stroke_width or token.get("width") or 1.5)
         top = bar_y
         foot = bar_y + bar_h
@@ -1278,7 +1277,7 @@ class GanttRenderer(BaseSVGRenderer):
             return str(style.fill_color)
         if event.color:
             return str(event.color)
-        return self._tk("box:duration").get("fill") or _DEFAULT_BAR_FILL
+        return self._tk("box:duration").get("fill") or config.gantt_bar_fill_color
 
     def _log_hidden_holidays(
         self,
@@ -1490,7 +1489,7 @@ class GanttRenderer(BaseSVGRenderer):
         marker kind/size through the usual vocabulary.
         """
         token = self._tk("line:grid")
-        color = style.stroke_color or token.get("color") or "grey"
+        color = style.stroke_color or token.get("color") or config.get_line_style("ec-grid-line").color
         width = float(style.stroke_width or token.get("width") or 1.0)
         opacity = float(style.stroke_opacity if style.stroke_opacity is not None else (token.get("opacity") or 0.9))
 
