@@ -194,8 +194,8 @@ class _SortedSubcommandsHelpFormatter(argparse.RawDescriptionHelpFormatter):
 
     Only the printed help is sorted — both the ``{a,b,…}`` choices in the
     usage line / positional heading and the one-line-per-subcommand list.
-    The parser keeps its registration order, which the Slint UI, the TUI
-    and tools/generate_option_catalog.py walk.
+    The parser keeps its registration order, which
+    tools/generate_option_catalog.py walks.
     """
 
     def _iter_indented_subactions(self, action: argparse.Action) -> Generator[argparse.Action]:

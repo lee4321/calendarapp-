@@ -4,8 +4,8 @@ Run every ecalendar.py example command in USER_GUIDE.md.
 
 Keeps the guide honest: extracts fenced ``` code blocks, picks the lines
 that invoke ``ecalendar.py``, and executes each one, failing on non-zero
-exit. Interactive tools (the TUI) and importer examples are skipped —
-they either need a terminal or would write to the real database.
+exit. Importer examples and shell prose are skipped — they would write to
+the real database, or are not commands at all.
 
 Usage:
     uv run python tools/check_user_guide.py            # run everything
@@ -40,7 +40,7 @@ def extract_commands(text: str) -> list[str]:
             if not line or line.startswith("#"):
                 continue
             if "ecalendar.py" not in line:
-                continue  # TUI, importers, shell prose
+                continue  # importers, shell prose
             # Only lines shaped like commands — not table rows / prose that
             # merely mention ecalendar.py inside a code block.
             if not line.startswith(("PYTHONPATH=", "uv run", "python ")):
