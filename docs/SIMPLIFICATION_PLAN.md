@@ -367,8 +367,9 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > **What is actually left of Part 3** is therefore a much smaller question than
 > §3.2–§3.4 describe: *which text and box elements still lack a `text:` / `box:`
 > token binding?* §3.1 now carries that re-measurement (2026-09-18): 25 text
-> draws passed no opacity and 8 a hardcoded literal. All of it was plumbed on
-> 2026-09-18 with no new config field; only box styling (§3.3–§3.4) remains.
+> draws passed no opacity and 8 a hardcoded literal, and nine rect draws ignored
+> `BoxStyle.fill_opacity`. All of it was plumbed on 2026-09-18 with no new config
+> field. Part 3 is done bar one unthemed feature — see §3.1.
 
 ### 3.1 Gap Summary Matrix
 
@@ -395,14 +396,23 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > or a splatted `**rect_kwargs` from `rect_overrides()`), *literal* (a hardcoded
 > number or quoted colour), or *absent*.
 >
-> | Renderer | text draws (themeable/literal/absent) | rect `fill_opacity` | rect `fill` | `text_override` sites |
-> |---|---|---|---|---|
-> | Weekly | 11 / 0 / 0 of 11 | 3 / 0 / 0 of 3 | 3 / 0 / 0 | 4 |
-> | Mini | 6 / 1 / 0 of 7 | 2 / 0 / 3 of 5 | 2 / 3 / 0 | 0 |
-> | Timeline | 16 / 0 / 0 of 16 | 3 / 4 / 0 of 7 | 7 / 0 / 0 | 7 |
-> | Blockplan | 13 / 0 / 0 of 13 | 3 / 0 / 4 of 7 | 7 / 0 / 0 | 6 |
-> | Compactplan | 3 / 0 / 0 of 3 | 1 / 0 / 0 of 1 | 1 / 0 / 0 | 1 |
-> | Chrome (header/footer/watermark) | 3 / 0 / 0 of 3 | 1 / 0 / 1 of 2 | 2 / 0 / 0 | — |
+> | Renderer | text draws (themeable/literal/absent) | rect draws (themeable / outline-only) | `text_override` sites |
+> |---|---|---|---|
+> | Weekly | 11 / 0 / 0 of 11 | 3 / 0 of 3 | 4 |
+> | Mini | 6 / 1 / 0 of 7 | 2 / 3 of 5 | 0 |
+> | Timeline | 16 / 0 / 0 of 16 | 7 / 0 of 7 | 7 |
+> | Blockplan | 13 / 0 / 0 of 13 | 7 / 0 of 7 | 6 |
+> | Compactplan | 3 / 0 / 0 of 3 | 1 / 0 of 1 | 1 |
+> | Chrome (header/footer/watermark) | 3 / 0 / 0 of 3 | 2 / 0 of 2 | — |
+>
+> **Box styling was closed on 2026-09-18 too.** `BoxStyle` has always carried
+> `fill_opacity`, but nine rect draws never passed it. Blockplan's four heading
+> and lane rects now take it from the element they already declare, the shared
+> `_draw_icon_band_row()` gained a `fill_opacity` argument that its three callers
+> fill from `ec-band-cell`, and timeline's two band-segment rects stopped passing
+> a literal `1.0`. Mini's three remaining rects are **outline-only**
+> (`fill="none"`) with themeable strokes — the earlier reading of them as "no
+> themeable fill" was a measurement artifact, not a gap.
 >
 > **Text opacity was plumbed end to end on 2026-09-18** — absent 25 → 0,
 > literal 8 → 1. Draws that already consulted a style rule use the opacity
@@ -426,9 +436,9 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > | Property | Weekly | Mini | Timeline | Blockplan | Compactplan |
 > |---|:---:|:---:|:---:|:---:|:---:|
 > | font_name / font_size / font_color | All | All | All | All | All |
-> | background_color | All ↑ | Partial ↑ | All ↑ | All ↑ | All ↑ |
+> | background_color | All ↑ | Outline-only rects ↑ | All ↑ | All ↑ | All ↑ |
 > | font_opacity | **All** ↑ | All but the outline effect ↑ | **All** ↑ | **All** ↑ | **All** ↑ |
-> | background_opacity | All ↑ | Partial ↑ | Partial ↑ | Partial ↑ | All ↑ |
+> | background_opacity | **All** ↑ | Outline-only rects ↑ | **All** ↑ | **All** ↑ | **All** ↑ |
 >
 > Notes on the two rows that did not simply improve:
 >
@@ -442,12 +452,27 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > - **Timeline has the most hardcoded literals** — 6 text draws and 4 rect
 >   opacities — so it looks well covered by count but has the most fixed values.
 >
-> **Part 3's font-opacity goal (§3.2, "Priority 1") is met** — by routing draws
-> through the existing rule and token layer, with **zero new config fields**
-> against the ~96 the section proposed. What is left of §3.3–§3.4 is *box*
-> styling, not text: 4 literal rect opacities in Timeline and 3 rect draws in
-> Mini with no themeable fill. `background_opacity` for those regions is the
-> only row of the matrix still short.
+> **Part 3 is done** — §3.2's font opacity and §3.3–§3.4's box styling both, by
+> routing draws through the existing rule, token and `BoxStyle` layers, with
+> **zero new config fields** against the ~96 the section proposed.
+>
+> **One unthemed surface is left, and it is a feature rather than plumbing.**
+> Timeline's fiscal period / quarter band rows hardcode an alternating pair
+> (`#e8eaf0`, `#d4d8e8`) at `0.6` opacity — now the named constants
+> `_FISCAL_BAND_ALT_FILLS` / `_FISCAL_BAND_FILL_OPACITY`, which makes the gap
+> visible in the code but does *not* make it themeable. The `time_bands:` rows
+> beside them read `fill_color` / `alt_fill_color` from the theme catalog;
+> fiscal rows come from `build_fiscal_period_segments()` instead, and a single
+> `BoxStyle` cannot express an alternating pair. Both rows are off by default
+> (`timeline_show_fiscal_periods` / `_quarters`), so nothing renders them today
+> and the refcorpus does not cover them. Giving them a theme surface needs a
+> decision about how to express the pair.
+>
+> Related, found while measuring: those two rects carry `css_class`
+> `ec-callout-box`, which the catalog defines as the timeline *event callout*
+> box — so a theme styling callouts silently restyles fiscal bands. Correcting
+> it changes output for anyone who enables the feature, so it is left as a
+> deliberate call rather than folded into a byte-identical pass.
 
 
 Currently, text elements across visualizers support these decoration properties unevenly:
