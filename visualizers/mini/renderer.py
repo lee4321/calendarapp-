@@ -238,6 +238,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             tk.get("font") or _ts.font,
             tk.get("size"),
             fill=tk.get("color") or _ts.color,
+            fill_opacity=self._tk_opacity("text:month_title", _ts),
             anchor="middle",
             css_class="ec-month-title",
         )
@@ -285,6 +286,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 tk_wn.get("font") or _ts_wn.font,
                 tk_wn.get("size"),
                 fill=tk_wn.get("color") or _ts_wn.color,
+                fill_opacity=self._tk_opacity("text:week_number", _ts_wn),
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -301,6 +303,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 tk_label.get("font") or _ts_label.font,
                 header_size,
                 fill=tk_label.get("color") or _ts_label.color,
+                fill_opacity=self._tk_opacity("text:label", _ts_label),
                 anchor="middle",
                 css_class="ec-label",
             )
@@ -357,6 +360,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             tk.get("font") or _ts.font,
             font_size,
             fill=tk.get("color") or _ts.color,
+            fill_opacity=self._tk_opacity("text:week_number", _ts),
             anchor="middle",
             css_class="ec-week-number",
         )
@@ -583,6 +587,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             # Since text_to_svg_group produces <path> elements, we
             # can't directly set stroke on them via _draw_text.
             # Instead, draw normally with reduced opacity for an outline effect.
+            # The 0.15 *is* the outline effect, not a missing theme hook —
+            # it is deliberately not read from text:day_number, whose opacity
+            # the non-outlined branch below already honours.
             self._draw_text(
                 cx,
                 text_y,
@@ -616,6 +623,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             tk_fiscal = self._tk("text:fiscal_label")
             label_font_size = max(4.0, tk_fiscal.get("size") or font_size * 0.6)
             label_y = y + h - label_font_size * 0.3
+            # 0.85 was hardcoded here; it stays the default so shipped themes
+            # render unchanged, but a theme can now set text:fiscal_label
+            # opacity like any other text token.
+            _fiscal_opacity = tk_fiscal.get("opacity")
+            fiscal_opacity = float(_fiscal_opacity if _fiscal_opacity is not None else 0.85)
             self._draw_text(
                 cx,
                 label_y,
@@ -623,7 +635,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 tk_fiscal.get("font") or _ts_fiscal.font,
                 label_font_size,
                 fill=tk_fiscal.get("color") or _ts_fiscal.color,
-                fill_opacity=0.85,
+                fill_opacity=fiscal_opacity,
                 anchor="middle",
                 css_class="ec-fiscal-label",
             )

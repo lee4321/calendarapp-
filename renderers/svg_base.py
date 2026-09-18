@@ -127,6 +127,16 @@ class BaseSVGRenderer(ABC):
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
         return self._tokens.get(token, {})
 
+    def _tk_opacity(self, token: str, style: Any) -> float:
+        """Opacity for *token*, falling back to *style*'s own value.
+
+        A token may legitimately set ``0.0``, so the token value is tested
+        against None rather than truthiness — ``or`` would swallow it and
+        hand back the fallback.
+        """
+        value = self._tk(token).get("opacity")
+        return float(value if value is not None else style.opacity)
+
     def _measure(self, text: str, font: str, size: float) -> float:
         """Width of *text*, resolving the font name to its registered path.
 
