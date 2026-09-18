@@ -24,8 +24,9 @@
 >   text-mini) verified against argparse — the only genuinely missing
 >   flags were `--WBS`, `--status`, `--weekend-days`, now documented in
 >   each. 2.2: themes inherit defaults; no per-theme gaps identified.
-> - **Part 3 (text decoration):** remains DEFERRED (see note below) —
->   express as unified tokens if picked up.
+> - **Part 3 (text decoration):** remains DEFERRED, and as of 2026-09-18 is
+>   **stale as written** — the token layer already supplies what §3.2 asks for.
+>   See the note under the Part 3 heading before acting on it.
 > - **Parts 4–5 (ordering/cleanup):** subsumed by the above; the
 >   deprecated `alpha:` alias is the only one-release-cycle alias in
 >   play.
@@ -343,6 +344,30 @@ Fields that exist in CalendarConfig and should be theme-configurable but lack TH
 > conflicts with the LOC-reduction goal of `docs/archive/CONSOLIDATION_PLAN.md`. Revisit
 > after that plan lands; when picked up, prefer expressing these as unified
 > theme tokens (`text:*` style bags) rather than new `CalendarConfig` fields.
+
+> **Stale — do not execute as written (2026-09-18).** The deferral condition has
+> been met (`CONSOLIDATION_PLAN.md` landed 2026-07-08), but the alternative this
+> note recommends *already exists*, so the ~96-field design below is the wrong
+> shape:
+>
+> - `TextStyle` (`config/styles.py:14`) carries **`opacity`**, and `BoxStyle`
+>   carries **`fill_opacity`**. `renderers/css_generator.py:79` emits
+>   `fill-opacity` from the first and `:86` from the second, and
+>   `renderers/glyph_cache.py` takes `fill_opacity` on a glyph run. Any element
+>   addressed by a `text:` or `box:` token therefore already has font opacity and
+>   background opacity, with no new `CalendarConfig` field.
+> - None of the proposed fields were ever added — `day_box_number_opacity`,
+>   `day_box_font_opacity`, `event_opacity`, `mini_title_opacity`,
+>   `timeline_title_opacity`, `blockplan_event_opacity` and
+>   `header_left_font_opacity` all have zero occurrences in `config/config.py`.
+> - Adding ~96 fields now would also fight two guards introduced since:
+>   `find_unconsumed_keys()` (`config/theme_engine.py:2224`) and
+>   `tests/test_theme_dead_keys.py` fail a theme carrying keys nothing consumes.
+>
+> **What is actually left of Part 3** is therefore a much smaller question than
+> §3.2–§3.4 describe: *which text and box elements still lack a `text:` / `box:`
+> token binding?* The gap matrix in §3.1 should be re-measured against the token
+> layer before any of it is picked up — the "None"/"Partial" columns predate it.
 
 ### 3.1 Gap Summary Matrix
 
