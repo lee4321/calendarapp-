@@ -228,7 +228,7 @@ list.
 
 ### 6. Icon halo / background tokens are defined but never drawn — RESOLVED
 
-The design ([design_unified_style_rules.html](design_unified_style_rules.html) §10.3 / §11.4)
+The design ([design_unified_style_rules.html](../design_unified_style_rules.html) §10.3 / §11.4)
 specifies that each icon glyph token is paired with an optional `box:`
 token for a halo or background rect behind the glyph:
 
