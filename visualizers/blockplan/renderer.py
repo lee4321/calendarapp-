@@ -673,6 +673,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     timeline_x - left_x,
                     row_h,
                     fill=heading_fill,
+                    fill_opacity=_heading_cell_style.fill_opacity,
                     stroke=stroke,
                     stroke_width=tb_width,
                     stroke_opacity=tb_opacity,
@@ -733,7 +734,14 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     )
                     for d in visible_days
                 ]
-                self._draw_icon_band_row(day_cells, y_top, row_h, icon_h, fill)
+                self._draw_icon_band_row(
+                    day_cells,
+                    y_top,
+                    row_h,
+                    icon_h,
+                    fill,
+                    fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
+                )
                 # Bottom border for the row.
                 self._draw_line(
                     timeline_x,
@@ -804,6 +812,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_x - left_x,
                 row_h,
                 fill=heading_fill,
+                fill_opacity=_heading_cell_style.fill_opacity,
                 stroke=stroke,
                 stroke_width=tb_width,
                 stroke_opacity=tb_opacity,
@@ -1475,6 +1484,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_x - left_x,
                 lane_h,
                 fill=heading_fill,
+                fill_opacity=_lane_heading_cell_style.fill_opacity,
                 stroke=_lg_color,
                 stroke_width=_lg_w,
                 stroke_opacity=_lg_op,
@@ -1487,6 +1497,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 timeline_w,
                 lane_h,
                 fill=timeline_fill,
+                fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                 stroke=_lg_color,
                 stroke_width=_lg_w,
                 stroke_opacity=_lg_op,

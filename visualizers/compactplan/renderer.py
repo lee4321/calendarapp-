@@ -652,6 +652,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
                     icon_h,
                     fill,
                     css_class="ec-band-cell",
+                    fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                 )
                 separator(area_x, row_y + row_h, area_x + area_w, row_y + row_h)
                 row_y += row_h

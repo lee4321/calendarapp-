@@ -1434,6 +1434,7 @@ class BaseSVGRenderer(ABC):
         icon_h: float,
         fill_color: str = "none",
         css_class: str | None = None,
+        fill_opacity: float = 1.0,
     ) -> None:
         """
         Render one icon-band row.
@@ -1453,6 +1454,9 @@ class BaseSVGRenderer(ABC):
             Display height of each icon in points.
         fill_color:
             Background fill for every day cell (``"none"`` = transparent).
+        fill_opacity:
+            Opacity of that fill.  Callers pass their band cell's own
+            ``BoxStyle.fill_opacity`` so a theme can shade the row.
         css_class:
             CSS class for the per-cell background rect (``None`` = unclassed).
             The icons themselves are never given this class — it is a
@@ -1469,6 +1473,7 @@ class BaseSVGRenderer(ABC):
                     cell_w,
                     row_h,
                     fill=draw_fill,
+                    fill_opacity=fill_opacity,
                     css_class=css_class,
                 )
             self._draw_cell_icons(icons, cell_x, cell_w, row_y, row_h, icon_h)
