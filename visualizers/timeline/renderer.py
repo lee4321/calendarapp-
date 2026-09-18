@@ -41,6 +41,16 @@ if TYPE_CHECKING:
 #: row of callout boxes.
 _AXIS_LABEL_MARGIN = 2.0
 
+#: Alternating fill for the fiscal period / quarter band rows, and the opacity
+#: they are drawn at.  Unlike the ``time_bands:`` rows beside them -- which take
+#: ``fill_color`` / ``alt_fill_color`` from the theme catalog -- fiscal rows have
+#: no theme surface of their own, so these are the only values available.  Both
+#: rows are off by default (``timeline_show_fiscal_periods`` /
+#: ``_quarters``), which is why the gap has gone unnoticed; giving them one
+#: needs a way to express an alternating *pair*, which a single BoxStyle cannot.
+_FISCAL_BAND_ALT_FILLS = ("#e8eaf0", "#d4d8e8")
+_FISCAL_BAND_FILL_OPACITY = 0.6
+
 
 def _timeline_style_rules(config: CalendarConfig) -> list:
     """Source the raw style_rules list for StyleEngine.
@@ -2721,7 +2731,14 @@ class TimelineRenderer(BaseSVGRenderer):
                     cell_x2 = self._x_for_day(next_arrow, start, end, axis_left, axis_right)
                     cell_w = max(0.0, cell_x2 - cell_x)
                     day_cells.append((cell_x, cell_w, day_icon_map.get(day_d, [])))
-                self._draw_icon_band_row(day_cells, row_y, row_h, icon_h, fill)
+                self._draw_icon_band_row(
+                    day_cells,
+                    row_y,
+                    row_h,
+                    icon_h,
+                    fill,
+                    fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
+                )
                 sep_y = row_y + row_h
                 self._draw_line(
                     axis_left,
@@ -2775,7 +2792,7 @@ class TimelineRenderer(BaseSVGRenderer):
                         seg_w,
                         row_h,
                         fill=fill,
-                        fill_opacity=1.0,
+                        fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                         css_class="ec-band-cell",
                     )
 
@@ -3577,7 +3594,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if config.timeline_show_fiscal_periods:
             rows.append(build_fiscal_period_segments(start_date, end_date, config))
 
-        alt_colors = ["#e8eaf0", "#d4d8e8"]
+        alt_colors = _FISCAL_BAND_ALT_FILLS
         label_color = config.get_line_style("ec-axis-tick").color
 
         for row_idx, segments in enumerate(rows):
@@ -3598,7 +3615,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     x2 - x1,
                     band_h,
                     fill=fill,
-                    fill_opacity=0.6,
+                    fill_opacity=_FISCAL_BAND_FILL_OPACITY,
                     stroke="#aaaaaa",
                     stroke_width=0.5,
                     css_class="ec-callout-box",
@@ -3658,7 +3675,7 @@ class TimelineRenderer(BaseSVGRenderer):
             self._axis_label_clearance(config, start, end) or (self._axis_tick_height(config) + label_size * 1.5)
         )
 
-        alt_colors = ["#e8eaf0", "#d4d8e8"]
+        alt_colors = _FISCAL_BAND_ALT_FILLS
         label_color = config.get_line_style("ec-axis-tick").color
         font_name = self._tk("text:event_date").get("font") or config.timeline_date_font
 
@@ -3678,7 +3695,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     band_w,
                     y2 - y1,
                     fill=alt_colors[seg_idx % 2],
-                    fill_opacity=0.6,
+                    fill_opacity=_FISCAL_BAND_FILL_OPACITY,
                     stroke="#aaaaaa",
                     stroke_width=0.5,
                     css_class="ec-callout-box",
@@ -3768,6 +3785,7 @@ class TimelineRenderer(BaseSVGRenderer):
                         max(0.0, cell_y2 - cell_y),
                         icon_h,
                         fill,
+                        fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                     )
                 self._draw_line(
                     col_x,
@@ -3836,7 +3854,7 @@ class TimelineRenderer(BaseSVGRenderer):
                         col_w,
                         seg_h,
                         fill=fill,
-                        fill_opacity=1.0,
+                        fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                         css_class="ec-band-cell",
                     )
                 if seg.label:
