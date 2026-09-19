@@ -52,6 +52,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "stroke_dasharray"): "day_box_stroke_dasharray",
     ("weekly.day_box", "hash_pattern"): "theme_weekly_hash_pattern",
     ("weekly.day_box", "hash_pattern_opacity"): "hash_pattern_opacity",
+    ("weekly.day_box", "hash_pattern_target_size"): "hash_pattern_target_size",
+    ("weekly.day_box", "hash_pattern_scale"): "hash_pattern_scale",
     ("weekly.day_box", "fill_color"): "day_box_fill_color",
     ("weekly.day_box", "fill_opacity"): "day_box_fill_opacity",
     ("weekly.day_box", "number_font"): "day_box_number_font",

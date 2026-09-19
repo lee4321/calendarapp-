@@ -1060,7 +1060,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         sizes are in document coordinates.  Opacity defaults to
         config.hash_pattern_opacity but can be overridden per-decoration.
         """
-        pat_id = self._ensure_svg_pattern_def(pattern_name, color)
+        pat_id = self._ensure_svg_pattern_def(pattern_name, color, config)
         if not pat_id:
             logger.warning("SVG pattern '%s' not found in database", pattern_name)
             return

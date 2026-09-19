@@ -20,6 +20,15 @@ def get_creation_date() -> str:
     return arrow.now().format("YYYY-MM-DD")
 
 
+#: Default target for the largest dimension of a decoration pattern tile,
+#: in document points.  Native tiles in the ``patterns`` table span 16 to
+#: 1920 pt; this size makes a tile repeat several times across a weekly day
+#: box (384 x 54 pt on a 1920 x 1080 page) instead of showing one crop.
+#: Re-exported by renderers.svg_patterns, which owns tile geometry but
+#: cannot be imported from here without a cycle.
+DEFAULT_PATTERN_TARGET_SIZE = 18.0
+
+
 # =============================================================================
 # Font Name Constants
 # =============================================================================
@@ -617,6 +626,16 @@ class CalendarConfig:
     weekly_notes_text_font_size: float | None = None
     weekly_notes_text_font_opacity: float = 1.0
     hash_pattern_opacity: float = 0.15
+    # Auto-normalization of pattern tile sizes.  Native tiles in the DB
+    # span 16 to 1920 pt, so at native size the large ones show a single
+    # crop of the artwork instead of a texture.  Tiles larger than
+    # hash_pattern_target_size are scaled down to it; smaller tiles are
+    # left alone (shrink-only).  Set the target to 0 to tile every
+    # pattern at its native size.  hash_pattern_scale is an extra
+    # multiplier applied on top, for themes that want a finer or coarser
+    # grain without restating the target.
+    hash_pattern_target_size: float = DEFAULT_PATTERN_TARGET_SIZE
+    hash_pattern_scale: float = 1.0
 
     # Timeline styling.  Phase 2 strip dropped dead fields with no
     # readers post-Phase-1: background_color (page bg from box:background),
@@ -1512,6 +1531,13 @@ class CalendarConfig:
             raise ValueError(f"weekend_style must be 0–4, got {self.weekend_style}")
         if self.mini_columns < 1:
             raise ValueError(f"mini_columns must be >= 1, got {self.mini_columns}")
+        if self.hash_pattern_target_size < 0:
+            raise ValueError(
+                f"hash_pattern_target_size must be >= 0 (0 disables auto-normalization), "
+                f"got {self.hash_pattern_target_size}"
+            )
+        if self.hash_pattern_scale <= 0:
+            raise ValueError(f"hash_pattern_scale must be > 0, got {self.hash_pattern_scale}")
         if self.timeline_orientation not in ("horizontal", "vertical"):
             raise ValueError(
                 f"timeline_orientation must be 'horizontal' or 'vertical', got {self.timeline_orientation!r}"

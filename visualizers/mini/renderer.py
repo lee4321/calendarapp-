@@ -811,7 +811,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         opacity: float | None = None,
     ) -> None:
         """Draw an SVG pattern across the full mini day cell."""
-        pat_id = self._ensure_svg_pattern_def(pattern_name, color)
+        pat_id = self._ensure_svg_pattern_def(pattern_name, color, config)
         if not pat_id:
             logger.warning("SVG pattern '%s' not found in database", pattern_name)
             return

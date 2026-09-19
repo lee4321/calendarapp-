@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from cli.errors import ConfigError
+from config.config import DEFAULT_PATTERN_TARGET_SIZE
 from shared.run_paths import RunPaths
 
 
@@ -674,6 +675,17 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         default="#333333",
         metavar="COLOR",
         help="Fill color for pattern tiles (default: #333333)",
+    )
+    patternsheet.add_argument(
+        "--tile-size",
+        "-ts",
+        type=float,
+        default=DEFAULT_PATTERN_TARGET_SIZE,
+        metavar="PTS",
+        help=(
+            "Largest tile dimension after auto-normalization, in points "
+            f"(default: {DEFAULT_PATTERN_TARGET_SIZE:g}); 0 previews tiles at native size"
+        ),
     )
     patternsheet.add_argument(
         "--outputfile",

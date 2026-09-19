@@ -29,7 +29,11 @@ from renderers.details_record import (
 )
 from renderers.glyph_cache import text_to_svg_group
 from renderers.icon_export import icon_color_style, icon_viewbox, minify_svg_markup, strip_svg_wrapper
-from renderers.svg_patterns import pattern_def_id, pattern_def_xml
+from renderers.svg_patterns import (
+    DEFAULT_PATTERN_TARGET_SIZE,
+    pattern_def_id,
+    pattern_def_xml,
+)
 from renderers.text_utils import shrinktext, string_width
 
 if TYPE_CHECKING:
@@ -178,6 +182,7 @@ class BaseSVGRenderer(ABC):
         self,
         pattern_name: str | None,
         color: str | None,
+        config: CalendarConfig | None = None,
     ) -> str | None:
         """
         Guarantee that a <pattern> element exists in the SVG <defs> for
@@ -186,6 +191,10 @@ class BaseSVGRenderer(ABC):
 
         Pattern elements are registered at most once per Drawing instance;
         call sites need not guard against duplicates.
+
+        Tile size is auto-normalized from config.hash_pattern_target_size
+        and config.hash_pattern_scale; callers that have no config in hand
+        get the module defaults.
         """
         if not pattern_name:
             return None
@@ -197,7 +206,9 @@ class BaseSVGRenderer(ABC):
         if pat_id in self._registered_pattern_ids:
             return pat_id
 
-        self.drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color)))
+        target_size = getattr(config, "hash_pattern_target_size", DEFAULT_PATTERN_TARGET_SIZE)
+        extra_scale = getattr(config, "hash_pattern_scale", 1.0)
+        self.drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color, target_size, extra_scale)))
         self._registered_pattern_ids.add(pat_id)
         return pat_id
 

@@ -13,6 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+# Module-level (the rest of this file's imports are function-local) because it
+# is a signature default.  config.config is loaded on every path that reaches
+# these sheets, and importing it here pulls in no renderer machinery.
+from config.config import DEFAULT_PATTERN_TARGET_SIZE
+
 
 @dataclass(frozen=True)
 class SheetChrome:
@@ -1258,12 +1263,14 @@ def _generate_patternsheet_svg(
     output_path: Path,
     color: str = CHROME.icon,
     title: str = "Patterns",
+    target_size: float | None = DEFAULT_PATTERN_TARGET_SIZE,
 ) -> None:
     """
     Write an SVG grid preview of day-box patterns from the database.
 
-    Each cell shows a swatch filled with the pattern (tiled at its native
-    size) plus the pattern name as a label below.  Lets users identify
+    Each cell shows a swatch filled with the pattern, tiled at the same
+    auto-normalized size a real render uses, plus the pattern name as a
+    label below.  Lets users identify
     pattern names for use in theme ``day_box.hash_pattern`` and per-rule
     ``hash_rules[].pattern`` fields without querying the database directly.
 
@@ -1281,6 +1288,8 @@ def _generate_patternsheet_svg(
         output_path: Destination path for the generated SVG.
         color:       Fill color applied to pattern tiles (default ``CHROME.icon``).
         title:       SVG title string.
+        target_size: Largest tile dimension after auto-normalization, in
+                     points; 0 or None tiles every pattern at native size.
     """
     import math
 
@@ -1288,6 +1297,7 @@ def _generate_patternsheet_svg(
     from renderers.svg_patterns import (
         colorize_pattern_svg,
         extract_pattern_inner,
+        normalize_tile_scale,
         parse_svg_tile_size,
         pattern_def_id,
     )
@@ -1325,13 +1335,14 @@ def _generate_patternsheet_svg(
             colorized = colorize_pattern_svg(raw_svg, color)
             inner = extract_pattern_inner(colorized)
 
-            # Scale oversized tiles down so at least one full tile fits inside
-            # the swatch.  Wrap the tile content in a <g transform="scale(s)">
-            # and shrink the pattern's reported tile size by the same factor
-            # so the pattern still tiles correctly across the swatch.
-            scale = min(1.0, SWATCH_SIZE / max(tile_w, tile_h)) if max(tile_w, tile_h) > 0 else 1.0
-            if scale < 1.0:
-                inner = f'<g transform="scale({scale})">{inner}</g>'
+            # Normalize the tile the same way a real render does, so a swatch
+            # shows the grain the pattern will actually have in a day box
+            # rather than one blown-up crop of the source artwork.  Wrapping
+            # the content in <g transform="scale(s)"> and shrinking the
+            # pattern's reported size by the same factor keeps it seamless.
+            scale = normalize_tile_scale(tile_w, tile_h, target_size)
+            if scale != 1.0:
+                inner = f'<g transform="scale({scale:.6g})">{inner}</g>'
                 tile_w *= scale
                 tile_h *= scale
 
