@@ -47,6 +47,17 @@ The architecture reading order lives in `docs/architecture/README.md`
   the tables — the hand-written prose under each `### <command>` heading is
   left alone. New guide examples are executed by
   `uv run python tools/check_user_guide.py`.
+- `docs/DefaultRendererValues.md` is generated too, but handled differently:
+  it quotes source line numbers, so almost any renderer edit — a comment
+  included — makes its `--check` report stale. The pre-commit hook therefore
+  regenerates it and stages it alongside a commit that touches `renderers/`,
+  `visualizers/` or `config/`, rather than failing over drift.
+  `tests/test_default_renderer_values.py` guards it with line numbers
+  ignored, so a renderer that gains, loses or changes a *fallback* still
+  fails the suite; run
+  `uv run python tools/generate_default_renderer_values.py` to fix it.
+  Do not add a line-number-sensitive check: the document went stale across
+  several commits precisely because blind regeneration is easy to tune out.
 - Content filters (`--noevents`, `--nodurations`/`--durations`, `--milestones`,
   `--WBS`, `--status`, `--country`, `--empty`, and the gated `--shade`,
   `--includenotes`) are defined once: register them with

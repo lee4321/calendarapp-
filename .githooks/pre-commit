@@ -40,6 +40,24 @@ if ! uv run python -m pytest tests/ -q -p no:cacheprovider; then
     exit 1
 fi
 
+# docs/DefaultRendererValues.md quotes source line numbers, so almost any
+# renderer edit — a comment included — makes it stale. Failing the commit
+# over that would be noise, so regenerate and stage it the same way the
+# version bump below does. tests/test_default_renderer_values.py guards the
+# rows themselves (line numbers ignored) in case this hook is bypassed.
+echo "pre-commit: DefaultRendererValues.md"
+if ! uv run python tools/generate_default_renderer_values.py >/dev/null; then
+    echo "pre-commit: could not regenerate docs/DefaultRendererValues.md." >&2
+    echo "Fix the generator, or commit with --no-verify to skip." >&2
+    exit 1
+fi
+# Stage it only when the commit already touches code it describes: the
+# generator reads the working tree, so on an unrelated commit with dirty
+# renderer edits this would otherwise sweep them into the document.
+if git diff --cached --name-only | grep -qE '^(renderers/|visualizers/|config/)'; then
+    git add docs/DefaultRendererValues.md
+fi
+
 FILE="ecalendar.py"
 
 # Only update if ecalendar.py is staged
