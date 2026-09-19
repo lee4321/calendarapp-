@@ -12,14 +12,27 @@ The architecture reading order lives in `docs/architecture/README.md`
   text measurement, which moves every label.
   `tests/test_text_layout_engine.py` fails if raqm is missing.
 - Python is run with `uv run python …` (never a bare `python`).
-- Tests: `uv run python -m pytest tests/ -q` — the whole suite runs in ~10 s;
-  run it after every change, not just at the end.
+- Tests: `uv run python -m pytest tests/ -q` — the whole suite runs in
+  under 20 s; run it after every change, not just at the end.
 - Rendering regression guard: `tools/refcorpus.sh check` renders all 9
-  visualizers × 3 themes and diffs against the baseline in
-  `output/_refcorpus/`, ignoring only the `<desc>` metadata block.
+  visualizers × 3 themes plus text-mini — 28 run folders, 889 files — and
+  diffs them against the baseline in `output/_refcorpus/`, ignoring the
+  `<desc>` metadata block and the details document's `Generated:` line.
+  Whole run folders are compared, so the `.md` details document, the `.csv`
+  and every captured `icons/*.svg` weigh as much as the page SVG.
+  - The baseline is **local**: `output/` is gitignored, so a fresh clone or
+    worktree has none. Render one first, or `check` reports every file as
+    `EXTRA`.
   - Pure refactors and comment passes must be **byte-identical**.
   - Deliberate visual changes: inspect the diff, then re-baseline with
     `tools/refcorpus.sh render` in the same commit.
+  - Dependency upgrades move the baseline too — `holidays` ships a dataset,
+    so a bump can add or rename days and shift every view that draws them.
+    To show an upgrade is data-only, hold the suspect package at its old
+    version and re-check. `uv run` re-syncs the venv to `uv.lock` before
+    every render, so the pin only survives as
+    `UV_NO_SYNC=1 tools/refcorpus.sh check`; plain `uv sync` restores the
+    lock afterwards.
 - SVG attribute *order* is significant to the guard: drawsvg emits kwargs in
   call order, so keep kwarg order stable when touching draw helpers.
 - Theme band references are guarded: a visualizer's `top_bands`/`bands` list
