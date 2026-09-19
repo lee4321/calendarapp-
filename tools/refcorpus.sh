@@ -48,7 +48,7 @@ render_all() {
   render_one text-mini 20260101 20261231 "refcorpus_text_mini.txt"
 
   mv output/refcorpus_* "$dest"/
-  echo "Rendered $(find "$dest" -type f | wc -l | tr -d ' ') files into $dest"
+  echo "Rendered $(find "$dest" -type f ! -name .DS_Store | wc -l | tr -d ' ') files into $dest"
 }
 
 # Strip the <desc>...</desc> block and the details document's Generated
@@ -58,6 +58,10 @@ normalized() {
 }
 
 check() {
+  # .DS_Store is excluded throughout: Finder recreates it inside these
+  # directories at any time, including midway through a run, so counting it
+  # makes the guard fail with MISSING/EXTRA noise that has nothing to do with
+  # rendering.
   render_all "$CHECK_DIR"
   local fail=0 ref rel new
   # Each visualization writes a run folder, so compare the trees file by file.
@@ -71,13 +75,13 @@ check() {
       echo "DIFFERS  $rel"
       fail=1
     fi
-  done < <(find "$CORPUS_DIR" -type f -print0 | sort -z)
+  done < <(find "$CORPUS_DIR" -type f ! -name .DS_Store -print0 | sort -z)
   while IFS= read -r -d '' new; do
     rel="${new#"$CHECK_DIR"/}"
     [[ -f "$CORPUS_DIR/$rel" ]] || { echo "EXTRA    $rel"; fail=1; }
-  done < <(find "$CHECK_DIR" -type f -print0 | sort -z)
+  done < <(find "$CHECK_DIR" -type f ! -name .DS_Store -print0 | sort -z)
   if [[ "$fail" -eq 0 ]]; then
-    echo "Corpus check PASSED ($(find "$CORPUS_DIR" -type f | wc -l | tr -d ' ') files identical modulo <desc>)"
+    echo "Corpus check PASSED ($(find "$CORPUS_DIR" -type f ! -name .DS_Store | wc -l | tr -d ' ') files identical modulo <desc>)"
   else
     echo "Corpus check FAILED"
   fi
