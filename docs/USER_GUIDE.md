@@ -567,6 +567,8 @@ The two forms paginate differently:
 
 No positional arguments. Use `--filter` to narrow the rendered grid by pattern name and `--color` to set the tile fill (default `#333333`). Use `--tile-size` to preview a different auto-normalized tile size (default `18` points; `0` shows tiles at their native size). Run `ecalendar.py patterns` to discover pattern names.
 
+Pattern tiles are monochrome artwork, and `--color` — like a `style_rules` `patterncolor` — repaints all of a tile's ink, whichever form the source SVG declared it in. One pattern is the exception: `stars65` is an embedded bitmap rather than vector geometry, so it always renders in its own black. `ecalendar.py patterns` marks it `[fixed]`, and the sheet labels it `(fixed)`.
+
 ### `iconsheet`
 
 No positional arguments. Use `--filter` to narrow the rendered grid by icon name and `--color` to set the stroke color (default `#333333`). Run `ecalendar.py icons` to discover icon names.

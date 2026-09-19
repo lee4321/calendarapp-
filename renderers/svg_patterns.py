@@ -7,7 +7,7 @@ owns the string surgery those defs need:
 
 * `parse_svg_tile_size`   — tile dimensions from viewBox or width/height,
 * `normalize_tile_scale`  — shrink-only auto-normalization factor,
-* `colorize_pattern_svg`  — recolor black fills to a rule's color,
+* `colorize_pattern_svg`  — repaint the tile's ink in a rule's color,
 * `extract_pattern_inner` — strip prolog/wrapper/Inkscape metadata,
 * `pattern_def_id`        — stable `pat-{name}-{color}` def id,
 * `pattern_def_xml`       — the complete `<pattern>` element.
@@ -18,6 +18,12 @@ the artwork rather than a repeating texture.  `normalize_tile_scale`
 brings oversized tiles down to a common target; see its docstring for
 the exact rule.
 
+Every tile in the table is monochrome ink on transparent, but the ink is
+declared in whatever form the tile's authoring tool emitted — a `fill`
+attribute, an Inkscape `style="fill:…"`, a Serif `rgb(35,31,32)`, or
+`currentColor` (which resolves against the `<pattern>` def, not the
+element being filled, so it never picked up a rule's color).
+`colorize_pattern_svg` normalizes all of those; see its docstring.
 
 `BaseSVGRenderer._ensure_svg_pattern_def()` is the normal entry point for
 renderers; the sheet generators in `ecalendar.py` call these functions
@@ -42,6 +48,7 @@ __all__ = [
     "parse_svg_tile_size",
     "pattern_def_id",
     "pattern_def_xml",
+    "pattern_is_recolorable",
 ]
 
 
@@ -123,19 +130,86 @@ def extract_pattern_inner(svg: str) -> str:
     return inner.strip()
 
 
+#: A ``fill=`` / ``stroke=`` presentation attribute and its value.
+_PAINT_ATTR_RE = re.compile(r'\b(fill|stroke)="([^"]*)"', re.IGNORECASE)
+
+#: A ``fill:`` / ``stroke:`` declaration inside a ``style="…"`` attribute.
+#: The lookbehind keeps the hyphenated properties out — ``fill-rule``,
+#: ``fill-opacity``, ``stroke-width``, ``stroke-linejoin`` and friends have a
+#: ``-`` rather than a ``:`` after the name, so they can never match anyway,
+#: but the guard also stops a match starting mid-identifier.
+_PAINT_STYLE_RE = re.compile(r'(?<![\w-])(fill|stroke)\s*:\s*([^;"}\s]+)', re.IGNORECASE)
+
+#: Paint values that mean "draw nothing here", which must survive untouched:
+#: repainting them would fill in shapes the artwork deliberately leaves
+#: hollow.  ``inherit`` is left alone so it keeps resolving up the tree.
+_UNPAINTED = frozenset({"none", "inherit", "transparent"})
+
+
 def colorize_pattern_svg(svg: str, color: str | None) -> str:
     """
-    Replace black fill declarations in a pattern SVG with *color*.
+    Repaint a pattern tile's ink in *color*.
 
-    Handles the three common forms: fill="#000000", fill="#000",
-    fill="black".  No-ops when color is None.
+    Every tile in the ``patterns`` table is monochrome ink on transparent
+    — a survey of all 350 finds exactly three ink values in use
+    (``#000000``, ``#000`` and Serif's near-black ``rgb(35,31,32)``), and
+    no tile mixes two.  So rather than matching a list of literals, this
+    rewrites *every* paint declaration that draws something, in both the
+    attribute form (``fill="…"``) and the ``style="fill:…"`` form that
+    Inkscape and Serif exports use.
+
+    ``currentColor`` is rewritten too.  Inside a ``<pattern>`` def it
+    resolves against the def's own context rather than the element
+    carrying ``fill="url(#pat-id)"``, so tiles declaring it used to
+    render at the UA default regardless of the color a rule asked for.
+
+    Values in :data:`_UNPAINTED` are left alone, so ``fill="none"`` keeps
+    a shape hollow.  A tile that declares no paint at all inherits from
+    the wrapper :func:`pattern_def_xml` emits.
+
+    Note this flattens a tile to a single color by design.  Were a
+    genuinely multi-color tile ever added to the table, it would need to
+    opt out rather than be recolored.
+
+    No-ops when *color* is None.
     """
     if not color:
         return svg
-    result = re.sub(r'fill="#000000"', f'fill="{color}"', svg, flags=re.IGNORECASE)
-    result = re.sub(r'fill="#000"', f'fill="{color}"', result, flags=re.IGNORECASE)
-    result = re.sub(r'fill="black"', f'fill="{color}"', result, flags=re.IGNORECASE)
-    return result
+
+    def _attr(m: re.Match[str]) -> str:
+        prop, value = m.group(1), m.group(2)
+        if value.strip().lower() in _UNPAINTED:
+            return m.group(0)
+        return f'{prop}="{color}"'
+
+    def _style(m: re.Match[str]) -> str:
+        prop, value = m.group(1), m.group(2)
+        if value.strip().lower() in _UNPAINTED:
+            return m.group(0)
+        return f"{prop}:{color}"
+
+    result = _PAINT_ATTR_RE.sub(_attr, svg)
+    return _PAINT_STYLE_RE.sub(_style, result)
+
+
+#: A raster payload: an ``<image>`` element or an inline data URI.
+_RASTER_RE = re.compile(r"<image\b|data:image/", re.IGNORECASE)
+
+
+def pattern_is_recolorable(svg: str) -> bool:
+    """
+    Whether :func:`colorize_pattern_svg` can actually repaint this tile.
+
+    False for a tile whose artwork is a raster image rather than vector
+    geometry — the pixels carry their own color and no amount of ``fill``
+    rewriting reaches them.  ``stars65`` is the only such tile in the
+    shipped table (an embedded base64 PNG, which is also why it is by far
+    the largest row at ~950 KB); it always renders in its baked-in black.
+
+    Callers use this to tell a user why a pattern ignored their color,
+    not to reject it: a raster tile still tiles correctly.
+    """
+    return not _RASTER_RE.search(svg)
 
 
 def pattern_def_id(pattern_name: str, color: str | None) -> str:
@@ -165,15 +239,29 @@ def pattern_def_xml(
     a single document — one pattern name resolves to one scale per
     drawing.  Pass distinct ids if that ever stops holding.
 
+    The artwork is wrapped in a ``<g>`` carrying ``fill`` as well as the
+    scale.  ``extract_pattern_inner`` drops the source ``<svg>`` element,
+    and with it any paint declared there — 25 tiles carry only a root
+    ``fill="currentColor"`` — so the wrapper restores an inheritable
+    color for content that declares none of its own.  It sets ``fill``
+    but deliberately not ``stroke``: an unset ``fill`` defaults to black
+    and so wants overriding, whereas an unset ``stroke`` defaults to
+    ``none``, and setting it would outline shapes that were never
+    stroked.
     """
     tile_w, tile_h = parse_svg_tile_size(raw_svg)
     inner = extract_pattern_inner(colorize_pattern_svg(raw_svg, color))
 
     scale = normalize_tile_scale(tile_w, tile_h, target_size, extra_scale)
+    wrapper: list[str] = []
     if scale != 1.0:
-        inner = f'<g transform="scale({scale:.6g})">{inner}</g>'
+        wrapper.append(f'transform="scale({scale:.6g})"')
         tile_w *= scale
         tile_h *= scale
+    if color:
+        wrapper.append(f'fill="{color}"')
+    if wrapper:
+        inner = f"<g {' '.join(wrapper)}>{inner}</g>"
 
     return (
         f'<pattern id="{pat_id}" x="0" y="0" '
