@@ -1294,13 +1294,7 @@ def _generate_patternsheet_svg(
     import math
 
     from renderers.svg_base import BaseSVGRenderer
-    from renderers.svg_patterns import (
-        colorize_pattern_svg,
-        extract_pattern_inner,
-        normalize_tile_scale,
-        parse_svg_tile_size,
-        pattern_def_id,
-    )
+    from renderers.svg_patterns import pattern_def_id, pattern_def_xml, pattern_is_recolorable
 
     MARGIN = 40
     TITLE_H = 55
@@ -1331,26 +1325,12 @@ def _generate_patternsheet_svg(
         pat_id = pattern_def_id(name, color)
 
         if pat_id not in seen_ids:
-            tile_w, tile_h = parse_svg_tile_size(raw_svg)
-            colorized = colorize_pattern_svg(raw_svg, color)
-            inner = extract_pattern_inner(colorized)
-
-            # Normalize the tile the same way a real render does, so a swatch
-            # shows the grain the pattern will actually have in a day box
-            # rather than one blown-up crop of the source artwork.  Wrapping
-            # the content in <g transform="scale(s)"> and shrinking the
-            # pattern's reported size by the same factor keeps it seamless.
-            scale = normalize_tile_scale(tile_w, tile_h, target_size)
-            if scale != 1.0:
-                inner = f'<g transform="scale({scale:.6g})">{inner}</g>'
-                tile_w *= scale
-                tile_h *= scale
-
-            inner = BaseSVGRenderer._minify_svg_markup(inner)
+            # Build the def through the same function the renderers use, so a
+            # swatch shows the grain and the color the pattern will actually
+            # have in a day box rather than a blown-up, differently-painted
+            # crop of the source artwork.
             defs.append(
-                f'    <pattern id="{pat_id}" x="0" y="0"'
-                f' width="{tile_w}" height="{tile_h}"'
-                f' patternUnits="userSpaceOnUse">{inner}</pattern>'
+                "    " + BaseSVGRenderer._minify_svg_markup(pattern_def_xml(pat_id, raw_svg, color, target_size))
             )
             seen_ids.add(pat_id)
 
@@ -1360,11 +1340,14 @@ def _generate_patternsheet_svg(
         )
         body.append(f'  <rect x="{x}" y="{y}" width="{SWATCH_SIZE}" height="{SWATCH_SIZE}" fill="url(#{pat_id})"/>')
 
+        # A raster tile ignores `color`, so say so rather than leaving the
+        # reader to wonder why one swatch came out a different colour.
+        label = name if pattern_is_recolorable(raw_svg) else f"{name} (fixed)"
         label_y = y + SWATCH_SIZE + 14
         body.append(
             f'  <text x="{x + SWATCH_SIZE // 2}" y="{label_y}"'
             f' font-family="Helvetica, Arial, sans-serif" font-size="10"'
-            f' fill="{CHROME.caption}" text-anchor="middle">{name}</text>'
+            f' fill="{CHROME.caption}" text-anchor="middle">{_xml_escape(label)}</text>'
         )
 
     lines = [

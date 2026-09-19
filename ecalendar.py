@@ -326,6 +326,7 @@ def run(argv: list[str] | None = None) -> int:
             DEFAULT_PATTERN_TARGET_SIZE,
             normalize_tile_scale,
             parse_svg_tile_size,
+            pattern_is_recolorable,
         )
 
         # This command predates config assembly, so it reports the shipped
@@ -333,6 +334,9 @@ def run(argv: list[str] | None = None) -> int:
         target = DEFAULT_PATTERN_TARGET_SIZE
         print(f"  Sizes are the native tile; renders normalize them to <= {target:g} pt.")
         print("  Tune with theme day_box.hash_pattern_target_size / .hash_pattern_scale.")
+        fixed = sorted(n for n in names if not pattern_is_recolorable(all_patterns[n]))
+        if fixed:
+            print(f"  Marked [fixed]: raster artwork, so it keeps its own color: {', '.join(fixed)}")
         print()
 
         col_width = max(len(n) for n in names) + 2
@@ -346,6 +350,8 @@ def run(argv: list[str] | None = None) -> int:
                 tile = f"({int(tw)}x{int(th)})"
                 if scale != 1.0:
                     tile += f" ->{tw * scale:.0f}x{th * scale:.0f}"
+                if not pattern_is_recolorable(all_patterns[n]):
+                    tile += " [fixed]"
                 parts.append(f"{n:<{col_width}}{tile:<22}")
             print("  " + "  ".join(parts))
         return 0
