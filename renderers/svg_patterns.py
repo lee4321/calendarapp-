@@ -9,6 +9,7 @@ owns the string surgery those defs need:
 * `normalize_tile_scale`  — shrink-only auto-normalization factor,
 * `colorize_pattern_svg`  — repaint the tile's ink in a rule's color,
 * `extract_pattern_inner` — strip prolog/wrapper/Inkscape metadata,
+* `scope_pattern_ids`     — prefix a tile's own ids so two cannot collide,
 * `pattern_def_id`        — stable `pat-{name}-{color}` def id,
 * `pattern_def_xml`       — the complete `<pattern>` element.
 
@@ -49,6 +50,7 @@ __all__ = [
     "pattern_def_id",
     "pattern_def_xml",
     "pattern_is_recolorable",
+    "scope_pattern_ids",
 ]
 
 
@@ -128,6 +130,58 @@ def extract_pattern_inner(svg: str) -> str:
     inner = re.sub(r'\s+(?:inkscape|sodipodi):[a-zA-Z][\w-]*="[^"]*"', "", inner)
     inner = re.sub(r"\s+(?:inkscape|sodipodi):[a-zA-Z][\w-]*='[^']*'", "", inner)
     return inner.strip()
+
+
+#: An ``id="…"`` declaration.  Empty values are skipped: they are already
+#: invalid, and prefixing one would invent an id that nothing refers to.
+_ID_DECL_RE = re.compile(r'\bid="([^"]+)"')
+
+#: A same-document reference: ``url(#name)``, ``href="#name"`` or
+#: ``xlink:href="#name"``.
+_ID_REF_RE = re.compile(r'url\(\s*#([^)\s]+)\s*\)|(?:xlink:)?href="#([^"]+)"')
+
+
+def scope_pattern_ids(inner: str, scope: str) -> str:
+    """
+    Prefix every id a tile declares with *scope*, and repoint the
+    references that resolve to it.
+
+    A tile's ids are authored as if it were its own document, but
+    :func:`extract_pattern_inner` inlines its content into a shared
+    ``<defs>``, so two tiles that use the same id collide.  The 112
+    EMF-derived ``stars*`` tiles all carry ``defs2``, ``layer1``,
+    ``base``, ``grid8``, ``metadata5`` and the empty hatch-base pattern
+    ``EMFhbasepattern``, so a sheet showing 24 of them emits 24 copies of
+    each.
+
+    Today that is only invalid markup and not a wrong render, because no
+    tile in the table references its own ids -- the colliding ones are
+    inert leftovers.  The moment one does, though, a second copy would
+    silently resolve to the first tile's element and paint the wrong
+    thing with nothing to diagnose.  Scoping closes that off up front
+    rather than after someone debugs it.
+
+    Only references whose target is declared in this same tile are
+    rewritten, so a reference out to the containing document (none ship
+    today) still resolves.
+    """
+    local = set(_ID_DECL_RE.findall(inner))
+    if not local:
+        return inner
+
+    def _declaration(m: re.Match[str]) -> str:
+        return f'id="{scope}-{m.group(1)}"'
+
+    def _reference(m: re.Match[str]) -> str:
+        name = m.group(1) if m.group(1) is not None else m.group(2)
+        if name not in local:
+            return m.group(0)
+        if m.group(1) is not None:
+            return f"url(#{scope}-{name})"
+        # Keep whichever spelling the source used (href / xlink:href).
+        return m.group(0).replace(f"#{name}", f"#{scope}-{name}", 1)
+
+    return _ID_DECL_RE.sub(_declaration, _ID_REF_RE.sub(_reference, inner))
 
 
 #: A ``fill=`` / ``stroke=`` presentation attribute and its value.
@@ -248,9 +302,16 @@ def pattern_def_xml(
     and so wants overriding, whereas an unset ``stroke`` defaults to
     ``none``, and setting it would outline shapes that were never
     stroked.
+
+    The tile's own ids are scoped to *pat_id* first, so two tiles that
+    were authored with the same id do not collide once both are inlined
+    into one ``<defs>``.
     """
     tile_w, tile_h = parse_svg_tile_size(raw_svg)
     inner = extract_pattern_inner(colorize_pattern_svg(raw_svg, color))
+    # The def id is unique per (pattern, color), so it is the natural scope
+    # for the tile's own ids once they land in a shared <defs>.
+    inner = scope_pattern_ids(inner, pat_id)
 
     scale = normalize_tile_scale(tile_w, tile_h, target_size, extra_scale)
     wrapper: list[str] = []
