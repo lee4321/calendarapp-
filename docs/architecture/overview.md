@@ -70,6 +70,7 @@ Key facts:
   header/footer/watermark chrome, the overflow table, and all draw
   primitives live on `BaseSVGRenderer`; visualizer renderers override
   `_render_content()`.
-- **Guard rails.** `tools/refcorpus.sh check` diffs 34 reference SVGs
-  (9 visualizers × 3 themes) byte-for-byte modulo `<desc>`; the test suite
-  (~580 tests) runs in under 10 s.
+- **Guard rails.** `tools/refcorpus.sh check` diffs 28 reference run
+  folders (9 visualizers × 3 themes, plus text-mini) — 889 files, page SVGs
+  and their details documents, CSVs and icons — byte-for-byte modulo
+  `<desc>`; the test suite (~1,600 tests) runs in under 20 s.
