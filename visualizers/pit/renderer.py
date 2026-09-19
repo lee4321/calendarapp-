@@ -855,7 +855,7 @@ class PITRenderer(BaseSVGRenderer):
                 css_class="ec-callout-box",
             )
             if eff_pattern:
-                pat_id = self._ensure_svg_pattern_def(eff_pattern, eff_label_stroke)
+                pat_id = self._ensure_svg_pattern_def(eff_pattern, eff_label_stroke, config)
                 if pat_id:
                     self.drawing.append(
                         drawsvg.Raw(

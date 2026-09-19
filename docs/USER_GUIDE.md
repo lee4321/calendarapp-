@@ -279,6 +279,7 @@ table by hand.
 | `--tick-label-format` | `FMT` | `pit` | Arrow date format for tick labels (e.g. 'MMM D'). For week/interval units the timeband label is used when omitted. |  |
 | `--tick-length` | `POINTS` | `pit` | Half-length of each axis tick mark, per side (default: 5.0). |  |
 | `--tick-unit` |  | `pit` | Axis tick granularity (timeband unit). Default: month. | choices `month, week, fiscal_quarter, fiscal_period, interval, date, year` |
+| `--tile-size`, `-ts` | `PTS` | `patternsheet` | Largest tile dimension after auto-normalization, in points (default: 18); 0 previews tiles at native size | default `18.0` |
 | `--today-date` | `YYYYMMDD` | `pit` | Override the today-line position. Lets a forward-dated presentation be prepared with the 'correct' today indicator. |  |
 | `--today-label` | `TEXT` | `pit` | Today-line label text (default: "today"; "" suppresses). |  |
 | `--today-line` |  | `pit` | Draw the today line (default: on). |  |
@@ -564,7 +565,7 @@ The two forms paginate differently:
 
 ### `patternsheet`
 
-No positional arguments. Use `--filter` to narrow the rendered grid by pattern name and `--color` to set the tile fill (default `#333333`). Run `ecalendar.py patterns` to discover pattern names.
+No positional arguments. Use `--filter` to narrow the rendered grid by pattern name and `--color` to set the tile fill (default `#333333`). Use `--tile-size` to preview a different auto-normalized tile size (default `18` points; `0` shows tiles at their native size). Run `ecalendar.py patterns` to discover pattern names.
 
 ### `iconsheet`
 
@@ -1718,6 +1719,8 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `day_name_font_color` | `weekly.day_names.font_color` | `str` | `'grey'` | font color |
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
+| `hash_pattern_target_size` | `weekly.day_box.hash_pattern_target_size` | `float` | `18.0` | Largest tile dimension after auto-normalization, in points. Tiles bigger than this are scaled down to it; smaller tiles are left alone. `0` tiles every pattern at its native size. |
+| `hash_pattern_scale` | `weekly.day_box.hash_pattern_scale` | `float` | `1.0` | Extra multiplier applied on top of the normalized tile size, for a finer (`< 1`) or coarser (`> 1`) grain. |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
 | `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |

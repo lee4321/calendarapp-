@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.14.1"
+__version__ = "26.09.19.0"
 
 import logging
 import sys
@@ -322,7 +322,18 @@ def run(argv: list[str] | None = None) -> int:
         print('  Use in themes:  day_box.hash_pattern: "<name>"')
         print('  Use in rules:   hash_rules: [{pattern: "<name>", when: {...}}]')
         print()
-        from renderers.svg_patterns import parse_svg_tile_size
+        from renderers.svg_patterns import (
+            DEFAULT_PATTERN_TARGET_SIZE,
+            normalize_tile_scale,
+            parse_svg_tile_size,
+        )
+
+        # This command predates config assembly, so it reports the shipped
+        # default rather than a theme's override.
+        target = DEFAULT_PATTERN_TARGET_SIZE
+        print(f"  Sizes are the native tile; renders normalize them to <= {target:g} pt.")
+        print("  Tune with theme day_box.hash_pattern_target_size / .hash_pattern_scale.")
+        print()
 
         col_width = max(len(n) for n in names) + 2
         cols = 3
@@ -331,8 +342,11 @@ def run(argv: list[str] | None = None) -> int:
             parts = []
             for n in row_names:
                 tw, th = parse_svg_tile_size(all_patterns[n])
+                scale = normalize_tile_scale(tw, th, target)
                 tile = f"({int(tw)}x{int(th)})"
-                parts.append(f"{n:<{col_width}}{tile:<12}")
+                if scale != 1.0:
+                    tile += f" ->{tw * scale:.0f}x{th * scale:.0f}"
+                parts.append(f"{n:<{col_width}}{tile:<22}")
             print("  " + "  ".join(parts))
         return 0
 
@@ -402,7 +416,13 @@ def run(argv: list[str] | None = None) -> int:
             return 1
         out_path = Path(args.outputfile) if args.outputfile else Path("output") / "patternsheet.svg"
         sheet_title = "Patterns" if not args.filter else f"Patterns: {args.filter}"
-        _generate_patternsheet_svg(items, out_path, color=args.color, title=sheet_title)
+        _generate_patternsheet_svg(
+            items,
+            out_path,
+            color=args.color,
+            title=sheet_title,
+            target_size=args.tile_size,
+        )
         if not args.quiet:
             print(out_path)
         return 0
