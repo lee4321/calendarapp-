@@ -476,10 +476,17 @@ class TestThemeEngineColorMaps:
         assert config.theme_fiscal_period_colors["02"] == "blue"
         assert config.theme_fiscal_period_colors["13"] == "green"
 
-    def test_resource_group_colors_applied(self):
+    def test_resource_group_colors_are_style_rules(self):
+        """A built-in theme colors resource groups with style_rules, which
+        every visualizer reads."""
+        from shared.data_models import Event
+        from shared.rule_engine import StyleEngine
+
         config = self._load_builtin("corporate")
-        assert config.theme_resource_group_colors is not None
-        assert config.theme_resource_group_colors["a"] == "midnightblue"
+        assert config.theme is not None
+        engine = StyleEngine(config.theme.sections["style_rules"])
+        event = Event(task_name="T", start="20260105", end="20260105", resource_group="A")
+        assert engine.evaluate_event(event).fill_color == "midnightblue"
 
     def test_holiday_colors_applied(self):
         config = self._load_builtin("dark")
@@ -1495,6 +1502,30 @@ class TestElementCatalogBindings:
             f.flush()
             engine.load(f.name)
         with pytest.raises(ThemeError, match=r"weekly\.overflow is deprecated"):
+            engine.apply(CalendarConfig())
+
+    @pytest.mark.parametrize(
+        ("section", "body", "message"),
+        [
+            ("colors", {"resource_groups": {"a": "red"}}, r"colors\.resource_groups is retired"),
+            (
+                "compact_plan",
+                {"color_rules": [{"select": {"priority": 1}, "color": "red"}]},
+                r"compact_plan\.color_rules is retired",
+            ),
+        ],
+    )
+    def test_retired_event_color_maps_raise(self, section, body, message):
+        """Event colors come from style_rules in every visualizer; the
+        per-visualizer maps must not be silently ignored."""
+        theme = self._minimal_theme()
+        theme[section] = {**(theme.get(section) or {}), **body}
+        engine = ThemeEngine()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(theme, f)
+            f.flush()
+            engine.load(f.name)
+        with pytest.raises(ThemeError, match=message):
             engine.apply(CalendarConfig())
 
     def test_top_level_overflow_section_sets_the_icon(self):

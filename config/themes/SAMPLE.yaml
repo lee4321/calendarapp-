@@ -95,11 +95,6 @@ colors:
     opacity: 0.25
   company_holiday:
     opacity: 0.25
-  resource_groups:
-    engineering: steelblue
-    design: mediumpurple
-    qa: tomato
-    ops: goldenrod
 weekly:
   week_numbers:
     label_format: W{num:02d}
@@ -341,6 +336,40 @@ time_bands:
     label: Date Range
     label_format: '{start} – {end}'
 style_rules:
+  # Event colors by resource group.  An event's color comes from style_rules
+  # in every visualizer; the theme's later rules still win over these.
+  - name: resource group engineering
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: engineering
+    style:
+      fill: steelblue
+  - name: resource group design
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: design
+    style:
+      fill: mediumpurple
+  - name: resource group qa
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: qa
+    style:
+      fill: tomato
+  - name: resource group ops
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: ops
+    style:
+      fill: goldenrod
   - name: define text:heading
     define: text
     as: heading

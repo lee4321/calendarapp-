@@ -342,12 +342,19 @@ def _value_matches(want: Any, have: Any, *, key: str) -> bool:
     # List-valued selector — substring match on string contexts, exact-match
     # on others.  Case-insensitive for strings.
     if isinstance(want, list):
-        return any(_scalar_matches(item, have) for item in want)
+        return any(_scalar_matches(item, have, key=key) for item in want)
 
-    return _scalar_matches(want, have)
+    return _scalar_matches(want, have, key=key)
 
 
-def _scalar_matches(want: Any, have: Any) -> bool:
+# Selector keys matched whole, as shared.rule_engine matches them: a
+# resource group of "a" is not every group with an "a" in its name.
+_EXACT_KEYS: frozenset[str] = frozenset({"resource_group"})
+
+
+def _scalar_matches(want: Any, have: Any, *, key: str = "") -> bool:
+    if key in _EXACT_KEYS and isinstance(want, str) and isinstance(have, str):
+        return want.strip().lower() == have.strip().lower()
     if isinstance(want, str) and isinstance(have, str):
         return want.lower() in have.lower()
     return want == have

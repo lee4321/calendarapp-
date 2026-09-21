@@ -57,6 +57,9 @@ Transformations performed
         rules with apply_to: text:<role> using the role-to-target table.
  12.  Section-purpose comments per design §11.5 are emitted at the top of every
         top-level section.
+ 13.  colors.resource_groups and compact_plan.color_rules → style_rules on
+        [box:event, box:duration] with style.fill, ahead of the theme's own
+        rules.  Event colors come from style_rules in every visualizer now.
 
 The converter is conservative: every diagnostic it emits goes to stderr and
 prefixes lines with "warn:" or "drop:" so authors can grep for them.
@@ -670,6 +673,60 @@ def _flatten_text_subbag(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+_EVENT_COLOR_TARGETS = ["box:event", "box:duration"]
+
+
+def _convert_event_color_maps(src: dict[str, Any], *, fname: str = "") -> list[dict[str, Any]]:
+    """``colors.resource_groups`` and ``compact_plan.color_rules`` as style_rules.
+
+    Both colored events outside style_rules — the first in weekly and mini
+    only, the second in compactplan only.  style_rules color every
+    visualizer.  A resource_groups entry becomes a rule selecting its group.
+    color_rules matched first-wins and style_rules layer last-wins, so they
+    are emitted in reverse to keep the same winner, after the resource
+    groups so a specific condition beats a plain group color.
+    """
+    from shared.rule_engine import _EVENT_CRITERIA_KEYS
+
+    rules: list[dict[str, Any]] = []
+    colors = src.get("colors")
+    groups = colors.get("resource_groups") if isinstance(colors, dict) else None
+    if isinstance(groups, dict):
+        for group, color in groups.items():
+            if not color:
+                _drop(f"colors.resource_groups.{group}: no color", fname=fname)
+                continue
+            rules.append(
+                {
+                    "name": f"resource group {group}",
+                    "apply_to": list(_EVENT_COLOR_TARGETS),
+                    "select": {"resource_group": str(group)},
+                    "style": {"fill": color},
+                }
+            )
+    compact = src.get("compact_plan")
+    color_rules = compact.get("color_rules") if isinstance(compact, dict) else None
+    converted: list[dict[str, Any]] = []
+    for index, raw in enumerate(color_rules if isinstance(color_rules, list) else []):
+        label = f"compact_plan.color_rules[{index}]"
+        if not isinstance(raw, dict) or not raw.get("color"):
+            _drop(f"{label}: not a rule with a color", fname=fname)
+            continue
+        select = raw.get("select") or {}
+        unknown = sorted(set(select) - _EVENT_CRITERIA_KEYS) if isinstance(select, dict) else ["<not a mapping>"]
+        if unknown:
+            _drop(f"{label}: unknown select criteria {', '.join(unknown)}", fname=fname)
+            continue
+        rule: dict[str, Any] = {"name": str(raw.get("name") or f"color rule {index}")}
+        rule["apply_to"] = list(_EVENT_COLOR_TARGETS)
+        if select:
+            rule["select"] = dict(select)
+        rule["style"] = {"fill": raw["color"]}
+        converted.append(rule)
+    rules.extend(reversed(converted))
+    return rules
+
+
 def _convert_style_rules(rules: list[Any]) -> list[dict[str, Any]]:
     """Walk existing style_rules: retarget, rename props, flatten text sub-bag."""
     converted: list[dict[str, Any]] = []
@@ -1054,7 +1111,17 @@ def convert_theme(src: dict[str, Any], *, fname: str = "") -> OrderedDict:
     if catalog_map:
         out["time_bands"] = catalog_map
 
-    # 11. Existing style_rules (retarget, rename, flatten text sub-bag)
+    # 11. Retired event-color maps, then the existing style_rules (retarget,
+    #     rename, flatten text sub-bag) so the theme's own rules win.
+    style_rules.extend(_convert_event_color_maps(src, fname=fname))
+    colors_out = out.get("colors")
+    if isinstance(colors_out, dict):
+        colors_out.pop("resource_groups", None)
+        if not colors_out:
+            del out["colors"]
+    compact_out = out.get("compact_plan")
+    if isinstance(compact_out, dict):
+        compact_out.pop("color_rules", None)
     style_rules.extend(_convert_style_rules(src.get("style_rules") or []))
 
     # 12. swimlane_rules -> apply_to: lane rules

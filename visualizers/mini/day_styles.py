@@ -320,7 +320,7 @@ class DayStyleResolver:
 
     def _apply_events(self, style: DayStyle, events: list[dict]) -> None:
         """Apply event-driven styling."""
-        from config.config import Resource_Group_colors
+        engine = StyleEngine(_mini_style_rules(self._config))
 
         for event in events:
             # Milestones get circled
@@ -338,12 +338,11 @@ class DayStyleResolver:
                 # day, and two milestones no longer displace each other.
                 style.add_icon(event.get("Icon"), ICON_RANK_MILESTONE, event=event)
 
-            # Resource group coloring
-            rg = (event.get("Resource_Group") or "").upper()
-            if rg:
-                rg_colors = self._config.theme_resource_group_colors or Resource_Group_colors
-                if rg in rg_colors:
-                    style.text_color = rg_colors[rg]
+            # The event's color from style_rules, as every view assigns it,
+            # colors the day number.  A day_number text rule still wins.
+            fill = engine.evaluate_event(self._dict_to_event(event)).fill_color
+            if fill:
+                style.text_color = fill
 
             # Icon from a non-milestone event. Every event that carries one
             # gets a corner now — a second event no longer overwrites the

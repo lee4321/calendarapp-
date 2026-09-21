@@ -810,7 +810,7 @@ class PITRenderer(BaseSVGRenderer):
             # label box instead (see further below).
             spec = resolve_marker(ev)
             base_color = ms_color_default if ev.milestone else dot_color_default
-            color = ev.color or base_color
+            color = sr.fill_color or ev.color or base_color
             m_size = marker_size if ev.milestone else dot_size
             draw_marker(
                 self._drawing,
@@ -823,7 +823,7 @@ class PITRenderer(BaseSVGRenderer):
             note = self._details_note(ev)
             if note is not None:
                 note.assigned_color = color
-                note.color_source = "event color" if ev.color else "theme"
+                note.color_source = "style rule" if sr.fill_color else ("event color" if ev.color else "theme")
             with self._event_scope(ev):
                 self._note_mark("diamond" if ev.milestone else "dot", color, "milestone" if ev.milestone else "event")
 
