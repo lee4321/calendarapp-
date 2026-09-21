@@ -11,8 +11,9 @@ application in ``ecalendar.run()``.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -97,16 +98,21 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
     Every string field in config that starts with ``"palette:"`` is passed to
     _resolve_single_palette_ref() and replaced with the resolved hex colour.
 
+    Phase 3 — References inside the parsed theme
+    ─────────────────────────────────────────────
+    ``style_rules`` styles (``define:`` tokens and ``apply_to`` rules) on
+    ``config.theme`` and the ThemeStyles built from them are resolved by
+    _resolve_theme_palette_refs().
+
     Called by:
         run() for both the excelblockplan path and all calendar-visualizer paths,
         after theme application is complete.
 
     Calls:
         db.sample_palette_n(), db.get_palette(),
-        _resolve_single_palette_ref(), dataclasses.fields().
+        _resolve_single_palette_ref(), _resolve_theme_palette_refs(),
+        dataclasses.fields().
     """
-    import dataclasses
-
     if config.theme_month_palette:
         colors = db.sample_palette_n(config.theme_month_palette, 12)
         if colors:
@@ -155,3 +161,80 @@ def _resolve_palette_overrides(config: CalendarConfig, db: CalendarDB) -> None:
         val = getattr(config, f.name, None)
         if isinstance(val, str) and val.startswith("palette:"):
             setattr(config, f.name, _resolve_single_palette_ref(val, db))
+
+    _resolve_theme_palette_refs(config, db)
+
+
+def _resolve_refs_in(value: Any, db: CalendarDB) -> Any:
+    """
+    Return *value* with every ``palette:NAME:INDEX`` string resolved.
+
+    Walks strings, lists, tuples, dicts and dataclass instances.  Containers
+    holding a reference are rebuilt, never edited in place, and anything
+    without one is returned as the same object, so values shared with the
+    cached theme YAML are left untouched.
+    """
+    if isinstance(value, str):
+        return _resolve_single_palette_ref(value, db) if value.startswith("palette:") else value
+    if isinstance(value, dict):
+        items = {k: _resolve_refs_in(v, db) for k, v in value.items()}
+        return items if any(items[k] is not value[k] for k in value) else value
+    if isinstance(value, (list, tuple)):
+        seq = [_resolve_refs_in(v, db) for v in value]
+        if all(a is b for a, b in zip(seq, value, strict=True)):
+            return value
+        return seq if isinstance(value, list) else tuple(seq)
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        changes = {}
+        for f in dataclasses.fields(value):
+            if not f.init:
+                continue
+            old = getattr(value, f.name)
+            new = _resolve_refs_in(old, db)
+            if new is not old:
+                changes[f.name] = new
+        return dataclasses.replace(value, **changes) if changes else value
+    return value
+
+
+def _resolve_theme_palette_refs(config: CalendarConfig, db: CalendarDB) -> None:
+    """
+    Resolve ``palette:NAME:INDEX`` references in the parsed theme's styles.
+
+    ``config.theme`` (UnifiedTheme) keeps the theme's ``style_rules`` as the
+    YAML wrote them — both the raw list in ``sections["style_rules"]`` (what
+    each visualizer feeds its StyleEngine) and the parsed ``rules`` behind
+    the token resolver — so token styles such as ``color: palette:Accent:4``
+    and rule styles such as ``fill: palette:Accent:0`` (or a list of them)
+    would otherwise reach the SVG verbatim.  Both are replaced with resolved
+    copies, as is the legacy ``config.theme_style_rules`` fallback; the cached
+    YAML they came from is not modified.  ``config.theme_styles``, built from
+    the same rules during theme application, is resolved likewise and its
+    CSS regenerated.
+    """
+    from config.unified_theme import _build_token_index
+
+    theme = getattr(config, "theme", None)
+    if theme is not None:
+        raw_rules = theme.sections.get("style_rules")
+        resolved_raw = _resolve_refs_in(raw_rules, db)
+        if resolved_raw is not raw_rules:
+            # Rebind a copy: ``sections`` is the cached YAML mapping itself.
+            theme.sections = {**theme.sections, "style_rules": resolved_raw}
+        rules = [_resolve_refs_in(rule, db) for rule in theme.rules]
+        if any(new is not old for new, old in zip(rules, theme.rules, strict=True)):
+            theme.rules = rules
+            theme._token_index = _build_token_index(rules)
+
+    legacy_rules = getattr(config, "theme_style_rules", None)
+    if legacy_rules:
+        config.theme_style_rules = _resolve_refs_in(legacy_rules, db)
+
+    theme_styles = getattr(config, "theme_styles", None)
+    if theme_styles is not None:
+        resolved = _resolve_refs_in(theme_styles, db)
+        if resolved is not theme_styles:
+            from renderers.css_generator import generate_css
+
+            resolved.css = generate_css(resolved)
+            config.theme_styles = resolved
