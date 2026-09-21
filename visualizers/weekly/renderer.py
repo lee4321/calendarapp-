@@ -18,7 +18,6 @@ from config.config import (
     CompanyHolidayColor,
     FederalHolidayAlpha,
     FederalHolidayColor,
-    Resource_Group_colors,
     get_font_path,
     hashlinecolor,
     monthcolors,
@@ -1119,18 +1118,19 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         textcolor = tk_en.get("color") or _ts_en.color
         iconcolor = tk_icon_ev.get("color") or _is_ei.color
 
-        _rg_colors = config.theme_resource_group_colors or Resource_Group_colors
-        group = (t.resource_group or "").lower()
-        if group and group in _rg_colors:
-            textcolor = _rg_colors[group]
+        # A style rule's fill is the event's color here as in every other
+        # view: the name and icon take it.  A text/icon override in the
+        # same rules is more specific and still wins below.
+        ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
+        if ev_style.fill_color:
+            textcolor = ev_style.fill_color
             iconcolor = textcolor
             note = self._details_note(t)
             if note is not None:
                 note.assigned_color = textcolor
-                note.color_source = "resource group"
-            self._note_color(textcolor, t.resource_group or group, "resource group")
+                note.color_source = "style rule"
+            self._note_color(textcolor, ev_style.fill_source or "style rule", "style rule")
 
-        ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
         name_font, name_size, name_color, _ = ev_style.text_override(
             "event_name",
             font=en_font,

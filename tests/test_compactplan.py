@@ -589,7 +589,7 @@ def test_rows_rank_by_group_assignment_then_start_date(tmp_path):
     assert _names_by_color_rank(renderer) == ["A early", "A late", "B early", "Launch"]
 
 
-def test_rows_rank_color_rule_matches_first_in_rule_order(tmp_path):
+def test_rows_rank_style_rule_colors_in_rule_order(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
         [
@@ -598,13 +598,13 @@ def test_rows_rank_color_rule_matches_first_in_rule_order(tmp_path):
             _dur("Urgent", "20260323", "20260327", group="Beta") | {"Priority": 5},
             _dur("Urgent early", "20260316", "20260320", group="Alpha") | {"Priority": 5},
         ],
-        compactplan_color_rules=[
-            {"name": "urgent", "select": {"priority": 5}, "color": "#aa0000"},
-            {"name": "beta", "select": {"resource_group": "Beta"}, "color": "#0000aa"},
+        theme_style_rules=[
+            _fill_rule({"resource_group": "Beta"}, "#0000aa", name="beta"),
+            _fill_rule({"priority": 5}, "#aa0000", name="urgent"),
         ],
     )
 
-    assert _names_by_color_rank(renderer) == ["Urgent early", "Urgent", "Blue team", "Plain"]
+    assert _names_by_color_rank(renderer) == ["Blue team", "Urgent early", "Urgent", "Plain"]
 
 
 def test_rows_cluster_by_the_color_each_bar_was_drawn_in(tmp_path):
@@ -656,15 +656,17 @@ def test_a_bar_records_the_palette_color_of_its_group(tmp_path):
     assert any(kw.get("stroke") == "#0a0b0c" for kw in renderer.line_kwargs)
 
 
-def test_a_color_rule_is_recorded_as_the_bars_source(tmp_path):
+def test_a_style_rule_is_recorded_as_the_bars_source(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
         [_dur("Urgent", "20260309", "20260320", group="Dev") | {"Priority": 5}],
-        compactplan_color_rules=[{"select": {"priority": 5}, "color": "#aa0000"}],
+        theme_style_rules=[_fill_rule({"priority": 5}, "#aa0000", name="urgent")],
     )
 
     note = _notes(renderer)["Urgent"]
-    assert (note.assigned_color, note.color_source) == ("#aa0000", "color rule")
+    assert (note.assigned_color, note.color_source) == ("#aa0000", "style rule")
+    # The color key names the rule that hands the color out.
+    assert ("#aa0000", "urgent") in {(c.color, c.label) for c in renderer.details_record.colors}
 
 
 def test_a_milestone_records_its_flag_in_its_color(tmp_path):
@@ -899,8 +901,15 @@ def test_show_every_merges_date_cells_within_a_week(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Theme color rules (compact_plan.color_rules)
+# Bar colors from style_rules (the rules every visualizer colors events by)
 # ---------------------------------------------------------------------------
+
+
+def _fill_rule(select, color, name=None):
+    rule = {"name": name or f"fill {color}", "apply_to": ["box:event", "box:duration"], "style": {"fill": color}}
+    if select:
+        rule["select"] = select
+    return rule
 
 
 def _bar_strokes(renderer):
@@ -908,11 +917,11 @@ def _bar_strokes(renderer):
 
 
 def _render_colored(tmp_path, events, rules):
-    renderer, _, _ = _render(tmp_path, events, compactplan_color_rules=rules)
+    renderer, _, _ = _render(tmp_path, events, theme_style_rules=rules)
     return renderer
 
 
-def test_without_color_rules_bars_take_their_group_palette_color(tmp_path):
+def test_without_fill_rules_bars_take_their_group_palette_color(tmp_path):
     renderer, _, _ = _render(
         tmp_path,
         [_dur("Build", "20260309", "20260320", group="Dev")],
@@ -922,40 +931,38 @@ def test_without_color_rules_bars_take_their_group_palette_color(tmp_path):
     assert _bar_strokes(renderer) == {"#0a0b0c"}
 
 
-def test_a_matching_color_rule_colors_the_bar(tmp_path):
+def test_a_matching_fill_rule_colors_the_bar(tmp_path):
     renderer = _render_colored(
         tmp_path,
         [
             _dur("Urgent", "20260309", "20260320", group="Dev") | {"Priority": 5},
             _dur("Routine", "20260309", "20260320", group="Dev"),
         ],
-        [{"select": {"priority_min": 4}, "color": "#aa0000"}],
+        [_fill_rule({"priority_min": 4}, "#aa0000")],
     )
 
     palette_color = renderer._config.compactplan_palette[0]
     assert _bar_strokes(renderer) == {"#aa0000", palette_color}
 
 
-def test_the_first_matching_rule_wins(tmp_path):
+def test_the_last_matching_rule_wins(tmp_path):
     renderer = _render_colored(
         tmp_path,
         [_dur("Urgent", "20260309", "20260320", group="Dev") | {"Priority": 5}],
         [
-            {"select": {"priority": 5}, "color": "#aa0000"},
-            {"select": {"resource_group": "Dev"}, "color": "#0000aa"},
+            _fill_rule({"resource_group": "Dev"}, "#0000aa"),
+            _fill_rule({"priority": 5}, "#aa0000"),
         ],
     )
 
     assert _bar_strokes(renderer) == {"#aa0000"}
 
 
-def test_a_color_rule_beats_the_events_own_color(tmp_path):
-    """The event's Color is part of the default assignment the theme's
-    conditions replace."""
+def test_a_fill_rule_beats_the_events_own_color(tmp_path):
     renderer = _render_colored(
         tmp_path,
         [_dur("Build", "20260309", "20260320", group="Dev", color="#123456")],
-        [{"select": {"resource_group": "Dev"}, "color": "#aa0000"}],
+        [_fill_rule({"resource_group": "Dev"}, "#aa0000")],
     )
 
     assert _bar_strokes(renderer) == {"#aa0000"}
@@ -965,7 +972,7 @@ def test_an_unmatched_bar_keeps_its_own_color(tmp_path):
     renderer = _render_colored(
         tmp_path,
         [_dur("Build", "20260309", "20260320", group="Dev", color="#123456")],
-        [{"select": {"resource_group": "Ops"}, "color": "#aa0000"}],
+        [_fill_rule({"resource_group": "Ops"}, "#aa0000")],
     )
 
     assert _bar_strokes(renderer) == {"#123456"}
@@ -978,89 +985,10 @@ def test_a_rule_with_no_select_colors_every_bar(tmp_path):
             _dur("One", "20260309", "20260320", group="A"),
             _dur("Two", "20260309", "20260320", group="B"),
         ],
-        [{"name": "everything", "color": "#777777"}],
+        [_fill_rule(None, "#777777", name="everything")],
     )
 
     assert _bar_strokes(renderer) == {"#777777"}
-
-
-def test_color_rules_load_from_a_theme(tmp_path):
-    from config.config import CalendarConfig
-    from config.theme_engine import ThemeEngine
-
-    theme = tmp_path / "rules.yaml"
-    theme.write_text(
-        "compact_plan:\n  color_rules:\n    - name: urgent\n      select: {priority_min: 4}\n      color: firebrick\n"
-    )
-    config = CalendarConfig()
-    engine = ThemeEngine()
-    engine.load(str(theme))
-    engine.apply(config)
-
-    assert config.compactplan_color_rules == [{"name": "urgent", "select": {"priority_min": 4}, "color": "firebrick"}]
-
-
-def test_a_rule_color_may_reference_a_palette():
-    from config.config import CalendarConfig
-    from config.palette_resolver import _resolve_palette_overrides
-
-    class _PaletteDB(FakeCalendarDB):
-        def get_palette(self, name):
-            return ["#111111", "#222222", "#333333"] if name == "Greys" else None
-
-        def sample_palette_n(self, name, n):
-            return None
-
-    rules = [{"select": {}, "color": "palette:Greys:1"}, {"select": {}, "color": "red"}]
-    config = CalendarConfig()
-    config.compactplan_color_rules = rules
-    _resolve_palette_overrides(config, _PaletteDB())
-
-    assert [r["color"] for r in config.compactplan_color_rules] == ["#222222", "red"]
-    assert rules[0]["color"] == "palette:Greys:1"  # the theme's own list is untouched
-
-
-class TestColorRuleEngine:
-    def _event(self, **fields):
-        from shared.data_models import Event
-
-        return Event.from_dict(_dur("T", "20260309", "20260320") | fields)
-
-    def test_returns_the_rule_index_and_color(self):
-        from shared.rule_engine import ColorRuleEngine
-
-        engine = ColorRuleEngine(
-            [
-                {"select": {"priority": 9}, "color": "red"},
-                {"select": {"resource_group": "dev"}, "color": "blue"},
-            ]
-        )
-
-        assert engine.assign(self._event(Resource_Group="Dev")) == (1, "blue")
-        assert engine.assign(self._event(Resource_Group="Ops")) is None
-
-    def test_an_unknown_criterion_skips_the_rule_rather_than_matching_all(self, caplog):
-        from shared.rule_engine import ColorRuleEngine
-
-        engine = ColorRuleEngine(
-            [
-                {"name": "typo", "select": {"resouce_group": "Dev"}, "color": "red"},
-                {"select": {"resource_group": "Dev"}, "color": "blue"},
-            ]
-        )
-
-        assert engine.assign(self._event(Resource_Group="Dev")) == (1, "blue")
-        assert "resouce_group" in caplog.text
-
-    def test_a_rule_without_a_color_is_skipped(self, caplog):
-        from shared.rule_engine import ColorRuleEngine
-
-        # A malformed rule list, on purpose.
-        engine = ColorRuleEngine([{"select": {}}, "not a rule"])  # ty: ignore[invalid-argument-type]
-
-        assert not engine
-        assert engine.assign(self._event()) is None
-        assert "no color" in caplog.text
 
 
 # ---------------------------------------------------------------------------

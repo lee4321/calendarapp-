@@ -390,29 +390,16 @@ In blockplan, items are first assigned to configured lanes, then rendered separa
 In compactplan, durations and milestones are rendered relative to a horizontal dashed axis spanning the full content width:
 
 - Duration lines are placed using a greedy row assignment that alternates above and below the axis. Row 0 is immediately above the axis, row 1 is immediately below, row 2 is further above, row 3 further below, and so on. Durations are sorted by start date before placement; the first row with no x-overlap is chosen.
-- **Duration line colors** are assigned by the theme's conditions, `compact_plan.color_rules` — an ordered list, first match wins:
-
-  ```yaml
-  compact_plan:
-    color_rules:
-      - name: critical
-        select: {priority_min: 4}
-        color: firebrick
-      - name: vendor work
-        select: {resource_names: [acme]}
-        color: palette:Set1:1
-  ```
-
-  `select` takes the event criteria `style_rules` use — `resource_group`, `resource_names`, `task_name`, `notes`, `wbs`, `priority` / `priority_min` / `priority_max`, `percent_complete`, `rollup`, `color`, `icon`; a rule with no `select` matches every bar, so a final catch-all replaces the default entirely. `color` is any CSS color or a `palette:NAME:INDEX` reference. A rule with no `color`, or whose `select` names a criterion that doesn't exist, is skipped with a warning rather than guessed at.
-  - A bar no rule matches keeps the **default assignment, by resource group**: the event's own `Color` if it has one, else its group's color from `compact_plan.palette` (or the database palette named by `compact_plan.palette_name`). Groups take palette slots in sorted name order, wrapping when there are more groups than colors; ungrouped bars sort first. Every group present keeps its slot even when rules color all its bars, so adding a rule never reshuffles the other groups' colors.
-  - A theme condition beats the event's own `Color` (that `Color` is part of the default it replaces). A `style_rules` entry with `apply_to: duration` and `fill_color` still layers over everything, as it does in every view.
+- **Duration line colors** come from the theme's `style_rules`, the same [event color rules](#event-colors) every view uses: a `box:duration` (or `box:event`) rule whose `style` sets `fill` colors the bars it selects, and when several match, the last one wins.
+  - A bar no rule colors keeps the **default assignment, by resource group**: the event's own `Color` if it has one, else its group's color from `compact_plan.palette` (or the database palette named by `compact_plan.palette_name`). Groups take palette slots in sorted name order, wrapping when there are more groups than colors; ungrouped bars sort first. Every group present keeps its slot even when rules color all its bars, so adding a rule never reshuffles the other groups' colors.
+  - A rule's `fill` beats the event's own `Color`.
 - **Duration start icons**: when `compact_plan.show_duration_icons` is `true` (the default), an icon is drawn at the start (left) end of every duration line. Icons are handed out per duration, in start-date order, by cycling through the named icon list (`compact_plan.duration_icon_list`, default `"darksquare"` — numbered squares). The icon takes a style rule's `icon_color`, else the theme's `icon:duration` color, else the bar color — and whichever it gets is swapped for black or white when it matches the bar color, so the glyph never disappears into its own bar. `compact_plan.duration_icon_height` controls the icon size in points (default `8.0`). Available icon lists are `darksquare`, `squares`, `darkcircles`, `circles`, `squircles`, and `darksquircles`; all are defined in `config/config.py` as `ICON_SETS`.
 - Milestone markers are drawn on the axis at the milestone date: a stem standing up from the axis, topped by a pennant or an icon. Icon priority: a style rule's `icon` → `event.Icon` from the database → `compact_plan.milestone_icon` from the active theme; with none of those, or a name not in the `icons` table, the built-in pennant is drawn. An icon takes the pennant's place at the stem tip, sized to the flag height (capped at one label line), in the milestone's color — the event's `Color`, a style rule's `fill_color`, or the `ec-milestone-marker` color — unless a style rule sets `icon_color`; a theme can halo it with a `box:milestone` rule. If `show_milestone_labels` is enabled, the task name is drawn in italic to the right of the marker. In the details document, the milestone's Key cell carries the same icon or flag.
 - Column header time bands come from `compact_plan.bands`, a list of keys into the shared [`time_bands:` catalog](#time-bands-shared-catalog) (optionally with per-placement overrides, e.g. `- band: week` + `row_height: 30`). Supported units: `week`, `month`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, `dow`, `countdown`, `countup`, `icon`, and `holiday` — one cell per visible day carrying each holiday's own country flag, uncolored, with `nonworkdays_only: true` hiding observances that do not close the office (the same band blockplan and gantt draw). Each band may set its own `row_height` (else `compact_plan.band_row_height`, default `22`; the label size follows the row unless `compact_plan.text.font_size` is set) and `show_every: N` to draw every N segments as one cell labelled by its first — `date`/`dow` cells never merge across a week boundary (`week_start`, default Monday), exactly as in blockplan. Week-unit columns support `{n}` (sequential week number), `{start}` and `{end}` (M/D date strings) format tokens. Alternate-fill columns (`alt_fill_color`) color every other column segment. Each band supports a `text_align` key (`"left"` / `"center"` / `"right"`, default `"left"`) that controls the horizontal alignment of the label within its segment — `"left"` pins the text to the left edge, `"center"` centres it, and `"right"` pins it to the right edge. Text is always shrunk to fit the segment width regardless of alignment.
 - The layout is content-first and always shrunk: the axis is fixed at the vertical centre of the content area, duration rows are placed around it, then the header bands float `compact_plan.header_bottom_y` pts above the topmost row. The SVG viewBox is trimmed to exactly the rendered content — from the top of the header bands to the lowest ink below the axis (the bottom row's bar or the icons riding on it) — producing the smallest possible output.
 - **The key is the details document.** Nothing but the chart is drawn on the chart page. What each bar, flag and symbol means is written to the run's [details document](#the-details-document), which carries everything the key page did:
-  - Each activity's **Key** cell (`marker`) is its bar in miniature: a mark in the exact color it was drawn in, its start icon, and the continuation arrows if it runs off either end. A milestone's is its flag or icon in its marker color. Its **Color** cell names the color, and its **Color Key** row says where it came from: a `color_rules` entry, the resource group's palette slot, the event's own `Color`, or a style rule's `fill_color`.
-  - Sort the Events table with `details.markdown.sort: [color_rank, start_date]` to list rows as the key did: rows of one color together, the colors in the order they are handed out (each `color_rules` entry's in the theme's order, then each resource group's palette color by slot, then any color only events carry), with milestones, which take no color assignment, last.
+  - Each activity's **Key** cell (`marker`) is its bar in miniature: a mark in the exact color it was drawn in, its start icon, and the continuation arrows if it runs off either end. A milestone's is its flag or icon in its marker color. Its **Color** cell names the color, and its **Color Key** row says where it came from: a style rule (listed by the rule's `name`), the resource group's palette slot, or the event's own `Color`.
+  - Sort the Events table with `details.markdown.sort: [color_rank, start_date]` to list rows as the key did: rows of one color together, the colors in the order they are handed out (each style rule's that colored a bar, in the theme's order, then each resource group's palette color by slot, then any color only events carry), with milestones, which take no color assignment, last.
   - The **Icons & Symbols** table explains the continuation arrows (`compact_plan.continuation_before_legend_text`, default `"activity began earlier"`, and `continuation_legend_text`, default `"activity continues"`, each listed only when a bar needs it) and the axis (`compact_plan.legend_axis_text`, default `"timeline"`, listed when `show_axis` and `show_axis_legend` are on).
   - A bar name shortened to fit, or a date left out for want of room, is listed under **Exceptions**.
 - **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line and listed in the details document's Icons & Symbols table. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
@@ -1695,7 +1682,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_mini_nonworkday_fill_color` | `colors.mini_calendar.nonworkday_fill_color` | `str | None` | `None` | Mini non-workday cell fill color override |
 | `theme_month_palette` | `colors.month_palette` | `str | None` | `None` | DB palette name for month colors |
 | `theme_month_colors` | `colors.months` | `dict[str, str] | None` | `None` | Month number to color map (01-12) |
-| `theme_resource_group_colors` | `colors.resource_groups` | `dict[str, str] | None` | `None` | Resource-group to color map |
 | `watermark_text` | `watermark.text` | `str` | `''` | text |
 | `watermark_opacity` | `watermark.opacity` | `float` | `0.3` | opacity |
 | `watermark_color` | `watermark.color` | `str` | `'white'` | color |
@@ -2008,6 +1994,27 @@ style_rules:
     select: { priority: 1 }
     style: { color: crimson, font: OfficinaSans-Bold }
 ```
+
+#### Event colors
+
+An event's color comes from `style_rules`, in every visualizer. A rule targeting `box:event` and/or `box:duration` whose `style` sets `fill` colors each event it selects: weekly event names and icons, mini / mini-icon / candybar day numbers, compactplan, blockplan, timeline and gantt bars and markers, PIT markers, and ExcelBlockplan cells. When several rules match an event, the last one wins; an event no rule colors keeps its own `Color` or its view's default. A more specific rule still wins where it applies, e.g. a `text:event_name` color for the name alone, or an `icon_color` for the icon.
+
+```yaml
+style_rules:
+  - name: resource group engineering
+    apply_to: [box:event, box:duration]
+    select: { resource_group: engineering }
+    style: { fill: steelblue }
+
+  - name: critical work
+    apply_to: [box:event, box:duration]
+    select: { priority_min: 4 }
+    style: { fill: firebrick }
+```
+
+`resource_group` matches the whole group name, ignoring case. On `box:event` / `box:duration`, `fill` is the event's color rather than a box behind its icon, so only a `stroke` there outlines the icon.
+
+The older per-view color settings are retired: a theme carrying `colors.resource_groups` or `compact_plan.color_rules` is rejected with a pointer here, and `tools/migrate_theme.py` rewrites both as rules like the ones above (`color_rules`, which matched first-wins, are emitted in reverse so the same rule still wins).
 
 #### `apply_to:` — Targets
 

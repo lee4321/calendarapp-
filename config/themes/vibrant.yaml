@@ -103,11 +103,6 @@ colors:
   company_holiday:
     color: limegreen
     opacity: 0.3
-  resource_groups:
-    a: deeppink
-    b: dodgerblue
-    c: chocolate
-    d: mediumseagreen
 weekly:
   week_numbers:
     label_format: W{num:02d}
@@ -530,6 +525,40 @@ layout:
     right: 0
     top: 0
 style_rules:
+  # Event colors by resource group.  An event's color comes from style_rules
+  # in every visualizer; the theme's later rules still win over these.
+  - name: resource group a
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: a
+    style:
+      fill: deeppink
+  - name: resource group b
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: b
+    style:
+      fill: dodgerblue
+  - name: resource group c
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: c
+    style:
+      fill: chocolate
+  - name: resource group d
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: d
+    style:
+      fill: mediumseagreen
   - name: timeline duration-bar fill opacity (ported from timeline.duration_bar_fill_opacity)
     apply_to: line:duration_bar
     select:

@@ -25,7 +25,7 @@ from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
-from shared.rule_engine import ColorRuleEngine, StyleEngine, StyleResult
+from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import (
     BandSegment as _BandSegment,
 )
@@ -350,15 +350,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
         self._style_engine = StyleEngine(_resolve_style_rules(config))
-        self._color_rules = ColorRuleEngine(config.compactplan_color_rules, owner="compact_plan.color_rules")
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]
         self._note_visible_days(day.strftime("%Y%m%d") for day in visible_days)
-        for rule_color in self._color_rules.colors:
-            self._note_color(rule_color, "Color rule", "compact_plan.color_rules")
-        for group, group_color in group_color_map.items():
-            self._note_color(group_color, group or "(no group)", "group palette")
 
         placed = self._place_durations(
             durations,
@@ -370,6 +365,14 @@ class CompactPlanRenderer(BaseSVGRenderer):
             config,
             axis_y,
         )
+        # The color key lists the rule colors a bar took, in rule order, then
+        # the group palette's -- the order the details' color_rank sorts by.
+        used_rules = {p.style.fill_source for p in placed if p.style is not None and p.style.fill_color}
+        for rule_name, rule_color in self._style_engine.event_fills():
+            if rule_name in used_rules:
+                self._note_color(rule_color, rule_name, "style rule")
+        for group, group_color in group_color_map.items():
+            self._note_color(group_color, group or "(no group)", "group palette")
         milestone_lanes = self._place_milestone_labels(milestones, day_x, px_per_day, config, area_x + area_w)
         # Duration rows sit both above and below the axis, and milestone
         # labels ride at the stem tip — so a stem only as tall as the
@@ -798,11 +801,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         note = self._details_note(p.event)
         if note is None:
             return
-        engine = getattr(self, "_color_rules", None)
         if p.style is not None and p.style.fill_color:
             source = "style rule"
-        elif engine and engine.assign(p.event) is not None:
-            source = "color rule"
         elif p.event.color:
             source = "event color"
         else:
@@ -846,17 +846,9 @@ class CompactPlanRenderer(BaseSVGRenderer):
         return {g: palette[i % len(palette)] for i, g in enumerate(groups)}
 
     def _assign_bar_color(self, evt: Event, group_color_map: dict[str, str]) -> str:
-        """A bar's color.
-
-        The theme's ``compact_plan.color_rules`` are tried in order and the
-        first match colors the bar.  A bar none matches gets the default
-        assignment: its own ``Color``, else its resource group's palette
-        color.  (A style rule's ``fill_color`` still layers over either.)
+        """A bar's default color: its own ``Color``, else its resource
+        group's palette color.  A style rule's fill layers over either.
         """
-        engine = getattr(self, "_color_rules", None)
-        matched = engine.assign(evt) if engine else None
-        if matched is not None:
-            return matched[1]
         group = (evt.resource_group or "").strip()
         return evt.color or group_color_map.get(group, "steelblue")
 

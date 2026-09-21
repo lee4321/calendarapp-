@@ -133,3 +133,43 @@ def test_full_theme_completeness_summary() -> None:
         print("  (no gaps — every converted theme satisfies its intended visualizers)")
     print("=== end completeness gap inventory ===\n")
     assert True  # explicit pass — see docstring
+
+
+def test_retired_event_color_maps_become_style_rules() -> None:
+    """colors.resource_groups and compact_plan.color_rules migrate to fill
+    rules every visualizer reads.  color_rules matched first-wins and
+    style_rules layer last-wins, so they come out reversed."""
+    from shared.data_models import Event
+    from shared.rule_engine import StyleEngine
+
+    legacy = {
+        "colors": {"resource_groups": {"dev": "navy"}, "hash_lines": "black"},
+        "compact_plan": {
+            "color_rules": [
+                {"name": "urgent", "select": {"priority": 5}, "color": "firebrick"},
+                {"name": "dev", "select": {"resource_group": "Dev"}, "color": "teal"},
+                {"name": "typo", "select": {"resouce_group": "Dev"}, "color": "pink"},
+            ],
+            "palette": ["gold"],
+        },
+        "style_rules": [
+            {"name": "own", "apply_to": "box:event", "select": {"priority": 9}, "style": {"fill": "black"}},
+        ],
+    }
+    out = _deep_to_dict(convert_theme(legacy))
+
+    assert "resource_groups" not in out["colors"]
+    assert "color_rules" not in out["compact_plan"]
+    fills = [(r["name"], r["style"]["fill"]) for r in out["style_rules"] if "box:event" in str(r.get("apply_to"))]
+    assert fills[:3] == [("resource group dev", "navy"), ("dev", "teal"), ("urgent", "firebrick")]
+    assert fills[-1] == ("own", "black")  # the theme's own rules still come last and win
+
+    engine = StyleEngine(out["style_rules"])
+
+    def color(**fields: Any) -> str | None:
+        return engine.evaluate_event(Event(task_name="T", start="20260105", end="20260105", **fields)).fill_color
+
+    assert color(resource_group="Dev", priority=5) == "firebrick"  # the first color rule still wins
+    assert color(resource_group="Dev") == "teal"
+    assert color(resource_group="Ops") is None
+    assert color(priority=9) == "black"

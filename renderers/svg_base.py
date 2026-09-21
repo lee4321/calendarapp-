@@ -61,6 +61,10 @@ logger = logging.getLogger(__name__)
 
 _NONE_COLORS = {"", "none", "transparent"}
 
+#: Tokens whose style_rules ``fill`` is the event's own color, not an
+#: icon background (see _maybe_draw_icon_halo).
+_EVENT_COLOR_TOKENS = frozenset({"box:event", "box:duration"})
+
 #: Share of its slot's width a band-cell icon may take when the slot is
 #: narrower than the icon's own size (see _draw_cell_icons).  The rest is
 #: clearance, so neighbouring icons never touch.
@@ -1135,7 +1139,9 @@ class BaseSVGRenderer(ABC):
 
         Honours: ``fill``, ``fill_opacity``, ``stroke``, ``stroke_width``,
         ``stroke_opacity``, ``dasharray``, plus a token-level ``padding``
-        override.  Rules whose merged style has neither a drawable fill nor
+        override.  On ``box:event`` / ``box:duration`` a ``fill`` is the
+        event's own color -- every view paints the event in it -- so only
+        the stroke outlines the icon there.  Rules whose merged style has neither a drawable fill nor
         a drawable stroke are treated as no-ops (so the basic.yaml
         placeholder ``box:milestone fill: none, stroke: none`` doesn't
         produce a ghost rect).
@@ -1158,7 +1164,7 @@ class BaseSVGRenderer(ABC):
             merged.update(sty)
         if not merged:
             return
-        fill = merged.get("fill")
+        fill = None if box_token in _EVENT_COLOR_TOKENS else merged.get("fill")
         stroke = merged.get("stroke")
         if not (self._is_drawable_color(fill) or self._is_drawable_color(stroke)):
             return

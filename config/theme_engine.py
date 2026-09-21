@@ -339,7 +339,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "lane_spacing"): "compactplan_lane_spacing",
     ("compact_plan", "palette"): "compactplan_palette",
     ("compact_plan", "palette_name"): "theme_compactplan_palette_name",
-    ("compact_plan", "color_rules"): "compactplan_color_rules",
     ("compact_plan", "milestone_icon"): "compactplan_milestone_icon",
     ("compact_plan", "milestone_flag_width"): "compactplan_milestone_flag_width",
     ("compact_plan", "milestone_flag_height"): "compactplan_milestone_flag_height",
@@ -633,12 +632,11 @@ _RETIRED_PAGE_KEYS: dict[str, frozenset[str]] = {
 }
 
 # `colors:` keys read by ThemeEngine._apply_color_maps().  months /
-# fiscal_periods / resource_groups are free-form maps, read whole.
+# fiscal_periods are free-form maps, read whole.
 _COLOR_KEYS = frozenset(
     {
         "months",
         "fiscal_periods",
-        "resource_groups",
         "hash_lines",
         "group_colors",
         "month_palette",
@@ -1692,9 +1690,6 @@ class ThemeEngine:
         if "hash_lines" in colors:
             config.theme_hash_line_color = colors["hash_lines"]
 
-        if "resource_groups" in colors and isinstance(colors["resource_groups"], dict):
-            config.theme_resource_group_colors = {str(k).lower(): v for k, v in colors["resource_groups"].items()}
-
         if "group_colors" in colors and isinstance(colors["group_colors"], list):
             config.group_colors = colors["group_colors"]
 
@@ -2176,6 +2171,21 @@ class ThemeEngine:
                 f"{', '.join(retired)}: the companion details, key and overflow pages were replaced by "
                 "the run's details document -- configure it under `details:` (markdown, icons, csv), "
                 "or run tools/migrate_theme.py to convert this theme"
+            )
+
+        colors = self._theme_data.get("colors")
+        if isinstance(colors, dict) and "resource_groups" in colors:
+            raise ThemeError(
+                "colors.resource_groups is retired — event colors come from style_rules in every "
+                "visualizer: write `apply_to: [box:event, box:duration]`, `select: {resource_group: <name>}`, "
+                "`style: {fill: <color>}`, or run tools/migrate_theme.py to convert this theme"
+            )
+        compact_plan = self._theme_data.get("compact_plan")
+        if isinstance(compact_plan, dict) and "color_rules" in compact_plan:
+            raise ThemeError(
+                "compact_plan.color_rules is retired — event colors come from style_rules in every "
+                "visualizer: write each rule as `apply_to: [box:event, box:duration]` with its `select:` "
+                "and `style: {fill: <color>}` (later rules win), or run tools/migrate_theme.py to convert this theme"
             )
 
         weekly = self._theme_data.get("weekly", {}) or {}

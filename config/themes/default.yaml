@@ -108,11 +108,6 @@ colors:
   company_holiday:
     color: green
     opacity: 0.25
-  resource_groups:
-    a: black
-    b: yellow
-    c: red
-    d: grey
 weekly:
   week_numbers:
     label_format: W{num:02d}
@@ -363,12 +358,8 @@ pit:
   label_palette: Pastel1
 
 compact_plan:
-  # conditions that color duration bars, first match wins; a bar none
-  # matches takes its resource group's palette color below.  e.g.
-  #   - name: critical
-  #     select: {priority_min: 4}
-  #     color: firebrick
-  color_rules: []
+  # A bar takes its style_rules fill, else its own Color, else its
+  # resource group's palette color below.
   palette:
     - '#92d050'
     - '#6b9bc7'
@@ -594,6 +585,40 @@ layout:
     right: 0
     top: 0
 style_rules:
+  # Event colors by resource group.  An event's color comes from style_rules
+  # in every visualizer; the theme's later rules still win over these.
+  - name: resource group a
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: a
+    style:
+      fill: black
+  - name: resource group b
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: b
+    style:
+      fill: yellow
+  - name: resource group c
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: c
+    style:
+      fill: red
+  - name: resource group d
+    apply_to:
+      - box:event
+      - box:duration
+    select:
+      resource_group: d
+    style:
+      fill: grey
   - name: gantt dependency arrows
     apply_to: line:dependency_arrow
     style:

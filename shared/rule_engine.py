@@ -7,7 +7,6 @@ Provides:
 - StyleResult: accumulated style fields from matched rules (None = not set)
 - StyleEngine: evaluates style_rules; results layer additively in order
 - LaneEngine: evaluates swimlane_rules; first-match wins
-- ColorRuleEngine: evaluates a visualizer's color_rules; first-match wins
 """
 
 from __future__ import annotations
@@ -70,6 +69,8 @@ class StyleResult:
     # matched band segments; ``fill_color`` is then its first entry.
     fill_color: str | None = None
     fill_colors: list[str] | None = None
+    # Name of the rule whose fill won — the label a color key shows for it.
+    fill_source: str | None = None
     fill_opacity: float | None = None
     # Pattern (day_box)
     pattern: str | None = None
@@ -215,6 +216,7 @@ class StyleResult:
         if other.fill_color is not None or other.fill_colors is not None:
             self.fill_color = other.fill_color
             self.fill_colors = other.fill_colors
+            self.fill_source = other.fill_source
         if other.fill_opacity is not None:
             self.fill_opacity = other.fill_opacity
         if other.pattern is not None:
@@ -560,6 +562,14 @@ def _build_style_result(rule_style: dict) -> StyleResult:
     return sr
 
 
+def _rule_result(rule: dict) -> StyleResult:
+    """A matched rule's StyleResult, its fill labeled with the rule's name."""
+    sr = _build_style_result(rule.get("style") or {})
+    if sr.fill_color is not None:
+        sr.fill_source = str(rule.get("name") or "style rule")
+    return sr
+
+
 # ── StyleEngine ───────────────────────────────────────────────────────────────
 
 
@@ -597,6 +607,23 @@ class StyleEngine:
                 out.append(rule)
         return out
 
+    def event_fills(self) -> list[tuple[str, str]]:
+        """``(rule name, fill)`` of every event or duration rule that sets a
+        single fill color, in declaration order.
+
+        The colors style rules can hand an event, for a color key to list
+        before any color the render only met on an event.
+        """
+        targeted = {id(r) for r in self._applicable_rules("event") + self._applicable_rules("duration")}
+        out: list[tuple[str, str]] = []
+        for rule in self._rules:
+            if id(rule) not in targeted:
+                continue
+            sr = _rule_result(rule)
+            if sr.fill_color and not sr.fill_colors:
+                out.append((sr.fill_source or "style rule", sr.fill_color))
+        return out
+
     def evaluate_day(
         self,
         ctx: DayContext,
@@ -622,7 +649,7 @@ class StyleEngine:
             if event_ok is False:
                 continue
 
-            result.merge(_build_style_result(rule.get("style") or {}))
+            result.merge(_rule_result(rule))
 
         return result
 
@@ -696,7 +723,7 @@ class StyleEngine:
                 if not _matches_date_overlap(select["date"], event):
                     continue
 
-            result.merge(_build_style_result(rule.get("style") or {}))
+            result.merge(_rule_result(rule))
 
         return result
 
@@ -759,7 +786,7 @@ class StyleEngine:
                 if day_match is False:
                     continue
 
-            out.append((rule_index, _build_style_result(rule.get("style") or {})))
+            out.append((rule_index, _rule_result(rule)))
 
         return out
 
@@ -817,65 +844,4 @@ class LaneEngine:
             lane = rule.get("apply_to")
             return str(lane) if lane is not None else None
 
-        return None
-
-
-# ── ColorRuleEngine ───────────────────────────────────────────────────────────
-
-
-class ColorRuleEngine:
-    """
-    Evaluates a visualizer's ``color_rules``: first match wins.
-
-    Each rule is ``{name, select, color}``.  ``select`` takes the event
-    criteria style_rules and swimlane_rules use (resource_group, priority,
-    wbs, task_name, …); an empty or absent ``select`` matches every event,
-    so a final catch-all replaces the visualizer's default coloring.
-
-    Rules are checked once, up front.  One with no ``color``, or whose
-    ``select`` names a criterion the engine does not know, is skipped with
-    a warning: matching on the criteria it does know would color events
-    the author meant to exclude, and matching on none would color them all.
-    """
-
-    def __init__(self, rules: list[dict] | None, *, owner: str = "color_rules"):
-        self._rules: list[tuple[int, dict, str]] = []
-        for index, rule in enumerate(rules or []):
-            label = f"{owner}[{index}]"
-            if not isinstance(rule, dict):
-                logger.warning("%s is not a mapping; skipped", label)
-                continue
-            if rule.get("name"):
-                label = f"{label} {rule['name']!r}"
-            color = str(rule.get("color") or "").strip()
-            if not color:
-                logger.warning("%s has no color; skipped", label)
-                continue
-            select = rule.get("select") or {}
-            if not isinstance(select, dict):
-                logger.warning("%s: select must be a mapping; skipped", label)
-                continue
-            unknown = sorted(set(select) - _EVENT_CRITERIA_KEYS)
-            if unknown:
-                logger.warning("%s: unknown select criteria %s; skipped", label, ", ".join(unknown))
-                continue
-            self._rules.append((index, select, color))
-
-    def __bool__(self) -> bool:
-        return bool(self._rules)
-
-    @property
-    def colors(self) -> list[str]:
-        """Each usable rule's color, in rule order."""
-        return [color for _, _, color in self._rules]
-
-    def assign(self, event: Event) -> tuple[int, str] | None:
-        """``(rule index, color)`` of the first rule *event* matches, or None.
-
-        The index is the rule's position in the theme's list, so it stays
-        put when an earlier, malformed rule is skipped.
-        """
-        for index, select, color in self._rules:
-            if not select or _matches_event_fields(select, event) is not False:
-                return index, color
         return None
