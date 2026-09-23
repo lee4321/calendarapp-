@@ -817,9 +817,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             [holiday name?]                                  ... [day number]
 
         The holiday name is drawn ONLY when there is exactly one holiday/
-        special-day marking AND no overflow. With overflow OR multiple
-        markings, only the icons are drawn — the row never has more than
-        one text label besides the day number.
+        special-day marking (overflow icon or not; the name shrinks to the
+        space left after the icons). With multiple markings, only the icons
+        are drawn — the row never has more than one text label besides the
+        day number.
 
         All elements are vertically centered with the day number using
         baseline shifts of ``0.3 * (day_num_size - element_size)``.
@@ -911,10 +912,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 )
             next_x += icon_size + icon_gap
 
-        # 4. Holiday name — drawn ONLY when a single marking exists and
-        # there is no overflow. Multiple markings or an overflow icon
-        # mean the row is icon-only.
-        if has_overflow or len(holidays) != 1:
+        # 4. Holiday name — drawn ONLY when a single marking exists.
+        # Multiple markings mean the row is icon-only.
+        if len(holidays) != 1:
             return
 
         daytitle, _icon = holidays[0]
