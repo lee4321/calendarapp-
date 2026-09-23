@@ -1725,7 +1725,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_cell_bold_font` | `mini_calendar.cell_bold_font` | `str` | `Fonts.R_BOLD` | Bold variant |
 | `mini_cell_font` | `mini_calendar.cell_font` | `str` | `Fonts.J_REGULAR` | Monospace day number font |
 | `mini_cell_font_size` | `mini_calendar.cell_font_size` | `float | None` | `None` | cell font size |
-| `mini_circle_milestones` | `mini_calendar.circle_milestones` | `bool` | `True` | Circle milestone day numbers |
+| `mini_circle_milestones` | `mini_calendar.circle_milestones` | `bool` | `False` | Circle milestone day numbers |
 | `mini_event_icon_opacity` | `mini_calendar.event_icon_opacity` | `float` | `0.6` | opacity of a day cell's corner icons. They are drawn over the day number, so this is what keeps the number legible where an icon reaches it |
 | `mini_event_icon_scale` | `mini_calendar.event_icon_scale` | `float` | `0.25` | size of a day cell's corner icons, as a fraction of the cell's shorter side. Applies to `mini`, `mini-icon` and `candybar` |
 | `mini_current_day_color` | `mini_calendar.current_day_color` | `str` | `'lightblue'` | Current day shade color |

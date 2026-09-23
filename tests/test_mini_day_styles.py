@@ -78,6 +78,7 @@ def test_mini_style_rules_apply_pattern_decoration():
 
 def test_mini_circle_stroke_style_is_configurable():
     config = _config()
+    config.mini_circle_milestones = True
     config.mini_milestone_stroke_width = 2.5
     config.mini_milestone_stroke_opacity = 0.35
 

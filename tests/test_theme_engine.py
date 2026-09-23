@@ -1176,7 +1176,7 @@ class TestStrokeDasharrayTimelineMini:
         assert config.mini_day_number_glyphs is None
         assert config.mini_day_number_digits is None
         assert config.mini_show_adjacent is True
-        assert config.mini_circle_milestones is True
+        assert config.mini_circle_milestones is False
         assert config.mini_milestone_stroke_width == 1.0
         assert config.mini_milestone_stroke_opacity == 1.0
         assert config.theme_style_rules is None

@@ -179,7 +179,7 @@ class CalendarConfig:
     mini_day_number_digits: list[str] | None = None
     mini_cell_font_size: float | None = None
     mini_show_adjacent: bool = True  # Show leading/trailing days
-    mini_circle_milestones: bool = True
+    mini_circle_milestones: bool = False
     # Event / holiday / special-day icons drawn in a day cell's corners,
     # alongside the day number (or day glyph in mini-icon) rather than in
     # place of it. Scale is a fraction of the cell's shorter side; the
