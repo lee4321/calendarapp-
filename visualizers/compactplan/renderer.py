@@ -1233,13 +1233,21 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """A bar's column edges: ``(x1, middle start, middle end, x2)``.
 
         The start and end date columns are each
-        ``compactplan_duration_date_column_ratio`` of the bar's width -- the
-        same width whether or not a date is shown in them -- and the middle
-        column, holding the icon and name, takes the rest.
+        ``compactplan_duration_date_column_ratio`` of the bar's width, and the
+        middle column, holding the icon and name, takes the rest.  With start
+        dates off there is no start column, so the icon sits at the bar's left
+        edge (after the before arrow, when it has one).
         """
         ratio = min(max(float(config.compactplan_duration_date_column_ratio), 0.0), 0.5)
         date_w = (p.x2 - p.x1) * ratio
-        return p.x1, p.x1 + date_w, p.x2 - date_w, p.x2
+        if config.compactplan_duration_show_start_date:
+            mid_x1 = p.x1 + date_w
+        elif p.starts_early and config.show_continuation_icon:
+            bar_h = float(CompactPlanRenderer._bar_stroke(p, config)["stroke_width"])
+            mid_x1 = p.x1 + min(CompactPlanRenderer._continuation_icon_style(config, before=True)[1], bar_h)
+        else:
+            mid_x1 = p.x1
+        return p.x1, mid_x1, p.x2 - date_w, p.x2
 
     def _draw_bar_content(self, p: _PlacedDuration, icon_h: float, config: CalendarConfig) -> None:
         """Fill a bar's three columns, each centred on the bar's centre line.

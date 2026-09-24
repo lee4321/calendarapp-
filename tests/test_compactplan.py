@@ -1026,12 +1026,21 @@ def _texts(renderer, css_class):
 
 
 def test_a_bars_date_columns_are_each_four_percent_of_it_by_default(tmp_path):
-    renderer, config, (bar,) = _render_bars(tmp_path, [_dur("Build", "20260309", "20260320")])
+    renderer, config, (bar,) = _render_bars(
+        tmp_path, [_dur("Build", "20260309", "20260320")], compactplan_duration_show_start_date=True
+    )
 
     x1, mid_x1, mid_x2, x2 = renderer._bar_columns(bar, config)
     assert (x1, x2) == (bar.x1, bar.x2)
     assert abs((mid_x1 - x1) - 0.04 * (x2 - x1)) < 1e-9
     assert abs((x2 - mid_x2) - (mid_x1 - x1)) < 1e-9
+
+
+def test_with_start_dates_off_the_icon_is_left_aligned_on_the_bar(tmp_path):
+    renderer, config, (bar,) = _render_bars(tmp_path, [_dur("Build", "20260309", "20260320")])
+
+    x1, mid_x1, _, _ = renderer._bar_columns(bar, config)
+    assert mid_x1 == x1
 
 
 def test_bar_dates_are_off_unless_the_theme_turns_them_on(tmp_path):
