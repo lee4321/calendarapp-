@@ -24,12 +24,12 @@ from config.required_keys import (
     VISUALIZERS,
     check_required_keys,
 )
+from config.theme_inheritance import read_theme_file
 from config.unified_theme import ThemeError, parse_theme
 
 # Make the project root importable so we can use tools.migrate_theme.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import yaml
 
 from tools.migrate_theme import convert_theme
 
@@ -82,7 +82,7 @@ def _deep_to_dict(obj: Any) -> Any:
 @pytest.mark.parametrize("theme_path", _legacy_theme_paths(), ids=lambda p: p.name)
 def test_legacy_theme_round_trips_through_unified_parser(theme_path: Path) -> None:
     """Convert -> parse; the unified loader must accept the converted output."""
-    raw_legacy = yaml.safe_load(theme_path.read_text()) or {}
+    raw_legacy = read_theme_file(theme_path)
     converted = _deep_to_dict(convert_theme(raw_legacy, fname=theme_path.name))
     try:
         theme = parse_theme(converted)
@@ -107,7 +107,7 @@ def test_full_theme_completeness_summary() -> None:
     """
     findings: list[str] = []
     for theme_path in _legacy_theme_paths():
-        raw_legacy = yaml.safe_load(theme_path.read_text()) or {}
+        raw_legacy = read_theme_file(theme_path)
         converted = _deep_to_dict(convert_theme(raw_legacy, fname=theme_path.name))
         try:
             theme = parse_theme(converted)

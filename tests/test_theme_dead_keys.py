@@ -14,16 +14,16 @@ from __future__ import annotations
 import logging
 
 import pytest
-import yaml
 
 from config.theme_engine import ThemeEngine, find_unconsumed_keys
+from config.theme_inheritance import read_theme_file
 
 THEME_FILES = sorted(ThemeEngine.BUILTIN_THEMES_DIR.glob("*.yaml"))
 
 
 @pytest.mark.parametrize("theme_path", THEME_FILES, ids=lambda p: p.stem)
 def test_shipped_theme_has_no_unconsumed_keys(theme_path):
-    data = yaml.safe_load(theme_path.read_text()) or {}
+    data = read_theme_file(theme_path)
     assert find_unconsumed_keys(data) == []
 
 

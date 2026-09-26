@@ -19,8 +19,6 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-import yaml
-
 if TYPE_CHECKING:
     from config.config import CalendarConfig
 
@@ -784,11 +782,13 @@ class ThemeEngine:
                 available = ", ".join(self.list_available_themes())
                 raise ThemeError(f"Theme not found: '{theme_path_or_name}'. Available built-in themes: {available}")
 
+        from config.theme_inheritance import read_theme_file
+        from config.unified_theme import ThemeError as UnifiedThemeError
+
         try:
-            with open(path) as f:
-                self._theme_data = yaml.safe_load(f) or {}
-        except yaml.YAMLError as e:
-            raise ThemeError(f"Invalid YAML in theme file '{path}': {e}") from e
+            self._theme_data = read_theme_file(path)  # resolves extends:
+        except UnifiedThemeError as e:
+            raise ThemeError(str(e)) from e
 
         meta = self._theme_data.get("theme", {})
         self._theme_name = meta.get("name", path.stem) if isinstance(meta, dict) else path.stem

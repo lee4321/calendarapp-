@@ -1366,6 +1366,48 @@ uv run python tools/convert_style_keys.py my_theme.yaml             # show the c
 uv run python tools/convert_style_keys.py --in-place my_theme.yaml  # rewrite it (keeps my_theme.yaml.bak)
 ```
 
+### Theme inheritance
+
+A theme can start from another and state only what differs. `Julia`, `dark`,
+`accent` and `vibrant` all extend `corporate`:
+
+```yaml
+extends: corporate                  # a theme name, or a path to a .yaml file
+unset: [candybar.month_shade_colors]
+theme:
+  name: Dark
+  description: Dark background theme for reduced eye strain
+timeline:
+  today_line_color: grey            # every other timeline key comes from corporate
+style_rules:
+  - name: define text:heading       # a rule of the parent's, by name
+    style: {color: whitesmoke}      # merged into it: font, size etc. stay
+  - name: night sky                 # a new name: inserted right after the rule above
+    apply_to: box:default
+    style: {fill: '#1e1e1e'}
+```
+
+The merge happens when the theme loads, so every view, `validate_theme.py`
+and the style rules see one ordinary theme:
+
+- **Sections** merge key by key, all the way down. A list or a single value
+  replaces the parent's.
+- **`unset`** lists dotted keys to drop from the result. Use it when the
+  parent sets a key that this theme wants left at the built-in default.
+- **`style_rules`** are matched by `name`, so rule names must be unique.
+  - An entry naming a parent rule merges into that rule where it stands:
+    `style` merges key by key, and any other key replaces the parent's.
+  - `replace: true` swaps the whole rule; `remove: true` drops it.
+  - An entry with a new name is added after the rule the previous entry
+    named, or first if it leads the list. Order decides which rule wins, so
+    it is always explicit.
+- **Chains:** a parent can extend a theme of its own; a loop is an error.
+
+To turn a full theme into a child, run
+`uv run python tools/derive_theme.py corporate my_theme.yaml --in-place`. The
+tool writes only the differences, and refuses unless the child resolves back
+to exactly the original theme.
+
 ### Creating a New Theme
 
 The fastest path is to copy `config/themes/basic.yaml` — the minimum viable theme — and edit. `basic.yaml` ships with every required key set to a plain default, so each line you change is a deliberate styling choice. Recipe:

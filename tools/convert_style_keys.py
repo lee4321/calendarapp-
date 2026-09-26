@@ -201,6 +201,9 @@ def insert_rules(text: str, data: dict, rules: list[tuple[str, dict]]) -> str:
 def convert_text(text: str) -> tuple[str, list[str]]:
     """Return the converted theme text and a list of changes made."""
     data = yaml.safe_load(text) or {}
+    if "extends" in data:
+        # Retired keys predate inheritance: convert a full theme, then derive.
+        raise ValueError("convert the full theme before it extends another (tools/derive_theme.py)")
     rules = converted_rules(data)
     changes = [f"add rule: {rule['name']} {rule['style']}" for _t, rule in rules]
     text = insert_rules(text, data, rules)

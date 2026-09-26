@@ -296,6 +296,18 @@ There is also one place to look when asking "why is this text red?"
 
 ### 3.5 Theme inheritance (saves about 4,000 YAML lines)
 
+> **Status (2026-09-26):** done, with a different parent than planned. The
+> data showed `corporate` is the natural parent: Julia, dark, accent and
+> vibrant share 200+ values with it, but only about 160 with `default`.
+> Those four now extend it, going from 4,039 to 867 lines. Wholesale
+> `style_rules` would have saved little, since the rules are over half of
+> each theme, so rules overlay the parent's by name instead. Every child
+> resolves to exactly its original theme data (`tools/derive_theme.py`
+> refuses otherwise), and all 10 themes render byte-identically. `default`
+> stays full as the reference theme. `TJX`, `basic` and `minimal` reorder the
+> parent's rules, so a child would not be shorter. The saving is about 3,200
+> lines rather than 4,000.
+
 Add `extends: default` to theme YAML, applied as a deep merge before
 validation. `style_rules`, `swimlane_rules` and the other
 `_WHOLESALE_SECTIONS` should replace, not merge. Then strip every value

@@ -1,209 +1,48 @@
+# accent: every value not listed here comes from 'corporate'.
+# See USER_GUIDE.md, "Theme inheritance".  Rewritten by tools/derive_theme.py.
+extends: corporate
+unset:
+  - candybar.month_shade_colors
+  - compact_plan.palette
+  - blockplan.top_bands
+  - time_bands.fiscal_quarter
+  - time_bands.pi
+  - time_bands.sprint
+  - time_bands.month
+  - time_bands.week_number
+  - time_bands.date
+  - time_bands.dow
 theme:
   name: Accent
-  version: '2.0'
-  description: Palette-driven theme with all colors from the Accent DB palette — unified
-    theme model
-base:
-  # size of the stand-in glyph; null = the size of what it replaces
-  default_missing_icon_size: null
-  font_family: RobotoCondensed-Regular
-  default_missing_icon: star-dashed
-  # Ink for that stand-in. It flags an event naming an icon the icons
-  # table does not have, so it stays an alert colour by default.
-  default_missing_icon_color: red
+  description: Palette-driven theme with all colors from the Accent DB palette — unified theme model
+base: {default_missing_icon: star-dashed}
 events:
   icon_color: palette:Accent:4
-  item_placement_order:
-    - milestones
-    - events
-    - durations
-watermark:
-  text: null
-  font_family: Roboto-Bold
-  opacity: 0.15
-  font_size: null
-  resize_mode: fit
-  rotation_angle: 0.0
-  image_rotation_angle: 0.0
-overflow:
-  icon: send-backward
-details:
-  # Run details: every visualization writes a folder under output/ holding
-  # the chart, this details document, one icon file per icon it drew, and
-  # an event CSV.  Column lists use the gantt.columns schema (field, header,
-  # align, max_lines, render, icon, format, date_format, indent; width is
-  # accepted and ignored).
-  markdown:
-    enable: true
-    title_text: Calendar Details
-    sections: [events, colors, symbols, exceptions, holidays]
-    events_section_text: Events
-    colors_section_text: Color Key
-    symbols_section_text: Icons & Symbols
-    exceptions_section_text: Exceptions
-    holidays_section_text: Holidays & Special Days
-    empty_exceptions_text: Every item was drawn as scheduled.
-    empty_cell_text: ''
-    icon_mode: file        # file | name | none
-    color_mode: swatch     # swatch | hex | name
-    group_by: none         # none, or a field: category, lane, resource_group ...
-    sort: [start_date, end_date, name]
-    columns:
-      - { field: source_id,        header: ID,        align: right }
-      - { field: marker,           header: Key,       align: center }
-      - { field: name,             header: Task Name, indent: true }
-      - { field: category,         header: Type }
-      - { field: status,           header: Status }
-      - { field: priority,         header: Pri,       align: right }
-      - { field: wbs,              header: WBS }
-      - { field: percent_complete, header: '%',       align: right, format: '{:.0%}' }
-      - { field: start_date,       header: Start,     date_format: YYYY-MM-DD }
-      - { field: end_date,         header: Finish,    date_format: YYYY-MM-DD }
-      - { field: resource_names,   header: Resources }
-      - { field: resource_group,   header: Group }
-      - { field: assigned_color,   header: Color }
-      - { field: notes,            header: Notes,     max_lines: 3 }
-      - { field: drawn,            header: Drawn }
-    exception_columns:
-      - { field: issue,  header: Issue }
-      - { field: task,   header: Task }
-      - { field: date,   header: Date, date_format: YYYY-MM-DD }
-      - { field: ref,    header: Ref }
-      - { field: detail, header: Detail }
-    holiday_columns:
-      - { field: icons,      header: Icon, align: center }
-      - { field: date,       header: Date }
-      - { field: name,       header: Name }
-      - { field: kind,       header: Kind }
-      - { field: nonworkday, header: Non-work }
-      - { field: notes,      header: Notes }
-  icons:
-    enable: true
-    size: 16               # every icon file is size x size
-  csv:
-    enable: true
-    columns: exportdata    # exportdata (re-importable), or a column list
-    render_columns: true   # append assigned color, icons, lane, drawn ...
-fiscal:
-  label_format: '{prefix}{period_short}'
-  end_label_format: '{period_short} End'
-  year_offset: null
+  item_placement_order: [milestones, events, durations]
+overflow: {icon: send-backward}
 colors:
   month_palette: PuBuGn
   fiscal_palette: Accent
   group_palette: PuBuGn
   hash_lines: palette:Accent:7
-  federal_holiday:
-    color: palette:Accent:5
-    opacity: 0.25
-  company_holiday:
-    color: palette:Accent:0
-    opacity: 0.25
-weekly:
-  week_numbers:
-    label_format: W{num:02d}
-  day_box:
-    hash_pattern_opacity: 0.2
+  federal_holiday: {color: 'palette:Accent:5', opacity: 0.25}
+  company_holiday: {color: 'palette:Accent:0', opacity: 0.25}
 mini_calendar:
-  # mini-icon day glyphs: squares | darksquare | circles |
-  # darkcircles | squircles | darksquircles
-  icon_set: squares
-  cell_bold_font: Roboto-Bold
-  cell_font_size: null
-  title_font_size: null
-  title_format: MMMM YYYY
-  header_font_size: null
-  day_number_glyphs: null
-  day_number_digits: null
   adjacent_month_color: palette:Accent:1
-  show_adjacent: true
   holiday_color: palette:Accent:5
   nonworkday_fill_color: palette:Accent:3
   milestone_color: palette:Accent:4
-  circle_milestones: true
   milestone_stroke_color: palette:Accent:4
   current_day_color: palette:Accent:2
-  week_number_font_size: null
-  week_number_label_format: W{num}
-  # event / holiday / special-day icons in a day cell's corners, drawn
-  # alongside the day number rather than in place of it: up to four, filled
-  # top-right first and then clockwise
-  event_icon_scale: 0.25      # fraction of the cell's shorter side
-  event_icon_opacity: 0.6     # keeps the day number legible underneath
-text_mini:
-  cell_width: 2
-  month_gap: 4
-  week_number_digits: null
-  day_number_digits: null
-  event_symbols: [⯍, ⯏, 🟈, 🟃, 🟎, 🟉, ⯌, 🟒, 🟋, 🞻, 🞯, 🟂, 🟐, 🞿, 🞭, 🞹, ⭐, 🃟, ⊛, ⋇, ⊗, ⨳, ⧾, ⟡, ⟐, ❖, ◊, ⯪, ⯫, ꥟, 𜱃, 𜱪, 𜱩, 𜸂, "\U0001cecf", 🟙, 🝴, "\U0001fa54", 🮻, 🯀, 🮽, "\ue60e", "\ue615", "\ue835", "\uf2dc", "\U000f0633", ⟠, ⨷, ✢, ✨, ❂]
-  milestone_symbols: [🄰, 🄱, 🄲, 🄳, 🄴, 🄵, 🄶, 🄷, 🄸, 🄹, 🄺, 🄻, 🄼, 🄽, 🄾, 🄿, 🅀, 🅁, 🅂, 🅃, 🅄, 🅅, 🅆, 🅇, 🅈, 🅉]
-  holiday_symbols: [🅰, 🅱, 🅲, 🅳, 🅴, 🅵, 🅶, 🅷, 🅸, 🅹, 🅺, 🅻, 🅼, 🅽, 🅾, 🅿, 🆀, 🆁, 🆂, 🆃, 🆄, 🆅, 🆆, 🆇, 🆈, 🆉]
-  nonworkday_symbols: [𝒂, 𝒃, 𝒄, 𝒅, 𝒆, 𝒇, 𝒈, 𝒉, 𝒊, 𝒋, 𝒌, 𝒍, 𝒎, 𝒏, 𝒐, 𝒑, 𝒒, 𝒓, 𝒔, 𝒕, 𝒖, 𝒗, 𝒘, 𝒙, 𝒚, 𝒛]
-  duration_symbols: null
-  duration_fill: null
 candybar:
-  show_week_numbers: true
-  cell_width: 0            # 0 = square cells (width == row height)
-  weeknum_col_ratio: 0.6   # week-number column width / day-cell width
-  month_col_ratio: 1.6     # month-box column width / day-cell width
-  grid_lines: true
   grid_line_color: lightgrey
-  weekend_fill: null        # Sat/Sun day-cell tint (null = off)
-  weekend_opacity: 0.15
-  month_shading: false       # alternate day-cell tint per month
-  month_shade_opacity: 0.12
-  month_label_side: right
-  month_format: MMM
-  month:
-    font: RobotoCondensed-Bold
-    color: teal
-    opacity: 1.0
-    anchor: middle
-    rotation: 0
-  month_box:
-    fill: null
-    stroke: cadetblue
-    opacity: 1.0
+  weekend_fill: null
+  month_shading: false
+  month: {color: teal}
+  month_box: {fill: null, stroke: cadetblue}
 timeline:
-  leader:
-    # one curve per leader instead of one per row it crosses
-    direct: true
-    # straight perpendicular run at the axis dot
-    start_stub: 4.0
-    # and at the box
-    end_stub: 4.0
-  # leading WBS segments that share one color; 0 = off
-  wbs_group_depth: 2
-  # government-holiday marks under the axis
-  show_holiday_icons: true
-  holiday_icon_size: 10.0
-  # null keeps each flag's own colors
-  holiday_icon_color: null
-  holiday_icon_y_offset: 4.0
-  # print each holiday's date under its icon
-  show_holiday_dates: true
-  # null follows timeline.date_format
-  holiday_date_format: null
-  holiday_date_font_size: null
-  holiday_date_color: null
-  # axis-to-tick-date distance; null = 1.5 label heights
-  tick_label_gap: null
-  # the whole distance; wins over the gap
-  tick_label_offset_y: null
-  axis_width: 2
-  date_format: MMM D
-  tick_label_format: MMM YY
-  today_date: ''
-  today_label_text: Today
-  today_label_offset_y: 10.0
   today_line_color: palette:Accent:5
   marker_stroke_color: palette:Accent:4
-  marker_stroke_width: 1.0
-  marker_radius: 4.2
-  icon_size: 10.0
-  duration_offset_y: 44.0
-  duration_lane_gap_y: 8.0
-  label_fill_opacity: 0.0
   top_colors:
     - palette:Accent:4
     - palette:Accent:0
@@ -217,148 +56,48 @@ timeline:
     - palette:Accent:1
     - palette:Accent:2
   palette: Accent
-timeline_events:
-  box_width: 150
-  # how point-event boxes are placed: "packed" puts each box's leading
-  # edge on its own start date and stacks collisions away from the axis;
-  # "labella" keeps the force-solved placement centred on the date
-  placement: packed
-  # clear space between two rows of boxes; null follows timeline.labella.layer_gap
-  row_gap: null
-  # clear space between two boxes sharing a row
-  box_gap: 2.0
-  # inner border kept clear on all four sides of a box
-  inner_pad: 2.0
-  # share of a box's inner width given to the icon / date column
-  icon_column_ratio: 0.15
 pit:
-  direction: horizontal      # horizontal | vertical
-  label_side: both           # primary | secondary | both
-  labella:
-    layer_gap: 8
-    node_height: 24
-    density: 0.75
-  axis:
-    color: "#cccccc"
-    width: 1.5
-    marker_size: 7.0          # bounding box of built-in circle/diamond
-    marker_start: "none"
-    marker_start_size: 4.0
-    marker_end: "arrow-head"
-    marker_end_size: 6.0
-  tick_color: "#aaaaaa"
-  tick_unit: month
-  # Two tick rows: month labels over a light weekly grid. Band colors are
-  # literal (per-band tick_color is not palette-resolved).
+  axis: {color: '#cccccc'}
+  tick_color: '#aaaaaa'
   ticks:
     - unit: month
       label_format: MMM
-      label_side: below         # month names beneath the axis
+      label_side: below
       tick_length: 8.0
-      tick_color: "#7a7a7a"
-      label_color: "#7a7a7a"
+      tick_color: '#7a7a7a'
+      label_color: '#7a7a7a'
       label_gap: 16.0
     - unit: week
       show_labels: true
       label_format: DD
-      label_side: above         # day numbers above, clear of the month names
-      label_color: "#aaaaaa"
+      label_side: above
+      label_color: '#aaaaaa'
       label_font_size: 6
       max_label_count: 400
       tick_length: 3.0
-      tick_color: "#cccccc"
+      tick_color: '#cccccc'
       tick_opacity: 0.6
-  date_format: "MMM D"
-  name_text:
-    font_name: RobotoCondensed-Regular  # PIT callout event-name font
-  notes_text:
-    font_name: RobotoCondensed-Italic   # PIT callout notes font
-  date_text:
-    color: "#888888"
-    font_name: Roboto-Regular
-    font_size: 9
-    offset: 6.0
-  # Optional DB icon names drawn INSIDE the callout label box,
-  # left of the event name. Leave null for plain text-only labels.
-  # The axis marker is always a built-in shape (circle for events,
-  # diamond for milestones) and is NOT affected by these settings.
-  default_event_icon: null
-  default_milestone_icon: null
-  dot_color: "palette:PuBuGn:4"
-  milestone_color: "palette:Accent:1"
-  leader:
-    color: "#888888"
-    width: 0.75
-    dasharray: null
-    opacity: 1.0
-    linecap: round
-    marker_start: "none"
-    marker_start_size: 3.0
-    marker_end: "arrow-head"
-    marker_end_size: 5.0
-  leader_primary:
-    color: "palette:PuBuGn:5"
-  leader_secondary:
-    color: "palette:Accent:2"
-  today_line:
-    show: true
-    color: "palette:Accent:1"
-    width: 1.0
-    dasharray: "4,2"
-    opacity: 0.85
-    linecap: round
-    linejoin: round
-    label: today
-    label_color: "palette:Accent:1"
-    label_font_name: Roboto-Bold
-    label_font_size: 9
-    label_position: end
-    marker_start: "none"
-    marker_start_size: 4.0
-    marker_end: "none"
-    marker_end_size: 6.0
-  arrow_head:
-    color: "#888888"
+  date_text: {color: '#888888'}
+  dot_color: palette:PuBuGn:4
+  milestone_color: palette:Accent:1
+  leader: {color: '#888888'}
+  leader_primary: {color: 'palette:PuBuGn:5'}
+  leader_secondary: {color: 'palette:Accent:2'}
+  today_line: {color: 'palette:Accent:1', label_color: 'palette:Accent:1'}
+  arrow_head: {color: '#888888'}
   label:
-    stroke_color: "#cccccc"
-    stroke_width: 0.5
-    fill_color: "palette:PuBuGn:1"
-    fill_opacity: 0.85
-    pattern: null
-    text_color: "#1b1f24"
-    corner_radius: 2.0
-    padding_x: 6.0
-    padding_y: 3.0
-    icon_size: null            # null = match event-name font size
-    icon_gap: 4.0
+    stroke_color: '#cccccc'
+    fill_color: palette:PuBuGn:1
+    text_color: '#1b1f24'
   label_palette: PuBuGn
-compact_plan:
-  palette_name: Accent
-  bands:
-    - date_range
-    - week
+compact_plan: {palette_name: Accent}
 blockplan:
   label_column_ratio: 0.1
   fiscal_year_start_month: 1
-  week_start: 0
-  show_unmatched_lane: true
   unmatched_lane_name: Other
-  lane_match_mode: first
-  header_font_size: null
   header_label_align_h: right
-  band_font_size: null
-  timeband_fill_palette:
-    - accent
-  timeband_fill_opacity: 1.0
-  lane_label_font_size: null
+  timeband_fill_palette: [accent]
   lane_label_align_h: right
-  lane_label_align_v: middle
-  lane_label_rotation: 0
-  event_show_date: false
-  event_date_font_size: null
-  event_date_format: YYYY-MM-DD
-  marker_radius: 2.0
-  duration_bar_height: 8.0
   palette:
     - palette:Accent:4
     - palette:Accent:0
@@ -368,196 +107,45 @@ blockplan:
     - palette:Accent:7
   palette_name: Accent
   swimlanes:
-  - name: Other
-gantt:
-  # dependency arrowhead; none to omit
-  arrow_marker_end: arrow-head
-  arrow_marker_end_size: 6.0
-  arrow_linecap: round
-  arrow_linejoin: round
-  table_width_ratio: 0.38
-  row_height: 14.0
-  header_row_height: 18.0
-  band_row_height: 10.0
-  bar_height: 8.0
-  indent_per_level: 8.0
-  min_day_width: 4.0
-  progress_color: black
-  float_opacity_scale: 0.4
-  milestone_icon: diamond-fill
-  deadline_icon: square-fill
-  rollup_icon: check
-  show_dependencies: true
-  show_today_line: true
-time_bands:
-  date_range:
-    unit: week
-    label: Date Range
-    label_format: '{start} – {end}'
-  week:
-    unit: week
-    label: Week
-    label_format: Week {n}
-excelblockplan:
-  band_row_height: 18.0
-  font_name: Calibri
-  font_size: 9
-layout:
-  margin:
-    bottom: 0
-    left: 0
-    right: 0
-    top: 0
+    - {name: Other}
 style_rules:
-  # Event colors by resource group.  An event's color comes from style_rules
-  # in every visualizer; the theme's later rules still win over these.
   - name: box:duration — blockplan (from blockplan)
-    apply_to: box:duration
-    select: {visualizer: blockplan}
-    style: {stroke_opacity: 0.9, stroke_width: 1.0}
+    style: {stroke_width: 1.0}
   - name: resource group a
-    apply_to:
-      - box:event
-      - box:duration
-    select:
-      resource_group: a
-    style:
-      fill: palette:Accent:4
+    style: {fill: 'palette:Accent:4'}
   - name: resource group b
-    apply_to:
-      - box:event
-      - box:duration
-    select:
-      resource_group: b
-    style:
-      fill: palette:Accent:0
+    style: {fill: 'palette:Accent:0'}
   - name: resource group c
-    apply_to:
-      - box:event
-      - box:duration
-    select:
-      resource_group: c
-    style:
-      fill: palette:Accent:1
+    style: {fill: 'palette:Accent:1'}
   - name: resource group d
-    apply_to:
-      - box:event
-      - box:duration
-    select:
-      resource_group: d
-    style:
-      fill: palette:Accent:7
-  - name: timeline duration-bar fill opacity (ported from timeline.duration_bar_fill_opacity)
-    apply_to: line:duration_bar
-    select:
-      visualizer: timeline
-    style:
-      opacity: 0.25
+    style: {fill: 'palette:Accent:7'}
   - name: define text:heading
-    define: text
-    as: heading
-    style:
-      font: Roboto-Bold
-      size: 10
-      color: palette:Accent:4
-  - name: text:heading — blockplan (from blockplan)
-    apply_to: text:heading
-    select: {visualizer: blockplan}
-    style: {opacity: 1.0}
+    style: {size: 10, color: 'palette:Accent:4'}
   - name: text:heading — letter / ledger paper
-    apply_to: text:heading
-    select:
-      papersize:
-        - letter
-        - ledger
-    style:
-      size: 18
-  - name: text:heading — 3x5 / 5x8 paper
-    apply_to: text:heading
-    select:
-      papersize:
-        - 3x5
-        - 5x8
-    style:
-      size: 8
+    style: {size: 18}
   - name: define text:body
-    define: text
-    as: body
-    style:
-      font: RobotoCondensed-Regular
-      size: 8
-      color: palette:Accent:7
+    style: {color: 'palette:Accent:7'}
   - name: define text:body_secondary
-    define: text
-    as: body_secondary
-    style:
-      font: RobotoCondensed-Italic
-      size: 7
-      color: palette:Accent:6
+    style: {color: 'palette:Accent:6'}
   - name: define text:label
-    define: text
-    as: label
-    style:
-      font: RobotoCondensed-Light
-      size: 7
-      color: palette:Accent:7
+    style: {color: 'palette:Accent:7'}
   - name: define text:label_bold
-    define: text
-    as: label_bold
-    style:
-      font: RobotoCondensed-Bold
-      size: 7
-      color: palette:Accent:7
+    style: {color: 'palette:Accent:7'}
   - name: define text:caption
-    define: text
-    as: caption
-    style:
-      font: RobotoCondensed-Light
-      size: 6
-      color: palette:Accent:7
+    style: {color: 'palette:Accent:7'}
   - name: define text:day_number
-    define: text
-    as: day_number
-    style:
-      font: Roboto-Bold
-      size: 10
-      color: palette:Accent:4
+    style: {color: 'palette:Accent:4'}
   - name: define text:month_title
-    define: text
-    as: month_title
-    style:
-      font: Roboto-Bold
-      size: 8
-      color: palette:Accent:4
-  - name: define box:default
-    define: box
-    as: default
-    style:
-      fill: white
-      fill_opacity: 1.0
-      stroke: none
+    style: {font: Roboto-Bold, color: 'palette:Accent:4'}
   - name: define box:cell
-    define: box
-    as: cell
     style:
       fill: palette:Accent:0
       fill_opacity: 0.15
       stroke: palette:Accent:7
       stroke_width: 2
       stroke_opacity: 0.2
-  - name: define box:header
-    define: box
-    as: header
-    style:
-      fill: none
-      stroke: none
   - name: define box:timeband
-    define: box
-    as: timeband
     style:
-      fill: none
-      fill_opacity: 1.0
-      stroke: none
       fill_palette: Accent
       fill_colors:
         - palette:Accent:4
@@ -566,275 +154,58 @@ style_rules:
         - palette:Accent:2
         - palette:Accent:1
   - name: define box:highlight
-    define: box
-    as: highlight
-    style:
-      fill: palette:Accent:0
-      fill_opacity: 0.15
-      stroke: none
+    style: {fill: 'palette:Accent:0', fill_opacity: 0.15}
   - name: define box:callout
-    define: box
-    as: callout
-    style:
-      fill: white
-      fill_opacity: 0.25
-      stroke: palette:Accent:7
-      stroke_width: 1.0
+    style: {fill: white, stroke: 'palette:Accent:7'}
   - name: define line:grid
-    define: line
-    as: grid
-    style:
-      color: palette:Accent:7
-      width: 0.5
-      opacity: 0.4
+    style: {color: 'palette:Accent:7'}
   - name: define line:axis
-    define: line
-    as: axis
-    style:
-      color: palette:Accent:3
-      width: 2
-      opacity: 0.9
+    style: {color: 'palette:Accent:3'}
   - name: define line:separator
-    define: line
-    as: separator
-    style:
-      color: palette:Accent:7
-      width: 0.5
-      opacity: 0.5
+    style: {color: 'palette:Accent:7'}
   - name: define line:today
-    define: line
-    as: today
-    style:
-      color: palette:Accent:5
-      width: 1.5
-      opacity: 1.0
+    style: {color: 'palette:Accent:5'}
   - name: define line:connector
-    define: line
-    as: connector
-    style:
-      color: palette:Accent:7
-      width: 0.5
-      opacity: 1.0
-      dasharray: 4 2
+    style: {color: 'palette:Accent:7'}
   - name: define icon:event
-    define: icon
-    as: event
-    style:
-      color: palette:Accent:4
-      size: 10
+    style: {color: 'palette:Accent:4'}
   - name: define icon:duration
-    define: icon
-    as: duration
-    style:
-      color: palette:Accent:4
+    style: {color: 'palette:Accent:4'}
   - name: define icon:overflow
-    define: icon
-    as: overflow
-    style:
-      icon: send-backward
-      color: orange
+    style: {icon: send-backward, color: orange}
   - name: define line:tick
-    define: line
-    as: tick
-    style:
-      color: palette:Accent:1
-      width: 0.5
-      opacity: 1.0
+    style: {color: 'palette:Accent:1'}
   - name: today label color
-    apply_to: text:today_label
-    style:
-      color: palette:Accent:3
+    style: {color: 'palette:Accent:3'}
   - name: box:band — blockplan (from blockplan)
-    apply_to: box:band
-    select: {visualizer: blockplan}
-    style: {stroke_width: 1.0, stroke_opacity: 0.4}
-  - name: band date_range — segment
-    apply_to: box:band
-    select:
-      band: date_range
-    style:
-      fill: none
-  - name: band week — segment
-    apply_to: box:band
-    select:
-      band: week
-    style:
-      fill: none
+    style: {stroke_opacity: 0.4}
   - name: blockplan_vline_0
-    apply_to: box:vline
-    select:
-      band: Sprint
-      repeat: true
     style:
-      align: end
-      fill:
-        - palette:Accent:0
-        - none
+      fill: ['palette:Accent:0', none]
       fill_opacity: 0.1
-  - name: define box:band
-    define: box
-    as: band
-    style:
-      fill: none
-      stroke: none
-  - name: define box:day
-    define: box
-    as: day
-    style:
-      fill: '#F8F8FF'
-      fill_opacity: 0.25
-      stroke: '#CCCCCC'
-      stroke_width: 0.5
-  - name: define box:duration
-    define: box
-    as: duration
-    style:
-      fill: '#888888'
-      fill_opacity: 0.75
-      stroke: none
-  - name: define box:event
-    define: box
-    as: event
-    style:
-      fill: none
-      stroke: none
-  - name: define box:milestone
-    define: box
-    as: milestone
-    style:
-      fill: none
-      stroke: none
-  - name: define box:vline
-    define: box
-    as: vline
-    style:
-      fill: lightblue
-      fill_opacity: 0.3
-      stroke: none
-  - name: define icon:milestone
-    define: icon
-    as: milestone
-    style:
-      color: '#333333'
-      size: 10
-  - name: define text:band_label
-    define: text
-    as: band_label
-    style:
-      font: Roboto-Regular
-      size: 7
-      color: black
-  - name: define text:duration_date
-    define: text
-    as: duration_date
-    style:
-      font: RobotoCondensed-Light
-      size: 8
-      color: '#666666'
-  - name: define text:event_date
-    define: text
-    as: event_date
-    style:
-      font: RobotoCondensed-Light
-      size: 8
-      color: '#666666'
-  - name: define text:event_name
-    define: text
-    as: event_name
-    style:
-      font: RobotoCondensed-Light
-      size: 10
-      color: '#333333'
-  - name: define text:event_notes
-    define: text
-    as: event_notes
-    style:
-      font: RobotoCondensed-LightItalic
-      size: 9
-      color: '#666666'
-  - name: define text:fiscal_label
-    define: text
-    as: fiscal_label
-    style:
-      font: RobotoCondensed-Light
-      size: 8
-      color: '#666666'
-  - name: define text:holiday_title
-    define: text
-    as: holiday_title
-    style:
-      font: RobotoCondensed-Light
-      size: 8
-      color: '#333333'
-  - name: define text:swimlane_label
-    define: text
-    as: swimlane_label
-    style:
-      font: Roboto-Regular
-      size: 8
-      color: black
-  - name: define text:today_label
-    define: text
-    as: today_label
-    style:
-      font: RobotoCondensed-Light
-      size: 8
-      color: '#FF4444'
-  - name: define text:week_number
-    define: text
-    as: week_number
-    style:
-      font: RobotoCondensed-Light
-      size: 9
-      color: '#888888'
+  - {name: 'define text:week_number'}
   - name: route everything to Other
     apply_to: lane
     select: {}
-    style:
-      swimlane: Other
-  - name: icon:milestone — mini (from mini_calendar)
-    apply_to: icon:milestone
-    select: {visualizer: mini}
-    style: {stroke_width: 1.0, stroke_opacity: 1.0}
-  - name: text:event_name — pit (from timeline.name_text)
-    apply_to: text:event_name
-    select: {visualizer: pit}
-    style: {font: Roboto-Bold}
-  - name: text:event_notes — pit (from timeline.notes_text)
-    apply_to: text:event_notes
-    select: {visualizer: pit}
-    style: {font: RobotoCondensed-Bold}
+    style: {swimlane: Other}
+  - {name: band fiscal_quarter — segment, remove: true}
+  - {name: band pi — segment, remove: true}
+  - {name: band sprint — segment, remove: true}
+  - {name: band month — segment, remove: true}
+  - {name: band week_number — segment, remove: true}
+  - {name: band date — segment, remove: true}
+  - {name: band dow — segment, remove: true}
+  - {name: weekly_hash_0, remove: true}
+  - {name: weekly_hash_1, remove: true}
+  - {name: weekly_hash_2, remove: true}
+  - {name: weekly_hash_3, remove: true}
+  - {name: weekly_hash_4, remove: true}
+  - {name: weekly_hash_5, remove: true}
+  - {name: weekly_hash_6, remove: true}
+  - {name: weekly_hash_7, remove: true}
+  - {name: weekly_hash_8, remove: true}
+  - {name: Route Engineering, remove: true}
+  - {name: Route Operations, remove: true}
+  - {name: Route Quality, remove: true}
 element_overrides:
-  ec-axis-tick:
-    use: line:tick
-  ec-tick-label:
-    use: text:caption
-  ec-week-number:
-    use: text:label_bold
-  ec-fiscal-label:
-    use: text:caption
-  ec-event-name:
-    use: text:body
-  ec-event-notes:
-    use: text:body_secondary
-  ec-event-date:
-    use: text:caption
-  ec-duration-date:
-    use: text:caption
-  ec-holiday-title:
-    use: text:body
-  ec-today-label:
-    use: text:label
-    color: palette:Accent:3
-  ec-band-cell:
-    use: box:timeband
-  ec-vline-fill:
-    use: box:highlight
-  ec-day-box:
-    use: box:cell
-  ec-connector:
-    use: line:connector
-  ec-duration-marker:
-    use: line:axis
-  ec-legend-swatch:
-    use: line:axis
+  ec-today-label: {color: 'palette:Accent:3'}
