@@ -103,36 +103,8 @@ class GanttLayout(BaseLayout):
 
         margins = self._calculate_margins(config)
         hf = self._calculate_header_footer(config, margins)
-
-        if config.include_header and hf["header_height"] > 0:
-            header_y = config.pageY - margins["top"] - hf["header_height"]
-            coord.update(
-                self._generate_three_column_coords(
-                    margins["left"],
-                    config.pageX,
-                    header_y,
-                    hf["header_height"],
-                    "Header",
-                    margins["right"],
-                )
-            )
-
-        if config.include_footer and hf["footer_height"] > 0:
-            coord.update(
-                self._generate_three_column_coords(
-                    margins["left"],
-                    config.pageX,
-                    margins["bottom"],
-                    hf["footer_height"],
-                    "Footer",
-                    margins["right"],
-                )
-            )
-
-        content_x = margins["left"]
-        content_y = margins["bottom"] + hf["footer_height"]
-        content_w = margins["usable_width"]
-        content_h = margins["usable_height"] - hf["header_height"] - hf["footer_height"]
+        self._emit_header_footer_coords(coord, config, margins, hf)
+        content_x, content_y, content_w, content_h = self._content_rect(margins, hf)
 
         # The table takes its configured share of the content width; the
         # chart takes the rest.  Clamped so a mis-set ratio cannot leave

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -213,6 +213,49 @@ class BaseLayout(ABC):
 
         return result
 
+    def _emit_header_footer_coords(
+        self,
+        coord: CoordinateDict,
+        config: CalendarConfig,
+        margins: dict,
+        hf: dict,
+    ) -> None:
+        """Add the three-column header and footer rows to ``coord`` (PDF space)."""
+        if config.include_header and hf["header_height"] > 0:
+            header_y = config.pageY - margins["top"] - hf["header_height"]
+            coord.update(
+                self._generate_three_column_coords(
+                    margins["left"],
+                    config.pageX,
+                    header_y,
+                    hf["header_height"],
+                    "Header",
+                    margins["right"],
+                )
+            )
+
+        if config.include_footer and hf["footer_height"] > 0:
+            coord.update(
+                self._generate_three_column_coords(
+                    margins["left"],
+                    config.pageX,
+                    margins["bottom"],
+                    hf["footer_height"],
+                    "Footer",
+                    margins["right"],
+                )
+            )
+
+    @staticmethod
+    def _content_rect(margins: dict, hf: dict) -> tuple[float, float, float, float]:
+        """The (x, y, w, h) area between header and footer, in PDF space."""
+        return (
+            margins["left"],
+            margins["bottom"] + hf["footer_height"],
+            margins["usable_width"],
+            margins["usable_height"] - hf["header_height"] - hf["footer_height"],
+        )
+
     def _generate_three_column_coords(
         self,
         margin: float,
@@ -249,6 +292,25 @@ class BaseLayout(ABC):
                 height,
             ),
         }
+
+
+class ContentAreaLayout(BaseLayout):
+    """Header, footer and one content rectangle filling the rest of the page.
+
+    Subclasses name the rectangle with ``area_key``; the renderer lays out
+    everything inside it.
+    """
+
+    area_key: ClassVar[str]
+
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
+        coord: CoordinateDict = {}
+        margins = self._calculate_margins(config)
+        hf = self._calculate_header_footer(config, margins)
+        self._emit_header_footer_coords(coord, config, margins, hf)
+        x, y, w, h = self._content_rect(margins, hf)
+        coord[self.area_key] = (round(x, 2), round(y, 2), round(w, 2), round(h, 2))
+        return self._to_svg_coords(coord, config.pageY)
 
 
 class BaseVisualizer(ABC):
