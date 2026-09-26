@@ -59,6 +59,22 @@ def callout_date_extent(date_label: str, font_name: str | None, font_size: float
     return width + _DATE_GAP_X
 
 
+def event_font(config: CalendarConfig, part: str) -> str:
+    """Font the renderer draws an event's ``name`` or ``notes`` in.
+
+    Measured and drawn text must agree, so this mirrors the renderer: the
+    ``text:event_<part>`` token resolved for the timeline, then the element
+    style.
+    """
+    theme = getattr(config, "theme", None)
+    token = (
+        theme.resolve_token(f"text:event_{part}", {"visualizer": "timeline", "papersize": config.papersize})
+        if theme
+        else {}
+    )
+    return token.get("font") or config.get_text_style(f"ec-event-{part}").font
+
+
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
     """Horizontal extent the label's two columns need.
 
@@ -67,8 +83,8 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
     left edge, so the box needs the wider of them plus the left column; the
     date is what sizes that column, being wider than any icon.
     """
-    name_font_path = _resolve_font_path(config.timeline_name_text_font_name)
-    notes_font_path = _resolve_font_path(config.timeline_notes_text_font_name)
+    name_font_path = _resolve_font_path(event_font(config, "name"))
+    notes_font_path = _resolve_font_path(event_font(config, "notes"))
     name_size = float(config.timeline_name_text_font_size or 12.0)
     notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
 
@@ -102,7 +118,7 @@ def _date_extent_for(event: Event, config: CalendarConfig) -> float:
     # layout is exercised without it in tests.
     base = config.weekly_name_text_font_size or config.timeline_name_text_font_size or 12.0
     size = max(8.0, float(base) * 0.95)
-    return callout_date_extent(label, config.timeline_date_font, size)
+    return callout_date_extent(label, config.get_text_style("ec-event-date").font, size)
 
 
 def _line_height_extent(config: CalendarConfig) -> float:
@@ -112,7 +128,7 @@ def _line_height_extent(config: CalendarConfig) -> float:
     direction. Used as the off-axis dimension for horizontal labels and
     as the along-axis dimension for vertical labels.
     """
-    name_font_path = _resolve_font_path(config.timeline_name_text_font_name)
+    name_font_path = _resolve_font_path(event_font(config, "name"))
     name_size = float(config.timeline_name_text_font_size or 12.0)
     notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
     if name_font_path:

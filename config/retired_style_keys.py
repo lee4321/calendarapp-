@@ -22,6 +22,10 @@ class Retired(NamedTuple):
     attr: str  # style attribute on the token, e.g. "stroke"
     visualizer: str  # visualizer the old code read it for
     default: Any  # the old built-in value when the theme did not set the key
+    # True when the old code read the key *before* the token, so the value
+    # always won: the converted rule is then written even if the token
+    # already sets the attribute.
+    override: bool = False
 
 
 RETIRED: tuple[Retired, ...] = (
@@ -39,6 +43,18 @@ RETIRED: tuple[Retired, ...] = (
     Retired("mini_calendar", "milestone_stroke_width", "icon:milestone", "stroke_width", "mini", 1.0),
     Retired("mini_calendar", "milestone_stroke_opacity", "icon:milestone", "stroke_opacity", "mini", 1.0),
     Retired("mini_calendar", "cell_font", "text:day_number", "font", "mini", "JuliaMono-Regular"),
+    # timeline event text, axis dates and callout leaders.
+    Retired("timeline.name_text", "font_name", "text:event_name", "font", "timeline", "Roboto-Bold"),
+    Retired("timeline.name_text", "font_color", "text:event_name", "color", "timeline", "deepskyblue"),
+    Retired("timeline.notes_text", "font_name", "text:event_notes", "font", "timeline", "RobotoCondensed-Bold"),
+    Retired("timeline.notes_text", "font_color", "text:event_notes", "color", "timeline", "deepskyblue"),
+    Retired("timeline.date", "font_family", "text:event_date", "font", "timeline", "Roboto-Bold"),
+    Retired("timeline", "connector_stroke_dasharray", "line:grid", "dasharray", "timeline", None),
+    # PIT labels fell back to the timeline fonts without consulting a token.
+    Retired("timeline.name_text", "font_name", "text:event_name", "font", "pit", "Roboto-Bold", override=True),
+    Retired(
+        "timeline.notes_text", "font_name", "text:event_notes", "font", "pit", "RobotoCondensed-Bold", override=True
+    ),
 )
 
 #: Dotted theme paths that are rejected on load.

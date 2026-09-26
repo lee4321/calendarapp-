@@ -709,9 +709,19 @@ class PITRenderer(BaseSVGRenderer):
         default_label_pattern = config.theme_pit_label_pattern
         default_label_pattern_opacity = float(getattr(config, "hash_pattern_opacity", 0.15))
 
-        # Label text fonts
-        name_font = config.pit_name_text_font_name or config.timeline_name_text_font_name or "Roboto-Bold"
-        notes_font = config.pit_notes_text_font_name or config.timeline_notes_text_font_name or "Roboto-Regular"
+        # Label text fonts: pit.*_text.font_name, else the event text tokens
+        # resolved for this view.
+        view = {"visualizer": "pit", "papersize": config.papersize}
+        name_font = (
+            config.pit_name_text_font_name
+            or self._resolve_token(config, "text:event_name", view).get("font")
+            or config.get_text_style("ec-event-name").font
+        )
+        notes_font = (
+            config.pit_notes_text_font_name
+            or self._resolve_token(config, "text:event_notes", view).get("font")
+            or config.get_text_style("ec-event-notes").font
+        )
         name_size = float(config.pit_name_text_font_size or 11.0)
         notes_size = float(config.pit_notes_text_font_size or name_size * 0.85)
         name_color = config.theme_pit_label_text_color or config.pit_name_text_color

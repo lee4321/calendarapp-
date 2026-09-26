@@ -39,8 +39,8 @@ class TestFindUnconsumedKeys:
         assert find_unconsumed_keys(data) == ["details.markdown.bogus"]
 
     def test_section_level_cascade_is_consumed(self):
-        # timeline.font_name cascades into timeline.name_text / notes_text.
-        assert find_unconsumed_keys({"timeline": {"font_name": "Roboto-Regular"}}) == []
+        # timeline.font_size cascades into timeline.name_text / notes_text.
+        assert find_unconsumed_keys({"timeline": {"font_size": 11}}) == []
 
     def test_base_cascade_is_consumed(self):
         assert find_unconsumed_keys({"base": {"font_family": "Roboto-Regular", "font_size": 9}}) == []

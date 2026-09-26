@@ -180,7 +180,6 @@ timeline:
   # the whole distance; wins over the gap
   tick_label_offset_y: null
   axis_width: 3
-  tick_color: grey
   date_format: M/D
   tick_label_format: M/D
   today_date: ''
@@ -195,7 +194,6 @@ timeline:
   duration_lane_gap_y: 20.0
   duration_icon_visible: true
   label_fill_opacity: 0.25
-  connector_stroke_dasharray: 4 2
   top_colors:
     - deepskyblue
     - gold
@@ -219,15 +217,9 @@ timeline:
     - firebrick
     - fuchsia
   name_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: white
     font_size: 18
   notes_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: grey
     font_size: 14
-  date:
-    font_family: PlaywriteDEGrund-VariableFont_wght
   ticks:
     - unit: month
       label_format: MMM D
@@ -277,9 +269,7 @@ timeline_events:
   icon_column_ratio: 0.15
 timeline_durations:
   box_height: 50
-  date_font: PlaywriteDEGrund-VariableFont_wght
   date_font_size: 10
-  date_color: black
 compact_plan:
   palette: null
   header_bottom_y: 8
@@ -1041,6 +1031,10 @@ style_rules:
       font: RobotoCondensed-Light
       size: 9
       color: '#888888'
+  - name: line:grid — timeline (from timeline)
+    apply_to: line:grid
+    select: {visualizer: timeline}
+    style: {dasharray: 4 2}
   - name: line:grid — mini (from mini_calendar)
     apply_to: line:grid
     select: {visualizer: mini}
@@ -1049,6 +1043,14 @@ style_rules:
     apply_to: icon:milestone
     select: {visualizer: mini}
     style: {stroke_width: 1.0, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: PlaywriteDEGrund-VariableFont_wght}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: PlaywriteDEGrund-VariableFont_wght}
 element_overrides:
   ec-axis-tick:
     use: line:tick

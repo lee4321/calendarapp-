@@ -192,7 +192,6 @@ timeline:
   # the whole distance; wins over the gap
   tick_label_offset_y: null
   axis_width: 3
-  tick_color: grey
   date_format: M/D
   tick_label_format: M/D
   today_date: ''
@@ -207,14 +206,6 @@ timeline:
   duration_lane_gap_y: 8.0
   label_fill_opacity: 0.25
   palette: colorblind2
-  name_text:
-    font_name: OfficinaSans-Book
-    font_color: black
-  notes_text:
-    font_name: OfficinaSans-BookItalic
-    font_color: black
-  date:
-    font_family: OfficinaSans-BookItalic
 timeline_events:
   box_width: 115
   box_height: 16
@@ -233,9 +224,7 @@ timeline_events:
 timeline_durations:
   box_width: null
   box_height: 14
-  date_font: OfficinaSans-BookItalic
   date_font_size: 9
-  date_color: black
 pit:
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both
@@ -1083,6 +1072,14 @@ style_rules:
     apply_to: icon:milestone
     select: {visualizer: mini}
     style: {stroke_width: 0.5, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: OfficinaSans-Book}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: OfficinaSans-BookItalic}
 element_overrides:
   ec-axis-tick:
     use: line:tick

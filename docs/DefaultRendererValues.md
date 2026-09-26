@@ -284,61 +284,61 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `line:duration_bar` | `opacity` | *unset* | `self._tk("line:duration_bar").get("opacity")` | `timeline/renderer.py:1533` |
-| `text:duration_date` | `color` | `#666666` | `_date_style.color or config.timeline_duration_date_color or tk_date.get("color") or text_color` | `timeline/renderer.py:1731` |
-| `text:duration_date` | `font` | `RobotoCondensed-Light` | `_date_style.font or config.timeline_duration_date_font or tk_date.get("font") or config.timeline_date_font` | `timeline/renderer.py:1729` |
-| `text:duration_date` | `size` | `7.58` | `self._tk("text:duration_date").get("size") or ( float(config.timeline_duration_date_font_size) if config.timeline_duration_date_font_size is not None…` | `timeline/renderer.py:2217` |
-| `text:event_date` | `color` | `#666666` / `#AAAAAA` (differs by call site); some call sites depend on the item | `_event_date_style.color or tk_event_date.get("color") or event_text_color` | `timeline/renderer.py:1367`, `timeline/renderer.py:2582`, `timeline/renderer.py:2785` |
-| `text:event_date` | `font` | `RobotoCondensed-Light` / `Roboto-Bold` (differs by call site); some call sites depend on the item | `_event_date_style.font or tk_event_date.get("font") or config.timeline_date_font` | `timeline/renderer.py:1366`, `timeline/renderer.py:2585`, `timeline/renderer.py:2783` +2 |
-| `text:event_date` | `size` | `9.23` | `self._tk("text:event_date").get("size") or max(8.0, _base_name_size(config) * 0.95)` | `timeline/renderer.py:3373` |
-| `text:event_name` | `color` | `deepskyblue` | `tk_name.get("color") or config.timeline_name_text_font_color or _name_style.color or item.color` | `timeline/renderer.py:1292`, `timeline/renderer.py:1715` |
-| `text:event_name` | `font` | `Roboto-Bold` | `tk_name.get("font") or config.timeline_name_text_font_name or _name_style.font` | `timeline/renderer.py:1288`, `timeline/renderer.py:1713` |
-| `text:event_name` | `size` | `11.72` ¹ | `self._tk("text:event_name").get("size") or ( float(config.timeline_name_text_font_size * 0.85) if config.timeline_name_text_font_size is not None els…` | `timeline/renderer.py:2207`, `timeline/renderer.py:3363` |
-| `text:event_notes` | `color` | `deepskyblue` | `tk_notes.get("color") or config.timeline_notes_text_font_color or _notes_style.color or event_text_color` | `timeline/renderer.py:1304`, `timeline/renderer.py:1725` |
-| `text:event_notes` | `font` | `RobotoCondensed-Bold` | `tk_notes.get("font") or config.timeline_notes_text_font_name or _notes_style.font` | `timeline/renderer.py:1289`, `timeline/renderer.py:1714` |
-| `text:event_notes` | `size` | `8.75` ¹ | `self._tk("text:event_notes").get("size") or ( float(config.timeline_notes_text_font_size * 0.82) if config.timeline_notes_text_font_size is not None …` | `timeline/renderer.py:2212`, `timeline/renderer.py:3368` |
-| `text:label` | `color` | `#888888` | `str(tk_band_label.get("color") or _band_text_style.color or "black")` | `timeline/renderer.py:2289` |
-| `text:label` | `font` | *depends on the item being drawn* | `str( band.get("font") or tk_band_label.get("font") or _band_text_style.font or config.timeline_text_font_name )` | `timeline/renderer.py:2349` |
-| `text:label` | `opacity` | `1` | `float( tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity )` | `timeline/renderer.py:2291` |
-| `text:label` | `size` | *depends on the item being drawn* | `float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))` | `timeline/renderer.py:2353` |
-| `text:today_label` | `color` | `#FF4444` | `tk_today_label.get("color") or _today_label_style.color` | `timeline/renderer.py:3227` |
-| `text:today_label` | `font` | `RobotoCondensed-Light` | `tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font` | `timeline/renderer.py:3194` |
-| `text:today_label` | `size` | `7.78` | `tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)` | `timeline/renderer.py:3192` |
+| `line:duration_bar` | `opacity` | *unset* | `self._tk("line:duration_bar").get("opacity")` | `timeline/renderer.py:1524` |
+| `line:grid` | `dasharray` | *unset* | `self._tk("line:grid").get("dasharray") or leader_style.dasharray or None` | `timeline/renderer.py:404` |
+| `text:duration_date` | `color` | `#666666` | `_date_style.color or tk_date.get("color") or text_color` | `timeline/renderer.py:1720` |
+| `text:duration_date` | `font` | `RobotoCondensed-Light` | `_date_style.font or tk_date.get("font")` | `timeline/renderer.py:1719` |
+| `text:duration_date` | `size` | `7.58` | `self._tk("text:duration_date").get("size") or ( float(config.timeline_duration_date_font_size) if config.timeline_duration_date_font_size is not None…` | `timeline/renderer.py:2210` |
+| `text:event_date` | `color` | `#666666` / `#AAAAAA` (differs by call site); some call sites depend on the item | `_event_date_style.color or tk_event_date.get("color") or event_text_color` | `timeline/renderer.py:1358`, `timeline/renderer.py:2573`, `timeline/renderer.py:2776` |
+| `text:event_date` | `font` | `RobotoCondensed-Light` | `self._tk("text:event_date").get("font") or config.get_text_style("ec-event-date").font` | `timeline/renderer.py:1357`, `timeline/renderer.py:2180` |
+| `text:event_date` | `size` | `9.23` | `self._tk("text:event_date").get("size") or max(8.0, _base_name_size(config) * 0.95)` | `timeline/renderer.py:3359` |
+| `text:event_name` | `color` | `#333333` | `tk_name.get("color") or _name_style.color or item.color` | `timeline/renderer.py:1286`, `timeline/renderer.py:1706` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_name.get("font") or _name_style.font` | `timeline/renderer.py:1283`, `timeline/renderer.py:1704` |
+| `text:event_name` | `size` | `11.72` ¹ | `self._tk("text:event_name").get("size") or ( float(config.timeline_name_text_font_size * 0.85) if config.timeline_name_text_font_size is not None els…` | `timeline/renderer.py:2200`, `timeline/renderer.py:3349` |
+| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _notes_style.color or event_text_color` | `timeline/renderer.py:1296`, `timeline/renderer.py:1716` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _notes_style.font` | `timeline/renderer.py:1284`, `timeline/renderer.py:1705` |
+| `text:event_notes` | `size` | `8.75` ¹ | `self._tk("text:event_notes").get("size") or ( float(config.timeline_notes_text_font_size * 0.82) if config.timeline_notes_text_font_size is not None …` | `timeline/renderer.py:2205`, `timeline/renderer.py:3354` |
+| `text:label` | `color` | `#888888` | `str(tk_band_label.get("color") or _band_text_style.color or "black")` | `timeline/renderer.py:2282` |
+| `text:label` | `font` | *depends on the item being drawn* | `str(band.get("font") or tk_band_label.get("font") or _band_text_style.font)` | `timeline/renderer.py:2341` |
+| `text:label` | `opacity` | `1` | `float( tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity )` | `timeline/renderer.py:2284` |
+| `text:label` | `size` | *depends on the item being drawn* | `float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))` | `timeline/renderer.py:2344` |
+| `text:today_label` | `color` | `#FF4444` | `tk_today_label.get("color") or _today_label_style.color` | `timeline/renderer.py:3213` |
+| `text:today_label` | `font` | `RobotoCondensed-Light` | `tk_today_label.get("font") or _today_label_style.font` | `timeline/renderer.py:3180` |
+| `text:today_label` | `size` | `7.78` | `tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)` | `timeline/renderer.py:3178` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `timeline/renderer.py:449` |
-| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `timeline/renderer.py:452` |
-| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `timeline/renderer.py:451` |
-| `ec-axis-line` | `width` | `2` | `_axis_style.width` | `timeline/renderer.py:450` |
-| `ec-axis-tick` | `color` | `#AAAAAA` | `config.get_line_style("ec-axis-tick").color` | `timeline/renderer.py:2772`, `timeline/renderer.py:3099` |
-| `ec-axis-tick` | `dasharray` | *unset* | `_tick_style.dasharray or None` | `timeline/renderer.py:2775` |
-| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `timeline/renderer.py:2316`, `timeline/renderer.py:2378` |
-| `ec-callout-box` | `fill_opacity` | `0.25` | `_callout_style.fill_opacity` | `timeline/renderer.py:1230` |
-| `ec-callout-box` | `stroke_dasharray` | *unset* | `_callout_style.stroke_dasharray or None` | `timeline/renderer.py:1234` |
-| `ec-callout-box` | `stroke_opacity` | `1` | `_callout_style.stroke_opacity` | `timeline/renderer.py:1233` |
-| `ec-callout-box` | `stroke_width` | `1` | `config.get_box_style("ec-callout-box").stroke_width` | `timeline/renderer.py:348`, `timeline/renderer.py:627`, `timeline/renderer.py:1232` |
-| `ec-callout-leader` | `dasharray` | *unset* | `leader_style.dasharray or config.timeline_connector_stroke_dasharray or None` | `timeline/renderer.py:403` |
-| `ec-callout-leader` | `opacity` | `0.5` | `leader_style.opacity or 0.75` | `timeline/renderer.py:402` |
-| `ec-callout-leader` | `width` | `0.5` | `leader_style.width or 1.25` | `timeline/renderer.py:401` |
-| `ec-duration-bar` | `dasharray` | *unset* | `_dur_bar_style.dasharray or None` | `timeline/renderer.py:1497`, `timeline/renderer.py:1541` |
-| `ec-duration-bar` | `opacity` | `0.9`; some call sites depend on the item | `_dur_bar_style.opacity` | `timeline/renderer.py:1496`, `timeline/renderer.py:1537`, `timeline/renderer.py:1540` |
-| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color or config.timeline_name_text_font_color` | `timeline/renderer.py:755` |
-| `ec-event-name` | `opacity` | `1` | `_name_style.opacity` | `timeline/renderer.py:1298`, `timeline/renderer.py:1720` |
-| `ec-event-notes` | `color` | `#666666` | `_notes_style.color or config.timeline_notes_text_font_color` | `timeline/renderer.py:859`, `timeline/renderer.py:932` |
-| `ec-event-notes` | `opacity` | `1` | `_notes_style.opacity` | `timeline/renderer.py:1306`, `timeline/renderer.py:1726` |
-| `ec-holiday-date` | `color` | `#666666` | `getattr(config, "timeline_holiday_date_color", None) or _date_style.color or color or config.timeline_tick_color` | `timeline/renderer.py:2940` |
-| `ec-holiday-date` | `font` | `RobotoCondensed-Light` | `_date_style.font or config.timeline_date_font` | `timeline/renderer.py:2936` |
-| `ec-holiday-date` | `opacity` | `1` | `_date_style.opacity` | `timeline/renderer.py:2974` |
-| `ec-month-tick` | `opacity` | `0.35` | `config.get_line_style("ec-month-tick").opacity` | `timeline/renderer.py:2774` |
-| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `timeline/renderer.py:2298` |
-| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `timeline/renderer.py:2300` |
-| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `timeline/renderer.py:2299` |
-| `ec-today-line` | `color` | `#FF4444` | `_today_line_style.color` | `timeline/renderer.py:3185` |
-| `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:3188` |
-| `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:3187` |
+| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `timeline/renderer.py:450` |
+| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `timeline/renderer.py:453` |
+| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `timeline/renderer.py:452` |
+| `ec-axis-line` | `width` | `2` | `_axis_style.width` | `timeline/renderer.py:451` |
+| `ec-axis-tick` | `color` | `#AAAAAA` | `config.get_line_style("ec-axis-tick").color` | `timeline/renderer.py:2763`, `timeline/renderer.py:3085` |
+| `ec-axis-tick` | `dasharray` | *unset* | `_tick_style.dasharray or None` | `timeline/renderer.py:2766` |
+| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `timeline/renderer.py:2309`, `timeline/renderer.py:2369` |
+| `ec-callout-box` | `fill_opacity` | `0.25` | `_callout_style.fill_opacity` | `timeline/renderer.py:1225` |
+| `ec-callout-box` | `stroke_dasharray` | *unset* | `_callout_style.stroke_dasharray or None` | `timeline/renderer.py:1229` |
+| `ec-callout-box` | `stroke_opacity` | `1` | `_callout_style.stroke_opacity` | `timeline/renderer.py:1228` |
+| `ec-callout-box` | `stroke_width` | `1` | `config.get_box_style("ec-callout-box").stroke_width` | `timeline/renderer.py:349`, `timeline/renderer.py:628`, `timeline/renderer.py:1227` |
+| `ec-callout-leader` | `opacity` | `0.5` | `leader_style.opacity or 0.75` | `timeline/renderer.py:403` |
+| `ec-callout-leader` | `width` | `0.5` | `leader_style.width or 1.25` | `timeline/renderer.py:402` |
+| `ec-duration-bar` | `dasharray` | *unset* | `_dur_bar_style.dasharray or None` | `timeline/renderer.py:1488`, `timeline/renderer.py:1532` |
+| `ec-duration-bar` | `opacity` | `0.9`; some call sites depend on the item | `_dur_bar_style.opacity` | `timeline/renderer.py:1487`, `timeline/renderer.py:1528`, `timeline/renderer.py:1531` |
+| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `timeline/renderer.py:755` |
+| `ec-event-name` | `opacity` | `1` | `_name_style.opacity` | `timeline/renderer.py:1291`, `timeline/renderer.py:1711` |
+| `ec-event-notes` | `color` | `#666666` | `_notes_style.color` | `timeline/renderer.py:855`, `timeline/renderer.py:927` |
+| `ec-event-notes` | `opacity` | `1` | `_notes_style.opacity` | `timeline/renderer.py:1297`, `timeline/renderer.py:1717` |
+| `ec-holiday-date` | `color` | `#666666` | `getattr(config, "timeline_holiday_date_color", None) or _date_style.color or color or "grey"` | `timeline/renderer.py:2929` |
+| `ec-holiday-date` | `font` | `RobotoCondensed-Light` | `_date_style.font` | `timeline/renderer.py:2927` |
+| `ec-holiday-date` | `opacity` | `1` | `_date_style.opacity` | `timeline/renderer.py:2960` |
+| `ec-month-tick` | `opacity` | `0.35` | `config.get_line_style("ec-month-tick").opacity` | `timeline/renderer.py:2765` |
+| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `timeline/renderer.py:2291` |
+| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `timeline/renderer.py:2293` |
+| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `timeline/renderer.py:2292` |
+| `ec-today-line` | `color` | `#FF4444` | `_today_line_style.color` | `timeline/renderer.py:3171` |
+| `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:3174` |
+| `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:3173` |
 
-<details><summary>Settings (63)</summary>
+<details><summary>Settings (53)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -354,13 +354,9 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `timeline.axis_width` | `timeline_axis_width` | `2` |
 | `timeline.bottom_colors` | `timeline_bottom_colors` | `[midnightblue, springgreen, deepskyblue, gold, tomato]` |
 | `timeline.bottom_time_bands` | `timeline_bottom_time_bands` | `[]` |
-| `timeline.connector_stroke_dasharray` | `timeline_connector_stroke_dasharray` | *unset* |
-| `timeline.date.font_family` | `timeline_date_font` | `Roboto-Bold` |
 | `timeline.date_format` | `timeline_date_format` | `MMM D` |
 | `timeline_durations.box_height` | `timeline_duration_box_height` | *unset* |
 | `timeline_durations.box_width` | `timeline_duration_box_width` | *unset* |
-| `timeline_durations.date_color` | `timeline_duration_date_color` | *unset* |
-| `timeline_durations.date_font` | `timeline_duration_date_font` | *unset* |
 | `timeline_durations.date_font_size` | `timeline_duration_date_font_size` | *unset* |
 | `timeline_durations.icon_column_ratio` | `timeline_duration_icon_column_ratio` | *unset* |
 | `timeline.duration_icon_visible` | `timeline_duration_icon_visible` | `false` |
@@ -381,19 +377,13 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `timeline.marker_radius` | `timeline_marker_radius` | `6` |
 | `timeline.marker_stroke_color` | `timeline_marker_stroke_color` | `black` |
 | `timeline.marker_stroke_width` | `timeline_marker_stroke_width` | `1` |
-| `timeline.name_text.font_color` | `timeline_name_text_font_color` | `deepskyblue` |
-| `timeline.name_text.font_name` | `timeline_name_text_font_name` | `Roboto-Bold` |
 | `timeline.name_text.font_size` | `timeline_name_text_font_size` | `11.72` |
-| `timeline.notes_text.font_color` | `timeline_notes_text_font_color` | `deepskyblue` |
-| `timeline.notes_text.font_name` | `timeline_notes_text_font_name` | `RobotoCondensed-Bold` |
 | `timeline.notes_text.font_size` | `timeline_notes_text_font_size` | `8.75` |
 | `timeline.orientation` | `timeline_orientation` | `horizontal` |
 | `timeline.show_fiscal_periods` | `timeline_show_fiscal_periods` | `false` |
 | `timeline.show_fiscal_quarters` | `timeline_show_fiscal_quarters` | `false` |
 | `timeline.show_holiday_dates` | `timeline_show_holiday_dates` | `true` |
 | `timeline.show_holiday_icons` | `timeline_show_holiday_icons` | `true` |
-| `timeline.text.font_name` | `timeline_text_font_name` | `Roboto-Bold` |
-| `timeline.tick_color` | `timeline_tick_color` | `grey` |
 | `timeline.tick_label_format` | `timeline_tick_label_format` | `MMM D` |
 | `timeline.tick_label_gap` | `timeline_tick_label_gap` | *unset* |
 | `timeline.tick_label_offset_y` | `timeline_tick_label_offset_y` | *unset* |
@@ -412,7 +402,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` settings below.
 
-<details><summary>Settings (91)</summary>
+<details><summary>Settings (89)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -504,8 +494,6 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `pit:` block | `theme_pit_today_line_linejoin` | *unset* |
 | `pit:` block | `theme_pit_today_line_opacity` | *unset* |
 | `pit:` block | `theme_pit_today_line_width` | *unset* |
-| `timeline.name_text.font_name` | `timeline_name_text_font_name` | `Roboto-Bold` |
-| `timeline.notes_text.font_name` | `timeline_notes_text_font_name` | `RobotoCondensed-Bold` |
 | `timeline.today_line_color` | `timeline_today_line_color` | `grey` |
 
 </details>

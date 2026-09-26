@@ -58,3 +58,30 @@ def test_the_loader_rejects_a_retired_key_and_names_the_converter():
     engine._theme_data = {"weekly": {"day_box": {"stroke_width": 1}}}
     with pytest.raises(ThemeError, match="convert_style_keys"):
         engine.apply(CalendarConfig())
+
+
+_PIT_FONT = """\
+timeline:
+  name_text:
+    font_name: Offside-Regular   # PIT read this ahead of any token
+style_rules:
+  - name: define text:event_name
+    define: text
+    as: event_name
+    style: {font: Roboto-Regular}
+"""
+
+
+def test_a_key_read_ahead_of_the_token_is_written_even_when_the_token_sets_it():
+    text, _changes = convert_text(_PIT_FONT)
+    theme = parse_theme(yaml.safe_load(text))
+    assert theme.resolve_token("text:event_name", {"visualizer": "pit"})["font"] == "Offside-Regular"
+    # The timeline read the token first, so it keeps the definition's font.
+    assert theme.resolve_token("text:event_name", {"visualizer": "timeline"})["font"] == "Roboto-Regular"
+
+
+def test_converting_twice_changes_nothing():
+    once, _ = convert_text(_PIT_FONT)
+    twice, changes = convert_text(once)
+    assert twice == once
+    assert changes == []

@@ -1776,14 +1776,10 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_timeline_palette` | `timeline.palette` | `str | None` | `None` | palette |
 | `timeline_axis_width` | `timeline.axis_width` | `float` | `2.0` | axis width |
 | `timeline_bottom_colors` | `timeline.bottom_colors` | `list[str]` | `field(default_factory=lambda: ['midnightblue', 'springgreen', 'deepskyblue', ...` | bottom colors |
-| `timeline_connector_stroke_dasharray` | `timeline.connector_stroke_dasharray` | `str | None` | `None` | connector stroke dasharray |
-| `timeline_date_font` | `timeline.date.font_family` | `str` | `Fonts.R_BOLD` | font family |
 | `timeline_date_format` | `timeline.date_format` | `str` | `'MMM D'` | date format |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
 | `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | the width a duration bar's grid is taken to need. A bar is never stretched to it — both bar edges belong to the event's dates — so it only decides which bars break their name over two rows and condense. `None` derives the width from what each column has to hold: a date in each side column, the wider of the name and notes in the middle |
 | `timeline_duration_icon_column_ratio` | `timeline_durations.icon_column_ratio` | `float | None` | `None` | share of a duration bar given to each of its two side columns (icon over start date; end date on the other). `None` follows `timeline_events.icon_column_ratio`, so bars and callout boxes line up without a theme saying so twice |
-| `timeline_duration_date_color` | `timeline_durations.date_color` | `str | None` | `None` | date color |
-| `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
 | `timeline_duration_date_font_size` | `timeline_durations.date_font_size` | `float | None` | `None` | date font size |
 | `timeline_duration_lane_gap_y` | `timeline.duration_lane_gap_y` | `float` | `8.0` | duration lane gap y |
 | `timeline_duration_side` | `timeline.duration_side` | `str` | `opposite` | which side of the axis the duration bars stack on. `opposite` puts them across the axis from the event callouts — with the default `label_side`, callouts above and bars below. `primary` (above / right) / `secondary` (below / left) / `both` pin them regardless of where the callouts went |
@@ -1796,7 +1792,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_event_icon_column_ratio` | `timeline_events.icon_column_ratio` | `float` | `0.15` | share of a callout box's inner width given to the icon / date column; the name and notes get the rest |
 | `timeline_event_placement` | `timeline_events.placement` | `str` | `packed` | how point-event callouts are placed. `packed` puts each box's leading edge on its own start date and stacks collisions away from the axis, earliest nearest; `labella` keeps the force-solved placement that centres a box on its date |
 | `timeline_event_row_gap` | `timeline_events.row_gap` | `float | None` | `None` | clear space between two rows of packed boxes; `None` follows `timeline.labella.layer_gap` |
-| `timeline_holiday_date_color` | `timeline.holiday_date_color` | `str | None` | `None` | holiday date color; falls back to the icon color, then the tick color |
+| `timeline_holiday_date_color` | `timeline.holiday_date_color` | `str | None` | `None` | holiday date color; falls back to the `text:event_date` color (element `ec-holiday-date`) |
 | `timeline_holiday_date_font_size` | `timeline.holiday_date_font_size` | `float | None` | `None` | holiday date font size; defaults to 0.68 x the icon size |
 | `timeline_holiday_date_format` | `timeline.holiday_date_format` | `str | None` | `None` | holiday date format; falls back to `timeline.date_format` |
 | `timeline_holiday_icon_color` | `timeline.holiday_icon_color` | `str | None` | `None` | holiday icon color; `None` keeps the icon's own colors |
@@ -1812,7 +1808,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_marker_stroke_width` | `timeline.marker_stroke_width` | `float` | `1.0` | marker stroke width |
 | `timeline_show_holiday_dates` | `timeline.show_holiday_dates` | `bool` | `True` | print each holiday's date under its icon |
 | `timeline_show_holiday_icons` | `timeline.show_holiday_icons` | `bool` | `True` | draw the government-holiday icon row below the axis |
-| `timeline_tick_color` | `timeline.tick_color` | `str` | `'grey'` | tick color |
 | `timeline_tick_label_format` | `timeline.tick_label_format` | `str` | `'MMM D'` | tick label format |
 | `timeline_tick_label_gap` | `timeline.tick_label_gap` | `float | None` | `None` | clear space between a tick mark's tip and its date label, so it moves with the tick length. `None` = 1.5 label heights. Ignored where a `timeline.ticks` band sets its own `label_gap` |
 | `timeline_tick_label_offset_y` | `timeline.tick_label_offset_y` | `float | None` | `None` | the whole distance from the axis to the label, tick length included; wins over `tick_label_gap` |

@@ -322,6 +322,14 @@ style_rules:
     apply_to: icon:milestone
     select: {visualizer: mini}
     style: {stroke_width: 1.0, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: Roboto-Bold}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: RobotoCondensed-Bold}
 element_overrides:
   ec-day-number:
     use: text:label
