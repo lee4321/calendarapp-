@@ -2,7 +2,7 @@
 
 One or two sentences per change, with the commit that made it; the commit message holds the detail (`git show <sha>`). Newest first.
 
-- 2026-09-26 phase 5: a fresh clone's tests build `calendar.db` themselves (`tools/db/build_db.py`), `DefaultRendererValues.md` cites `file:function` instead of line numbers, `.python-version` pins `3.14` so `uv sync` works off macOS, and this changelog keeps entries short.
+- 2026-09-26 be1ddcd dev: a fresh clone's tests build `calendar.db` themselves (`tools/db/build_db.py`), `DefaultRendererValues.md` cites `file:function` instead of line numbers, `.python-version` pins `3.14` so `uv sync` works off macOS, and this changelog keeps entries short.
 - 2026-09-26 73a9947 tools: retire `tools/migrate_theme.py` and `tools/strip_element_bindings.py`; legacy-schema errors say how to restore them from tag `pre-migrator-retirement`.
 - 2026-09-26 2452468 themes: theme inheritance — a theme can `extends:` another and list only its differences; Julia, dark, accent and vibrant now extend corporate (4,039 → 867 lines, identical renders).
 - 2026-09-26 10760c2 themes: retire blockplan's section style keys in favour of tokens (**breaking**; `tools/convert_style_keys.py` converts); `StyleEngine` now honours `select: {visualizer}`.
