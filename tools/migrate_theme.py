@@ -457,9 +457,12 @@ def _convert_text_styles(src: dict[str, Any]) -> list[dict[str, Any]]:
                     new_style["size"] = v
                 else:
                     new_style[k] = v
+            papers = when.get("papersize")
+            papers = " / ".join(map(str, papers)) if isinstance(papers, list) else str(papers or "any")
             rules.append(
                 {
-                    "name": f"text:{name} — papersize override",
+                    # Named after the papers it selects: rule names are unique.
+                    "name": f"text:{name} — {papers} paper",
                     "apply_to": f"text:{name}",
                     "select": when,
                     "style": new_style,
