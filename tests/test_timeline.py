@@ -384,7 +384,7 @@ def test_timeline_month_ticks_default_to_first_of_month_inside_range(tmp_path):
 
     start = arrow.get("20260115", "YYYYMMDD")
     end = arrow.get("20260320", "YYYYMMDD")
-    renderer._draw_month_ticks(config, start, end, 50.0, 700.0, 300.0)
+    renderer._draw_month_ticks(config, _hframe(start, end, 50.0, 700.0, 300.0))
 
     labels = [c["text"] for c in renderer.text_calls]
     assert "Feb 1" in labels
@@ -2371,12 +2371,7 @@ def test_the_built_in_ticks_read_the_theme_keys(tmp_path):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
 
     renderer._draw_month_ticks(
-        config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        60.0,
-        700.0,
-        300.0,
+        config, _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 60.0, 700.0, 300.0)
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels
@@ -2657,7 +2652,7 @@ def test_fiscal_bands_run_as_columns_beside_a_vertical_axis(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_fiscal_bands_vertical(config, start, end, 50.0, 700.0, 300.0, side=Side.PRIMARY)
+    renderer._draw_fiscal_bands(config, _vframe(start, end, 50.0, 700.0, 300.0), Side.PRIMARY)
     rects = renderer.rect_calls
     assert rects
     for rect in rects:
@@ -2811,13 +2806,10 @@ def test_a_tick_date_grows_away_from_the_axis(tmp_path):
 def _vertical_ticks(config, start="20260101", end="20260430", axis_top=50.0, axis_bottom=700.0, axis_x=300.0):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get(start, "YYYYMMDD"),
-        arrow.get(end, "YYYYMMDD"),
-        axis_top,
-        axis_bottom,
-        axis_x,
+        _vframe(arrow.get(start, "YYYYMMDD"), arrow.get(end, "YYYYMMDD"), axis_top, axis_bottom, axis_x),
+        Side.SECONDARY,
     )
     return renderer
 
@@ -2855,14 +2847,10 @@ def test_tick_labels_move_to_the_far_side_with_the_bars(tmp_path):
     config.timeline_tick_label_gap = 20.0
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
-        label_side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        Side.PRIMARY,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     tick_h = renderer._axis_tick_height(config)
@@ -2879,13 +2867,10 @@ def test_vertical_tick_labels_take_the_theme_font_and_color(tmp_path):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     renderer._tokens = {"text:event_date": {"font": "JuliaMono-Regular", "color": "hotpink"}}
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        Side.SECONDARY,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert [lbl["text"] for lbl in labels][:2] == ["January", "February"]
@@ -2904,16 +2889,13 @@ def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
         "label_gap": 5.0,
         "font": "JuliaMono-Regular",
     }
-    renderer._draw_axis_ticks_from_band_vertical(
+    renderer._draw_axis_ticks_from_band(
         config,
         band,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
         None,
         ticks=[(date(2026, 2, 1), "Feb"), (date(2026, 3, 1), "Mar")],
+        label_side=Side.SECONDARY,
     )
     ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
     assert len(ticks) == 2
