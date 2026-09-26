@@ -7,7 +7,7 @@ and duration bars aligned to start/end dates.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING
@@ -100,16 +100,13 @@ class TimelineCallout:
 class TimelineDuration:
     """Duration bar placement alongside the timeline axis.
 
-    For HORIZONTAL orientation: `start_x`/`end_x` are the bar endpoints
-    along the axis — exactly the x of the event's start and end dates, so
-    bars sharing a date share an edge — and `lane` stacks downward below
-    the axis.
-
-    For VERTICAL orientation: `start_y`/`end_y` are the bar endpoints
-    along the axis, `start_x`/`end_x` both equal the axis x position,
-    and `lane` stacks to the LEFT of the axis (secondary side).
-    `continues_left` / `continues_right` map to "continues past the top"
-    / "continues past the bottom" respectively.
+    The bar's ends are exactly the positions of the event's start and end
+    dates along the axis (``along_start`` / ``along_end``), so bars sharing
+    a date share an edge; `lane` stacks away from the axis on `lane_side`.
+    Those positions live in `start_x`/`end_x` on a horizontal axis and in
+    `start_y`/`end_y` on a vertical one, where `start_x`/`end_x` hold the
+    axis x.  `continues_left` / `continues_right` mean "starts before" /
+    "ends after" the visible range, whichever way the axis runs.
     """
 
     event: Event
@@ -124,8 +121,8 @@ class TimelineDuration:
     orientation: Orientation = Orientation.HORIZONTAL
     start_y: float = 0.0
     end_y: float = 0.0
-    # Which side of the axis this bar sits on (vertical orientation only;
-    # ignored for horizontal). PRIMARY = right, SECONDARY = left.
+    # Which side of the axis this bar sits on: PRIMARY is above a horizontal
+    # axis and right of a vertical one (see visualizers/timeline/axis.py).
     lane_side: Side = Side.SECONDARY
     # True when the bar is narrower than `min_width`, i.e. than its own text
     # needs.  Horizontal bars are never widened past their dates to make room
@@ -248,6 +245,9 @@ class TimelineRenderer(BaseSVGRenderer):
         # Tick dates go where the bars are not: a bar's first lane starts a
         # few points off the axis, exactly where a date would land.
         tick_label_side = self._tick_label_side(duration_side)
+        # Holiday marks sit between the axis and the bars, opposite the tick
+        # dates — the bars' own side, or PRIMARY when the bars take both.
+        holiday_side = self._holiday_side(tick_label_side)
 
         # Room for the timeband stacks, taken off the ends of the content
         # area: above and below a horizontal chart, left and right of a
@@ -284,9 +284,16 @@ class TimelineRenderer(BaseSVGRenderer):
             if getattr(config, "includeevents", True):
                 axis_y = inner_y + (inner_h * 0.44)
             else:
-                # Nothing above the axis but its own tick dates, so it can
-                # rise to just past them.
-                axis_y = inner_y + self._tick_side_clearance(config, start, end) + 4.0
+                # With --noevents only the bars and the tick dates share the
+                # page: the axis goes to the edge the bars leave free, just
+                # far enough in for its dates (see the vertical branch).
+                clear = self._tick_side_clearance(config, start, end) + 4.0
+                if duration_side is Side.BOTH:
+                    axis_y = min(inner_y + (inner_h * 0.50), inner_y + inner_h - clear)
+                elif duration_side is Side.PRIMARY:
+                    axis_y = inner_y + inner_h - clear
+                else:
+                    axis_y = inner_y + clear
             axis_origin = (axis_left, axis_y)
             axis_length = axis_right - axis_left
             # End-of-axis coordinates for the line draw and downstream uses.
@@ -445,10 +452,9 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-axis-line",
         )
 
-        # The today marker, fiscal bands, holiday icons and timebands below
-        # remain horizontal-only in this release. Axis ticks are not: a
-        # vertical axis draws the same theme's bands turned on their side
-        # (see _draw_axis_ticks_from_band_vertical).
+        # Everything beside the axis is drawn through ``frame``; sides follow
+        # the bars (holiday marks) or the opposite of the bars (tick dates,
+        # fiscal rows), the same way in either direction.
         _horizontal = orient is Orientation.HORIZONTAL
 
         tick_bands_cfg = getattr(config, "timeline_ticks", None)
@@ -497,36 +503,20 @@ class TimelineRenderer(BaseSVGRenderer):
             self._draw_fiscal_bands(config, frame, tick_label_side)
 
         if _horizontal:
+            self._draw_today_marker(config, frame, area_y, area_y + area_h)
+        else:
             self._draw_today_marker(
                 config,
-                start,
-                end,
-                axis_left,
-                axis_right,
-                axis_y,
-                area_y,
-                area_h,
-            )
-        else:
-            self._draw_today_marker_vertical(
-                config,
-                start,
-                end,
-                axis_origin[1],
-                axis_end[1],
-                axis_origin[0],
+                frame,
                 area_x,
-                area_w,
-                label_bounds=(
-                    area_x + top_bands_h,
-                    area_x + area_w - bottom_bands_h,
-                ),
+                area_x + area_w,
+                label_bounds=(area_x + top_bands_h, area_x + area_w - bottom_bands_h),
             )
 
         # Government holiday icons sit between the axis line and the duration
         # bars (the duration offset already reserves enough space for them).
         if getattr(config, "timeline_show_holiday_icons", True):
-            self._draw_holiday_icons(config, frame, db, duration_side)
+            self._draw_holiday_icons(config, frame, db, holiday_side)
 
         # Pass 2: draw all boxes, markers, and text on top.
         for callout in callouts:
@@ -536,60 +526,18 @@ class TimelineRenderer(BaseSVGRenderer):
             with self._event_scope(duration.event):
                 self._draw_duration(config, duration, frame, _duration_room(duration))
 
-        # Timebands: top bands stack above the timeline area; bottom bands
-        # stack below it. Only drawn when declared in the theme.
-        if top_bands:
-            if _horizontal:
-                self._draw_timeline_bands(
-                    config,
-                    top_bands,
-                    area_y,
-                    axis_left,
-                    axis_right,
-                    start,
-                    end,
-                    db,
-                    events=event_objs,
-                )
-            else:
-                self._draw_timeline_bands_vertical(
-                    config,
-                    top_bands,
-                    area_x + top_bands_h,
-                    axis_origin[1],
-                    axis_end[1],
-                    start,
-                    end,
-                    db,
-                    events=event_objs,
-                    sign=-1.0,
-                )
-        if bottom_bands:
-            if _horizontal:
-                self._draw_timeline_bands(
-                    config,
-                    bottom_bands,
-                    area_y + area_h - bottom_bands_h,
-                    axis_left,
-                    axis_right,
-                    start,
-                    end,
-                    db,
-                    events=event_objs,
-                )
-            else:
-                self._draw_timeline_bands_vertical(
-                    config,
-                    bottom_bands,
-                    area_x + area_w - bottom_bands_h,
-                    axis_origin[1],
-                    axis_end[1],
-                    start,
-                    end,
-                    db,
-                    events=event_objs,
-                    sign=1.0,
-                )
+        # Timebands: the top stack sits above a horizontal chart (read top
+        # to bottom) or left of a vertical one (growing outward from the
+        # chart); the bottom stack below it or to its right. Only drawn when
+        # declared in the theme.
+        if _horizontal:
+            top_start, top_sign = area_y, 1.0
+            bottom_start, bottom_sign = area_y + area_h - bottom_bands_h, 1.0
+        else:
+            top_start, top_sign = area_x + top_bands_h, -1.0
+            bottom_start, bottom_sign = area_x + area_w - bottom_bands_h, 1.0
+        self._draw_timeline_bands(config, top_bands, frame, top_start, top_sign, db, events=event_objs)
+        self._draw_timeline_bands(config, bottom_bands, frame, bottom_start, bottom_sign, db, events=event_objs)
 
         # After all content is laid out, tighten the SVG viewBox to the actual
         # rendered extent. _shrink_drawing_to_content() runs before
@@ -659,7 +607,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # usually reach further down and would cover this, but a timeline with
         # no duration bars would otherwise crop the band away under --shrink.
         if getattr(config, "timeline_show_holiday_icons", True):
-            holiday_side = self._duration_side(config, Side(config.timeline_label_side))
+            holiday_side = self._holiday_side(tick_side)
             if frame.vertical or frame.sign(holiday_side) > 0:
                 max_y = max(max_y, axis_y + self._holiday_band_extent(config))
             else:
@@ -2290,19 +2238,18 @@ class TimelineRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         bands: list[dict],
-        block_top_y: float,
-        axis_left: float,
-        axis_right: float,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
+        frame: AxisFrame,
+        block_near: float,
+        sign: float,
         db: CalendarDB,
         events: list[Event] | None = None,
     ) -> None:
         """Draw a stack of timebands using shared.timeband.build_segments().
 
-        Each band gets a row of the configured ``row_height``. Bands are stacked
-        downward starting at ``block_top_y``. Segment x positions are mapped via
-        the same date→x function used by the timeline axis.
+        Each band is ``row_height`` thick across the axis; the stack starts
+        at ``block_near`` and grows in ``sign``.  Segments are placed with
+        the axis's own date mapping.  Beside a vertical axis a band is a
+        column, so its labels are rotated to read bottom-to-top.
 
         Bands with ``unit: "icon"`` are rendered per visible day via
         :func:`shared.icon_band.compute_icon_band_days` rather than as labeled
@@ -2311,6 +2258,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if not bands:
             return
 
+        start, end = frame.start, frame.end
         start_d = start.floor("day").date()
         end_d = end.floor("day").date()
         # visible_days for date/dow units (continuous calendar — timeline does
@@ -2337,45 +2285,53 @@ class TimelineRenderer(BaseSVGRenderer):
             tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity
         )
 
-        row_y = block_top_y
+        def _separator(across: float) -> None:
+            self._draw_line(
+                *frame.xy(frame.along0, across),
+                *frame.xy(frame.along1, across),
+                stroke=_sep_style.color,
+                stroke_width=_sep_style.width,
+                stroke_opacity=_sep_style.opacity,
+                css_class="ec-separator",
+            )
+
+        near = block_near
         for band in bands:
-            row_h = float(band.get("row_height", 14.0))
+            thickness = float(band.get("row_height", 14.0))
+            across_lo = min(near, near + sign * thickness)
             unit = str(band.get("unit", "week")).strip().lower()
 
             # ── Icon band — one cell per visible day, icons driven by rules ──
             if unit == "icon":
                 icon_rules = list(band.get("icon_rules") or [])
                 day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days, classify_fn=_classify)
-                icon_h = float(band.get("icon_height") or row_h * 0.65)
+                icon_h = float(band.get("icon_height") or thickness * 0.65)
                 fill = str(band.get("fill_color") or "none")
+                fill_opacity = config.get_box_style("ec-band-cell").fill_opacity
                 day_cells: list[tuple[float, float, list[tuple[str, str]]]] = []
                 for day_d in visible_days:
                     day_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day)
-                    next_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day).shift(days=1)
-                    cell_x = self._x_for_day(day_arrow, start, end, axis_left, axis_right)
-                    cell_x2 = self._x_for_day(next_arrow, start, end, axis_left, axis_right)
-                    cell_w = max(0.0, cell_x2 - cell_x)
-                    day_cells.append((cell_x, cell_w, day_icon_map.get(day_d, [])))
-                self._draw_icon_band_row(
-                    day_cells,
-                    row_y,
-                    row_h,
-                    icon_h,
-                    fill,
-                    fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
-                )
-                sep_y = row_y + row_h
-                self._draw_line(
-                    axis_left,
-                    sep_y,
-                    axis_right,
-                    sep_y,
-                    stroke=_sep_style.color,
-                    stroke_width=_sep_style.width,
-                    stroke_opacity=_sep_style.opacity,
-                    css_class="ec-separator",
-                )
-                row_y += row_h
+                    a1 = frame.pos(day_arrow)
+                    a2 = frame.pos(day_arrow.shift(days=1))
+                    if frame.vertical:
+                        # A vertical band's day cells stack down the column.
+                        self._draw_icon_band_row(
+                            [(across_lo, thickness, day_icon_map.get(day_d, []))],
+                            a1,
+                            max(0.0, a2 - a1),
+                            icon_h,
+                            fill,
+                            fill_opacity=fill_opacity,
+                        )
+                    else:
+                        day_cells.append((a1, max(0.0, a2 - a1), day_icon_map.get(day_d, [])))
+                if frame.vertical:
+                    _separator(across_lo)
+                    self._note_side_ink(across_lo, across_lo + thickness)
+                else:
+                    self._draw_icon_band_row(day_cells, across_lo, thickness, icon_h, fill, fill_opacity=fill_opacity)
+                    _separator(across_lo + thickness)
+                near += sign * thickness
                 continue
 
             fill_color = str(band.get("fill_color") or "none")
@@ -2388,7 +2344,7 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             band_font_color = str(band.get("font_color") or text_color)
             band_label_color = str(band.get("label_color") or band_font_color)
-            font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, row_h * 0.55))
+            font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))
 
             segments = _build_band_segments(
                 band,
@@ -2402,66 +2358,68 @@ class TimelineRenderer(BaseSVGRenderer):
             )
 
             for seg_idx, seg in enumerate(segments):
-                seg_start_arrow = arrow.Arrow(seg.start.year, seg.start.month, seg.start.day)
-                seg_end_arrow = arrow.Arrow(seg.end_exclusive.year, seg.end_exclusive.month, seg.end_exclusive.day)
-                x1 = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
-                x2 = self._x_for_day(seg_end_arrow, start, end, axis_left, axis_right)
-                seg_w = max(0.0, x2 - x1)
-                if seg_w <= 0:
+                a1 = frame.pos(arrow.Arrow(seg.start.year, seg.start.month, seg.start.day))
+                a2 = frame.pos(arrow.Arrow(seg.end_exclusive.year, seg.end_exclusive.month, seg.end_exclusive.day))
+                seg_len = max(0.0, a2 - a1)
+                if seg_len <= 0:
                     continue
 
                 fill = alt_fill_color if seg_idx % 2 else fill_color
                 if fill and fill.strip().lower() not in {"none", "transparent", ""}:
                     self._draw_rect(
-                        x1,
-                        row_y,
-                        seg_w,
-                        row_h,
+                        *frame.rect(a1, seg_len, across_lo, thickness),
                         fill=fill,
                         fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
                         css_class="ec-band-cell",
                     )
 
-                label = seg.label
-                if label:
-                    pad = 2.0
-                    if text_align == "center":
-                        text_x = x1 + seg_w / 2.0
-                        anchor = "middle"
-                        max_w = seg_w - pad * 2
+                if not seg.label:
+                    continue
+                pad = 2.0
+                baseline = across_lo + thickness * 0.72
+                transform = None
+                if frame.vertical:
+                    # The label reads bottom→top, so `text_align` lands along
+                    # the segment: "left" pins the text to where it starts
+                    # reading (the segment's bottom edge), "right" to where it
+                    # ends.  rotate(-90) maps a pre-rotation offset of +dx
+                    # onto -dx in y, hence the sign.
+                    cx, cy = baseline, a1 + seg_len / 2.0
+                    if text_align == "left":
+                        text_x, anchor = cx + (cy - (a2 - pad)), "start"
                     elif text_align == "right":
-                        text_x = x2 - pad
-                        anchor = "end"
-                        max_w = seg_w - pad * 2
+                        text_x, anchor = cx + (cy - (a1 + pad)), "end"
                     else:
-                        text_x = x1 + pad
-                        anchor = "start"
-                        max_w = seg_w - pad * 2
-                    self._draw_text(
-                        text_x,
-                        row_y + row_h * 0.72,
-                        label,
-                        band_font,
-                        font_size,
-                        fill=band_label_color,
-                        fill_opacity=text_opacity,
-                        anchor=anchor,
-                        max_width=max_w,
-                        css_class="ec-label",
-                    )
+                        text_x, anchor = cx, "middle"
+                    text_y = cy
+                    transform = f"rotate(-90 {cx:.4f} {cy:.4f})"
+                else:
+                    if text_align == "center":
+                        text_x, anchor = a1 + seg_len / 2.0, "middle"
+                    elif text_align == "right":
+                        text_x, anchor = a2 - pad, "end"
+                    else:
+                        text_x, anchor = a1 + pad, "start"
+                    text_y = baseline
+                self._draw_text(
+                    text_x,
+                    text_y,
+                    seg.label,
+                    band_font,
+                    font_size,
+                    fill=band_label_color,
+                    fill_opacity=text_opacity,
+                    anchor=anchor,
+                    max_width=seg_len - pad * 2,
+                    transform=transform,
+                    css_class="ec-label",
+                )
 
-            sep_y = row_y + row_h
-            self._draw_line(
-                axis_left,
-                sep_y,
-                axis_right,
-                sep_y,
-                stroke=_sep_style.color,
-                stroke_width=_sep_style.width,
-                stroke_opacity=_sep_style.opacity,
-                css_class="ec-separator",
-            )
-            row_y += row_h
+            # The separator closes the band on its far side.
+            _separator(near + sign * thickness)
+            if frame.vertical:
+                self._note_side_ink(across_lo, across_lo + thickness)
+            near += sign * thickness
 
     def _tick_side_clearance(self, config: CalendarConfig, start: arrow.Arrow, end: arrow.Arrow) -> float:
         """Room the axis ticks and their dates need on their own side.
@@ -2844,27 +2802,17 @@ class TimelineRenderer(BaseSVGRenderer):
     def _holiday_marks(
         self,
         config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
+        frame: AxisFrame,
         db: CalendarDB,
-        pos_for_day: Callable[[arrow.Arrow], float] | None = None,
     ) -> list[tuple[float, str, str]]:
-        """Return (pos, icon_name, date_label) for each government holiday.
+        """Return (along, icon_name, date_label) for each government holiday.
 
-        ``pos`` is the mark's coordinate along the axis — x on a horizontal
-        one, y on a vertical one, which is what ``pos_for_day`` is for.
-
-        One mark per date: a day carrying several holidays is represented by
-        the first one that is a nonworkday and has an icon, matching what the
-        axis itself can show at that position.
+        ``along`` is the mark's position along the axis. One mark per date: a
+        day carrying several holidays is represented by the first one that is
+        a nonworkday and has an icon, matching what the axis itself can show
+        at that position.
         """
-        if pos_for_day is None:
-
-            def pos_for_day(day: arrow.Arrow) -> float:
-                return self._x_for_day(day, start, end, axis_left, axis_right)
-
+        start, end = frame.start, frame.end
         date_format = getattr(config, "timeline_holiday_date_format", None) or config.timeline_date_format
         marks: list[tuple[float, str, str]] = []
         seen: set[str] = set()
@@ -2885,7 +2833,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 continue
             marks.append(
                 (
-                    pos_for_day(day),
+                    frame.pos(day),
                     str(icon_name),
                     format_arrow_date(day, date_format),
                 )
@@ -2933,9 +2881,10 @@ class TimelineRenderer(BaseSVGRenderer):
         """Mark each government holiday with its icon and, unless
         suppressed, the date it falls on.
 
-        The icons sit between the axis and the first lane of duration bars,
-        so they take the bars' ``side`` (``Side.BOTH`` counts as SECONDARY);
-        ``timeline.holiday_icon_y_offset`` is the gap to the axis either way.
+        The icons sit between the axis and the first lane of duration bars
+        on ``side`` — the side the tick dates leave free (see
+        :py:meth:`_holiday_side`); ``timeline.holiday_icon_y_offset`` is the
+        gap to the axis either way.
         The dates are written past the icons, on further rows when two
         holidays fall close enough for their dates to touch.
         """
@@ -2948,7 +2897,7 @@ class TimelineRenderer(BaseSVGRenderer):
         color = getattr(config, "timeline_holiday_icon_color", None)
         icon_across = frame.cross + sign * (y_offset + size * 0.5)
 
-        marks = self._holiday_marks(config, frame.start, frame.end, 0.0, 0.0, db, pos_for_day=frame.pos)
+        marks = self._holiday_marks(config, frame, db)
         if not marks:
             return
         for along, icon_name, _date_label in marks:
@@ -3060,12 +3009,14 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _duration_side(config: CalendarConfig, label_side: Side) -> Side:
-        """Which side of a vertical axis the duration bars stack on.
+        """Which side of the axis the duration bars (and holiday marks) take.
 
         ``timeline.duration_side: opposite`` — the default — puts them
-        across the axis from the event callouts, which is how a horizontal
-        timeline reads: callouts above, bars below.  Naming a concrete side
-        pins them there instead, wherever the callouts went.
+        across the axis from the event callouts: with the default
+        ``label_side: primary`` that is callouts above and bars below a
+        horizontal axis, callouts right and bars left of a vertical one.
+        Naming a concrete side pins them there instead, wherever the
+        callouts went.
         """
         configured = str(getattr(config, "timeline_duration_side", "opposite") or "opposite").lower()
         if configured != "opposite":
@@ -3076,17 +3027,22 @@ class TimelineRenderer(BaseSVGRenderer):
 
     @staticmethod
     def _tick_label_side(duration_side: Side) -> Side:
-        """Which side of a vertical axis carries the tick dates.
+        """Which side of the axis carries the tick dates and fiscal rows.
 
         Opposite the bars, whose first lane starts a few points off the
         axis — right where a date would be written.  With bars on both
-        sides there is no clear side; the dates take the left, and a theme
-        that wants them elsewhere can move the bars with
-        ``timeline.duration_side``.
+        sides there is no clear side; the dates take the secondary side
+        (below a horizontal axis, left of a vertical one), and a theme that
+        wants them elsewhere can move the bars with ``timeline.duration_side``.
         """
         if duration_side is Side.PRIMARY:
             return Side.SECONDARY
         return Side.PRIMARY if duration_side is Side.SECONDARY else Side.SECONDARY
+
+    @staticmethod
+    def _holiday_side(tick_label_side: Side) -> Side:
+        """The side holiday marks take: the one the tick dates leave free."""
+        return Side.PRIMARY if tick_label_side is Side.SECONDARY else Side.SECONDARY
 
     @staticmethod
     def _month_tick_arrows(start: arrow.Arrow, end: arrow.Arrow) -> list[arrow.Arrow]:
@@ -3173,363 +3129,98 @@ class TimelineRenderer(BaseSVGRenderer):
                     css_class="ec-label",
                 )
 
-    def _draw_timeline_bands_vertical(
+    def _draw_today_marker(
         self,
         config: CalendarConfig,
-        bands: list[dict],
-        block_near_x: float,
-        axis_top: float,
-        axis_bottom: float,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        db: CalendarDB,
-        events: list[Event] | None = None,
-        sign: float = -1.0,
-    ) -> None:
-        """:py:meth:`_draw_timeline_bands` as columns beside a vertical axis.
-
-        A band's ``row_height`` is its column width here, and the stack
-        grows away from the axis in ``sign`` — the top bands to the left of
-        the chart, the bottom bands to the right, mirroring where they sit
-        above and below a horizontal one.  Segment labels are rotated to
-        read bottom-to-top, since a column is far taller than it is wide.
-        """
-        if not bands:
-            return
-
-        start_d = start.floor("day").date()
-        end_d = end.floor("day").date()
-        from datetime import timedelta
-
-        visible_days: list = []
-        d = start_d
-        while d <= end_d:
-            visible_days.append(d)
-            d = d + timedelta(days=1)
-
-        _events: list[Event] = events or []
-        _day_classes: dict = {d: classify_day(d, db, config) for d in visible_days} if db is not None else {}
-
-        def _classify(day_) -> frozenset:
-            return _day_classes.get(day_, frozenset())
-
-        _band_text_style = config.get_text_style("ec-label")
-        _sep_style = config.get_line_style("ec-separator")
-        tk_band_label = self._tk("text:label")
-        text_color = str(tk_band_label.get("color") or _band_text_style.color or "black")
-        text_opacity = float(
-            tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity
-        )
-
-        col_near = block_near_x
-        for band in bands:
-            col_w = float(band.get("row_height", 14.0))
-            col_x = min(col_near, col_near + sign * col_w)
-            unit = str(band.get("unit", "week")).strip().lower()
-
-            if unit == "icon":
-                icon_rules = list(band.get("icon_rules") or [])
-                day_icon_map = compute_icon_band_days(_events, icon_rules, visible_days, classify_fn=_classify)
-                icon_h = float(band.get("icon_height") or col_w * 0.65)
-                fill = str(band.get("fill_color") or "none")
-                for day_d in visible_days:
-                    day_arrow = arrow.Arrow(day_d.year, day_d.month, day_d.day)
-                    cell_y = self._y_for_day(day_arrow, start, end, axis_top, axis_bottom)
-                    cell_y2 = self._y_for_day(day_arrow.shift(days=1), start, end, axis_top, axis_bottom)
-                    self._draw_icon_band_row(
-                        [(col_x, col_w, day_icon_map.get(day_d, []))],
-                        cell_y,
-                        max(0.0, cell_y2 - cell_y),
-                        icon_h,
-                        fill,
-                        fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
-                    )
-                self._draw_line(
-                    col_x,
-                    axis_top,
-                    col_x,
-                    axis_bottom,
-                    stroke=_sep_style.color,
-                    stroke_width=_sep_style.width,
-                    stroke_opacity=_sep_style.opacity,
-                    css_class="ec-separator",
-                )
-                self._note_side_ink(col_x, col_x + col_w)
-                col_near += sign * col_w
-                continue
-
-            fill_color = str(band.get("fill_color") or "none")
-            alt_fill_color = str(band.get("alt_fill_color") or "none")
-            text_align = str(band.get("text_align", "center")).strip().lower()
-            if text_align not in {"left", "center", "right"}:
-                text_align = "center"
-            band_font = str(
-                band.get("font") or tk_band_label.get("font") or _band_text_style.font or config.timeline_text_font_name
-            )
-            band_font_color = str(band.get("font_color") or text_color)
-            band_label_color = str(band.get("label_color") or band_font_color)
-            font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, col_w * 0.55))
-
-            segments = _build_band_segments(
-                band,
-                start_d,
-                end_d,
-                config,
-                visible_days=visible_days,
-                db=db,
-                week_start_default=0,
-                fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
-            )
-
-            for seg_idx, seg in enumerate(segments):
-                y1 = self._y_for_day(
-                    arrow.Arrow(seg.start.year, seg.start.month, seg.start.day),
-                    start,
-                    end,
-                    axis_top,
-                    axis_bottom,
-                )
-                y2 = self._y_for_day(
-                    arrow.Arrow(
-                        seg.end_exclusive.year,
-                        seg.end_exclusive.month,
-                        seg.end_exclusive.day,
-                    ),
-                    start,
-                    end,
-                    axis_top,
-                    axis_bottom,
-                )
-                seg_h = max(0.0, y2 - y1)
-                if seg_h <= 0:
-                    continue
-
-                fill = alt_fill_color if seg_idx % 2 else fill_color
-                if fill and fill.strip().lower() not in {"none", "transparent", ""}:
-                    self._draw_rect(
-                        col_x,
-                        y1,
-                        col_w,
-                        seg_h,
-                        fill=fill,
-                        fill_opacity=config.get_box_style("ec-band-cell").fill_opacity,
-                        css_class="ec-band-cell",
-                    )
-                if seg.label:
-                    cx = col_x + col_w * 0.72
-                    cy = y1 + seg_h / 2.0
-                    # The label reads bottom→top, so a band's `text_align`
-                    # lands along the segment: "left" pins the text to where
-                    # it starts reading (the segment's bottom edge), "right"
-                    # to where it ends.  rotate(-90) maps a pre-rotation
-                    # offset of +dx onto -dx in y, hence the sign.
-                    pad = 2.0
-                    if text_align == "left":
-                        text_x, anchor = cx + (cy - (y2 - pad)), "start"
-                    elif text_align == "right":
-                        text_x, anchor = cx + (cy - (y1 + pad)), "end"
-                    else:
-                        text_x, anchor = cx, "middle"
-                    self._draw_text(
-                        text_x,
-                        cy,
-                        seg.label,
-                        band_font,
-                        font_size,
-                        fill=band_label_color,
-                        fill_opacity=text_opacity,
-                        anchor=anchor,
-                        max_width=seg_h - pad * 2,
-                        transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
-                        css_class="ec-label",
-                    )
-
-            sep_x = col_x if sign < 0 else col_x + col_w
-            self._draw_line(
-                sep_x,
-                axis_top,
-                sep_x,
-                axis_bottom,
-                stroke=_sep_style.color,
-                stroke_width=_sep_style.width,
-                stroke_opacity=_sep_style.opacity,
-                css_class="ec-separator",
-            )
-            self._note_side_ink(col_x, col_x + col_w)
-            col_near += sign * col_w
-
-    def _draw_today_marker_vertical(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-        axis_x: float,
-        area_x: float,
-        area_w: float,
+        frame: AxisFrame,
+        area_lo: float,
+        area_hi: float,
         label_bounds: tuple[float, float] | None = None,
     ) -> None:
-        """The today line and its label across a vertical axis.
+        """Draw the today line (and its label) across the axis when today —
+        or the ``timeline_today_date`` override — falls in range.
 
-        ``timeline.today_line_direction`` keeps its horizontal vocabulary:
+        ``timeline_today_line_direction`` names sides in horizontal terms:
         ``above`` is the primary side (right of a vertical axis) and
-        ``below`` the secondary (left), the same pairing
-        :py:class:`~shared.orientation.Side` uses.  ``_length`` 0 still
-        means "the whole width available".
+        ``below`` the secondary, the pairing :py:class:`~shared.orientation.Side`
+        uses; ``both`` straddles the axis.  ``_length`` 0 means "all the room
+        the content area has" (``area_lo`` to ``area_hi`` across the axis).
         """
         today = self._resolve_today(config)
-        if today < start.floor("day") or today > end.floor("day"):
+        if today < frame.start.floor("day") or today > frame.end.floor("day"):
             return
 
-        y = self._y_for_day(today, start, end, axis_top, axis_bottom)
-        area_left = area_x
-        area_right = area_x + area_w
-
+        along = frame.pos(today)
+        axis = frame.cross
+        primary_high = frame.sign(Side.PRIMARY) > 0
         direction = (config.timeline_today_line_direction or "both").strip().lower()
         length = max(0.0, config.timeline_today_line_length)
         if length == 0.0:
-            line_left = axis_x if direction == "above" else area_left
-            line_right = axis_x if direction == "below" else area_right
+            lo, hi = area_lo, area_hi
+            if direction == "above":
+                lo, hi = (axis, hi) if primary_high else (lo, axis)
+            elif direction == "below":
+                lo, hi = (lo, axis) if primary_high else (axis, hi)
         elif direction == "above":
-            line_left, line_right = axis_x, axis_x + length
+            lo, hi = (axis, axis + length) if primary_high else (axis - length, axis)
         elif direction == "below":
-            line_left, line_right = axis_x - length, axis_x
+            lo, hi = (axis - length, axis) if primary_high else (axis, axis + length)
         else:
-            line_left, line_right = axis_x - length / 2.0, axis_x + length / 2.0
-        line_left = max(line_left, area_left)
-        line_right = min(line_right, area_right)
+            lo, hi = axis - length / 2.0, axis + length / 2.0
+        # Clamp to the content area so the line never overruns the margins.
+        lo = max(lo, area_lo)
+        hi = min(hi, area_hi)
 
         _today_line_style = config.get_line_style("ec-today-line")
         _today_label_style = config.get_text_style("ec-today-label")
         self._draw_line(
-            line_left,
-            y,
-            line_right,
-            y,
+            *frame.xy(along, lo),
+            *frame.xy(along, hi),
             stroke=_today_line_style.color,
             stroke_width=1.0,
             stroke_opacity=config.get_line_style("ec-today-marker").opacity,
             stroke_dasharray=_today_line_style.dasharray or None,
             css_class="ec-today-line",
         )
-        self._note_side_ink(line_left, line_right)
         tk_today_label = self._tk("text:today_label")
         label_size = tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)
         label = config.timeline_today_label_text or "Today"
         font_name = tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font
-        # The label rides off the leading end of the line, and tucks just
-        # inside it when there is no room there — the horizontal marker
-        # drops its label below the line's top for the same reason.
-        # ``label_bounds`` keeps it out of the timeband columns, which are
-        # painted over this line later in the pass.
         offset = max(0.0, config.timeline_today_label_offset_y)
-        width = string_width(label, self._safe_font_path(font_name), label_size)
-        left_limit, right_limit = label_bounds or (0.0, self._page_width)
-        if line_left - offset - width >= left_limit:
-            label_x, anchor = line_left - offset, "end"
-            label_x = max(left_limit + width, min(label_x, right_limit))
+        # The label rides off the line's leading (low-coordinate) end — its
+        # top on a horizontal chart, its left end on a vertical one — and
+        # tucks just inside the line when there is no room there.
+        if frame.vertical:
+            self._note_side_ink(lo, hi)
+            # ``label_bounds`` keeps it out of the timeband columns, which
+            # are painted over this line later in the pass.
+            width = string_width(label, self._safe_font_path(font_name), label_size)
+            left_limit, right_limit = label_bounds or (0.0, self._page_width)
+            if lo - offset - width >= left_limit:
+                label_x, anchor = lo - offset, "end"
+                label_x = max(left_limit + width, min(label_x, right_limit))
+            else:
+                label_x, anchor = max(lo, left_limit) + offset, "start"
+                label_x = max(left_limit, min(label_x, right_limit - width))
+            label_y = along - label_size * 0.35
         else:
-            label_x, anchor = max(line_left, left_limit) + offset, "start"
-            label_x = max(left_limit, min(label_x, right_limit - width))
+            # Keep the baseline inside the page.
+            min_y = label_size * 1.1
+            max_y = self._page_height - (label_size * 0.6)
+            preferred_y = lo - offset
+            if preferred_y < min_y:
+                preferred_y = lo + (label_size * 1.25)
+            label_x, anchor = along, "middle"
+            label_y = max(min_y, min(preferred_y, max_y))
         self._draw_text(
             label_x,
-            y - label_size * 0.35,
+            label_y,
             label,
             font_name,
             label_size,
             fill=tk_today_label.get("color") or _today_label_style.color,
             fill_opacity=self._tk_opacity_default("text:today_label", 0.85),
             anchor=anchor,
-            css_class="ec-today-label",
-        )
-
-    def _draw_today_marker(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
-        area_y: float,
-        area_h: float,
-    ) -> None:
-        """Draw the vertical 'today' line (and its label) when today —
-        or the ``timeline_today_date`` override — falls in range.
-        ``timeline_today_line_direction`` (above/below/both) and
-        ``_length`` (0 = full span) shape the line around the axis."""
-        today = self._resolve_today(config)
-        if today < start.floor("day") or today > end.floor("day"):
-            return
-
-        x = self._x_for_day(today, start, end, axis_left, axis_right)
-
-        # Bounds within which the line may be drawn (SVG: top = small y, bottom = large y).
-        area_top = area_y  # visually topmost edge (smallest SVG y)
-        area_bottom = area_y + area_h  # visually bottommost edge (largest SVG y)
-
-        direction = (config.timeline_today_line_direction or "both").strip().lower()
-        length = max(0.0, config.timeline_today_line_length)
-
-        if length == 0.0:
-            # Full available span in the requested direction.
-            if direction == "above":
-                line_top = area_top
-                line_bottom = axis_y
-            elif direction == "below":
-                line_top = axis_y
-                line_bottom = area_bottom
-            else:  # "both"
-                line_top = area_top
-                line_bottom = area_bottom
-        else:
-            if direction == "above":
-                line_top = axis_y - length
-                line_bottom = axis_y
-            elif direction == "below":
-                line_top = axis_y
-                line_bottom = axis_y + length
-            else:  # "both"
-                half = length / 2.0
-                line_top = axis_y - half
-                line_bottom = axis_y + half
-
-        # Clamp to page content area so the line never overruns the margins.
-        line_top = max(line_top, area_top)
-        line_bottom = min(line_bottom, area_bottom)
-
-        _today_line_style = config.get_line_style("ec-today-line")
-        _today_label_style = config.get_text_style("ec-today-label")
-        self._draw_line(
-            x,
-            line_top,
-            x,
-            line_bottom,
-            stroke=_today_line_style.color,
-            stroke_width=1.0,
-            stroke_opacity=config.get_line_style("ec-today-marker").opacity,
-            stroke_dasharray=_today_line_style.dasharray or None,
-            css_class="ec-today-line",
-        )
-        tk_today_label = self._tk("text:today_label")
-        label_size = tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)
-        preferred_y = line_top - max(0.0, config.timeline_today_label_offset_y)
-        # Keep label baseline inside SVG bounds.
-        min_y = label_size * 1.1
-        max_y = self._page_height - (label_size * 0.6)
-        if preferred_y < min_y:
-            preferred_y = line_top + (label_size * 1.25)
-        label_y = max(min_y, min(preferred_y, max_y))
-        self._draw_text(
-            x,
-            label_y,
-            config.timeline_today_label_text or "Today",
-            tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font,
-            label_size,
-            fill=tk_today_label.get("color") or _today_label_style.color,
-            fill_opacity=self._tk_opacity_default("text:today_label", 0.85),
-            anchor="middle",
             css_class="ec-today-label",
         )
 
@@ -3648,34 +3339,6 @@ class TimelineRenderer(BaseSVGRenderer):
             return arrow.get(raw).floor("day")
         except Exception:
             return arrow.now().floor("day")
-
-    @staticmethod
-    def _x_for_day(
-        day: arrow.Arrow,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-    ) -> float:
-        span_days = max(1, (end.floor("day") - start.floor("day")).days)
-        day_offset = (day.floor("day") - start.floor("day")).days
-        clamped = max(0, min(day_offset, span_days))
-        return axis_left + ((axis_right - axis_left) * (clamped / span_days))
-
-    @staticmethod
-    def _y_for_day(
-        day: arrow.Arrow,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-    ) -> float:
-        """Vertical analogue of :meth:`_x_for_day`. Y increases downward
-        with later dates (start at top, end at bottom)."""
-        span_days = max(1, (end.floor("day") - start.floor("day")).days)
-        day_offset = (day.floor("day") - start.floor("day")).days
-        clamped = max(0, min(day_offset, span_days))
-        return axis_top + ((axis_bottom - axis_top) * (clamped / span_days))
 
     @staticmethod
     def _safe_font_path(font_name: str) -> str:
