@@ -230,6 +230,26 @@ mapping in each adapter.
 
 ## Phase 3: Single styling path (about 3–4 weeks, largest structural win)
 
+> **Status (2026-09-26):** steps 1 and 3 done, as a breaking change.
+> Measuring first shrank the job: of the style fields, 48 only fed level 4
+> (removed outright), and just 42 in four views were read *beside* a token
+> (a real second path). Those 42 are retired, one view per commit — weekly,
+> mini family, timeline (plus PIT's fallback), blockplan — and a theme still
+> carrying one is rejected with a pointer to
+> `tools/convert_style_keys.py`, which rewrites it into view-selected token
+> rules. Every bundled theme renders byte-identically after conversion
+> (10 themes × 11 views, plus the 2,348-file timeline corpus). Themeless
+> runs now take element styles from the catalog defaults.
+> `_fallback_*_style` is gone. `CalendarConfig` lost 88 fields and
+> `THEME_TO_CONFIG_MAP` 83 rows (416 → 333).
+> Along the way, two real bugs were fixed: `StyleEngine` ignored
+> `select: {visualizer}`, so a rule for one view restyled every view; and
+> timeline labels were measured in a different font from the one they were
+> drawn in.
+> Not done: steps 2 and 4. The other ~85 style settings are single-path
+> (only a section key, no token) and stay as they are. Converting them
+> would move values, not remove a path.
+
 `docs/architecture/theme-resolution.md` documents a four-level precedence
 chain at every draw site:
 
