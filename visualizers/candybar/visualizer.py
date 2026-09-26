@@ -8,75 +8,28 @@ per month. Decoration and icon placement reuse the mini/mini-icon rule engine.
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
-from visualizers.base import BaseLayout, VisualizationResult
 from visualizers.candybar.layout import CandybarLayout
 from visualizers.candybar.renderer import CandybarRenderer
 from visualizers.mini.visualizer import MiniCalendarVisualizer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
-    from shared.db_access import CalendarDB
-
-logger = logging.getLogger(__name__)
 
 
 class CandybarVisualizer(MiniCalendarVisualizer):
-    """Vertical year-strip calendar visualization."""
+    """Vertical year-strip calendar visualization.
 
-    @property
-    def name(self) -> str:
-        return "candybar"
+    Same workflow as the mini calendar, but the date range expands to whole
+    weeks (not whole months) so every row is a complete week with no blank
+    end cells.
+    """
 
-    @property
-    def supported_options(self) -> list[str]:
-        return super().supported_options + [
-            "candybar_row_height",
-            "candybar_week_start",
-            "candybar_suppress_weekends",
-            "candybar_show_week_numbers",
-            "candybar_max_rows_per_page",
-            "candybar_month_rotation",
-            "candybar_month_label_side",
-        ]
+    def __init__(self) -> None:
+        super().__init__("candybar", CandybarLayout, CandybarRenderer)
 
-    def _create_layout(self) -> BaseLayout:
-        return CandybarLayout()
-
-    def _create_renderer(self) -> CandybarRenderer:
-        return CandybarRenderer()
-
-    def generate(
-        self,
-        config: CalendarConfig,
-        db: CalendarDB,
-    ) -> VisualizationResult:
-        """Generate the candybar SVG.
-
-        The requested date range is expanded out to whole-week boundaries (not
-        whole months) so every row is a complete week with no blank end cells.
-        """
-        self._expand_to_week_boundaries(config)
-
-        events = self._prepare_data(config, db)
-
-        layout = CandybarLayout()
-        coordinates = layout.calculate(config)
-
-        renderer = CandybarRenderer()
-        renderer.set_week_numbers(layout.week_numbers)
-
-        return renderer.render(
-            config=config,
-            coordinates=coordinates,
-            events=events,
-            db=db,
-        )
-
-    @staticmethod
-    def _expand_to_week_boundaries(config: CalendarConfig) -> None:
+    def _expand_date_range(self, config: CalendarConfig) -> None:
         """Expand the date range to enclosing whole-week boundaries.
 
         Snaps the start back to its week-start day and the end forward to its

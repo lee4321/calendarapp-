@@ -31,7 +31,6 @@ from visualizers.pit.markers import (
     resolve_marker,
 )
 from visualizers.pit.renderer import PITRenderer
-from visualizers.pit.visualizer import PITVisualizer
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -133,9 +132,10 @@ def _render_pit(tmp_path: Path, events: list[dict] | None = None, **kwargs) -> s
 
 
 def test_pit_factory_registered():
-    """VisualizerFactory.create('pit') returns a PITVisualizer."""
+    """VisualizerFactory.create('pit') returns the PIT visualizer."""
     viz = VisualizerFactory.create("pit")
-    assert isinstance(viz, PITVisualizer)
+    assert viz.name == "pit"
+    assert isinstance(viz._create_renderer(), PITRenderer)
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +336,7 @@ def test_pit_applies_content_filter_flags(tmp_path):
         """(events rendered, callouts in the SVG) for one run."""
         config = _make_config(tmp_path / name)
         config.milestones = filtered
-        result = PITVisualizer().generate(config, _EventsDB())
+        result = VisualizerFactory.create("pit").generate(config, _EventsDB())
         svg = Path(config.outputfile).read_text(encoding="utf-8")
         return result.event_count, svg.count("ec-pit-callout-group")
 
