@@ -310,6 +310,10 @@ style_rules:
     select: {}
     style:
       swimlane: Other
+  - name: box:cell — weekly (from weekly.day_box)
+    apply_to: box:cell
+    select: {visualizer: weekly}
+    style: {stroke_opacity: 0.25}
 element_overrides:
   ec-day-number:
     use: text:label

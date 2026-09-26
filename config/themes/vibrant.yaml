@@ -102,10 +102,6 @@ weekly:
   week_numbers:
     label_format: W{num:02d}
   day_box:
-    stroke_color: slategrey
-    stroke_opacity: 0.7
-    stroke_width: 2
-    stroke_dasharray: 8 2
     hash_pattern_opacity: 0.12
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
@@ -1087,6 +1083,10 @@ style_rules:
       font: RobotoCondensed-Light
       size: 9
       color: '#888888'
+  - name: box:cell — weekly (from weekly.day_box)
+    apply_to: box:cell
+    select: {visualizer: weekly}
+    style: {dasharray: 8 2}
 element_overrides:
   ec-axis-tick:
     use: line:tick

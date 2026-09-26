@@ -6,6 +6,7 @@ import tempfile
 
 import pytest
 import yaml
+from fakes import apply_style_rules, define
 
 from config.config import CalendarConfig, create_calendar_config
 from config.theme_engine import (
@@ -15,6 +16,7 @@ from config.theme_engine import (
     is_font_key,
     iter_font_references,
 )
+from config.unified_theme import parse_theme
 
 
 class TestThemeEngineListing:
@@ -184,10 +186,10 @@ class TestThemeEngineApply:
         assert config.event_icon_color == "deeppink"
 
     def test_day_box_styling_applied(self):
-        _, config = self._load_builtin("corporate")
-        assert config.day_box_stroke_color == "lightsteelblue"
-        assert config.day_box_stroke_opacity == 0.4
-        assert config.day_box_stroke_width == 3
+        """weekly.day_box stroke styling now lives in the theme's box:cell token."""
+        engine, _config = self._load_builtin("corporate")
+        cell = parse_theme(engine._theme_data).resolve_token("box:cell", {"visualizer": "weekly"})
+        assert (cell["stroke"], cell["stroke_opacity"], cell["stroke_width"]) == ("lightsteelblue", 0.4, 3)
 
     def test_watermark_styling_applied(self):
         _, config = self._load_builtin("dark")
@@ -526,14 +528,14 @@ class TestStrokeDasharray:
             engine.apply(config)
         return config
 
-    def test_day_box_stroke_dasharray_applied_from_theme(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "Dash"},
-                "weekly": {"day_box": {"stroke_dasharray": "5,3"}},
-            }
-        )
-        assert config.day_box_stroke_dasharray == "5,3"
+    def test_day_box_stroke_dasharray_is_a_retired_key(self):
+        with pytest.raises(ThemeError, match="convert_style_keys"):
+            self._apply_theme_data(
+                {
+                    "theme": {"name": "Dash"},
+                    "weekly": {"day_box": {"stroke_dasharray": "5,3"}},
+                }
+            )
 
     def test_hash_pattern_applied_from_theme(self):
         config = self._apply_theme_data(
@@ -581,7 +583,6 @@ class TestStrokeDasharray:
 
     def test_dasharray_defaults_to_none(self):
         config = create_calendar_config()
-        assert config.day_box_stroke_dasharray is None
         assert config.duration_stroke_dasharray is None
         assert config.hash_pattern_opacity == 0.15
         assert config.theme_weekly_hash_pattern is None
@@ -865,7 +866,7 @@ class TestStrokeDasharray:
         _, kwargs = mock_draw_image.call_args
         assert kwargs["transform"] == "rotate(-12.0 100.0 50.0)"
 
-    def _make_renderer_config(self, **overrides):
+    def _make_renderer_config(self, rules=None, **overrides):
         """Create a config with computed font sizes set for renderer tests.
 
         Calls `_inject_heuristic_size_tokens(config)` after populating the
@@ -877,6 +878,8 @@ class TestStrokeDasharray:
         from config.config import _inject_heuristic_size_tokens
 
         config = create_calendar_config()
+        if rules:
+            apply_style_rules(config, rules)
         config.weekly_name_text_font_size = 9.0
         config.event_icon_size = 9.0
         config.day_box_number_font_size = 13.0
@@ -886,7 +889,7 @@ class TestStrokeDasharray:
         return config
 
     def test_day_box_renderer_uses_config_stroke_values(self):
-        """_draw_day_box passes config stroke_color/opacity/width/dasharray to _draw_rect."""
+        """_draw_day_box passes the box:cell stroke color/opacity/width/dasharray to _draw_rect."""
         from unittest.mock import patch
 
         import arrow
@@ -895,10 +898,7 @@ class TestStrokeDasharray:
         from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
         config = self._make_renderer_config(
-            day_box_stroke_color="navy",
-            day_box_stroke_opacity=0.8,
-            day_box_stroke_width=3,
-            day_box_stroke_dasharray="4 2",
+            rules=[define("box", "cell", stroke="navy", stroke_opacity=0.8, stroke_width=3, dasharray="4 2")]
         )
 
         renderer = WeeklyCalendarRenderer()
@@ -927,7 +927,7 @@ class TestStrokeDasharray:
         assert kwargs["stroke_dasharray"] == "4 2"
 
     def test_day_box_renderer_uses_config_stroke_defaults(self):
-        """Default config stroke values propagate to _draw_rect."""
+        """Without a theme the day box takes the catalog's ec-cell style."""
         from unittest.mock import patch
 
         import arrow
@@ -956,9 +956,10 @@ class TestStrokeDasharray:
             renderer._draw_day_box(config, oneday, 10, 10, 80, 60, False, "", False)
 
         _, kwargs = mock_rect.call_args
-        assert kwargs["stroke"] == config.day_box_stroke_color  # "grey"
-        assert kwargs["stroke_opacity"] == config.day_box_stroke_opacity  # 0.25
-        assert kwargs["stroke_width"] == config.day_box_stroke_width  # 2
+        cell = config.get_box_style("ec-cell")
+        assert kwargs["stroke"] == cell.stroke
+        assert kwargs["stroke_opacity"] == cell.stroke_opacity
+        assert kwargs["stroke_width"] == cell.stroke_width
         assert kwargs["stroke_dasharray"] is None
 
 

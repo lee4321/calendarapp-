@@ -982,24 +982,25 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             fill_opacity = style_result.fill_opacity
         tk_cell = self._tk("box:cell")
         tk_hash = self._tk("line:hash")
+        _cell_style = config.get_box_style("ec-cell")
         self._draw_rect(
             X,
             Y,
             W,
             H,
             fill=fill_color,
-            stroke=tk_cell.get("stroke") or config.day_box_stroke_color,
+            stroke=tk_cell.get("stroke") or _cell_style.stroke,
             fill_opacity=fill_opacity,
             stroke_opacity=(
                 tk_cell.get("stroke_opacity")
                 if tk_cell.get("stroke_opacity") is not None
-                else config.day_box_stroke_opacity
+                else _cell_style.stroke_opacity
             ),
             stroke_width=(
-                tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else config.day_box_stroke_width
+                tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else _cell_style.stroke_width
             ),
             rx=5,
-            stroke_dasharray=(tk_cell.get("dasharray") or config.day_box_stroke_dasharray or None),
+            stroke_dasharray=(tk_cell.get("dasharray") or _cell_style.stroke_dasharray or None),
             css_class="ec-cell",
         )
 

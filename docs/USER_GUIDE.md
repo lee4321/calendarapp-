@@ -1345,6 +1345,27 @@ Every SVG element gets a semantic CSS class. The authoritative list — includin
 
 Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`, `ec-current-day`, `ec-adjacent`.
 
+### Retired section style keys
+
+A style has one source: its `style_rules` token. Some views used to read a
+style twice — from the token and, when the token left an attribute unset,
+from a section key such as `weekly.day_box.stroke_color` — so a theme could
+set the same thing in two places and only one of them would show. Those
+section keys are retired (the full list is `RETIRED` in
+`config/retired_style_keys.py`), and a theme that still carries one is
+rejected with a pointer here.
+
+`tools/convert_style_keys.py` rewrites such a theme so it renders exactly as
+before: each value the old code would have used — the key, its section or
+`base` cascade, or the old built-in default — goes into a rule
+`apply_to: <token>` selected on the view, but only for attributes the token's
+own definition leaves unset (the only case in which the key was ever read).
+
+```bash
+uv run python tools/convert_style_keys.py my_theme.yaml             # show the changes
+uv run python tools/convert_style_keys.py --in-place my_theme.yaml  # rewrite it (keeps my_theme.yaml.bak)
+```
+
 ### Creating a New Theme
 
 The fastest path is to copy `config/themes/basic.yaml` — the minimum viable theme — and edit. `basic.yaml` ships with every required key set to a plain default, so each line you change is a deliberate styling choice. Recipe:
@@ -1685,10 +1706,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
-| `day_box_stroke_color` | `weekly.day_box.stroke_color` | `str` | `'grey'` | stroke color |
-| `day_box_stroke_dasharray` | `weekly.day_box.stroke_dasharray` | `str | None` | `None` | stroke dasharray |
-| `day_box_stroke_opacity` | `weekly.day_box.stroke_opacity` | `float` | `0.25` | stroke opacity |
-| `day_box_stroke_width` | `weekly.day_box.stroke_width` | `int` | `2` | stroke width |
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
 | `hash_pattern_target_size` | `weekly.day_box.hash_pattern_target_size` | `float` | `18.0` | Largest tile dimension after auto-normalization, in points. Tiles bigger than this are scaled down to it; smaller tiles are left alone. `0` tiles every pattern at its native size. |

@@ -106,10 +106,6 @@ weekly:
   week_numbers:
     label_format: W{num:02d}
   day_box:
-    stroke_color: black
-    stroke_opacity: 0.5
-    stroke_width: 1
-    stroke_dasharray: null
     hash_pattern_opacity: 0.1
   name_text:
     font_size: 18
