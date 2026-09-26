@@ -924,7 +924,7 @@ def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119", "20260525"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260119", "20260525"]))
 
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
@@ -944,7 +944,7 @@ def test_timeline_holiday_dates_stagger_instead_of_colliding(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20261231", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260703", "20260704"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260703", "20260704"]))
 
     dates = [c for c in renderer.text_calls if c["text"] in ("Jul 3", "Jul 4")]
     assert len(dates) == 2
@@ -960,7 +960,7 @@ def test_timeline_holiday_dates_can_be_switched_off(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260119"]))
 
     assert len(renderer.icon_calls) == 1
     assert not [c for c in renderer.text_calls if c["text"] == "Jan 19"]
@@ -2599,15 +2599,8 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     renderer = _CaptureHolidayRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_holiday_icons_vertical(
-        config,
-        start,
-        end,
-        50.0,
-        700.0,
-        300.0,
-        _HolidayDB(["20260216", "20260406"]),
-        side=Side.SECONDARY,
+    renderer._draw_holiday_icons(
+        config, _vframe(start, end, 50.0, 700.0, 300.0), _HolidayDB(["20260216", "20260406"]), Side.SECONDARY
     )
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     # Between the axis and the bars: just off the axis, on the bars' side.
@@ -2630,15 +2623,8 @@ def test_holiday_marks_follow_the_bars_to_the_other_side(tmp_path):
     renderer = _CaptureHolidayRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_holiday_icons_vertical(
-        config,
-        start,
-        end,
-        50.0,
-        700.0,
-        300.0,
-        _HolidayDB(["20260216"]),
-        side=Side.PRIMARY,
+    renderer._draw_holiday_icons(
+        config, _vframe(start, end, 50.0, 700.0, 300.0), _HolidayDB(["20260216"]), Side.PRIMARY
     )
     assert renderer.icon_calls[0]["x"] > 300.0
     dates = [c for c in renderer.text_calls if c.get("css_class") == "ec-holiday-date"]
@@ -2739,14 +2725,11 @@ def test_a_vertical_chart_with_no_holidays_still_draws(tmp_path):
     config.country = "US"
     renderer = _CaptureHolidayRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_holiday_icons_vertical(
+    renderer._draw_holiday_icons(
         config,
-        arrow.get("20260201", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260201", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
         _HolidayDB([]),
+        Side.SECONDARY,
     )
     assert renderer.icon_calls == []
 
