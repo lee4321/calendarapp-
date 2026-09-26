@@ -481,59 +481,20 @@ class TimelineRenderer(BaseSVGRenderer):
                     continue
                 prio = band_priorities[idx]
                 allowed = {d for d, _l in band_ticks[idx] if max_prio.get(d) == prio}
-                if _horizontal:
-                    self._draw_axis_ticks_from_band(
-                        config,
-                        tb,
-                        start,
-                        end,
-                        axis_left,
-                        axis_right,
-                        axis_y,
-                        db,
-                        ticks=band_ticks[idx],
-                        allowed_label_dates=allowed,
-                    )
-                else:
-                    self._draw_axis_ticks_from_band_vertical(
-                        config,
-                        tb,
-                        start,
-                        end,
-                        axis_origin[1],
-                        axis_end[1],
-                        axis_origin[0],
-                        db,
-                        ticks=band_ticks[idx],
-                        allowed_label_dates=allowed,
-                        label_side=tick_label_side,
-                    )
-        elif _horizontal:
-            self._draw_month_ticks(config, start, end, axis_left, axis_right, axis_y)
+                self._draw_axis_ticks_from_band(
+                    config,
+                    tb,
+                    frame,
+                    db,
+                    ticks=band_ticks[idx],
+                    allowed_label_dates=allowed,
+                    label_side=tick_label_side,
+                )
         else:
-            self._draw_month_ticks_vertical(
-                config,
-                start,
-                end,
-                axis_origin[1],
-                axis_end[1],
-                axis_origin[0],
-                label_side=tick_label_side,
-            )
+            self._draw_month_ticks(config, frame, tick_label_side)
 
         if config.fiscal_lookup and (config.timeline_show_fiscal_periods or config.timeline_show_fiscal_quarters):
-            if _horizontal:
-                self._draw_fiscal_bands(config, start, end, axis_left, axis_right, axis_y)
-            else:
-                self._draw_fiscal_bands_vertical(
-                    config,
-                    start,
-                    end,
-                    axis_origin[1],
-                    axis_end[1],
-                    axis_origin[0],
-                    side=tick_label_side,
-                )
+            self._draw_fiscal_bands(config, frame, tick_label_side)
 
         if _horizontal:
             self._draw_today_marker(
@@ -695,13 +656,16 @@ class TimelineRenderer(BaseSVGRenderer):
         label_size = max(7.0, _base_name_size(config) * 0.8)
         date_size = max(8.0, _base_name_size(config) * 0.95)
 
-        # Axis + tick labels extend above axis_y (smaller SVG y = visually higher)
-        axis_tick_top = axis_y - (tick_h + label_size * 1.5)
-        # Date labels below axis sit slightly below axis_y (larger SVG y = visually lower)
-        axis_date_bottom = axis_y + (date_size * 0.1)
-
-        min_y = axis_tick_top
-        max_y = axis_date_bottom
+        # Tick labels extend past the tick on their own side of the axis;
+        # the other side keeps only the tick itself.
+        tick_reach = tick_h + label_size * 1.5
+        tick_side = self._tick_label_side(self._duration_side(config, Side(config.timeline_label_side)))
+        if frame.vertical or tick_side is Side.PRIMARY:
+            min_y = axis_y - tick_reach
+            max_y = axis_y + (date_size * 0.1)
+        else:
+            min_y = axis_y - tick_h
+            max_y = axis_y + tick_reach + label_size * 0.8
 
         # Holiday icons and their date labels hang below the axis. Durations
         # usually reach further down and would cover this, but a timeline with
@@ -2675,125 +2639,40 @@ class TimelineRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         band: dict,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
+        frame: AxisFrame,
         db: CalendarDB | None,
         ticks: list[tuple[date, str]] | None = None,
         allowed_label_dates: set[date] | None = None,
+        label_side: Side = Side.PRIMARY,
     ) -> None:
         """Draw axis ticks at the start of each segment produced by a band dict.
 
         Accepts any unit supported by shared.timeband.build_segments
         (fiscal_quarter, fiscal_period, month, week, interval, date, dow,
-        countdown, countup). Each segment.start gets a tick line; segment.label
-        is rendered above the axis.
+        countdown, countup). Each segment start gets a tick across the axis
+        and its label on ``label_side`` (see :py:meth:`_draw_tick_label`).
 
         Tick label_format is always an Arrow date format applied to each
-        tick's own date — independent of the band's unit. This lets any
-        supported unit produce date-style tick labels like "MMM D" or
-        "MMMM DD". When no label_format/date_format is given, fall back to the
-        segment's generated label.
+        tick's own date — independent of the band's unit — so any unit can
+        produce date-style labels like "MMM D". Without one, the segment's
+        generated label is used.
 
         When ``allowed_label_dates`` is provided, only ticks whose date is in
-        that set draw a label; the tick line is still drawn. The caller uses
-        this to suppress duplicate labels when multiple bands tick on the
-        same day.
+        that set draw a label; the tick itself is still drawn. The caller
+        uses this to suppress duplicate labels when bands tick on the same day.
         """
         if ticks is None:
-            ticks = self._compute_band_ticks(config, band, start, end, db)
+            ticks = self._compute_band_ticks(config, band, frame.start, frame.end, db)
         if not ticks:
             return
 
         style = self._band_tick_style(config, band, len(ticks))
-        tick_h = style["tick_h"]
-        tick_width = style["tick_width"]
-        tick_opacity = style["tick_opacity"]
-        tick_color = style["tick_color"]
-        tick_dash = style["tick_dash"]
-        label_size = style["label_size"]
-        draw_labels = style["draw_labels"]
-        label_color = style["label_color"]
-        label_opacity = style["label_opacity"]
-        font_name = style["font_name"]
-        label_offset_y = style["label_offset"]
-
         last_idx = len(ticks) - 1
         for idx, (tick_date, tick_label) in enumerate(ticks):
-            tick_arrow = arrow.Arrow(tick_date.year, tick_date.month, tick_date.day)
-            x = self._x_for_day(tick_arrow, start, end, axis_left, axis_right)
+            along = frame.pos(arrow.Arrow(tick_date.year, tick_date.month, tick_date.day))
             self._draw_line(
-                x,
-                axis_y - tick_h,
-                x,
-                axis_y + tick_h,
-                stroke=tick_color,
-                stroke_width=tick_width,
-                stroke_opacity=tick_opacity,
-                stroke_dasharray=tick_dash,
-                css_class="ec-axis-tick",
-            )
-            if draw_labels and tick_label and (allowed_label_dates is None or tick_date in allowed_label_dates):
-                if idx == 0:
-                    label_anchor = "start"
-                elif idx == last_idx:
-                    label_anchor = "end"
-                else:
-                    label_anchor = "middle"
-                self._draw_text(
-                    x,
-                    axis_y - label_offset_y,
-                    tick_label,
-                    font_name,
-                    label_size,
-                    fill=label_color,
-                    fill_opacity=label_opacity,
-                    anchor=label_anchor,
-                    css_class="ec-label",
-                )
-
-    def _draw_axis_ticks_from_band_vertical(
-        self,
-        config: CalendarConfig,
-        band: dict,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-        axis_x: float,
-        db: CalendarDB | None,
-        ticks: list[tuple[date, str]] | None = None,
-        allowed_label_dates: set[date] | None = None,
-        label_side: Side = Side.SECONDARY,
-    ) -> None:
-        """:py:meth:`_draw_axis_ticks_from_band` turned on its side.
-
-        Same bands, same theme resolution (see
-        :py:meth:`_band_tick_style`); the tick crosses the axis at the
-        day's y and its date is written beside it, on ``label_side`` —
-        SECONDARY (left) or PRIMARY (right), chosen by
-        :py:meth:`_tick_label_side` so the dates land clear of the bars.
-        The labels stay upright: a date is read, not followed.
-        """
-        if ticks is None:
-            ticks = self._compute_band_ticks(config, band, start, end, db)
-        if not ticks:
-            return
-
-        style = self._band_tick_style(config, band, len(ticks))
-        tick_h = style["tick_h"]
-        label_size = style["label_size"]
-
-        for tick_date, tick_label in ticks:
-            tick_arrow = arrow.Arrow(tick_date.year, tick_date.month, tick_date.day)
-            y = self._y_for_day(tick_arrow, start, end, axis_top, axis_bottom)
-            self._draw_line(
-                axis_x - tick_h,
-                y,
-                axis_x + tick_h,
-                y,
+                *frame.xy(along, frame.cross - style["tick_h"]),
+                *frame.xy(along, frame.cross + style["tick_h"]),
                 stroke=style["tick_color"],
                 stroke_width=style["tick_width"],
                 stroke_opacity=style["tick_opacity"],
@@ -2805,19 +2684,60 @@ class TimelineRenderer(BaseSVGRenderer):
                 and tick_label
                 and (allowed_label_dates is None or tick_date in allowed_label_dates)
             ):
-                label_x, anchor = self._tick_label_x(axis_x, style["label_offset"], label_side)
-                self._draw_text(
-                    label_x,
-                    self._tick_label_baseline(y, label_size, axis_top, axis_bottom),
+                self._draw_tick_label(
+                    frame,
+                    along,
                     tick_label,
                     style["font_name"],
-                    label_size,
-                    fill=style["label_color"],
-                    fill_opacity=style["label_opacity"],
-                    anchor=anchor,
-                    css_class="ec-label",
+                    style["label_size"],
+                    style["label_color"],
+                    style["label_opacity"],
+                    style["label_offset"],
+                    label_side,
+                    # Along a horizontal axis the end labels hang inward.
+                    along_anchor="start" if idx == 0 else "end" if idx == last_idx else "middle",
                 )
-                self._note_label_ink(label_x, tick_label, style["font_name"], label_size, label_side)
+
+    def _draw_tick_label(
+        self,
+        frame: AxisFrame,
+        along: float,
+        label: str,
+        font_name: str,
+        label_size: float,
+        fill: str,
+        opacity: float,
+        offset: float,
+        side: Side,
+        along_anchor: str = "middle",
+    ) -> None:
+        """Write a tick's date ``offset`` from the axis on ``side``.
+
+        Across a horizontal axis the label sits above (PRIMARY) or below
+        (SECONDARY) with ``offset`` between the axis and its nearer edge.
+        Beside a vertical one it stays upright — a date is read, not
+        followed — grows away from the axis and is centred on its tick.
+        """
+        if frame.vertical:
+            label_x, anchor = self._tick_label_x(frame.cross, offset, side)
+            label_y = self._tick_label_baseline(along, label_size, frame.along0, frame.along1)
+        else:
+            label_x, anchor = along, along_anchor
+            # Glyphs rise about 0.8 of the size above their baseline.
+            label_y = frame.cross - offset if side is Side.PRIMARY else frame.cross + offset + label_size * 0.8
+        self._draw_text(
+            label_x,
+            label_y,
+            label,
+            font_name,
+            label_size,
+            fill=fill,
+            fill_opacity=opacity,
+            anchor=anchor,
+            css_class="ec-label",
+        )
+        if frame.vertical:
+            self._note_label_ink(label_x, label, font_name, label_size, side)
 
     @staticmethod
     def _tick_label_x(axis_x: float, label_offset: float, label_side: Side) -> tuple[float, str]:
@@ -2868,23 +2788,11 @@ class TimelineRenderer(BaseSVGRenderer):
         baseline = y + label_size * 0.35
         return min(max(baseline, axis_top + label_size * 0.8), axis_bottom)
 
-    def _draw_month_ticks_vertical(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-        axis_x: float,
-        label_side: Side = Side.SECONDARY,
-    ) -> None:
-        """The built-in month ticks on a vertical axis.
-
-        The fallback when a theme declares no ``timeline.ticks`` bands, and
-        the twin of :py:meth:`_draw_month_ticks` down to the 18-tick label
-        cut-off and the ``text:event_date`` styling.
-        """
-        ticks = self._month_tick_arrows(start, end)
+    def _draw_month_ticks(self, config: CalendarConfig, frame: AxisFrame, label_side: Side = Side.PRIMARY) -> None:
+        """The built-in month ticks: the fallback when a theme declares no
+        ``timeline.ticks`` bands.  Labels are suppressed beyond 18 ticks to
+        avoid overlap, and go on ``label_side``."""
+        ticks = self._month_tick_arrows(frame.start, frame.end)
         if not ticks:
             return
 
@@ -2901,12 +2809,10 @@ class TimelineRenderer(BaseSVGRenderer):
         )
 
         for m in ticks:
-            y = self._y_for_day(m, start, end, axis_top, axis_bottom)
+            along = frame.pos(m)
             self._draw_line(
-                axis_x - tick_h,
-                y,
-                axis_x + tick_h,
-                y,
+                *frame.xy(along, frame.cross - tick_h),
+                *frame.xy(along, frame.cross + tick_h),
                 stroke=_tick_style.color,
                 stroke_width=1.0,
                 stroke_opacity=config.get_line_style("ec-month-tick").opacity,
@@ -2914,21 +2820,17 @@ class TimelineRenderer(BaseSVGRenderer):
                 css_class="ec-axis-tick",
             )
             if draw_labels:
-                label = format_arrow_date(m, config.timeline_tick_label_format)
-                font_name = tk_event_date.get("font") or config.timeline_date_font
-                label_x, anchor = self._tick_label_x(axis_x, label_offset, label_side)
-                self._draw_text(
-                    label_x,
-                    self._tick_label_baseline(y, label_size, axis_top, axis_bottom),
-                    label,
-                    font_name,
+                self._draw_tick_label(
+                    frame,
+                    along,
+                    format_arrow_date(m, config.timeline_tick_label_format),
+                    tk_event_date.get("font") or config.timeline_date_font,
                     label_size,
-                    fill=tk_event_date.get("color") or _tick_style.color,
-                    fill_opacity=self._tk_opacity_default("text:label", 0.8),
-                    anchor=anchor,
-                    css_class="ec-label",
+                    tk_event_date.get("color") or _tick_style.color,
+                    self._tk_opacity_default("text:label", 0.8),
+                    label_offset,
+                    label_side,
                 )
-                self._note_label_ink(label_x, label, font_name, label_size, label_side)
 
     @staticmethod
     def _holiday_icon_size(config: CalendarConfig) -> float:
@@ -3175,163 +3077,20 @@ class TimelineRenderer(BaseSVGRenderer):
             return []
         return list(arrow.Arrow.range("month", month_start, month_end))
 
-    def _draw_month_ticks(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
-    ) -> None:
-        """Draw month-boundary ticks on a horizontal axis; labels are
-        suppressed beyond 18 ticks to avoid overlap."""
-        ticks = self._month_tick_arrows(start, end)
-        if not ticks:
-            return
+    def _draw_fiscal_bands(self, config: CalendarConfig, frame: AxisFrame, side: Side = Side.PRIMARY) -> None:
+        """Fiscal period and/or quarter bands beside the axis.
 
-        draw_labels = len(ticks) <= 18
-        tick_h = self._axis_tick_height(config)
-        label_size = self._axis_tick_label_size(config)
-
-        _tick_style = config.get_line_style("ec-axis-tick")
-        for m in ticks:
-            x = self._x_for_day(m, start, end, axis_left, axis_right)
-            self._draw_line(
-                x,
-                axis_y - tick_h,
-                x,
-                axis_y + tick_h,
-                stroke=_tick_style.color,
-                stroke_width=1.0,
-                stroke_opacity=config.get_line_style("ec-month-tick").opacity,
-                stroke_dasharray=_tick_style.dasharray or None,
-                css_class="ec-axis-tick",
-            )
-            if draw_labels:
-                self._draw_text(
-                    x,
-                    axis_y
-                    - self._tick_label_offset(
-                        tick_h,
-                        label_size,
-                        config.timeline_tick_label_gap,
-                        config.timeline_tick_label_offset_y,
-                    ),
-                    format_arrow_date(m, config.timeline_tick_label_format),
-                    self._tk("text:event_date").get("font") or config.timeline_date_font,
-                    label_size,
-                    fill=self._tk("text:event_date").get("color") or _tick_style.color,
-                    fill_opacity=self._tk_opacity_default("text:label", 0.8),
-                    anchor="middle",
-                    css_class="ec-label",
-                )
-
-    def _draw_fiscal_bands(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
-    ) -> None:
-        """Draw fiscal period and/or quarter band rows above the timeline axis.
-
-        Each band row is a sequence of colored rectangles with centered labels,
-        positioned just above the month tick labels.
+        The rows stack out to ``side`` — the tick labels' side — just past
+        those labels.  Beside a vertical axis a row is a column as narrow as
+        a horizontal row is short, so its labels are rotated to read
+        bottom-to-top, the way a duration bar's are.
         """
         from shared.fiscal_renderer import (
             build_fiscal_period_segments,
             build_fiscal_quarter_segments,
         )
 
-        tick_h = max(6.0, config.timeline_axis_width * 2.5)
-        label_size = max(7.0, _base_name_size(config) * 0.8)
-        band_h = label_size * 1.8
-        band_gap = 2.0
-
-        # y position: start just above the month tick label area
-        # month tick labels are at axis_y - (tick_h + label_size * 1.5)
-        top_of_month_labels = axis_y - (tick_h + label_size * 1.5 + label_size)
-        band_bottom = top_of_month_labels - band_gap
-
-        start_date = start.date()
-        end_date = end.date()
-
-        rows: list[list] = []
-        if config.timeline_show_fiscal_quarters:
-            rows.append(build_fiscal_quarter_segments(start_date, end_date, config))
-        if config.timeline_show_fiscal_periods:
-            rows.append(build_fiscal_period_segments(start_date, end_date, config))
-
-        # Alternating band shades come from the catalog so a theme can set
-        # them; ec-fiscal-band / -alt carry fill, opacity, stroke and width.
-        _fb_styles = (config.get_box_style("ec-fiscal-band"), config.get_box_style("ec-fiscal-band-alt"))
-        _fb_classes = ("ec-fiscal-band", "ec-fiscal-band-alt")
-        label_color = config.get_line_style("ec-axis-tick").color
-
-        for row_idx, segments in enumerate(rows):
-            row_top = band_bottom - (row_idx + 1) * (band_h + band_gap)
-            for seg_idx, seg in enumerate(segments):
-                seg_start_arrow = arrow.get(seg.start)
-                seg_end_arrow = arrow.get(seg.end_exclusive)
-                x1 = self._x_for_day(seg_start_arrow, start, end, axis_left, axis_right)
-                x2 = self._x_for_day(seg_end_arrow, start, end, axis_left, axis_right)
-                x1 = max(x1, axis_left)
-                x2 = min(x2, axis_right)
-                if x2 <= x1:
-                    continue
-                _fb = _fb_styles[seg_idx % 2]
-                self._draw_rect(
-                    x1,
-                    row_top,
-                    x2 - x1,
-                    band_h,
-                    fill=_fb.fill,
-                    fill_opacity=_fb.fill_opacity,
-                    stroke=_fb.stroke,
-                    stroke_width=_fb.stroke_width,
-                    css_class=_fb_classes[seg_idx % 2],
-                )
-                cx = (x1 + x2) / 2.0
-                cy = row_top + band_h / 2.0 + label_size * 0.35
-                self._draw_text(
-                    cx,
-                    cy,
-                    seg.label,
-                    self._tk("text:event_date").get("font") or config.timeline_date_font,
-                    label_size,
-                    fill=label_color,
-                    fill_opacity=self._tk_opacity_default("text:label", 0.9),
-                    anchor="middle",
-                    max_width=x2 - x1 - 4.0,
-                    css_class="ec-label",
-                )
-
-    def _draw_fiscal_bands_vertical(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-        axis_x: float,
-        side: Side = Side.PRIMARY,
-    ) -> None:
-        """Fiscal period / quarter bands as columns beside a vertical axis.
-
-        The horizontal bands stack above the axis, past the tick labels;
-        these stack out to ``side`` — the tick labels' side — past the same
-        labels.  A column is as narrow as those rows are short, so each
-        band's name is rotated to read bottom-to-top, the way a duration
-        bar's is.
-        """
-        from shared.fiscal_renderer import (
-            build_fiscal_period_segments,
-            build_fiscal_quarter_segments,
-        )
-
+        start, end = frame.start, frame.end
         rows: list[list] = []
         if config.timeline_show_fiscal_quarters:
             rows.append(build_fiscal_quarter_segments(start.date(), end.date(), config))
@@ -3343,9 +3102,9 @@ class TimelineRenderer(BaseSVGRenderer):
         label_size = max(7.0, _base_name_size(config) * 0.8)
         band_w = label_size * 1.8
         band_gap = 2.0
-        sign = 1.0 if side is Side.PRIMARY else -1.0
+        sign = frame.sign(side)
         # Clear the tick labels, which occupy this side of the axis.
-        band_start = axis_x + sign * (
+        band_start = frame.cross + sign * (
             self._axis_label_clearance(config, start, end) or (self._axis_tick_height(config) + label_size * 1.5)
         )
 
@@ -3358,29 +3117,26 @@ class TimelineRenderer(BaseSVGRenderer):
 
         for row_idx, segments in enumerate(rows):
             near = band_start + sign * (row_idx * (band_w + band_gap))
-            col_x = min(near, near + sign * band_w)
+            across_lo = min(near, near + sign * band_w)
             for seg_idx, seg in enumerate(segments):
-                y1 = self._y_for_day(arrow.get(seg.start), start, end, axis_top, axis_bottom)
-                y2 = self._y_for_day(arrow.get(seg.end_exclusive), start, end, axis_top, axis_bottom)
-                y1 = max(y1, axis_top)
-                y2 = min(y2, axis_bottom)
-                if y2 <= y1:
+                a1 = max(frame.pos(arrow.get(seg.start)), frame.along0)
+                a2 = min(frame.pos(arrow.get(seg.end_exclusive)), frame.along1)
+                if a2 <= a1:
                     continue
                 _fb = _fb_styles[seg_idx % 2]
                 self._draw_rect(
-                    col_x,
-                    y1,
-                    band_w,
-                    y2 - y1,
+                    *frame.rect(a1, a2 - a1, across_lo, band_w),
                     fill=_fb.fill,
                     fill_opacity=_fb.fill_opacity,
                     stroke=_fb.stroke,
                     stroke_width=_fb.stroke_width,
                     css_class=_fb_classes[seg_idx % 2],
                 )
-                self._note_side_ink(col_x, col_x + band_w)
-                cx = col_x + band_w / 2.0
-                cy = (y1 + y2) / 2.0
+                if frame.vertical:
+                    self._note_side_ink(across_lo, across_lo + band_w)
+                along_c = (a1 + a2) / 2.0
+                across_c = across_lo + band_w / 2.0
+                cx, cy = frame.xy(along_c, across_c)
                 self._draw_text(
                     cx,
                     cy + label_size * 0.35,
@@ -3390,8 +3146,8 @@ class TimelineRenderer(BaseSVGRenderer):
                     fill=label_color,
                     fill_opacity=self._tk_opacity_default("text:label", 0.9),
                     anchor="middle",
-                    max_width=(y2 - y1) - 4.0,
-                    transform=f"rotate(-90 {cx:.4f} {cy:.4f})",
+                    max_width=(a2 - a1) - 4.0,
+                    transform=f"rotate(-90 {cx:.4f} {cy:.4f})" if frame.vertical else None,
                     css_class="ec-label",
                 )
 
