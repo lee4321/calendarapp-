@@ -181,6 +181,7 @@ class TimelineRenderer(BaseSVGRenderer):
         "line:today",
         "line:tick",
         "line:duration_bar",
+        "line:grid",
         "icon:event",
         "icon:milestone",
     )
@@ -400,7 +401,7 @@ class TimelineRenderer(BaseSVGRenderer):
         leader_style = config.get_line_style("ec-callout-leader")
         leader_stroke_width = leader_style.width or 1.25
         leader_opacity = leader_style.opacity or 0.75
-        leader_dasharray = leader_style.dasharray or config.timeline_connector_stroke_dasharray or None
+        leader_dasharray = self._tk("line:grid").get("dasharray") or leader_style.dasharray or None
         ox, oy = axis_origin
         for callout in callouts:
             if not callout.leader_path_d:
@@ -751,9 +752,7 @@ class TimelineRenderer(BaseSVGRenderer):
         group_colors = group_colors or {}
         group_depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
 
-        palette_primary = config.timeline_top_colors or [
-            config.get_text_style("ec-event-name").color or config.timeline_name_text_font_color
-        ]
+        palette_primary = config.timeline_top_colors or [config.get_text_style("ec-event-name").color]
         palette_secondary = config.timeline_bottom_colors or palette_primary
 
         # Pre-resolve color + rule-engine style per event, keyed by identity
@@ -853,11 +852,7 @@ class TimelineRenderer(BaseSVGRenderer):
             return {}
 
         _notes_style = config.get_text_style("ec-event-notes")
-        palette = (
-            config.timeline_top_colors
-            or config.timeline_bottom_colors
-            or [_notes_style.color or config.timeline_notes_text_font_color]
-        )
+        palette = config.timeline_top_colors or config.timeline_bottom_colors or [_notes_style.color]
 
         return wbs_group_colors(events, depth, palette)
 
@@ -929,7 +924,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 colors[id(event)] = group_colors.get(groups[id(event)], "")
         else:
             _notes_style = config.get_text_style("ec-event-notes")
-            palette = config.timeline_bottom_colors or [_notes_style.color or config.timeline_notes_text_font_color]
+            palette = config.timeline_bottom_colors or [_notes_style.color]
             for index, event in enumerate(ordered):
                 colors[id(event)] = palette[index % len(palette)]
 
@@ -1285,12 +1280,10 @@ class TimelineRenderer(BaseSVGRenderer):
         _notes_style = config.get_text_style("ec-event-notes")
         tk_name = self._tk("text:event_name")
         tk_notes = self._tk("text:event_notes")
-        name_font_default = tk_name.get("font") or config.timeline_name_text_font_name or _name_style.font
-        notes_font_default = tk_notes.get("font") or config.timeline_notes_text_font_name or _notes_style.font
+        name_font_default = tk_name.get("font") or _name_style.font
+        notes_font_default = tk_notes.get("font") or _notes_style.font
 
-        event_text_color = (
-            tk_name.get("color") or config.timeline_name_text_font_color or _name_style.color or item.color
-        )
+        event_text_color = tk_name.get("color") or _name_style.color or item.color
         name_font, _, name_color, name_opacity = _sr.text_override(
             "event_name",
             font=name_font_default,
@@ -1300,9 +1293,7 @@ class TimelineRenderer(BaseSVGRenderer):
         notes_font, _, notes_color, notes_opacity = _sr.text_override(
             "event_notes",
             font=notes_font_default,
-            color=(
-                tk_notes.get("color") or config.timeline_notes_text_font_color or _notes_style.color or event_text_color
-            ),
+            color=(tk_notes.get("color") or _notes_style.color or event_text_color),
             opacity=_notes_style.opacity,
         )
         name_path = self._safe_font_path(name_font)
@@ -1363,7 +1354,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_event_date = self._tk("text:event_date")
         date_font, _, date_color, date_opacity = _sr.text_override(
             "event_date",
-            font=(_event_date_style.font or tk_event_date.get("font") or config.timeline_date_font),
+            font=(_event_date_style.font or tk_event_date.get("font")),
             color=(_event_date_style.color or tk_event_date.get("color") or event_text_color),
             opacity=self._tk_opacity("text:event_date", _event_date_style),
         )
@@ -1710,9 +1701,9 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_notes = self._tk("text:event_notes")
         tk_date = self._tk("text:duration_date")
 
-        name_font_default = tk_name.get("font") or config.timeline_name_text_font_name or _name_style.font
-        notes_font_default = tk_notes.get("font") or config.timeline_notes_text_font_name or _notes_style.font
-        text_color = tk_name.get("color") or config.timeline_name_text_font_color or _name_style.color
+        name_font_default = tk_name.get("font") or _name_style.font
+        notes_font_default = tk_notes.get("font") or _notes_style.font
+        text_color = tk_name.get("color") or _name_style.color
         name_font, _, name_color, name_opacity = _sr.text_override(
             "duration_name",
             font=name_font_default,
@@ -1722,13 +1713,11 @@ class TimelineRenderer(BaseSVGRenderer):
         notes_font, _, notes_color, notes_opacity = _sr.text_override(
             "duration_notes",
             font=notes_font_default,
-            color=(tk_notes.get("color") or config.timeline_notes_text_font_color or _notes_style.color or text_color),
+            color=(tk_notes.get("color") or _notes_style.color or text_color),
             opacity=_notes_style.opacity,
         )
-        date_font_base = (
-            _date_style.font or config.timeline_duration_date_font or tk_date.get("font") or config.timeline_date_font
-        )
-        date_color_base = _date_style.color or config.timeline_duration_date_color or tk_date.get("color") or text_color
+        date_font_base = _date_style.font or tk_date.get("font")
+        date_color_base = _date_style.color or tk_date.get("color") or text_color
         start_font, _, start_color, _ = _sr.text_override(
             "duration_start_date", font=date_font_base, color=date_color_base
         )
@@ -2186,6 +2175,10 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_width=_marker_style.stroke_width,
         )
 
+    def _event_date_font(self, config: CalendarConfig) -> str:
+        """Font for date text drawn along the axis (ticks, bands, fiscal columns)."""
+        return self._tk("text:event_date").get("font") or config.get_text_style("ec-event-date").font
+
     @staticmethod
     def _marker_box_style(config: CalendarConfig) -> Any:
         """The axis marker's stroke: ``timeline.marker_stroke_color`` / ``_width``."""
@@ -2345,9 +2338,7 @@ class TimelineRenderer(BaseSVGRenderer):
             text_align = str(band.get("text_align", "center")).strip().lower()
             if text_align not in {"left", "center", "right"}:
                 text_align = "center"
-            band_font = str(
-                band.get("font") or tk_band_label.get("font") or _band_text_style.font or config.timeline_text_font_name
-            )
+            band_font = str(band.get("font") or tk_band_label.get("font") or _band_text_style.font)
             band_font_color = str(band.get("font_color") or text_color)
             band_label_color = str(band.get("label_color") or band_font_color)
             font_size = float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))
@@ -2582,7 +2573,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 band.get("label_color") or band.get("font_color") or tk_event_date.get("color") or _tick_style.color
             ),
             "label_opacity": float(label_opacity if (label_opacity := band.get("label_opacity")) is not None else 0.8),
-            "font_name": str(band.get("font") or tk_event_date.get("font") or config.timeline_date_font),
+            "font_name": str(band.get("font") or self._event_date_font(config)),
             "label_offset": self._tick_label_offset(
                 tick_h,
                 label_size,
@@ -2780,7 +2771,7 @@ class TimelineRenderer(BaseSVGRenderer):
                     frame,
                     along,
                     format_arrow_date(m, config.timeline_tick_label_format),
-                    tk_event_date.get("font") or config.timeline_date_font,
+                    self._event_date_font(config),
                     label_size,
                     tk_event_date.get("color") or _tick_style.color,
                     self._tk_opacity_default("text:label", 0.8),
@@ -2933,14 +2924,9 @@ class TimelineRenderer(BaseSVGRenderer):
         # styles event dates styles these too unless the holiday-specific
         # config field overrides it.
         _date_style = config.get_text_style("ec-holiday-date")
-        font_name = _date_style.font or config.timeline_date_font
+        font_name = _date_style.font
         font_path = self._safe_font_path(font_name)
-        date_color = (
-            getattr(config, "timeline_holiday_date_color", None)
-            or _date_style.color
-            or color
-            or config.timeline_tick_color
-        )
+        date_color = getattr(config, "timeline_holiday_date_color", None) or _date_style.color or color or "grey"
         labelled = [(along, label) for along, _icon, label in marks if label]
         if frame.vertical:
             # Along a vertical axis a date claims its own line height; rows
@@ -3097,7 +3083,7 @@ class TimelineRenderer(BaseSVGRenderer):
         _fb_styles = (config.get_box_style("ec-fiscal-band"), config.get_box_style("ec-fiscal-band-alt"))
         _fb_classes = ("ec-fiscal-band", "ec-fiscal-band-alt")
         label_color = config.get_line_style("ec-axis-tick").color
-        font_name = self._tk("text:event_date").get("font") or config.timeline_date_font
+        font_name = self._event_date_font(config)
 
         for row_idx, segments in enumerate(rows):
             near = band_start + sign * (row_idx * (band_w + band_gap))
@@ -3191,7 +3177,7 @@ class TimelineRenderer(BaseSVGRenderer):
         tk_today_label = self._tk("text:today_label")
         label_size = tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)
         label = config.timeline_today_label_text or "Today"
-        font_name = tk_today_label.get("font") or _today_label_style.font or config.timeline_date_font
+        font_name = tk_today_label.get("font") or _today_label_style.font
         offset = max(0.0, config.timeline_today_label_offset_y)
         # The label rides off the line's leading (low-coordinate) end — its
         # top on a horizontal chart, its left end on a vertical one — and
@@ -3295,7 +3281,7 @@ class TimelineRenderer(BaseSVGRenderer):
             config.timeline_tick_label_offset_y,
         )
         if orientation is Orientation.VERTICAL:
-            font_path = self._safe_font_path(self._tk("text:event_date").get("font") or config.timeline_date_font)
+            font_path = self._safe_font_path(self._event_date_font(config))
             widest = max(
                 string_width(
                     format_arrow_date(m, config.timeline_tick_label_format),

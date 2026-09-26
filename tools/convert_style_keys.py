@@ -11,7 +11,9 @@ so it renders exactly as before:
   the key itself, its section/``base`` cascade, or the old built-in default.
 * Where the theme's token, resolved for that visualizer, leaves the attribute
   unset (the only case in which the old code consulted the key), the value
-  goes into a rule ``apply_to: <token>`` selected on the visualizer.  The rule is inserted
+  goes into a rule ``apply_to: <token>`` selected on the visualizer.  A key
+  the old code read ahead of the token (``override``) is written whenever the
+  token's value differs.  The rule is inserted
   before the token's other conditional rules, so any of those that match still
   win, as they did before.
 * The retired keys are removed.  Comments elsewhere in the file are kept.
@@ -57,6 +59,17 @@ def resolve_old_value(data: dict, r: Retired) -> Any:
     return r.default
 
 
+def _has_view_rule(data: dict, token: str, visualizer: str) -> bool:
+    """True when a rule already styles ``token`` for exactly this view."""
+    for rule in data.get("style_rules") or []:
+        if not isinstance(rule, dict) or rule.get("select") != {"visualizer": visualizer}:
+            continue
+        targets = rule.get("apply_to")
+        if token in ([targets] if isinstance(targets, str) else list(targets or [])):
+            return True
+    return False
+
+
 def converted_rules(data: dict) -> list[tuple[str, dict]]:
     """``[(token, rule)]`` a theme needs so it renders as it did."""
     theme = parse_theme(data)
@@ -67,11 +80,14 @@ def converted_rules(data: dict) -> list[tuple[str, dict]]:
         # view, left the attribute unset.  Resolving with just the view (no
         # paper size etc.) counts definitions and view-wide rules — including
         # a rule an earlier run of this tool added, so it is idempotent.
-        if r.attr in theme.resolve_token(r.token, {"visualizer": r.visualizer}):
-            continue
+        resolved = theme.resolve_token(r.token, {"visualizer": r.visualizer})
         value = resolve_old_value(data, r)
         if value is None:
             continue  # nothing was drawn from it either way
+        if r.attr in resolved and (not r.override or resolved[r.attr] == value):
+            continue
+        if r.override and _has_view_rule(data, r.token, r.visualizer):
+            continue  # converted already: the view rule is where the value lives
         groups.setdefault((r.token, r.visualizer), {})[r.attr] = value
         sources.setdefault((r.token, r.visualizer), set()).add(r.section)
     rules = []

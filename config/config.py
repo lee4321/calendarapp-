@@ -590,7 +590,6 @@ class CalendarConfig:
     hash_pattern_scale: float = 1.0
 
     timeline_axis_width: float = 2.0
-    timeline_tick_color: str = "grey"
     timeline_date_format: str = "MMM D"
     timeline_tick_label_format: str = "MMM D"
     # Distance from a tick mark's tip to its date label, in points. None
@@ -620,13 +619,7 @@ class CalendarConfig:
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     timeline_duration_icon_visible: bool = False
-    # ── Timeline text styling — kept survivors only.
-    timeline_text_font_name: str = Fonts.R_BOLD
-    timeline_name_text_font_name: str = Fonts.R_BOLD
-    timeline_name_text_font_color: str = "deepskyblue"
     timeline_name_text_font_size: float | None = None
-    timeline_notes_text_font_name: str = Fonts.RC_BOLD
-    timeline_notes_text_font_color: str = "deepskyblue"
     timeline_notes_text_font_size: float | None = None
     # Timeline box/date fields (not renamed — not event name/notes text)
     timeline_event_box_width: float | None = None
@@ -656,12 +649,8 @@ class CalendarConfig:
     # bars share one color and its bars sort together. 0 disables grouping —
     # each layout cycles its own palette per item, as before.
     timeline_wbs_group_depth: int = 2
-    timeline_duration_date_font: str | None = None
     timeline_duration_date_font_size: float | None = None
-    timeline_duration_date_color: str | None = None
-    timeline_date_font: str = Fonts.R_BOLD
     timeline_label_fill_opacity: float = 0.25
-    timeline_connector_stroke_dasharray: str | None = None
     timeline_top_colors: list[str] = field(
         default_factory=lambda: [
             "deepskyblue",
@@ -714,7 +703,7 @@ class CalendarConfig:
     timeline_holiday_date_format: str | None = None
     # None = size relative to the icon (see _holiday_date_font_size()).
     timeline_holiday_date_font_size: float | None = None
-    # None = follow timeline_tick_color.
+    # None = follow the ec-holiday-date element color.
     timeline_holiday_date_color: str | None = None
 
     # ---- labella-driven label placement ----

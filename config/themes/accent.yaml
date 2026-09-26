@@ -191,7 +191,6 @@ timeline:
   # the whole distance; wins over the gap
   tick_label_offset_y: null
   axis_width: 2
-  tick_color: palette:Accent:1
   date_format: MMM D
   tick_label_format: MMM YY
   today_date: ''
@@ -205,7 +204,6 @@ timeline:
   duration_offset_y: 44.0
   duration_lane_gap_y: 8.0
   label_fill_opacity: 0.0
-  connector_stroke_dasharray: null
   top_colors:
     - palette:Accent:4
     - palette:Accent:0
@@ -219,14 +217,6 @@ timeline:
     - palette:Accent:1
     - palette:Accent:2
   palette: Accent
-  name_text:
-    font_name: Roboto-Bold
-    font_color: palette:Accent:3
-  notes_text:
-    font_name: RobotoCondensed-Bold
-    font_color: palette:Accent:1
-  date:
-    font_family: Roboto-Bold
 timeline_events:
   box_width: 150
   # how point-event boxes are placed: "packed" puts each box's leading
@@ -809,6 +799,14 @@ style_rules:
     apply_to: icon:milestone
     select: {visualizer: mini}
     style: {stroke_width: 1.0, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: Roboto-Bold}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: RobotoCondensed-Bold}
 element_overrides:
   ec-axis-tick:
     use: line:tick

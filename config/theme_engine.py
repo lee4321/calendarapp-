@@ -64,7 +64,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # / _font_size, name_text_font_opacity/_alignment,
     # notes_text_font_opacity/_alignment.
     ("timeline", "axis_width"): "timeline_axis_width",
-    ("timeline", "tick_color"): "timeline_tick_color",
     ("timeline", "date_format"): "timeline_date_format",
     ("timeline", "tick_label_format"): "timeline_tick_label_format",
     ("timeline", "tick_label_gap"): "timeline_tick_label_gap",
@@ -111,12 +110,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline.labella", "min_pos"): "timeline_labella_min_pos",
     ("timeline.labella", "max_pos"): "timeline_labella_max_pos",
     # Timeline text styling — kept survivors only.
-    ("timeline.text", "font_name"): "timeline_text_font_name",
-    ("timeline.name_text", "font_name"): "timeline_name_text_font_name",
-    ("timeline.name_text", "font_color"): "timeline_name_text_font_color",
     ("timeline.name_text", "font_size"): "timeline_name_text_font_size",
-    ("timeline.notes_text", "font_name"): "timeline_notes_text_font_name",
-    ("timeline.notes_text", "font_color"): "timeline_notes_text_font_color",
     ("timeline.notes_text", "font_size"): "timeline_notes_text_font_size",
     # Timeline box/date fields (not renamed)
     ("timeline_events", "box_width"): "timeline_event_box_width",
@@ -132,10 +126,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "wbs_group_depth"): "timeline_wbs_group_depth",
     # Accepted where it first shipped, when grouping only reached the bars.
     ("timeline_durations", "wbs_group_depth"): "timeline_wbs_group_depth",
-    ("timeline_durations", "date_font"): "timeline_duration_date_font",
     ("timeline_durations", "date_font_size"): "timeline_duration_date_font_size",
-    ("timeline_durations", "date_color"): "timeline_duration_date_color",
-    ("timeline.date", "font_family"): "timeline_date_font",
     # Blockplan.  Phase 2 strip dropped 23 dead translations:
     # background_color, band_font, band_row_height, event_date_color/_font,
     # header_font, lane_heading_fill_color, lane_label_color/_font,
@@ -415,7 +406,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("candybar.month_box", "fill"): "candybar_month_box_fill",
     ("candybar.month_box", "stroke"): "candybar_month_box_stroke",
     ("candybar.month_box", "opacity"): "candybar_month_box_opacity",
-    ("timeline", "connector_stroke_dasharray"): "timeline_connector_stroke_dasharray",
     # ExcelBlockplan
     ("excelblockplan", "font_name"): "excelblockplan_font",
     ("excelblockplan", "font_size"): "excelblockplan_font_size",

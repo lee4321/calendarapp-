@@ -86,46 +86,46 @@ class TestThemeEngineCascading:
         return engine
 
     def test_element_level_overrides_section_level(self):
-        """timeline.name_text.font_name should override timeline.font_name."""
+        """timeline.name_text.font_size should override timeline.font_size."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
                 "timeline": {
-                    "font_name": "Roboto-Bold",
-                    "name_text": {"font_name": "Offside-Regular"},
+                    "font_size": 11,
+                    "name_text": {"font_size": 14},
                 },
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.timeline_name_text_font_name == "Offside-Regular"
+        assert config.timeline_name_text_font_size == 14
 
     def test_section_level_overrides_base(self):
-        """timeline.font_name should override base.font_name."""
+        """timeline.font_size should override base.font_size."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "base": {"font_name": "Roboto-Bold"},
-                "timeline": {"font_name": "Offside-Regular"},
+                "base": {"font_size": 11},
+                "timeline": {"font_size": 14},
             }
         )
         config = create_calendar_config()
         engine.apply(config)
         # timeline.name_text inherits from timeline since no element-level value
-        assert config.timeline_name_text_font_name == "Offside-Regular"
+        assert config.timeline_name_text_font_size == 14
 
     def test_base_level_applies_when_no_section(self):
-        """base.font_name should apply to timeline text when no timeline section."""
+        """base.font_size should apply to timeline text when no timeline section."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "base": {"font_name": "Roboto-Bold"},
+                "base": {"font_size": 11},
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.timeline_name_text_font_name == "Roboto-Bold"
-        assert config.timeline_notes_text_font_name == "Roboto-Bold"
+        assert config.timeline_name_text_font_size == 11
+        assert config.timeline_notes_text_font_size == 11
 
     def test_pit_name_notes_text_fonts_map_from_theme(self):
         """pit.name_text/notes_text font_name + font_size reach config so the
@@ -147,28 +147,28 @@ class TestThemeEngineCascading:
         assert config.pit_notes_text_font_size == 8
 
     def test_section_level_used_when_no_element_level(self):
-        """timeline.font_name applies to name_text when it sets only a size."""
+        """timeline.font_size applies to notes_text when only name_text sets one."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
                 "timeline": {
-                    "font_name": "Roboto-Bold",
+                    "font_size": 11,
                     "name_text": {"font_size": 13},
                 },
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.timeline_name_text_font_name == "Roboto-Bold"
         assert config.timeline_name_text_font_size == 13
+        assert config.timeline_notes_text_font_size == 11
 
     def test_no_theme_data_returns_config_unchanged(self):
         """An empty theme should not modify config defaults."""
         engine = ThemeEngine()
         config = create_calendar_config()
-        original_font = config.timeline_name_text_font_name
+        original_size = config.timeline_name_text_font_size
         engine.apply(config)
-        assert config.timeline_name_text_font_name == original_font
+        assert config.timeline_name_text_font_size == original_size
 
 
 class TestThemeEngineApply:
@@ -347,13 +347,8 @@ class TestThemeEngineApply:
                 "duration_offset_y": 80,
                 "duration_lane_gap_y": 14,
                 "top_colors": ["red", "blue"],
-                "name_text": {"font_name": "Roboto-Bold", "font_color": "gold", "font_size": 14.5},
-                "notes_text": {
-                    "font_name": "RobotoCondensed-Bold",
-                    "font_color": "silver",
-                    "font_size": 11.5,
-                },
-                "date": {"font_family": "Roboto-Bold", "font_color": "orange"},
+                "name_text": {"font_size": 14.5},
+                "notes_text": {"font_size": 11.5},
             },
             "timeline_events": {
                 "box_width": 180,
@@ -383,17 +378,12 @@ class TestThemeEngineApply:
         assert config.timeline_duration_offset_y == 80
         assert config.timeline_duration_lane_gap_y == 14
         assert config.timeline_top_colors == ["red", "blue"]
-        assert config.timeline_name_text_font_name == "Roboto-Bold"
-        assert config.timeline_name_text_font_color == "gold"
-        assert config.timeline_notes_text_font_name == "RobotoCondensed-Bold"
-        assert config.timeline_notes_text_font_color == "silver"
         assert config.timeline_name_text_font_size == 14.5
         assert config.timeline_notes_text_font_size == 11.5
         assert config.timeline_event_box_width == 180
         assert config.timeline_event_box_height == 80
         assert config.timeline_duration_box_width == 120
         assert config.timeline_duration_box_height == 36
-        assert config.timeline_date_font == "Roboto-Bold"
 
 
 class TestThemeEngineColorMaps:

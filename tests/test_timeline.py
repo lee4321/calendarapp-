@@ -997,7 +997,7 @@ def test_a_line_of_text_stays_inside_its_own_cell(tmp_path, cell_h):
         config,
         100.0,
         cell_h,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     assert top >= 100.0 - 0.01
@@ -1015,7 +1015,7 @@ def test_a_line_is_centred_in_its_cell(tmp_path):
         config,
         100.0,
         40.0,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     assert (top - 100.0) == pytest.approx(140.0 - bottom, abs=0.01)
@@ -1025,7 +1025,7 @@ def test_a_short_cell_caps_the_font_size(tmp_path):
     """The box is never stretched, so the text is what gives way."""
     config = _base_config(tmp_path / "cell_cap.svg")
     renderer = TimelineRenderer()
-    path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    path = renderer._safe_font_path(config.get_text_style("ec-event-name").font)
 
     assert renderer._cell_font_size(60.0, path, 12.0) == pytest.approx(12.0)
     assert renderer._cell_font_size(5.0, path, 12.0) < 12.0
@@ -1043,7 +1043,7 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
         config,
         100.0,
         row_h,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     notes_top, _bottom = _cell_ink(
@@ -1051,7 +1051,7 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
         config,
         100.0 + row_h,
         row_h,
-        config.timeline_notes_text_font_name,
+        config.get_text_style("ec-event-notes").font,
         notes_size,
     )
     assert notes_top >= name_bottom - 0.01
@@ -2474,7 +2474,7 @@ def test_a_vertical_axis_reserves_the_width_of_its_tick_dates(tmp_path):
     widest = max(
         string_width(
             format_arrow_date(m, config.timeline_tick_label_format),
-            renderer._safe_font_path(config.timeline_date_font),
+            renderer._safe_font_path(config.get_text_style("ec-event-date").font),
             label_size,
         )
         for m in renderer._month_tick_arrows(start, end)
