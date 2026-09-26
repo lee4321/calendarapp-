@@ -86,7 +86,7 @@ def test_expand_to_week_boundaries_snaps_partial_weeks():
 
     # 2026-02-04 is Wed, 2026-02-10 is Tue (Monday-start weeks).
     cfg = _config("20260204", "20260210")
-    CandybarVisualizer._expand_to_week_boundaries(cfg)
+    CandybarVisualizer()._expand_date_range(cfg)
     assert cfg.adjustedstart == "20260202"  # back to Monday
     assert cfg.adjustedend == "20260215"  # forward to Sunday
 
@@ -96,7 +96,7 @@ def test_rows_are_full_after_boundary_expansion():
     from visualizers.candybar.visualizer import CandybarVisualizer
 
     cfg = _config("20260204", "20260210")
-    CandybarVisualizer._expand_to_week_boundaries(cfg)
+    CandybarVisualizer()._expand_date_range(cfg)
     coords = CandybarLayout().calculate(cfg)
     cells = [k for k in coords if k.startswith("Cell_")]
     weeknums = [k for k in coords if k.startswith("WeekNum_")]

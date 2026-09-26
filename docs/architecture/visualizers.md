@@ -1,9 +1,13 @@
 # Visualizers
 
-Every SVG visualizer is a package under `visualizers/<name>/` with the same
-three files: `layout.py` (geometry → CoordinateDict, PDF coords),
-`renderer.py` (a `BaseSVGRenderer` subclass overriding `_render_content`),
-and `visualizer.py` (thin orchestrator registered in `factory.py`).
+Every SVG visualizer is a package under `visualizers/<name>/` with
+`layout.py` (geometry → CoordinateDict, PDF coords) and `renderer.py`
+(a `BaseSVGRenderer` subclass overriding `_render_content`). The table in
+`visualizers/factory.py` pairs each view name with its layout and renderer;
+`BaseVisualizer` runs filter → layout → render. Only views that change that
+workflow have a `visualizer.py`: mini (month-boundary dates and week numbers,
+shared with mini-icon), candybar (week-boundary dates) and text-mini (text
+output). Views with a single content rectangle use `ContentAreaLayout`.
 Class-inheritance exceptions are noted below.
 
 ## weekly — the flagship calendar
