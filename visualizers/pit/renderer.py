@@ -183,7 +183,7 @@ class PITRenderer(BaseSVGRenderer):
         except Exception:
             self._pattern_svg_cache = {}
 
-        style_engine = StyleEngine(_pit_style_rules(config))
+        style_engine = StyleEngine(_pit_style_rules(config), "pit")
         icon_map = getattr(self, "_icon_svg_map", {}) or {}
 
         # Pre-resolve per-event style + label-icon presence so the layout
@@ -261,13 +261,12 @@ class PITRenderer(BaseSVGRenderer):
                 direction,
                 pos_for_day,
             )
-        self._draw_callout_groups(config, placements, direction, side, per_event_styles)
+        self._draw_callout_groups(config, placements, direction, per_event_styles)
 
         return 0, []
 
     # ------------------------------------------------------------------
     # Draw helpers
-    # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     # SVG <marker> defs (arrow-head etc.) — independent start/end per line
     # ------------------------------------------------------------------
@@ -302,18 +301,6 @@ class PITRenderer(BaseSVGRenderer):
             prefix="pit-marker",
             css_class="ec-pit-marker-arrow-head",
         )
-
-    @staticmethod
-    def _marker_attr_pair(kind: str, color: str, size: float) -> str:
-        """Return the leading-space attribute fragment for a non-empty
-        marker (or "" when none should be drawn).
-
-        The caller chooses which attribute (``marker-start`` /
-        ``marker-end``) the fragment is prefixed with via ``ensure``.
-        """
-        # Intentional no-op — kept as the seam tests can monkey-patch
-        # when they want to assert "marker emitted nothing".
-        return f' fill="{color}" size="{size}" kind="{kind}"'
 
     def _draw_axis_group(
         self,
@@ -677,7 +664,6 @@ class PITRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         placements: list[PITPlacement],
         direction: Orientation,
-        side_config: Side,
         per_event_styles: dict[int, StyleResult] | None = None,
     ) -> None:
         """Emit one <g class="ec-pit-callout-group ec-pit-side-…"
@@ -723,9 +709,19 @@ class PITRenderer(BaseSVGRenderer):
         default_label_pattern = config.theme_pit_label_pattern
         default_label_pattern_opacity = float(getattr(config, "hash_pattern_opacity", 0.15))
 
-        # Label text fonts
-        name_font = config.pit_name_text_font_name or config.timeline_name_text_font_name or "Roboto-Bold"
-        notes_font = config.pit_notes_text_font_name or config.timeline_notes_text_font_name or "Roboto-Regular"
+        # Label text fonts: pit.*_text.font_name, else the event text tokens
+        # resolved for this view.
+        view = {"visualizer": "pit", "papersize": config.papersize}
+        name_font = (
+            config.pit_name_text_font_name
+            or self._resolve_token(config, "text:event_name", view).get("font")
+            or config.get_text_style("ec-event-name").font
+        )
+        notes_font = (
+            config.pit_notes_text_font_name
+            or self._resolve_token(config, "text:event_notes", view).get("font")
+            or config.get_text_style("ec-event-notes").font
+        )
         name_size = float(config.pit_name_text_font_size or 11.0)
         notes_size = float(config.pit_notes_text_font_size or name_size * 0.85)
         name_color = config.theme_pit_label_text_color or config.pit_name_text_color

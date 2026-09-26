@@ -338,6 +338,10 @@ time_bands:
 style_rules:
   # Event colors by resource group.  An event's color comes from style_rules
   # in every visualizer; the theme's later rules still win over these.
+  - name: box:duration — blockplan (from blockplan)
+    apply_to: box:duration
+    select: {visualizer: blockplan}
+    style: {stroke_opacity: 0.9}
   - name: resource group engineering
     apply_to:
       - box:event
@@ -482,6 +486,10 @@ style_rules:
       font: FiraSans-Light
       size: 7
       color: black
+  - name: text:heading — blockplan (from blockplan)
+    apply_to: text:heading
+    select: {visualizer: blockplan}
+    style: {opacity: 1.0}
   - name: text:heading — small paper
     apply_to: text:heading
     select:
@@ -682,6 +690,10 @@ style_rules:
         min: 100
     style:
       fill: '#f4f4f4'
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
   - name: critical milestone — marker
     apply_to: icon:milestone
     select:
@@ -754,6 +766,18 @@ style_rules:
     select: {}
     style:
       swimlane: Other
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: Roboto-Bold}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: RobotoCondensed-Bold}
+  - name: text:duration_date — blockplan (from blockplan)
+    apply_to: text:duration_date
+    select: {visualizer: blockplan}
+    style: {font: RobotoCondensed-Light}
 element_overrides:
   ec-axis-tick:
     use: line:tick

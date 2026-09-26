@@ -1,7 +1,9 @@
 # Theme resolution — YAML to pixels
 
 A theme YAML has three kinds of styling content, resolved through different
-paths that meet in the renderer:
+paths that meet in the renderer.  Before any of that, a theme that
+`extends:` another is merged over its parent (`config/theme_inheritance.py`),
+so everything below sees one complete theme:
 
 ```mermaid
 flowchart TD
@@ -35,8 +37,9 @@ Most draw sites resolve each attribute through this chain (first hit wins):
 3. **Element style** — `config.get_text_style("ec-event-name")` etc.;
    the element's token binding comes from the catalog, per-theme tweaks
    from `element_overrides:`.
-4. **Legacy config field / module default** — the no-theme fallback
-   (`config.py _fallback_*_style` factories and plain fields).
+4. **Legacy config field / module default** — a plain `CalendarConfig`
+   field or literal written into the draw site. Element styles have no such
+   layer: without a theme they come from `element_catalog_defaults.yaml`.
 
 ## Font sizes specifically
 
@@ -50,8 +53,8 @@ fill every gap.
 ## Who validates what
 
 - `theme_engine` rejects legacy sections (old `hash_rules`,
-  `swimlanes[].match`, `apply_to: element`) with pointers to
-  `tools/migrate_theme.py` / `tools/strip_element_bindings.py`.
+  `swimlanes[].match`, `apply_to: element`) with a pointer to the retired
+  converters at tag `pre-migrator-retirement` (`legacy_hint()`).
 - `config/required_keys.py` powers `tools/validate_theme.py` — missing
   required keys are reported with example values from `basic.yaml`.
 - Unknown *sections* warn; unknown keys inside valid sections are ignored

@@ -199,7 +199,7 @@ class GanttRenderer(BaseSVGRenderer):
 
         self._ensure_details_record(events)
         self._extra_page_count = 0
-        self._style_engine = StyleEngine(_gantt_style_rules(config))
+        self._style_engine = StyleEngine(_gantt_style_rules(config), self.TOKEN_VISUALIZER)
 
         rows = build_rows(events, config)
         columns = resolve_columns(config)

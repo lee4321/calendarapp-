@@ -10,7 +10,6 @@ from visualizers.base import (
     BaseLayout,
     BaseVisualizer,
     VisualizationResult,
-    Visualizer,
 )
 from visualizers.factory import VisualizerFactory
 
@@ -18,6 +17,5 @@ __all__ = [
     "BaseLayout",
     "BaseVisualizer",
     "VisualizationResult",
-    "Visualizer",
     "VisualizerFactory",
 ]

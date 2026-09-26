@@ -10,12 +10,6 @@ base:
   # Ink for that stand-in. It flags an event naming an icon the icons
   # table does not have, so it stays an alert colour by default.
   default_missing_icon_color: red
-header:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
-footer:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
 events:
   icon_color: blue
   item_placement_order:
@@ -112,10 +106,6 @@ weekly:
   week_numbers:
     label_format: W{num:02d}
   day_box:
-    stroke_color: black
-    stroke_opacity: 0.5
-    stroke_width: 1
-    stroke_dasharray: null
     hash_pattern_opacity: 0.1
   name_text:
     font_size: 18
@@ -125,7 +115,6 @@ mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
   icon_set: squares
-  cell_font: JuliaMono-Regular
   cell_bold_font: Caveat-Bold
   cell_font_size: 48
   title_font_size: 18
@@ -133,7 +122,6 @@ mini_calendar:
   header_font_size: 12
   day_number_glyphs: null
   day_number_digits: null
-  day_color: black
   adjacent_month_color: lightgrey
   show_adjacent: false
   holiday_color: red
@@ -141,16 +129,10 @@ mini_calendar:
   milestone_color: navy
   circle_milestones: false
   milestone_stroke_color: navy
-  milestone_stroke_width: 1.0
-  milestone_stroke_opacity: 1.0
   current_day_color: black
   week_number_font_size: 12
   week_number_label_format: W{num}
   grid_lines: true
-  grid_line_color: grey
-  grid_line_width: 0.4
-  grid_line_opacity: 0.7
-  grid_line_dasharray: 1,2
   month_outline_color: navy
   month_outline_width: 0.75
   month_outline_opacity: 0.6
@@ -198,7 +180,6 @@ timeline:
   # the whole distance; wins over the gap
   tick_label_offset_y: null
   axis_width: 3
-  tick_color: grey
   date_format: M/D
   tick_label_format: M/D
   today_date: ''
@@ -213,7 +194,6 @@ timeline:
   duration_lane_gap_y: 20.0
   duration_icon_visible: true
   label_fill_opacity: 0.25
-  connector_stroke_dasharray: 4 2
   top_colors:
     - deepskyblue
     - gold
@@ -237,15 +217,9 @@ timeline:
     - firebrick
     - fuchsia
   name_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: white
     font_size: 18
   notes_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: grey
     font_size: 14
-  date:
-    font_family: PlaywriteDEGrund-VariableFont_wght
   ticks:
     - unit: month
       label_format: MMM D
@@ -295,9 +269,7 @@ timeline_events:
   icon_column_ratio: 0.15
 timeline_durations:
   box_height: 50
-  date_font: PlaywriteDEGrund-VariableFont_wght
   date_font_size: 10
-  date_color: black
 compact_plan:
   palette: null
   header_bottom_y: 8
@@ -333,15 +305,7 @@ compact_plan:
     - date_range
     - dow_2
 blockplan:
-  grid_color: black
-  grid_opacity: 1.0
-  grid_line_width: 1.0
-  grid_dasharray: null
   timeband_fill_opacity: 1.0
-  timeband_line_color: black
-  timeband_line_width: 0.75
-  timeband_line_opacity: 1.0
-  timeband_line_dasharray: null
   label_column_ratio: 0.05
   fiscal_year_start_month: 2
   week_start: 0
@@ -353,8 +317,6 @@ blockplan:
   unmatched_lane_name: Other
   lane_match_mode: first
   header_font_size: 11
-  header_label_color: Green
-  header_label_opacity: 1.0
   header_label_align_h: right
   band_font_size: 14
   company_holiday_fill_color: gold
@@ -374,21 +336,11 @@ blockplan:
     - name: 15.0.2
     - name: IC Fix
     - name: Post PI6
-  duration_date_font: PlaywriteDEGrund-VariableFont_wght
-  duration_fill_opacity: 1.0
-  duration_stroke_color: white
-  duration_stroke_width: 1.0
-  duration_stroke_opacity: 1.0
-  duration_stroke_dasharray: null
   duration_bar_height: 40
   duration_icon_visible: true
-  notes_text:
-    font_name: PlaywriteDEGrund-VariableFont_wght
-    font_color: grey
   duration_show_start_date: true
   duration_show_end_date: true
   duration_date_format: M/D
-  duration_date_color: Black
   event_show_date: false
   event_date_font_size: null
   event_date_format: MM/DD
@@ -477,6 +429,10 @@ layout:
 style_rules:
   # Event colors by resource group.  An event's color comes from style_rules
   # in every visualizer; the theme's later rules still win over these.
+  - name: box:duration — blockplan (from blockplan)
+    apply_to: box:duration
+    select: {visualizer: blockplan}
+    style: {stroke_opacity: 1.0, stroke_width: 1.0, stroke: white}
   - name: resource group a
     apply_to:
       - box:event
@@ -522,7 +478,11 @@ style_rules:
       font: PlaywriteDEGrund-VariableFont_wght
       size: 14
       color: grey
-  - name: text:heading — papersize override
+  - name: text:heading — blockplan (from blockplan)
+    apply_to: text:heading
+    select: {visualizer: blockplan}
+    style: {opacity: 1.0}
+  - name: text:heading — letter / ledger / tabloid paper
     apply_to: text:heading
     select:
       papersize:
@@ -531,7 +491,7 @@ style_rules:
         - tabloid
     style:
       size: 10
-  - name: text:heading — papersize override
+  - name: text:heading — 3x5 / 5x8 paper
     apply_to: text:heading
     select:
       papersize:
@@ -711,6 +671,10 @@ style_rules:
     apply_to: text:today_label
     style:
       color: grey
+  - name: box:band — blockplan (from blockplan)
+    apply_to: box:band
+    select: {visualizer: blockplan}
+    style: {stroke_width: 0.75, stroke_opacity: 1.0}
   - name: band fiscal_quarter — segment
     apply_to: box:band
     select:
@@ -1059,6 +1023,34 @@ style_rules:
       font: RobotoCondensed-Light
       size: 9
       color: '#888888'
+  - name: line:grid — timeline (from timeline)
+    apply_to: line:grid
+    select: {visualizer: timeline}
+    style: {dasharray: 4 2}
+  - name: line:grid — mini (from mini_calendar)
+    apply_to: line:grid
+    select: {visualizer: mini}
+    style: {dasharray: '1,2'}
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: PlaywriteDEGrund-VariableFont_wght}
+  - name: text:event_notes — blockplan (from blockplan.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: blockplan}
+    style: {font: PlaywriteDEGrund-VariableFont_wght, color: grey}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: PlaywriteDEGrund-VariableFont_wght}
+  - name: text:duration_date — blockplan (from blockplan)
+    apply_to: text:duration_date
+    select: {visualizer: blockplan}
+    style: {color: Black, font: PlaywriteDEGrund-VariableFont_wght}
 element_overrides:
   ec-axis-tick:
     use: line:tick

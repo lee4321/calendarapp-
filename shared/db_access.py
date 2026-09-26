@@ -670,29 +670,6 @@ class CalendarDB:
                     sizes[row["name"]] = (w, h)
             return sizes
 
-    def get_paper_size_names(self) -> list[str]:
-        """Return sorted list of available paper size names."""
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM papersizes ORDER BY name")
-            return [row["name"] for row in cursor.fetchall()]
-
-    def get_pattern_svg(self, name: str) -> str | None:
-        """
-        Return the SVG string for a named pattern, or None if not found.
-
-        Args:
-            name: Pattern name (e.g. "brick-wall", "polka-dots")
-
-        Returns:
-            SVG string or None
-        """
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT svg FROM patterns WHERE name = ?", (name,))
-            row = cursor.fetchone()
-            return row["svg"] if row else None
-
     def get_all_patterns(self) -> dict[str, str]:
         """
         Return all patterns as {name: svg} for bulk preloading.

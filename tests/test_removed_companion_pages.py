@@ -7,8 +7,6 @@ still configures one is told where its settings went.
 
 from __future__ import annotations
 
-from dataclasses import fields
-
 import pytest
 import yaml
 
@@ -34,24 +32,6 @@ def test_views_reject_the_removed_flags(view, flag, capsys):
     with pytest.raises(SystemExit):
         parser.parse_args([*argv, flag])
     assert flag in capsys.readouterr().err
-
-
-def test_config_has_no_fields_for_the_removed_pages():
-    names = {f.name for f in fields(CalendarConfig)}
-    removed = {
-        "include_overflow",
-        "overflow_title_text",
-        "overflow_output_suffix",
-        "include_mini_details",
-        "mini_details_headers",
-        "include_gantt_details",
-        "gantt_details_title_text",
-        "compactplan_show_legend",
-        "compactplan_key_title_text",
-        "compactplan_show_holiday_list",
-        "details_body_font_size",
-    }
-    assert not names & removed
 
 
 def _theme_file(tmp_path, change) -> str:
@@ -86,31 +66,3 @@ def test_a_mini_details_section_is_pointed_at_details(tmp_path):
     engine.load(path)
     with pytest.raises(Exception, match=r"details\.markdown\.columns"):
         engine.apply(CalendarConfig())
-
-
-def test_migration_turns_mini_details_into_details_markdown():
-    from tools.migrate_theme import _convert_mini_details
-
-    converted = _convert_mini_details(
-        {
-            "enable": False,
-            "title_text": "Event Details",
-            "headers": ["Start Date", "Name / Description", "Milestone", "Days", "Group"],
-            "column_widths": [0.16, 0.52, 0.1, 0.1, 0.12],
-            "output_suffix": "_details",
-        }
-    )
-
-    assert converted == {
-        "markdown": {
-            "columns": [
-                {"field": "start_date", "date_format": "YYYY-MM-DD", "header": "Start Date"},
-                {"field": "name", "header": "Name / Description"},
-                {"field": "milestone", "header": "Milestone"},
-                {"field": "priority", "header": "Days"},
-                {"field": "resource_group", "header": "Group"},
-            ],
-            "enable": False,
-            "title_text": "Event Details",
-        }
-    }

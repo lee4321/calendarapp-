@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def _ddl_columns() -> list[str]:
-    ddl = (ROOT / "db utils" / "events.sql").read_text()
+    ddl = (ROOT / "tools" / "db" / "events.sql").read_text()
     body = ddl.split('CREATE TABLE IF NOT EXISTS "events"', 1)[1].split(");", 1)[0]
     return re.findall(r'^\s*"(\w+)"\s+\w+', body, flags=re.MULTILINE)
 

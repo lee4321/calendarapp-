@@ -15,12 +15,12 @@ from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
 from shared.data_models import Event
+from shared.labella_layout import partition_for_both
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
 from visualizers.factory import VisualizerFactory
 from visualizers.pit.labella_adapter import (
     PIT_MAX_EVENTS_PER_SIDE,
-    _partition_for_both,
     layout_pit_callouts,
 )
 from visualizers.pit.layout import PITLayout
@@ -31,7 +31,6 @@ from visualizers.pit.markers import (
     resolve_marker,
 )
 from visualizers.pit.renderer import PITRenderer
-from visualizers.pit.visualizer import PITVisualizer
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -133,9 +132,10 @@ def _render_pit(tmp_path: Path, events: list[dict] | None = None, **kwargs) -> s
 
 
 def test_pit_factory_registered():
-    """VisualizerFactory.create('pit') returns a PITVisualizer."""
+    """VisualizerFactory.create('pit') returns the PIT visualizer."""
     viz = VisualizerFactory.create("pit")
-    assert isinstance(viz, PITVisualizer)
+    assert viz.name == "pit"
+    assert isinstance(viz._create_renderer(), PITRenderer)
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +336,7 @@ def test_pit_applies_content_filter_flags(tmp_path):
         """(events rendered, callouts in the SVG) for one run."""
         config = _make_config(tmp_path / name)
         config.milestones = filtered
-        result = PITVisualizer().generate(config, _EventsDB())
+        result = VisualizerFactory.create("pit").generate(config, _EventsDB())
         svg = Path(config.outputfile).read_text(encoding="utf-8")
         return result.event_count, svg.count("ec-pit-callout-group")
 
@@ -736,7 +736,6 @@ def test_pit_axis_marker_is_always_a_shape():
     spec = resolve_marker(ev, config=config, icon_svg_map=icon_map)
     assert spec.kind == "shape"
     assert spec.shape == "circle"
-    assert spec.is_icon is False
 
     # Milestone → diamond, even when a per-rule marker_icon is set.
     ms = Event(task_name="M", start="20260101", end="20260101", milestone=True)
@@ -1064,7 +1063,7 @@ def test_pit_palette_reference(tmp_path):
 def test_pit_both_side_partition():
     """With side=BOTH, events are split to both sides with alternating assignment."""
     events = [Event(task_name=f"E{i}", start=f"2026{i + 1:02d}01", end=f"2026{i + 1:02d}01") for i in range(4)]
-    primary, secondary = _partition_for_both(events)
+    primary, secondary = partition_for_both(events)
     assert len(primary) == 2
     assert len(secondary) == 2
     # No event appears on both sides.

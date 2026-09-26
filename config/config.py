@@ -142,8 +142,6 @@ class CalendarConfig:
     fiscal_show_period_labels: bool = True
     fiscal_show_quarter_labels: bool = True
     fiscal_use_period_colors: bool = False
-    fiscal_period_label_font: str = Fonts.RC_BOLD
-    fiscal_period_label_color: str = "darkblue"
     fiscal_period_label_font_size: float | None = None  # Set in setfontsizes()
     fiscal_period_label_format: str = "{prefix}{period_short}"
     fiscal_period_end_label_format: str = "{period_short} End"
@@ -160,21 +158,15 @@ class CalendarConfig:
     mini_columns: int = 3  # Months per row
     mini_rows: int = 0  # 0 = auto from date range
     mini_month_gap: float = 18.0  # Points between month grids
-    mini_cell_font: str = Fonts.J_REGULAR  # Monospace day number font
     mini_cell_bold_font: str = Fonts.R_BOLD  # Bold variant
-    mini_title_font: str = Fonts.RC_BOLD  # Month title font
     mini_title_font_size: float | None = None
     mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
-    mini_title_color: str = "navy"
     mini_header_font_size: float | None = None
-    mini_day_color: str = "black"  # Default day number color
     mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
     mini_holiday_color: str = "red"  # Holiday day number color
     mini_nonworkday_fill_color: str = "lightblue"  # Non-work day background
     mini_milestone_color: str = "navy"  # Milestone circle color
     mini_milestone_stroke_color: str = "navy"  # Milestone circle stroke color
-    mini_milestone_stroke_width: float = 1.0
-    mini_milestone_stroke_opacity: float = 1.0
     mini_day_number_glyphs: list[str] | None = None
     mini_day_number_digits: list[str] | None = None
     mini_cell_font_size: float | None = None
@@ -188,18 +180,11 @@ class CalendarConfig:
     mini_event_icon_opacity: float = 0.6
     mini_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
-    mini_duration_bar_stroke_opacity: float = 0.7
     mini_grid_lines: bool = False  # Draw grid lines between cells
-    mini_grid_line_color: str = "lightgrey"
-    mini_grid_line_width: float = 0.25
-    mini_grid_line_opacity: float = 0.5
-    mini_grid_line_dasharray: str | None = None
     mini_month_outline_color: str | None = None  # None disables the outline
     mini_month_outline_width: float = 0.5
     mini_month_outline_opacity: float = 1.0
     mini_month_outline_dasharray: str | None = None
-    mini_strikethrough_stroke_dasharray: str | None = None
-    mini_hash_line_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
@@ -416,8 +401,6 @@ class CalendarConfig:
     mini_nonworkday_fill_opacity: float = 0.2
     mini_special_nonworkday_opacity: float = 0.25
 
-    # Theme-overridable mini calendar fields (None = use mini_* defaults above)
-    theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
     theme_mini_holiday_color: str | None = None
     theme_mini_nonworkday_fill_color: str | None = None
@@ -535,41 +518,17 @@ class CalendarConfig:
     day_box_number_font_size: float | None = None
     event_icon_size: float | None = None
 
-    # Week number styling
-    week_number_font: str = Fonts.RC_BOLD
-    week_number_font_color: str = "grey"
     week_number_label_format: str = "W{num:02d}"
 
     # Header text and styling
     header_left_text: str = ""
-    header_left_font: str = Fonts.R_BOLD_ITALIC
-    header_left_font_color: str = "grey"
     header_center_text: str = ""
-    header_center_font: str = Fonts.R_BOLD_ITALIC
-    header_center_font_color: str = "grey"
     header_right_text: str = field(default_factory=lambda: f"as of {get_creation_date()}")
 
     # Footer text and styling
     footer_left_text: str = ""
     footer_center_text: str = ""
-    footer_center_font: str = Fonts.RC_LIGHT
-    footer_center_font_color: str = "grey"
     footer_right_text: str = ""
-
-    # Day name styling
-    day_name_font: str = Fonts.RC_LIGHT_ITALIC
-    day_name_font_color: str = "grey"
-
-    # Day box styling
-    day_box_stroke_color: str = "grey"
-    day_box_stroke_opacity: float = 0.25
-    day_box_stroke_width: int = 2
-    day_box_stroke_dasharray: str | None = None
-    day_box_fill_color: str = "grey"
-    day_box_fill_opacity: float = 0.25
-    day_box_number_font: str = "CascadiaCode"
-    day_box_number_color: str = "white"
-    day_box_color: str = "navy"
 
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
@@ -604,7 +563,6 @@ class CalendarConfig:
     # section in theme YAMLs; themes can also paint a halo behind it with a
     # `box:overflow` rule.
     overflow_indicator_icon: str = "warningtriangle"
-    overflow_indicator_color: str = "red"
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
@@ -617,14 +575,8 @@ class CalendarConfig:
     weekly_duration_fill_color: str = "lightsteelblue"
     weekly_duration_stroke_color: str = "white"
 
-    weekly_name_text_font_name: str = Fonts.RC_LIGHT
-    weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None
-    weekly_name_text_font_opacity: float = 1.0
-    weekly_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
-    weekly_notes_text_font_color: str = "darkgrey"
     weekly_notes_text_font_size: float | None = None
-    weekly_notes_text_font_opacity: float = 1.0
     hash_pattern_opacity: float = 0.15
     # Auto-normalization of pattern tile sizes.  Native tiles in the DB
     # span 16 to 1920 pt, so at native size the large ones show a single
@@ -637,16 +589,7 @@ class CalendarConfig:
     hash_pattern_target_size: float = DEFAULT_PATTERN_TARGET_SIZE
     hash_pattern_scale: float = 1.0
 
-    # Timeline styling.  Phase 2 strip dropped dead fields with no
-    # readers post-Phase-1: background_color (page bg from box:background),
-    # text_font_color/_opacity/_alignment + name_text_font_opacity/_alignment
-    # + notes_text_font_opacity/_alignment (all subsumed by text:event_name /
-    # text:event_notes / text:label tokens), text_font_size,
-    # duration_bar_stroke_dasharray, duration_bracket_stroke_dasharray.
-    timeline_axis_color: str = "lightgrey"
-    timeline_axis_opacity: float = 0.85
     timeline_axis_width: float = 2.0
-    timeline_tick_color: str = "grey"
     timeline_date_format: str = "MMM D"
     timeline_tick_label_format: str = "MMM D"
     # Distance from a tick mark's tip to its date label, in points. None
@@ -661,7 +604,6 @@ class CalendarConfig:
     timeline_today_label_text: str = "Today"
     timeline_today_label_offset_y: float = 10.0
     timeline_today_line_color: str = "grey"
-    timeline_today_label_color: str = "grey"
     # Length of the today line in points (0 = full available area height).
     timeline_today_line_length: float = 0.0
     # Which side of the timeline axis the today line extends to.
@@ -677,13 +619,7 @@ class CalendarConfig:
     timeline_duration_offset_y: float = 44.0
     timeline_duration_lane_gap_y: float = 8.0
     timeline_duration_icon_visible: bool = False
-    # ── Timeline text styling — kept survivors only.
-    timeline_text_font_name: str = Fonts.R_BOLD
-    timeline_name_text_font_name: str = Fonts.R_BOLD
-    timeline_name_text_font_color: str = "deepskyblue"
     timeline_name_text_font_size: float | None = None
-    timeline_notes_text_font_name: str = Fonts.RC_BOLD
-    timeline_notes_text_font_color: str = "deepskyblue"
     timeline_notes_text_font_size: float | None = None
     # Timeline box/date fields (not renamed — not event name/notes text)
     timeline_event_box_width: float | None = None
@@ -713,19 +649,8 @@ class CalendarConfig:
     # bars share one color and its bars sort together. 0 disables grouping —
     # each layout cycles its own palette per item, as before.
     timeline_wbs_group_depth: int = 2
-    timeline_duration_date_font: str | None = None
     timeline_duration_date_font_size: float | None = None
-    timeline_duration_date_color: str | None = None
-    timeline_date_font: str = Fonts.R_BOLD
-    timeline_date_color: str = "deepskyblue"
-    timeline_label_stroke_width: float = 1.0
     timeline_label_fill_opacity: float = 0.25
-    # stroke-dasharray for timeline elements
-    timeline_axis_stroke_dasharray: str | None = None
-    timeline_tick_stroke_dasharray: str | None = None
-    timeline_today_line_dasharray: str | None = None
-    timeline_label_stroke_dasharray: str | None = None
-    timeline_connector_stroke_dasharray: str | None = None
     timeline_top_colors: list[str] = field(
         default_factory=lambda: [
             "deepskyblue",
@@ -778,7 +703,7 @@ class CalendarConfig:
     timeline_holiday_date_format: str | None = None
     # None = size relative to the icon (see _holiday_date_font_size()).
     timeline_holiday_date_font_size: float | None = None
-    # None = follow timeline_tick_color.
+    # None = follow the ec-holiday-date element color.
     timeline_holiday_date_color: str | None = None
 
     # ---- labella-driven label placement ----
@@ -992,28 +917,6 @@ class CalendarConfig:
     pit_notes_text_font_name: str | None = None
     pit_notes_text_font_size: float | None = None
 
-    # Blockplan styling and behavior.
-    # Phase 2 strip dropped dead fields with no readers post-Phase-1:
-    # background_color (page bg from box:background), band_row_height
-    # (per-band row_height key), header_font / band_font / lane_label_font /
-    # event_date_font (text:* token covers font selection),
-    # lane_heading_fill_color (box:swimlane_heading), lane_label_color
-    # (text:swimlane_label), event_date_color (text:event_date),
-    # timeband_label_color/_label_opacity (per-band YAML overrides);
-    # the per-text font_color/_opacity/_alignment trio for
-    # text/name_text/notes_text (subsumed by text:event_name /
-    # text:event_notes / text:label tokens); text_font_size, plus a
-    # redundant text_font_name copy (name_text_font_name kept).
-    # blockplan_timeband_fill_color stays — referenced by the
-    # ec-band-cell BoxStyle factory below.
-    blockplan_grid_color: str = "grey"
-    blockplan_grid_opacity: float = 0.6
-    blockplan_grid_line_width: float = 1.0
-    blockplan_grid_dasharray: str | None = None
-    blockplan_timeband_line_color: str | None = None
-    blockplan_timeband_line_width: float | None = None
-    blockplan_timeband_line_opacity: float | None = None
-    blockplan_timeband_line_dasharray: str | None = None
     blockplan_label_column_ratio: float = 0.16
     # Width of the time-band name cells; None = same as label_column_ratio.
     blockplan_band_label_column_ratio: float | None = None
@@ -1097,10 +1000,7 @@ class CalendarConfig:
     # Empty → no swimlanes: one unlabeled lane holds every item.
     blockplan_swimlanes: list[dict[str, Any]] = field(default_factory=list)
     blockplan_header_font_size: float | None = None
-    blockplan_header_label_color: str = "black"
-    blockplan_header_label_opacity: float = 1.0
     blockplan_header_label_align_h: str = "left"  # left | center | right
-    blockplan_header_heading_fill_color: str = "none"
     blockplan_band_font_size: float | None = None
     blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
     blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
@@ -1125,19 +1025,12 @@ class CalendarConfig:
     )
     # ── Blockplan text styling — kept survivors only (font_size + name fields).
     blockplan_name_text_font_size: float | None = None
-    blockplan_notes_text_font_name: str | None = None
-    blockplan_notes_text_font_color: str | None = None
     blockplan_notes_text_font_size: float | None = None
     # Blockplan event/duration date & marker fields (not renamed)
     blockplan_event_show_date: bool = False
     blockplan_event_date_font_size: float | None = None
     blockplan_event_date_format: str = "YYYY-MM-DD"
     blockplan_marker_radius: float = 2.0
-    blockplan_duration_fill_opacity: float = 0.35
-    blockplan_duration_stroke_color: str | None = None
-    blockplan_duration_stroke_width: float = 1.0
-    blockplan_duration_stroke_opacity: float = 0.9
-    blockplan_duration_stroke_dasharray: str | None = None
     blockplan_duration_bar_height: float = 8.0
     # Space (pt) between duration bars in adjacent rows; bars shrink below
     # duration_bar_height to keep it.  None = bars may fill 95% of the row.
@@ -1146,15 +1039,7 @@ class CalendarConfig:
     blockplan_duration_show_start_date: bool = False
     blockplan_duration_show_end_date: bool = False
     blockplan_duration_date_format: str = "MMM D"
-    blockplan_duration_date_font: str = Fonts.RC_LIGHT
     blockplan_duration_date_font_size: float | None = None
-    blockplan_duration_date_color: str | None = None
-    blockplan_vertical_line_color: str = "red"
-    blockplan_vertical_line_width: float = 1.5
-    blockplan_vertical_line_dasharray: str | None = None
-    blockplan_vertical_line_opacity: float = 0.9
-    blockplan_vertical_line_fill_color: str = "none"  # default no fill; set to color, list, or palette
-    blockplan_vertical_line_fill_opacity: float = 0.2
 
     # ── Gantt ─────────────────────────────────────────────────────────────────
     # Task table on the left, timescale chart on the right.  Column layout is
@@ -1436,7 +1321,6 @@ class CalendarConfig:
 
     # Watermark text
     watermark_text: str = ""
-    watermark_color: str = "white"
     watermark_font: str = "CascadiaCode"
     watermark_font_size: int | None = None
     watermark_resize_mode: str = "fit"  # "fit" (default) or "stretch"
@@ -1622,192 +1506,43 @@ class CalendarConfig:
         return frozenset({5, 6})
 
     # ── Style accessor methods ──────────────────────────────────────────────
-    # These delegate to theme_styles when available, falling back to style
-    # objects built from old config fields for backward compatibility.
+    # Element styles always come from tokens: the theme's, or with no
+    # ``style_rules`` theme loaded, the built-in catalog defaults.
+
+    def _styles(self) -> Any:
+        if self.theme_styles is not None:
+            return self.theme_styles
+        from config.theme_engine import builtin_theme_styles
+
+        return builtin_theme_styles()
 
     def get_text_style(self, element_class: str) -> Any:
         """Look up the TextStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_text_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_text_style(element_class)
+        from config.styles import TextStyle
+
+        return self._styles().get_text_style(element_class) or TextStyle()
 
     def get_box_style(self, element_class: str) -> Any:
         """Look up the BoxStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_box_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_box_style(element_class)
+        from config.styles import BoxStyle
+
+        return self._styles().get_box_style(element_class) or BoxStyle()
 
     def get_line_style(self, element_class: str) -> Any:
         """Look up the LineStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_line_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_line_style(element_class)
+        from config.styles import LineStyle
+
+        return self._styles().get_line_style(element_class) or LineStyle()
 
     def get_icon_style(self, element_class: str) -> Any:
         """Look up the IconStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_icon_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_icon_style(element_class)
+        from config.styles import IconStyle
+
+        return self._styles().get_icon_style(element_class) or IconStyle()
 
     def get_element_color(self, element_class: str, fallback: str = "#333333") -> str:
         """Get the effective color for a CSS element class."""
-        if self.theme_styles is not None:
-            c = self.theme_styles.get_element_color(element_class)
-            if c is not None:
-                return c
-        return fallback
-
-    # ── Fallback style builders (no theme loaded) ─────────────────────────
-    # These build style objects from old config fields so the no-theme case
-    # preserves backward-compatible default values.
-
-    def _fallback_text_style(self, ec: str) -> Any:
-        from config.styles import TextStyle
-
-        _map = {
-            "ec-heading": lambda: TextStyle(font=self.header_left_font, color=self.header_left_font_color),
-            "ec-label": lambda: TextStyle(font=self.day_name_font, color=self.day_name_font_color),
-            "ec-day-number": lambda: TextStyle(font=self.day_box_number_font, color=self.day_box_number_color),
-            "ec-month-title": lambda: TextStyle(font=self.mini_title_font, color=self.mini_title_color),
-            "ec-week-number": lambda: TextStyle(font=self.week_number_font, color=self.week_number_font_color),
-            "ec-fiscal-label": lambda: TextStyle(
-                font=self.fiscal_period_label_font, color=self.fiscal_period_label_color
-            ),
-            "ec-event-name": lambda: TextStyle(
-                font=self.weekly_name_text_font_name,
-                color=self.weekly_name_text_font_color,
-                opacity=self.weekly_name_text_font_opacity,
-            ),
-            "ec-event-notes": lambda: TextStyle(
-                font=self.weekly_notes_text_font_name,
-                color=self.weekly_notes_text_font_color,
-                opacity=self.weekly_notes_text_font_opacity,
-            ),
-            "ec-event-date": lambda: TextStyle(font=self.timeline_date_font, color=self.timeline_date_color),
-            "ec-duration-date": lambda: TextStyle(
-                font=self.timeline_duration_date_font or self.timeline_date_font,
-                color=self.timeline_duration_date_color or self.timeline_date_color,
-            ),
-            "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_color),
-            "ec-today-label": lambda: TextStyle(color=self.timeline_today_label_color),
-            "ec-header-text": lambda: TextStyle(font=self.header_center_font, color=self.header_center_font_color),
-            "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
-            "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
-            "ec-legend-text": lambda: TextStyle(
-                font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color
-            ),
-            "ec-legend-notes": lambda: TextStyle(
-                font=self.weekly_notes_text_font_name,
-                color=self.weekly_notes_text_font_color,
-                opacity=self.weekly_notes_text_font_opacity,
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else TextStyle()
-
-    def _fallback_box_style(self, ec: str) -> Any:
-        from config.styles import BoxStyle
-
-        _map = {
-            "ec-cell": lambda: BoxStyle(
-                fill=self.day_box_fill_color,
-                fill_opacity=self.day_box_fill_opacity,
-                stroke=self.day_box_stroke_color,
-                stroke_width=self.day_box_stroke_width,
-                stroke_opacity=self.day_box_stroke_opacity,
-                stroke_dasharray=self.day_box_stroke_dasharray,
-            ),
-            "ec-background": lambda: BoxStyle(fill="none"),
-            # No legacy field behind this one; the literals keep a
-            # themeless run banding rather than painting it white.
-            "ec-row-band": lambda: BoxStyle(fill="lightgrey", fill_opacity=0.15),
-            "ec-heading-cell": lambda: BoxStyle(fill=self.blockplan_header_heading_fill_color),
-            "ec-band-cell": lambda: BoxStyle(
-                fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity
-            ),
-            "ec-callout-box": lambda: BoxStyle(
-                fill_opacity=self.timeline_label_fill_opacity,
-                stroke_width=self.timeline_label_stroke_width,
-                stroke_dasharray=self.timeline_label_stroke_dasharray,
-            ),
-            "ec-vline-fill": lambda: BoxStyle(
-                fill=self.blockplan_vertical_line_fill_color, fill_opacity=self.blockplan_vertical_line_fill_opacity
-            ),
-            "ec-milestone-marker": lambda: BoxStyle(
-                stroke=self.timeline_marker_stroke_color, stroke_width=self.timeline_marker_stroke_width
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else BoxStyle()
-
-    def _fallback_line_style(self, ec: str) -> Any:
-        from config.styles import LineStyle
-
-        _map = {
-            "ec-grid-line": lambda: LineStyle(
-                color=self.mini_grid_line_color,
-                width=self.mini_grid_line_width,
-                opacity=self.mini_grid_line_opacity,
-                dasharray=self.mini_grid_line_dasharray,
-            ),
-            "ec-axis-line": lambda: LineStyle(
-                color=self.timeline_axis_color,
-                width=self.timeline_axis_width,
-                opacity=self.timeline_axis_opacity,
-                dasharray=self.timeline_axis_stroke_dasharray,
-            ),
-            "ec-axis-tick": lambda: LineStyle(
-                color=self.timeline_tick_color, dasharray=self.timeline_tick_stroke_dasharray
-            ),
-            "ec-today-line": lambda: LineStyle(
-                color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray
-            ),
-            "ec-separator": lambda: LineStyle(),
-            "ec-connector": lambda: LineStyle(dasharray=self.timeline_connector_stroke_dasharray),
-            "ec-vline": lambda: LineStyle(
-                color=self.blockplan_vertical_line_color,
-                width=self.blockplan_vertical_line_width,
-                opacity=self.blockplan_vertical_line_opacity,
-                dasharray=self.blockplan_vertical_line_dasharray,
-            ),
-            "ec-duration-bar": lambda: LineStyle(
-                dasharray=self.duration_stroke_dasharray, opacity=self.mini_duration_bar_stroke_opacity
-            ),
-            "ec-hash-line": lambda: LineStyle(dasharray=self.mini_hash_line_dasharray),
-            "ec-strikethrough": lambda: LineStyle(dasharray=self.mini_strikethrough_stroke_dasharray),
-            "ec-milestone-marker": lambda: LineStyle(
-                width=self.mini_milestone_stroke_width, opacity=self.mini_milestone_stroke_opacity
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else LineStyle()
-
-    def _fallback_icon_style(self, ec: str) -> Any:
-        from config.styles import IconStyle
-
-        _map = {
-            "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
-            "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
-            "ec-continuation-icon": lambda: IconStyle(
-                color=(self.continuation_icon_color or self.duration_icon_color),
-                # Compactplan (the consumer of this fallback) is horizontal,
-                # so resolve here rather than handing a list to IconStyle.
-                icon=resolve_continuation_icon(self.continuation_icon_after, "horizontal", "arrow-right"),
-            ),
-            "ec-overflow-icon": lambda: IconStyle(
-                color=self.overflow_indicator_color, icon=self.overflow_indicator_icon
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else IconStyle()
+        return self._styles().get_element_color(element_class) or fallback
 
 
 def create_calendar_config() -> CalendarConfig:
@@ -1815,364 +1550,29 @@ def create_calendar_config() -> CalendarConfig:
     return CalendarConfig()
 
 
-def create_sample_blockplan_swimlanes_from_wbs(
-    wbs_values: list[str] | tuple[str, ...],
-    *,
-    lane_name_format: str = "WBS {wbs}",
-    sort_values: bool = True,
-    include_unmatched_lane: bool = True,
-    unmatched_lane_name: str = "Unmatched",
-) -> list[dict[str, Any]]:
-    """
-    Build a sample blockplan swimlane list from WBS values/prefixes.
-
-    Each unique non-empty WBS token becomes a lane that matches event WBS values
-    by prefix using blockplan's ``wbs_prefixes`` matcher.
-
-    Example:
-        create_sample_blockplan_swimlanes_from_wbs(["1", "2.1", "3."])
-        -> [
-             {"name": "WBS 1",   "match": {"wbs_prefixes": ["1"]}},
-             {"name": "WBS 2.1", "match": {"wbs_prefixes": ["2.1"]}},
-             {"name": "WBS 3.",  "match": {"wbs_prefixes": ["3."]}},
-             {"name": "Unmatched", "match": {}},
-           ]
-
-    Args:
-        wbs_values: WBS values/prefixes to convert into lanes.
-        lane_name_format: Format for each lane name; receives ``{wbs}``.
-        sort_values: Sort unique WBS values for deterministic output.
-        include_unmatched_lane: Append a final catch-all lane with empty match.
-        unmatched_lane_name: Lane name for the catch-all lane.
-
-    Returns:
-        List of blockplan swimlane dictionaries suitable for
-        ``CalendarConfig.blockplan_swimlanes``.
-    """
-    cleaned: list[str] = []
-    seen: set[str] = set()
-    for raw in wbs_values:
-        token = str(raw or "").strip()
-        if not token:
-            continue
-        if token in seen:
-            continue
-        seen.add(token)
-        cleaned.append(token)
-
-    if sort_values:
-        cleaned.sort()
-
-    lanes: list[dict[str, Any]] = []
-    for token in cleaned:
-        try:
-            lane_name = lane_name_format.format(wbs=token)
-        except Exception:
-            lane_name = f"WBS {token}"
-        lanes.append(
-            {
-                "name": lane_name,
-                "match": {"wbs_prefixes": [token]},
-            }
-        )
-
-    if include_unmatched_lane:
-        lanes.append({"name": unmatched_lane_name, "match": {}})
-
-    return lanes
-
-
-# =============================================================================
-# Unit Conversions
-# =============================================================================
-
-INCH_TO_CM = 2.54
-CM_TO_INCH = 0.3937
-MM_TO_INCH = 0.039
-INCH_TO_PT = 72
-CM_TO_PT = 28.34
-MM_TO_PT = 2.834
-
-
 # =============================================================================
 # Calendar Labels
 # =============================================================================
 
-month_names = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-]
-
-month_short = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-]
-
-day_names = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-]
-
 day_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-squares = [
-    "square-01",
-    "square-02",
-    "square-03",
-    "square-04",
-    "square-05",
-    "square-06",
-    "square-07",
-    "square-08",
-    "square-09",
-    "square-10",
-    "square-11",
-    "square-12",
-    "square-13",
-    "square-14",
-    "square-15",
-    "square-16",
-    "square-17",
-    "square-18",
-    "square-19",
-    "square-20",
-    "square-21",
-    "square-22",
-    "square-23",
-    "square-24",
-    "square-25",
-    "square-26",
-    "square-27",
-    "square-28",
-    "square-29",
-    "square-30",
-    "square-31",
-]
 
-darksquare = [
-    "darksquare-01",
-    "darksquare-02",
-    "darksquare-03",
-    "darksquare-04",
-    "darksquare-05",
-    "darksquare-06",
-    "darksquare-07",
-    "darksquare-08",
-    "darksquare-09",
-    "darksquare-10",
-    "darksquare-11",
-    "darksquare-12",
-    "darksquare-13",
-    "darksquare-14",
-    "darksquare-15",
-    "darksquare-16",
-    "darksquare-17",
-    "darksquare-18",
-    "darksquare-19",
-    "darksquare-20",
-    "darksquare-21",
-    "darksquare-22",
-    "darksquare-23",
-    "darksquare-24",
-    "darksquare-25",
-    "darksquare-26",
-    "darksquare-27",
-    "darksquare-28",
-    "darksquare-29",
-    "darksquare-30",
-    "darksquare-31",
-    "darksquare-32",
-    "darksquare-33",
-    "darksquare-34",
-    "darksquare-35",
-    "darksquare-36",
-    "darksquare-37",
-    "darksquare-38",
-    "darksquare-39",
-    "darksquare-40",
-    "darksquare-41",
-    "darksquare-42",
-    "darksquare-43",
-    "darksquare-44",
-    "darksquare-45",
-    "darksquare-46",
-    "darksquare-47",
-    "darksquare-48",
-    "darksquare-49",
-    "darksquare-50",
-]
+def _numbered_icons(prefix: str, count: int = 31, *, zero_pad: bool = True) -> list[str]:
+    """Icon names ``prefix-01 … prefix-NN`` (``prefix-1 …`` when not zero-padded)."""
+    return [f"{prefix}-{n:02d}" if zero_pad else f"{prefix}-{n}" for n in range(1, count + 1)]
 
-darkcircles = [
-    "darkcircle-01",
-    "darkcircle-02",
-    "darkcircle-03",
-    "darkcircle-04",
-    "darkcircle-05",
-    "darkcircle-06",
-    "darkcircle-07",
-    "darkcircle-08",
-    "darkcircle-09",
-    "darkcircle-10",
-    "darkcircle-11",
-    "darkcircle-12",
-    "darkcircle-13",
-    "darkcircle-14",
-    "darkcircle-15",
-    "darkcircle-16",
-    "darkcircle-17",
-    "darkcircle-18",
-    "darkcircle-19",
-    "darkcircle-20",
-    "darkcircle-21",
-    "darkcircle-22",
-    "darkcircle-23",
-    "darkcircle-24",
-    "darkcircle-25",
-    "darkcircle-26",
-    "darkcircle-27",
-    "darkcircle-28",
-    "darkcircle-29",
-    "darkcircle-30",
-    "darkcircle-31",
-]
-
-circles = [
-    "circle-1",
-    "circle-2",
-    "circle-3",
-    "circle-4",
-    "circle-5",
-    "circle-6",
-    "circle-7",
-    "circle-8",
-    "circle-9",
-    "circle-10",
-    "circle-11",
-    "circle-12",
-    "circle-13",
-    "circle-14",
-    "circle-15",
-    "circle-16",
-    "circle-17",
-    "circle-18",
-    "circle-19",
-    "circle-20",
-    "circle-21",
-    "circle-22",
-    "circle-23",
-    "circle-24",
-    "circle-25",
-    "circle-26",
-    "circle-27",
-    "circle-28",
-    "circle-29",
-    "circle-30",
-    "circle-31",
-]
-
-squircles = [
-    "squircle-01",
-    "squircle-02",
-    "squircle-03",
-    "squircle-04",
-    "squircle-05",
-    "squircle-06",
-    "squircle-07",
-    "squircle-08",
-    "squircle-09",
-    "squircle-10",
-    "squircle-11",
-    "squircle-12",
-    "squircle-13",
-    "squircle-14",
-    "squircle-15",
-    "squircle-16",
-    "squircle-17",
-    "squircle-18",
-    "squircle-19",
-    "squircle-20",
-    "squircle-21",
-    "squircle-22",
-    "squircle-23",
-    "squircle-24",
-    "squircle-25",
-    "squircle-26",
-    "squircle-27",
-    "squircle-28",
-    "squircle-29",
-    "squircle-30",
-    "squircle-31",
-]
-
-darksquircles = [
-    "darksquircle-01",
-    "darksquircle-02",
-    "darksquircle-03",
-    "darksquircle-04",
-    "darksquircle-05",
-    "darksquircle-06",
-    "darksquircle-07",
-    "darksquircle-08",
-    "darksquircle-09",
-    "darksquircle-10",
-    "darksquircle-11",
-    "darksquircle-12",
-    "darksquircle-13",
-    "darksquircle-14",
-    "darksquircle-15",
-    "darksquircle-16",
-    "darksquircle-17",
-    "darksquircle-18",
-    "darksquircle-19",
-    "darksquircle-20",
-    "darksquircle-21",
-    "darksquircle-22",
-    "darksquircle-23",
-    "darksquircle-24",
-    "darksquircle-25",
-    "darksquircle-26",
-    "darksquircle-27",
-    "darksquircle-28",
-    "darksquircle-29",
-    "darksquircle-30",
-    "darksquircle-31",
-]
 
 # Canonical mapping of icon-list names to their icon-name sequences.
 # Used by the compactplan duration-start icons and the mini-icon view.
 ICON_SETS: dict[str, list[str]] = {
-    "squares": squares,
-    "darksquare": darksquare,
-    "darkcircles": darkcircles,
-    "circles": circles,
-    "squircles": squircles,
-    "darksquircles": darksquircles,
+    "squares": _numbered_icons("square"),
+    "darksquare": _numbered_icons("darksquare", 50),
+    "darkcircles": _numbered_icons("darkcircle"),
+    "circles": _numbered_icons("circle", zero_pad=False),
+    "squircles": _numbered_icons("squircle"),
+    "darksquircles": _numbered_icons("darksquircle"),
 }
+
 
 # =============================================================================
 # Colors
@@ -2403,21 +1803,6 @@ def weekend_style_is_workweek(style: int) -> bool:
 def weekend_style_starts_sunday(style: int) -> bool:
     """True for styles 1 and 2 (week starts on Sunday)."""
     return style in (1, 2)
-
-
-def weekend_style_starts_monday(style: int) -> bool:
-    """True for styles 3 and 4 (week starts on Monday)."""
-    return style in (3, 4)
-
-
-def weekend_style_has_half_weekends(style: int) -> bool:
-    """True for styles 2 and 4 (weekends rendered at half column width)."""
-    return style in (2, 4)
-
-
-def weekend_style_includes_weekends(style: int) -> bool:
-    """True for styles 1–4 (any weekend days are shown)."""
-    return style != 0
 
 
 # =============================================================================

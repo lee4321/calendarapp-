@@ -46,6 +46,7 @@ from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.labella_layout import partition_for_both, resolve_font_path
 from shared.orientation import Orientation, Side, axis_to_xy, perp_offset
+from visualizers.timeline.labella_adapter import event_font
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,8 @@ def resolve_box_size(events: Sequence[Event], config: CalendarConfig) -> tuple[f
     if configured is not None and configured > 0:
         return float(configured), height
 
-    name_path = resolve_font_path(config.timeline_name_text_font_name)
-    notes_path = resolve_font_path(config.timeline_notes_text_font_name)
+    name_path = resolve_font_path(event_font(config, "name"))
+    notes_path = resolve_font_path(event_font(config, "notes"))
     name_size = float(config.timeline_name_text_font_size or 12.0)
     notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
 

@@ -320,7 +320,7 @@ class DayStyleResolver:
 
     def _apply_events(self, style: DayStyle, events: list[dict]) -> None:
         """Apply event-driven styling."""
-        engine = StyleEngine(_mini_style_rules(self._config))
+        engine = StyleEngine(_mini_style_rules(self._config), "mini")
 
         for event in events:
             # Milestones get circled
@@ -377,8 +377,8 @@ class DayStyleResolver:
         ``colors.federal_holiday`` / ``colors.company_holiday``, and any
         explicit ``apply_to: box:day`` rules the theme declares.  Pass 2
         consumes the legacy ``apply_to: day_box`` form via ``StyleEngine``
-        for pre-migration themes that haven't been re-saved through
-        ``tools/migrate_theme.py``; ``_applicable_rules("day_box")`` ignores
+        for pre-migration themes that were never converted;
+        ``_applicable_rules("day_box")`` ignores
         the new ``box:day`` form so the two passes don't double up.
         """
         federal_holiday = bool(holidays)
@@ -409,7 +409,7 @@ class DayStyleResolver:
             workday=not nonworkday,
         )
         event_objects = [self._dict_to_event(e) for e in events]
-        style_result = StyleEngine(style_rules).evaluate_day(ctx, event_objects)
+        style_result = StyleEngine(style_rules, "mini").evaluate_day(ctx, event_objects)
 
         if style_result.fill_color:
             style.shade_color = style_result.fill_color

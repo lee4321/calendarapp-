@@ -530,20 +530,6 @@ def _spans_by_row(
     return rows
 
 
-def _same_row_overlap(placements: Sequence[CalloutPlacement]) -> bool:
-    """True when two labels sharing a row overlap along the axis.
-
-    Labella's distributor decides how many layers to use by comparing the
-    *total* width of all labels against ``density * axis_length``.  That is a
-    global capacity test: a set of labels whose total width fits one layer can
-    still be impossible to place there when the events cluster in time, and
-    the constraint solver then leaves them overlapping rather than opening
-    another layer.  Rows are compared by drawn position, not by layer index,
-    because a label's layer index and its final row do not always agree.
-    """
-    return _row_overlap_count(placements) > 0
-
-
 def _stack_extent(placements: Sequence[CalloutPlacement]) -> float:
     """How far the deepest label reaches from the axis, box included."""
     worst = 0.0

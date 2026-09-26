@@ -640,15 +640,15 @@ In timeline, single-day events and multi-day durations are rendered differently 
 - **Duration bars span exactly their dates.** Each edge sits at the x of the day it names, so every bar starting on a given day shares a left edge and every bar ending on one shares a right edge — bars can be read against the axis and against each other. One vertical leader ties the bar back to the axis, drawn from the start date; a second at the end date would cross every bar stacked between the two edges.
 - **When a bar is too narrow for its text** it is *not* widened — its edges are its dates. The grid holds, and the bar answers in two steps. First it **breaks the name across both rows of the middle column**, at the word boundary that balances the two lines, and **drops the notes** that second row would otherwise carry: two legible lines of what the activity is beat one line of it above a description neither has room for. A single-word name stays on one line. Second, whatever text still wants more than its cell is **condensed horizontally at full font size, keeping every word** — and every cell of the bar is condensed by *the same* factor, the one the tightest of them needs, so the name, both dates and the event icon narrow together rather than each being squashed to its own cell's taste. A bar too narrow to give its side columns 3pt — where every cell would be thinner than the ink it carries — draws nothing inside; the rect alone stands. `timeline_durations.box_width`, when a theme sets it, is the width the grid is considered to want: it decides which bars break and condense, and never stretches one.
 - A **vertical** timeline follows the same rules along its own axis: a bar runs from its start date to its end date, carries the one start-date leader, and breaks and condenses its text rather than stretching. Its grid is the same one turned a quarter-turn — the columns run along the axis (start date at the top, name and notes between, end date at the bottom) and the rows across the bar's thickness. Text is rotated to read bottom→top with the bar; the icons stay upright, since an indicator on its side reads as a different glyph, and condense along the axis with the text rather than across it.
-- **The two sides of a vertical axis are spent the way a horizontal one spends above and below**: event callouts take the side `timeline.label_side` names, and the duration bars take the other one. `timeline.duration_side` overrides that — `primary` / `secondary` / `both` pin the bars wherever you want them, including back onto the callouts' side. With `label_side: both` the bars keep splitting across both sides too.
+- **Both directions spend their two sides the same way.** `primary` is above a horizontal axis and right of a vertical one; `secondary` is below or left. Event callouts take the side `timeline.label_side` names and the duration bars take the other one, so the default (`label_side: primary`) reads callouts above, bars below. `timeline.duration_side` overrides that — `primary` / `secondary` / `both` pin the bars wherever you want them, including back onto the callouts' side. With `label_side: both` the bars split across both sides too. The tick dates and fiscal rows go opposite the bars (the secondary side when bars take both), and holiday marks go opposite the tick dates.
 - Event callout boxes are lane-positioned and horizontally offset to reduce collisions. Their connector lines are routed to avoid other boxes when possible.
-- **Axis ticks and their dates** are drawn in both directions. Each tick crosses the axis at its date; the label is written above a horizontal axis and, on a vertical one, on whichever side the duration bars are not (a bar's first lane starts a few points off the axis, right where a date would land), styled from the same keys either way — `ec-axis-tick` for the mark's color and dasharray, the `text:event_date` token for the label's font and color, `timeline.tick_label_format` for the date format, and `timeline.tick_label_gap` / `tick_label_offset_y` for how far the label sits from the axis. A theme's `timeline.ticks` bands (with their own `tick_length`, `label_format`, `font`, `label_color`, `max_label_count`, …) reach a vertical axis too; without them, month-boundary ticks are the fallback, labelled until there are more than 18. Under `--shrink` the viewBox is widened to keep a vertical axis's labels.
+- **Axis ticks and their dates** are drawn in both directions. Each tick crosses the axis at its date; the label is written on whichever side of the axis the duration bars are not (a bar's first lane starts a few points off the axis, right where a date would land) — above a horizontal axis by default — styled from the same keys either way — `ec-axis-tick` for the mark's color and dasharray, the `text:event_date` token for the label's font and color, `timeline.tick_label_format` for the date format, and `timeline.tick_label_gap` / `tick_label_offset_y` for how far the label sits from the axis. A theme's `timeline.ticks` bands (with their own `tick_length`, `label_format`, `font`, `label_color`, `max_label_count`, …) reach a vertical axis too; without them, month-boundary ticks are the fallback, labelled until there are more than 18. Under `--shrink` the viewBox is widened to keep a vertical axis's labels.
 - **Fiscal bands, the today marker, holiday icons and timebands are drawn in both directions**, each turned through the same quarter-turn:
   - *Fiscal bands* become columns beside the axis, on the tick dates' side and past them, with each period's name rotated to read bottom→top.
   - *The today marker* runs across the axis at today's date. `timeline.today_line_direction` keeps its horizontal vocabulary — `above` is the primary side (right of a vertical axis), `below` the secondary (left), the pairing used everywhere `primary` / `secondary` appear — and `today_line_length: 0` still means "all the width there is". The label rides off the line's leading end, kept clear of the timeband columns.
-  - *Holiday icons* sit between the axis and the first lane of duration bars, on the bars' side, with each date written past its icon; dates that would collide step further out instead of down.
+  - *Holiday icons* sit between the axis and the first lane of duration bars, on the side the tick dates leave free (the bars' side, or the primary side when the bars take both), with each date written past its icon; on a vertical axis dates that would collide step further out instead of down.
   - *Timebands* stack as columns off the ends of the content area — `timeline.top_time_bands` to the left of the chart, `bottom_time_bands` to the right — with each band's `row_height` read as its column width and its labels rotated. A band's `text_align` lands along the segment there: `left` pins the label where its rotated line starts reading (the segment's bottom edge), `right` where it ends. The axis is placed in what is left over, exactly as a horizontal chart places it between its band rows.
-- With `--noevents` the axis moves to the edge of the area the bars leave free, kept far enough in for its own tick dates to be printed. (Before v9.5 a horizontal axis rose past them and the dates were clipped off the page.)
+- With `--noevents` the axis moves to the edge of the area the bars leave free — the top of a horizontal chart when the bars are below, the bottom when they are above, the middle when they take both sides — kept far enough in for its own tick dates to be printed.
 - The timeline does not take a `--shade` flag. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
 
 ### `weekly`
@@ -1071,9 +1071,10 @@ Date formats accepted: `YYYY-MM-DD`, `M/D/YYYY`, `M/D/YY`, and any other format 
 
 Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a content surface (`box:day`, `box:duration`, etc.) or a lane assignment. Element-to-token bindings — *which* `ec-*` class consumes *which* token — are not part of any theme; they live in the built-in catalog at [`config/element_catalog.yaml`](config/element_catalog.yaml) and are shared by every theme. Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
 
-There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error pointing at `tools/migrate_theme.py`. Run the migrator once on any existing theme:
+There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error. The converter for them, `tools/migrate_theme.py`, was retired once every shipped theme had been converted; to convert an old theme, restore it from its tag and run it once:
 
 ```bash
+git checkout pre-migrator-retirement -- tools/migrate_theme.py
 uv run python tools/migrate_theme.py --in-place path/to/theme.yaml
 ```
 
@@ -1200,9 +1201,10 @@ element_overrides:
     color: "#888888"      # keep the catalog's text token, change just the color
 ```
 
-`element_overrides:` keys must be `ec-*` class names that appear in the catalog. Omit `use:` to keep the catalog's default token while still applying a per-element color.  Authoring full `apply_to: element` rules in a theme is no longer supported; if you have an older theme that still ships them, run `tools/strip_element_bindings.py` (targeted, idempotent) to lift them into `element_overrides:`:
+`element_overrides:` keys must be `ec-*` class names that appear in the catalog. Omit `use:` to keep the catalog's default token while still applying a per-element color.  Authoring full `apply_to: element` rules in a theme is no longer supported; an older theme that still ships them is rejected. The retired `tools/strip_element_bindings.py` lifts them into `element_overrides:`:
 
 ```bash
+git checkout pre-migrator-retirement -- tools/strip_element_bindings.py
 uv run python tools/strip_element_bindings.py path/to/theme.yaml
 ```
 
@@ -1344,6 +1346,69 @@ Every SVG element gets a semantic CSS class. The authoritative list — includin
 | `ec-legend-icon` | legend | Legend item icon |
 
 Modifier classes (added alongside element class): `ec-holiday`, `ec-nonworkday`, `ec-current-day`, `ec-adjacent`.
+
+### Retired section style keys
+
+A style has one source: its `style_rules` token. Some views used to read a
+style twice — from the token and, when the token left an attribute unset,
+from a section key such as `weekly.day_box.stroke_color` — so a theme could
+set the same thing in two places and only one of them would show. Those
+section keys are retired (the full list is `RETIRED` in
+`config/retired_style_keys.py`), and a theme that still carries one is
+rejected with a pointer here.
+
+`tools/convert_style_keys.py` rewrites such a theme so it renders exactly as
+before: each value the old code would have used — the key, its section or
+`base` cascade, or the old built-in default — goes into a rule
+`apply_to: <token>` selected on the view, but only for attributes the token's
+own definition leaves unset (the only case in which the key was ever read).
+
+```bash
+uv run python tools/convert_style_keys.py my_theme.yaml             # show the changes
+uv run python tools/convert_style_keys.py --in-place my_theme.yaml  # rewrite it (keeps my_theme.yaml.bak)
+```
+
+### Theme inheritance
+
+A theme can start from another and state only what differs. `Julia`, `dark`,
+`accent` and `vibrant` all extend `corporate`:
+
+```yaml
+extends: corporate                  # a theme name, or a path to a .yaml file
+unset: [candybar.month_shade_colors]
+theme:
+  name: Dark
+  description: Dark background theme for reduced eye strain
+timeline:
+  today_line_color: grey            # every other timeline key comes from corporate
+style_rules:
+  - name: define text:heading       # a rule of the parent's, by name
+    style: {color: whitesmoke}      # merged into it: font, size etc. stay
+  - name: night sky                 # a new name: inserted right after the rule above
+    apply_to: box:default
+    style: {fill: '#1e1e1e'}
+```
+
+The merge happens when the theme loads, so every view, `validate_theme.py`
+and the style rules see one ordinary theme:
+
+- **Sections** merge key by key, all the way down. A list or a single value
+  replaces the parent's.
+- **`unset`** lists dotted keys to drop from the result. Use it when the
+  parent sets a key that this theme wants left at the built-in default.
+- **`style_rules`** are matched by `name`, so rule names must be unique.
+  - An entry naming a parent rule merges into that rule where it stands:
+    `style` merges key by key, and any other key replaces the parent's.
+  - `replace: true` swaps the whole rule; `remove: true` drops it.
+  - An entry with a new name is added after the rule the previous entry
+    named, or first if it leads the list. Order decides which rule wins, so
+    it is always explicit.
+- **Chains:** a parent can extend a theme of its own; a loop is an error.
+
+To turn a full theme into a child, run
+`uv run python tools/derive_theme.py corporate my_theme.yaml --in-place`. The
+tool writes only the differences, and refuses unless the child resolves back
+to exactly the original theme.
 
 ### Creating a New Theme
 
@@ -1500,13 +1565,12 @@ than quietly ignored — move the two keys up one level.
 | Theme key | Type | Default | Explanation |
 |---|---|---|---|
 | `overflow.icon` | `str` | `"warningtriangle"` | Glyph name, resolved through the `icons` table |
-| `overflow.color` | `str` | `"red"` | Icon color |
+| *(rule-based)* | `define icon:overflow` | — | Icon color (`color`), from the `icon:overflow` token like every element style |
 | *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | Optional halo (fill / stroke / padding) painted behind the icon. See "Style Rules" → Box Properties. |
 
 ```yaml
 overflow:
   icon: warningtriangle
-  color: red
 ```
 
 What did not fit is listed in the run's
@@ -1606,9 +1670,9 @@ The pages the document replaced took their settings from `mini_details:`,
 `gantt.show_details` / `details_title_text` / `details_output_suffix`,
 `compact_plan.show_legend` / `key_*` / `legend_swatch_width` /
 `show_holiday_list` and `overflow.title_text` / `output_suffix`. A theme
-still carrying any of them is rejected with a message naming `details:`;
-`tools/migrate_theme.py` moves a `mini_details:` section's headers into
-`details.markdown.columns`.
+still carrying any of them is rejected with a message naming `details:`.
+A `mini_details:` section's headers go in `details.markdown.columns` (the
+retired `tools/migrate_theme.py` moved them; see [Theme System](#theme-system)).
 
 ### Complete Theme Key Reference
 
@@ -1647,17 +1711,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `fiscal_period_end_label_format` | `fiscal.end_label_format` | `str` | `'{period_short} End'` | end label format |
 | `fiscal_period_label_format` | `fiscal.label_format` | `str` | `'{prefix}{period_short}'` | label format |
 | `fiscal_year_offset` | `fiscal.year_offset` | `int \| None` | `None` | added to calendar year to get fiscal year; null = auto (+1 for non-January start, 0 for NRF); 0 = same year, 1 = year+1, -1 = year-1 |
-| `footer_center_font` | `footer.center.font_family` | `str` | `Fonts.RC_LIGHT` | font family |
-| `footer_center_font_color` | `footer.center.font_color` | `str` | `'grey'` | font color |
 | `footer_center_font_size` | `footer.center.size_rule` | `float | None` | `None` | Per-papersize footer-center font size rule |
 | `footer_left_font_size` | `footer.left.size_rule` | `float | None` | `None` | Per-papersize footer-left font size rule |
 | `footer_right_font_size` | `footer.right.size_rule` | `float | None` | `None` | Per-papersize footer-right font size rule |
 | `group_colors` | `colors.group_colors` | `list` | `field(default_factory=lambda: ['bisque', 'skyblue', 'lawngreen', 'cyan', 'pur...` | List of group colors |
-| `header_center_font` | `header.center.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
-| `header_center_font_color` | `header.center.font_color` | `str` | `'grey'` | font color |
 | `header_center_font_size` | `header.center.size_rule` | `float | None` | `None` | Per-papersize header-center font size rule |
-| `header_left_font` | `header.left.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
-| `header_left_font_color` | `header.left.font_color` | `str` | `'grey'` | font color |
 | `header_left_font_size` | `header.left.size_rule` | `float | None` | `None` | Per-papersize header-left font size rule |
 | `header_right_font_size` | `header.right.size_rule` | `float | None` | `None` | Per-papersize header-right font size rule |
 | `watermark_image_rotation_angle` | `watermark.image_rotation_angle` | `float` | `0.0` | watermark image rotation angle |
@@ -1676,7 +1734,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_hash_line_color` | `colors.hash_lines` | `str | None` | `None` | Default hash line color |
 | `theme_mini_adjacent_month_color` | `colors.mini_calendar.adjacent_month_color` | `str | None` | `None` | Mini adjacent-month day color override |
 | `theme_mini_current_day_color` | `colors.mini_calendar.current_day_color` | `str | None` | `None` | Mini current-day shade override |
-| `theme_mini_day_color` | `colors.mini_calendar.day_color` | `str | None` | `None` | Mini day number color override |
 | `theme_mini_holiday_color` | `colors.mini_calendar.holiday_color` | `str | None` | `None` | Mini holiday day color override |
 | `theme_mini_milestone_color` | `colors.mini_calendar.milestone_color` | `str | None` | `None` | Mini milestone marker color override |
 | `theme_mini_nonworkday_fill_color` | `colors.mini_calendar.nonworkday_fill_color` | `str | None` | `None` | Mini non-workday cell fill color override |
@@ -1684,7 +1741,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_month_colors` | `colors.months` | `dict[str, str] | None` | `None` | Month number to color map (01-12) |
 | `watermark_text` | `watermark.text` | `str` | `''` | text |
 | `watermark_opacity` | `watermark.opacity` | `float` | `0.3` | opacity |
-| `watermark_color` | `watermark.color` | `str` | `'white'` | color |
 | `watermark_font` | `watermark.font_family` | `str` | `Fonts.R_BLACK` | font family |
 | `watermark_resize_mode` | `watermark.resize_mode` | `str` | `'fit'` | "fit" (default) or "stretch" |
 | `watermark_rotation_angle` | `watermark.rotation_angle` | `float` | `0.0` | rotation angle |
@@ -1694,25 +1750,12 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
-| `day_box_fill_color` | `weekly.day_box.fill_color` | `str` | `'grey'` | fill color |
-| `day_box_fill_opacity` | `weekly.day_box.fill_opacity` | `float` | `0.25` | fill opacity |
-| `day_box_color` | `weekly.day_box.font_color` | `str` | `'navy'` | font color |
-| `day_box_number_color` | `weekly.day_box.number_color` | `str` | `'white'` | number color |
-| `day_box_number_font` | `weekly.day_box.number_font` | `str` | `Fonts.R_BLACK` | number font |
-| `day_box_stroke_color` | `weekly.day_box.stroke_color` | `str` | `'grey'` | stroke color |
-| `day_box_stroke_dasharray` | `weekly.day_box.stroke_dasharray` | `str | None` | `None` | stroke dasharray |
-| `day_box_stroke_opacity` | `weekly.day_box.stroke_opacity` | `float` | `0.25` | stroke opacity |
-| `day_box_stroke_width` | `weekly.day_box.stroke_width` | `int` | `2` | stroke width |
-| `day_name_font` | `weekly.day_names.font_family` | `str` | `Fonts.RC_LIGHT_ITALIC` | font family |
-| `day_name_font_color` | `weekly.day_names.font_color` | `str` | `'grey'` | font color |
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
 | `hash_pattern_target_size` | `weekly.day_box.hash_pattern_target_size` | `float` | `18.0` | Largest tile dimension after auto-normalization, in points. Tiles bigger than this are scaled down to it; smaller tiles are left alone. `0` tiles every pattern at its native size. |
 | `hash_pattern_scale` | `weekly.day_box.hash_pattern_scale` | `float` | `1.0` | Extra multiplier applied on top of the normalized tile size, for a finer (`< 1`) or coarser (`> 1`) grain. |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
-| `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |
-| `week_number_font_color` | `weekly.week_numbers.font_color` | `str` | `'grey'` | font color |
 | `week_number_font_size` | `weekly.week_numbers.size_rule` | `float | None` | `None` | Per-papersize week-number font size rule |
 | `week_number_label_format` | `weekly.week_numbers.label_format` | `str` | `'W{num:02d}'` | label format |
 
@@ -1723,38 +1766,25 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_*_font_size` | `mini_calendar.size_rule` | `` | `` | Per-papersize mini font sizes |
 | `mini_adjacent_month_color` | `mini_calendar.adjacent_month_color` | `str` | `'lightgrey'` | Leading/trailing days |
 | `mini_cell_bold_font` | `mini_calendar.cell_bold_font` | `str` | `Fonts.R_BOLD` | Bold variant |
-| `mini_cell_font` | `mini_calendar.cell_font` | `str` | `Fonts.J_REGULAR` | Monospace day number font |
 | `mini_cell_font_size` | `mini_calendar.cell_font_size` | `float | None` | `None` | cell font size |
 | `mini_circle_milestones` | `mini_calendar.circle_milestones` | `bool` | `False` | Circle milestone day numbers |
 | `mini_event_icon_opacity` | `mini_calendar.event_icon_opacity` | `float` | `0.6` | opacity of a day cell's corner icons. They are drawn over the day number, so this is what keeps the number legible where an icon reaches it |
 | `mini_event_icon_scale` | `mini_calendar.event_icon_scale` | `float` | `0.25` | size of a day cell's corner icons, as a fraction of the cell's shorter side. Applies to `mini`, `mini-icon` and `candybar` |
 | `mini_current_day_color` | `mini_calendar.current_day_color` | `str` | `'lightblue'` | Current day shade color |
-| `mini_day_color` | `mini_calendar.day_color` | `str` | `'black'` | Default day number color |
 | `mini_day_number_glyphs` | `mini_calendar.day_number_glyphs` | `list[str] \| None` | `None` | Optional explicit glyphs for day numbers 1-31 in SVG mini calendars |
 | `mini_day_number_digits` | `mini_calendar.day_number_digits` | `list[str] \| None` | `None` | Optional digit glyph substitutions for SVG mini day numbers |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `mini_calendar.day_box.hash_rules`. Mini renderer reads the same top-level `style_rules` filtered by `apply_to: day_box`. |
-| `mini_duration_bar_stroke_opacity` | `mini_calendar.duration_bar_stroke_opacity` | `float` | `0.7` | duration bar stroke opacity |
 | `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell (also enabled by `--mini-grid-lines`) |
-| `mini_grid_line_color` | `mini_calendar.grid_line_color` | `str` | `'lightgrey'` | mini grid line stroke color |
-| `mini_grid_line_opacity` | `mini_calendar.grid_line_opacity` | `float` | `0.5` | mini grid line stroke opacity |
-| `mini_grid_line_width` | `mini_calendar.grid_line_width` | `float` | `0.25` | mini grid line stroke width |
-| `mini_grid_line_dasharray` | `mini_calendar.grid_line_dasharray` | `str | None` | `None` | grid line stroke dasharray |
 | `mini_month_outline_color` | `mini_calendar.month_outline_color` | `str | None` | `None` | Outline color drawn around each entire month grid; `None` disables the outline |
 | `mini_month_outline_width` | `mini_calendar.month_outline_width` | `float` | `0.5` | Month outline stroke width in points |
 | `mini_month_outline_opacity` | `mini_calendar.month_outline_opacity` | `float` | `1.0` | Month outline stroke opacity (0–1) |
 | `mini_month_outline_dasharray` | `mini_calendar.month_outline_dasharray` | `str | None` | `None` | Month outline stroke dasharray |
-| `mini_hash_line_dasharray` | `mini_calendar.hash_line_dasharray` | `str | None` | `None` | hash line stroke dasharray |
 | `mini_header_font_size` | `mini_calendar.header_font_size` | `float | None` | `None` | header font size |
 | `mini_holiday_color` | `mini_calendar.holiday_color` | `str` | `'red'` | Holiday day number color |
 | `mini_milestone_color` | `mini_calendar.milestone_color` | `str` | `'navy'` | Milestone circle color |
 | `mini_milestone_stroke_color` | `mini_calendar.milestone_stroke_color` | `str` | `'navy'` | Milestone circle stroke color |
-| `mini_milestone_stroke_opacity` | `mini_calendar.milestone_stroke_opacity` | `float` | `1.0` | Milestone circle stroke opacity |
-| `mini_milestone_stroke_width` | `mini_calendar.milestone_stroke_width` | `float` | `1.0` | Milestone circle stroke width |
 | `mini_nonworkday_fill_color` | `mini_calendar.nonworkday_fill_color` | `str` | `'lightblue'` | Non-work day fill color |
 | `mini_show_adjacent` | `mini_calendar.show_adjacent` | `bool` | `True` | Show leading/trailing adjacent-month days |
-| `mini_strikethrough_stroke_dasharray` | `mini_calendar.strikethrough_stroke_dasharray` | `str | None` | `None` | strikethrough stroke dasharray |
-| `mini_title_color` | `mini_calendar.title_color` | `str` | `'navy'` | title color |
-| `mini_title_font` | `mini_calendar.title_font` | `str` | `Fonts.RC_BOLD` | Month title font |
 | `mini_title_font_size` | `mini_calendar.title_font_size` | `float | None` | `None` | title font size |
 | `mini_title_format` | `mini_calendar.title_format` | `str` | `'MMMM YYYY'` | Arrow format string for title |
 | `mini_week_number_font_size` | `mini_calendar.week_number_font_size` | `float | None` | `None` | Week number font size |
@@ -1788,23 +1818,15 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
 | `theme_timeline_palette` | `timeline.palette` | `str | None` | `None` | palette |
-| `timeline_axis_color` | `timeline.axis_color` | `str` | `'lightgrey'` | axis color |
-| `timeline_axis_opacity` | `timeline.axis_opacity` | `float` | `0.85` | axis opacity |
-| `timeline_axis_stroke_dasharray` | `timeline.axis_stroke_dasharray` | `str | None` | `None` | axis stroke dasharray |
 | `timeline_axis_width` | `timeline.axis_width` | `float` | `2.0` | axis width |
 | `timeline_bottom_colors` | `timeline.bottom_colors` | `list[str]` | `field(default_factory=lambda: ['midnightblue', 'springgreen', 'deepskyblue', ...` | bottom colors |
-| `timeline_connector_stroke_dasharray` | `timeline.connector_stroke_dasharray` | `str | None` | `None` | connector stroke dasharray |
-| `timeline_date_color` | `timeline.date.font_color` | `str` | `'deepskyblue'` | font color |
-| `timeline_date_font` | `timeline.date.font_family` | `str` | `Fonts.R_BOLD` | font family |
 | `timeline_date_format` | `timeline.date_format` | `str` | `'MMM D'` | date format |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
 | `timeline_duration_box_width` | `timeline_durations.box_width` | `float | None` | `None` | the width a duration bar's grid is taken to need. A bar is never stretched to it — both bar edges belong to the event's dates — so it only decides which bars break their name over two rows and condense. `None` derives the width from what each column has to hold: a date in each side column, the wider of the name and notes in the middle |
 | `timeline_duration_icon_column_ratio` | `timeline_durations.icon_column_ratio` | `float | None` | `None` | share of a duration bar given to each of its two side columns (icon over start date; end date on the other). `None` follows `timeline_events.icon_column_ratio`, so bars and callout boxes line up without a theme saying so twice |
-| `timeline_duration_date_color` | `timeline_durations.date_color` | `str | None` | `None` | date color |
-| `timeline_duration_date_font` | `timeline_durations.date_font` | `str | None` | `None` | date font |
 | `timeline_duration_date_font_size` | `timeline_durations.date_font_size` | `float | None` | `None` | date font size |
 | `timeline_duration_lane_gap_y` | `timeline.duration_lane_gap_y` | `float` | `8.0` | duration lane gap y |
-| `timeline_duration_side` | `timeline.duration_side` | `str` | `opposite` | which side of a **vertical** axis the duration bars stack on. `opposite` puts them across the axis from the event callouts — the way a horizontal timeline reads, callouts above and bars below. `primary` (right) / `secondary` (left) / `both` pin them regardless of where the callouts went. Ignored on a horizontal axis, where bars are always below |
+| `timeline_duration_side` | `timeline.duration_side` | `str` | `opposite` | which side of the axis the duration bars stack on. `opposite` puts them across the axis from the event callouts — with the default `label_side`, callouts above and bars below. `primary` (above / right) / `secondary` (below / left) / `both` pin them regardless of where the callouts went |
 | `timeline_wbs_group_depth` | `timeline.wbs_group_depth` | `int` | `2` | leading WBS segments that group chart items: every event, milestone and duration bar in a group takes one color from `timeline.top_colors`, and bars in a group sort together. A group's rollup bars lead it and are drawn nearer the axis than every other bar sharing that root WBS, so a rollup reads as the header of what it summarises. `0` disables grouping, leaving each layout to cycle its own palette per item and the rollup rule inert. Also accepted at its original key, `timeline_durations.wbs_group_depth` |
 | `timeline_duration_offset_y` | `timeline.duration_offset_y` | `float` | `44.0` | duration offset y |
 | `timeline_event_box_height` | `timeline_events.box_height` | `float | None` | `None` | box height |
@@ -1814,7 +1836,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_event_icon_column_ratio` | `timeline_events.icon_column_ratio` | `float` | `0.15` | share of a callout box's inner width given to the icon / date column; the name and notes get the rest |
 | `timeline_event_placement` | `timeline_events.placement` | `str` | `packed` | how point-event callouts are placed. `packed` puts each box's leading edge on its own start date and stacks collisions away from the axis, earliest nearest; `labella` keeps the force-solved placement that centres a box on its date |
 | `timeline_event_row_gap` | `timeline_events.row_gap` | `float | None` | `None` | clear space between two rows of packed boxes; `None` follows `timeline.labella.layer_gap` |
-| `timeline_holiday_date_color` | `timeline.holiday_date_color` | `str | None` | `None` | holiday date color; falls back to the icon color, then the tick color |
+| `timeline_holiday_date_color` | `timeline.holiday_date_color` | `str | None` | `None` | holiday date color; falls back to the `text:event_date` color (element `ec-holiday-date`) |
 | `timeline_holiday_date_font_size` | `timeline.holiday_date_font_size` | `float | None` | `None` | holiday date font size; defaults to 0.68 x the icon size |
 | `timeline_holiday_date_format` | `timeline.holiday_date_format` | `str | None` | `None` | holiday date format; falls back to `timeline.date_format` |
 | `timeline_holiday_icon_color` | `timeline.holiday_icon_color` | `str | None` | `None` | holiday icon color; `None` keeps the icon's own colors |
@@ -1822,8 +1844,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_holiday_icon_y_offset` | `timeline.holiday_icon_y_offset` | `float` | `4.0` | gap below the axis to the top of the holiday icon |
 | `timeline_icon_size` | `timeline.icon_size` | `float` | `8.0` | icon size |
 | `timeline_label_fill_opacity` | `timeline.label_fill_opacity` | `float` | `0.25` | label fill opacity |
-| `timeline_label_stroke_dasharray` | `timeline.label_stroke_dasharray` | `str | None` | `None` | label stroke dasharray |
-| `timeline_label_stroke_width` | `timeline.label_stroke_width` | `float` | `1.0` | label stroke width |
 | `timeline_leader_direct` | `timeline.leader.direct` | `bool` | `True` | route each leader straight from its axis dot to its own box. `False` restores labella's routing, which threads it through every ancestor row — a curve-and-line pair per row |
 | `timeline_leader_end_stub` | `timeline.leader.end_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader meets its box; `0` = pure bezier |
 | `timeline_leader_start_stub` | `timeline.leader.start_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader leaves the axis dot; `0` = pure bezier |
@@ -1832,17 +1852,13 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_marker_stroke_width` | `timeline.marker_stroke_width` | `float` | `1.0` | marker stroke width |
 | `timeline_show_holiday_dates` | `timeline.show_holiday_dates` | `bool` | `True` | print each holiday's date under its icon |
 | `timeline_show_holiday_icons` | `timeline.show_holiday_icons` | `bool` | `True` | draw the government-holiday icon row below the axis |
-| `timeline_tick_color` | `timeline.tick_color` | `str` | `'grey'` | tick color |
 | `timeline_tick_label_format` | `timeline.tick_label_format` | `str` | `'MMM D'` | tick label format |
 | `timeline_tick_label_gap` | `timeline.tick_label_gap` | `float | None` | `None` | clear space between a tick mark's tip and its date label, so it moves with the tick length. `None` = 1.5 label heights. Ignored where a `timeline.ticks` band sets its own `label_gap` |
 | `timeline_tick_label_offset_y` | `timeline.tick_label_offset_y` | `float | None` | `None` | the whole distance from the axis to the label, tick length included; wins over `tick_label_gap` |
-| `timeline_tick_stroke_dasharray` | `timeline.tick_stroke_dasharray` | `str | None` | `None` | tick stroke dasharray |
 | `timeline_today_date` | `timeline.today_date` | `str` | `''` | today date |
-| `timeline_today_label_color` | `timeline.today_label_color` | `str` | `'grey'` | today label color |
 | `timeline_today_label_offset_y` | `timeline.today_label_offset_y` | `float` | `10.0` | today label offset y |
 | `timeline_today_label_text` | `timeline.today_label_text` | `str` | `'Today'` | today label text |
 | `timeline_today_line_color` | `timeline.today_line_color` | `str` | `'grey'` | today line color |
-| `timeline_today_line_dasharray` | `timeline.today_line_dasharray` | `str | None` | `None` | today line stroke dasharray |
 | `timeline_top_colors` | `timeline.top_colors` | `list[str]` | `field(default_factory=lambda: ['deepskyblue', 'gold', 'tomato', 'springgreen'...` | top colors |
 
 #### `blockplan`
@@ -1854,31 +1870,17 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_bottom_time_bands` | `blockplan.bottom_time_bands` | `list[dict]` | `[]` | time-band rows rendered below swimlanes; same structure as top_time_bands |
 | `blockplan_duration_bar_height` | `blockplan.duration_bar_height` | `float` | `8.0` | duration bar height |
 | `blockplan_duration_row_gap` | `blockplan.duration_row_gap` | `float \| None` | `None` | space (pt) between duration bars in stacked rows; bars shrink below `duration_bar_height` to keep it. null = bars fill up to 95% of the row |
-| `blockplan_duration_date_color` | `blockplan.duration_date_color` | `str \| None` | `None` | start/end date label color; null = duration_color |
-| `blockplan_duration_date_font` | `blockplan.duration_date_font` | `str` | `'RobotoCondensed-LightItalic'` | date label font |
 | `blockplan_duration_date_font_size` | `blockplan.duration_date_font_size` | `float \| None` | `None` | date label font size |
 | `blockplan_duration_date_format` | `blockplan.duration_date_format` | `str` | `'M/D'` | Arrow date format for start/end labels |
-| `blockplan_duration_fill_opacity` | `blockplan.duration_fill_opacity` | `float` | `0.35` | duration fill opacity |
 | `blockplan_duration_icon_visible` | `blockplan.duration_icon_visible` | `bool` | `False` | show event icon inside duration bar when available |
 | `blockplan_duration_show_end_date` | `blockplan.duration_show_end_date` | `bool` | `False` | show end date below bar right edge |
 | `blockplan_duration_show_start_date` | `blockplan.duration_show_start_date` | `bool` | `False` | show start date below bar left edge |
-| `blockplan_duration_stroke_color` | `blockplan.duration_stroke_color` | `str \| None` | `None` | bar border color; null = no border |
-| `blockplan_duration_stroke_dasharray` | `blockplan.duration_stroke_dasharray` | `str \| None` | `None` | bar border dash pattern |
-| `blockplan_duration_stroke_opacity` | `blockplan.duration_stroke_opacity` | `float` | `1.0` | bar border opacity |
-| `blockplan_duration_stroke_width` | `blockplan.duration_stroke_width` | `float` | `1.0` | bar border width in points |
 | `blockplan_event_date_font_size` | `blockplan.event_date_font_size` | `float | None` | `None` | event date font size |
 | `blockplan_event_date_format` | `blockplan.event_date_format` | `str` | `'YYYY-MM-DD'` | event date format |
 | `blockplan_event_show_date` | `blockplan.event_show_date` | `bool` | `False` | event show date |
 | `blockplan_fiscal_year_start_month` | `blockplan.fiscal_year_start_month` | `int` | `10` | fiscal year start month |
-| `blockplan_grid_color` | `blockplan.grid_color` | `str` | `'grey'` | grid color |
-| `blockplan_grid_dasharray` | `blockplan.grid_dasharray` | `str \| None` | `None` | swimlane border dash pattern |
-| `blockplan_grid_line_width` | `blockplan.grid_line_width` | `float` | `1.0` | swimlane border line width in points |
-| `blockplan_grid_opacity` | `blockplan.grid_opacity` | `float` | `0.6` | grid opacity |
 | `blockplan_header_font_size` | `blockplan.header_font_size` | `float | None` | `None` | header font size |
-| `blockplan_header_heading_fill_color` | `blockplan.header_heading_fill_color` | `str` | `'none'` | header heading fill color |
 | `blockplan_header_label_align_h` | `blockplan.header_label_align_h` | `str` | `'left'` | left \| center \| right |
-| `blockplan_header_label_color` | `blockplan.header_label_color` | `str` | `'black'` | header label color |
-| `blockplan_header_label_opacity` | `blockplan.header_label_opacity` | `float` | `1.0` | heading cell label text opacity |
 | `blockplan_label_column_ratio` | `blockplan.label_column_ratio` | `float` | `0.16` | label column ratio |
 | `blockplan_band_label_column_ratio` | `blockplan.band_label_column_ratio` | `float \| None` | `None` | width of the time-band name cells as a share of the area width; null = `label_column_ratio`. The timeline starts after the wider of the two columns, so the narrower cells leave blank space on their left |
 | `blockplan_lane_label_align_h` | `blockplan.lane_label_align_h` | `str` | `'left'` | left \| center \| right |
@@ -1895,17 +1897,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_timeband_fill_color` | `blockplan.timeband_fill_color` | `str` | `'none'` | timeband fill color |
 | `blockplan_timeband_fill_opacity` | `blockplan.timeband_fill_opacity` | `float` | `1.0` | timeband fill opacity |
 | `blockplan_timeband_fill_palette` | `blockplan.timeband_fill_palette` | `list[str]` | `field(default_factory=list)` | timeband fill palette |
-| `blockplan_timeband_line_color` | `blockplan.timeband_line_color` | `str \| None` | `None` | time-band cell border color; null = grid_color |
-| `blockplan_timeband_line_dasharray` | `blockplan.timeband_line_dasharray` | `str \| None` | `None` | time-band border dash pattern; null = grid_dasharray |
-| `blockplan_timeband_line_opacity` | `blockplan.timeband_line_opacity` | `float \| None` | `None` | time-band border opacity; null = grid_opacity |
-| `blockplan_timeband_line_width` | `blockplan.timeband_line_width` | `float \| None` | `None` | time-band border line width; null = grid_line_width |
 | `blockplan_unmatched_lane_name` | `blockplan.unmatched_lane_name` | `str` | `'Unmatched'` | unmatched lane name |
-| `blockplan_vertical_line_color` | `blockplan.vertical_line_color` | `str` | `'red'` | vertical line color |
-| `blockplan_vertical_line_dasharray` | `blockplan.vertical_line_dasharray` | `str \| None` | `None` | vertical line dasharray |
-| `blockplan_vertical_line_fill_color` | `blockplan.vertical_line_fill_color` | `str` | `'none'` | default column fill color for vertical lines |
-| `blockplan_vertical_line_fill_opacity` | `blockplan.vertical_line_fill_opacity` | `float` | `0.15` | default column fill opacity |
-| `blockplan_vertical_line_opacity` | `blockplan.vertical_line_opacity` | `float` | `0.9` | vertical line opacity |
-| `blockplan_vertical_line_width` | `blockplan.vertical_line_width` | `float` | `1.5` | vertical line width |
 | `blockplan_wbs_group_depth` | `blockplan.wbs_group_depth` | `int` | `2` | leading WBS segments that group duration bars: a group's bars take one color from `blockplan.palette` and its rollup bars (or the bar whose WBS is the group code) are packed in rows above the group's other bars. Bars without a WBS keep event-color / priority coloring. `0` disables grouping |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `blockplan.vertical_lines` — see Complex Structures Reference (`apply_to: vertical_line`). |
 | `blockplan_week_start` | `blockplan.week_start` | `int` | `0` | 0=Monday |
@@ -2014,7 +2006,7 @@ style_rules:
 
 `resource_group` matches the whole group name, ignoring case. On `box:event` / `box:duration`, `fill` is the event's color rather than a box behind its icon, so only a `stroke` there outlines the icon.
 
-The older per-view color settings are retired: a theme carrying `colors.resource_groups` or `compact_plan.color_rules` is rejected with a pointer here, and `tools/migrate_theme.py` rewrites both as rules like the ones above (`color_rules`, which matched first-wins, are emitted in reverse so the same rule still wins).
+The older per-view color settings are retired: a theme carrying `colors.resource_groups` or `compact_plan.color_rules` is rejected with a pointer here, and the retired `tools/migrate_theme.py` (see [Theme System](#theme-system)) rewrites both as rules like the ones above (`color_rules`, which matched first-wins, are emitted in reverse so the same rule still wins).
 
 #### `apply_to:` — Targets
 

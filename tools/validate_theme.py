@@ -2,8 +2,8 @@
 """
 Validate a theme YAML against the unified schema.
 
-Use this during the migration to check whether a theme is ready for the
-unified runtime (design §11.2).  The script:
+Check that a theme (with any ``extends:`` chain resolved) is complete for
+the unified runtime.  The script:
 
   1. Parses the theme with :func:`config.unified_theme.parse_theme`.  If
      the parser rejects it (legacy section names, unknown selectors,
@@ -18,10 +18,6 @@ unified runtime (design §11.2).  The script:
      any missing settings or tokens with the §11.2 error format —
      including a paste-ready snippet pulled from basic.yaml.
 
-  4. Optionally runs the theme through the converter first
-     (``--convert``).  Useful when validating a legacy theme without
-     committing the conversion.
-
 Exit codes
 ----------
   0 — theme parses cleanly and satisfies every requested visualizer.
@@ -33,8 +29,7 @@ Examples
 --------
     uv run python tools/validate_theme.py config/themes/basic.yaml
     uv run python tools/validate_theme.py config/themes/SAMPLE.yaml --visualizer weekly
-    uv run python tools/validate_theme.py config/themes/default.yaml --convert
-    uv run python tools/validate_theme.py config/themes/default.yaml --convert -v blockplan,timeline
+    uv run python tools/validate_theme.py config/themes/default.yaml -v blockplan,timeline
 
 """
 
@@ -47,7 +42,6 @@ from pathlib import Path
 # Ensure imports work whether the script is run directly or via -m.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import yaml
 
 from config.required_keys import (
     VISUALIZERS,
@@ -55,16 +49,8 @@ from config.required_keys import (
     format_missing_key_error,
 )
 from config.theme_engine import find_unconsumed_keys, find_unregistered_fonts
-from config.unified_theme import ThemeError, parse_theme
-
-
-def _deep_to_dict(obj):
-    """OrderedDict-trees -> plain-dict trees (the parser accepts plain dicts)."""
-    if isinstance(obj, dict):
-        return {k: _deep_to_dict(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_deep_to_dict(v) for v in obj]
-    return obj
+from config.theme_inheritance import read_theme_file
+from config.unified_theme import ThemeError, legacy_hint, parse_theme
 
 
 def _find_element_bindings(raw: dict) -> list[tuple[int, str | None]]:
@@ -110,14 +96,6 @@ def main(argv: list[str] | None = None) -> int:
         help=(f"Visualizer(s) to validate against (comma-separated). Default: all of {sorted(VISUALIZERS)}."),
     )
     parser.add_argument(
-        "--convert",
-        action="store_true",
-        help=(
-            "Run the theme through tools/migrate_theme.py first.  Use this on "
-            "legacy themes that haven't been migrated yet."
-        ),
-    )
-    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress the success line on a clean pass.",
@@ -142,12 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         requested = sorted(VISUALIZERS)
 
-    # Load and optionally convert.
-    raw = yaml.safe_load(theme_path.read_text()) or {}
-    if args.convert:
-        from tools.migrate_theme import convert_theme
-
-        raw = _deep_to_dict(convert_theme(raw, fname=theme_path.name))
+    raw = read_theme_file(theme_path)  # with any extends: chain resolved
 
     # Pre-parse check: reject leftover `apply_to: element` rules with a
     # pointer to the catalog/overrides model.
@@ -158,8 +131,7 @@ def main(argv: list[str] | None = None) -> int:
             "rule(s); element-to-token bindings now live in "
             "config/element_catalog.yaml.  Move per-theme tweaks to the "
             "top-level `element_overrides:` map (see USER_GUIDE.md "
-            '"Element Bindings: built-in catalog"), or run\n'
-            f"    uv run python tools/strip_element_bindings.py {theme_path}",
+            f'"Element Bindings: built-in catalog"), or {legacy_hint("strip_element_bindings.py")}',
             file=sys.stderr,
         )
         for i, ec in stray[:6]:
@@ -171,14 +143,6 @@ def main(argv: list[str] | None = None) -> int:
         theme = parse_theme(raw)
     except ThemeError as exc:
         print(f"\n{exc}\n", file=sys.stderr)
-        if not args.convert:
-            print(
-                "hint: this looks like a legacy theme.  Run again with --convert "
-                "to migrate it on the fly, or commit a permanent conversion via:"
-                "\n    uv run python tools/migrate_theme.py --in-place "
-                f"{theme_path}\n",
-                file=sys.stderr,
-            )
         return 2
 
     # Font names must be in FONT_REGISTRY, or get_font_path() raises KeyError

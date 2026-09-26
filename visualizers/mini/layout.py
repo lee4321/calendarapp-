@@ -295,47 +295,6 @@ class MiniCalendarLayout(BaseLayout):
         # Month grid bounding box
         coord[f"MonthGrid_{month_key}"] = (x, y, width, height)
 
-    def _emit_header_footer_coords(
-        self,
-        coord: CoordinateDict,
-        config: CalendarConfig,
-        margins: dict,
-        hf: dict,
-    ) -> None:
-        """
-        Emit header and footer coordinates using the shared three-column helper.
-        """
-        left = margins["left"]
-        top = config.pageY - margins["top"]
-
-        if config.include_header and hf["header_height"] > 0:
-            h_height = hf["header_height"]
-            header_y = top - h_height
-            coord.update(
-                self._generate_three_column_coords(
-                    left,
-                    config.pageX,
-                    header_y,
-                    h_height,
-                    "Header",
-                    margins["right"],
-                )
-            )
-
-        if config.include_footer and hf["footer_height"] > 0:
-            f_height = hf["footer_height"]
-            footer_y = margins["bottom"]
-            coord.update(
-                self._generate_three_column_coords(
-                    left,
-                    config.pageX,
-                    footer_y,
-                    f_height,
-                    "Footer",
-                    margins["right"],
-                )
-            )
-
     @staticmethod
     def _week_starts_sunday(config: CalendarConfig) -> bool:
         """

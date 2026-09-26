@@ -14,16 +14,16 @@ from __future__ import annotations
 import logging
 
 import pytest
-import yaml
 
 from config.theme_engine import ThemeEngine, find_unconsumed_keys
+from config.theme_inheritance import read_theme_file
 
 THEME_FILES = sorted(ThemeEngine.BUILTIN_THEMES_DIR.glob("*.yaml"))
 
 
 @pytest.mark.parametrize("theme_path", THEME_FILES, ids=lambda p: p.stem)
 def test_shipped_theme_has_no_unconsumed_keys(theme_path):
-    data = yaml.safe_load(theme_path.read_text()) or {}
+    data = read_theme_file(theme_path)
     assert find_unconsumed_keys(data) == []
 
 
@@ -39,8 +39,8 @@ class TestFindUnconsumedKeys:
         assert find_unconsumed_keys(data) == ["details.markdown.bogus"]
 
     def test_section_level_cascade_is_consumed(self):
-        # header.font_family cascades into header.left / header.center.
-        assert find_unconsumed_keys({"header": {"font_family": "Roboto-Regular"}}) == []
+        # timeline.font_size cascades into timeline.name_text / notes_text.
+        assert find_unconsumed_keys({"timeline": {"font_size": 11}}) == []
 
     def test_base_cascade_is_consumed(self):
         assert find_unconsumed_keys({"base": {"font_family": "Roboto-Regular", "font_size": 9}}) == []

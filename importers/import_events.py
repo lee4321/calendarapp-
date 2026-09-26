@@ -24,7 +24,6 @@ import importlib.util
 import inspect
 import os
 import re
-import shlex
 import sqlite3
 import sys
 
@@ -37,20 +36,22 @@ from importers.common import (
     ImportDatabase as _ImportDatabaseBase,
 )
 from importers.common import (
+    ImportLog,
     ImportResult,
+    add_history_and_log_arguments,
+    add_import_arguments,
     coerce_source_text,
+    collect_import_files,
     compute_file_hash,
     convert_date,
     convert_datetime,
-    find_files,
-    list_import_history,
-    parse_import_pattern,
+    finish_import_run,
+    handle_history_commands,
+    log_import_result,
+    log_import_totals,
     process_datetimes,
     read_file,
-    remove_import,
-)
-from importers.common import (
-    setup_logging as _setup_logging_common,
+    start_import_run,
 )
 from shared.duration_parser import normalize_decimal_separators, parse_duration
 
@@ -58,27 +59,7 @@ from shared.duration_parser import normalize_decimal_separators, parse_duration
 # Logging
 # ============================================================================
 
-# Global logger instance
-logger = None
-
-
-def setup_logging(log_file="import_events.log", level="info"):
-    """Configure logging to file and console."""
-    return _setup_logging_common("import_events", log_file, level)
-
-
-def log(message, level="info"):
-    """Log message at specified level."""
-    if logger is None:
-        print(message)
-        return
-    level_map = {
-        "debug": logger.debug,
-        "info": logger.info,
-        "warning": logger.warning,
-        "error": logger.error,
-    }
-    level_map.get(level, logger.info)(message)
+log = ImportLog()
 
 
 # ============================================================================
@@ -800,35 +781,7 @@ def import_file(db, filepath, user_id, replace=False, verbose=False, skip_errors
 
 def main():
     parser = argparse.ArgumentParser(prog="import_events", description="Import XLSX/CSV event files into calendar.db")
-
-    # Make files optional (not required for --list or --remove)
-    parser.add_argument("files", nargs="*", help="Files or directories to import")
-    parser.add_argument(
-        "--database",
-        "-db",
-        default="calendar.db",
-        help="Path to SQLite database (default: calendar.db)",
-    )
-    parser.add_argument(
-        "--user-id",
-        "-u",
-        type=int,
-        default=1,
-        help="User ID for imported events (default: 1)",
-    )
-    parser.add_argument(
-        "--replace",
-        "-r",
-        action="store_true",
-        help="Replace events from previously imported file",
-    )
-    parser.add_argument("--dry-run", "-n", action="store_true", help="Validate files without importing")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
-    parser.add_argument(
-        "--skip-errors",
-        action="store_true",
-        help="Continue importing when individual rows fail",
-    )
+    add_import_arguments(parser, "events")
 
     # Generator option
     parser.add_argument(
@@ -859,40 +812,7 @@ def main():
         metavar="KEY=VALUE",
         help="Pass parameter to generator script (repeatable, e.g., --param Priority=1 --param Icon=rocket)",
     )
-
-    # Import history management options
-    parser.add_argument(
-        "--list",
-        "-l",
-        action="store_true",
-        help="List all previous imports from import_history",
-    )
-    parser.add_argument(
-        "--remove",
-        "-rm",
-        type=str,
-        metavar="PATTERN",
-        help='Remove imports by ID. Supports: single (3), range (1-5), list (1,3,5), open range (5- or -3), or "all"',
-    )
-    parser.add_argument(
-        "--force",
-        "-f",
-        action="store_true",
-        help="Skip confirmation prompt when removing",
-    )
-
-    # Logging options
-    parser.add_argument(
-        "--log-file",
-        default="import_events.log",
-        help="Path to log file (default: import_events.log)",
-    )
-    parser.add_argument(
-        "--log-level",
-        choices=["debug", "info", "warning", "error"],
-        default="info",
-        help="Set logging level (default: info)",
-    )
+    add_history_and_log_arguments(parser, "import_events.log")
 
     args = parser.parse_args()
 
@@ -933,96 +853,9 @@ def main():
                 parser.error(f"Invalid --param: empty key in '{param_str}'")
             generator_kwargs[key] = value.strip()
 
-    # Setup logging
-    # --verbose is shorthand for --log-level debug
-    global logger
-    log_level = "debug" if args.verbose else args.log_level
-    logger = setup_logging(args.log_file, log_level)
-
-    command_line = shlex.join(sys.argv)
-    log("=== import_events.py started ===")
-    log(f"Command: {command_line}")
-    log(f"Database: {args.database}")
-
-    # Verify database exists
-    if not os.path.exists(args.database):
-        log(f"Error: Database not found: {args.database}", "error")
-        sys.exit(1)
-
+    command_line = start_import_run(args, log, "import_events")
     db = ImportDatabase(args.database)
-
-    # Handle --list
-    if args.list:
-        list_import_history(db, log)
-        log("=== import_events.py completed ===")
-        sys.exit(0)
-
-    # Handle --remove
-    if args.remove is not None:
-        # Get max import ID for pattern parsing
-        with db.transaction() as cursor:
-            max_id = db.get_max_import_id(cursor)
-
-        if max_id == 0:
-            log("No imports found to remove.", "warning")
-            log("=== import_events.py completed ===")
-            sys.exit(0)
-
-        # Parse the pattern
-        try:
-            import_ids = parse_import_pattern(args.remove, max_id)
-        except ValueError as e:
-            log(f"Error: {e}", "error")
-            log("=== import_events.py completed ===")
-            sys.exit(1)
-
-        # Filter to only existing IDs
-        with db.transaction() as cursor:
-            existing_ids = []
-            for import_id in import_ids:
-                if db.get_import_by_id(cursor, import_id):
-                    existing_ids.append(import_id)
-
-        if not existing_ids:
-            log(f"No matching imports found for pattern: {args.remove}", "warning")
-            log("=== import_events.py completed ===")
-            sys.exit(0)
-
-        # Show summary and confirm
-        log(f"Found {len(existing_ids)} import(s) to remove: {existing_ids}")
-
-        if not args.force:
-            # Show details for each import
-            with db.transaction() as cursor:
-                total_events = 0
-                for import_id in existing_ids:
-                    record = db.get_import_by_id(cursor, import_id)
-                    if record:
-                        _, _, filename, date, _, event_count, _ = record
-                        display_date = date[:19] if date else ""
-                        log(f"  ID {import_id}: {filename} ({event_count} events, {display_date})")
-                        total_events += event_count
-                log(f"  Total: {total_events} events will be deleted")
-
-            response = input("Are you sure you want to delete these imports and all their events? [y/N]: ")
-            if response.lower() != "y":
-                log("Cancelled.")
-                log("=== import_events.py completed ===")
-                sys.exit(0)
-
-        # Perform deletions
-        success_count = 0
-        fail_count = 0
-        for import_id in existing_ids:
-            # Use force=True since we already confirmed
-            if remove_import(db, import_id, log, force=True, verbose=args.verbose):
-                success_count += 1
-            else:
-                fail_count += 1
-
-        log(f"\nRemoved {success_count} import(s), {fail_count} failed")
-        log("=== import_events.py completed ===")
-        sys.exit(0 if fail_count == 0 else 1)
+    handle_history_commands(args, db, log, "import_events")
 
     # Handle --generate
     if args.generate:
@@ -1064,8 +897,7 @@ def main():
             except Exception as e:
                 log(f"  ERROR: {e}", "error")
 
-            log("=== import_events.py completed ===")
-            sys.exit(0)
+            finish_import_run(log, "import_events", 0)
 
         # Perform the actual import
         log(f"\nGenerating events from: {os.path.basename(script_path)}")
@@ -1081,22 +913,9 @@ def main():
             generator_kwargs=generator_kwargs,
             command=command_line,
         )
-
-        log(f"  Result: {result.imported_rows}/{result.total_rows} imported")
-        if result.failed_rows:
-            log(f"  Failed: {result.failed_rows} rows", "warning")
-        if result.errors and not args.verbose:
-            for err in result.errors[:3]:
-                log(f"  Error: {err}", "error")
-            if len(result.errors) > 3:
-                log(f"  ... and {len(result.errors) - 3} more errors", "error")
-
-        log("\n=== Generate Complete ===")
-        log(f"Total imported: {result.imported_rows}")
-        log(f"Total failed: {result.failed_rows}")
-        log("=== import_events.py completed ===")
-
-        sys.exit(0 if result.failed_rows == 0 else 1)
+        log_import_result(result, args.verbose, log)
+        log_import_totals("Generate", result.imported_rows, result.failed_rows, log)
+        finish_import_run(log, "import_events", 0 if result.failed_rows == 0 else 1)
 
     # Require files for import operation
     if not args.files:
@@ -1105,19 +924,7 @@ def main():
             "or --generate SCRIPT to generate events."
         )
 
-    # Find all files to import
-    all_files = []
-    for path in args.files:
-        files = find_files(path)
-        if not files:
-            log(f"Warning: No importable files found: {path}", "warning")
-        all_files.extend(files)
-
-    if not all_files:
-        log("Error: No files to import", "error")
-        sys.exit(1)
-
-    log(f"Found {len(all_files)} file(s) to import")
+    all_files = collect_import_files(args.files, log)
 
     # Handle dry-run mode
     if args.dry_run:
@@ -1144,8 +951,7 @@ def main():
 
             except Exception as e:
                 log(f"  {os.path.basename(filepath)}: ERROR - {e}", "error")
-        log("=== import_events.py completed ===")
-        sys.exit(0)
+        finish_import_run(log, "import_events", 0)
 
     # Import files
     total_imported = 0
@@ -1162,25 +968,12 @@ def main():
             skip_errors=args.skip_errors,
             command=command_line,
         )
-
-        log(f"  Result: {result.imported_rows}/{result.total_rows} imported")
-        if result.failed_rows:
-            log(f"  Failed: {result.failed_rows} rows", "warning")
-        if result.errors and not args.verbose:
-            for err in result.errors[:3]:
-                log(f"  Error: {err}", "error")
-            if len(result.errors) > 3:
-                log(f"  ... and {len(result.errors) - 3} more errors", "error")
-
+        log_import_result(result, args.verbose, log)
         total_imported += result.imported_rows
         total_failed += result.failed_rows
 
-    log("\n=== Import Complete ===")
-    log(f"Total imported: {total_imported}")
-    log(f"Total failed: {total_failed}")
-    log("=== import_events.py completed ===")
-
-    sys.exit(0 if total_failed == 0 else 1)
+    log_import_totals("Import", total_imported, total_failed, log)
+    finish_import_run(log, "import_events", 0 if total_failed == 0 else 1)
 
 
 if __name__ == "__main__":

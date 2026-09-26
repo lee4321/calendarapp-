@@ -147,7 +147,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """
         rows_on_days = defaultdict(dict)
         days_to_print = []
-        style_engine = StyleEngine(_weekly_style_rules(config))
+        style_engine = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER)
 
         for oneday in arrow.Arrow.range("day", adjustedstart, adjustedend):
             daykey = oneday.format("YYYYMMDD")
@@ -982,24 +982,25 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             fill_opacity = style_result.fill_opacity
         tk_cell = self._tk("box:cell")
         tk_hash = self._tk("line:hash")
+        _cell_style = config.get_box_style("ec-cell")
         self._draw_rect(
             X,
             Y,
             W,
             H,
             fill=fill_color,
-            stroke=tk_cell.get("stroke") or config.day_box_stroke_color,
+            stroke=tk_cell.get("stroke") or _cell_style.stroke,
             fill_opacity=fill_opacity,
             stroke_opacity=(
                 tk_cell.get("stroke_opacity")
                 if tk_cell.get("stroke_opacity") is not None
-                else config.day_box_stroke_opacity
+                else _cell_style.stroke_opacity
             ),
             stroke_width=(
-                tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else config.day_box_stroke_width
+                tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else _cell_style.stroke_width
             ),
             rx=5,
-            stroke_dasharray=(tk_cell.get("dasharray") or config.day_box_stroke_dasharray or None),
+            stroke_dasharray=(tk_cell.get("dasharray") or _cell_style.stroke_dasharray or None),
             css_class="ec-cell",
         )
 
@@ -1121,7 +1122,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # A style rule's fill is the event's color here as in every other
         # view: the name and icon take it.  A text/icon override in the
         # same rules is more specific and still wins below.
-        ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
+        ev_style = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER).evaluate_event(t)
         if ev_style.fill_color:
             textcolor = ev_style.fill_color
             iconcolor = textcolor
@@ -1275,7 +1276,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             notes_max_w = nWidth - (ntextx - niconx) if t.icon else nWidth
                             _ts_notes = config.get_text_style("ec-event-notes")
                             tk_notes = self._tk("text:event_notes")
-                            _ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
+                            _ev_style = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER).evaluate_event(
+                                t
+                            )
                             n_font, n_size, n_color, n_opacity = _ev_style.text_override(
                                 "event_notes",
                                 font=tk_notes.get("font") or _ts_notes.font,
@@ -1446,7 +1449,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _ts_en = config.get_text_style("ec-event-name")
         _ts_notes = config.get_text_style("ec-event-notes")
 
-        style_engine = StyleEngine(_weekly_style_rules(config))
+        style_engine = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER)
         dur_style = style_engine.evaluate_event(t)
 
         rect_kwargs = dur_style.rect_overrides(
