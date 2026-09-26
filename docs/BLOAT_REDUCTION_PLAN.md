@@ -351,6 +351,21 @@ that only restate old behaviour.
 
 ## Phase 5: Developer-experience fixes (about 1 day)
 
+> **Status (2026-09-26):** done.
+> - **Fresh-clone tests:** a fresh clone went from 49 failing tests to 0.
+>   `tests/conftest.py` builds `calendar.db` when it is missing, using the new
+>   `tools/db/build_db.py`. That tool loads the schema, colours, paper sizes,
+>   icons and both sample CSVs. The five tests that inspect the owner's
+>   pattern tiles skip with a reason when the table is empty.
+> - **Generated docs:** `DefaultRendererValues.md` cites `file:Class.method`,
+>   so its test compares it exactly. The hook's regenerate-and-stage step is
+>   gone.
+> - **Python pin:** `.python-version` is `3.14`, so `uv sync --locked` and
+>   `uv run` work on Linux. `deploy_copy.sh` copies the file instead of
+>   rewriting it, and the hook's version bump uses portable `sed`.
+> - **Changelog:** 17 paragraph entries were cut to one or two sentences
+>   each, with their SHAs, and the convention is in CONTRIBUTING.
+
 - **Fresh-clone test failures.** 50 tests error because `calendar.db` is
   gitignored and nothing builds it. Add a session-scoped pytest fixture that
   builds a minimal database from `tools/db/create.calendar.db.sql` plus a
