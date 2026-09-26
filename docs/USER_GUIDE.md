@@ -1500,13 +1500,12 @@ than quietly ignored — move the two keys up one level.
 | Theme key | Type | Default | Explanation |
 |---|---|---|---|
 | `overflow.icon` | `str` | `"warningtriangle"` | Glyph name, resolved through the `icons` table |
-| `overflow.color` | `str` | `"red"` | Icon color |
+| *(rule-based)* | `define icon:overflow` | — | Icon color (`color`), from the `icon:overflow` token like every element style |
 | *(rule-based)* | `style_rules` entry with `apply_to: box:overflow` | — | Optional halo (fill / stroke / padding) painted behind the icon. See "Style Rules" → Box Properties. |
 
 ```yaml
 overflow:
   icon: warningtriangle
-  color: red
 ```
 
 What did not fit is listed in the run's
@@ -1647,17 +1646,11 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `fiscal_period_end_label_format` | `fiscal.end_label_format` | `str` | `'{period_short} End'` | end label format |
 | `fiscal_period_label_format` | `fiscal.label_format` | `str` | `'{prefix}{period_short}'` | label format |
 | `fiscal_year_offset` | `fiscal.year_offset` | `int \| None` | `None` | added to calendar year to get fiscal year; null = auto (+1 for non-January start, 0 for NRF); 0 = same year, 1 = year+1, -1 = year-1 |
-| `footer_center_font` | `footer.center.font_family` | `str` | `Fonts.RC_LIGHT` | font family |
-| `footer_center_font_color` | `footer.center.font_color` | `str` | `'grey'` | font color |
 | `footer_center_font_size` | `footer.center.size_rule` | `float | None` | `None` | Per-papersize footer-center font size rule |
 | `footer_left_font_size` | `footer.left.size_rule` | `float | None` | `None` | Per-papersize footer-left font size rule |
 | `footer_right_font_size` | `footer.right.size_rule` | `float | None` | `None` | Per-papersize footer-right font size rule |
 | `group_colors` | `colors.group_colors` | `list` | `field(default_factory=lambda: ['bisque', 'skyblue', 'lawngreen', 'cyan', 'pur...` | List of group colors |
-| `header_center_font` | `header.center.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
-| `header_center_font_color` | `header.center.font_color` | `str` | `'grey'` | font color |
 | `header_center_font_size` | `header.center.size_rule` | `float | None` | `None` | Per-papersize header-center font size rule |
-| `header_left_font` | `header.left.font_family` | `str` | `Fonts.R_BLACK_ITALIC` | font family |
-| `header_left_font_color` | `header.left.font_color` | `str` | `'grey'` | font color |
 | `header_left_font_size` | `header.left.size_rule` | `float | None` | `None` | Per-papersize header-left font size rule |
 | `header_right_font_size` | `header.right.size_rule` | `float | None` | `None` | Per-papersize header-right font size rule |
 | `watermark_image_rotation_angle` | `watermark.image_rotation_angle` | `float` | `0.0` | watermark image rotation angle |
@@ -1676,7 +1669,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_hash_line_color` | `colors.hash_lines` | `str | None` | `None` | Default hash line color |
 | `theme_mini_adjacent_month_color` | `colors.mini_calendar.adjacent_month_color` | `str | None` | `None` | Mini adjacent-month day color override |
 | `theme_mini_current_day_color` | `colors.mini_calendar.current_day_color` | `str | None` | `None` | Mini current-day shade override |
-| `theme_mini_day_color` | `colors.mini_calendar.day_color` | `str | None` | `None` | Mini day number color override |
 | `theme_mini_holiday_color` | `colors.mini_calendar.holiday_color` | `str | None` | `None` | Mini holiday day color override |
 | `theme_mini_milestone_color` | `colors.mini_calendar.milestone_color` | `str | None` | `None` | Mini milestone marker color override |
 | `theme_mini_nonworkday_fill_color` | `colors.mini_calendar.nonworkday_fill_color` | `str | None` | `None` | Mini non-workday cell fill color override |
@@ -1684,7 +1676,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `theme_month_colors` | `colors.months` | `dict[str, str] | None` | `None` | Month number to color map (01-12) |
 | `watermark_text` | `watermark.text` | `str` | `''` | text |
 | `watermark_opacity` | `watermark.opacity` | `float` | `0.3` | opacity |
-| `watermark_color` | `watermark.color` | `str` | `'white'` | color |
 | `watermark_font` | `watermark.font_family` | `str` | `Fonts.R_BLACK` | font family |
 | `watermark_resize_mode` | `watermark.resize_mode` | `str` | `'fit'` | "fit" (default) or "stretch" |
 | `watermark_rotation_angle` | `watermark.rotation_angle` | `float` | `0.0` | rotation angle |
@@ -1694,25 +1685,16 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
-| `day_box_fill_color` | `weekly.day_box.fill_color` | `str` | `'grey'` | fill color |
-| `day_box_fill_opacity` | `weekly.day_box.fill_opacity` | `float` | `0.25` | fill opacity |
-| `day_box_color` | `weekly.day_box.font_color` | `str` | `'navy'` | font color |
-| `day_box_number_color` | `weekly.day_box.number_color` | `str` | `'white'` | number color |
-| `day_box_number_font` | `weekly.day_box.number_font` | `str` | `Fonts.R_BLACK` | number font |
 | `day_box_stroke_color` | `weekly.day_box.stroke_color` | `str` | `'grey'` | stroke color |
 | `day_box_stroke_dasharray` | `weekly.day_box.stroke_dasharray` | `str | None` | `None` | stroke dasharray |
 | `day_box_stroke_opacity` | `weekly.day_box.stroke_opacity` | `float` | `0.25` | stroke opacity |
 | `day_box_stroke_width` | `weekly.day_box.stroke_width` | `int` | `2` | stroke width |
-| `day_name_font` | `weekly.day_names.font_family` | `str` | `Fonts.RC_LIGHT_ITALIC` | font family |
-| `day_name_font_color` | `weekly.day_names.font_color` | `str` | `'grey'` | font color |
 | `day_name_font_size` | `weekly.day_names.size_rule` | `float | None` | `None` | Per-papersize day-name font size rule |
 | `hash_pattern_opacity` | `weekly.day_box.hash_pattern_opacity` | `float` | `0.15` | hash pattern opacity |
 | `hash_pattern_target_size` | `weekly.day_box.hash_pattern_target_size` | `float` | `18.0` | Largest tile dimension after auto-normalization, in points. Tiles bigger than this are scaled down to it; smaller tiles are left alone. `0` tiles every pattern at its native size. |
 | `hash_pattern_scale` | `weekly.day_box.hash_pattern_scale` | `float` | `1.0` | Extra multiplier applied on top of the normalized tile size, for a finer (`< 1`) or coarser (`> 1`) grain. |
 | `theme_weekly_hash_pattern` | `weekly.day_box.hash_pattern` | `str | None` | `None` | hash pattern |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `weekly.day_box.hash_rules`. See Complex Structures Reference. |
-| `week_number_font` | `weekly.week_numbers.font_family` | `str` | `Fonts.RC_BOLD` | font family |
-| `week_number_font_color` | `weekly.week_numbers.font_color` | `str` | `'grey'` | font color |
 | `week_number_font_size` | `weekly.week_numbers.size_rule` | `float | None` | `None` | Per-papersize week-number font size rule |
 | `week_number_label_format` | `weekly.week_numbers.label_format` | `str` | `'W{num:02d}'` | label format |
 
@@ -1729,11 +1711,9 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_event_icon_opacity` | `mini_calendar.event_icon_opacity` | `float` | `0.6` | opacity of a day cell's corner icons. They are drawn over the day number, so this is what keeps the number legible where an icon reaches it |
 | `mini_event_icon_scale` | `mini_calendar.event_icon_scale` | `float` | `0.25` | size of a day cell's corner icons, as a fraction of the cell's shorter side. Applies to `mini`, `mini-icon` and `candybar` |
 | `mini_current_day_color` | `mini_calendar.current_day_color` | `str` | `'lightblue'` | Current day shade color |
-| `mini_day_color` | `mini_calendar.day_color` | `str` | `'black'` | Default day number color |
 | `mini_day_number_glyphs` | `mini_calendar.day_number_glyphs` | `list[str] \| None` | `None` | Optional explicit glyphs for day numbers 1-31 in SVG mini calendars |
 | `mini_day_number_digits` | `mini_calendar.day_number_digits` | `list[str] \| None` | `None` | Optional digit glyph substitutions for SVG mini day numbers |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `mini_calendar.day_box.hash_rules`. Mini renderer reads the same top-level `style_rules` filtered by `apply_to: day_box`. |
-| `mini_duration_bar_stroke_opacity` | `mini_calendar.duration_bar_stroke_opacity` | `float` | `0.7` | duration bar stroke opacity |
 | `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell (also enabled by `--mini-grid-lines`) |
 | `mini_grid_line_color` | `mini_calendar.grid_line_color` | `str` | `'lightgrey'` | mini grid line stroke color |
 | `mini_grid_line_opacity` | `mini_calendar.grid_line_opacity` | `float` | `0.5` | mini grid line stroke opacity |
@@ -1743,7 +1723,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_month_outline_width` | `mini_calendar.month_outline_width` | `float` | `0.5` | Month outline stroke width in points |
 | `mini_month_outline_opacity` | `mini_calendar.month_outline_opacity` | `float` | `1.0` | Month outline stroke opacity (0–1) |
 | `mini_month_outline_dasharray` | `mini_calendar.month_outline_dasharray` | `str | None` | `None` | Month outline stroke dasharray |
-| `mini_hash_line_dasharray` | `mini_calendar.hash_line_dasharray` | `str | None` | `None` | hash line stroke dasharray |
 | `mini_header_font_size` | `mini_calendar.header_font_size` | `float | None` | `None` | header font size |
 | `mini_holiday_color` | `mini_calendar.holiday_color` | `str` | `'red'` | Holiday day number color |
 | `mini_milestone_color` | `mini_calendar.milestone_color` | `str` | `'navy'` | Milestone circle color |
@@ -1752,9 +1731,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_milestone_stroke_width` | `mini_calendar.milestone_stroke_width` | `float` | `1.0` | Milestone circle stroke width |
 | `mini_nonworkday_fill_color` | `mini_calendar.nonworkday_fill_color` | `str` | `'lightblue'` | Non-work day fill color |
 | `mini_show_adjacent` | `mini_calendar.show_adjacent` | `bool` | `True` | Show leading/trailing adjacent-month days |
-| `mini_strikethrough_stroke_dasharray` | `mini_calendar.strikethrough_stroke_dasharray` | `str | None` | `None` | strikethrough stroke dasharray |
-| `mini_title_color` | `mini_calendar.title_color` | `str` | `'navy'` | title color |
-| `mini_title_font` | `mini_calendar.title_font` | `str` | `Fonts.RC_BOLD` | Month title font |
 | `mini_title_font_size` | `mini_calendar.title_font_size` | `float | None` | `None` | title font size |
 | `mini_title_format` | `mini_calendar.title_format` | `str` | `'MMMM YYYY'` | Arrow format string for title |
 | `mini_week_number_font_size` | `mini_calendar.week_number_font_size` | `float | None` | `None` | Week number font size |
@@ -1788,13 +1764,9 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | Config field | Theme key | Type | Default | Explanation |
 |---|---|---|---|---|
 | `theme_timeline_palette` | `timeline.palette` | `str | None` | `None` | palette |
-| `timeline_axis_color` | `timeline.axis_color` | `str` | `'lightgrey'` | axis color |
-| `timeline_axis_opacity` | `timeline.axis_opacity` | `float` | `0.85` | axis opacity |
-| `timeline_axis_stroke_dasharray` | `timeline.axis_stroke_dasharray` | `str | None` | `None` | axis stroke dasharray |
 | `timeline_axis_width` | `timeline.axis_width` | `float` | `2.0` | axis width |
 | `timeline_bottom_colors` | `timeline.bottom_colors` | `list[str]` | `field(default_factory=lambda: ['midnightblue', 'springgreen', 'deepskyblue', ...` | bottom colors |
 | `timeline_connector_stroke_dasharray` | `timeline.connector_stroke_dasharray` | `str | None` | `None` | connector stroke dasharray |
-| `timeline_date_color` | `timeline.date.font_color` | `str` | `'deepskyblue'` | font color |
 | `timeline_date_font` | `timeline.date.font_family` | `str` | `Fonts.R_BOLD` | font family |
 | `timeline_date_format` | `timeline.date_format` | `str` | `'MMM D'` | date format |
 | `timeline_duration_box_height` | `timeline_durations.box_height` | `float | None` | `None` | box height |
@@ -1822,8 +1794,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_holiday_icon_y_offset` | `timeline.holiday_icon_y_offset` | `float` | `4.0` | gap below the axis to the top of the holiday icon |
 | `timeline_icon_size` | `timeline.icon_size` | `float` | `8.0` | icon size |
 | `timeline_label_fill_opacity` | `timeline.label_fill_opacity` | `float` | `0.25` | label fill opacity |
-| `timeline_label_stroke_dasharray` | `timeline.label_stroke_dasharray` | `str | None` | `None` | label stroke dasharray |
-| `timeline_label_stroke_width` | `timeline.label_stroke_width` | `float` | `1.0` | label stroke width |
 | `timeline_leader_direct` | `timeline.leader.direct` | `bool` | `True` | route each leader straight from its axis dot to its own box. `False` restores labella's routing, which threads it through every ancestor row — a curve-and-line pair per row |
 | `timeline_leader_end_stub` | `timeline.leader.end_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader meets its box; `0` = pure bezier |
 | `timeline_leader_start_stub` | `timeline.leader.start_stub` | `float` | `4.0` | straight perpendicular segment where a callout leader leaves the axis dot; `0` = pure bezier |
@@ -1836,13 +1806,10 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `timeline_tick_label_format` | `timeline.tick_label_format` | `str` | `'MMM D'` | tick label format |
 | `timeline_tick_label_gap` | `timeline.tick_label_gap` | `float | None` | `None` | clear space between a tick mark's tip and its date label, so it moves with the tick length. `None` = 1.5 label heights. Ignored where a `timeline.ticks` band sets its own `label_gap` |
 | `timeline_tick_label_offset_y` | `timeline.tick_label_offset_y` | `float | None` | `None` | the whole distance from the axis to the label, tick length included; wins over `tick_label_gap` |
-| `timeline_tick_stroke_dasharray` | `timeline.tick_stroke_dasharray` | `str | None` | `None` | tick stroke dasharray |
 | `timeline_today_date` | `timeline.today_date` | `str` | `''` | today date |
-| `timeline_today_label_color` | `timeline.today_label_color` | `str` | `'grey'` | today label color |
 | `timeline_today_label_offset_y` | `timeline.today_label_offset_y` | `float` | `10.0` | today label offset y |
 | `timeline_today_label_text` | `timeline.today_label_text` | `str` | `'Today'` | today label text |
 | `timeline_today_line_color` | `timeline.today_line_color` | `str` | `'grey'` | today line color |
-| `timeline_today_line_dasharray` | `timeline.today_line_dasharray` | `str | None` | `None` | today line stroke dasharray |
 | `timeline_top_colors` | `timeline.top_colors` | `list[str]` | `field(default_factory=lambda: ['deepskyblue', 'gold', 'tomato', 'springgreen'...` | top colors |
 
 #### `blockplan`
@@ -1875,7 +1842,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_grid_line_width` | `blockplan.grid_line_width` | `float` | `1.0` | swimlane border line width in points |
 | `blockplan_grid_opacity` | `blockplan.grid_opacity` | `float` | `0.6` | grid opacity |
 | `blockplan_header_font_size` | `blockplan.header_font_size` | `float | None` | `None` | header font size |
-| `blockplan_header_heading_fill_color` | `blockplan.header_heading_fill_color` | `str` | `'none'` | header heading fill color |
 | `blockplan_header_label_align_h` | `blockplan.header_label_align_h` | `str` | `'left'` | left \| center \| right |
 | `blockplan_header_label_color` | `blockplan.header_label_color` | `str` | `'black'` | header label color |
 | `blockplan_header_label_opacity` | `blockplan.header_label_opacity` | `float` | `1.0` | heading cell label text opacity |
@@ -1900,12 +1866,6 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `blockplan_timeband_line_opacity` | `blockplan.timeband_line_opacity` | `float \| None` | `None` | time-band border opacity; null = grid_opacity |
 | `blockplan_timeband_line_width` | `blockplan.timeband_line_width` | `float \| None` | `None` | time-band border line width; null = grid_line_width |
 | `blockplan_unmatched_lane_name` | `blockplan.unmatched_lane_name` | `str` | `'Unmatched'` | unmatched lane name |
-| `blockplan_vertical_line_color` | `blockplan.vertical_line_color` | `str` | `'red'` | vertical line color |
-| `blockplan_vertical_line_dasharray` | `blockplan.vertical_line_dasharray` | `str \| None` | `None` | vertical line dasharray |
-| `blockplan_vertical_line_fill_color` | `blockplan.vertical_line_fill_color` | `str` | `'none'` | default column fill color for vertical lines |
-| `blockplan_vertical_line_fill_opacity` | `blockplan.vertical_line_fill_opacity` | `float` | `0.15` | default column fill opacity |
-| `blockplan_vertical_line_opacity` | `blockplan.vertical_line_opacity` | `float` | `0.9` | vertical line opacity |
-| `blockplan_vertical_line_width` | `blockplan.vertical_line_width` | `float` | `1.5` | vertical line width |
 | `blockplan_wbs_group_depth` | `blockplan.wbs_group_depth` | `int` | `2` | leading WBS segments that group duration bars: a group's bars take one color from `blockplan.palette` and its rollup bars (or the bar whose WBS is the group code) are packed in rows above the group's other bars. Bars without a WBS keep event-color / priority coloring. `0` disables grouping |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `blockplan.vertical_lines` — see Complex Structures Reference (`apply_to: vertical_line`). |
 | `blockplan_week_start` | `blockplan.week_start` | `int` | `0` | 0=Monday |

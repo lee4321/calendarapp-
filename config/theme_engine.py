@@ -31,19 +31,9 @@ logger = logging.getLogger(__name__)
 # Each entry: (yaml_section_path, yaml_key) -> config_field_name
 THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Header
-    ("header.left", "font_family"): "header_left_font",
-    ("header.left", "font_color"): "header_left_font_color",
-    ("header.center", "font_family"): "header_center_font",
-    ("header.center", "font_color"): "header_center_font_color",
     # Footer
-    ("footer.center", "font_family"): "footer_center_font",
-    ("footer.center", "font_color"): "footer_center_font_color",
     # Day names (weekly)
-    ("weekly.day_names", "font_family"): "day_name_font",
-    ("weekly.day_names", "font_color"): "day_name_font_color",
     # Week numbers (weekly)
-    ("weekly.week_numbers", "font_family"): "week_number_font",
-    ("weekly.week_numbers", "font_color"): "week_number_font_color",
     ("weekly.week_numbers", "label_format"): "week_number_label_format",
     # Day box (weekly)
     ("weekly.day_box", "stroke_color"): "day_box_stroke_color",
@@ -54,11 +44,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "hash_pattern_opacity"): "hash_pattern_opacity",
     ("weekly.day_box", "hash_pattern_target_size"): "hash_pattern_target_size",
     ("weekly.day_box", "hash_pattern_scale"): "hash_pattern_scale",
-    ("weekly.day_box", "fill_color"): "day_box_fill_color",
-    ("weekly.day_box", "fill_opacity"): "day_box_fill_opacity",
-    ("weekly.day_box", "number_font"): "day_box_number_font",
-    ("weekly.day_box", "number_color"): "day_box_number_color",
-    ("weekly.day_box", "font_color"): "day_box_color",
     # Base / global
     ("base", "default_missing_icon"): "default_missing_icon",
     ("base", "default_missing_icon_size"): "default_missing_icon_size",
@@ -72,24 +57,16 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Weekly text styling — kept survivors only.  Phase 2 stripped the
     # weekly_text_* set entirely (font_name/color/size/opacity/alignment),
     # plus name_text_alignment + notes_text_alignment (no readers).
-    ("weekly.name_text", "font_name"): "weekly_name_text_font_name",
-    ("weekly.name_text", "font_color"): "weekly_name_text_font_color",
     ("weekly", "month_shade_opacity"): "weekly_month_shade_opacity",
     ("weekly", "duration_fill_color"): "weekly_duration_fill_color",
     ("weekly", "duration_stroke_color"): "weekly_duration_stroke_color",
     ("weekly.name_text", "font_size"): "weekly_name_text_font_size",
-    ("weekly.name_text", "font_opacity"): "weekly_name_text_font_opacity",
-    ("weekly.notes_text", "font_name"): "weekly_notes_text_font_name",
-    ("weekly.notes_text", "font_color"): "weekly_notes_text_font_color",
     ("weekly.notes_text", "font_size"): "weekly_notes_text_font_size",
-    ("weekly.notes_text", "font_opacity"): "weekly_notes_text_font_opacity",
     # Timeline.  Phase 2 strip dropped 11 dead translations:
     # background_color, duration_bar_stroke_dasharray,
     # duration_bracket_stroke_dasharray, text_font_color/_opacity/_alignment
     # / _font_size, name_text_font_opacity/_alignment,
     # notes_text_font_opacity/_alignment.
-    ("timeline", "axis_color"): "timeline_axis_color",
-    ("timeline", "axis_opacity"): "timeline_axis_opacity",
     ("timeline", "axis_width"): "timeline_axis_width",
     ("timeline", "tick_color"): "timeline_tick_color",
     ("timeline", "date_format"): "timeline_date_format",
@@ -100,7 +77,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "today_label_text"): "timeline_today_label_text",
     ("timeline", "today_label_offset_y"): "timeline_today_label_offset_y",
     ("timeline", "today_line_color"): "timeline_today_line_color",
-    ("timeline", "today_label_color"): "timeline_today_label_color",
     ("timeline", "marker_stroke_color"): "timeline_marker_stroke_color",
     ("timeline", "marker_stroke_width"): "timeline_marker_stroke_width",
     ("timeline", "marker_radius"): "timeline_marker_radius",
@@ -108,12 +84,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "duration_offset_y"): "timeline_duration_offset_y",
     ("timeline", "duration_lane_gap_y"): "timeline_duration_lane_gap_y",
     ("timeline", "duration_icon_visible"): "timeline_duration_icon_visible",
-    ("timeline", "label_stroke_width"): "timeline_label_stroke_width",
     ("timeline", "label_fill_opacity"): "timeline_label_fill_opacity",
-    ("timeline", "axis_stroke_dasharray"): "timeline_axis_stroke_dasharray",
-    ("timeline", "tick_stroke_dasharray"): "timeline_tick_stroke_dasharray",
-    ("timeline", "today_line_dasharray"): "timeline_today_line_dasharray",
-    ("timeline", "label_stroke_dasharray"): "timeline_label_stroke_dasharray",
     ("timeline", "top_colors"): "timeline_top_colors",
     ("timeline", "bottom_colors"): "timeline_bottom_colors",
     ("timeline", "show_fiscal_periods"): "timeline_show_fiscal_periods",
@@ -169,7 +140,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline_durations", "date_font_size"): "timeline_duration_date_font_size",
     ("timeline_durations", "date_color"): "timeline_duration_date_color",
     ("timeline.date", "font_family"): "timeline_date_font",
-    ("timeline.date", "font_color"): "timeline_date_color",
     # Blockplan.  Phase 2 strip dropped 23 dead translations:
     # background_color, band_font, band_row_height, event_date_color/_font,
     # header_font, lane_heading_fill_color, lane_label_color/_font,
@@ -202,7 +172,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "header_label_color"): "blockplan_header_label_color",
     ("blockplan", "header_label_opacity"): "blockplan_header_label_opacity",
     ("blockplan", "header_label_align_h"): "blockplan_header_label_align_h",
-    ("blockplan", "header_heading_fill_color"): "blockplan_header_heading_fill_color",
     ("blockplan", "timeband_fill_color"): "blockplan_timeband_fill_color",
     ("blockplan", "timeband_fill_palette"): "blockplan_timeband_fill_palette",
     ("blockplan", "timeband_fill_opacity"): "blockplan_timeband_fill_opacity",
@@ -238,12 +207,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "duration_date_font_size"): "blockplan_duration_date_font_size",
     ("blockplan", "duration_date_color"): "blockplan_duration_date_color",
     ("blockplan", "marker_radius"): "blockplan_marker_radius",
-    ("blockplan", "vertical_line_color"): "blockplan_vertical_line_color",
-    ("blockplan", "vertical_line_width"): "blockplan_vertical_line_width",
-    ("blockplan", "vertical_line_dasharray"): "blockplan_vertical_line_dasharray",
-    ("blockplan", "vertical_line_opacity"): "blockplan_vertical_line_opacity",
-    ("blockplan", "vertical_line_fill_color"): "blockplan_vertical_line_fill_color",
-    ("blockplan", "vertical_line_fill_opacity"): "blockplan_vertical_line_fill_opacity",
     ("blockplan", "header_font_size"): "blockplan_header_font_size",
     ("blockplan", "band_font_size"): "blockplan_band_font_size",
     ("blockplan", "lane_label_font_size"): "blockplan_lane_label_font_size",
@@ -363,7 +326,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # visualizer whose box is too small for its text; configured under the
     # top-level `overflow:` section in theme YAMLs)
     ("overflow", "icon"): "overflow_indicator_icon",
-    ("overflow", "color"): "overflow_indicator_color",
     # Continuation icons (global — shared by timeline / blockplan / compact_plan)
     ("continuation", "show"): "show_continuation_icon",
     ("continuation", "icon_before"): "continuation_icon_before",
@@ -372,7 +334,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("continuation", "icon_color"): "continuation_icon_color",
     # Watermark
     ("watermark", "text"): "watermark_text",
-    ("watermark", "color"): "watermark_color",
     ("watermark", "font_family"): "watermark_font",
     ("watermark", "font_size"): "watermark_font_size",
     ("watermark", "resize_mode"): "watermark_resize_mode",
@@ -389,14 +350,11 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "icon_set"): "mini_icon_set",
     ("mini_calendar", "cell_font"): "mini_cell_font",
     ("mini_calendar", "cell_bold_font"): "mini_cell_bold_font",
-    ("mini_calendar", "title_font"): "mini_title_font",
     ("mini_calendar", "title_font_size"): "mini_title_font_size",
-    ("mini_calendar", "title_color"): "mini_title_color",
     ("mini_calendar", "header_font_size"): "mini_header_font_size",
     ("mini_calendar", "cell_font_size"): "mini_cell_font_size",
     ("mini_calendar", "day_number_glyphs"): "mini_day_number_glyphs",
     ("mini_calendar", "day_number_digits"): "mini_day_number_digits",
-    ("mini_calendar", "day_color"): "mini_day_color",
     ("mini_calendar", "adjacent_month_color"): "mini_adjacent_month_color",
     ("mini_calendar", "show_adjacent"): "mini_show_adjacent",
     ("mini_calendar", "holiday_color"): "mini_holiday_color",
@@ -437,7 +395,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
         "mini_calendar",
         "strikethrough_stroke_dasharray",
     ): "mini_strikethrough_stroke_dasharray",
-    ("mini_calendar", "hash_line_dasharray"): "mini_hash_line_dasharray",
     (
         "mini_calendar",
         "duration_bar_stroke_opacity",
@@ -656,7 +613,6 @@ _COLOR_KEYS = frozenset(
 # no renderer reads them post-migration (text:month_title / text:label /
 # text:week_number tokens cover those styling slots).
 _MINI_COLOR_FIELDS: dict[str, str] = {
-    "day_color": "theme_mini_day_color",
     "adjacent_month_color": "theme_mini_adjacent_month_color",
     "holiday_color": "theme_mini_holiday_color",
     "nonworkday_fill_color": "theme_mini_nonworkday_fill_color",
@@ -2284,3 +2240,22 @@ def find_unconsumed_keys(data: Any) -> list[str]:
         for key, value in body.items():
             walk(value, f"{section}.{key}")
     return found
+
+
+@functools.cache
+def builtin_theme_styles():
+    """Element styles for a run with no ``style_rules`` theme.
+
+    Every token comes from ``config/element_catalog_defaults.yaml`` — the same
+    source that fills the tokens a theme leaves undefined — bound to elements
+    by the built-in catalog.  Cached: it depends on nothing but those files.
+    """
+    from config.styles import ThemeStyles
+
+    text: dict = {}
+    box: dict = {}
+    line: dict = {}
+    icon: dict = {}
+    ThemeEngine._apply_catalog_defaults(text, box, line, icon)
+    bindings = ThemeEngine._build_element_bindings_from_catalog(text, box, line, icon, element_overrides={})
+    return ThemeStyles(text_styles=text, box_styles=box, line_styles=line, icon_styles=icon, element_bindings=bindings)

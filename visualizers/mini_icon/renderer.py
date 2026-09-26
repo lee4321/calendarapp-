@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from config.config import ICON_SETS
+from config.styles import LineStyle
 from renderers.svg_base import _is_none_color
 from visualizers.mini.day_styles import DayStyle
 from visualizers.mini.renderer import MiniCalendarRenderer
@@ -138,7 +139,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
                 cx,
                 cy,
                 radius,
-                stroke=style.circle_color or config.get_line_style("ec-milestone-marker").color,
+                stroke=style.circle_color or LineStyle().color,
                 fill=style.circle_fill or "none",
                 stroke_width=float(
                     milestone_icon.get("stroke_width")

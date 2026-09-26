@@ -35,8 +35,9 @@ Most draw sites resolve each attribute through this chain (first hit wins):
 3. **Element style** — `config.get_text_style("ec-event-name")` etc.;
    the element's token binding comes from the catalog, per-theme tweaks
    from `element_overrides:`.
-4. **Legacy config field / module default** — the no-theme fallback
-   (`config.py _fallback_*_style` factories and plain fields).
+4. **Legacy config field / module default** — a plain `CalendarConfig`
+   field or literal written into the draw site. Element styles have no such
+   layer: without a theme they come from `element_catalog_defaults.yaml`.
 
 ## Font sizes specifically
 

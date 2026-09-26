@@ -142,8 +142,6 @@ class CalendarConfig:
     fiscal_show_period_labels: bool = True
     fiscal_show_quarter_labels: bool = True
     fiscal_use_period_colors: bool = False
-    fiscal_period_label_font: str = Fonts.RC_BOLD
-    fiscal_period_label_color: str = "darkblue"
     fiscal_period_label_font_size: float | None = None  # Set in setfontsizes()
     fiscal_period_label_format: str = "{prefix}{period_short}"
     fiscal_period_end_label_format: str = "{period_short} End"
@@ -162,12 +160,9 @@ class CalendarConfig:
     mini_month_gap: float = 18.0  # Points between month grids
     mini_cell_font: str = Fonts.J_REGULAR  # Monospace day number font
     mini_cell_bold_font: str = Fonts.R_BOLD  # Bold variant
-    mini_title_font: str = Fonts.RC_BOLD  # Month title font
     mini_title_font_size: float | None = None
     mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
-    mini_title_color: str = "navy"
     mini_header_font_size: float | None = None
-    mini_day_color: str = "black"  # Default day number color
     mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
     mini_holiday_color: str = "red"  # Holiday day number color
     mini_nonworkday_fill_color: str = "lightblue"  # Non-work day background
@@ -188,7 +183,6 @@ class CalendarConfig:
     mini_event_icon_opacity: float = 0.6
     mini_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
-    mini_duration_bar_stroke_opacity: float = 0.7
     mini_grid_lines: bool = False  # Draw grid lines between cells
     mini_grid_line_color: str = "lightgrey"
     mini_grid_line_width: float = 0.25
@@ -198,8 +192,6 @@ class CalendarConfig:
     mini_month_outline_width: float = 0.5
     mini_month_outline_opacity: float = 1.0
     mini_month_outline_dasharray: str | None = None
-    mini_strikethrough_stroke_dasharray: str | None = None
-    mini_hash_line_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
@@ -416,8 +408,6 @@ class CalendarConfig:
     mini_nonworkday_fill_opacity: float = 0.2
     mini_special_nonworkday_opacity: float = 0.25
 
-    # Theme-overridable mini calendar fields (None = use mini_* defaults above)
-    theme_mini_day_color: str | None = None
     theme_mini_adjacent_month_color: str | None = None
     theme_mini_holiday_color: str | None = None
     theme_mini_nonworkday_fill_color: str | None = None
@@ -535,41 +525,23 @@ class CalendarConfig:
     day_box_number_font_size: float | None = None
     event_icon_size: float | None = None
 
-    # Week number styling
-    week_number_font: str = Fonts.RC_BOLD
-    week_number_font_color: str = "grey"
     week_number_label_format: str = "W{num:02d}"
 
     # Header text and styling
     header_left_text: str = ""
-    header_left_font: str = Fonts.R_BOLD_ITALIC
-    header_left_font_color: str = "grey"
     header_center_text: str = ""
-    header_center_font: str = Fonts.R_BOLD_ITALIC
-    header_center_font_color: str = "grey"
     header_right_text: str = field(default_factory=lambda: f"as of {get_creation_date()}")
 
     # Footer text and styling
     footer_left_text: str = ""
     footer_center_text: str = ""
-    footer_center_font: str = Fonts.RC_LIGHT
-    footer_center_font_color: str = "grey"
     footer_right_text: str = ""
-
-    # Day name styling
-    day_name_font: str = Fonts.RC_LIGHT_ITALIC
-    day_name_font_color: str = "grey"
 
     # Day box styling
     day_box_stroke_color: str = "grey"
     day_box_stroke_opacity: float = 0.25
     day_box_stroke_width: int = 2
     day_box_stroke_dasharray: str | None = None
-    day_box_fill_color: str = "grey"
-    day_box_fill_opacity: float = 0.25
-    day_box_number_font: str = "CascadiaCode"
-    day_box_number_color: str = "white"
-    day_box_color: str = "navy"
 
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
@@ -604,7 +576,6 @@ class CalendarConfig:
     # section in theme YAMLs; themes can also paint a halo behind it with a
     # `box:overflow` rule.
     overflow_indicator_icon: str = "warningtriangle"
-    overflow_indicator_color: str = "red"
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
@@ -617,14 +588,8 @@ class CalendarConfig:
     weekly_duration_fill_color: str = "lightsteelblue"
     weekly_duration_stroke_color: str = "white"
 
-    weekly_name_text_font_name: str = Fonts.RC_LIGHT
-    weekly_name_text_font_color: str = "navy"
     weekly_name_text_font_size: float | None = None
-    weekly_name_text_font_opacity: float = 1.0
-    weekly_notes_text_font_name: str = Fonts.RC_LIGHT_ITALIC
-    weekly_notes_text_font_color: str = "darkgrey"
     weekly_notes_text_font_size: float | None = None
-    weekly_notes_text_font_opacity: float = 1.0
     hash_pattern_opacity: float = 0.15
     # Auto-normalization of pattern tile sizes.  Native tiles in the DB
     # span 16 to 1920 pt, so at native size the large ones show a single
@@ -637,14 +602,6 @@ class CalendarConfig:
     hash_pattern_target_size: float = DEFAULT_PATTERN_TARGET_SIZE
     hash_pattern_scale: float = 1.0
 
-    # Timeline styling.  Phase 2 strip dropped dead fields with no
-    # readers post-Phase-1: background_color (page bg from box:background),
-    # text_font_color/_opacity/_alignment + name_text_font_opacity/_alignment
-    # + notes_text_font_opacity/_alignment (all subsumed by text:event_name /
-    # text:event_notes / text:label tokens), text_font_size,
-    # duration_bar_stroke_dasharray, duration_bracket_stroke_dasharray.
-    timeline_axis_color: str = "lightgrey"
-    timeline_axis_opacity: float = 0.85
     timeline_axis_width: float = 2.0
     timeline_tick_color: str = "grey"
     timeline_date_format: str = "MMM D"
@@ -661,7 +618,6 @@ class CalendarConfig:
     timeline_today_label_text: str = "Today"
     timeline_today_label_offset_y: float = 10.0
     timeline_today_line_color: str = "grey"
-    timeline_today_label_color: str = "grey"
     # Length of the today line in points (0 = full available area height).
     timeline_today_line_length: float = 0.0
     # Which side of the timeline axis the today line extends to.
@@ -717,14 +673,7 @@ class CalendarConfig:
     timeline_duration_date_font_size: float | None = None
     timeline_duration_date_color: str | None = None
     timeline_date_font: str = Fonts.R_BOLD
-    timeline_date_color: str = "deepskyblue"
-    timeline_label_stroke_width: float = 1.0
     timeline_label_fill_opacity: float = 0.25
-    # stroke-dasharray for timeline elements
-    timeline_axis_stroke_dasharray: str | None = None
-    timeline_tick_stroke_dasharray: str | None = None
-    timeline_today_line_dasharray: str | None = None
-    timeline_label_stroke_dasharray: str | None = None
     timeline_connector_stroke_dasharray: str | None = None
     timeline_top_colors: list[str] = field(
         default_factory=lambda: [
@@ -1100,7 +1049,6 @@ class CalendarConfig:
     blockplan_header_label_color: str = "black"
     blockplan_header_label_opacity: float = 1.0
     blockplan_header_label_align_h: str = "left"  # left | center | right
-    blockplan_header_heading_fill_color: str = "none"
     blockplan_band_font_size: float | None = None
     blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
     blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
@@ -1149,12 +1097,6 @@ class CalendarConfig:
     blockplan_duration_date_font: str = Fonts.RC_LIGHT
     blockplan_duration_date_font_size: float | None = None
     blockplan_duration_date_color: str | None = None
-    blockplan_vertical_line_color: str = "red"
-    blockplan_vertical_line_width: float = 1.5
-    blockplan_vertical_line_dasharray: str | None = None
-    blockplan_vertical_line_opacity: float = 0.9
-    blockplan_vertical_line_fill_color: str = "none"  # default no fill; set to color, list, or palette
-    blockplan_vertical_line_fill_opacity: float = 0.2
 
     # ── Gantt ─────────────────────────────────────────────────────────────────
     # Task table on the left, timescale chart on the right.  Column layout is
@@ -1436,7 +1378,6 @@ class CalendarConfig:
 
     # Watermark text
     watermark_text: str = ""
-    watermark_color: str = "white"
     watermark_font: str = "CascadiaCode"
     watermark_font_size: int | None = None
     watermark_resize_mode: str = "fit"  # "fit" (default) or "stretch"
@@ -1622,192 +1563,43 @@ class CalendarConfig:
         return frozenset({5, 6})
 
     # ── Style accessor methods ──────────────────────────────────────────────
-    # These delegate to theme_styles when available, falling back to style
-    # objects built from old config fields for backward compatibility.
+    # Element styles always come from tokens: the theme's, or with no
+    # ``style_rules`` theme loaded, the built-in catalog defaults.
+
+    def _styles(self) -> Any:
+        if self.theme_styles is not None:
+            return self.theme_styles
+        from config.theme_engine import builtin_theme_styles
+
+        return builtin_theme_styles()
 
     def get_text_style(self, element_class: str) -> Any:
         """Look up the TextStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_text_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_text_style(element_class)
+        from config.styles import TextStyle
+
+        return self._styles().get_text_style(element_class) or TextStyle()
 
     def get_box_style(self, element_class: str) -> Any:
         """Look up the BoxStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_box_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_box_style(element_class)
+        from config.styles import BoxStyle
+
+        return self._styles().get_box_style(element_class) or BoxStyle()
 
     def get_line_style(self, element_class: str) -> Any:
         """Look up the LineStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_line_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_line_style(element_class)
+        from config.styles import LineStyle
+
+        return self._styles().get_line_style(element_class) or LineStyle()
 
     def get_icon_style(self, element_class: str) -> Any:
         """Look up the IconStyle bound to a CSS element class."""
-        if self.theme_styles is not None:
-            s = self.theme_styles.get_icon_style(element_class)
-            if s is not None:
-                return s
-        return self._fallback_icon_style(element_class)
+        from config.styles import IconStyle
+
+        return self._styles().get_icon_style(element_class) or IconStyle()
 
     def get_element_color(self, element_class: str, fallback: str = "#333333") -> str:
         """Get the effective color for a CSS element class."""
-        if self.theme_styles is not None:
-            c = self.theme_styles.get_element_color(element_class)
-            if c is not None:
-                return c
-        return fallback
-
-    # ── Fallback style builders (no theme loaded) ─────────────────────────
-    # These build style objects from old config fields so the no-theme case
-    # preserves backward-compatible default values.
-
-    def _fallback_text_style(self, ec: str) -> Any:
-        from config.styles import TextStyle
-
-        _map = {
-            "ec-heading": lambda: TextStyle(font=self.header_left_font, color=self.header_left_font_color),
-            "ec-label": lambda: TextStyle(font=self.day_name_font, color=self.day_name_font_color),
-            "ec-day-number": lambda: TextStyle(font=self.day_box_number_font, color=self.day_box_number_color),
-            "ec-month-title": lambda: TextStyle(font=self.mini_title_font, color=self.mini_title_color),
-            "ec-week-number": lambda: TextStyle(font=self.week_number_font, color=self.week_number_font_color),
-            "ec-fiscal-label": lambda: TextStyle(
-                font=self.fiscal_period_label_font, color=self.fiscal_period_label_color
-            ),
-            "ec-event-name": lambda: TextStyle(
-                font=self.weekly_name_text_font_name,
-                color=self.weekly_name_text_font_color,
-                opacity=self.weekly_name_text_font_opacity,
-            ),
-            "ec-event-notes": lambda: TextStyle(
-                font=self.weekly_notes_text_font_name,
-                color=self.weekly_notes_text_font_color,
-                opacity=self.weekly_notes_text_font_opacity,
-            ),
-            "ec-event-date": lambda: TextStyle(font=self.timeline_date_font, color=self.timeline_date_color),
-            "ec-duration-date": lambda: TextStyle(
-                font=self.timeline_duration_date_font or self.timeline_date_font,
-                color=self.timeline_duration_date_color or self.timeline_date_color,
-            ),
-            "ec-holiday-title": lambda: TextStyle(font=self.weekly_name_text_font_name, color=self.day_box_color),
-            "ec-today-label": lambda: TextStyle(color=self.timeline_today_label_color),
-            "ec-header-text": lambda: TextStyle(font=self.header_center_font, color=self.header_center_font_color),
-            "ec-footer-text": lambda: TextStyle(font=self.footer_center_font, color=self.footer_center_font_color),
-            "ec-watermark": lambda: TextStyle(font=self.watermark_font, color=self.watermark_color),
-            "ec-legend-text": lambda: TextStyle(
-                font=self.weekly_name_text_font_name, color=self.weekly_name_text_font_color
-            ),
-            "ec-legend-notes": lambda: TextStyle(
-                font=self.weekly_notes_text_font_name,
-                color=self.weekly_notes_text_font_color,
-                opacity=self.weekly_notes_text_font_opacity,
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else TextStyle()
-
-    def _fallback_box_style(self, ec: str) -> Any:
-        from config.styles import BoxStyle
-
-        _map = {
-            "ec-cell": lambda: BoxStyle(
-                fill=self.day_box_fill_color,
-                fill_opacity=self.day_box_fill_opacity,
-                stroke=self.day_box_stroke_color,
-                stroke_width=self.day_box_stroke_width,
-                stroke_opacity=self.day_box_stroke_opacity,
-                stroke_dasharray=self.day_box_stroke_dasharray,
-            ),
-            "ec-background": lambda: BoxStyle(fill="none"),
-            # No legacy field behind this one; the literals keep a
-            # themeless run banding rather than painting it white.
-            "ec-row-band": lambda: BoxStyle(fill="lightgrey", fill_opacity=0.15),
-            "ec-heading-cell": lambda: BoxStyle(fill=self.blockplan_header_heading_fill_color),
-            "ec-band-cell": lambda: BoxStyle(
-                fill=self.blockplan_timeband_fill_color, fill_opacity=self.blockplan_timeband_fill_opacity
-            ),
-            "ec-callout-box": lambda: BoxStyle(
-                fill_opacity=self.timeline_label_fill_opacity,
-                stroke_width=self.timeline_label_stroke_width,
-                stroke_dasharray=self.timeline_label_stroke_dasharray,
-            ),
-            "ec-vline-fill": lambda: BoxStyle(
-                fill=self.blockplan_vertical_line_fill_color, fill_opacity=self.blockplan_vertical_line_fill_opacity
-            ),
-            "ec-milestone-marker": lambda: BoxStyle(
-                stroke=self.timeline_marker_stroke_color, stroke_width=self.timeline_marker_stroke_width
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else BoxStyle()
-
-    def _fallback_line_style(self, ec: str) -> Any:
-        from config.styles import LineStyle
-
-        _map = {
-            "ec-grid-line": lambda: LineStyle(
-                color=self.mini_grid_line_color,
-                width=self.mini_grid_line_width,
-                opacity=self.mini_grid_line_opacity,
-                dasharray=self.mini_grid_line_dasharray,
-            ),
-            "ec-axis-line": lambda: LineStyle(
-                color=self.timeline_axis_color,
-                width=self.timeline_axis_width,
-                opacity=self.timeline_axis_opacity,
-                dasharray=self.timeline_axis_stroke_dasharray,
-            ),
-            "ec-axis-tick": lambda: LineStyle(
-                color=self.timeline_tick_color, dasharray=self.timeline_tick_stroke_dasharray
-            ),
-            "ec-today-line": lambda: LineStyle(
-                color=self.timeline_today_line_color, dasharray=self.timeline_today_line_dasharray
-            ),
-            "ec-separator": lambda: LineStyle(),
-            "ec-connector": lambda: LineStyle(dasharray=self.timeline_connector_stroke_dasharray),
-            "ec-vline": lambda: LineStyle(
-                color=self.blockplan_vertical_line_color,
-                width=self.blockplan_vertical_line_width,
-                opacity=self.blockplan_vertical_line_opacity,
-                dasharray=self.blockplan_vertical_line_dasharray,
-            ),
-            "ec-duration-bar": lambda: LineStyle(
-                dasharray=self.duration_stroke_dasharray, opacity=self.mini_duration_bar_stroke_opacity
-            ),
-            "ec-hash-line": lambda: LineStyle(dasharray=self.mini_hash_line_dasharray),
-            "ec-strikethrough": lambda: LineStyle(dasharray=self.mini_strikethrough_stroke_dasharray),
-            "ec-milestone-marker": lambda: LineStyle(
-                width=self.mini_milestone_stroke_width, opacity=self.mini_milestone_stroke_opacity
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else LineStyle()
-
-    def _fallback_icon_style(self, ec: str) -> Any:
-        from config.styles import IconStyle
-
-        _map = {
-            "ec-event-icon": lambda: IconStyle(color=self.event_icon_color),
-            "ec-duration-icon": lambda: IconStyle(color=self.duration_icon_color),
-            "ec-continuation-icon": lambda: IconStyle(
-                color=(self.continuation_icon_color or self.duration_icon_color),
-                # Compactplan (the consumer of this fallback) is horizontal,
-                # so resolve here rather than handing a list to IconStyle.
-                icon=resolve_continuation_icon(self.continuation_icon_after, "horizontal", "arrow-right"),
-            ),
-            "ec-overflow-icon": lambda: IconStyle(
-                color=self.overflow_indicator_color, icon=self.overflow_indicator_icon
-            ),
-        }
-        builder = _map.get(ec)
-        return builder() if builder else IconStyle()
+        return self._styles().get_element_color(element_class) or fallback
 
 
 def create_calendar_config() -> CalendarConfig:

@@ -1,5 +1,5 @@
 import pytest
-from fakes import FakeCalendarDB
+from fakes import FakeCalendarDB, apply_style_rules, define
 
 from config.config import create_calendar_config, setfontsizes
 from visualizers.mini.day_styles import DayStyle, DayStyleResolver
@@ -326,9 +326,7 @@ def test_a_day_with_no_icons_draws_none():
 def test_mini_grid_lines_are_inset_to_avoid_bottom_clip():
     config = _config()
     config.mini_grid_lines = True
-    config.mini_grid_line_color = "orange"
-    config.mini_grid_line_width = 0.5
-    config.mini_grid_line_opacity = 0.3
+    apply_style_rules(config, [define("line", "grid", color="orange", width=0.5, opacity=0.3)])
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -472,26 +470,20 @@ def test_mini_day_number_glyphs_take_precedence_over_digits():
 
 def test_day_number_color_chain_is_shared_across_the_mini_family():
     """mini, mini-icon and candybar resolve the base day-number color the same
-    way.  mini-icon used to skip the ec-day-number element binding and the
-    other two used to skip colors.mini_calendar.day_color, so one theme could
-    paint the views differently."""
+    way: the resolved ``text:day_number`` token, then the ``ec-day-number``
+    element style (its ``element_overrides`` color, else its token's color)."""
     from visualizers.candybar.renderer import CandybarRenderer
     from visualizers.mini_icon.renderer import MiniIconRenderer
 
     renderers = (MiniCalendarRenderer(), MiniIconRenderer(), CandybarRenderer())
 
-    # Bottom of the chain: mini_calendar.day_color.
+    # Bottom of the chain: the element style's own token color.
     config = _config()
-    config.mini_day_color = "black"
-    for r in renderers:
-        assert r._resolve_day_number_color(config, {}) == "black"
-
-    # colors.mini_calendar.day_color beats it.
-    config.theme_mini_day_color = "teal"
+    apply_style_rules(config, [define("text", "day_number", color="teal")])
     for r in renderers:
         assert r._resolve_day_number_color(config, {}) == "teal"
 
-    # An ec-day-number element binding sits between the two.
+    # An ec-day-number element override beats it.
     class _Styles:
         def get_element_color(self, element_class):
             return "orchid" if element_class == "ec-day-number" else None
@@ -500,7 +492,7 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
     for r in renderers:
         assert r._resolve_day_number_color(config, {}) == "orchid"
 
-    # The text:day_number token beats everything below it.
+    # The per-view text:day_number token beats everything below it.
     for r in renderers:
         assert r._resolve_day_number_color(config, {"color": "crimson"}) == "crimson"
 

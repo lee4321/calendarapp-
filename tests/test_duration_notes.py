@@ -13,6 +13,7 @@ Covers:
 from collections import defaultdict
 
 from config.config import create_calendar_config, setfontsizes
+from config.theme_engine import ThemeEngine
 from shared.data_models import Event
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
@@ -318,13 +319,22 @@ def test_duration_without_notes_does_not_render_notes_text():
     )
 
 
+def _style_text(config, *, name: tuple[str, str], notes: tuple[str, str]) -> None:
+    """Define text:event_name / text:event_notes (font, color) through a theme."""
+    engine = ThemeEngine()
+    engine._theme_data = {
+        "style_rules": [
+            {"name": f"define text:{token}", "define": "text", "as": token, "style": {"font": font, "color": color}}
+            for token, (font, color) in (("event_name", name), ("event_notes", notes))
+        ]
+    }
+    engine.apply(config)
+
+
 def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
-    """Duration name/notes should use duration-specific font and color fields."""
+    """Duration name/notes take the text:event_name / text:event_notes tokens."""
     config = _base_config(include_notes=True)
-    config.weekly_name_text_font_name = "RobotoCondensed-Bold"
-    config.weekly_name_text_font_color = "darkgreen"
-    config.weekly_notes_text_font_name = "JuliaMono-RegularItalic"
-    config.weekly_notes_text_font_color = "red"
+    _style_text(config, name=("RobotoCondensed-Bold", "darkgreen"), notes=("JuliaMono-RegularItalic", "red"))
     event = _make_event("Sprint 10", "20260302", "20260304", notes="Sprint goal: auth module")
     days = ["20260302", "20260303", "20260304"]
 
@@ -344,12 +354,9 @@ def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
 
 
 def test_event_notes_use_event_notes_font_and_color():
-    """Event notes should use weekly_notes_text_* style fields, not weekly_name_text_*."""
+    """Event notes take the text:event_notes token, not text:event_name."""
     config = _base_config(include_notes=True)
-    config.weekly_name_text_font_name = "RobotoCondensed-Regular"
-    config.weekly_name_text_font_color = "darkslategrey"
-    config.weekly_notes_text_font_name = "JuliaMono-RegularItalic"
-    config.weekly_notes_text_font_color = "red"
+    _style_text(config, name=("RobotoCondensed-Regular", "darkslategrey"), notes=("JuliaMono-RegularItalic", "red"))
     day = "20260303"
     event = _make_event("Build API", day, day, notes="Owner: platform team")
 

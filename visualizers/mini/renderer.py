@@ -17,6 +17,7 @@ from config.config import (
     weekend_style_is_workweek,
     weekend_style_starts_sunday,
 )
+from config.styles import LineStyle
 from renderers.svg_base import BaseSVGRenderer, TokenStyle, _is_none_color
 from shared.date_utils import (
     format_arrow_date,
@@ -465,11 +466,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         One chain for the whole mini family (mini, mini-icon, candybar), so a
         theme colors every one of them the same way: the ``text:day_number``
-        token, then an ``ec-day-number`` element binding, then
-        ``colors.mini_calendar.day_color``, then ``mini_calendar.day_color``.
-        mini-icon used to skip the element binding and mini/candybar used to
-        skip ``colors.mini_calendar.day_color``, so the same theme could paint
-        the views differently.
+        token as resolved for this view, then the ``ec-day-number`` element
+        style (an ``element_overrides`` color, else the token's own color).
 
         Per-day overrides — adjacent month, holiday, resource group, a
         ``style_rules`` entry — arrive as ``DayStyle.text_color`` and win over
@@ -479,10 +477,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             token_style: the already-resolved ``text:day_number`` token dict
                 (the two renderers resolve tokens by different routes).
         """
-        return token_style.get("color") or config.get_element_color(
-            "ec-day-number",
-            config.theme_mini_day_color or config.mini_day_color,
-        )
+        return token_style.get("color") or config.get_element_color("ec-day-number")
 
     def _draw_day_cell_foreground(
         self,
@@ -535,7 +530,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 5. Circle (milestone)
         if style.circled:
-            _ls_milestone = config.get_line_style("ec-milestone-marker")
+            # mini_calendar.milestone_stroke_* style the circle (the catalog's
+            # ec-milestone-marker is the timeline's icon, not this line).
+            _ls_milestone = LineStyle(
+                width=config.mini_milestone_stroke_width, opacity=config.mini_milestone_stroke_opacity
+            )
             radius = min(w, h) * 0.38
             self._draw_circle(
                 cx,

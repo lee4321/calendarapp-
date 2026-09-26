@@ -10,12 +10,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import arrow
 import drawsvg
 
 from config.config import get_font_path, resolve_continuation_icon
+from config.styles import BoxStyle
 from renderers.glyph_cache import get_ink_extents
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import string_width
@@ -1546,7 +1547,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # own far end already stands on it, and a dot out on the axis with no
         # leader running to the bar belongs to no bar in particular once
         # several lanes share the day.
-        _marker_style = config.get_box_style("ec-milestone-marker")
+        _marker_style = self._marker_box_style(config)
         marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
         marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
         self._draw_circle(
@@ -2154,7 +2155,7 @@ class TimelineRenderer(BaseSVGRenderer):
 
         icon_found = self._resolve_icon_svg(effective_icon) is not None
 
-        _marker_style = config.get_box_style("ec-milestone-marker")
+        _marker_style = self._marker_box_style(config)
         if icon_found:
             self._draw_circle(
                 x,
@@ -2184,6 +2185,11 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke=_marker_style.stroke,
             stroke_width=_marker_style.stroke_width,
         )
+
+    @staticmethod
+    def _marker_box_style(config: CalendarConfig) -> Any:
+        """The axis marker's stroke: ``timeline.marker_stroke_color`` / ``_width``."""
+        return BoxStyle(stroke=config.timeline_marker_stroke_color, stroke_width=config.timeline_marker_stroke_width)
 
     def _duration_metrics(
         self,
