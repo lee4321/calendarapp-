@@ -537,12 +537,6 @@ class CalendarConfig:
     footer_center_text: str = ""
     footer_right_text: str = ""
 
-    # Day box styling
-    day_box_stroke_color: str = "grey"
-    day_box_stroke_opacity: float = 0.25
-    day_box_stroke_width: int = 2
-    day_box_stroke_dasharray: str | None = None
-
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
     duration_icon_color: str = "navy"

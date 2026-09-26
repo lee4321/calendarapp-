@@ -81,22 +81,22 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `box:cell` | `dasharray` | *unset* | `tk_cell.get("dasharray") or config.day_box_stroke_dasharray or None` | `weekly/renderer.py:1002` |
-| `box:cell` | `stroke` | `grey` | `tk_cell.get("stroke") or config.day_box_stroke_color` | `weekly/renderer.py:991` |
-| `box:cell` | `stroke_opacity` | `0.25` | `tk_cell.get("stroke_opacity") if tk_cell.get("stroke_opacity") is not None else config.day_box_stroke_opacity` | `weekly/renderer.py:994`, `weekly/renderer.py:995` |
-| `box:cell` | `stroke_width` | `2` | `tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else config.day_box_stroke_width` | `weekly/renderer.py:999` |
-| `icon:event` | `color` | `#333333` | `tk_icon_ev.get("color") or _is_ei.color` | `weekly/renderer.py:889`, `weekly/renderer.py:1119` |
+| `box:cell` | `dasharray` | *unset* | `tk_cell.get("dasharray") or _cell_style.stroke_dasharray or None` | `weekly/renderer.py:1003` |
+| `box:cell` | `stroke` | `#CCCCCC` | `tk_cell.get("stroke") or _cell_style.stroke` | `weekly/renderer.py:992` |
+| `box:cell` | `stroke_opacity` | `1` | `tk_cell.get("stroke_opacity") if tk_cell.get("stroke_opacity") is not None else _cell_style.stroke_opacity` | `weekly/renderer.py:995`, `weekly/renderer.py:996` |
+| `box:cell` | `stroke_width` | `0.5` | `tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else _cell_style.stroke_width` | `weekly/renderer.py:1000` |
+| `icon:event` | `color` | `#333333` | `tk_icon_ev.get("color") or _is_ei.color` | `weekly/renderer.py:889`, `weekly/renderer.py:1120` |
 | `icon:overflow` | `color` | `red` | `tk_overflow.get("color") or _is_oi.color` | `weekly/renderer.py:859` |
-| `line:hash` | `color` | `white` | `tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor` | `weekly/renderer.py:1007` |
-| `text:day_number` | `color` | `#333333` | `tk_dn.get("color") or _ts_dn.color` | `weekly/renderer.py:1019` |
-| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_dn.get("font") or config.get_text_style("ec-day-number").font` | `weekly/renderer.py:352`, `weekly/renderer.py:1017` |
+| `line:hash` | `color` | `white` | `tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor` | `weekly/renderer.py:1008` |
+| `text:day_number` | `color` | `#333333` | `tk_dn.get("color") or _ts_dn.color` | `weekly/renderer.py:1020` |
+| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_dn.get("font") or config.get_text_style("ec-day-number").font` | `weekly/renderer.py:352`, `weekly/renderer.py:1018` |
 | `text:day_number` | `size` | `14.04` ¹ | `self._tk("text:day_number").get("size")` | `weekly/renderer.py:353`, `weekly/renderer.py:399`, `weekly/renderer.py:694` +4 |
-| `text:event_name` | `color` | `#333333` | `tk_en.get("color") or _ts_en.color` | `weekly/renderer.py:1118`, `weekly/renderer.py:1465` |
-| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_en.get("font") or _ts_en.font` | `weekly/renderer.py:1116`, `weekly/renderer.py:1463` |
-| `text:event_name` | `size` | `9.72` ¹ | `self._tk("text:event_name").get("size")` | `weekly/renderer.py:398`, `weekly/renderer.py:890`, `weekly/renderer.py:1117` +1 |
-| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _ts_notes.color` | `weekly/renderer.py:1283`, `weekly/renderer.py:1471` |
-| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _ts_notes.font` | `weekly/renderer.py:1281`, `weekly/renderer.py:1469` |
-| `text:event_notes` | `size` | `8.75` ¹ | `tk_notes.get("size")` | `weekly/renderer.py:1282`, `weekly/renderer.py:1470` |
+| `text:event_name` | `color` | `#333333` | `tk_en.get("color") or _ts_en.color` | `weekly/renderer.py:1119`, `weekly/renderer.py:1466` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_en.get("font") or _ts_en.font` | `weekly/renderer.py:1117`, `weekly/renderer.py:1464` |
+| `text:event_name` | `size` | `9.72` ¹ | `self._tk("text:event_name").get("size")` | `weekly/renderer.py:398`, `weekly/renderer.py:890`, `weekly/renderer.py:1118` +1 |
+| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _ts_notes.color` | `weekly/renderer.py:1284`, `weekly/renderer.py:1472` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _ts_notes.font` | `weekly/renderer.py:1282`, `weekly/renderer.py:1470` |
+| `text:event_notes` | `size` | `8.75` ¹ | `tk_notes.get("size")` | `weekly/renderer.py:1283`, `weekly/renderer.py:1471` |
 | `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `weekly/renderer.py:699` |
 | `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `weekly/renderer.py:698` |
 | `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or day_num_size * 0.7` | `weekly/renderer.py:695` |
@@ -110,19 +110,15 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
 | `ec-day-box` | `fill_opacity` | `0.25` | `config.get_box_style("ec-day-box").fill_opacity` | `weekly/renderer.py:613` |
-| `ec-duration-bar` | `dasharray` | *unset* | `_ls_dur.dasharray or None` | `weekly/renderer.py:1456` |
-| `ec-duration-icon` | `color` | *depends on the item being drawn* | `dur_style.icon_color or _is_di.color` | `weekly/renderer.py:1476` |
-| `ec-duration-icon` | `size` | `10` | `_is_di.size if _is_di.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1479` |
-| `ec-event-icon` | `size` | `10` | `_is_ei.size if _is_ei.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1170` |
+| `ec-duration-bar` | `dasharray` | *unset* | `_ls_dur.dasharray or None` | `weekly/renderer.py:1457` |
+| `ec-duration-icon` | `color` | *depends on the item being drawn* | `dur_style.icon_color or _is_di.color` | `weekly/renderer.py:1477` |
+| `ec-duration-icon` | `size` | `10` | `_is_di.size if _is_di.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1480` |
+| `ec-event-icon` | `size` | `10` | `_is_ei.size if _is_ei.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1171` |
 
-<details><summary>Settings (16)</summary>
+<details><summary>Settings (12)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
-| `weekly.day_box.stroke_color` | `day_box_stroke_color` | `grey` |
-| `weekly.day_box.stroke_dasharray` | `day_box_stroke_dasharray` | *unset* |
-| `weekly.day_box.stroke_opacity` | `day_box_stroke_opacity` | `0.25` |
-| `weekly.day_box.stroke_width` | `day_box_stroke_width` | `2` |
 | `base.default_missing_icon` | `default_missing_icon` | *unset* |
 | `base.default_missing_icon_color` | `default_missing_icon_color` | `red` |
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |

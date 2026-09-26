@@ -103,10 +103,6 @@ weekly:
   week_numbers:
     label_format: W{num:02d}
   day_box:
-    stroke_color: palette:Accent:7
-    stroke_opacity: 0.2
-    stroke_width: 2
-    stroke_dasharray: null
     hash_pattern_opacity: 0.2
 mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |

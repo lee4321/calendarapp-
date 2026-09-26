@@ -36,10 +36,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Week numbers (weekly)
     ("weekly.week_numbers", "label_format"): "week_number_label_format",
     # Day box (weekly)
-    ("weekly.day_box", "stroke_color"): "day_box_stroke_color",
-    ("weekly.day_box", "stroke_opacity"): "day_box_stroke_opacity",
-    ("weekly.day_box", "stroke_width"): "day_box_stroke_width",
-    ("weekly.day_box", "stroke_dasharray"): "day_box_stroke_dasharray",
     ("weekly.day_box", "hash_pattern"): "theme_weekly_hash_pattern",
     ("weekly.day_box", "hash_pattern_opacity"): "hash_pattern_opacity",
     ("weekly.day_box", "hash_pattern_target_size"): "hash_pattern_target_size",
@@ -1182,6 +1178,7 @@ class ThemeEngine:
 
         # Raise on old hash_rules / swimlanes.match keys that should have been migrated.
         self._check_deprecated_rule_keys()
+        self._check_retired_style_keys()
         # Raise on a run-details column naming a field no row carries.
         self._check_details_columns()
 
@@ -2075,6 +2072,18 @@ class ThemeEngine:
         return result
 
     # ── Rule-list support ─────────────────────────────────────────────────────
+
+    def _check_retired_style_keys(self) -> None:
+        """Reject section style keys that now live in ``style_rules`` tokens."""
+        from config.retired_style_keys import RETIRED_PATHS
+
+        present = sorted(path for path in RETIRED_PATHS if self._get_theme_node(path) is not None)
+        if present:
+            raise ThemeError(
+                f"Theme '{self._theme_name}' uses retired style keys ({', '.join(present)}); these styles now come "
+                "only from style_rules tokens. Run `uv run python tools/convert_style_keys.py --in-place <theme.yaml>` "
+                "to move the values into token rules."
+            )
 
     def _check_deprecated_rule_keys(self) -> None:
         """Raise ThemeError if the YAML contains old-format rule keys."""
