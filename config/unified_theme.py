@@ -351,21 +351,24 @@ def parse_theme(source: str | Path | dict[str, Any]) -> UnifiedTheme:
     names the offending key and (for legacy sections) points at
     ``tools/migrate_theme.py``.
     """
+    from config.theme_inheritance import read_theme_file, resolve_extends
+
     if isinstance(source, dict):
-        raw = source
+        raw = resolve_extends(source)
         origin = "<dict>"
     elif isinstance(source, Path):
-        raw = yaml.safe_load(source.read_text()) or {}
+        raw = read_theme_file(source)
         origin = str(source)
     elif isinstance(source, str):
         # Heuristic: treat as a path if it looks like one, otherwise as YAML text.
         if "\n" in source or source.lstrip().startswith(("{", "-", "#")):
             raw = yaml.safe_load(source) or {}
+            if isinstance(raw, dict):
+                raw = resolve_extends(raw)
             origin = "<string>"
         else:
-            p = Path(source)
-            raw = yaml.safe_load(p.read_text()) or {}
-            origin = str(p)
+            raw = read_theme_file(source)
+            origin = source
     else:
         raise TypeError(f"parse_theme expects path/string/dict, got {type(source)!r}")
 

@@ -47,7 +47,6 @@ from pathlib import Path
 # Ensure imports work whether the script is run directly or via -m.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import yaml
 
 from config.required_keys import (
     VISUALIZERS,
@@ -55,6 +54,7 @@ from config.required_keys import (
     format_missing_key_error,
 )
 from config.theme_engine import find_unconsumed_keys, find_unregistered_fonts
+from config.theme_inheritance import read_theme_file
 from config.unified_theme import ThemeError, parse_theme
 
 
@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         requested = sorted(VISUALIZERS)
 
     # Load and optionally convert.
-    raw = yaml.safe_load(theme_path.read_text()) or {}
+    raw = read_theme_file(theme_path)  # with any extends: chain resolved
     if args.convert:
         from tools.migrate_theme import convert_theme
 

@@ -1,7 +1,9 @@
 # Theme resolution — YAML to pixels
 
 A theme YAML has three kinds of styling content, resolved through different
-paths that meet in the renderer:
+paths that meet in the renderer.  Before any of that, a theme that
+`extends:` another is merged over its parent (`config/theme_inheritance.py`),
+so everything below sees one complete theme:
 
 ```mermaid
 flowchart TD

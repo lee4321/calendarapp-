@@ -12,6 +12,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.theme_engine import find_unregistered_fonts
+from config.theme_inheritance import read_theme_file
 from tools.validate_theme import main
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
@@ -133,7 +134,7 @@ def test_no_bundled_theme_contains_stray_element_bindings() -> None:
     """
     failures: list[str] = []
     for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
-        raw = yaml.safe_load(theme_path.read_text()) or {}
+        raw = read_theme_file(theme_path)
         rules = raw.get("style_rules") or []
         for i, rule in enumerate(rules):
             if not isinstance(rule, dict):
@@ -182,7 +183,7 @@ def test_no_bundled_theme_references_unregistered_fonts() -> None:
     """
     failures: list[str] = []
     for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
-        raw = yaml.safe_load(theme_path.read_text()) or {}
+        raw = read_theme_file(theme_path)
         for font_path, font in find_unregistered_fonts(raw):
             failures.append(f"{theme_path.name}: {font!r} at {font_path}")
     assert not failures, "Shipped themes reference fonts missing from FONT_REGISTRY:\n" + "\n".join(failures)
