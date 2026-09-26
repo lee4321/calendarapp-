@@ -7,9 +7,9 @@ Spanish/German/French translations populated, tie-broken by lowest rowid); the
 rest are deleted.
 
 Usage:
-    uv run python "db utils/dedupe_colors.py"            # dry run (default)
-    uv run python "db utils/dedupe_colors.py" --apply    # perform deletion
-    uv run python "db utils/dedupe_colors.py" --apply --db path/to/calendar.db
+    uv run python tools/db/dedupe_colors.py            # dry run (default)
+    uv run python tools/db/dedupe_colors.py --apply    # perform deletion
+    uv run python tools/db/dedupe_colors.py --apply --db path/to/calendar.db
 """
 
 from __future__ import annotations

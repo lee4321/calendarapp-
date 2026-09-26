@@ -6,6 +6,7 @@ import tempfile
 
 import pytest
 import yaml
+from fakes import apply_style_rules, define
 
 from config.config import CalendarConfig, create_calendar_config
 from config.theme_engine import (
@@ -15,6 +16,7 @@ from config.theme_engine import (
     is_font_key,
     iter_font_references,
 )
+from config.unified_theme import parse_theme
 
 
 class TestThemeEngineListing:
@@ -84,46 +86,46 @@ class TestThemeEngineCascading:
         return engine
 
     def test_element_level_overrides_section_level(self):
-        """header.left.font_color should override header.font_color."""
+        """timeline.name_text.font_size should override timeline.font_size."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "header": {
-                    "font_color": "blue",
-                    "left": {"font_color": "red"},
+                "timeline": {
+                    "font_size": 11,
+                    "name_text": {"font_size": 14},
                 },
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.header_left_font_color == "red"
+        assert config.timeline_name_text_font_size == 14
 
     def test_section_level_overrides_base(self):
-        """header.font_color should override base.font_color."""
+        """timeline.font_size should override base.font_size."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "base": {"font_color": "green"},
-                "header": {"font_color": "blue"},
+                "base": {"font_size": 11},
+                "timeline": {"font_size": 14},
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        # header.left inherits from header since no left-specific value
-        assert config.header_left_font_color == "blue"
+        # timeline.name_text inherits from timeline since no element-level value
+        assert config.timeline_name_text_font_size == 14
 
     def test_base_level_applies_when_no_section(self):
-        """base.font_name should apply to weekly text when no weekly section."""
+        """base.font_size should apply to timeline text when no timeline section."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "base": {"font_name": "Roboto-Bold"},
+                "base": {"font_size": 11},
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.weekly_name_text_font_name == "Roboto-Bold"
-        assert config.weekly_notes_text_font_name == "Roboto-Bold"
+        assert config.timeline_name_text_font_size == 11
+        assert config.timeline_notes_text_font_size == 11
 
     def test_pit_name_notes_text_fonts_map_from_theme(self):
         """pit.name_text/notes_text font_name + font_size reach config so the
@@ -145,28 +147,28 @@ class TestThemeEngineCascading:
         assert config.pit_notes_text_font_size == 8
 
     def test_section_level_used_when_no_element_level(self):
-        """header.font_family applies to header.left when left has no font_family."""
+        """timeline.font_size applies to notes_text when only name_text sets one."""
         engine = self._make_engine(
             {
                 "theme": {"name": "Test"},
-                "header": {
-                    "font_family": "Roboto-Bold",
-                    "left": {"font_color": "red"},
+                "timeline": {
+                    "font_size": 11,
+                    "name_text": {"font_size": 13},
                 },
             }
         )
         config = create_calendar_config()
         engine.apply(config)
-        assert config.header_left_font == "Roboto-Bold"
-        assert config.header_left_font_color == "red"
+        assert config.timeline_name_text_font_size == 13
+        assert config.timeline_notes_text_font_size == 11
 
     def test_no_theme_data_returns_config_unchanged(self):
         """An empty theme should not modify config defaults."""
         engine = ThemeEngine()
         config = create_calendar_config()
-        original_color = config.weekly_name_text_font_color
+        original_size = config.timeline_name_text_font_size
         engine.apply(config)
-        assert config.weekly_name_text_font_color == original_color
+        assert config.timeline_name_text_font_size == original_size
 
 
 class TestThemeEngineApply:
@@ -179,41 +181,15 @@ class TestThemeEngineApply:
         engine.apply(config)
         return engine, config
 
-    # header.*.font_color and weekly.day_box.number_color only feed the
-    # no-style_rules fallback styles, so no shipped theme sets them; check the
-    # mapping with inline theme data instead.
-    def test_header_center_color_maps_to_config(self):
-        engine = ThemeEngine()
-        engine._theme_data = {"header": {"center": {"font_color": "midnightblue"}}}
-        config = create_calendar_config()
-        engine.apply(config)
-        assert config.header_center_font_color == "midnightblue"
-
-    def test_day_box_number_color_maps_to_config(self):
-        engine = ThemeEngine()
-        engine._theme_data = {"weekly": {"day_box": {"number_color": "whitesmoke"}}}
-        config = create_calendar_config()
-        engine.apply(config)
-        assert config.day_box_number_color == "whitesmoke"
-
     def test_vibrant_theme_applies_event_color(self):
         _, config = self._load_builtin("vibrant")
         assert config.event_icon_color == "deeppink"
 
-    def test_default_theme_matches_original_defaults(self):
-        """The default theme should match the original hardcoded values."""
-        _, config = self._load_builtin("default")
-        assert config.weekly_name_text_font_color == "navy"
-        assert config.day_box_number_color == "white"
-        # day_box_icon_color was stripped in Phase 2 wave 1 (no consumers
-        # post-Phase-1; event_icon_color is the live field).
-        assert config.header_left_font_color == "grey"
-
     def test_day_box_styling_applied(self):
-        _, config = self._load_builtin("corporate")
-        assert config.day_box_stroke_color == "lightsteelblue"
-        assert config.day_box_stroke_opacity == 0.4
-        assert config.day_box_stroke_width == 3
+        """weekly.day_box stroke styling now lives in the theme's box:cell token."""
+        engine, _config = self._load_builtin("corporate")
+        cell = parse_theme(engine._theme_data).resolve_token("box:cell", {"visualizer": "weekly"})
+        assert (cell["stroke"], cell["stroke_opacity"], cell["stroke_width"]) == ("lightsteelblue", 0.4, 3)
 
     def test_watermark_styling_applied(self):
         _, config = self._load_builtin("dark")
@@ -371,13 +347,8 @@ class TestThemeEngineApply:
                 "duration_offset_y": 80,
                 "duration_lane_gap_y": 14,
                 "top_colors": ["red", "blue"],
-                "name_text": {"font_name": "Roboto-Bold", "font_color": "gold", "font_size": 14.5},
-                "notes_text": {
-                    "font_name": "RobotoCondensed-Bold",
-                    "font_color": "silver",
-                    "font_size": 11.5,
-                },
-                "date": {"font_family": "Roboto-Bold", "font_color": "orange"},
+                "name_text": {"font_size": 14.5},
+                "notes_text": {"font_size": 11.5},
             },
             "timeline_events": {
                 "box_width": 180,
@@ -397,7 +368,6 @@ class TestThemeEngineApply:
             engine.apply(config)
 
         # timeline_background_color stripped in Phase 2 wave 1 (no consumers).
-        assert config.timeline_axis_color == "white"
         assert config.timeline_date_format == "YYYY-MM-DD"
         assert config.timeline_tick_label_format == "MMM YYYY"
         assert config.timeline_today_date == "2026-03-17"
@@ -408,18 +378,12 @@ class TestThemeEngineApply:
         assert config.timeline_duration_offset_y == 80
         assert config.timeline_duration_lane_gap_y == 14
         assert config.timeline_top_colors == ["red", "blue"]
-        assert config.timeline_name_text_font_name == "Roboto-Bold"
-        assert config.timeline_name_text_font_color == "gold"
-        assert config.timeline_notes_text_font_name == "RobotoCondensed-Bold"
-        assert config.timeline_notes_text_font_color == "silver"
         assert config.timeline_name_text_font_size == 14.5
         assert config.timeline_notes_text_font_size == 11.5
         assert config.timeline_event_box_width == 180
         assert config.timeline_event_box_height == 80
         assert config.timeline_duration_box_width == 120
         assert config.timeline_duration_box_height == 36
-        assert config.timeline_date_font == "Roboto-Bold"
-        assert config.timeline_date_color == "orange"
 
 
 class TestThemeEngineColorMaps:
@@ -554,14 +518,14 @@ class TestStrokeDasharray:
             engine.apply(config)
         return config
 
-    def test_day_box_stroke_dasharray_applied_from_theme(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "Dash"},
-                "weekly": {"day_box": {"stroke_dasharray": "5,3"}},
-            }
-        )
-        assert config.day_box_stroke_dasharray == "5,3"
+    def test_day_box_stroke_dasharray_is_a_retired_key(self):
+        with pytest.raises(ThemeError, match="convert_style_keys"):
+            self._apply_theme_data(
+                {
+                    "theme": {"name": "Dash"},
+                    "weekly": {"day_box": {"stroke_dasharray": "5,3"}},
+                }
+            )
 
     def test_hash_pattern_applied_from_theme(self):
         config = self._apply_theme_data(
@@ -609,7 +573,6 @@ class TestStrokeDasharray:
 
     def test_dasharray_defaults_to_none(self):
         config = create_calendar_config()
-        assert config.day_box_stroke_dasharray is None
         assert config.duration_stroke_dasharray is None
         assert config.hash_pattern_opacity == 0.15
         assert config.theme_weekly_hash_pattern is None
@@ -893,7 +856,7 @@ class TestStrokeDasharray:
         _, kwargs = mock_draw_image.call_args
         assert kwargs["transform"] == "rotate(-12.0 100.0 50.0)"
 
-    def _make_renderer_config(self, **overrides):
+    def _make_renderer_config(self, rules=None, **overrides):
         """Create a config with computed font sizes set for renderer tests.
 
         Calls `_inject_heuristic_size_tokens(config)` after populating the
@@ -905,6 +868,8 @@ class TestStrokeDasharray:
         from config.config import _inject_heuristic_size_tokens
 
         config = create_calendar_config()
+        if rules:
+            apply_style_rules(config, rules)
         config.weekly_name_text_font_size = 9.0
         config.event_icon_size = 9.0
         config.day_box_number_font_size = 13.0
@@ -914,7 +879,7 @@ class TestStrokeDasharray:
         return config
 
     def test_day_box_renderer_uses_config_stroke_values(self):
-        """_draw_day_box passes config stroke_color/opacity/width/dasharray to _draw_rect."""
+        """_draw_day_box passes the box:cell stroke color/opacity/width/dasharray to _draw_rect."""
         from unittest.mock import patch
 
         import arrow
@@ -923,10 +888,7 @@ class TestStrokeDasharray:
         from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
         config = self._make_renderer_config(
-            day_box_stroke_color="navy",
-            day_box_stroke_opacity=0.8,
-            day_box_stroke_width=3,
-            day_box_stroke_dasharray="4 2",
+            rules=[define("box", "cell", stroke="navy", stroke_opacity=0.8, stroke_width=3, dasharray="4 2")]
         )
 
         renderer = WeeklyCalendarRenderer()
@@ -955,7 +917,7 @@ class TestStrokeDasharray:
         assert kwargs["stroke_dasharray"] == "4 2"
 
     def test_day_box_renderer_uses_config_stroke_defaults(self):
-        """Default config stroke values propagate to _draw_rect."""
+        """Without a theme the day box takes the catalog's ec-cell style."""
         from unittest.mock import patch
 
         import arrow
@@ -984,9 +946,10 @@ class TestStrokeDasharray:
             renderer._draw_day_box(config, oneday, 10, 10, 80, 60, False, "", False)
 
         _, kwargs = mock_rect.call_args
-        assert kwargs["stroke"] == config.day_box_stroke_color  # "grey"
-        assert kwargs["stroke_opacity"] == config.day_box_stroke_opacity  # 0.25
-        assert kwargs["stroke_width"] == config.day_box_stroke_width  # 2
+        cell = config.get_box_style("ec-cell")
+        assert kwargs["stroke"] == cell.stroke
+        assert kwargs["stroke_opacity"] == cell.stroke_opacity
+        assert kwargs["stroke_width"] == cell.stroke_width
         assert kwargs["stroke_dasharray"] is None
 
 
@@ -1005,71 +968,11 @@ class TestStrokeDasharrayTimelineMini:
 
     # ── Timeline theme mappings ──────────────────────────────────────────────
 
-    def test_timeline_axis_stroke_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "timeline": {"axis_stroke_dasharray": "8,4"},
-            }
-        )
-        assert config.timeline_axis_stroke_dasharray == "8,4"
-
-    def test_timeline_tick_stroke_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "timeline": {"tick_stroke_dasharray": "3,3"},
-            }
-        )
-        assert config.timeline_tick_stroke_dasharray == "3,3"
-
-    def test_timeline_today_line_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "timeline": {"today_line_dasharray": "6,2"},
-            }
-        )
-        assert config.timeline_today_line_dasharray == "6,2"
-
-    def test_timeline_label_stroke_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "timeline": {"label_stroke_dasharray": "2,4"},
-            }
-        )
-        assert config.timeline_label_stroke_dasharray == "2,4"
-
     # timeline_duration_bar_stroke_dasharray was stripped in Phase 2 wave 1
     # (no consumers — renderers always pass per-call dasharray to _draw_rect /
     # _draw_line).  The corresponding test is removed.
 
     # ── Mini theme mappings ──────────────────────────────────────────────────
-
-    def test_mini_grid_line_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "mini_calendar": {"grid_line_dasharray": "1,2"},
-            }
-        )
-        assert config.mini_grid_line_dasharray == "1,2"
-
-    def test_mini_grid_line_style_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "mini_calendar": {
-                    "grid_line_color": "orange",
-                    "grid_line_width": 0.5,
-                    "grid_line_opacity": 0.3,
-                },
-            }
-        )
-        assert config.mini_grid_line_color == "orange"
-        assert config.mini_grid_line_width == 0.5
-        assert config.mini_grid_line_opacity == 0.3
 
     def test_mini_day_number_digits_applied(self):
         config = self._apply_theme_data(
@@ -1130,15 +1033,11 @@ class TestStrokeDasharrayTimelineMini:
                 "mini_calendar": {
                     "circle_milestones": False,
                     "milestone_stroke_color": "gold",
-                    "milestone_stroke_width": 2.5,
-                    "milestone_stroke_opacity": 0.4,
                 },
             }
         )
         assert config.mini_circle_milestones is False
         assert config.mini_milestone_stroke_color == "gold"
-        assert config.mini_milestone_stroke_width == 2.5
-        assert config.mini_milestone_stroke_opacity == 0.4
 
     def test_style_rules_applied_from_theme_mini(self):
         rules = [
@@ -1159,26 +1058,14 @@ class TestStrokeDasharrayTimelineMini:
 
     # ── Defaults are None ────────────────────────────────────────────────────
 
-    def test_timeline_dasharray_fields_default_to_none(self):
-        config = create_calendar_config()
-        assert config.timeline_axis_stroke_dasharray is None
-        assert config.timeline_tick_stroke_dasharray is None
-        assert config.timeline_today_line_dasharray is None
-        assert config.timeline_label_stroke_dasharray is None
-        # timeline_duration_bar_stroke_dasharray stripped in Phase 2 wave 1.
+    # timeline_duration_bar_stroke_dasharray stripped in Phase 2 wave 1.
 
-    def test_mini_dasharray_fields_default_to_none(self):
+    def test_mini_fields_default(self):
         config = create_calendar_config()
-        assert config.mini_grid_line_dasharray is None
-        assert config.mini_grid_line_color == "lightgrey"
-        assert config.mini_grid_line_width == 0.25
-        assert config.mini_grid_line_opacity == 0.5
         assert config.mini_day_number_glyphs is None
         assert config.mini_day_number_digits is None
         assert config.mini_show_adjacent is True
         assert config.mini_circle_milestones is False
-        assert config.mini_milestone_stroke_width == 1.0
-        assert config.mini_milestone_stroke_opacity == 1.0
         assert config.theme_style_rules is None
 
     # ── SVG output integration ───────────────────────────────────────────────
@@ -1193,7 +1080,6 @@ class TestStrokeDasharrayTimelineMini:
         config = create_calendar_config()
         config.adjustedstart = "20260101"
         config.adjustedend = "20260131"
-        config.timeline_axis_stroke_dasharray = "6,3"
         with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
             config.outputfile = f.name
         try:
@@ -1208,8 +1094,8 @@ class TestStrokeDasharrayTimelineMini:
                 50,
                 100,
                 50,
-                stroke=config.timeline_axis_color,
-                stroke_dasharray=config.timeline_axis_stroke_dasharray,
+                stroke="black",
+                stroke_dasharray="6,3",
             )
             svg_text = renderer._drawing.as_svg()
             assert "stroke-dasharray" in svg_text
@@ -1251,8 +1137,6 @@ def test_blockplan_theme_applied():
     theme_data = {
         "theme": {"name": "BlockplanTheme"},
         "blockplan": {
-            "grid_color": "silver",
-            "grid_opacity": 0.75,
             "lane_match_mode": "all",
             "show_unmatched_lane": False,
             "vertical_line_color": "orange",
@@ -1280,14 +1164,8 @@ def test_blockplan_theme_applied():
         config = create_calendar_config()
         engine.apply(config)
 
-    assert config.blockplan_grid_color == "silver"
-    assert config.blockplan_grid_opacity == 0.75
     assert config.blockplan_lane_match_mode == "all"
     assert config.blockplan_show_unmatched_lane is False
-    assert config.blockplan_vertical_line_color == "orange"
-    assert config.blockplan_vertical_line_width == 2.5
-    assert config.blockplan_vertical_line_dasharray == "4,2"
-    assert config.blockplan_vertical_line_opacity == 0.6
     assert not hasattr(config, "blockplan_vertical_lines")
     # Phase 2 wave 1 stripped: blockplan_header_font, blockplan_name_text_font_color,
     # blockplan_event_date_font, blockplan_event_date_color (all subsumed by
@@ -1534,7 +1412,6 @@ class TestElementCatalogBindings:
         engine = self._engine_for(theme)
         cfg = engine.apply(CalendarConfig())
         assert cfg.overflow_indicator_icon == "send-backward"
-        assert cfg.overflow_indicator_color == "orange"
 
     def test_stray_apply_to_element_raises(self):
         theme = self._minimal_theme(

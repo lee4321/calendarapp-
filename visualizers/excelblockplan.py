@@ -1164,7 +1164,7 @@ def generate_excel_blockplan(
     filtered = [p[0] for p in paired]
     events = [p[1] for p in paired]
 
-    style_engine = StyleEngine(_blockplan_style_rules(config))
+    style_engine = StyleEngine(_blockplan_style_rules(config), "excelblockplan")
 
     visible_start = visible_days[0]
     visible_end = visible_days[-1]

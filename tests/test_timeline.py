@@ -8,7 +8,7 @@ from typing import Any
 import arrow
 import drawsvg
 import pytest
-from fakes import FakeCalendarDB
+from fakes import FakeCalendarDB, apply_style_rules, define
 
 from config.config import create_calendar_config, setfontsizes
 from renderers.text_utils import string_width
@@ -17,12 +17,40 @@ from shared.date_utils import format_arrow_date
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
 from shared.wbs_filter import wbs_group
+from visualizers.timeline.axis import AxisFrame
 from visualizers.timeline.layout import TimelineLayout
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,
     TimelineRenderer,
 )
+
+# The duration layout and drawing take an AxisFrame; these build one.
+_FRAME_D0 = arrow.get("20260101", "YYYYMMDD")
+_FRAME_D1 = arrow.get("20261231", "YYYYMMDD")
+
+
+def _hframe(start, end, left: float, right: float, axis_y: float) -> AxisFrame:
+    return AxisFrame(Orientation.HORIZONTAL, start, end, left, right, axis_y)
+
+
+def _vframe(start, end, top: float, bottom: float, axis_x: float) -> AxisFrame:
+    return AxisFrame(Orientation.VERTICAL, start, end, top, bottom, axis_x)
+
+
+def _haxis(axis_y: float) -> AxisFrame:
+    """A horizontal axis at ``axis_y``, for draw calls that only read the axis line."""
+    return _hframe(_FRAME_D0, _FRAME_D1, 0.0, 1.0, axis_y)
+
+
+def _vaxis(axis_x: float) -> AxisFrame:
+    return _vframe(_FRAME_D0, _FRAME_D1, 0.0, 1.0, axis_x)
+
+
+def _bar_y(renderer, config, item, axis_y: float) -> tuple[float, float]:
+    """``(top edge, height)`` of a bar below a horizontal axis at ``axis_y``."""
+    near, thickness, _sign = renderer._duration_bar_across(config, item, _haxis(axis_y))
+    return near, thickness
 
 
 class _DummyDB(FakeCalendarDB):
@@ -91,6 +119,14 @@ class _CaptureMarkerRenderer(TimelineRenderer):
         self.text_calls.append({"x": x, "y": y, "text": text, "font": font_name, "size": font_size})
 
 
+def _boxes_overlap(
+    box_a: tuple[float, float, float, float], box_b: tuple[float, float, float, float], pad: float = 0.0
+) -> bool:
+    ax1, ay1, ax2, ay2 = box_a
+    bx1, by1, bx2, by2 = box_b
+    return not (ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1)
+
+
 def _base_config(output: Path):
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
@@ -154,7 +190,7 @@ def test_timeline_renderer_generates_svg(tmp_path):
 def test_timeline_background_none_is_transparent(tmp_path):
     output = tmp_path / "timeline_transparent.svg"
     config = _base_config(output)
-    config.timeline_background_color = "none"
+    apply_style_rules(config, [define("box", "default", fill="none")])
     coords = TimelineLayout().calculate(config)
 
     renderer = TimelineRenderer()
@@ -182,7 +218,7 @@ def test_timeline_duration_bars_use_start_end_alignment(tmp_path):
         Event(task_name="A", start="20260110", end="20260210"),
         Event(task_name="B", start="20260301", end="20260401"),
     ]
-    laid_out = renderer._layout_durations(config, durations, start, end, axis_left, axis_right, axis_y)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, axis_left, axis_right, axis_y))
 
     assert len(laid_out) == 2
     assert laid_out[0].start_x < laid_out[0].end_x
@@ -301,9 +337,9 @@ def test_timeline_duration_dates_share_same_y_and_offset_is_configurable(tmp_pat
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
 
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     start_label = arrow.get("20260110", "YYYYMMDD").format("MMM D")
     end_label = arrow.get("20260210", "YYYYMMDD").format("MMM D")
@@ -328,9 +364,9 @@ def test_timeline_duration_minimum_offset_exceeds_timeline_date_height(tmp_path)
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260120")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
 
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     _, _, date_size, _ = renderer._duration_metrics(config)
     expected_min = renderer._min_duration_offset(config, date_size)
@@ -348,7 +384,7 @@ def test_timeline_month_ticks_default_to_first_of_month_inside_range(tmp_path):
 
     start = arrow.get("20260115", "YYYYMMDD")
     end = arrow.get("20260320", "YYYYMMDD")
-    renderer._draw_month_ticks(config, start, end, 50.0, 700.0, 300.0)
+    renderer._draw_month_ticks(config, _hframe(start, end, 50.0, 700.0, 300.0))
 
     labels = [c["text"] for c in renderer.text_calls]
     assert "Feb 1" in labels
@@ -367,8 +403,8 @@ def test_timeline_date_format_is_configurable(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     labels = {c["text"] for c in renderer.text_calls}
     assert "2026-01-10" in labels
@@ -528,7 +564,7 @@ def test_timeline_duration_uses_configured_name_and_notes_font_sizes(tmp_path):
         lane=0,
         min_width=40.0,
     )
-    renderer._draw_duration(config, duration, axis_y=300.0)
+    renderer._draw_duration(config, duration, _haxis(300.0))
 
     name = [c for c in renderer.text_calls if c["text"] == "Imaginary Sprint 4"]
     notes = [c for c in renderer.text_calls if c["text"] == "Execution window"]
@@ -552,7 +588,7 @@ def test_timeline_duration_uses_configured_box_height_and_text_width(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="A", start="20260110", end="20260110", notes="B")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 60.0, 730.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 60.0, 730.0, 300.0))
     assert len(laid_out) == 1
     assert laid_out[0].min_width == 140.0
     assert (laid_out[0].end_x - laid_out[0].start_x) < 140.0
@@ -628,7 +664,7 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
     overlaps = 0
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
-            if renderer._boxes_overlap(boxes[i], boxes[j], pad=2.0):
+            if _boxes_overlap(boxes[i], boxes[j], pad=2.0):
                 overlaps += 1
     # On constrained pages, placement should strongly avoid collisions.
     assert overlaps <= 1
@@ -644,13 +680,9 @@ def test_timeline_today_uses_configured_date_and_label(tmp_path):
     renderer._page_height = config.pageY
     renderer._draw_today_marker(
         config,
-        start=arrow.get("20260301", "YYYYMMDD"),
-        end=arrow.get("20260331", "YYYYMMDD"),
-        axis_left=50.0,
-        axis_right=700.0,
-        axis_y=300.0,
-        area_y=20.0,
-        area_h=300.0,
+        _hframe(arrow.get("20260301", "YYYYMMDD"), arrow.get("20260331", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        20.0,
+        (20.0) + (300.0),
     )
 
     labels = [c["text"] for c in renderer.text_calls]
@@ -674,13 +706,9 @@ def test_timeline_today_label_stays_within_svg_bounds(tmp_path):
 
     renderer._draw_today_marker(
         config,
-        start=arrow.get("20260301", "YYYYMMDD"),
-        end=arrow.get("20260331", "YYYYMMDD"),
-        axis_left=20.0,
-        axis_right=180.0,
-        axis_y=60.0,
-        area_y=0.0,
-        area_h=120.0,
+        _hframe(arrow.get("20260301", "YYYYMMDD"), arrow.get("20260331", "YYYYMMDD"), 20.0, 180.0, 60.0),
+        0.0,
+        (0.0) + (120.0),
     )
 
     label_call = next(c for c in renderer.text_calls if c["text"] == "Today Label")
@@ -714,13 +742,9 @@ def _draw_today(config, direction=None, length=None):
     renderer._page_height = config.pageY
     renderer._draw_today_marker(
         config,
-        start=arrow.get("20260301", "YYYYMMDD"),
-        end=arrow.get("20260331", "YYYYMMDD"),
-        axis_left=50.0,
-        axis_right=700.0,
-        axis_y=300.0,
-        area_y=20.0,
-        area_h=580.0,
+        _hframe(arrow.get("20260301", "YYYYMMDD"), arrow.get("20260331", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        20.0,
+        (20.0) + (580.0),
     )
     return renderer
 
@@ -888,7 +912,7 @@ def test_timeline_prints_the_date_under_each_holiday_icon(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119", "20260525"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260119", "20260525"]))
 
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     dates = [c for c in renderer.text_calls if c["text"] in ("Jan 19", "May 25")]
@@ -908,7 +932,7 @@ def test_timeline_holiday_dates_stagger_instead_of_colliding(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20261231", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260703", "20260704"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260703", "20260704"]))
 
     dates = [c for c in renderer.text_calls if c["text"] in ("Jul 3", "Jul 4")]
     assert len(dates) == 2
@@ -924,7 +948,7 @@ def test_timeline_holiday_dates_can_be_switched_off(tmp_path):
 
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    renderer._draw_holiday_icons(config, start, end, 60.0, 730.0, 400.0, _HolidayDB(["20260119"]))
+    renderer._draw_holiday_icons(config, _hframe(start, end, 60.0, 730.0, 400.0), _HolidayDB(["20260119"]))
 
     assert len(renderer.icon_calls) == 1
     assert not [c for c in renderer.text_calls if c["text"] == "Jan 19"]
@@ -973,7 +997,7 @@ def test_a_line_of_text_stays_inside_its_own_cell(tmp_path, cell_h):
         config,
         100.0,
         cell_h,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     assert top >= 100.0 - 0.01
@@ -991,7 +1015,7 @@ def test_a_line_is_centred_in_its_cell(tmp_path):
         config,
         100.0,
         40.0,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     assert (top - 100.0) == pytest.approx(140.0 - bottom, abs=0.01)
@@ -1001,7 +1025,7 @@ def test_a_short_cell_caps_the_font_size(tmp_path):
     """The box is never stretched, so the text is what gives way."""
     config = _base_config(tmp_path / "cell_cap.svg")
     renderer = TimelineRenderer()
-    path = renderer._safe_font_path(config.timeline_name_text_font_name)
+    path = renderer._safe_font_path(config.get_text_style("ec-event-name").font)
 
     assert renderer._cell_font_size(60.0, path, 12.0) == pytest.approx(12.0)
     assert renderer._cell_font_size(5.0, path, 12.0) < 12.0
@@ -1019,7 +1043,7 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
         config,
         100.0,
         row_h,
-        config.timeline_name_text_font_name,
+        config.get_text_style("ec-event-name").font,
         title_size,
     )
     notes_top, _bottom = _cell_ink(
@@ -1027,7 +1051,7 @@ def test_the_notes_never_reach_into_the_row_above(tmp_path):
         config,
         100.0 + row_h,
         row_h,
-        config.timeline_notes_text_font_name,
+        config.get_text_style("ec-event-notes").font,
         notes_size,
     )
     assert notes_top >= name_bottom - 0.01
@@ -1045,8 +1069,8 @@ def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    laid_out = renderer._layout_durations(config, [event], start, end, axis_left, axis_right, 300.0)
-    renderer._draw_duration_connectors(config, laid_out[0], axis_y=300.0)
+    laid_out = renderer._layout_durations(config, [event], _hframe(start, end, axis_left, axis_right, 300.0))
+    renderer._draw_duration_connectors(config, laid_out[0], _haxis(300.0))
     return laid_out[0], [c["x1"] for c in renderer.line_calls]
 
 
@@ -1077,7 +1101,7 @@ def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
         orientation=Orientation.VERTICAL,
         lane_side=Side.PRIMARY,
     )
-    renderer._draw_duration_connectors_vertical(config, item, axis_x=100.0)
+    renderer._draw_duration_connectors(config, item, _vaxis(100.0))
 
     assert [c["y1"] for c in renderer.line_calls] == [item.start_y]
 
@@ -1099,11 +1123,7 @@ def _grouped_bars(config, events):
     return renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
 
 
@@ -1199,15 +1219,11 @@ def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
 
-    bars = renderer._layout_durations_vertical(
+    bars = renderer._layout_durations(
         config,
         _phase_events(),
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_x=200.0,
-        axis_top=50.0,
-        axis_bottom=700.0,
-        side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+        Side.PRIMARY,
     )
     by_group: dict[str, set[str]] = {}
     for bar in bars:
@@ -1381,11 +1397,7 @@ def _lay_out(config, events, axis_y=300.0):
     bars = renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        axis_y,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, axis_y),
     )
     return renderer, bars
 
@@ -1394,14 +1406,14 @@ def test_a_bar_past_the_limit_is_not_drawn(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_bar.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
 
     renderer.rect_calls.clear()
-    renderer._draw_duration(config, deep, 300.0, limit=bar_y - 1.0)
+    renderer._draw_duration(config, deep, _haxis(300.0), limit=(bar_y - 1.0) - (300.0))
     assert renderer.rect_calls == []
 
     # Same bar, room to spare: it draws.
-    renderer._draw_duration(config, deep, 300.0, limit=bar_y + 10_000.0)
+    renderer._draw_duration(config, deep, _haxis(300.0), limit=(bar_y + 10_000.0) - (300.0))
     assert renderer.rect_calls
 
 
@@ -1409,10 +1421,10 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_leader.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
     limit = bar_y - 1.0
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
 
     assert len(renderer.line_calls) == 1
     end_y = renderer.line_calls[0]["y2"]
@@ -1429,9 +1441,9 @@ def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_fits.svg")
     renderer, bars = _lay_out(config, events)
     shallow = min(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, shallow, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, shallow, 300.0)
 
-    renderer._draw_duration_connectors(config, shallow, 300.0, limit=bar_y + 10_000.0)
+    renderer._draw_duration_connectors(config, shallow, _haxis(300.0), limit=(bar_y + 10_000.0) - (300.0))
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] == pytest.approx(bar_y)
 
@@ -1442,7 +1454,7 @@ def test_no_limit_draws_every_bar(tmp_path):
     renderer, bars = _lay_out(config, events)
     renderer.rect_calls.clear()
     for bar in bars:
-        renderer._draw_duration(config, bar, 300.0, limit=None)
+        renderer._draw_duration(config, bar, _haxis(300.0), limit=None)
     # One bar rect each, and no leader was cut short.
     assert len(renderer.rect_calls) == len(bars)
     assert renderer.icon_calls == []
@@ -1453,9 +1465,9 @@ def test_a_theme_without_a_missing_icon_still_clamps_the_leader(tmp_path):
     config.default_missing_icon = None
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=bar_y - 1.0)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(bar_y - 1.0) - (300.0))
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] < bar_y
 
@@ -1484,13 +1496,9 @@ def _drawn_duration(tmp_path, name, event, axis_y=300.0):
     bars = renderer._layout_durations(
         config,
         [event],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        axis_y,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, axis_y),
     )
-    renderer._draw_duration(config, bars[0], axis_y)
+    renderer._draw_duration(config, bars[0], _haxis(axis_y))
     return config, renderer, bars[0]
 
 
@@ -1501,7 +1509,7 @@ def _date_texts(renderer):
 def test_the_start_and_end_dates_are_drawn_inside_the_bar(tmp_path):
     event = Event(task_name="Build", start="20260210", end="20260320")
     config, renderer, bar = _drawn_duration(tmp_path, "in_bar.svg", event)
-    bar_y, bar_h = renderer._duration_bar_y(config, bar, 300.0)
+    bar_y, bar_h = _bar_y(renderer, config, bar, 300.0)
 
     dates = _date_texts(renderer)
     assert len(dates) == 2
@@ -1570,13 +1578,9 @@ def test_the_event_icon_leads_the_row_above_the_start_date(tmp_path):
     bars = renderer._layout_durations(
         config,
         [event],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
 
     icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
@@ -1594,11 +1598,7 @@ def test_a_bar_too_narrow_for_its_dates_overflows_instead_of_growing(tmp_path):
     bars = renderer._layout_durations(
         config,
         [Event(task_name="Ship", start="20260210", end="20260210")],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
     bar = bars[0]
     assert bar.end_x - bar.start_x < renderer._duration_full_extent(
@@ -1635,23 +1635,14 @@ def _aligned_bars(tmp_path, name, events, axis_left=50.0, axis_right=700.0, rend
         renderer._layout_durations(
             config,
             events,
-            arrow.get("20260101", "YYYYMMDD"),
-            arrow.get("20260630", "YYYYMMDD"),
-            axis_left,
-            axis_right,
-            300.0,
+            _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), axis_left, axis_right, 300.0),
         ),
     )
 
 
 def _day_x(renderer, daykey, axis_left=50.0, axis_right=700.0):
-    return renderer._x_for_day(
-        arrow.get(daykey, "YYYYMMDD"),
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_left,
-        axis_right,
-    )
+    frame = _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), axis_left, axis_right, 0.0)
+    return frame.pos(arrow.get(daykey, "YYYYMMDD"))
 
 
 def test_bars_ending_on_the_same_day_share_a_right_edge(tmp_path):
@@ -1712,7 +1703,7 @@ def test_the_axis_marker_sits_on_the_start_date_only(tmp_path):
         [Event(task_name="Ship it", start="20260316", end="20260320")],
         renderer=_CaptureCircleRenderer(),
     )
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
     marker_xs = [c["cx"] for c in renderer.circle_calls]
     assert marker_xs == [bars[0].start_x]
 
@@ -1724,7 +1715,7 @@ def test_a_vertical_bar_also_marks_only_its_start_date(tmp_path):
         [Event(task_name="Build", start="20260210", end="20260501")],
         renderer=_CaptureCircleRenderer(),
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     marker_ys = [c["cy"] for c in renderer.circle_calls]
     assert marker_ys == [bars[0].start_y]
 
@@ -1742,7 +1733,7 @@ def _overflow_drawn(tmp_path, name, event, config=None, **cfg):
     for key, value in cfg.items():
         setattr(config, key, value)
     config, renderer, bars = _aligned_bars(tmp_path, name, [event], config=config)
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
     return config, renderer, bars[0]
 
 
@@ -1890,19 +1881,15 @@ def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
     bars = renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
     lanes = sorted({b.lane for b in bars})
     assert len(lanes) >= 2
 
     _t, _n, date_size, bar_h = renderer._duration_metrics(config)
     lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-    y0, _ = renderer._duration_bar_y(config, bars[0], 300.0)
-    y1, _ = renderer._duration_bar_y(config, next(b for b in bars if b.lane == 1), 300.0)
+    y0, _ = _bar_y(renderer, config, bars[0], 300.0)
+    y1, _ = _bar_y(renderer, config, next(b for b in bars if b.lane == 1), 300.0)
     assert y1 - y0 == pytest.approx(bar_h + lane_gap)
 
 
@@ -1911,17 +1898,13 @@ def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
     config.timeline_orientation = "vertical"
     renderer = _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    bars = renderer._layout_durations_vertical(
+    bars = renderer._layout_durations(
         config,
         [Event(task_name="Build", start="20260210", end="20260320")],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_x=200.0,
-        axis_top=50.0,
-        axis_bottom=700.0,
-        side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+        Side.PRIMARY,
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     dates = _date_texts(renderer)
     assert len(dates) == 2
@@ -1946,27 +1929,18 @@ def _vertical_bars(tmp_path, name, events, config=None, renderer=None):
     return (
         config,
         renderer,
-        renderer._layout_durations_vertical(
+        renderer._layout_durations(
             config,
             events,
-            arrow.get("20260101", "YYYYMMDD"),
-            arrow.get("20260630", "YYYYMMDD"),
-            axis_x=200.0,
-            axis_top=50.0,
-            axis_bottom=700.0,
-            side=Side.PRIMARY,
+            _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+            Side.PRIMARY,
         ),
     )
 
 
 def _day_y(renderer, daykey, axis_top=50.0, axis_bottom=700.0):
-    return renderer._y_for_day(
-        arrow.get(daykey, "YYYYMMDD"),
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_top,
-        axis_bottom,
-    )
+    frame = _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), axis_top, axis_bottom, 0.0)
+    return frame.pos(arrow.get(daykey, "YYYYMMDD"))
 
 
 def test_a_vertical_bar_spans_exactly_its_two_dates(tmp_path):
@@ -2003,7 +1977,7 @@ def test_an_overflowing_vertical_bar_breaks_its_name_over_two_rows(tmp_path):
     )
     bar = bars[0]
     assert bar.text_overflow
-    renderer._draw_duration_vertical(config, bar, 200.0)
+    renderer._draw_duration(config, bar, _vaxis(200.0))
 
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
 
@@ -2030,7 +2004,7 @@ def test_a_condensed_vertical_bar_condenses_its_icon_along_the_axis(tmp_path):
         [Event(task_name="A name much longer than this bar", icon="rocket", start="20260210", end="20260310")],
     )
     config.timeline_duration_icon_visible = True
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     icon = next(c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon")
     transform = icon.get("transform") or ""
@@ -2044,7 +2018,7 @@ def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):
         [Event(task_name="Build", start="20260210", end="20260501")],
     )
     assert not bars[0].text_overflow
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
     assert len(_date_texts(renderer)) == 2
 
@@ -2191,14 +2165,14 @@ def test_the_overflow_marker_takes_the_configured_missing_icon_size(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_size.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, bar_h = _bar_y(renderer, config, deep, 300.0)
     limit = bar_y - 1.0
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
     assert renderer.icon_calls[-1]["size"] == pytest.approx(bar_h)
 
     config.default_missing_icon_size = 21.0
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
     assert renderer.icon_calls[-1]["size"] == pytest.approx(21.0)
 
 
@@ -2246,14 +2220,7 @@ def test_every_item_type_in_a_group_takes_one_color(tmp_path):
         group_colors=group_colors,
     )
     bars = renderer._layout_durations(
-        config,
-        durations,
-        start,
-        end,
-        60.0,
-        730.0,
-        300.0,
-        group_colors=group_colors,
+        config, durations, _hframe(start, end, 60.0, 730.0, 300.0), group_colors=group_colors
     )
 
     by_group: dict[str, set[str]] = {}
@@ -2289,11 +2256,7 @@ def test_a_milestone_matches_the_bars_in_its_phase(tmp_path):
     bars = renderer._layout_durations(
         config,
         durations,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        60.0,
-        730.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 60.0, 730.0, 300.0),
         group_colors=group_colors,
     )
     milestone = next(c for c in callouts if c.event.task_name == "A gate")
@@ -2386,12 +2349,7 @@ def test_the_built_in_ticks_read_the_theme_keys(tmp_path):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
 
     renderer._draw_month_ticks(
-        config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        60.0,
-        700.0,
-        300.0,
+        config, _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 60.0, 700.0, 300.0)
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert labels
@@ -2432,7 +2390,7 @@ def test_a_vertical_duration_bar_shows_the_event_icon(tmp_path):
         renderer=_CaptureOverflowRenderer(),
     )
     assert not bars[0].text_overflow
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
@@ -2452,7 +2410,7 @@ def test_a_vertical_duration_bar_leaves_the_icon_out_when_told_to(tmp_path):
         config=config,
         renderer=_CaptureOverflowRenderer(),
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"] == []
 
 
@@ -2465,16 +2423,13 @@ def test_a_vertical_timeband_honors_text_align(tmp_path):
     def _label_xs(align):
         renderer = _CaptureTimelineRenderer()
         renderer._page_width, renderer._page_height = config.pageX, config.pageY
-        renderer._draw_timeline_bands_vertical(
+        renderer._draw_timeline_bands(
             config,
             [{"unit": "month", "row_height": 16.0, "text_align": align}],
+            _vframe(start, end, 50.0, 700.0, 0.0),
             100.0,
-            50.0,
-            700.0,
-            start,
-            end,
+            -1.0,
             _DummyDB(),
-            sign=-1.0,
         )
         return [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
 
@@ -2519,7 +2474,7 @@ def test_a_vertical_axis_reserves_the_width_of_its_tick_dates(tmp_path):
     widest = max(
         string_width(
             format_arrow_date(m, config.timeline_tick_label_format),
-            renderer._safe_font_path(config.timeline_date_font),
+            renderer._safe_font_path(config.get_text_style("ec-event-date").font),
             label_size,
         )
         for m in renderer._month_tick_arrows(start, end)
@@ -2564,7 +2519,7 @@ def test_the_today_line_crosses_a_vertical_axis(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_today_marker_vertical(config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0)
+    renderer._draw_today_marker(config, _vframe(start, end, 50.0, 700.0, 300.0), 0.0, (0.0) + (600.0))
     lines = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
     assert len(lines) == 1  # runs across, not along
     assert lines[0]["x1"] == pytest.approx(0.0)
@@ -2582,7 +2537,7 @@ def test_the_today_line_direction_maps_to_the_two_sides(tmp_path):
         config.timeline_today_line_direction = direction
         renderer = _CaptureTimelineRenderer()
         start, end = _vertical_render_args(config, renderer)
-        renderer._draw_today_marker_vertical(config, start, end, 50.0, 700.0, 300.0, 0.0, 600.0)
+        renderer._draw_today_marker(config, _vframe(start, end, 50.0, 700.0, 300.0), 0.0, (0.0) + (600.0))
         line = next(c for c in renderer.line_calls if c["y1"] == c["y2"])
         return line["x1"], line["x2"]
 
@@ -2598,16 +2553,8 @@ def test_the_today_label_keeps_clear_of_the_band_columns(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_today_marker_vertical(
-        config,
-        start,
-        end,
-        50.0,
-        700.0,
-        300.0,
-        0.0,
-        600.0,
-        label_bounds=(40.0, 560.0),
+    renderer._draw_today_marker(
+        config, _vframe(start, end, 50.0, 700.0, 300.0), 0.0, (0.0) + (600.0), label_bounds=(40.0, 560.0)
     )
     label = next(c for c in renderer.text_calls if c.get("css_class") == "ec-today-label")
     assert label["x"] >= 40.0
@@ -2619,15 +2566,8 @@ def test_holidays_are_marked_beside_a_vertical_axis(tmp_path):
     renderer = _CaptureHolidayRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_holiday_icons_vertical(
-        config,
-        start,
-        end,
-        50.0,
-        700.0,
-        300.0,
-        _HolidayDB(["20260216", "20260406"]),
-        side=Side.SECONDARY,
+    renderer._draw_holiday_icons(
+        config, _vframe(start, end, 50.0, 700.0, 300.0), _HolidayDB(["20260216", "20260406"]), Side.SECONDARY
     )
     assert [c["icon"] for c in renderer.icon_calls] == ["flag-us", "flag-us"]
     # Between the axis and the bars: just off the axis, on the bars' side.
@@ -2650,15 +2590,8 @@ def test_holiday_marks_follow_the_bars_to_the_other_side(tmp_path):
     renderer = _CaptureHolidayRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_holiday_icons_vertical(
-        config,
-        start,
-        end,
-        50.0,
-        700.0,
-        300.0,
-        _HolidayDB(["20260216"]),
-        side=Side.PRIMARY,
+    renderer._draw_holiday_icons(
+        config, _vframe(start, end, 50.0, 700.0, 300.0), _HolidayDB(["20260216"]), Side.PRIMARY
     )
     assert renderer.icon_calls[0]["x"] > 300.0
     dates = [c for c in renderer.text_calls if c.get("css_class") == "ec-holiday-date"]
@@ -2672,7 +2605,7 @@ def test_fiscal_bands_run_as_columns_beside_a_vertical_axis(tmp_path):
     renderer = _CaptureTimelineRenderer()
     start, end = _vertical_render_args(config, renderer)
 
-    renderer._draw_fiscal_bands_vertical(config, start, end, 50.0, 700.0, 300.0, side=Side.PRIMARY)
+    renderer._draw_fiscal_bands(config, _vframe(start, end, 50.0, 700.0, 300.0), Side.PRIMARY)
     rects = renderer.rect_calls
     assert rects
     for rect in rects:
@@ -2693,17 +2626,7 @@ def test_timebands_stack_as_columns_beside_a_vertical_axis(tmp_path):
         {"unit": "week", "row_height": 12.0, "fill_color": "#dddddd"},
     ]
 
-    renderer._draw_timeline_bands_vertical(
-        config,
-        bands,
-        100.0,
-        50.0,
-        700.0,
-        start,
-        end,
-        _DummyDB(),
-        sign=-1.0,
-    )
+    renderer._draw_timeline_bands(config, bands, _vframe(start, end, 50.0, 700.0, 0.0), 100.0, -1.0, _DummyDB())
     cells = [c for c in renderer.rect_calls]
     assert cells
     # First band's column is 16pt wide and abuts the given near edge; the
@@ -2759,14 +2682,11 @@ def test_a_vertical_chart_with_no_holidays_still_draws(tmp_path):
     config.country = "US"
     renderer = _CaptureHolidayRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_holiday_icons_vertical(
+    renderer._draw_holiday_icons(
         config,
-        arrow.get("20260201", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260201", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
         _HolidayDB([]),
+        Side.SECONDARY,
     )
     assert renderer.icon_calls == []
 
@@ -2826,13 +2746,10 @@ def test_a_tick_date_grows_away_from_the_axis(tmp_path):
 def _vertical_ticks(config, start="20260101", end="20260430", axis_top=50.0, axis_bottom=700.0, axis_x=300.0):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get(start, "YYYYMMDD"),
-        arrow.get(end, "YYYYMMDD"),
-        axis_top,
-        axis_bottom,
-        axis_x,
+        _vframe(arrow.get(start, "YYYYMMDD"), arrow.get(end, "YYYYMMDD"), axis_top, axis_bottom, axis_x),
+        Side.SECONDARY,
     )
     return renderer
 
@@ -2870,14 +2787,10 @@ def test_tick_labels_move_to_the_far_side_with_the_bars(tmp_path):
     config.timeline_tick_label_gap = 20.0
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
-        label_side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        Side.PRIMARY,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     tick_h = renderer._axis_tick_height(config)
@@ -2894,13 +2807,10 @@ def test_vertical_tick_labels_take_the_theme_font_and_color(tmp_path):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     renderer._tokens = {"text:event_date": {"font": "JuliaMono-Regular", "color": "hotpink"}}
-    renderer._draw_month_ticks_vertical(
+    renderer._draw_month_ticks(
         config,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
+        Side.SECONDARY,
     )
     labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
     assert [lbl["text"] for lbl in labels][:2] == ["January", "February"]
@@ -2919,16 +2829,13 @@ def test_a_vertical_tick_band_honors_its_own_overrides(tmp_path):
         "label_gap": 5.0,
         "font": "JuliaMono-Regular",
     }
-    renderer._draw_axis_ticks_from_band_vertical(
+    renderer._draw_axis_ticks_from_band(
         config,
         band,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260430", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0),
         None,
         ticks=[(date(2026, 2, 1), "Feb"), (date(2026, 3, 1), "Mar")],
+        label_side=Side.SECONDARY,
     )
     ticks = [c for c in renderer.line_calls if c["y1"] == c["y2"]]
     assert len(ticks) == 2
@@ -2963,3 +2870,56 @@ def test_the_callout_clearance_follows_the_configured_gap(tmp_path):
     wide = renderer._axis_label_clearance(config, start, end)
     assert wide > narrow
     assert wide - narrow == pytest.approx(40.0 - renderer._axis_tick_label_size(config) * 1.5)
+
+
+# ── A horizontal axis spends its sides the way a vertical one does ─────────
+
+
+def test_horizontal_bars_on_the_primary_side_stack_above_the_axis(tmp_path):
+    config = _base_config(tmp_path / "h_bars_above.svg")
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    frame = _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0)
+    events = [
+        Event(task_name="Build", start="20260210", end="20260320"),
+        Event(task_name="Test", start="20260301", end="20260410"),
+    ]
+    bars = renderer._layout_durations(config, events, frame, Side.PRIMARY)
+    assert {b.lane_side for b in bars} == {Side.PRIMARY}
+    for bar in bars:
+        renderer._draw_duration(config, bar, frame)
+    rects = [r for r in renderer.rect_calls if r.get("css_class") == "ec-duration-bar"]
+    assert len(rects) == 2
+    assert all(r["y"] + r["h"] < 300.0 for r in rects)
+
+
+def test_horizontal_tick_dates_on_the_secondary_side_sit_below_the_axis(tmp_path):
+    config = _base_config(tmp_path / "h_ticks_below.svg")
+    renderer = _CaptureTimelineRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    frame = _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260430", "YYYYMMDD"), 50.0, 700.0, 300.0)
+    renderer._draw_month_ticks(config, frame, Side.SECONDARY)
+    labels = [c for c in renderer.text_calls if c.get("css_class") == "ec-label"]
+    assert labels
+    assert all(c["y"] > 300.0 for c in labels)
+
+
+def test_horizontal_holiday_icons_on_the_primary_side_sit_above_the_axis(tmp_path):
+    config = _base_config(tmp_path / "h_holidays_above.svg")
+    config.country = "US"
+    renderer = _CaptureHolidayRenderer()
+    renderer._page_width, renderer._page_height = config.pageX, config.pageY
+    frame = _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20261231", "YYYYMMDD"), 60.0, 730.0, 400.0)
+    renderer._draw_holiday_icons(config, frame, _HolidayDB(["20260119"]), Side.PRIMARY)
+    assert len(renderer.icon_calls) == 1
+    assert renderer.icon_calls[0]["y"] < 400.0
+    date = next(c for c in renderer.text_calls if c["text"] == "Jan 19")
+    assert date["y"] < renderer.icon_calls[0]["y"]
+
+
+def test_holiday_marks_take_the_side_the_tick_dates_leave_free():
+    """With bars on both sides the ticks take SECONDARY; holidays must not join them."""
+    assert TimelineRenderer._holiday_side(Side.SECONDARY) is Side.PRIMARY
+    assert TimelineRenderer._holiday_side(Side.PRIMARY) is Side.SECONDARY
+    both = TimelineRenderer._tick_label_side(Side.BOTH)
+    assert TimelineRenderer._holiday_side(both) is not both

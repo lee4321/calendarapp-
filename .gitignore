@@ -41,3 +41,6 @@ config/themes/*.yaml.bak
 # them does not fill the working folder again.
 capsule_numbers/
 sficons/
+
+# Reference sheets written by the *sheet subcommands (e.g. _sh_iconsheet.svg)
+/_sh_*.svg

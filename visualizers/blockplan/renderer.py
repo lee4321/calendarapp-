@@ -43,7 +43,7 @@ from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width, text_center_baseline
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
-from shared.day_classifier import classify_day, day_rule_matches
+from shared.day_classifier import NonWorkdayStyle, classify_day, nonworkday_override
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import DayContext, StyleEngine, StyleResult, _build_style_result
@@ -82,105 +82,6 @@ def _blockplan_swimlane_rules(config: CalendarConfig) -> list:
         if isinstance(rules, list):
             return rules
     return list(getattr(config, "theme_swimlane_rules", None) or [])
-
-
-def _nwd_fill_for_classes(
-    classes: frozenset[str],
-    band_fill_rules: list[dict] | None,
-    config: CalendarConfig,
-) -> str | None:
-    """Resolve a non-workday fill override for a single-day cell.
-
-    Order of precedence:
-
-    1. Band-level ``fill_rules`` — first matching rule wins.
-    2. Config-level defaults — ``federal_holiday`` → ``company_holiday`` →
-       ``weekend``.
-
-    Returns ``None`` if the day has no non-workday classes or no override
-    is configured.
-    """
-    if not classes:
-        return None
-    if band_fill_rules:
-        for rule in band_fill_rules:
-            if not isinstance(rule, dict):
-                continue
-            match = rule.get("match") or {}
-            if not isinstance(match, dict):
-                continue
-            if day_rule_matches(classes, match):
-                color = rule.get("color")
-                if color:
-                    return str(color)
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
-        return config.blockplan_federal_holiday_fill_color
-    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
-        return config.blockplan_company_holiday_fill_color
-    if "weekend" in classes and config.blockplan_weekend_fill_color:
-        return config.blockplan_weekend_fill_color
-    return None
-
-
-def _nwd_fill_opacity_for_classes(
-    classes: frozenset[str],
-    band_fill_rules: list[dict] | None,
-    config: CalendarConfig,
-) -> float | None:
-    """Resolve the fill opacity for a non-workday override cell.
-
-    Band-level ``fill_rules`` may carry an ``opacity`` key; if the matching
-    rule has one, it is returned.  Otherwise falls back to the per-type config
-    field.  Returns ``None`` if no override applies (caller uses the default
-    ``blockplan_timeband_fill_opacity``).
-    """
-    if not classes:
-        return None
-    if band_fill_rules:
-        for rule in band_fill_rules:
-            if not isinstance(rule, dict):
-                continue
-            match = rule.get("match") or {}
-            if not isinstance(match, dict):
-                continue
-            if day_rule_matches(classes, match):
-                if rule.get("color"):  # only override opacity when fill matched
-                    op = rule.get("opacity")
-                    return float(op) if op is not None else None
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
-        return config.blockplan_federal_holiday_fill_opacity
-    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
-        return config.blockplan_company_holiday_fill_opacity
-    if "weekend" in classes and config.blockplan_weekend_fill_color:
-        return config.blockplan_weekend_fill_opacity
-    return None
-
-
-def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tuple[str, str] | None:
-    """Resolve a global non-workday icon for a single-day cell.
-
-    Returns ``(icon_name, color)`` or ``None``.  Priority:
-    federal_holiday → company_holiday → weekend.  The icon colour reuses
-    the matching fill colour (or config.nonworkday_fill_color when none is set).
-    """
-    if not classes:
-        return None
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_icon:
-        return (
-            config.blockplan_federal_holiday_icon,
-            config.blockplan_federal_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "company_holiday" in classes and config.blockplan_company_holiday_icon:
-        return (
-            config.blockplan_company_holiday_icon,
-            config.blockplan_company_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "weekend" in classes and config.blockplan_weekend_icon:
-        return (
-            config.blockplan_weekend_icon,
-            config.blockplan_weekend_fill_color or config.nonworkday_fill_color,
-        )
-    return None
 
 
 if TYPE_CHECKING:
@@ -249,7 +150,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             return 0, []
 
         self._populate_tokens(config)
-        self._style_engine = StyleEngine(_blockplan_style_rules(config))
+        self._style_engine = StyleEngine(_blockplan_style_rules(config), self.TOKEN_VISUALIZER)
 
         top_bands = list(getattr(config, "blockplan_top_time_bands", []) or [])
         bottom_bands = list(getattr(config, "blockplan_bottom_time_bands", []) or [])
@@ -390,42 +291,36 @@ class BlockPlanRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
-        """Stroke attrs for band/heading row cells.
+        """Stroke attrs for band/heading row cells: ``box:band``, else the grid stroke.
 
-        Prefers ``box:band`` token stroke values, then ``blockplan.timeband_line_*``,
-        then ``blockplan.grid_*``.  Same fallback chain as the pre-migration
-        version with the unified-theme token slotted in front.
+        A dash is never inherited: it comes from ``box:band`` itself or not at all.
         """
         tk_band = self._tk("box:band")
-        color = tk_band.get("stroke") or config.blockplan_timeband_line_color or config.blockplan_grid_color
+        grid_color, grid_width, grid_opacity, _grid_dasharray = self._grid_stroke(config)
         width = tk_band.get("stroke_width")
-        if width is None:
-            width = config.blockplan_timeband_line_width
-        if width is None:
-            width = config.blockplan_grid_line_width
         opacity = tk_band.get("stroke_opacity")
-        if opacity is None:
-            opacity = config.blockplan_timeband_line_opacity
-        if opacity is None:
-            opacity = config.blockplan_grid_opacity
-        dasharray = (
-            tk_band.get("dasharray") or config.blockplan_timeband_line_dasharray or config.blockplan_grid_dasharray
+        return (
+            tk_band.get("stroke") or grid_color,
+            float(width if width is not None else grid_width),
+            float(opacity if opacity is not None else grid_opacity),
+            tk_band.get("dasharray") or None,
         )
-        return color, float(width), float(opacity), dasharray
 
     def _grid_stroke(
         self,
         config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
-        """Stroke attrs for blockplan grid lines.
+        """Stroke attrs for blockplan grid lines: ``line:grid``, else ``ec-grid-line``.
 
-        Prefers ``line:grid`` token, then ``blockplan.grid_*``.
+        The dash comes from ``line:grid`` alone; a theme may bind ``ec-grid-line``
+        to a dashed calendar grid that blockplan never drew with.
         """
         tk_grid = self._tk("line:grid")
-        color = tk_grid.get("color") or config.blockplan_grid_color
-        width = tk_grid.get("width") if tk_grid.get("width") is not None else config.blockplan_grid_line_width
-        opacity = tk_grid.get("opacity") if tk_grid.get("opacity") is not None else config.blockplan_grid_opacity
-        dasharray = tk_grid.get("dasharray") or config.blockplan_grid_dasharray
+        element = config.get_line_style("ec-grid-line")
+        color = tk_grid.get("color") or element.color
+        width = tk_grid.get("width") if tk_grid.get("width") is not None else element.width
+        opacity = tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity
+        dasharray = tk_grid.get("dasharray") or None
         return color, float(width), float(opacity), dasharray
 
     def _band_row_h(self, band: dict[str, Any], config: CalendarConfig) -> float:
@@ -645,6 +540,27 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if config.blockplan_federal_holiday_icon and db is not None
             else {}
         )
+        # Single-day date/dow cells on non-workdays, highest priority first.
+        _nwd_styles = (
+            NonWorkdayStyle(
+                "federal_holiday",
+                config.blockplan_federal_holiday_fill_color,
+                config.blockplan_federal_holiday_fill_opacity,
+                config.blockplan_federal_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "company_holiday",
+                config.blockplan_company_holiday_fill_color,
+                config.blockplan_company_holiday_fill_opacity,
+                config.blockplan_company_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "weekend",
+                config.blockplan_weekend_fill_color,
+                config.blockplan_weekend_fill_opacity,
+                config.blockplan_weekend_icon,
+            ),
+        )
 
         _n_vis = len(visible_days)
         _px_per_day = timeline_w / max(1, _n_vis)
@@ -792,14 +708,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_font_size = row_h * 0.65
             else:
                 heading_font_size = float(tk_heading.get("size"))
-            heading_color = band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color
+            heading_color = band.get("label_color") or tk_heading.get("color") or _heading_text_style.color
             heading_opacity = float(
                 label_opacity_value
                 if (label_opacity_value := band.get("label_opacity")) is not None
                 else (
-                    tk_heading.get("opacity")
-                    if tk_heading.get("opacity") is not None
-                    else config.blockplan_header_label_opacity
+                    tk_heading.get("opacity") if tk_heading.get("opacity") is not None else _heading_text_style.opacity
                 )
             )
             heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
@@ -865,18 +779,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _nwd_icons: list[tuple[str, str]] = []
                 _nwd_opacity: float | None = None
                 if _is_single_day:
-                    _day_cls = _classify(first_seg.start)
-                    _nwd_fill = _nwd_fill_for_classes(_day_cls, band_fill_rules, config)
-                    if _nwd_fill:
-                        seg_fill = _nwd_fill
-                        _nwd_opacity = _nwd_fill_opacity_for_classes(_day_cls, band_fill_rules, config)
-                    _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
-                    if _nwd_icon_result:
-                        # Prefer the holidays' own country flags over the
-                        # static config icon (mirrors the weekly calendar).
-                        _icon_color = _nwd_icon_result[1]
-                        _flags = _holiday_flags.get(first_seg.start) if "federal_holiday" in _day_cls else None
-                        _nwd_icons = [(mark.icon, _icon_color) for mark in _flags] if _flags else [_nwd_icon_result]
+                    _nwd = nonworkday_override(
+                        _classify(first_seg.start),
+                        _nwd_styles,
+                        config.nonworkday_fill_color,
+                        band_fill_rules=band_fill_rules,
+                        holiday_flags=_holiday_flags.get(first_seg.start),
+                    )
+                    if _nwd.fill:
+                        seg_fill = _nwd.fill
+                        _nwd_opacity = _nwd.opacity
+                    _nwd_icons = _nwd.icons
                 _band_fop = self._tk("box:band").get("fill_opacity")
                 self._draw_rect(
                     seg_x0,
@@ -1715,31 +1628,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
                 color = _sr.fill_color
-            _dur_stroke_color = (
-                config.blockplan_duration_stroke_color
-                if config.blockplan_duration_stroke_color is not None
-                else (tk_dur_box.get("stroke") or _dur_bar_style.color)
-            )
-            _dur_stroke_dash = (
-                config.blockplan_duration_stroke_dasharray
-                if config.blockplan_duration_stroke_dasharray is not None
-                else (tk_dur_box.get("dasharray") or _dur_bar_style.dasharray)
-            )
-            _dur_fill_opacity = (
-                tk_dur_box.get("fill_opacity")
-                if tk_dur_box.get("fill_opacity") is not None
-                else config.blockplan_duration_fill_opacity
-            )
-            _dur_stroke_opacity = (
-                tk_dur_box.get("stroke_opacity")
-                if tk_dur_box.get("stroke_opacity") is not None
-                else float(config.blockplan_duration_stroke_opacity)
-            )
-            _dur_stroke_width = (
-                tk_dur_box.get("stroke_width")
-                if tk_dur_box.get("stroke_width") is not None
-                else float(config.blockplan_duration_stroke_width)
-            )
+            _dur_stroke_color = tk_dur_box.get("stroke") or _dur_bar_style.color
+            _dur_stroke_dash = tk_dur_box.get("dasharray") or _dur_bar_style.dasharray
+            # A theme without box:duration opacities/width gets the old built-ins.
+            _dur_fill_opacity = tk_dur_box.get("fill_opacity")
+            if _dur_fill_opacity is None:
+                _dur_fill_opacity = 0.35
+            _dur_stroke_opacity = tk_dur_box.get("stroke_opacity")
+            if _dur_stroke_opacity is None:
+                _dur_stroke_opacity = 0.9
+            _dur_stroke_width = tk_dur_box.get("stroke_width")
+            if _dur_stroke_width is None:
+                _dur_stroke_width = 1.0
             rect_kwargs = _sr.rect_overrides(
                 fill=color,
                 fill_opacity=_dur_fill_opacity,
@@ -1804,13 +1704,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_dur_date = self._tk("text:duration_date")
             if has_dates:
                 date_font_size = float(tk_dur_date.get("size"))
-                date_color = (
-                    config.blockplan_duration_date_color
-                    if config.blockplan_duration_date_color is not None
-                    else (tk_dur_date.get("color") or _dur_date_style.color)
-                )
+                date_color = tk_dur_date.get("color") or _dur_date_style.color
                 date_fmt = config.blockplan_duration_date_format
-                date_font = config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font
+                date_font = tk_dur_date.get("font") or _dur_date_style.font
                 date_font, _, date_color, date_opacity = _sr.text_override(
                     "duration_start_date",
                     font=date_font,
@@ -1829,14 +1725,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     else bar_center_y + date_font_size * 0.35
                 )
             dur_text_color = tk_event_name.get("color") or _event_name_style.color
-            dur_notes_color = (
-                config.blockplan_notes_text_font_color
-                if config.blockplan_notes_text_font_color is not None
-                else (tk_event_notes.get("color") or _event_notes_style.color)
-            )
-            _dur_notes_font_name = (
-                config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font
-            )
+            dur_notes_color = tk_event_notes.get("color") or _event_notes_style.color
+            _dur_notes_font_name = tk_event_notes.get("font") or _event_notes_style.font
             _dur_name_font, _, dur_text_color, dur_text_opacity = _sr.text_override(
                 "duration_name",
                 font=tk_event_name.get("font") or _event_name_style.font,
@@ -2096,14 +1986,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
             event_font_path = get_font_path(_evt_name_font)
         except Exception:
             event_font_path = ""
-        _event_notes_font_name = (
-            config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _evt_notes_style.font
-        )
-        _event_notes_color = (
-            config.blockplan_notes_text_font_color
-            if config.blockplan_notes_text_font_color is not None
-            else (tk_event_notes.get("color") or _evt_notes_style.color)
-        )
+        _event_notes_font_name = tk_event_notes.get("font") or _evt_notes_style.font
+        _event_notes_color = tk_event_notes.get("color") or _evt_notes_style.color
         try:
             notes_font_path = get_font_path(_event_notes_font_name)
         except Exception:

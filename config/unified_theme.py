@@ -75,8 +75,18 @@ VALID_SECTIONS: frozenset[str] = frozenset(
     }
 )
 
+
+def legacy_hint(tool: str = "migrate_theme.py") -> str:
+    """How to convert a pre-2026-07 theme.
+
+    The converters were retired once every shipped theme had been converted
+    (see docs/changelog.md); they are kept at a tag.
+    """
+    return f"convert it with tools/{tool}, restored by `git checkout pre-migrator-retirement -- tools/{tool}`"
+
+
 # Legacy sections that the migration retires.  Their presence is a hard parse
-# error pointing the author at tools/migrate_theme.py.
+# error pointing the author at the retired converter (legacy_hint).
 RETIRED_SECTIONS: frozenset[str] = frozenset(
     {
         "text_styles",
@@ -210,9 +220,6 @@ class UnifiedTheme:
         v = self.sections.get(name)
         return v if isinstance(v, dict) else {}
 
-    def has_section(self, name: str) -> bool:
-        return name in self.sections and self.sections[name] is not None
-
     # ----- Token resolution --------------------------------------------------
 
     def resolve_token(self, token: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -254,22 +261,6 @@ class UnifiedTheme:
                 continue
             out.append(rule)
         return out
-
-    def route_lane(self, context: dict[str, Any]) -> str | None:
-        """First-match-wins lane routing (design §9.9).
-
-        Returns the swimlane name for the first ``apply_to: lane`` rule whose
-        select matches the context.  Returns ``None`` if no rule matches.
-        """
-        for rule in self.rules:
-            if "lane" not in rule.apply_to:
-                continue
-            if not _select_matches(rule.select, context):
-                continue
-            lane = rule.style.get("swimlane")
-            if isinstance(lane, str):
-                return lane
-        return None
 
     # ----- Token introspection ----------------------------------------------
 
@@ -367,24 +358,27 @@ def parse_theme(source: str | Path | dict[str, Any]) -> UnifiedTheme:
     """Parse a theme from a YAML file, YAML string, or already-loaded dict.
 
     Raises :class:`ThemeError` on any schema violation, with a message that
-    names the offending key and (for legacy sections) points at
-    ``tools/migrate_theme.py``.
+    names the offending key and (for legacy sections) says how to recover the
+    retired converter.
     """
+    from config.theme_inheritance import read_theme_file, resolve_extends
+
     if isinstance(source, dict):
-        raw = source
+        raw = resolve_extends(source)
         origin = "<dict>"
     elif isinstance(source, Path):
-        raw = yaml.safe_load(source.read_text()) or {}
+        raw = read_theme_file(source)
         origin = str(source)
     elif isinstance(source, str):
         # Heuristic: treat as a path if it looks like one, otherwise as YAML text.
         if "\n" in source or source.lstrip().startswith(("{", "-", "#")):
             raw = yaml.safe_load(source) or {}
+            if isinstance(raw, dict):
+                raw = resolve_extends(raw)
             origin = "<string>"
         else:
-            p = Path(source)
-            raw = yaml.safe_load(p.read_text()) or {}
-            origin = str(p)
+            raw = read_theme_file(source)
+            origin = source
     else:
         raise TypeError(f"parse_theme expects path/string/dict, got {type(source)!r}")
 
@@ -405,20 +399,16 @@ def _check_section_names(raw: dict[str, Any], *, origin: str) -> None:
             continue
         if key in RENAMED_SECTIONS:
             raise ThemeError(
-                f"{origin}: section '{key}' was renamed to "
-                f"'{RENAMED_SECTIONS[key]}'; rename it, or run "
-                "`uv run python tools/migrate_theme.py` to convert this theme."
+                f"{origin}: section '{key}' was renamed to '{RENAMED_SECTIONS[key]}'; rename it, or {legacy_hint()}."
             )
         if key in REPLACED_SECTIONS:
             raise ThemeError(
-                f"{origin}: section '{key}' is no longer supported: {REPLACED_SECTIONS[key]}; or run "
-                "`uv run python tools/migrate_theme.py` to convert this theme."
+                f"{origin}: section '{key}' is no longer supported: {REPLACED_SECTIONS[key]}; or {legacy_hint()}."
             )
         if key in RETIRED_SECTIONS:
             raise ThemeError(
-                f"{origin}: legacy section '{key}' is no longer supported; "
-                "run `uv run python tools/migrate_theme.py` to convert this "
-                "theme to the unified style_rules schema."
+                f"{origin}: legacy section '{key}' is no longer supported by the unified "
+                f"style_rules schema; {legacy_hint()}."
             )
         raise ThemeError(f"{origin}: unknown top-level section '{key}'. Valid sections: {sorted(VALID_SECTIONS)}")
 

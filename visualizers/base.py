@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -103,50 +103,6 @@ class VisualizationResult:
     files: list[str] = field(default_factory=list)
 
 
-@runtime_checkable
-class Visualizer(Protocol):
-    """Protocol defining the visualization interface."""
-
-    @property
-    def name(self) -> str:
-        """Human-readable name of the visualization type."""
-        ...
-
-    @property
-    def supported_options(self) -> list[str]:
-        """List of CLI option names this visualizer supports."""
-        ...
-
-    def validate_config(self, config: CalendarConfig) -> list[str]:
-        """
-        Validate configuration for this visualizer.
-
-        Args:
-            config: Calendar configuration to validate
-
-        Returns:
-            List of warning/error messages (empty if valid)
-        """
-        ...
-
-    def generate(
-        self,
-        config: CalendarConfig,
-        db: CalendarDB,
-    ) -> VisualizationResult:
-        """
-        Generate the visualization and return result.
-
-        Args:
-            config: Calendar configuration
-            db: Database access instance
-
-        Returns:
-            Result containing output path and statistics
-        """
-        ...
-
-
 class BaseLayout(ABC):
     """Abstract base class for layout calculation."""
 
@@ -213,6 +169,49 @@ class BaseLayout(ABC):
 
         return result
 
+    def _emit_header_footer_coords(
+        self,
+        coord: CoordinateDict,
+        config: CalendarConfig,
+        margins: dict,
+        hf: dict,
+    ) -> None:
+        """Add the three-column header and footer rows to ``coord`` (PDF space)."""
+        if config.include_header and hf["header_height"] > 0:
+            header_y = config.pageY - margins["top"] - hf["header_height"]
+            coord.update(
+                self._generate_three_column_coords(
+                    margins["left"],
+                    config.pageX,
+                    header_y,
+                    hf["header_height"],
+                    "Header",
+                    margins["right"],
+                )
+            )
+
+        if config.include_footer and hf["footer_height"] > 0:
+            coord.update(
+                self._generate_three_column_coords(
+                    margins["left"],
+                    config.pageX,
+                    margins["bottom"],
+                    hf["footer_height"],
+                    "Footer",
+                    margins["right"],
+                )
+            )
+
+    @staticmethod
+    def _content_rect(margins: dict, hf: dict) -> tuple[float, float, float, float]:
+        """The (x, y, w, h) area between header and footer, in PDF space."""
+        return (
+            margins["left"],
+            margins["bottom"] + hf["footer_height"],
+            margins["usable_width"],
+            margins["usable_height"] - hf["header_height"] - hf["footer_height"],
+        )
+
     def _generate_three_column_coords(
         self,
         margin: float,
@@ -251,52 +250,57 @@ class BaseLayout(ABC):
         }
 
 
-class BaseVisualizer(ABC):
+class ContentAreaLayout(BaseLayout):
+    """Header, footer and one content rectangle filling the rest of the page.
+
+    Subclasses name the rectangle with ``area_key``; the renderer lays out
+    everything inside it.
     """
-    Abstract base class implementing common visualizer functionality.
 
-    Uses the Template Method pattern to define the visualization workflow
-    while allowing subclasses to customize specific steps.
+    area_key: ClassVar[str]
+
+    def calculate(self, config: CalendarConfig) -> CoordinateDict:
+        coord: CoordinateDict = {}
+        margins = self._calculate_margins(config)
+        hf = self._calculate_header_footer(config, margins)
+        self._emit_header_footer_coords(coord, config, margins, hf)
+        x, y, w, h = self._content_rect(margins, hf)
+        coord[self.area_key] = (round(x, 2), round(y, 2), round(w, 2), round(h, 2))
+        return self._to_svg_coords(coord, config.pageY)
+
+
+# Page-chrome options every SVG view honours. ecalendar warns when one of
+# them is set for a view whose ``supported_options`` lacks it.
+PAGE_CHROME_OPTIONS = frozenset(
+    {
+        "papersize",
+        "orientation",
+        "margin",
+        "header",
+        "footer",
+        "watermark_text",
+        "watermark_image",
+    }
+)
+
+
+class BaseVisualizer:
+    """One visualization: filter the events, lay out the page, render it.
+
+    Most views need nothing beyond a layout class and a renderer class, and
+    are created straight from the table in ``visualizers/factory.py``.
+    Subclass only to change the workflow (see mini, candybar, text-mini).
     """
 
-    def __init__(self):
-        """Initialize the visualizer."""
-        self._layout: BaseLayout | None = None
-        self._renderer = None
+    supported_options: frozenset[str] = PAGE_CHROME_OPTIONS
 
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Human-readable name of the visualization type."""
-        pass
-
-    @property
-    def supported_options(self) -> list[str]:
-        """
-        Default common options supported by all visualizers.
-
-        Override to add view-specific options.
-        """
-        return [
-            "papersize",
-            "orientation",
-            "margin",
-            "header",
-            "footer",
-            "watermark_text",
-            "watermark_image",
-        ]
+    def __init__(self, name: str, layout_cls: type[BaseLayout], renderer_cls: type) -> None:
+        self.name = name
+        self._layout_cls = layout_cls
+        self._renderer_cls = renderer_cls
 
     def validate_config(self, config: CalendarConfig) -> list[str]:
-        """
-        Base validation - can be extended by subclasses.
-
-        Args:
-            config: Calendar configuration to validate
-
-        Returns:
-            List of warning messages
-        """
+        """Return warnings for a config this view cannot render sensibly."""
         warnings = []
 
         if not config.adjustedstart or not config.adjustedend:
@@ -307,64 +311,26 @@ class BaseVisualizer(ABC):
 
         return warnings
 
-    @abstractmethod
     def _create_layout(self) -> BaseLayout:
-        """
-        Factory method for layout calculator.
+        return self._layout_cls()
 
-        Returns:
-            Layout calculator instance for this visualization type
-        """
-        pass
-
-    @abstractmethod
     def _create_renderer(self):
-        """
-        Factory method for renderer.
-
-        Returns:
-            Renderer instance for this visualization type
-        """
-        pass
+        return self._renderer_cls()
 
     def generate(
         self,
         config: CalendarConfig,
         db: CalendarDB,
     ) -> VisualizationResult:
-        """
-        Template Method pattern for visualization workflow.
-
-        Steps:
-        1. Prepare data (query DB, filter events)
-        2. Calculate layout (coordinates)
-        3. Render to SVG
-        4. Return result
-
-        Args:
-            config: Calendar configuration
-            db: Database access instance
-
-        Returns:
-            Result containing output path and statistics
-        """
-        # Step 1: Prepare data
+        """Prepare the events, calculate the layout and render the page(s)."""
         events = self._prepare_data(config, db)
-
-        # Step 2: Calculate layout
-        self._layout = self._create_layout()
-        coordinates = self._layout.calculate(config)
-
-        # Step 3: Render
-        self._renderer = self._create_renderer()
-        result = self._renderer.render(
+        coordinates = self._create_layout().calculate(config)
+        return self._create_renderer().render(
             config=config,
             coordinates=coordinates,
             events=events,
             db=db,
         )
-
-        return result
 
     def _prepare_data(
         self,
@@ -385,25 +351,4 @@ class BaseVisualizer(ABC):
             config.adjustedstart,
             config.adjustedend,
         )
-        return self._filter_events(events, config)
-
-    def _filter_events(
-        self,
-        events: list,
-        config: CalendarConfig,
-    ) -> list:
-        """Delegate to the module-level :func:`filter_events` helper."""
         return filter_events(events, config)
-
-    def _should_include_event(
-        self,
-        event: dict,
-        config: CalendarConfig,
-    ) -> bool:
-        """
-        Check if a single event passes all active filters.
-
-        Delegates to :func:`filter_events` for consistency; kept for
-        backwards-compatibility with any subclass that may override it.
-        """
-        return bool(filter_events([event], config))

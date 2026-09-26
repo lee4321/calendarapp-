@@ -467,6 +467,38 @@ style_rules:
     select: {}
     style:
       swimlane: Other
+  - name: box:cell — weekly (from weekly.day_box)
+    apply_to: box:cell
+    select: {visualizer: weekly}
+    style: {stroke_opacity: 0.25}
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
+  - name: text:event_name — pit (from timeline.name_text)
+    apply_to: text:event_name
+    select: {visualizer: pit}
+    style: {font: Roboto-Bold}
+  - name: text:event_notes — pit (from timeline.notes_text)
+    apply_to: text:event_notes
+    select: {visualizer: pit}
+    style: {font: RobotoCondensed-Bold}
+  - name: box:band — blockplan (from blockplan)
+    apply_to: box:band
+    select: {visualizer: blockplan}
+    style: {stroke_opacity: 0.6}
+  - name: text:heading — blockplan (from blockplan)
+    apply_to: text:heading
+    select: {visualizer: blockplan}
+    style: {opacity: 1.0}
+  - name: box:duration — blockplan (from blockplan)
+    apply_to: box:duration
+    select: {visualizer: blockplan}
+    style: {fill_opacity: 0.35, stroke_opacity: 0.9}
+  - name: text:duration_date — blockplan (from blockplan)
+    apply_to: text:duration_date
+    select: {visualizer: blockplan}
+    style: {font: RobotoCondensed-Light}
 element_overrides:
   ec-axis-tick:
     use: line:tick

@@ -12,6 +12,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.theme_engine import find_unregistered_fonts
+from config.theme_inheritance import read_theme_file
 from tools.validate_theme import main
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
@@ -29,7 +30,7 @@ def test_sample_yaml_passes() -> None:
     assert rc == 0
 
 
-def test_legacy_theme_without_convert_fails_with_hint(
+def test_legacy_theme_fails_with_a_converter_hint(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -48,23 +49,7 @@ def test_legacy_theme_without_convert_fails_with_hint(
     assert rc == 2
     err = captured.err
     assert "legacy section" in err
-    assert "tools/migrate_theme.py" in err
-    assert "--convert" in err
-
-
-def test_legacy_theme_with_convert_passes(tmp_path: Path) -> None:
-    """The same synthetic legacy theme should pass with --convert."""
-    legacy = tmp_path / "legacy.yaml"
-    legacy.write_text(
-        yaml.safe_dump(
-            {
-                "theme": {"name": "legacy", "version": "2.0"},
-                "text_styles": {"heading": {"font": "Roboto-Regular", "size": 10, "color": "black"}},
-            }
-        )
-    )
-    rc = main([str(legacy), "--convert", "--quiet"])
-    assert rc == 0
+    assert "git checkout pre-migrator-retirement -- tools/migrate_theme.py" in err
 
 
 def test_missing_keys_exit_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -133,7 +118,7 @@ def test_no_bundled_theme_contains_stray_element_bindings() -> None:
     """
     failures: list[str] = []
     for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
-        raw = yaml.safe_load(theme_path.read_text()) or {}
+        raw = read_theme_file(theme_path)
         rules = raw.get("style_rules") or []
         for i, rule in enumerate(rules):
             if not isinstance(rule, dict):
@@ -182,7 +167,7 @@ def test_no_bundled_theme_references_unregistered_fonts() -> None:
     """
     failures: list[str] = []
     for theme_path in sorted(THEMES_DIR.glob("*.yaml")):
-        raw = yaml.safe_load(theme_path.read_text()) or {}
+        raw = read_theme_file(theme_path)
         for font_path, font in find_unregistered_fonts(raw):
             failures.append(f"{theme_path.name}: {font!r} at {font_path}")
     assert not failures, "Shipped themes reference fonts missing from FONT_REGISTRY:\n" + "\n".join(failures)

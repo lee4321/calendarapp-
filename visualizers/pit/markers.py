@@ -74,12 +74,6 @@ class MarkerSpec:
     shape: str = ""  # one of BUILTIN_SHAPES
     css_class: str = ""  # ec-pit-event-marker / ec-milestone-marker
 
-    @property
-    def is_icon(self) -> bool:
-        # Axis markers are never icons. Kept for backward compatibility
-        # with callers that branch on this property.
-        return False
-
 
 # Pattern used to colorize a DB icon glyph. Mirrors the SVG-pattern
 # colorization path used by the weekly day-box decoration code.
@@ -329,33 +323,4 @@ def _draw_icon_at_center(
 
     drawing.append(
         drawsvg.Raw(f'<g transform="translate({tx:.2f},{ty:.2f}) scale({scale:.4f})" class="{css_class}">{colored}</g>')
-    )
-
-
-# ---------------------------------------------------------------------------
-# Back-compat shim — older tests imported ``_draw_icon_marker`` directly.
-# Now that the axis no longer draws icons, the symbol is repointed at the
-# label-box drawing path so callers that just want to verify sizing still
-# work. The (cx, cy) signature is preserved.
-# ---------------------------------------------------------------------------
-def _draw_icon_marker(
-    drawing,
-    spec: MarkerSpec | object,
-    cx: float,
-    cy: float,
-    size: float,
-    color: str,
-    strip_svg_wrapper,
-) -> None:
-    """Deprecated — kept so older tests still import successfully."""
-    icon_svg = getattr(spec, "icon_svg", "") or ""
-    _draw_icon_at_center(
-        drawing,
-        icon_svg,
-        cx,
-        cy,
-        size,
-        color,
-        strip_svg_wrapper,
-        "ec-pit-label-icon",
     )

@@ -21,6 +21,7 @@ import yaml
 
 from config.config import CalendarConfig
 from config.theme_engine import ThemeEngine
+from config.theme_inheritance import read_theme_file
 
 THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 THEME_FILES = sorted(THEMES_DIR.glob("*.yaml"))
@@ -52,7 +53,7 @@ def test_every_band_reference_resolves(theme_path: Path, caplog):
 @pytest.mark.parametrize("theme_path", THEME_FILES, ids=lambda p: p.name)
 def test_a_theme_that_names_bands_ships_a_catalog(theme_path: Path):
     """The failure mode that bit us: references with nowhere to resolve."""
-    raw = yaml.safe_load(theme_path.read_text()) or {}
+    raw = read_theme_file(theme_path)
     catalog = raw.get("time_bands") or {}
 
     named: list[str] = []

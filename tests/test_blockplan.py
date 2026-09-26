@@ -8,7 +8,6 @@ from fakes import FakeCalendarDB
 
 from config.config import (
     create_calendar_config,
-    create_sample_blockplan_swimlanes_from_wbs,
     setfontsizes,
 )
 from shared.data_models import Event
@@ -598,9 +597,6 @@ def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
     config = _base_config(output)
     config.blockplan_event_show_date = True
     config.blockplan_event_date_format = "MMM D"
-    config.blockplan_event_date_color = "purple"
-    config.blockplan_event_date_font = "Roboto-Bold"
-    config.blockplan_event_date_font_size = 11.0
     config.userstart = "20260210"
     config.userend = "20260212"
     config.adjustedstart = "20260210"
@@ -634,7 +630,7 @@ def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
     date_call = next(c for c in renderer.text_calls if c["text"] == "Feb 10")
     name_call = next(c for c in renderer.text_calls if c["text"] == "Launch Window")
     assert date_call["y"] < name_call["y"]  # SVG: above = smaller Y
-    assert date_call["font"] == "Roboto-Bold"
+    assert date_call["font"] == config.get_text_style("ec-event-date").font
 
     name_y_a = next(c["y"] for c in renderer.text_calls if c["text"] == "Launch Window")
     name_y_b = next(c["y"] for c in renderer.text_calls if c["text"] == "Launch Backup")
@@ -748,19 +744,6 @@ def test_blockplan_timeband_per_band_style_and_palette(tmp_path):
     seg_fills = [r.get("fill") for r in renderer.rect_calls if r.get("fill") in {"#111111", "#222222"}]
     assert len(seg_fills) >= 2
     assert seg_fills[0] != seg_fills[1]
-
-
-def test_sample_blockplan_swimlane_factory_from_wbs():
-    lanes = create_sample_blockplan_swimlanes_from_wbs(
-        ["2.1", "1", "2.1", "", " 3. "],
-        lane_name_format="Lane {wbs}",
-    )
-    assert lanes == [
-        {"name": "Lane 1", "match": {"wbs_prefixes": ["1"]}},
-        {"name": "Lane 2.1", "match": {"wbs_prefixes": ["2.1"]}},
-        {"name": "Lane 3.", "match": {"wbs_prefixes": ["3."]}},
-        {"name": "Unmatched", "match": {}},
-    ]
 
 
 def test_blockplan_event_notes_and_y_adjustment_for_collisions(tmp_path):

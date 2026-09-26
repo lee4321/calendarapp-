@@ -382,39 +382,3 @@ class CandybarLayout(BaseLayout):
         except ValueError:
             logger.warning("Invalid mini_week1_start: %s", config.mini_week1_start)
             return None
-
-    def _emit_header_footer_coords(
-        self,
-        coord: CoordinateDict,
-        config: CalendarConfig,
-        margins: dict,
-        hf: dict,
-    ) -> None:
-        """Emit page header/footer coords via the shared three-column helper."""
-        left = margins["left"]
-        top = config.pageY - margins["top"]
-
-        if config.include_header and hf["header_height"] > 0:
-            h_height = hf["header_height"]
-            coord.update(
-                self._generate_three_column_coords(
-                    left,
-                    config.pageX,
-                    top - h_height,
-                    h_height,
-                    "Header",
-                    margins["right"],
-                )
-            )
-        if config.include_footer and hf["footer_height"] > 0:
-            f_height = hf["footer_height"]
-            coord.update(
-                self._generate_three_column_coords(
-                    left,
-                    config.pageX,
-                    margins["bottom"],
-                    f_height,
-                    "Footer",
-                    margins["right"],
-                )
-            )

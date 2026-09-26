@@ -199,3 +199,14 @@ def test_an_event_rule_stroke_still_outlines_its_icon():
 
     [halo] = _halo_rects([rule], "box:event")
     assert (halo["fill"], halo["stroke"]) == ("none", "crimson")
+
+
+def test_a_rule_selected_on_another_view_is_ignored():
+    rules = [
+        {"apply_to": "box:duration", "select": {"visualizer": "blockplan"}, "style": {"stroke_width": 3}},
+        {"apply_to": "box:duration", "select": {"visualizer": ["weekly", "mini"]}, "style": {"stroke_width": 5}},
+    ]
+    event = Event(task_name="t", start="20260101", end="20260105")
+    assert StyleEngine(rules, "weekly").evaluate_event(event).stroke_width == 5
+    assert StyleEngine(rules, "blockplan").evaluate_event(event).stroke_width == 3
+    assert StyleEngine(rules, "timeline").evaluate_event(event).stroke_width is None

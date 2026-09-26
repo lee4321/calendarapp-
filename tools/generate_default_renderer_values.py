@@ -17,9 +17,10 @@ Usage:
     uv run python tools/generate_default_renderer_values.py --check   # exit 1 when stale
 
 Re-run after changing a renderer's fallbacks, ``setfontsizes()``,
-``config/element_catalog_defaults.yaml`` or ``CalendarConfig`` defaults.  The
-document quotes source line numbers, so ``--check`` also reports it stale after
-unrelated edits that move those lines.
+``config/element_catalog_defaults.yaml`` or ``CalendarConfig`` defaults.
+Sources are cited as ``file:function``, so an edit that only moves lines leaves
+the document as it is, and ``tests/test_default_renderer_values.py`` compares it
+exactly.
 """
 
 from __future__ import annotations
@@ -160,7 +161,7 @@ class Read:
     name: str  # "text:event_name" or "ec-event-name"
     prop: str
     file: str
-    line: int
+    where: str  # enclosing ``Class.method``: stable across edits, unlike a line number
     chain: str  # the enclosing fallback expression, as source
     condition: bool  # the read is only tested (``is not None``), not used as a value
     style_kind: str = ""
@@ -222,29 +223,20 @@ def capture_configs(theme: Path) -> dict[str, Any]:
     return captured
 
 
-def element_styles(directory: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-    """Catalog entries, then every ec-* style for a theme with and without style_rules."""
+def element_styles() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Catalog entries, then every ec-* style a theme that defines no tokens gets."""
     from config.config import CalendarConfig
     from config.element_catalog import load_catalog
-    from config.theme_engine import ThemeEngine
 
     catalog = load_catalog()
-    results = []
-    for name, data in (
-        ("with_rules", {"theme": {"name": "blank", "version": "3.0"}, "style_rules": []}),
-        ("without_rules", {"theme": {"name": "blank", "version": "3.0"}}),
-    ):
-        engine = ThemeEngine()
-        engine.load(str(_write_theme(directory, name, data)))
-        config = engine.apply(CalendarConfig())
-        getters = {
-            "text": config.get_text_style,
-            "box": config.get_box_style,
-            "line": config.get_line_style,
-            "icon": config.get_icon_style,
-        }
-        results.append({ec: _plain(getters[entry.kind](ec)) for ec, entry in catalog.items()})
-    return catalog, results[0], results[1]
+    config = CalendarConfig()
+    getters = {
+        "text": config.get_text_style,
+        "box": config.get_box_style,
+        "line": config.get_line_style,
+        "icon": config.get_icon_style,
+    }
+    return catalog, {ec: _plain(getters[entry.kind](ec)) for ec, entry in catalog.items()}
 
 
 # ── Static extraction ────────────────────────────────────────────────────────
@@ -285,6 +277,16 @@ def extract_reads(relative: str) -> list[Read]:
     source = (ROOT / relative).read_text(encoding="utf-8")
     tree = ast.parse(source)
     parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+
+    def where(node: ast.AST) -> str:
+        """Qualified name of the innermost function (and its classes) around ``node``."""
+        names = []
+        cur = parents.get(node)
+        while cur is not None:
+            if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.append(cur.name)
+            cur = parents.get(cur)
+        return ".".join(reversed(names))
 
     def enclosing(node: ast.AST) -> tuple[str, bool]:
         cur = node
@@ -327,7 +329,7 @@ def extract_reads(relative: str) -> list[Read]:
                     seen.add((node.lineno, node.col_offset))
                     chain, condition = enclosing(node)
                     reads.append(
-                        Read("token", token, node.args[0].value, relative, node.lineno, chain, condition,
+                        Read("token", token, node.args[0].value, relative, where(node), chain, condition,
                              tokvars=dict(tokvars), stylevars=dict(stylevars))
                     )  # fmt: skip
             if isinstance(node, ast.Attribute) and node.attr in STYLE_PROPS:
@@ -337,7 +339,7 @@ def extract_reads(relative: str) -> list[Read]:
                     seen.add((node.lineno, node.col_offset))
                     chain, condition = enclosing(node)
                     reads.append(
-                        Read("style", style[1], node.attr, relative, node.lineno, chain, condition, style[0],
+                        Read("style", style[1], node.attr, relative, where(node), chain, condition, style[0],
                              tokvars=dict(tokvars), stylevars=dict(stylevars))
                     )  # fmt: skip
     return reads
@@ -528,8 +530,8 @@ def _best_chain(reads: list[Read]) -> str:
 
 
 def _source_cell(reads: list[Read]) -> str:
-    locations = sorted({(read.file, read.line) for read in reads})
-    shown = [f"`{Path(f).parent.name}/{Path(f).name}:{line}`" for f, line in locations[:3]]
+    locations = sorted({(read.file, read.where) for read in reads})
+    shown = [f"`{Path(f).parent.name}/{Path(f).name}:{func}`" for f, func in locations[:3]]
     extra = f" +{len(locations) - 3}" if len(locations) > 3 else ""
     return ", ".join(shown) + extra
 
@@ -596,7 +598,7 @@ def build_document() -> str:
     with tempfile.TemporaryDirectory() as tmp:
         blank = _write_theme(Path(tmp), "blank", {"theme": {"name": "blank", "version": "3.0"}, "style_rules": []})
         configs = capture_configs(blank)
-        catalog, with_rules, without_rules = element_styles(Path(tmp))
+        catalog, defaults = element_styles()
 
     reads_by_file = {relative: extract_reads(relative) for relative in {*OWN_FILE.values(), PAGE_FILE}}
     contexts = {view: token_context(view, configs[view]) for view in VIEW_DATES}
@@ -654,10 +656,9 @@ def build_document() -> str:
     )
     add(
         "2. **Element styles** (`ec-*` CSS classes). Looked up through the built-in element catalog "
-        "(`config/element_catalog.yaml`). If the theme has a `style_rules:` section, a token it doesn't define is "
-        "filled from `config/element_catalog_defaults.yaml`. If the theme has no `style_rules:` section at all, "
-        "element styles come from legacy `config.*` fields instead. Every bundled theme has `style_rules:`, so the "
-        "tables below use that case; the [appendix](#appendix-element-style-defaults) lists both."
+        "(`config/element_catalog.yaml`) and always drawn from tokens: a token the theme doesn't define — or every "
+        "token, when no theme or a theme without `style_rules:` is used — comes from "
+        "`config/element_catalog_defaults.yaml`. The [appendix](#appendix-element-style-defaults) lists them."
     )
     add(
         "3. **Settings** (geometry, formats, palettes, symbols). A theme key maps to a `CalendarConfig` field; unset, "
@@ -755,20 +756,15 @@ def build_document() -> str:
     add("## Appendix: element style defaults")
     add("")
     add(
-        "Every `ec-*` class in the element catalog, with the token it is bound to. *With `style_rules`* is what a "
-        "theme that has a `style_rules:` section gets for a token it doesn't define "
-        "(`config/element_catalog_defaults.yaml`). *Without `style_rules`* is what a theme with no `style_rules:` "
-        "section gets (legacy `config.*` fields)."
+        "Every `ec-*` class in the element catalog, with the token it is bound to and the style it gets when the "
+        "theme does not define that token (`config/element_catalog_defaults.yaml`)."
     )
     add("")
-    add("| Element | Token | With `style_rules` | Without `style_rules` |")
-    add("|---|---|---|---|")
+    add("| Element | Token | Default |")
+    add("|---|---|---|")
     for ec in sorted(catalog):
         entry = catalog[ec]
-        add(
-            f"| `{ec}` | `{entry.kind}:{entry.token}` | {_style_summary(entry.kind, with_rules[ec])} | "
-            f"{_style_summary(entry.kind, without_rules[ec])} |"
-        )
+        add(f"| `{ec}` | `{entry.kind}:{entry.token}` | {_style_summary(entry.kind, defaults[ec])} |")
     return "\n".join(out).rstrip("\n") + "\n"
 
 
