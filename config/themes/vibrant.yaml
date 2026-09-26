@@ -538,7 +538,7 @@ style_rules:
     apply_to: text:heading
     select: {visualizer: blockplan}
     style: {opacity: 1.0}
-  - name: text:heading — papersize override
+  - name: text:heading — letter / ledger / tabloid paper
     apply_to: text:heading
     select:
       papersize:
@@ -547,7 +547,7 @@ style_rules:
         - tabloid
     style:
       size: 12
-  - name: text:heading — papersize override
+  - name: text:heading — 3x5 / 5x8 paper
     apply_to: text:heading
     select:
       papersize:
