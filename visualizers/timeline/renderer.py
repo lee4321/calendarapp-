@@ -526,19 +526,7 @@ class TimelineRenderer(BaseSVGRenderer):
         # Government holiday icons sit between the axis line and the duration
         # bars (the duration offset already reserves enough space for them).
         if getattr(config, "timeline_show_holiday_icons", True):
-            if _horizontal:
-                self._draw_holiday_icons(config, start, end, axis_left, axis_right, axis_y, db)
-            else:
-                self._draw_holiday_icons_vertical(
-                    config,
-                    start,
-                    end,
-                    axis_origin[1],
-                    axis_end[1],
-                    axis_origin[0],
-                    db,
-                    side=duration_side,
-                )
+            self._draw_holiday_icons(config, frame, db, duration_side)
 
         # Pass 2: draw all boxes, markers, and text on top.
         for callout in callouts:
@@ -671,7 +659,11 @@ class TimelineRenderer(BaseSVGRenderer):
         # usually reach further down and would cover this, but a timeline with
         # no duration bars would otherwise crop the band away under --shrink.
         if getattr(config, "timeline_show_holiday_icons", True):
-            max_y = max(max_y, axis_y + self._holiday_band_extent(config))
+            holiday_side = self._duration_side(config, Side(config.timeline_label_side))
+            if frame.vertical or frame.sign(holiday_side) > 0:
+                max_y = max(max_y, axis_y + self._holiday_band_extent(config))
+            else:
+                min_y = min(min_y, axis_y - self._holiday_band_extent(config))
 
         # Durations extend below axis_y (horizontal) or to the left of
         # axis_x (vertical).
@@ -2934,40 +2926,54 @@ class TimelineRenderer(BaseSVGRenderer):
     def _draw_holiday_icons(
         self,
         config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
+        frame: AxisFrame,
         db: CalendarDB,
+        side: Side = Side.SECONDARY,
     ) -> None:
-        """Render each government holiday below the axis as an icon and,
-        unless suppressed, the date it falls on."""
+        """Mark each government holiday with its icon and, unless
+        suppressed, the date it falls on.
+
+        The icons sit between the axis and the first lane of duration bars,
+        so they take the bars' ``side`` (``Side.BOTH`` counts as SECONDARY);
+        ``timeline.holiday_icon_y_offset`` is the gap to the axis either way.
+        The dates are written past the icons, on further rows when two
+        holidays fall close enough for their dates to touch.
+        """
         size = self._holiday_icon_size(config)
-        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
         if size <= 0:
             return
+        sign = frame.sign(side)
+        side = frame.side_of(sign)
+        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
         color = getattr(config, "timeline_holiday_icon_color", None)
-        baseline_y = axis_y + y_offset + (size * 0.80)
+        icon_across = frame.cross + sign * (y_offset + size * 0.5)
 
-        marks = self._holiday_marks(config, start, end, axis_left, axis_right, db)
-        for x, icon_name, _date_label in marks:
+        marks = self._holiday_marks(config, frame.start, frame.end, 0.0, 0.0, db, pos_for_day=frame.pos)
+        if not marks:
+            return
+        for along, icon_name, _date_label in marks:
+            if frame.vertical:
+                icon_x, icon_y = icon_across, self._icon_baseline(along, size)
+            else:
+                icon_x, icon_y = along, self._icon_baseline(icon_across, size)
             self._draw_icon_svg(
                 icon_name,
-                x,
-                baseline_y,
+                icon_x,
+                icon_y,
                 size,
                 anchor="middle",
                 color=color,
                 css_class="ec-holiday-icon",
             )
+            if frame.vertical:
+                self._note_side_ink(icon_x - size / 2.0, icon_x + size / 2.0)
 
         if not getattr(config, "timeline_show_holiday_dates", True):
             return
-
         date_size = self._holiday_date_font_size(config)
         if date_size <= 0:
             return
+
         # ec-holiday-date is catalog-bound to text:event_date, so a theme that
         # styles event dates styles these too unless the holiday-specific
         # config field overrides it.
@@ -2980,26 +2986,42 @@ class TimelineRenderer(BaseSVGRenderer):
             or color
             or config.timeline_tick_color
         )
-        # First date row clears the icon's descender; further rows stack below.
-        first_baseline = axis_y + y_offset + size + (date_size * 0.95)
-        row_stride = date_size * 1.15
-
-        labelled = [(x, label) for x, _icon, label in marks if label]
-        rows = self._assign_holiday_date_rows([(x, string_width(label, font_path, date_size)) for x, label in labelled])
-        for (x, label), row in zip(labelled, rows, strict=False):
+        labelled = [(along, label) for along, _icon, label in marks if label]
+        if frame.vertical:
+            # Along a vertical axis a date claims its own line height; rows
+            # step away from the axis by the widest date.
+            rows = self._assign_holiday_date_rows([(along, date_size * 1.2) for along, _label in labelled])
+            first_x = frame.cross + sign * (y_offset + size + 2.0)
+            row_stride = sign * (max(string_width(label, font_path, date_size) for _p, _i, label in marks) + 3.0)
+        else:
+            # Along a horizontal axis a date claims its width; rows stack
+            # a line apart, the first clearing the icon.
+            rows = self._assign_holiday_date_rows(
+                [(along, string_width(label, font_path, date_size)) for along, label in labelled]
+            )
+            row_stride = date_size * 1.15
+        for (along, label), row in zip(labelled, rows, strict=False):
             if row < 0:
                 continue
+            if frame.vertical:
+                x, y, anchor = first_x + (row * row_stride), along + date_size * 0.35, "start" if sign > 0 else "end"
+            elif sign > 0:
+                x, y, anchor = along, frame.cross + y_offset + size + (date_size * 0.95) + (row * row_stride), "middle"
+            else:
+                x, y, anchor = along, frame.cross - y_offset - size - (date_size * 0.15) - (row * row_stride), "middle"
             self._draw_text(
                 x,
-                first_baseline + (row * row_stride),
+                y,
                 label,
                 font_name,
                 date_size,
                 fill=date_color,
                 fill_opacity=_date_style.opacity,
-                anchor="middle",
+                anchor=anchor,
                 css_class="ec-holiday-date",
             )
+            if frame.vertical:
+                self._note_label_ink(x, label, font_name, date_size, side)
 
     def _holiday_band_extent(self, config: CalendarConfig) -> float:
         """Height the holiday icons and their dates claim below the axis."""
@@ -3335,95 +3357,6 @@ class TimelineRenderer(BaseSVGRenderer):
             )
             self._note_side_ink(col_x, col_x + col_w)
             col_near += sign * col_w
-
-    def _draw_holiday_icons_vertical(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_top: float,
-        axis_bottom: float,
-        axis_x: float,
-        db: CalendarDB,
-        side: Side = Side.SECONDARY,
-    ) -> None:
-        """:py:meth:`_draw_holiday_icons` turned on its side.
-
-        The icons sit between the axis and the first lane of duration bars,
-        the same slot the horizontal axis gives them, so they take the bars'
-        ``side``; ``timeline.holiday_icon_y_offset`` is the gap to the axis
-        either way.  A day's date is written past its icon, stepping further
-        out when two holidays fall close enough for their dates to touch.
-        """
-        size = self._holiday_icon_size(config)
-        if size <= 0:
-            return
-        sign = 1.0 if side is Side.PRIMARY else -1.0
-        y_offset = float(getattr(config, "timeline_holiday_icon_y_offset", 4.0))
-        color = getattr(config, "timeline_holiday_icon_color", None)
-        icon_x = axis_x + sign * (y_offset + size * 0.5)
-
-        marks = self._holiday_marks(
-            config,
-            start,
-            end,
-            0.0,
-            0.0,
-            db,
-            pos_for_day=lambda day: self._y_for_day(day, start, end, axis_top, axis_bottom),
-        )
-        if not marks:
-            return
-        for y, icon_name, _date_label in marks:
-            self._draw_icon_svg(
-                icon_name,
-                icon_x,
-                self._icon_baseline(y, size),
-                size,
-                anchor="middle",
-                color=color,
-                css_class="ec-holiday-icon",
-            )
-            self._note_side_ink(icon_x - size / 2.0, icon_x + size / 2.0)
-
-        if not getattr(config, "timeline_show_holiday_dates", True):
-            return
-        date_size = self._holiday_date_font_size(config)
-        if date_size <= 0:
-            return
-
-        _date_style = config.get_text_style("ec-holiday-date")
-        font_name = _date_style.font or config.timeline_date_font
-        date_color = (
-            getattr(config, "timeline_holiday_date_color", None)
-            or _date_style.color
-            or color
-            or config.timeline_tick_color
-        )
-        # Rows step away from the axis, as they step down from a horizontal
-        # one; along the axis a date claims its own line height.
-        first_x = axis_x + sign * (y_offset + size + 2.0)
-        row_stride = sign * (
-            max(string_width(label, self._safe_font_path(font_name), date_size) for _p, _i, label in marks) + 3.0
-        )
-        labelled = [(y, label) for y, _icon, label in marks if label]
-        rows = self._assign_holiday_date_rows([(y, date_size * 1.2) for y, _label in labelled])
-        for (y, label), row in zip(labelled, rows, strict=False):
-            if row < 0:
-                continue
-            x = first_x + (row * row_stride)
-            self._draw_text(
-                x,
-                y + date_size * 0.35,
-                label,
-                font_name,
-                date_size,
-                fill=date_color,
-                fill_opacity=_date_style.opacity,
-                anchor="start" if side is Side.PRIMARY else "end",
-                css_class="ec-holiday-date",
-            )
-            self._note_label_ink(x, label, font_name, date_size, side)
 
     def _draw_today_marker_vertical(
         self,
