@@ -17,9 +17,10 @@ Usage:
     uv run python tools/generate_default_renderer_values.py --check   # exit 1 when stale
 
 Re-run after changing a renderer's fallbacks, ``setfontsizes()``,
-``config/element_catalog_defaults.yaml`` or ``CalendarConfig`` defaults.  The
-document quotes source line numbers, so ``--check`` also reports it stale after
-unrelated edits that move those lines.
+``config/element_catalog_defaults.yaml`` or ``CalendarConfig`` defaults.
+Sources are cited as ``file:function``, so an edit that only moves lines leaves
+the document as it is, and ``tests/test_default_renderer_values.py`` compares it
+exactly.
 """
 
 from __future__ import annotations
@@ -160,7 +161,7 @@ class Read:
     name: str  # "text:event_name" or "ec-event-name"
     prop: str
     file: str
-    line: int
+    where: str  # enclosing ``Class.method``: stable across edits, unlike a line number
     chain: str  # the enclosing fallback expression, as source
     condition: bool  # the read is only tested (``is not None``), not used as a value
     style_kind: str = ""
@@ -277,6 +278,16 @@ def extract_reads(relative: str) -> list[Read]:
     tree = ast.parse(source)
     parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
 
+    def where(node: ast.AST) -> str:
+        """Qualified name of the innermost function (and its classes) around ``node``."""
+        names = []
+        cur = parents.get(node)
+        while cur is not None:
+            if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.append(cur.name)
+            cur = parents.get(cur)
+        return ".".join(reversed(names))
+
     def enclosing(node: ast.AST) -> tuple[str, bool]:
         cur = node
         while True:
@@ -318,7 +329,7 @@ def extract_reads(relative: str) -> list[Read]:
                     seen.add((node.lineno, node.col_offset))
                     chain, condition = enclosing(node)
                     reads.append(
-                        Read("token", token, node.args[0].value, relative, node.lineno, chain, condition,
+                        Read("token", token, node.args[0].value, relative, where(node), chain, condition,
                              tokvars=dict(tokvars), stylevars=dict(stylevars))
                     )  # fmt: skip
             if isinstance(node, ast.Attribute) and node.attr in STYLE_PROPS:
@@ -328,7 +339,7 @@ def extract_reads(relative: str) -> list[Read]:
                     seen.add((node.lineno, node.col_offset))
                     chain, condition = enclosing(node)
                     reads.append(
-                        Read("style", style[1], node.attr, relative, node.lineno, chain, condition, style[0],
+                        Read("style", style[1], node.attr, relative, where(node), chain, condition, style[0],
                              tokvars=dict(tokvars), stylevars=dict(stylevars))
                     )  # fmt: skip
     return reads
@@ -519,8 +530,8 @@ def _best_chain(reads: list[Read]) -> str:
 
 
 def _source_cell(reads: list[Read]) -> str:
-    locations = sorted({(read.file, read.line) for read in reads})
-    shown = [f"`{Path(f).parent.name}/{Path(f).name}:{line}`" for f, line in locations[:3]]
+    locations = sorted({(read.file, read.where) for read in reads})
+    shown = [f"`{Path(f).parent.name}/{Path(f).name}:{func}`" for f, func in locations[:3]]
     extra = f" +{len(locations) - 3}" if len(locations) > 3 else ""
     return ", ".join(shown) + extra
 
