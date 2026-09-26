@@ -1071,9 +1071,10 @@ Date formats accepted: `YYYY-MM-DD`, `M/D/YYYY`, `M/D/YY`, and any other format 
 
 Themes are YAML files describing the visual style of SVG output via a single ordered `style_rules` list. Each rule either **defines** a named style token (text, box, line, or icon) or **applies** a style to a content surface (`box:day`, `box:duration`, etc.) or a lane assignment. Element-to-token bindings — *which* `ec-*` class consumes *which* token — are not part of any theme; they live in the built-in catalog at [`config/element_catalog.yaml`](config/element_catalog.yaml) and are shared by every theme. Non-styling configuration — format strings, geometry, fiscal semantics, structural lane and band declarations — lives in dedicated top-level sections.
 
-There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error pointing at `tools/migrate_theme.py`. Run the migrator once on any existing theme:
+There is one supported schema. Legacy themes (`text_styles` / `box_styles` / `line_styles` / `icon_styles` / `element_styles` / `axis` / `swimlane_rules` top-level keys) are rejected with a parse error. The converter for them, `tools/migrate_theme.py`, was retired once every shipped theme had been converted; to convert an old theme, restore it from its tag and run it once:
 
 ```bash
+git checkout pre-migrator-retirement -- tools/migrate_theme.py
 uv run python tools/migrate_theme.py --in-place path/to/theme.yaml
 ```
 
@@ -1200,9 +1201,10 @@ element_overrides:
     color: "#888888"      # keep the catalog's text token, change just the color
 ```
 
-`element_overrides:` keys must be `ec-*` class names that appear in the catalog. Omit `use:` to keep the catalog's default token while still applying a per-element color.  Authoring full `apply_to: element` rules in a theme is no longer supported; if you have an older theme that still ships them, run `tools/strip_element_bindings.py` (targeted, idempotent) to lift them into `element_overrides:`:
+`element_overrides:` keys must be `ec-*` class names that appear in the catalog. Omit `use:` to keep the catalog's default token while still applying a per-element color.  Authoring full `apply_to: element` rules in a theme is no longer supported; an older theme that still ships them is rejected. The retired `tools/strip_element_bindings.py` lifts them into `element_overrides:`:
 
 ```bash
+git checkout pre-migrator-retirement -- tools/strip_element_bindings.py
 uv run python tools/strip_element_bindings.py path/to/theme.yaml
 ```
 
@@ -1668,9 +1670,9 @@ The pages the document replaced took their settings from `mini_details:`,
 `gantt.show_details` / `details_title_text` / `details_output_suffix`,
 `compact_plan.show_legend` / `key_*` / `legend_swatch_width` /
 `show_holiday_list` and `overflow.title_text` / `output_suffix`. A theme
-still carrying any of them is rejected with a message naming `details:`;
-`tools/migrate_theme.py` moves a `mini_details:` section's headers into
-`details.markdown.columns`.
+still carrying any of them is rejected with a message naming `details:`.
+A `mini_details:` section's headers go in `details.markdown.columns` (the
+retired `tools/migrate_theme.py` moved them; see [Theme System](#theme-system)).
 
 ### Complete Theme Key Reference
 
@@ -2004,7 +2006,7 @@ style_rules:
 
 `resource_group` matches the whole group name, ignoring case. On `box:event` / `box:duration`, `fill` is the event's color rather than a box behind its icon, so only a `stroke` there outlines the icon.
 
-The older per-view color settings are retired: a theme carrying `colors.resource_groups` or `compact_plan.color_rules` is rejected with a pointer here, and `tools/migrate_theme.py` rewrites both as rules like the ones above (`color_rules`, which matched first-wins, are emitted in reverse so the same rule still wins).
+The older per-view color settings are retired: a theme carrying `colors.resource_groups` or `compact_plan.color_rules` is rejected with a pointer here, and the retired `tools/migrate_theme.py` (see [Theme System](#theme-system)) rewrites both as rules like the ones above (`color_rules`, which matched first-wins, are emitted in reverse so the same rule still wins).
 
 #### `apply_to:` — Targets
 

@@ -53,8 +53,8 @@ fill every gap.
 ## Who validates what
 
 - `theme_engine` rejects legacy sections (old `hash_rules`,
-  `swimlanes[].match`, `apply_to: element`) with pointers to
-  `tools/migrate_theme.py` / `tools/strip_element_bindings.py`.
+  `swimlanes[].match`, `apply_to: element`) with a pointer to the retired
+  converters at tag `pre-migrator-retirement` (`legacy_hint()`).
 - `config/required_keys.py` powers `tools/validate_theme.py` — missing
   required keys are reported with example values from `basic.yaml`.
 - Unknown *sections* warn; unknown keys inside valid sections are ignored
