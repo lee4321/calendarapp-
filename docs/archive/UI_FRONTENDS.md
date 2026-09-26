@@ -125,4 +125,4 @@ on it. Start from how it reads the parser, not from the retired code.
 - `docs/archive/textualUI.html` — the original TUI design write-up.
 - `docs/archive/CONSOLIDATION_PLAN.md` — lists both packages in the 2026-07
   inventory as "alternative front-ends".
-- `.claude/plans/retire-ui-frontends.md` — the retirement plan this file came from.
+- `docs/archive/retire-ui-frontends.md` — the retirement plan this file came from.

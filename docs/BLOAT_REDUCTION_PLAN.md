@@ -39,11 +39,15 @@ duplicated text across files. The bloat that is left falls into three kinds:
 
 Low risk and a large payoff. Do this first.
 
+> **Status (2026-09-26):** 0.1–0.4 done. `retire-ui-frontends.md` was moved to
+> `docs/archive/` rather than deleted, because `docs/archive/UI_FRONTENDS.md`
+> cites it as its source. 0.5 and 0.6 are still open and need an owner's decision.
+
 | # | Action | Saves |
 |---|---|---|
 | 0.1 | Delete the six root `_sh_*.svg` reference sheets. They are output of the `*sheet` subcommands, and `_sh_icon.svg` is byte-identical to `_sh_iconsheet.svg`. Add `/_sh_*.svg` to `.gitignore`. | 40.9 MB |
 | 0.2 | Delete `calendar.db.sql`, which is byte-identical to `db utils/create.calendar.db.sql`. | 135 lines |
-| 0.3 | Rename `db utils/` to `tools/db/`. The space in the name forces quoting everywhere and breaks `xargs`/`git ls-files` pipelines. | — |
+| 0.3 | Move `db utils/` to `tools/db/`. The space in the name forces quoting everywhere and breaks `xargs`/`git ls-files` pipelines. | — |
 | 0.4 | Delete completed plans: `.claude/plans/retire-ui-frontends.md` (done 2026-09-18), `iridescent-conjuring-comet.md` (`_r()` is in `svg_base.py`) and `uv-check-cleanup.md` (ruff is now clean). Move `docs/SIMPLIFICATION_PLAN.md` (Parts 1–2 done, Part 3 marked stale), `docs/design_unified_style_rules.html` (171 KB design record for work that has shipped) and `docs/GoPort.HTML` into `docs/archive/`. | 3 files, 2 docs out of the working set |
 | 0.5 | Move the 106 unreferenced fonts (67 MB) out of the main tree, either into a separate optional font-pack repository or into Git LFS. Keep only the fonts that `Fonts`, themes and tests name. `_build_font_registry()` already scans the folder, so an extra font directory only needs a search path (`ECAL_FONT_DIRS`). **Also do a licence review:** `AmericanTypewriter`, `VAGRounded`, `OfficinaSans/Serif`, `LetterGothic`, `NewsGothic`, `SilvermoonITC` and `Orator` are normally commercial faces and probably should not be redistributed. | up to 67 MB |
 | 0.6 | Optional: the clone is shallow here, but the SVGs and fonts are also in history. If clone size matters, run `git filter-repo` once, coordinated with every clone owner. | history |
