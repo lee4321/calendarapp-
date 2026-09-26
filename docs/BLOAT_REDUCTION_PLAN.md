@@ -110,9 +110,9 @@ About 450 lines saved.
 
 Order these by payoff and risk. Land each as its own PR and check each with the refcorpus.
 
-> **Status (2026-09-26):** 2.2–2.5 done, each with the refcorpus
-> byte-identical and the failing-test set unchanged. 2.6 was skipped and
-> 2.1 is on hold for a decision; see the notes under each. Net for 2.2–2.5:
+> **Status (2026-09-26):** 2.1–2.5 done. 2.2–2.5 left the refcorpus
+> byte-identical; 2.1 intentionally changes some horizontal timeline
+> output (see its note). 2.6 was skipped. Net for 2.2–2.5:
 > about −850 Python lines, and 8 files deleted.
 >
 > | Item | Result |
@@ -124,24 +124,29 @@ Order these by payoff and risk. Land each as its own PR and check each with the 
 
 ### 2.1 Timeline horizontal/vertical twins (saves about 800 lines)
 
-> **On hold: the premise was wrong.** Once x/y names are normalised, only
-> 61% of the lines in the ten pairs match (from 50% for `_draw_today_marker`
-> to 69% for `_draw_duration`), and many of the matches are shared keyword
-> arguments. The vertical variants grew features the horizontal ones lack:
-> label-side support, tick-label clearance via `_axis_label_clearance`,
-> rotated labels, side-ink tracking and a different `limit` meaning (a
-> distance from the axis rather than an absolute coordinate).
-> A byte-identical merge would keep about 40% of each method as
-> orientation branches, saving roughly 250–300 lines at a cost to
-> readability. The larger saving needs a behaviour change: make horizontal
-> the mirror of vertical (side-aware fiscal bands and clearance), then
-> re-baseline the refcorpus after reviewing the visual diffs.
+> **Done (2026-09-26) as a behaviour-changing merge, chosen by the owner.**
+> A byte-identical merge was not worthwhile: once x/y names were
+> normalised, only 61% of the twins' lines matched, because the vertical
+> variants had grown side support, clearance rules and rotated labels.
+> Instead horizontal now mirrors vertical.
 >
-> A wider local guard was built for this work: 2,348 files covering both
-> directions × three label sides × two page orientations × four themes,
-> plus tick bands, top and bottom time bands (icon, countdown, aligned text),
-> fiscal overlays and today-line variants. It covers 92% of the statements
-> in the paired methods.
+> - `visualizers/timeline/axis.AxisFrame` maps along/across positions and the
+>   side sign onto x/y.
+> - Nine of the ten pairs are merged: durations (layout, connector, bar),
+>   band ticks, month ticks, fiscal bands, holiday icons, time bands and the
+>   today marker.
+> - The in-bar content drawers stay separate, because their rotated-text
+>   arithmetic really differs.
+>
+> `renderer.py` went from 4,338 to 3,368 lines. Every vertical chart and
+> every default (`label_side: primary`) chart renders byte-identically,
+> except that horizontal fiscal rows now use the vertical clearance rule.
+> Horizontal `secondary` and `both` charts now spend their sides as vertical
+> ones do. In `both` mode (in both directions) holiday marks move off the
+> tick dates' side.
+>
+> Checked against a 2,348-file local timeline corpus: 59 files changed, all
+> reviewed visually.
 
 Ten methods in `visualizers/timeline/renderer.py` exist twice, as `X` and
 `X_vertical`: `_layout_durations`, `_draw_duration`,
