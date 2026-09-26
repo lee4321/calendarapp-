@@ -860,7 +860,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # Assign a distinct color and StyleResult to each duration event.
         palette = config.group_colors or ["lightsteelblue"]
-        style_engine = StyleEngine(_mini_style_rules(config))
+        style_engine = StyleEngine(_mini_style_rules(config), self.TOKEN_VISUALIZER)
         from shared.rule_engine import StyleResult
         from visualizers.mini.day_styles import DayStyleResolver
 

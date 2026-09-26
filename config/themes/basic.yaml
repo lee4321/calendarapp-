@@ -483,6 +483,22 @@ style_rules:
     apply_to: text:event_notes
     select: {visualizer: pit}
     style: {font: RobotoCondensed-Bold}
+  - name: box:band — blockplan (from blockplan)
+    apply_to: box:band
+    select: {visualizer: blockplan}
+    style: {stroke_opacity: 0.6}
+  - name: text:heading — blockplan (from blockplan)
+    apply_to: text:heading
+    select: {visualizer: blockplan}
+    style: {opacity: 1.0}
+  - name: box:duration — blockplan (from blockplan)
+    apply_to: box:duration
+    select: {visualizer: blockplan}
+    style: {fill_opacity: 0.35, stroke_opacity: 0.9}
+  - name: text:duration_date — blockplan (from blockplan)
+    apply_to: text:duration_date
+    select: {visualizer: blockplan}
+    style: {font: RobotoCondensed-Light}
 element_overrides:
   ec-axis-tick:
     use: line:tick

@@ -50,13 +50,22 @@ def _lookup(data: dict, dotted: str) -> tuple[bool, Any]:
 
 
 def resolve_old_value(data: dict, r: Retired) -> Any:
-    """The value the old code used: key, parent section, ``base``, else default."""
+    """The value the old code used: key, parent section, ``base``, else default.
+
+    A key that resolves to None hands over to its ``fallback`` key, as the old
+    code's ``or`` chain did.
+    """
     top = r.section.split(".")[0]
+    value = r.default
     for path in (f"{r.section}.{r.key}", f"{top}.{r.key}", f"base.{r.key}"):
-        found, value = _lookup(data, path)
+        found, found_value = _lookup(data, path)
         if found:
-            return value
-    return r.default
+            value = found_value
+            break
+    if value is None and r.fallback:
+        other = next(o for o in RETIRED if f"{o.section}.{o.key}" == r.fallback)
+        return resolve_old_value(data, other)
+    return value
 
 
 def _has_view_rule(data: dict, token: str, visualizer: str) -> bool:
@@ -166,10 +175,15 @@ def insert_rules(text: str, data: dict, rules: list[tuple[str, dict]]) -> str:
         lines += ["style_rules:"]
         head = len(lines) - 1
     end = _block_end(lines, head, 0)
-    items = [j for j in range(head + 1, end) if lines[j].lstrip().startswith("- ") and _indent(lines[j]) <= 2]
-    item_indent = " " * (_indent(lines[items[0]]) if items else 2)
+    first = next((j for j in range(head + 1, end) if lines[j].lstrip().startswith("- ")), None)
+    depth = _indent(lines[first]) if first is not None else 2
+    # Only lines at the first item's own indent start a rule; a nested list
+    # (``apply_to:`` entries) sits deeper even when the items are at column 0.
+    items = [j for j in range(head + 1, end) if lines[j].lstrip().startswith("- ") and _indent(lines[j]) == depth]
+    item_indent = " " * depth
     existing = data.get("style_rules") or []
-    for token, rule in reversed(rules):
+    placed = []
+    for order, (token, rule) in enumerate(rules):
         at = end
         for idx, existing_rule in enumerate(existing):
             targets = existing_rule.get("apply_to") if isinstance(existing_rule, dict) else None
@@ -177,6 +191,9 @@ def insert_rules(text: str, data: dict, rules: list[tuple[str, dict]]) -> str:
             if token in targets and idx < len(items):
                 at = items[idx]
                 break
+        placed.append((at, order, rule))
+    # Bottom-up, so an insertion never shifts a line still to be used.
+    for at, _order, rule in sorted(placed, key=lambda p: (p[0], p[1]), reverse=True):
         lines[at:at] = _rule_lines(rule, item_indent)
     return "\n".join(lines)
 
@@ -192,6 +209,10 @@ def convert_text(text: str) -> tuple[str, list[str]]:
         if found and dotted in RETIRED_PATHS | _parent_paths_only_retired(data):
             text, _ok = remove_path(text, dotted)
             changes.append(f"remove key: {dotted}")
+    # The edits are line-based; refuse to hand back a theme they broke.
+    converted = yaml.safe_load(text) or {}
+    if len(converted.get("style_rules") or []) != len(data.get("style_rules") or []) + len(rules):
+        raise ValueError("conversion lost or duplicated a style rule; the theme was not changed")
     return text, changes
 
 

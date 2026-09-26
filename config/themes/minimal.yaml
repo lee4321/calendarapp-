@@ -314,6 +314,10 @@ style_rules:
     apply_to: box:cell
     select: {visualizer: weekly}
     style: {stroke_opacity: 0.25}
+  - name: line:grid — blockplan (from blockplan)
+    apply_to: line:grid
+    select: {visualizer: blockplan}
+    style: {opacity: 0.6}
   - name: line:grid — mini (from mini_calendar)
     apply_to: line:grid
     select: {visualizer: mini}
@@ -330,6 +334,18 @@ style_rules:
     apply_to: text:event_notes
     select: {visualizer: pit}
     style: {font: RobotoCondensed-Bold}
+  - name: box:band — blockplan (from blockplan)
+    apply_to: box:band
+    select: {visualizer: blockplan}
+    style: {stroke_width: 1.0, stroke_opacity: 0.6}
+  - name: text:heading — blockplan (from blockplan)
+    apply_to: text:heading
+    select: {visualizer: blockplan}
+    style: {opacity: 1.0}
+  - name: box:duration — blockplan (from blockplan)
+    apply_to: box:duration
+    select: {visualizer: blockplan}
+    style: {stroke_opacity: 0.9, stroke_width: 1.0}
 element_overrides:
   ec-day-number:
     use: text:label

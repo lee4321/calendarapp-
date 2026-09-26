@@ -293,7 +293,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         self._load_icon_svg_cache(db)
 
         evt_objects = [Event.from_dict(e) if isinstance(e, dict) else e for e in events]
-        self._style_engine = StyleEngine(_resolve_style_rules(config))
+        self._style_engine = StyleEngine(_resolve_style_rules(config), "compactplan")
         group_color_map = self._assign_group_colors(evt_objects, config)
         durations = [e for e in evt_objects if e.is_duration and not e.milestone]
         milestones = [e for e in evt_objects if e.milestone]

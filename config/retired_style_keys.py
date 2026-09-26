@@ -26,6 +26,12 @@ class Retired(NamedTuple):
     # always won: the converted rule is then written even if the token
     # already sets the attribute.
     override: bool = False
+    # "section.key" of another retired key whose value the old code used
+    # when this one resolved to None.
+    fallback: str | None = None
+    # "section.key" of another retired key whose value the old code used
+    # when this one resolved to None.
+    fallback: str | None = None
 
 
 RETIRED: tuple[Retired, ...] = (
@@ -55,6 +61,62 @@ RETIRED: tuple[Retired, ...] = (
     Retired(
         "timeline.notes_text", "font_name", "text:event_notes", "font", "pit", "RobotoCondensed-Bold", override=True
     ),
+    # blockplan grid lines, band-row borders (which fell back to the grid),
+    # heading labels and duration bars.
+    Retired("blockplan", "grid_color", "line:grid", "color", "blockplan", "grey"),
+    Retired("blockplan", "grid_line_width", "line:grid", "width", "blockplan", 1.0),
+    Retired("blockplan", "grid_opacity", "line:grid", "opacity", "blockplan", 0.6),
+    Retired("blockplan", "grid_dasharray", "line:grid", "dasharray", "blockplan", None),
+    Retired(
+        "blockplan", "timeband_line_color", "box:band", "stroke", "blockplan", None, fallback="blockplan.grid_color"
+    ),
+    Retired(
+        "blockplan",
+        "timeband_line_width",
+        "box:band",
+        "stroke_width",
+        "blockplan",
+        None,
+        fallback="blockplan.grid_line_width",
+    ),
+    Retired(
+        "blockplan",
+        "timeband_line_opacity",
+        "box:band",
+        "stroke_opacity",
+        "blockplan",
+        None,
+        fallback="blockplan.grid_opacity",
+    ),
+    Retired(
+        "blockplan",
+        "timeband_line_dasharray",
+        "box:band",
+        "dasharray",
+        "blockplan",
+        None,
+        fallback="blockplan.grid_dasharray",
+    ),
+    Retired("blockplan", "header_label_color", "text:heading", "color", "blockplan", "black"),
+    Retired("blockplan", "header_label_opacity", "text:heading", "opacity", "blockplan", 1.0),
+    Retired("blockplan", "duration_fill_opacity", "box:duration", "fill_opacity", "blockplan", 0.35),
+    Retired("blockplan", "duration_stroke_opacity", "box:duration", "stroke_opacity", "blockplan", 0.9),
+    Retired("blockplan", "duration_stroke_width", "box:duration", "stroke_width", "blockplan", 1.0),
+    # ...and the keys blockplan read ahead of its tokens.
+    Retired("blockplan", "duration_stroke_color", "box:duration", "stroke", "blockplan", None, override=True),
+    Retired("blockplan", "duration_stroke_dasharray", "box:duration", "dasharray", "blockplan", None, override=True),
+    Retired("blockplan", "duration_date_color", "text:duration_date", "color", "blockplan", None, override=True),
+    Retired(
+        "blockplan",
+        "duration_date_font",
+        "text:duration_date",
+        "font",
+        "blockplan",
+        "RobotoCondensed-Light",
+        override=True,
+    ),
+    Retired("blockplan.notes_text", "font_name", "text:event_notes", "font", "blockplan", None, override=True),
+    Retired("blockplan.notes_text", "font_color", "text:event_notes", "color", "blockplan", None, override=True),
 )
 
 #: Dotted theme paths that are rejected on load.

@@ -917,28 +917,6 @@ class CalendarConfig:
     pit_notes_text_font_name: str | None = None
     pit_notes_text_font_size: float | None = None
 
-    # Blockplan styling and behavior.
-    # Phase 2 strip dropped dead fields with no readers post-Phase-1:
-    # background_color (page bg from box:background), band_row_height
-    # (per-band row_height key), header_font / band_font / lane_label_font /
-    # event_date_font (text:* token covers font selection),
-    # lane_heading_fill_color (box:swimlane_heading), lane_label_color
-    # (text:swimlane_label), event_date_color (text:event_date),
-    # timeband_label_color/_label_opacity (per-band YAML overrides);
-    # the per-text font_color/_opacity/_alignment trio for
-    # text/name_text/notes_text (subsumed by text:event_name /
-    # text:event_notes / text:label tokens); text_font_size, plus a
-    # redundant text_font_name copy (name_text_font_name kept).
-    # blockplan_timeband_fill_color stays — referenced by the
-    # ec-band-cell BoxStyle factory below.
-    blockplan_grid_color: str = "grey"
-    blockplan_grid_opacity: float = 0.6
-    blockplan_grid_line_width: float = 1.0
-    blockplan_grid_dasharray: str | None = None
-    blockplan_timeband_line_color: str | None = None
-    blockplan_timeband_line_width: float | None = None
-    blockplan_timeband_line_opacity: float | None = None
-    blockplan_timeband_line_dasharray: str | None = None
     blockplan_label_column_ratio: float = 0.16
     # Width of the time-band name cells; None = same as label_column_ratio.
     blockplan_band_label_column_ratio: float | None = None
@@ -1022,8 +1000,6 @@ class CalendarConfig:
     # Empty → no swimlanes: one unlabeled lane holds every item.
     blockplan_swimlanes: list[dict[str, Any]] = field(default_factory=list)
     blockplan_header_font_size: float | None = None
-    blockplan_header_label_color: str = "black"
-    blockplan_header_label_opacity: float = 1.0
     blockplan_header_label_align_h: str = "left"  # left | center | right
     blockplan_band_font_size: float | None = None
     blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
@@ -1049,19 +1025,12 @@ class CalendarConfig:
     )
     # ── Blockplan text styling — kept survivors only (font_size + name fields).
     blockplan_name_text_font_size: float | None = None
-    blockplan_notes_text_font_name: str | None = None
-    blockplan_notes_text_font_color: str | None = None
     blockplan_notes_text_font_size: float | None = None
     # Blockplan event/duration date & marker fields (not renamed)
     blockplan_event_show_date: bool = False
     blockplan_event_date_font_size: float | None = None
     blockplan_event_date_format: str = "YYYY-MM-DD"
     blockplan_marker_radius: float = 2.0
-    blockplan_duration_fill_opacity: float = 0.35
-    blockplan_duration_stroke_color: str | None = None
-    blockplan_duration_stroke_width: float = 1.0
-    blockplan_duration_stroke_opacity: float = 0.9
-    blockplan_duration_stroke_dasharray: str | None = None
     blockplan_duration_bar_height: float = 8.0
     # Space (pt) between duration bars in adjacent rows; bars shrink below
     # duration_bar_height to keep it.  None = bars may fill 95% of the row.
@@ -1070,9 +1039,7 @@ class CalendarConfig:
     blockplan_duration_show_start_date: bool = False
     blockplan_duration_show_end_date: bool = False
     blockplan_duration_date_format: str = "MMM D"
-    blockplan_duration_date_font: str = Fonts.RC_LIGHT
     blockplan_duration_date_font_size: float | None = None
-    blockplan_duration_date_color: str | None = None
 
     # ── Gantt ─────────────────────────────────────────────────────────────────
     # Task table on the left, timescale chart on the right.  Column layout is
