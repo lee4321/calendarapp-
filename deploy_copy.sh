@@ -8,7 +8,7 @@
 #   uv run python ecalendar.py --help
 # The first run creates the virtualenv from pyproject.toml + uv.lock.
 #
-# Deliberately excluded: tests/, tools/, "db utils/", docs,
+# Deliberately excluded: tests/, tools/ (including tools/db/), docs,
 # SVG/txt outputs, sample import data (importers/*.csv, palettes.txt,
 # importers/calendar.db), backups, caches.
 

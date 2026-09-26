@@ -124,7 +124,7 @@ Move the gantt column model into **`renderers/table_columns.py`**:
 * `id`, `user_id` and `import_id` become new optional `Event` fields
   (`db_id`, `user_id`, `import_id`). Verify the row keys
   `get_all_events_in_range()` returns first.
-* A test parses `db utils/events.sql` + `EVENTS_SCHEMA_ADDITIONS` and fails on any
+* A test parses `tools/db/events.sql` + `EVENTS_SCHEMA_ADDITIONS` and fails on any
   column that does not resolve.
 
 **Synthetic (render-derived) fields**, filled from the render record (§5):

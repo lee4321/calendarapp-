@@ -1699,7 +1699,7 @@ class ThemeEngine:
             if "color" in fed:
                 config.theme_federal_holiday_color = fed["color"]
             # "opacity" is the current key; "alpha" accepted as a
-            # deprecated alias (SIMPLIFICATION_PLAN 1.3).
+            # deprecated alias (docs/archive/SIMPLIFICATION_PLAN.md 1.3).
             if "opacity" in fed:
                 config.theme_federal_holiday_opacity = fed["opacity"]
             elif "alpha" in fed:
