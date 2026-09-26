@@ -261,13 +261,12 @@ class PITRenderer(BaseSVGRenderer):
                 direction,
                 pos_for_day,
             )
-        self._draw_callout_groups(config, placements, direction, side, per_event_styles)
+        self._draw_callout_groups(config, placements, direction, per_event_styles)
 
         return 0, []
 
     # ------------------------------------------------------------------
     # Draw helpers
-    # ------------------------------------------------------------------
     # ------------------------------------------------------------------
     # SVG <marker> defs (arrow-head etc.) — independent start/end per line
     # ------------------------------------------------------------------
@@ -302,18 +301,6 @@ class PITRenderer(BaseSVGRenderer):
             prefix="pit-marker",
             css_class="ec-pit-marker-arrow-head",
         )
-
-    @staticmethod
-    def _marker_attr_pair(kind: str, color: str, size: float) -> str:
-        """Return the leading-space attribute fragment for a non-empty
-        marker (or "" when none should be drawn).
-
-        The caller chooses which attribute (``marker-start`` /
-        ``marker-end``) the fragment is prefixed with via ``ensure``.
-        """
-        # Intentional no-op — kept as the seam tests can monkey-patch
-        # when they want to assert "marker emitted nothing".
-        return f' fill="{color}" size="{size}" kind="{kind}"'
 
     def _draw_axis_group(
         self,
@@ -677,7 +664,6 @@ class PITRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         placements: list[PITPlacement],
         direction: Orientation,
-        side_config: Side,
         per_event_styles: dict[int, StyleResult] | None = None,
     ) -> None:
         """Emit one <g class="ec-pit-callout-group ec-pit-side-…"

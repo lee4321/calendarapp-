@@ -11,34 +11,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from config.config import (
-    circles,
-    darkcircles,
-    darksquare,
-    darksquircles,
-    squares,
-    squircles,
-)
+from config.config import ICON_SETS
 from renderers.svg_base import _is_none_color
 from visualizers.mini.day_styles import DayStyle
 from visualizers.mini.renderer import MiniCalendarRenderer
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
-
-
-# Mapping from icon set name (CLI value) → list of 31 icon name strings.
-ICON_SETS: dict[str, list[str]] = {
-    "squares": squares,
-    "darksquare": darksquare,
-    "darkcircles": darkcircles,
-    "circles": circles,
-    "squircles": squircles,
-    "darksquircles": darksquircles,
-}
-
-# Valid icon set names for CLI help / validation.
-ICON_SET_NAMES = sorted(ICON_SETS.keys())
 
 
 class MiniIconRenderer(MiniCalendarRenderer):
@@ -58,7 +37,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
     def _get_day_icon_name(self, day_num: int, config: CalendarConfig) -> str | None:
         """Return the icon name for *day_num* from the configured icon set."""
         icon_set_name = getattr(config, "mini_icon_set", "squares")
-        icon_list = ICON_SETS.get(icon_set_name, squares)
+        icon_list = ICON_SETS.get(icon_set_name, ICON_SETS["squares"])
         if 1 <= day_num <= 31 and len(icon_list) >= 31:
             return icon_list[day_num - 1]
         return None

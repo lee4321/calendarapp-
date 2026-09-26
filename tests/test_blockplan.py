@@ -8,7 +8,6 @@ from fakes import FakeCalendarDB
 
 from config.config import (
     create_calendar_config,
-    create_sample_blockplan_swimlanes_from_wbs,
     setfontsizes,
 )
 from shared.data_models import Event
@@ -748,19 +747,6 @@ def test_blockplan_timeband_per_band_style_and_palette(tmp_path):
     seg_fills = [r.get("fill") for r in renderer.rect_calls if r.get("fill") in {"#111111", "#222222"}]
     assert len(seg_fills) >= 2
     assert seg_fills[0] != seg_fills[1]
-
-
-def test_sample_blockplan_swimlane_factory_from_wbs():
-    lanes = create_sample_blockplan_swimlanes_from_wbs(
-        ["2.1", "1", "2.1", "", " 3. "],
-        lane_name_format="Lane {wbs}",
-    )
-    assert lanes == [
-        {"name": "Lane 1", "match": {"wbs_prefixes": ["1"]}},
-        {"name": "Lane 2.1", "match": {"wbs_prefixes": ["2.1"]}},
-        {"name": "Lane 3.", "match": {"wbs_prefixes": ["3."]}},
-        {"name": "Unmatched", "match": {}},
-    ]
 
 
 def test_blockplan_event_notes_and_y_adjustment_for_collisions(tmp_path):

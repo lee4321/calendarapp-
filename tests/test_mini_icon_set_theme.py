@@ -13,9 +13,8 @@ from argparse import Namespace
 import pytest
 
 from cli.config_assembly import _reapply_post_theme_cli_overrides
-from config.config import CalendarConfig
+from config.config import ICON_SETS, CalendarConfig
 from config.theme_engine import ThemeEngine
-from visualizers.mini_icon.renderer import ICON_SETS
 
 
 def _themed(icon_set: str | None) -> CalendarConfig:

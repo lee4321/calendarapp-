@@ -35,9 +35,6 @@ from shared.labella_layout import (
     layout_callouts as _layout_callouts_shared,
 )
 from shared.labella_layout import (
-    partition_for_both as _partition_for_both,  # noqa: F401 - re-exported for tests
-)
-from shared.labella_layout import (
     resolve_font_path as _resolve_font_path,
 )
 from shared.orientation import Orientation, Side
@@ -87,19 +84,6 @@ def _date_string(event: Event, config: CalendarConfig) -> str:
         return format_arrow_date(day, config.pit_date_format)
     except Exception:
         return ""
-
-
-def _label_icon_size(config: CalendarConfig) -> float:
-    """Pixel size of the label-box icon glyph (longest viewBox side)."""
-    explicit = getattr(config, "pit_label_icon_size", None)
-    if explicit is not None and float(explicit) > 0:
-        return float(explicit)
-    return _name_size(config)
-
-
-def _label_icon_gap(config: CalendarConfig) -> float:
-    """Gap between the label icon's right edge and the name text."""
-    return float(getattr(config, "pit_label_icon_gap", 4.0) or 0.0)
 
 
 def _measured_text_width(

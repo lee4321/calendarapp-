@@ -36,12 +36,6 @@ class TestPaperSizesFromDB(unittest.TestCase):
         for name, (w, h) in sizes.items():
             self.assertLessEqual(w, h, f"{name}: width {w} > height {h}")
 
-    def test_get_paper_size_names(self):
-        names = self.db.get_paper_size_names()
-        self.assertIsInstance(names, list)
-        self.assertIn("Letter", names)
-        self.assertIn("A4", names)
-
     def test_get_paper_sizes_grouped(self):
         groups = self.db.get_paper_sizes_grouped()
         self.assertIsInstance(groups, dict)

@@ -51,18 +51,6 @@ class VisualizerFactory:
             }
 
     @classmethod
-    def register(cls, name: str, visualizer_class: type[BaseVisualizer]):
-        """
-        Register a new visualizer type.
-
-        Args:
-            name: Name to register under (e.g., "weekly", "monthly")
-            visualizer_class: Class to instantiate for this type
-        """
-        cls._ensure_registered()
-        cls._visualizers[name] = visualizer_class
-
-    @classmethod
     def create(cls, view_type: str) -> BaseVisualizer:
         """
         Create a visualizer instance by type name.
