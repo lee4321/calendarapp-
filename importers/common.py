@@ -14,14 +14,17 @@ Each importer supplies:
 * its CLI (`main`) and `import_file` orchestration.
 """
 
+import argparse
 import hashlib
 import logging
 import os
+import shlex
 import sqlite3
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import NoReturn
 
 import arrow
 import pandas
@@ -621,3 +624,217 @@ def remove_import(db: ImportDatabase, import_id, log, force=False, verbose=False
 
     log(f"Removed import {import_id}: {filename} ({deleted_rows} {unit} deleted)")
     return True
+
+
+# ============================================================================
+# Command-line driver shared by import_events.py and import_specialdays.py
+# ============================================================================
+
+
+class ImportLog:
+    """Module-level ``log(message, level)`` for an importer script.
+
+    Prints plain messages until :meth:`setup` attaches file and console
+    handlers, so helpers called from tests or other modules still work.
+    """
+
+    _LEVELS = ("debug", "info", "warning", "error")
+
+    def __init__(self) -> None:
+        self._logger: logging.Logger | None = None
+
+    def setup(self, module_name: str, log_file: str, level: str) -> None:
+        self._logger = setup_logging(module_name, log_file, level)
+
+    def __call__(self, message, level: str = "info") -> None:
+        if self._logger is None:
+            print(message)
+            return
+        getattr(self._logger, level if level in self._LEVELS else "info")(message)
+
+
+def add_import_arguments(parser: argparse.ArgumentParser, unit: str) -> None:
+    """Arguments every importer takes before its own (``unit``: "events", …)."""
+    # Files are optional: --list and --remove need none.
+    parser.add_argument("files", nargs="*", help="Files or directories to import")
+    parser.add_argument(
+        "--database",
+        "-db",
+        default="calendar.db",
+        help="Path to SQLite database (default: calendar.db)",
+    )
+    parser.add_argument(
+        "--user-id",
+        "-u",
+        type=int,
+        default=1,
+        help=f"User ID for imported {unit} (default: 1)",
+    )
+    parser.add_argument(
+        "--replace",
+        "-r",
+        action="store_true",
+        help=f"Replace {unit} from previously imported file",
+    )
+    parser.add_argument("--dry-run", "-n", action="store_true", help="Validate files without importing")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
+    parser.add_argument(
+        "--skip-errors",
+        action="store_true",
+        help="Continue importing when individual rows fail",
+    )
+
+
+def add_history_and_log_arguments(parser: argparse.ArgumentParser, log_file: str) -> None:
+    """Import-history (--list/--remove/--force) and logging arguments."""
+    parser.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="List all previous imports from import_history",
+    )
+    parser.add_argument(
+        "--remove",
+        "-rm",
+        type=str,
+        metavar="PATTERN",
+        help='Remove imports by ID. Supports: single (3), range (1-5), list (1,3,5), open range (5- or -3), or "all"',
+    )
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        help="Skip confirmation prompt when removing",
+    )
+    parser.add_argument(
+        "--log-file",
+        default=log_file,
+        help=f"Path to log file (default: {log_file})",
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Set logging level (default: info)",
+    )
+
+
+def start_import_run(args: argparse.Namespace, log: ImportLog, module_name: str) -> str:
+    """Configure logging, print the run banner and check the database exists.
+
+    Returns the command line, which is recorded in import_history.
+    """
+    # --verbose is shorthand for --log-level debug
+    log.setup(module_name, args.log_file, "debug" if args.verbose else args.log_level)
+
+    command_line = shlex.join(sys.argv)
+    log(f"=== {module_name}.py started ===")
+    log(f"Command: {command_line}")
+    log(f"Database: {args.database}")
+
+    if not os.path.exists(args.database):
+        log(f"Error: Database not found: {args.database}", "error")
+        sys.exit(1)
+    return command_line
+
+
+def finish_import_run(log: ImportLog, module_name: str, exit_code: int) -> NoReturn:
+    log(f"=== {module_name}.py completed ===")
+    sys.exit(exit_code)
+
+
+def handle_history_commands(args: argparse.Namespace, db: ImportDatabase, log: ImportLog, module_name: str) -> None:
+    """Run --list or --remove if requested (both exit); otherwise return."""
+    if args.list:
+        list_import_history(db, log)
+        finish_import_run(log, module_name, 0)
+
+    if args.remove is None:
+        return
+
+    unit = db.UNIT_LABEL
+    with db.transaction() as cursor:
+        max_id = db.get_max_import_id(cursor)
+
+    if max_id == 0:
+        log("No imports found to remove.", "warning")
+        finish_import_run(log, module_name, 0)
+
+    try:
+        import_ids = parse_import_pattern(args.remove, max_id)
+    except ValueError as e:
+        log(f"Error: {e}", "error")
+        finish_import_run(log, module_name, 1)
+
+    with db.transaction() as cursor:
+        existing_ids = [i for i in import_ids if db.get_import_by_id(cursor, i)]
+
+    if not existing_ids:
+        log(f"No matching imports found for pattern: {args.remove}", "warning")
+        finish_import_run(log, module_name, 0)
+
+    log(f"Found {len(existing_ids)} import(s) to remove: {existing_ids}")
+
+    if not args.force:
+        with db.transaction() as cursor:
+            total = 0
+            for import_id in existing_ids:
+                record = db.get_import_by_id(cursor, import_id)
+                if record:
+                    _, _, filename, date, _, row_count, _ = record
+                    display_date = date[:19] if date else ""
+                    log(f"  ID {import_id}: {filename} ({row_count} {unit}, {display_date})")
+                    total += row_count
+            log(f"  Total: {total} {unit} will be deleted")
+
+        response = input(f"Are you sure you want to delete these imports and all their {unit}? [y/N]: ")
+        if response.lower() != "y":
+            log("Cancelled.")
+            finish_import_run(log, module_name, 0)
+
+    success_count = 0
+    fail_count = 0
+    for import_id in existing_ids:
+        # force=True: the user already confirmed above (or passed --force)
+        if remove_import(db, import_id, log, force=True, verbose=args.verbose):
+            success_count += 1
+        else:
+            fail_count += 1
+
+    log(f"\nRemoved {success_count} import(s), {fail_count} failed")
+    finish_import_run(log, module_name, 0 if fail_count == 0 else 1)
+
+
+def collect_import_files(paths: list[str], log: ImportLog) -> list[str]:
+    """Expand files/directories to importable files; exit if there are none."""
+    all_files = []
+    for path in paths:
+        files = find_files(path)
+        if not files:
+            log(f"Warning: No importable files found: {path}", "warning")
+        all_files.extend(files)
+
+    if not all_files:
+        log("Error: No files to import", "error")
+        sys.exit(1)
+
+    log(f"Found {len(all_files)} file(s) to import")
+    return all_files
+
+
+def log_import_result(result: ImportResult, verbose: bool, log: ImportLog) -> None:
+    """Per-file summary, with the first three row errors unless --verbose showed them."""
+    log(f"  Result: {result.imported_rows}/{result.total_rows} imported")
+    if result.failed_rows:
+        log(f"  Failed: {result.failed_rows} rows", "warning")
+    if result.errors and not verbose:
+        for err in result.errors[:3]:
+            log(f"  Error: {err}", "error")
+        if len(result.errors) > 3:
+            log(f"  ... and {len(result.errors) - 3} more errors", "error")
+
+
+def log_import_totals(heading: str, imported: int, failed: int, log: ImportLog) -> None:
+    log(f"\n=== {heading} Complete ===")
+    log(f"Total imported: {imported}")
+    log(f"Total failed: {failed}")
