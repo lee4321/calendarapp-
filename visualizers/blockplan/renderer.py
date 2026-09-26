@@ -43,7 +43,7 @@ from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import string_width, text_center_baseline
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
-from shared.day_classifier import classify_day, day_rule_matches
+from shared.day_classifier import NonWorkdayStyle, classify_day, nonworkday_override
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import DayContext, StyleEngine, StyleResult, _build_style_result
@@ -82,105 +82,6 @@ def _blockplan_swimlane_rules(config: CalendarConfig) -> list:
         if isinstance(rules, list):
             return rules
     return list(getattr(config, "theme_swimlane_rules", None) or [])
-
-
-def _nwd_fill_for_classes(
-    classes: frozenset[str],
-    band_fill_rules: list[dict] | None,
-    config: CalendarConfig,
-) -> str | None:
-    """Resolve a non-workday fill override for a single-day cell.
-
-    Order of precedence:
-
-    1. Band-level ``fill_rules`` — first matching rule wins.
-    2. Config-level defaults — ``federal_holiday`` → ``company_holiday`` →
-       ``weekend``.
-
-    Returns ``None`` if the day has no non-workday classes or no override
-    is configured.
-    """
-    if not classes:
-        return None
-    if band_fill_rules:
-        for rule in band_fill_rules:
-            if not isinstance(rule, dict):
-                continue
-            match = rule.get("match") or {}
-            if not isinstance(match, dict):
-                continue
-            if day_rule_matches(classes, match):
-                color = rule.get("color")
-                if color:
-                    return str(color)
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
-        return config.blockplan_federal_holiday_fill_color
-    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
-        return config.blockplan_company_holiday_fill_color
-    if "weekend" in classes and config.blockplan_weekend_fill_color:
-        return config.blockplan_weekend_fill_color
-    return None
-
-
-def _nwd_fill_opacity_for_classes(
-    classes: frozenset[str],
-    band_fill_rules: list[dict] | None,
-    config: CalendarConfig,
-) -> float | None:
-    """Resolve the fill opacity for a non-workday override cell.
-
-    Band-level ``fill_rules`` may carry an ``opacity`` key; if the matching
-    rule has one, it is returned.  Otherwise falls back to the per-type config
-    field.  Returns ``None`` if no override applies (caller uses the default
-    ``blockplan_timeband_fill_opacity``).
-    """
-    if not classes:
-        return None
-    if band_fill_rules:
-        for rule in band_fill_rules:
-            if not isinstance(rule, dict):
-                continue
-            match = rule.get("match") or {}
-            if not isinstance(match, dict):
-                continue
-            if day_rule_matches(classes, match):
-                if rule.get("color"):  # only override opacity when fill matched
-                    op = rule.get("opacity")
-                    return float(op) if op is not None else None
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_fill_color:
-        return config.blockplan_federal_holiday_fill_opacity
-    if "company_holiday" in classes and config.blockplan_company_holiday_fill_color:
-        return config.blockplan_company_holiday_fill_opacity
-    if "weekend" in classes and config.blockplan_weekend_fill_color:
-        return config.blockplan_weekend_fill_opacity
-    return None
-
-
-def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tuple[str, str] | None:
-    """Resolve a global non-workday icon for a single-day cell.
-
-    Returns ``(icon_name, color)`` or ``None``.  Priority:
-    federal_holiday → company_holiday → weekend.  The icon colour reuses
-    the matching fill colour (or config.nonworkday_fill_color when none is set).
-    """
-    if not classes:
-        return None
-    if "federal_holiday" in classes and config.blockplan_federal_holiday_icon:
-        return (
-            config.blockplan_federal_holiday_icon,
-            config.blockplan_federal_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "company_holiday" in classes and config.blockplan_company_holiday_icon:
-        return (
-            config.blockplan_company_holiday_icon,
-            config.blockplan_company_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "weekend" in classes and config.blockplan_weekend_icon:
-        return (
-            config.blockplan_weekend_icon,
-            config.blockplan_weekend_fill_color or config.nonworkday_fill_color,
-        )
-    return None
 
 
 if TYPE_CHECKING:
@@ -645,6 +546,27 @@ class BlockPlanRenderer(BaseSVGRenderer):
             if config.blockplan_federal_holiday_icon and db is not None
             else {}
         )
+        # Single-day date/dow cells on non-workdays, highest priority first.
+        _nwd_styles = (
+            NonWorkdayStyle(
+                "federal_holiday",
+                config.blockplan_federal_holiday_fill_color,
+                config.blockplan_federal_holiday_fill_opacity,
+                config.blockplan_federal_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "company_holiday",
+                config.blockplan_company_holiday_fill_color,
+                config.blockplan_company_holiday_fill_opacity,
+                config.blockplan_company_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "weekend",
+                config.blockplan_weekend_fill_color,
+                config.blockplan_weekend_fill_opacity,
+                config.blockplan_weekend_icon,
+            ),
+        )
 
         _n_vis = len(visible_days)
         _px_per_day = timeline_w / max(1, _n_vis)
@@ -865,18 +787,17 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 _nwd_icons: list[tuple[str, str]] = []
                 _nwd_opacity: float | None = None
                 if _is_single_day:
-                    _day_cls = _classify(first_seg.start)
-                    _nwd_fill = _nwd_fill_for_classes(_day_cls, band_fill_rules, config)
-                    if _nwd_fill:
-                        seg_fill = _nwd_fill
-                        _nwd_opacity = _nwd_fill_opacity_for_classes(_day_cls, band_fill_rules, config)
-                    _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
-                    if _nwd_icon_result:
-                        # Prefer the holidays' own country flags over the
-                        # static config icon (mirrors the weekly calendar).
-                        _icon_color = _nwd_icon_result[1]
-                        _flags = _holiday_flags.get(first_seg.start) if "federal_holiday" in _day_cls else None
-                        _nwd_icons = [(mark.icon, _icon_color) for mark in _flags] if _flags else [_nwd_icon_result]
+                    _nwd = nonworkday_override(
+                        _classify(first_seg.start),
+                        _nwd_styles,
+                        config.nonworkday_fill_color,
+                        band_fill_rules=band_fill_rules,
+                        holiday_flags=_holiday_flags.get(first_seg.start),
+                    )
+                    if _nwd.fill:
+                        seg_fill = _nwd.fill
+                        _nwd_opacity = _nwd.opacity
+                    _nwd_icons = _nwd.icons
                 _band_fop = self._tk("box:band").get("fill_opacity")
                 self._draw_rect(
                     seg_x0,

@@ -22,7 +22,7 @@ from renderers.svg_base import BaseSVGRenderer, _is_none_color
 from renderers.text_utils import fit_lines, shrinktext, string_width, text_center_baseline
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date, visible_days
-from shared.day_classifier import classify_day
+from shared.day_classifier import NonWorkdayStyle, classify_day, nonworkday_override
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
 from shared.rule_engine import StyleEngine, StyleResult
@@ -206,62 +206,6 @@ def _resolve_style_rules(config: CalendarConfig) -> list:
         if isinstance(rules, list):
             return rules
     return list(getattr(config, "theme_style_rules", None) or [])
-
-
-def _nwd_fill_for_classes(
-    classes: frozenset[str],
-    config: CalendarConfig,
-) -> str | None:
-    """Resolve a non-workday fill override for a single-day cell.
-
-    Priority: federal_holiday → company_holiday → weekend.  Returns ``None``
-    when the day has no non-workday classes or no override is configured.
-    """
-    if not classes:
-        return None
-    if "federal_holiday" in classes and config.compactplan_federal_holiday_fill_color:
-        return config.compactplan_federal_holiday_fill_color
-    if "company_holiday" in classes and config.compactplan_company_holiday_fill_color:
-        return config.compactplan_company_holiday_fill_color
-    if "weekend" in classes and config.compactplan_weekend_fill_color:
-        return config.compactplan_weekend_fill_color
-    return None
-
-
-def _nwd_fill_opacity_for_classes(
-    classes: frozenset[str],
-    config: CalendarConfig,
-) -> float | None:
-    if not classes:
-        return None
-    if "federal_holiday" in classes and config.compactplan_federal_holiday_fill_color:
-        return config.compactplan_federal_holiday_fill_opacity
-    if "company_holiday" in classes and config.compactplan_company_holiday_fill_color:
-        return config.compactplan_company_holiday_fill_opacity
-    if "weekend" in classes and config.compactplan_weekend_fill_color:
-        return config.compactplan_weekend_fill_opacity
-    return None
-
-
-def _nwd_icon_for_classes(classes: frozenset[str], config: CalendarConfig) -> tuple[str, str] | None:
-    if not classes:
-        return None
-    if "federal_holiday" in classes and config.compactplan_federal_holiday_icon:
-        return (
-            config.compactplan_federal_holiday_icon,
-            config.compactplan_federal_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "company_holiday" in classes and config.compactplan_company_holiday_icon:
-        return (
-            config.compactplan_company_holiday_icon,
-            config.compactplan_company_holiday_fill_color or config.nonworkday_fill_color,
-        )
-    if "weekend" in classes and config.compactplan_weekend_icon:
-        return (
-            config.compactplan_weekend_icon,
-            config.compactplan_weekend_fill_color or config.nonworkday_fill_color,
-        )
-    return None
 
 
 if TYPE_CHECKING:
@@ -595,6 +539,27 @@ class CompactPlanRenderer(BaseSVGRenderer):
             if config.compactplan_federal_holiday_icon and db is not None
             else {}
         )
+        # Single-day date/dow cells on non-workdays, highest priority first.
+        _nwd_styles = (
+            NonWorkdayStyle(
+                "federal_holiday",
+                config.compactplan_federal_holiday_fill_color,
+                config.compactplan_federal_holiday_fill_opacity,
+                config.compactplan_federal_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "company_holiday",
+                config.compactplan_company_holiday_fill_color,
+                config.compactplan_company_holiday_fill_opacity,
+                config.compactplan_company_holiday_icon,
+            ),
+            NonWorkdayStyle(
+                "weekend",
+                config.compactplan_weekend_fill_color,
+                config.compactplan_weekend_fill_opacity,
+                config.compactplan_weekend_icon,
+            ),
+        )
 
         def separator(x1: float, y1: float, x2: float, y2: float) -> None:
             self._draw_line(
@@ -689,18 +654,16 @@ class CompactPlanRenderer(BaseSVGRenderer):
                 )
                 _nwd_icons: list[tuple[str, str]] = []
                 if _is_single_day and _day_classes:
-                    _day_cls = _day_classes.get(first_seg.start, frozenset())
-                    _nwd_fill = _nwd_fill_for_classes(_day_cls, config)
-                    if _nwd_fill:
-                        fill = _nwd_fill
-                        fill_opacity = _nwd_fill_opacity_for_classes(_day_cls, config)
-                    _nwd_icon_result = _nwd_icon_for_classes(_day_cls, config)
-                    if _nwd_icon_result:
-                        # Prefer the holidays' own country flags over the
-                        # static config icon.
-                        _icon_color = _nwd_icon_result[1]
-                        _flags = _holiday_flags.get(first_seg.start) if "federal_holiday" in _day_cls else None
-                        _nwd_icons = [(mark.icon, _icon_color) for mark in _flags] if _flags else [_nwd_icon_result]
+                    _nwd = nonworkday_override(
+                        _day_classes.get(first_seg.start, frozenset()),
+                        _nwd_styles,
+                        config.nonworkday_fill_color,
+                        holiday_flags=_holiday_flags.get(first_seg.start),
+                    )
+                    if _nwd.fill:
+                        fill = _nwd.fill
+                        fill_opacity = _nwd.opacity
+                    _nwd_icons = _nwd.icons
 
                 if not _is_none_color(fill):
                     self._draw_rect(
