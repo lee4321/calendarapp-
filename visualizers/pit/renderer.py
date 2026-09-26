@@ -183,7 +183,7 @@ class PITRenderer(BaseSVGRenderer):
         except Exception:
             self._pattern_svg_cache = {}
 
-        style_engine = StyleEngine(_pit_style_rules(config))
+        style_engine = StyleEngine(_pit_style_rules(config), "pit")
         icon_map = getattr(self, "_icon_svg_map", {}) or {}
 
         # Pre-resolve per-event style + label-icon presence so the layout

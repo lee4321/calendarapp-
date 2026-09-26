@@ -266,7 +266,7 @@ class TimelineRenderer(BaseSVGRenderer):
         self._side_ink_min_x = None
         self._side_ink_max_x = None
         point_events, duration_events = self._split_events(config, event_objs)
-        style_engine = StyleEngine(_timeline_style_rules(config))
+        style_engine = StyleEngine(_timeline_style_rules(config), self.TOKEN_VISUALIZER)
         # One color per WBS group for the whole chart, so a phase's events,
         # milestones and bars match instead of each layout cycling its own
         # palette independently.

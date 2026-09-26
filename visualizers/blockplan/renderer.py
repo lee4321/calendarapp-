@@ -150,7 +150,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
             return 0, []
 
         self._populate_tokens(config)
-        self._style_engine = StyleEngine(_blockplan_style_rules(config))
+        self._style_engine = StyleEngine(_blockplan_style_rules(config), self.TOKEN_VISUALIZER)
 
         top_bands = list(getattr(config, "blockplan_top_time_bands", []) or [])
         bottom_bands = list(getattr(config, "blockplan_bottom_time_bands", []) or [])
@@ -291,42 +291,36 @@ class BlockPlanRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
-        """Stroke attrs for band/heading row cells.
+        """Stroke attrs for band/heading row cells: ``box:band``, else the grid stroke.
 
-        Prefers ``box:band`` token stroke values, then ``blockplan.timeband_line_*``,
-        then ``blockplan.grid_*``.  Same fallback chain as the pre-migration
-        version with the unified-theme token slotted in front.
+        A dash is never inherited: it comes from ``box:band`` itself or not at all.
         """
         tk_band = self._tk("box:band")
-        color = tk_band.get("stroke") or config.blockplan_timeband_line_color or config.blockplan_grid_color
+        grid_color, grid_width, grid_opacity, _grid_dasharray = self._grid_stroke(config)
         width = tk_band.get("stroke_width")
-        if width is None:
-            width = config.blockplan_timeband_line_width
-        if width is None:
-            width = config.blockplan_grid_line_width
         opacity = tk_band.get("stroke_opacity")
-        if opacity is None:
-            opacity = config.blockplan_timeband_line_opacity
-        if opacity is None:
-            opacity = config.blockplan_grid_opacity
-        dasharray = (
-            tk_band.get("dasharray") or config.blockplan_timeband_line_dasharray or config.blockplan_grid_dasharray
+        return (
+            tk_band.get("stroke") or grid_color,
+            float(width if width is not None else grid_width),
+            float(opacity if opacity is not None else grid_opacity),
+            tk_band.get("dasharray") or None,
         )
-        return color, float(width), float(opacity), dasharray
 
     def _grid_stroke(
         self,
         config: CalendarConfig,
     ) -> tuple[str, float, float, str | None]:
-        """Stroke attrs for blockplan grid lines.
+        """Stroke attrs for blockplan grid lines: ``line:grid``, else ``ec-grid-line``.
 
-        Prefers ``line:grid`` token, then ``blockplan.grid_*``.
+        The dash comes from ``line:grid`` alone; a theme may bind ``ec-grid-line``
+        to a dashed calendar grid that blockplan never drew with.
         """
         tk_grid = self._tk("line:grid")
-        color = tk_grid.get("color") or config.blockplan_grid_color
-        width = tk_grid.get("width") if tk_grid.get("width") is not None else config.blockplan_grid_line_width
-        opacity = tk_grid.get("opacity") if tk_grid.get("opacity") is not None else config.blockplan_grid_opacity
-        dasharray = tk_grid.get("dasharray") or config.blockplan_grid_dasharray
+        element = config.get_line_style("ec-grid-line")
+        color = tk_grid.get("color") or element.color
+        width = tk_grid.get("width") if tk_grid.get("width") is not None else element.width
+        opacity = tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity
+        dasharray = tk_grid.get("dasharray") or None
         return color, float(width), float(opacity), dasharray
 
     def _band_row_h(self, band: dict[str, Any], config: CalendarConfig) -> float:
@@ -714,14 +708,12 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 heading_font_size = row_h * 0.65
             else:
                 heading_font_size = float(tk_heading.get("size"))
-            heading_color = band.get("label_color") or tk_heading.get("color") or config.blockplan_header_label_color
+            heading_color = band.get("label_color") or tk_heading.get("color") or _heading_text_style.color
             heading_opacity = float(
                 label_opacity_value
                 if (label_opacity_value := band.get("label_opacity")) is not None
                 else (
-                    tk_heading.get("opacity")
-                    if tk_heading.get("opacity") is not None
-                    else config.blockplan_header_label_opacity
+                    tk_heading.get("opacity") if tk_heading.get("opacity") is not None else _heading_text_style.opacity
                 )
             )
             heading_fill = band.get("label_fill_color", _heading_cell_style.fill)
@@ -1636,31 +1628,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
             _sr = _style_engine.evaluate_event(event) if _style_engine is not None else StyleResult()
             if _sr.fill_color:
                 color = _sr.fill_color
-            _dur_stroke_color = (
-                config.blockplan_duration_stroke_color
-                if config.blockplan_duration_stroke_color is not None
-                else (tk_dur_box.get("stroke") or _dur_bar_style.color)
-            )
-            _dur_stroke_dash = (
-                config.blockplan_duration_stroke_dasharray
-                if config.blockplan_duration_stroke_dasharray is not None
-                else (tk_dur_box.get("dasharray") or _dur_bar_style.dasharray)
-            )
-            _dur_fill_opacity = (
-                tk_dur_box.get("fill_opacity")
-                if tk_dur_box.get("fill_opacity") is not None
-                else config.blockplan_duration_fill_opacity
-            )
-            _dur_stroke_opacity = (
-                tk_dur_box.get("stroke_opacity")
-                if tk_dur_box.get("stroke_opacity") is not None
-                else float(config.blockplan_duration_stroke_opacity)
-            )
-            _dur_stroke_width = (
-                tk_dur_box.get("stroke_width")
-                if tk_dur_box.get("stroke_width") is not None
-                else float(config.blockplan_duration_stroke_width)
-            )
+            _dur_stroke_color = tk_dur_box.get("stroke") or _dur_bar_style.color
+            _dur_stroke_dash = tk_dur_box.get("dasharray") or _dur_bar_style.dasharray
+            # A theme without box:duration opacities/width gets the old built-ins.
+            _dur_fill_opacity = tk_dur_box.get("fill_opacity")
+            if _dur_fill_opacity is None:
+                _dur_fill_opacity = 0.35
+            _dur_stroke_opacity = tk_dur_box.get("stroke_opacity")
+            if _dur_stroke_opacity is None:
+                _dur_stroke_opacity = 0.9
+            _dur_stroke_width = tk_dur_box.get("stroke_width")
+            if _dur_stroke_width is None:
+                _dur_stroke_width = 1.0
             rect_kwargs = _sr.rect_overrides(
                 fill=color,
                 fill_opacity=_dur_fill_opacity,
@@ -1725,13 +1704,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
             tk_dur_date = self._tk("text:duration_date")
             if has_dates:
                 date_font_size = float(tk_dur_date.get("size"))
-                date_color = (
-                    config.blockplan_duration_date_color
-                    if config.blockplan_duration_date_color is not None
-                    else (tk_dur_date.get("color") or _dur_date_style.color)
-                )
+                date_color = tk_dur_date.get("color") or _dur_date_style.color
                 date_fmt = config.blockplan_duration_date_format
-                date_font = config.blockplan_duration_date_font or tk_dur_date.get("font") or _dur_date_style.font
+                date_font = tk_dur_date.get("font") or _dur_date_style.font
                 date_font, _, date_color, date_opacity = _sr.text_override(
                     "duration_start_date",
                     font=date_font,
@@ -1750,14 +1725,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     else bar_center_y + date_font_size * 0.35
                 )
             dur_text_color = tk_event_name.get("color") or _event_name_style.color
-            dur_notes_color = (
-                config.blockplan_notes_text_font_color
-                if config.blockplan_notes_text_font_color is not None
-                else (tk_event_notes.get("color") or _event_notes_style.color)
-            )
-            _dur_notes_font_name = (
-                config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _event_notes_style.font
-            )
+            dur_notes_color = tk_event_notes.get("color") or _event_notes_style.color
+            _dur_notes_font_name = tk_event_notes.get("font") or _event_notes_style.font
             _dur_name_font, _, dur_text_color, dur_text_opacity = _sr.text_override(
                 "duration_name",
                 font=tk_event_name.get("font") or _event_name_style.font,
@@ -2017,14 +1986,8 @@ class BlockPlanRenderer(BaseSVGRenderer):
             event_font_path = get_font_path(_evt_name_font)
         except Exception:
             event_font_path = ""
-        _event_notes_font_name = (
-            config.blockplan_notes_text_font_name or tk_event_notes.get("font") or _evt_notes_style.font
-        )
-        _event_notes_color = (
-            config.blockplan_notes_text_font_color
-            if config.blockplan_notes_text_font_color is not None
-            else (tk_event_notes.get("color") or _evt_notes_style.color)
-        )
+        _event_notes_font_name = tk_event_notes.get("font") or _evt_notes_style.font
+        _event_notes_color = tk_event_notes.get("color") or _evt_notes_style.color
         try:
             notes_font_path = get_font_path(_event_notes_font_name)
         except Exception:

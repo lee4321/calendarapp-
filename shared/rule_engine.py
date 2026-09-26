@@ -573,14 +573,26 @@ def _rule_result(rule: dict) -> StyleResult:
 # ── StyleEngine ───────────────────────────────────────────────────────────────
 
 
+def _view_matches(rule: dict, visualizer: str | None) -> bool:
+    """False only when ``rule`` selects a visualizer other than ``visualizer``."""
+    select = rule.get("select")
+    if visualizer is None or not isinstance(select, dict) or "visualizer" not in select:
+        return True
+    wanted = select["visualizer"]
+    return visualizer in wanted if isinstance(wanted, list) else wanted == visualizer
+
+
 class StyleEngine:
     """
     Evaluates style_rules for day boxes and events.
     Results layer additively in declaration order — None fields are not overwritten.
     """
 
-    def __init__(self, rules: list[dict]):
-        self._rules = [r for r in (rules or []) if isinstance(r, dict)]
+    def __init__(self, rules: list[dict], visualizer: str | None = None):
+        # Rules selected on another view are dropped up front: the per-event
+        # matchers below know nothing of views, and without this a rule
+        # meant for one visualizer would style every other one.
+        self._rules = [r for r in (rules or []) if isinstance(r, dict) and _view_matches(r, visualizer)]
 
     # Legacy apply_to filter strings ↔ unified-schema tokens.
     _UNIFIED_ALIASES: ClassVar[dict[str, set[str]]] = {

@@ -135,14 +135,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # / _font_name / _font_opacity / _font_size, timeband_fill_color,
     # timeband_label_color / _label_opacity (per-band YAML overrides
     # cover those slots; tokens cover the rest).
-    ("blockplan", "grid_color"): "blockplan_grid_color",
-    ("blockplan", "grid_opacity"): "blockplan_grid_opacity",
-    ("blockplan", "grid_line_width"): "blockplan_grid_line_width",
-    ("blockplan", "grid_dasharray"): "blockplan_grid_dasharray",
-    ("blockplan", "timeband_line_color"): "blockplan_timeband_line_color",
-    ("blockplan", "timeband_line_width"): "blockplan_timeband_line_width",
-    ("blockplan", "timeband_line_opacity"): "blockplan_timeband_line_opacity",
-    ("blockplan", "timeband_line_dasharray"): "blockplan_timeband_line_dasharray",
     ("blockplan", "label_column_ratio"): "blockplan_label_column_ratio",
     ("blockplan", "band_label_column_ratio"): "blockplan_band_label_column_ratio",
     ("blockplan", "fiscal_year_start_month"): "blockplan_fiscal_year_start_month",
@@ -156,8 +148,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "top_time_bands"): "blockplan_top_time_bands",
     ("blockplan", "bottom_time_bands"): "blockplan_bottom_time_bands",
     ("blockplan", "swimlanes"): "blockplan_swimlanes",
-    ("blockplan", "header_label_color"): "blockplan_header_label_color",
-    ("blockplan", "header_label_opacity"): "blockplan_header_label_opacity",
     ("blockplan", "header_label_align_h"): "blockplan_header_label_align_h",
     ("blockplan", "timeband_fill_color"): "blockplan_timeband_fill_color",
     ("blockplan", "timeband_fill_palette"): "blockplan_timeband_fill_palette",
@@ -179,20 +169,13 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("blockplan", "event_show_date"): "blockplan_event_show_date",
     ("blockplan", "event_date_font_size"): "blockplan_event_date_font_size",
     ("blockplan", "event_date_format"): "blockplan_event_date_format",
-    ("blockplan", "duration_fill_opacity"): "blockplan_duration_fill_opacity",
-    ("blockplan", "duration_stroke_color"): "blockplan_duration_stroke_color",
-    ("blockplan", "duration_stroke_width"): "blockplan_duration_stroke_width",
-    ("blockplan", "duration_stroke_opacity"): "blockplan_duration_stroke_opacity",
-    ("blockplan", "duration_stroke_dasharray"): "blockplan_duration_stroke_dasharray",
     ("blockplan", "duration_bar_height"): "blockplan_duration_bar_height",
     ("blockplan", "duration_row_gap"): "blockplan_duration_row_gap",
     ("blockplan", "duration_icon_visible"): "blockplan_duration_icon_visible",
     ("blockplan", "duration_show_start_date"): "blockplan_duration_show_start_date",
     ("blockplan", "duration_show_end_date"): "blockplan_duration_show_end_date",
     ("blockplan", "duration_date_format"): "blockplan_duration_date_format",
-    ("blockplan", "duration_date_font"): "blockplan_duration_date_font",
     ("blockplan", "duration_date_font_size"): "blockplan_duration_date_font_size",
-    ("blockplan", "duration_date_color"): "blockplan_duration_date_color",
     ("blockplan", "marker_radius"): "blockplan_marker_radius",
     ("blockplan", "header_font_size"): "blockplan_header_font_size",
     ("blockplan", "band_font_size"): "blockplan_band_font_size",
@@ -200,8 +183,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Blockplan text styling — only font_size + name fields kept; the
     # color / opacity / alignment trios were stripped (see header).
     ("blockplan.name_text", "font_size"): "blockplan_name_text_font_size",
-    ("blockplan.notes_text", "font_name"): "blockplan_notes_text_font_name",
-    ("blockplan.notes_text", "font_color"): "blockplan_notes_text_font_color",
     ("blockplan.notes_text", "font_size"): "blockplan_notes_text_font_size",
     # Gantt.  `columns` is a list of column dicts (layout, not style) and
     # rides the same scalar path as blockplan.swimlanes.

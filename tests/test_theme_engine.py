@@ -1137,8 +1137,6 @@ def test_blockplan_theme_applied():
     theme_data = {
         "theme": {"name": "BlockplanTheme"},
         "blockplan": {
-            "grid_color": "silver",
-            "grid_opacity": 0.75,
             "lane_match_mode": "all",
             "show_unmatched_lane": False,
             "vertical_line_color": "orange",
@@ -1166,8 +1164,6 @@ def test_blockplan_theme_applied():
         config = create_calendar_config()
         engine.apply(config)
 
-    assert config.blockplan_grid_color == "silver"
-    assert config.blockplan_grid_opacity == 0.75
     assert config.blockplan_lane_match_mode == "all"
     assert config.blockplan_show_unmatched_lane is False
     assert not hasattr(config, "blockplan_vertical_lines")

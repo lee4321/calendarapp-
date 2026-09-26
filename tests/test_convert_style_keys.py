@@ -85,3 +85,39 @@ def test_converting_twice_changes_nothing():
     twice, changes = convert_text(once)
     assert twice == once
     assert changes == []
+
+
+# Rule items at column 0 (yaml.dump style), nested lists at column 2, and
+# rules for two tokens that insert at different places in the list.
+_MANY_TARGETS = """\
+blockplan:
+  timeband_line_width: 2.5   # falls back to the grid key when unset
+  grid_color: silver
+  duration_stroke_color: red
+style_rules:
+- name: event colors
+  apply_to:
+  - box:event
+  - box:duration
+  style: {fill: blue}
+- name: grid on letter paper
+  apply_to: line:grid
+  select: {papersize: letter}
+  style: {width: 3}
+"""
+
+
+def test_rules_land_before_their_own_token_s_rules():
+    text, _changes = convert_text(_MANY_TARGETS)
+    names = [r["name"] for r in yaml.safe_load(text)["style_rules"]]
+    assert names.index("box:duration — blockplan (from blockplan)") < names.index("event colors")
+    assert names.index("line:grid — blockplan (from blockplan)") < names.index("grid on letter paper")
+    assert names.index("event colors") < names.index("line:grid — blockplan (from blockplan)")
+
+
+def test_a_key_left_unset_takes_its_fallback_key_s_value():
+    theme = parse_theme(yaml.safe_load(convert_text(_MANY_TARGETS)[0]))
+    band = theme.resolve_token("box:band", {"visualizer": "blockplan"})
+    assert band["stroke_width"] == 2.5  # its own key
+    assert band["stroke"] == "silver"  # timeband_line_color unset: grid_color
+    assert band["stroke_opacity"] == 0.6  # neither set: the grid's old default
