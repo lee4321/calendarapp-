@@ -984,30 +984,6 @@ class TestStrokeDasharrayTimelineMini:
 
     # ── Mini theme mappings ──────────────────────────────────────────────────
 
-    def test_mini_grid_line_dasharray_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "mini_calendar": {"grid_line_dasharray": "1,2"},
-            }
-        )
-        assert config.mini_grid_line_dasharray == "1,2"
-
-    def test_mini_grid_line_style_applied(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "T"},
-                "mini_calendar": {
-                    "grid_line_color": "orange",
-                    "grid_line_width": 0.5,
-                    "grid_line_opacity": 0.3,
-                },
-            }
-        )
-        assert config.mini_grid_line_color == "orange"
-        assert config.mini_grid_line_width == 0.5
-        assert config.mini_grid_line_opacity == 0.3
-
     def test_mini_day_number_digits_applied(self):
         config = self._apply_theme_data(
             {
@@ -1067,15 +1043,11 @@ class TestStrokeDasharrayTimelineMini:
                 "mini_calendar": {
                     "circle_milestones": False,
                     "milestone_stroke_color": "gold",
-                    "milestone_stroke_width": 2.5,
-                    "milestone_stroke_opacity": 0.4,
                 },
             }
         )
         assert config.mini_circle_milestones is False
         assert config.mini_milestone_stroke_color == "gold"
-        assert config.mini_milestone_stroke_width == 2.5
-        assert config.mini_milestone_stroke_opacity == 0.4
 
     def test_style_rules_applied_from_theme_mini(self):
         rules = [
@@ -1098,18 +1070,12 @@ class TestStrokeDasharrayTimelineMini:
 
     # timeline_duration_bar_stroke_dasharray stripped in Phase 2 wave 1.
 
-    def test_mini_dasharray_fields_default_to_none(self):
+    def test_mini_fields_default(self):
         config = create_calendar_config()
-        assert config.mini_grid_line_dasharray is None
-        assert config.mini_grid_line_color == "lightgrey"
-        assert config.mini_grid_line_width == 0.25
-        assert config.mini_grid_line_opacity == 0.5
         assert config.mini_day_number_glyphs is None
         assert config.mini_day_number_digits is None
         assert config.mini_show_adjacent is True
         assert config.mini_circle_milestones is False
-        assert config.mini_milestone_stroke_width == 1.0
-        assert config.mini_milestone_stroke_opacity == 1.0
         assert config.theme_style_rules is None
 
     # ── SVG output integration ───────────────────────────────────────────────

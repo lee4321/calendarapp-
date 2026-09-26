@@ -682,6 +682,10 @@ style_rules:
         min: 100
     style:
       fill: '#f4f4f4'
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
   - name: critical milestone — marker
     apply_to: icon:milestone
     select:

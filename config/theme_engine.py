@@ -344,7 +344,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # mini-icon has no section of its own — it is the mini renderer with day
     # numbers swapped for glyphs, so it reads mini_calendar like the rest.
     ("mini_calendar", "icon_set"): "mini_icon_set",
-    ("mini_calendar", "cell_font"): "mini_cell_font",
     ("mini_calendar", "cell_bold_font"): "mini_cell_bold_font",
     ("mini_calendar", "title_font_size"): "mini_title_font_size",
     ("mini_calendar", "header_font_size"): "mini_header_font_size",
@@ -357,15 +356,10 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("mini_calendar", "nonworkday_fill_color"): "mini_nonworkday_fill_color",
     ("mini_calendar", "milestone_color"): "mini_milestone_color",
     ("mini_calendar", "milestone_stroke_color"): "mini_milestone_stroke_color",
-    ("mini_calendar", "milestone_stroke_width"): "mini_milestone_stroke_width",
-    ("mini_calendar", "milestone_stroke_opacity"): "mini_milestone_stroke_opacity",
     ("mini_calendar", "circle_milestones"): "mini_circle_milestones",
     ("mini_calendar", "event_icon_scale"): "mini_event_icon_scale",
     ("mini_calendar", "event_icon_opacity"): "mini_event_icon_opacity",
     ("mini_calendar", "grid_lines"): "mini_grid_lines",
-    ("mini_calendar", "grid_line_color"): "mini_grid_line_color",
-    ("mini_calendar", "grid_line_width"): "mini_grid_line_width",
-    ("mini_calendar", "grid_line_opacity"): "mini_grid_line_opacity",
     ("mini_calendar", "month_outline_color"): "mini_month_outline_color",
     ("mini_calendar", "month_outline_width"): "mini_month_outline_width",
     ("mini_calendar", "month_outline_opacity"): "mini_month_outline_opacity",
@@ -386,7 +380,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("text_mini", "duration_fill"): "text_mini_duration_fill",
     ("mini_calendar", "title_format"): "mini_title_format",
     ("mini_calendar", "current_day_color"): "mini_current_day_color",
-    ("mini_calendar", "grid_line_dasharray"): "mini_grid_line_dasharray",
     (
         "mini_calendar",
         "strikethrough_stroke_dasharray",
