@@ -78,9 +78,8 @@ def test_mini_style_rules_apply_pattern_decoration():
 
 def test_mini_circle_stroke_style_is_configurable():
     config = _config()
+    apply_style_rules(config, [define("icon", "milestone", stroke_width=2.5, stroke_opacity=0.35)])
     config.mini_circle_milestones = True
-    config.mini_milestone_stroke_width = 2.5
-    config.mini_milestone_stroke_opacity = 0.35
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -183,7 +182,7 @@ def test_icons_fill_the_corners_clockwise_from_the_top_right():
     renderer = _drawn(config, style, x=0.0, y=0.0, w=20.0, h=20.0)
 
     size = 20.0 * config.mini_event_icon_scale
-    pad = config.mini_grid_line_width
+    pad = config.get_line_style("ec-grid-line").width
     lo = pad + size / 2.0
     hi = 20.0 - pad - size / 2.0
     placed = [(round(c["x"], 4), round(_corner_cy(c, size), 4)) for c in renderer.icon_calls]

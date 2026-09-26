@@ -105,7 +105,6 @@ mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
   icon_set: squares
-  cell_font: JuliaMono-Regular
   cell_bold_font: JuliaMono-Regular
   cell_font_size: null
   title_font_size: null
@@ -120,15 +119,9 @@ mini_calendar:
   milestone_color: midnightblue
   circle_milestones: true
   milestone_stroke_color: midnightblue
-  milestone_stroke_width: 1.0
-  milestone_stroke_opacity: 1.0
   current_day_color: lightskyblue
   week_number_font_size: null
   week_number_label_format: W{num}
-  grid_line_color: lightgrey
-  grid_line_width: 0.25
-  grid_line_opacity: 0.5
-  grid_line_dasharray: null
   # event / holiday / special-day icons in a day cell's corners, drawn
   # alongside the day number rather than in place of it: up to four, filled
   # top-right first and then clockwise
@@ -1013,6 +1006,10 @@ style_rules:
       font: RobotoCondensed-Light
       size: 9
       color: '#888888'
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
 element_overrides:
   ec-axis-tick:
     use: line:tick

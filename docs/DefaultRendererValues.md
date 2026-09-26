@@ -138,27 +138,27 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `icon:milestone` | `stroke_opacity` | *depends on the item being drawn* | `float( tk_milestone.get("stroke_opacity") if tk_milestone.get("stroke_opacity") is not None else _ls_milestone.opacity )` | `mini/renderer.py:551`, `mini/renderer.py:552` |
-| `icon:milestone` | `stroke_width` | *depends on the item being drawn* | `float( tk_milestone.get("stroke_width") if tk_milestone.get("stroke_width") is not None else _ls_milestone.width )` | `mini/renderer.py:546`, `mini/renderer.py:547` |
-| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or _ls_grid.color` | `mini/renderer.py:455` |
-| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or _ls_grid.dasharray or None` | `mini/renderer.py:460` |
-| `line:grid` | `opacity` | `0.5` | `float( tk_grid.get("opacity") if tk_grid.get("opacity") is not None else _ls_grid.opacity )` | `mini/renderer.py:458` |
-| `line:grid` | `width` | `0.5` | `float(tk_grid.get("width") if tk_grid.get("width") is not None else _ls_grid.width)` | `mini/renderer.py:447` |
-| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_day.get("font") or _ts_day.font` | `mini/renderer.py:517` |
-| `text:day_number` | `size` | `12.96` ¹ | `tk_day.get("size")` | `mini/renderer.py:528` |
+| `icon:milestone` | `stroke_opacity` | *unset* | `tk_milestone.get("stroke_opacity")` | `mini/renderer.py:554` |
+| `icon:milestone` | `stroke_width` | *unset* | `tk_milestone.get("stroke_width")` | `mini/renderer.py:553` |
+| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or element.color` | `mini/renderer.py:470` |
+| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or element.dasharray or None` | `mini/renderer.py:473` |
+| `line:grid` | `opacity` | `0.5` | `float(tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity)` | `mini/renderer.py:472` |
+| `line:grid` | `width` | `0.5` | `float(tk_grid.get("width") if tk_grid.get("width") is not None else element.width)` | `mini/renderer.py:471` |
+| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_day.get("font") or _ts_day.font` | `mini/renderer.py:529` |
+| `text:day_number` | `size` | `12.96` ¹ | `tk_day.get("size")` | `mini/renderer.py:540` |
 | `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `mini/renderer.py:637` |
 | `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `mini/renderer.py:635` |
 | `text:fiscal_label` | `opacity` | *unset* | `tk_fiscal.get("opacity")` | `mini/renderer.py:629` |
 | `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or font_size * 0.6` | `mini/renderer.py:624` |
-| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `mini/renderer.py:306` |
-| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `mini/renderer.py:304` |
-| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `mini/renderer.py:268` |
-| `text:month_title` | `color` | `#333333` | `tk.get("color") or _ts.color` | `mini/renderer.py:241` |
-| `text:month_title` | `font` | `RobotoCondensed-Bold` | `tk.get("font") or _ts.font` | `mini/renderer.py:239` |
-| `text:month_title` | `size` | `15.12` ¹ | `tk.get("size")` | `mini/renderer.py:240` |
-| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `mini/renderer.py:289`, `mini/renderer.py:363` |
-| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `mini/renderer.py:287`, `mini/renderer.py:361` |
-| `text:week_number` | `size` | `12.96` ¹ | `tk_wn.get("size")` | `mini/renderer.py:288`, `mini/renderer.py:351` |
+| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `mini/renderer.py:311` |
+| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `mini/renderer.py:309` |
+| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `mini/renderer.py:273` |
+| `text:month_title` | `color` | `#333333` | `tk.get("color") or _ts.color` | `mini/renderer.py:246` |
+| `text:month_title` | `font` | `RobotoCondensed-Bold` | `tk.get("font") or _ts.font` | `mini/renderer.py:244` |
+| `text:month_title` | `size` | `15.12` ¹ | `tk.get("size")` | `mini/renderer.py:245` |
+| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `mini/renderer.py:294`, `mini/renderer.py:368` |
+| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `mini/renderer.py:292`, `mini/renderer.py:366` |
+| `text:week_number` | `size` | `12.96` ¹ | `tk_wn.get("size")` | `mini/renderer.py:293`, `mini/renderer.py:356` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
@@ -172,7 +172,7 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `ec-hash-line` | `width` | `0.5` | `_hash_style.width` | `mini/renderer.py:775` |
 | `ec-strikethrough` | `dasharray` | *unset* | `config.get_line_style("ec-strikethrough").dasharray or None` | `mini/renderer.py:658` |
 
-<details><summary>Settings (18)</summary>
+<details><summary>Settings (15)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -184,10 +184,7 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `mini_calendar.day_number_glyphs` | `mini_day_number_glyphs` | *unset* |
 | `mini_calendar.event_icon_opacity` | `mini_event_icon_opacity` | `0.6` |
 | `mini_calendar.event_icon_scale` | `mini_event_icon_scale` | `0.25` |
-| `mini_calendar.grid_line_width` | `mini_grid_line_width` | `0.25` |
 | `mini_calendar.grid_lines` | `mini_grid_lines` | `false` |
-| `mini_calendar.milestone_stroke_opacity` | `mini_milestone_stroke_opacity` | `1` |
-| `mini_calendar.milestone_stroke_width` | `mini_milestone_stroke_width` | `1` |
 | `mini_calendar.month_outline_color` | `mini_month_outline_color` | *unset* |
 | `mini_calendar.month_outline_dasharray` | `mini_month_outline_dasharray` | *unset* |
 | `mini_calendar.month_outline_opacity` | `mini_month_outline_opacity` | `1` |
@@ -203,16 +200,12 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `icon:milestone` | `stroke_opacity` | `1` | `float( milestone_icon.get("stroke_opacity") if milestone_icon.get("stroke_opacity") is not None else config.mini_milestone_stroke_opacity )` | `mini_icon/renderer.py:150`, `mini_icon/renderer.py:151` |
-| `icon:milestone` | `stroke_width` | `1` | `float( milestone_icon.get("stroke_width") if milestone_icon.get("stroke_width") is not None else config.mini_milestone_stroke_width )` | `mini_icon/renderer.py:145`, `mini_icon/renderer.py:146` |
-| `line:grid` | `color` | `lightgrey` | `grid_line.get("color") or config.mini_grid_line_color` | `mini_icon/renderer.py:102` |
-| `line:grid` | `dasharray` | *unset* | `grid_line.get("dasharray") or config.mini_grid_line_dasharray or None` | `mini_icon/renderer.py:107` |
-| `line:grid` | `opacity` | `0.5` | `float( grid_line.get("opacity") if grid_line.get("opacity") is not None else config.mini_grid_line_opacity )` | `mini_icon/renderer.py:105` |
-| `line:grid` | `width` | `0.25` | `float( grid_line.get("width") if grid_line.get("width") is not None else config.mini_grid_line_width )` | `mini_icon/renderer.py:93` |
-| `text:day_number` | `font` | *depends on the item being drawn* | `config.mini_cell_bold_font if style.bold else (day_text.get("font") or config.mini_cell_font)` | `mini_icon/renderer.py:188` |
-| `text:day_number` | `size` | `12.96` ¹ | `day_text.get("size")` | `mini_icon/renderer.py:189` |
+| `icon:milestone` | `stroke_opacity` | *unset* | `milestone_icon.get("stroke_opacity")` | `mini_icon/renderer.py:139` |
+| `icon:milestone` | `stroke_width` | *unset* | `milestone_icon.get("stroke_width")` | `mini_icon/renderer.py:138` |
+| `text:day_number` | `font` | *depends on the item being drawn* | `config.mini_cell_bold_font if style.bold else (day_text.get("font") or config.get_text_style("ec-day-number").font)` | `mini_icon/renderer.py:177` |
+| `text:day_number` | `size` | `12.96` ¹ | `day_text.get("size")` | `mini_icon/renderer.py:179` |
 
-<details><summary>Settings (24)</summary>
+<details><summary>Settings (17)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -220,20 +213,13 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |
 | `weekly.day_box.hash_pattern_opacity` | `hash_pattern_opacity` | `0.15` |
 | `mini_calendar.cell_bold_font` | `mini_cell_bold_font` | `Roboto-Bold` |
-| `mini_calendar.cell_font` | `mini_cell_font` | `JuliaMono-Regular` |
 | `mini_calendar.cell_font_size` | `mini_cell_font_size` | `12.96` |
 | `mini_calendar.day_number_digits` | `mini_day_number_digits` | *unset* |
 | `mini_calendar.day_number_glyphs` | `mini_day_number_glyphs` | *unset* |
 | `mini_calendar.event_icon_opacity` | `mini_event_icon_opacity` | `0.6` |
 | `mini_calendar.event_icon_scale` | `mini_event_icon_scale` | `0.25` |
-| `mini_calendar.grid_line_color` | `mini_grid_line_color` | `lightgrey` |
-| `mini_calendar.grid_line_dasharray` | `mini_grid_line_dasharray` | *unset* |
-| `mini_calendar.grid_line_opacity` | `mini_grid_line_opacity` | `0.5` |
-| `mini_calendar.grid_line_width` | `mini_grid_line_width` | `0.25` |
 | `mini_calendar.grid_lines` | `mini_grid_lines` | `false` |
 | `mini_calendar.icon_set` | `mini_icon_set` | `squares` |
-| `mini_calendar.milestone_stroke_opacity` | `mini_milestone_stroke_opacity` | `1` |
-| `mini_calendar.milestone_stroke_width` | `mini_milestone_stroke_width` | `1` |
 | `mini_calendar.month_outline_color` | `mini_month_outline_color` | *unset* |
 | `mini_calendar.month_outline_dasharray` | `mini_month_outline_dasharray` | *unset* |
 | `mini_calendar.month_outline_opacity` | `mini_month_outline_opacity` | `1` |
@@ -255,7 +241,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `candybar/renderer.py:223` |
 | `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `candybar/renderer.py:221` |
 
-<details><summary>Settings (35)</summary>
+<details><summary>Settings (32)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -284,10 +270,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `mini_calendar.day_number_glyphs` | `mini_day_number_glyphs` | *unset* |
 | `mini_calendar.event_icon_opacity` | `mini_event_icon_opacity` | `0.6` |
 | `mini_calendar.event_icon_scale` | `mini_event_icon_scale` | `0.25` |
-| `mini_calendar.grid_line_width` | `mini_grid_line_width` | `0.25` |
 | `mini_calendar.grid_lines` | `mini_grid_lines` | `false` |
-| `mini_calendar.milestone_stroke_opacity` | `mini_milestone_stroke_opacity` | `1` |
-| `mini_calendar.milestone_stroke_width` | `mini_milestone_stroke_width` | `1` |
 | `mini_calendar.month_outline_color` | `mini_month_outline_color` | *unset* |
 | `mini_calendar.month_outline_dasharray` | `mini_month_outline_dasharray` | *unset* |
 | `mini_calendar.month_outline_opacity` | `mini_month_outline_opacity` | `1` |

@@ -30,6 +30,15 @@ RETIRED: tuple[Retired, ...] = (
     Retired("weekly.day_box", "stroke_opacity", "box:cell", "stroke_opacity", "weekly", 0.25),
     Retired("weekly.day_box", "stroke_width", "box:cell", "stroke_width", "weekly", 2),
     Retired("weekly.day_box", "stroke_dasharray", "box:cell", "dasharray", "weekly", None),
+    # mini family (mini, mini-icon, candybar all resolve tokens as "mini"):
+    # the day-cell grid, the milestone circle and the day-number font.
+    Retired("mini_calendar", "grid_line_color", "line:grid", "color", "mini", "lightgrey"),
+    Retired("mini_calendar", "grid_line_width", "line:grid", "width", "mini", 0.25),
+    Retired("mini_calendar", "grid_line_opacity", "line:grid", "opacity", "mini", 0.5),
+    Retired("mini_calendar", "grid_line_dasharray", "line:grid", "dasharray", "mini", None),
+    Retired("mini_calendar", "milestone_stroke_width", "icon:milestone", "stroke_width", "mini", 1.0),
+    Retired("mini_calendar", "milestone_stroke_opacity", "icon:milestone", "stroke_opacity", "mini", 1.0),
+    Retired("mini_calendar", "cell_font", "text:day_number", "font", "mini", "JuliaMono-Regular"),
 )
 
 #: Dotted theme paths that are rejected on load.

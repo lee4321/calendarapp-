@@ -158,7 +158,6 @@ class CalendarConfig:
     mini_columns: int = 3  # Months per row
     mini_rows: int = 0  # 0 = auto from date range
     mini_month_gap: float = 18.0  # Points between month grids
-    mini_cell_font: str = Fonts.J_REGULAR  # Monospace day number font
     mini_cell_bold_font: str = Fonts.R_BOLD  # Bold variant
     mini_title_font_size: float | None = None
     mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
@@ -168,8 +167,6 @@ class CalendarConfig:
     mini_nonworkday_fill_color: str = "lightblue"  # Non-work day background
     mini_milestone_color: str = "navy"  # Milestone circle color
     mini_milestone_stroke_color: str = "navy"  # Milestone circle stroke color
-    mini_milestone_stroke_width: float = 1.0
-    mini_milestone_stroke_opacity: float = 1.0
     mini_day_number_glyphs: list[str] | None = None
     mini_day_number_digits: list[str] | None = None
     mini_cell_font_size: float | None = None
@@ -184,10 +181,6 @@ class CalendarConfig:
     mini_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
     mini_grid_lines: bool = False  # Draw grid lines between cells
-    mini_grid_line_color: str = "lightgrey"
-    mini_grid_line_width: float = 0.25
-    mini_grid_line_opacity: float = 0.5
-    mini_grid_line_dasharray: str | None = None
     mini_month_outline_color: str | None = None  # None disables the outline
     mini_month_outline_width: float = 0.5
     mini_month_outline_opacity: float = 1.0

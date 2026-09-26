@@ -115,7 +115,6 @@ mini_calendar:
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
   icon_set: squares
-  cell_font: JuliaMono-Regular
   cell_bold_font: Caveat-Bold
   cell_font_size: 48
   title_font_size: 18
@@ -130,16 +129,10 @@ mini_calendar:
   milestone_color: navy
   circle_milestones: false
   milestone_stroke_color: navy
-  milestone_stroke_width: 1.0
-  milestone_stroke_opacity: 1.0
   current_day_color: black
   week_number_font_size: 12
   week_number_label_format: W{num}
   grid_lines: true
-  grid_line_color: grey
-  grid_line_width: 0.4
-  grid_line_opacity: 0.7
-  grid_line_dasharray: 1,2
   month_outline_color: navy
   month_outline_width: 0.75
   month_outline_opacity: 0.6
@@ -1048,6 +1041,14 @@ style_rules:
       font: RobotoCondensed-Light
       size: 9
       color: '#888888'
+  - name: line:grid — mini (from mini_calendar)
+    apply_to: line:grid
+    select: {visualizer: mini}
+    style: {dasharray: '1,2'}
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
 element_overrides:
   ec-axis-tick:
     use: line:tick

@@ -9,9 +9,9 @@ so it renders exactly as before:
 
 * For each retired key it works out the value the old code would have used —
   the key itself, its section/``base`` cascade, or the old built-in default.
-* Where the theme's own token *definition* leaves that attribute unset (the
-  only case in which the old code consulted the key), the value goes into a
-  rule ``apply_to: <token>`` selected on the visualizer.  The rule is inserted
+* Where the theme's token, resolved for that visualizer, leaves the attribute
+  unset (the only case in which the old code consulted the key), the value
+  goes into a rule ``apply_to: <token>`` selected on the visualizer.  The rule is inserted
   before the token's other conditional rules, so any of those that match still
   win, as they did before.
 * The retired keys are removed.  Comments elsewhere in the file are kept.
@@ -63,9 +63,12 @@ def converted_rules(data: dict) -> list[tuple[str, dict]]:
     groups: dict[tuple[str, str], dict[str, Any]] = {}
     sources: dict[tuple[str, str], set[str]] = {}
     for r in RETIRED:
-        defined = theme.resolve_token(r.token, {})
-        if r.attr in defined:
-            continue  # the token's definition always won; the key never mattered
+        # The old code read the key only when the token, resolved for this
+        # view, left the attribute unset.  Resolving with just the view (no
+        # paper size etc.) counts definitions and view-wide rules — including
+        # a rule an earlier run of this tool added, so it is idempotent.
+        if r.attr in theme.resolve_token(r.token, {"visualizer": r.visualizer}):
+            continue
         value = resolve_old_value(data, r)
         if value is None:
             continue  # nothing was drawn from it either way

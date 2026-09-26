@@ -8,7 +8,7 @@ events, holidays, and special days via the DayStyle system.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import arrow
 
@@ -48,6 +48,11 @@ def _mini_style_rules(config: CalendarConfig) -> list:
         if isinstance(rules, list):
             return rules
     return list(getattr(config, "theme_style_rules", None) or [])
+
+
+def _first_set(value: Any, default: float) -> Any:
+    """``value`` unless it is None (0 is a real setting)."""
+    return default if value is None else value
 
 
 class MiniCalendarRenderer(BaseSVGRenderer):
@@ -410,7 +415,6 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         3. Legacy hash pattern
         4. Grid line (if enabled)
         """
-        tk_grid = self._tk("line:grid")
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
@@ -443,23 +447,31 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 4. Grid lines
         if config.mini_grid_lines:
-            _ls_grid = config.get_line_style("ec-grid-line")
-            grid_stroke_width = float(tk_grid.get("width") if tk_grid.get("width") is not None else _ls_grid.width)
-            inset = grid_stroke_width / 2
+            grid = self._grid_line_style(config)
+            inset = grid.width / 2
             self._draw_rect(
                 x + inset,
                 y + inset,
-                max(0.0, w - grid_stroke_width),
-                max(0.0, h - grid_stroke_width),
+                max(0.0, w - grid.width),
+                max(0.0, h - grid.width),
                 fill="none",
-                stroke=tk_grid.get("color") or _ls_grid.color,
-                stroke_width=grid_stroke_width,
-                stroke_opacity=float(
-                    tk_grid.get("opacity") if tk_grid.get("opacity") is not None else _ls_grid.opacity
-                ),
-                stroke_dasharray=tk_grid.get("dasharray") or _ls_grid.dasharray or None,
+                stroke=grid.color,
+                stroke_width=grid.width,
+                stroke_opacity=grid.opacity,
+                stroke_dasharray=grid.dasharray,
                 css_class="ec-day-box",
             )
+
+    def _grid_line_style(self, config: CalendarConfig) -> LineStyle:
+        """The day-cell grid line: the ``line:grid`` token, then ``ec-grid-line``."""
+        tk_grid = self._tk("line:grid")
+        element = config.get_line_style("ec-grid-line")
+        return LineStyle(
+            color=tk_grid.get("color") or element.color,
+            width=float(tk_grid.get("width") if tk_grid.get("width") is not None else element.width),
+            opacity=float(tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity),
+            dasharray=tk_grid.get("dasharray") or element.dasharray or None,
+        )
 
     def _resolve_day_number_color(self, config: CalendarConfig, token_style: TokenStyle) -> str:
         """Base day-number color, before any per-day override.
@@ -530,28 +542,16 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 5. Circle (milestone)
         if style.circled:
-            # mini_calendar.milestone_stroke_* style the circle (the catalog's
-            # ec-milestone-marker is the timeline's icon, not this line).
-            _ls_milestone = LineStyle(
-                width=config.mini_milestone_stroke_width, opacity=config.mini_milestone_stroke_opacity
-            )
             radius = min(w, h) * 0.38
             self._draw_circle(
                 cx,
                 cy,
                 radius,
-                stroke=style.circle_color or _ls_milestone.color,
+                stroke=style.circle_color or LineStyle().color,
                 fill=style.circle_fill or "none",
-                stroke_width=float(
-                    tk_milestone.get("stroke_width")
-                    if tk_milestone.get("stroke_width") is not None
-                    else _ls_milestone.width
-                ),
-                stroke_opacity=float(
-                    tk_milestone.get("stroke_opacity")
-                    if tk_milestone.get("stroke_opacity") is not None
-                    else _ls_milestone.opacity
-                ),
+                # icon:milestone carries the circle's stroke; 1.0 when unset.
+                stroke_width=float(_first_set(tk_milestone.get("stroke_width"), 1.0)),
+                stroke_opacity=float(_first_set(tk_milestone.get("stroke_opacity"), 1.0)),
                 css_class="ec-milestone-marker",
             )
 
@@ -727,9 +727,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if size <= 0:
             return
         opacity = max(0.0, min(1.0, float(config.mini_event_icon_opacity)))
-        # Half a stroke keeps an icon off the grid line it would otherwise
+        # A stroke's width keeps an icon off the grid line it would otherwise
         # sit on; the cell's own inset is already applied by the caller.
-        pad = config.mini_grid_line_width
+        pad = self._grid_line_style(config).width
 
         for icon, (fx, fy) in zip(icons, self._ICON_CORNERS, strict=False):
             cx = x + pad + (size / 2.0) if fx == 0 else x + w - pad - (size / 2.0)

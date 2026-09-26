@@ -471,6 +471,10 @@ style_rules:
     apply_to: box:cell
     select: {visualizer: weekly}
     style: {stroke_opacity: 0.25}
+  - name: icon:milestone — mini (from mini_calendar)
+    apply_to: icon:milestone
+    select: {visualizer: mini}
+    style: {stroke_width: 1.0, stroke_opacity: 1.0}
 element_overrides:
   ec-axis-tick:
     use: line:tick
