@@ -110,7 +110,38 @@ About 450 lines saved.
 
 Order these by payoff and risk. Land each as its own PR and check each with the refcorpus.
 
+> **Status (2026-09-26):** 2.2–2.5 done, each with the refcorpus
+> byte-identical and the failing-test set unchanged. 2.6 was skipped and
+> 2.1 is on hold for a decision; see the notes under each. Net for 2.2–2.5:
+> about −850 Python lines, and 8 files deleted.
+>
+> | Item | Result |
+> |---|---|
+> | 2.3 layouts | `BaseLayout._emit_header_footer_coords` / `_content_rect` and `ContentAreaLayout`; four layouts become three-line subclasses (−257 lines) |
+> | 2.4 registration | Factory table; seven `visualizer.py` files deleted; mini/candybar share one `generate()` (−528 lines) |
+> | 2.5 importers | Shared CLI driver in `importers/common.py`; 16-scenario CLI output identical (−164 lines) |
+> | 2.2 plan bands | `shared.day_classifier.nonworkday_override()` + `NonWorkdayStyle` (−44 lines); `_build_segments` already delegated and `_band_row_h` genuinely differs |
+
 ### 2.1 Timeline horizontal/vertical twins (saves about 800 lines)
+
+> **On hold: the premise was wrong.** Once x/y names are normalised, only
+> 61% of the lines in the ten pairs match (from 50% for `_draw_today_marker`
+> to 69% for `_draw_duration`), and many of the matches are shared keyword
+> arguments. The vertical variants grew features the horizontal ones lack:
+> label-side support, tick-label clearance via `_axis_label_clearance`,
+> rotated labels, side-ink tracking and a different `limit` meaning (a
+> distance from the axis rather than an absolute coordinate).
+> A byte-identical merge would keep about 40% of each method as
+> orientation branches, saving roughly 250–300 lines at a cost to
+> readability. The larger saving needs a behaviour change: make horizontal
+> the mirror of vertical (side-aware fiscal bands and clearance), then
+> re-baseline the refcorpus after reviewing the visual diffs.
+>
+> A wider local guard was built for this work: 2,348 files covering both
+> directions × three label sides × two page orientations × four themes,
+> plus tick bands, top and bottom time bands (icon, countdown, aligned text),
+> fiscal overlays and today-line variants. It covers 92% of the statements
+> in the paired methods.
 
 Ten methods in `visualizers/timeline/renderer.py` exist twice, as `X` and
 `X_vertical`: `_layout_durations`, `_draw_duration`,
@@ -176,6 +207,13 @@ Move the shared parser and the loop into `common.run_importer(spec)`, so each
 importer declares only its extra flags and `transform_row`.
 
 ### 2.6 Labella adapters (saves about 100 lines)
+
+> **Skipped.** The adapters share function names but not bodies. PIT sizes
+> its boxes from a name line, an optional notes line and an optional inline
+> date, with an icon beside the name. Timeline uses a two-column box with
+> configured width and height overrides and font-metric line heights. The
+> shared algorithm already lives in `shared/labella_layout.py`. A common
+> helper would need a strategy object with about as many branches as it saves.
 
 `pit/labella_adapter.py` and `timeline/labella_adapter.py` (593 lines
 combined) both wrap `shared/labella_layout.py` and both partition by
