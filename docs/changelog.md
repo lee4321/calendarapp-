@@ -2,22 +2,23 @@
 
 One or two sentences per change, with the commit that made it; the commit message holds the detail (`git show <sha>`). Newest first.
 
-- 2026-09-26 be1ddcd dev: a fresh clone's tests build `calendar.db` themselves (`tools/db/build_db.py`), `DefaultRendererValues.md` cites `file:function` instead of line numbers, `.python-version` pins `3.14` so `uv sync` works off macOS, and this changelog keeps entries short.
-- 2026-09-26 73a9947 tools: retire `tools/migrate_theme.py` and `tools/strip_element_bindings.py`; legacy-schema errors say how to restore them from tag `pre-migrator-retirement`.
-- 2026-09-26 2452468 themes: theme inheritance — a theme can `extends:` another and list only its differences; Julia, dark, accent and vibrant now extend corporate (4,039 → 867 lines, identical renders).
-- 2026-09-26 10760c2 themes: retire blockplan's section style keys in favour of tokens (**breaking**; `tools/convert_style_keys.py` converts); `StyleEngine` now honours `select: {visualizer}`.
-- 2026-09-26 8bd6603 themes: retire timeline's section text/date/leader style keys in favour of tokens (**breaking**); labels are measured in the font they are drawn in.
-- 2026-09-26 4eae04b themes: retire the mini family's grid, milestone-stroke and cell-font section keys in favour of tokens (**breaking**); corner icons move 0.25 pt.
-- 2026-09-26 2293e78 themes: retire `weekly.day_box.stroke_*` in favour of `box:cell` (**breaking**) and add `tools/convert_style_keys.py`.
-- 2026-09-26 0d070bc themes: element styles always come from tokens (catalog defaults without a theme); 48 section keys that only fed the old fallback are removed.
-- 2026-09-19 a059131 patterns: scope each tile's ids to its own `<pattern>` def, so tiles no longer emit duplicate ids.
-- 2026-09-19 1889ce4 patterns: recolor every tile's ink (349 of 350 tiles now take the requested color; `stars65` is a fixed raster).
-- 2026-09-19 196aad8 patterns: shrink large tiles to `hash_pattern_target_size` (default 18 pt) so they read as texture, not one crop.
-- 2026-09-19 ee2a36b deps: upgrade every dependency (pandas 3, numpy 2.5, holidays 0.104 …); holidays adds three US informational days.
-- 2026-09-18 ce9708d ui: retire the Textual TUI and the Slint desktop UI (code kept at tag `pre-ui-retirement`).
-- 2026-09-14 1bd9a4d details: each run writes a folder with the chart, a Markdown details document, icons and an event CSV; the companion SVG pages are retired.
-- 2026-08-08 0499d23 gantt: dependency arrows use the PIT leader curve, and cross-page links are numbered instead of dropped.
-- 2026-08-07 0499d23 gantt: new Gantt visualizer (task table, timescale, bars, milestones, float, rollups, dependency arrows, pagination).
+- 2026-09-26 repo: history rewritten to drop the generated `_sh_*.svg` reference sheets (fresh clone 57.1 → 47.0 MiB); every commit ID changed, and the IDs below are the new ones. Re-clone any copy made before this.
+- 2026-09-26 21a450d dev: a fresh clone's tests build `calendar.db` themselves (`tools/db/build_db.py`), `DefaultRendererValues.md` cites `file:function` instead of line numbers, `.python-version` pins `3.14` so `uv sync` works off macOS, and this changelog keeps entries short.
+- 2026-09-26 fc382e5 tools: retire `tools/migrate_theme.py` and `tools/strip_element_bindings.py`; legacy-schema errors say how to restore them from tag `pre-migrator-retirement`.
+- 2026-09-26 c6fbacc themes: theme inheritance — a theme can `extends:` another and list only its differences; Julia, dark, accent and vibrant now extend corporate (4,039 → 867 lines, identical renders).
+- 2026-09-26 1d76139 themes: retire blockplan's section style keys in favour of tokens (**breaking**; `tools/convert_style_keys.py` converts); `StyleEngine` now honours `select: {visualizer}`.
+- 2026-09-26 a24e5a0 themes: retire timeline's section text/date/leader style keys in favour of tokens (**breaking**); labels are measured in the font they are drawn in.
+- 2026-09-26 b1e9850 themes: retire the mini family's grid, milestone-stroke and cell-font section keys in favour of tokens (**breaking**); corner icons move 0.25 pt.
+- 2026-09-26 0081f18 themes: retire `weekly.day_box.stroke_*` in favour of `box:cell` (**breaking**) and add `tools/convert_style_keys.py`.
+- 2026-09-26 8b59b15 themes: element styles always come from tokens (catalog defaults without a theme); 48 section keys that only fed the old fallback are removed.
+- 2026-09-19 ac3f3aa patterns: scope each tile's ids to its own `<pattern>` def, so tiles no longer emit duplicate ids.
+- 2026-09-19 8853d06 patterns: recolor every tile's ink (349 of 350 tiles now take the requested color; `stars65` is a fixed raster).
+- 2026-09-19 d31cb66 patterns: shrink large tiles to `hash_pattern_target_size` (default 18 pt) so they read as texture, not one crop.
+- 2026-09-19 a2e4fb5 deps: upgrade every dependency (pandas 3, numpy 2.5, holidays 0.104 …); holidays adds three US informational days.
+- 2026-09-18 c6a24fe ui: retire the Textual TUI and the Slint desktop UI (code kept at tag `pre-ui-retirement`).
+- 2026-09-14 25661c5 details: each run writes a folder with the chart, a Markdown details document, icons and an event CSV; the companion SVG pages are retired.
+- 2026-08-08 12df7fd gantt: dependency arrows use the PIT leader curve, and cross-page links are numbered instead of dropped.
+- 2026-08-07 12df7fd gantt: new Gantt visualizer (task table, timescale, bars, milestones, float, rollups, dependency arrows, pagination).
 - 2026-07-08 675fc02 consolidation: phases 0–7 of CONSOLIDATION_PLAN.md (refcorpus guard, dead code, shared helpers, `cli/` split, docs).
 - 2026-06-15 c08c380 candybar: new vertical year-strip visualizer.
 - 2026-05-25 56b91618 excelheader: skip timeband segments outside the visible day range
