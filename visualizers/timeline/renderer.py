@@ -27,6 +27,7 @@ from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
 from shared.wbs_filter import wbs_group, wbs_group_colors, wbs_sort_key
+from visualizers.timeline.axis import AxisFrame
 from visualizers.timeline.labella_adapter import (
     layout_callouts as _labella_layout_callouts,
 )
@@ -133,6 +134,16 @@ class TimelineDuration:
     # notes that row would otherwise carry, and condensing every cell of the
     # bar by one shared factor.
     text_overflow: bool = False
+
+    @property
+    def along_start(self) -> float:
+        """The bar's start date's position along the axis (x or y)."""
+        return self.start_y if self.orientation is Orientation.VERTICAL else self.start_x
+
+    @property
+    def along_end(self) -> float:
+        """The bar's end date's position along the axis."""
+        return self.end_y if self.orientation is Orientation.VERTICAL else self.end_x
 
 
 #: Inset from a duration bar's edge to its in-bar start / end date.
@@ -336,6 +347,14 @@ class TimelineRenderer(BaseSVGRenderer):
             room_high = max(0.0, (area_x + area_w - bottom_bands_h) - axis_origin[0])
             label_bounds = (area_y + _edge_inset, area_y + area_h - _edge_inset)
         callout_room = self._callout_room(orient, label_side, room_low, room_high)
+        frame = AxisFrame(
+            orient,
+            start,
+            end,
+            axis_origin[1] if orient is Orientation.VERTICAL else axis_left,
+            axis_end[1] if orient is Orientation.VERTICAL else axis_right,
+            axis_origin[0] if orient is Orientation.VERTICAL else axis_y,
+        )
 
         callouts = self._layout_callouts(
             config,
@@ -358,31 +377,14 @@ class TimelineRenderer(BaseSVGRenderer):
             group_colors=group_colors,
             style_engine=style_engine,
         )
-        if orient is Orientation.HORIZONTAL:
-            durations = self._layout_durations(
-                config,
-                duration_events,
-                start,
-                end,
-                axis_left,
-                axis_right,
-                axis_y,
-                style_engine,
-                group_colors=group_colors,
-            )
-        else:
-            durations = self._layout_durations_vertical(
-                config,
-                duration_events,
-                start,
-                end,
-                axis_x=axis_origin[0],
-                axis_top=axis_origin[1],
-                axis_bottom=axis_end[1],
-                side=duration_side,
-                style_engine=style_engine,
-                group_colors=group_colors,
-            )
+        durations = self._layout_durations(
+            config,
+            duration_events,
+            frame,
+            duration_side,
+            style_engine,
+            group_colors=group_colors,
+        )
 
         # Pass 1: emit labella's curved bezier leader paths under everything
         # else. Each path is in axis-local coordinates; we wrap it in a
@@ -406,35 +408,27 @@ class TimelineRenderer(BaseSVGRenderer):
                     f"</g>"
                 )
             )
-        # How far the duration band may reach before it leaves the paper.
+        # How far from the axis each side's bars may reach before they leave
+        # the paper — the axis is not centred, so each side has its own room.
         # None under --shrink: the viewBox is grown to whatever the bars
         # need, so every lane is drawn however deep the stack goes.
-        if config.shrink_to_content:
-            duration_limit = None
-            room_primary = room_secondary = None
-        elif orient is Orientation.HORIZONTAL:
-            duration_limit = area_y + area_h - bottom_bands_h
-            room_primary = room_secondary = None
-        else:
-            # Vertical bars fan out on both sides of the axis, and the axis
-            # is not centred, so each side is measured against its own room.
-            duration_limit = None
-            room_primary = max(0.0, area_x + area_w - axis_origin[0])
-            room_secondary = max(0.0, axis_origin[0] - area_x)
-
-        def _vertical_room(item: TimelineDuration) -> float | None:
-            if config.shrink_to_content:
-                return None
-            return room_primary if item.lane_side is Side.PRIMARY else room_secondary
-
         if orient is Orientation.HORIZONTAL:
-            for duration in durations:
-                with self._event_scope(duration.event):
-                    self._draw_duration_connectors(config, duration, axis_y, duration_limit)
+            duration_rooms = {
+                Side.PRIMARY: max(0.0, axis_y - (area_y + top_bands_h)),
+                Side.SECONDARY: max(0.0, (area_y + area_h - bottom_bands_h) - axis_y),
+            }
         else:
-            for duration in durations:
-                with self._event_scope(duration.event):
-                    self._draw_duration_connectors_vertical(config, duration, axis_origin[0], _vertical_room(duration))
+            duration_rooms = {
+                Side.PRIMARY: max(0.0, area_x + area_w - axis_origin[0]),
+                Side.SECONDARY: max(0.0, axis_origin[0] - area_x),
+            }
+
+        def _duration_room(item: TimelineDuration) -> float | None:
+            return None if config.shrink_to_content else duration_rooms[item.lane_side]
+
+        for duration in durations:
+            with self._event_scope(duration.event):
+                self._draw_duration_connectors(config, duration, frame, _duration_room(duration))
 
         # Main axis line. Vertical orientation: line runs (axis_x, axis_top)
         # → (axis_x, axis_bottom).
@@ -591,10 +585,7 @@ class TimelineRenderer(BaseSVGRenderer):
                 self._draw_callout(config, callout, axis_y)
         for duration in durations:
             with self._event_scope(duration.event):
-                if duration.orientation is Orientation.VERTICAL:
-                    self._draw_duration_vertical(config, duration, axis_origin[0], _vertical_room(duration))
-                else:
-                    self._draw_duration(config, duration, axis_y, duration_limit)
+                self._draw_duration(config, duration, frame, _duration_room(duration))
 
         # Timebands: top bands stack above the timeline area; bottom bands
         # stack below it. Only drawn when declared in the theme.
@@ -659,6 +650,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if config.shrink_to_content:
             tight = self._actual_content_bounds(
                 config,
+                frame,
                 callouts,
                 durations,
                 axis_left,
@@ -682,6 +674,7 @@ class TimelineRenderer(BaseSVGRenderer):
     def _actual_content_bounds(
         self,
         config: CalendarConfig,
+        frame: AxisFrame,
         callouts: list[TimelineCallout],
         durations: list[TimelineDuration],
         axis_left: float,
@@ -733,30 +726,18 @@ class TimelineRenderer(BaseSVGRenderer):
             min_x = min(min_x, callout.box_x - half_stroke)
             max_x = max(max_x, callout.box_x + callout.box_width + half_stroke)
 
-        if durations:
-            _title_size, _notes_size, d_date_size, bar_h = self._duration_metrics(config)
-            min_duration_offset = self._min_duration_offset(config, d_date_size)
-            duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
-            lane_gap = max(config.timeline_duration_lane_gap_y, d_date_size * 0.9)
-            lane_stride_h = bar_h + lane_gap
-            lane_stride_v = bar_h + lane_gap
-
-            for dur in durations:
-                if dur.orientation is Orientation.VERTICAL:
-                    if dur.lane_side is Side.PRIMARY:
-                        bar_x_left = axis_left + duration_offset + (dur.lane * lane_stride_v)
-                        max_x = max(max_x, bar_x_left + bar_h)
-                    else:
-                        bar_x_right = axis_left - duration_offset - (dur.lane * lane_stride_v)
-                        min_x = min(min_x, bar_x_right - bar_h)
-                    label_y_top = dur.start_y - (d_date_size * 1.3)
-                    label_y_bot = dur.end_y + (d_date_size * 1.3)
-                    min_y = min(min_y, label_y_top)
-                    max_y = max(max_y, label_y_bot)
-                else:
-                    bar_bottom = axis_y + duration_offset
-                    bar_y = bar_bottom + (dur.lane * lane_stride_h)
-                    max_y = max(max_y, bar_y + bar_h)
+        d_date_size = self._duration_metrics(config)[2]
+        for dur in durations:
+            near, thickness, sign = self._duration_bar_across(config, dur, frame)
+            lo, hi = (near, near + thickness) if sign > 0 else (near - thickness, near)
+            if frame.vertical:
+                min_x = min(min_x, lo)
+                max_x = max(max_x, hi)
+                min_y = min(min_y, dur.start_y - (d_date_size * 1.3))
+                max_y = max(max_y, dur.end_y + (d_date_size * 1.3))
+            else:
+                min_y = min(min_y, lo)
+                max_y = max(max_y, hi)
 
         # Extend bounds for declared timebands (only when present).
         top_bands = list(getattr(config, "timeline_top_time_bands", None) or [])
@@ -1053,52 +1034,69 @@ class TimelineRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         events: list[Event],
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_left: float,
-        axis_right: float,
-        axis_y: float,
+        frame: AxisFrame,
+        side: Side = Side.SECONDARY,
         style_engine: StyleEngine | None = None,
         group_colors: dict[str, str] | None = None,
     ) -> list[TimelineDuration]:
-        """Lay out duration bars in lanes below a horizontal axis.
+        """Lay out duration bars in lanes beside the axis, on ``side``.
 
-        Both edges of a bar are the x of its dates and nothing else, so
-        every bar starting on a given day shares a left edge with the
-        others and every bar ending on one shares a right edge — the
-        alignment that lets a reader compare bars against the axis and
-        against each other.  A bar too narrow for its own text is flagged
-        ``text_overflow`` rather than widened; `_draw_duration` answers
-        that by breaking the name over two rows and condensing the bar.
+        Both ends of a bar are the positions of its dates and nothing else,
+        so every bar starting on a given day shares an edge with the others
+        and every bar ending on one shares the other — the alignment that
+        lets a reader compare bars against the axis and against each other.
+        A bar too short for its own text is flagged ``text_overflow`` rather
+        than lengthened; :py:meth:`_draw_duration` answers that by breaking
+        the name over two rows and condensing the bar.
 
-        Chronologically sorted bars pack greedily into the first lane
-        whose previous bar ends at least ``min_gap`` px earlier.  Bars
-        are clamped to the user-typed range with ``continues_left/right``
-        flagged so the drawer can add continuation arrows; events wholly
-        outside the range are dropped.  Returns placement records only —
-        drawing happens in `_draw_duration`.
+        Chronologically sorted bars pack greedily into the first lane whose
+        previous bar ends at least ``min_gap`` earlier; lanes stack away from
+        the axis.  ``Side.BOTH`` alternates bars between the two sides by
+        start date, each side keeping its own lanes.  Bars are clamped to the
+        user-typed range with ``continues_left/right`` ("before"/"after")
+        flagged for the continuation icons; events wholly outside the range
+        are dropped.  Returns placement records only.
         """
         if not events:
             return []
 
         ordered, duration_colors = self._order_durations(config, events, group_colors)
 
+        if side is Side.BOTH:
+            # Chronological alternation mirrors how callouts split for
+            # Side.BOTH; gives a balanced layout regardless of input order.
+            return self._layout_durations(
+                config,
+                [e for i, e in enumerate(ordered) if i % 2 == 0],
+                frame,
+                Side.PRIMARY,
+                style_engine,
+                group_colors,
+            ) + self._layout_durations(
+                config,
+                [e for i, e in enumerate(ordered) if i % 2 == 1],
+                frame,
+                Side.SECONDARY,
+                style_engine,
+                group_colors,
+            )
+
         lane_last_end: list[float] = []
         # Lane each group's rollups reached, so the bars they summarise can
         # be kept further from the axis than their header is.
         rollup_floors: dict[str, int] = {}
-        min_gap = max(10.0, self._page_width * 0.01)
-        _title_size, _notes_size, _date_size, _ = self._duration_metrics(config)
+        min_gap = max(10.0, (self._page_height if frame.vertical else self._page_width) * 0.01)
 
         out: list[TimelineDuration] = []
 
         # Compare to the user-typed range (not the weekend-adjusted range)
         # so events ending on an excluded weekend day are not flagged as
         # continuing past the visible diagram.
+        start, end = frame.start, frame.end
         user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
         user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
 
-        for _idx, event in enumerate(ordered):
+        for event in ordered:
             start_day = self._safe_day(event.start, fallback=start)
             end_day = self._safe_day(event.end, fallback=start_day)
             if end_day < start_day:
@@ -1110,149 +1108,18 @@ class TimelineRenderer(BaseSVGRenderer):
             if start_day.floor("day") > user_end.floor("day"):
                 continue
 
-            continues_left = start_day.floor("day") < user_start.floor("day")
-            continues_right = end_day.floor("day") > user_end.floor("day")
+            a0 = frame.pos(start_day)
+            a1 = frame.pos(end_day)
 
-            sx = self._x_for_day(start_day, start, end, axis_left, axis_right)
-            ex = self._x_for_day(end_day, start, end, axis_left, axis_right)
-
-            # What the bar's three-column grid wants; nothing is widened to
-            # reach it, so it only decides which bars carry the overflow mark.
-            min_width = self._duration_full_extent(config, event, start)
-
-            group = self._rollup_group(config, event)
-            lane = self._place_span_in_lane(
-                lane_last_end,
-                sx,
-                ex,
-                min_gap,
-                self._rollup_lane_floor(rollup_floors, group, event),
-            )
-            if group is not None and event.rollup:
-                rollup_floors[group] = max(rollup_floors.get(group, -1), lane)
-            color = duration_colors[id(event)]
-            _sr = style_engine.evaluate_event(event) if style_engine is not None else None
-            if _sr is not None and _sr.fill_color:
-                color = _sr.fill_color
-            out.append(
-                TimelineDuration(
-                    event=event,
-                    color=color,
-                    start_x=sx,
-                    end_x=ex,
-                    lane=lane,
-                    min_width=min_width,
-                    text_overflow=(ex - sx) < min_width,
-                    continues_left=continues_left,
-                    continues_right=continues_right,
-                    style=_sr,
-                )
-            )
-
-        return out
-
-    def _layout_durations_vertical(
-        self,
-        config: CalendarConfig,
-        events: list[Event],
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        *,
-        axis_x: float,
-        axis_top: float,
-        axis_bottom: float,
-        side: Side = Side.SECONDARY,
-        style_engine: StyleEngine | None = None,
-        group_colors: dict[str, str] | None = None,
-    ) -> list[TimelineDuration]:
-        """Place vertical-orientation duration bars alongside the axis.
-
-        Bars run along the axis from start_y to end_y — exactly the y of
-        their two dates, so bars sharing a date share an edge, as in the
-        horizontal layout.  The per-bar `min_width` field carries the
-        *along-axis* length the label would need; a bar shorter than that
-        is flagged ``text_overflow`` rather than stretched, and
-        `_draw_duration_vertical` answers by breaking the name over two
-        rows and condensing the bar.
-
-        Lanes stack perpendicularly away from the axis (each new
-        overlapping bar sits further out).
-
-        ``side`` selects which side(s) of the axis bars go on:
-        - PRIMARY  → right side
-        - SECONDARY → left side
-        - BOTH     → alternate by start date, each side gets independent
-          lane tracking
-        """
-        if not events:
-            return []
-
-        ordered, duration_colors = self._order_durations(config, events, group_colors)
-
-        if side is Side.BOTH:
-            # Chronological alternation mirrors how callouts split for
-            # Side.BOTH; gives a balanced layout regardless of input order.
-            primary_events = [e for i, e in enumerate(ordered) if i % 2 == 0]
-            secondary_events = [e for i, e in enumerate(ordered) if i % 2 == 1]
-            return self._layout_durations_vertical(
-                config,
-                primary_events,
-                start,
-                end,
-                axis_x=axis_x,
-                axis_top=axis_top,
-                axis_bottom=axis_bottom,
-                side=Side.PRIMARY,
-                style_engine=style_engine,
-                group_colors=group_colors,
-            ) + self._layout_durations_vertical(
-                config,
-                secondary_events,
-                start,
-                end,
-                axis_x=axis_x,
-                axis_top=axis_top,
-                axis_bottom=axis_bottom,
-                side=Side.SECONDARY,
-                style_engine=style_engine,
-                group_colors=group_colors,
-            )
-
-        lane_last_end: list[float] = []
-        rollup_floors: dict[str, int] = {}
-        min_gap = max(10.0, self._page_height * 0.01)
-        _title_size, _notes_size, _date_size, _ = self._duration_metrics(config)
-
-        out: list[TimelineDuration] = []
-
-        user_start = self._safe_day(config.userstart, fallback=start) if config.userstart else start
-        user_end = self._safe_day(config.userend, fallback=end) if config.userend else end
-
-        for _idx, event in enumerate(ordered):
-            start_day = self._safe_day(event.start, fallback=start)
-            end_day = self._safe_day(event.end, fallback=start_day)
-            if end_day < start_day:
-                start_day, end_day = end_day, start_day
-
-            if end_day.floor("day") < user_start.floor("day"):
-                continue
-            if start_day.floor("day") > user_end.floor("day"):
-                continue
-
-            continues_top = start_day.floor("day") < user_start.floor("day")
-            continues_bottom = end_day.floor("day") > user_end.floor("day")
-
-            sy = self._y_for_day(start_day, start, end, axis_top, axis_bottom)
-            ey = self._y_for_day(end_day, start, end, axis_top, axis_bottom)
-
-            # Same grid as a horizontal bar, so the same demand — measured
-            # along this axis, where the bar's length is its text's width.
+            # What the bar's three-column grid wants, measured along the
+            # axis; nothing is lengthened to reach it, so it only decides
+            # which bars carry the overflow mark.
             min_length = self._duration_full_extent(config, event, start_day)
             group = self._rollup_group(config, event)
             lane = self._place_span_in_lane(
                 lane_last_end,
-                sy,
-                ey,
+                a0,
+                a1,
                 min_gap,
                 self._rollup_lane_floor(rollup_floors, group, event),
             )
@@ -1266,17 +1133,17 @@ class TimelineRenderer(BaseSVGRenderer):
                 TimelineDuration(
                     event=event,
                     color=color,
-                    start_x=axis_x,
-                    end_x=axis_x,
+                    start_x=frame.cross if frame.vertical else a0,
+                    end_x=frame.cross if frame.vertical else a1,
                     lane=lane,
                     min_width=min_length,
-                    text_overflow=(ey - sy) < min_length,
-                    continues_left=continues_top,
-                    continues_right=continues_bottom,
+                    text_overflow=(a1 - a0) < min_length,
+                    continues_left=start_day.floor("day") < user_start.floor("day"),
+                    continues_right=end_day.floor("day") > user_end.floor("day"),
                     style=_sr,
-                    orientation=Orientation.VERTICAL,
-                    start_y=sy,
-                    end_y=ey,
+                    orientation=frame.orientation,
+                    start_y=a0 if frame.vertical else 0.0,
+                    end_y=a1 if frame.vertical else 0.0,
                     lane_side=side,
                 )
             )
@@ -1610,52 +1477,41 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-event-date",
         )
 
-    def _duration_bar_y(self, config: CalendarConfig, item: TimelineDuration, axis_y: float) -> tuple[float, float]:
-        """``(bar_y, bar_h)`` for one horizontal duration bar.
+    def _duration_bar_across(
+        self, config: CalendarConfig, item: TimelineDuration, frame: AxisFrame
+    ) -> tuple[float, float, float]:
+        """``(near, thickness, sign)`` for one bar, across the axis.
 
-        The connector and the bar itself both need this and used to compute
-        it separately; sharing it is what lets the connector know whether the
-        bar it points at was actually drawn.
+        ``near`` is the bar's edge nearest the axis and ``sign`` the
+        direction its lanes stack in (see :py:meth:`AxisFrame.sign`), so the
+        far edge is ``near + sign * thickness``.  The connector, the bar and
+        the --shrink bounds all place the bar from here.
         """
-        _title, _notes, date_size, bar_h = self._duration_metrics(config)
+        _title, _notes, date_size, thickness = self._duration_metrics(config)
         duration_offset = max(
             config.timeline_duration_offset_y,
             self._min_duration_offset(config, date_size),
         )
         lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        # The start/end dates ride inside the bar, so a row is the bar plus
-        # the gap to the next one — no label band underneath.
-        lane_stride = bar_h + lane_gap
-        return axis_y + duration_offset + (item.lane * lane_stride), bar_h
+        # The start/end dates ride inside the bar, so a lane is the bar plus
+        # the gap to the next one — no label band beside it.
+        lane_stride = thickness + lane_gap
+        sign = frame.sign(item.lane_side)
+        if sign > 0:
+            near = frame.cross + duration_offset + (item.lane * lane_stride)
+        else:
+            near = frame.cross - duration_offset - (item.lane * lane_stride)
+        return near, thickness, sign
 
     def _duration_row_extent(self, config: CalendarConfig) -> float:
-        """Vertical room one duration row needs, its date labels included.
+        """Room one duration lane needs across the axis, its dates included.
 
-        The dates sit inside the bar, so the row is just the rect.  Kept as
+        The dates sit inside the bar, so the lane is just the rect.  Kept as
         its own method because `_actual_content_bounds` reserves the same
         figure and the two must not drift.
         """
         _title, _notes, _date_size, bar_h = self._duration_metrics(config)
         return bar_h
-
-    def _duration_bar_x(
-        self, config: CalendarConfig, item: TimelineDuration, axis_x: float
-    ) -> tuple[float, float, float]:
-        """``(near_edge_x, thickness, sign)`` for one vertical duration bar.
-
-        ``sign`` is +1 on the primary side (right of the axis), -1 on the
-        secondary.
-        """
-        _title, _notes, date_size, bar_thickness = self._duration_metrics(config)
-        duration_offset = max(
-            config.timeline_duration_offset_y,
-            self._min_duration_offset(config, date_size),
-        )
-        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_thickness + lane_gap
-        sign = 1.0 if item.lane_side is Side.PRIMARY else -1.0
-        near_x = axis_x + sign * (duration_offset + (item.lane * lane_stride))
-        return near_x, bar_thickness, sign
 
     @staticmethod
     def _duration_fits(bar_far_edge: float, limit: float | None) -> bool:
@@ -1704,30 +1560,32 @@ class TimelineRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         item: TimelineDuration,
-        axis_y: float,
+        frame: AxisFrame,
         limit: float | None = None,
     ) -> None:
-        """Draw the vertical aligner line from the axis to the duration bar.
+        """Draw the aligner line from the axis to the duration bar.
 
-        Start edge only, as in :py:meth:`_draw_duration_connectors_vertical`.
-        Both edges stand on real dates now (see ``_layout_durations``), but
-        one leader is enough to tie a lane deep below the axis back up to it,
-        and a second would cross every bar stacked between the two edges.
+        Start edge only.  Both edges stand on real dates (see
+        :py:meth:`_layout_durations`), but one leader is enough to tie a lane
+        deep off the axis back to it, and a second would cross every bar
+        stacked between the two edges.
 
-        When the bar itself did not fit below ``limit`` the leader stops at
-        the edge of the drawable area and ends in the theme's missing-box
-        icon, instead of running off the page toward a bar nobody drew.
+        ``limit`` is how far from the axis the bar's side may reach.  A lane
+        past it gets a leader that stops at the edge and ends in the theme's
+        missing-box icon, instead of one running off the page toward a bar
+        nobody drew.
         """
-        bar_y, bar_h = self._duration_bar_y(config, item, axis_y)
-        row_extent = self._duration_row_extent(config)
-        fits = self._duration_fits(bar_y + row_extent, limit)
-        end_y = bar_y if fits or limit is None else limit - row_extent
+        near, thickness, sign = self._duration_bar_across(config, item, frame)
+        fits = self._duration_fits(abs(near + sign * thickness - frame.cross), limit)
+        end = near if fits or limit is None else frame.cross + sign * (limit - thickness)
         _dur_bar_style = config.get_line_style("ec-duration-bar")
+        x1, y1 = frame.xy(item.along_start, frame.cross)
+        x2, y2 = frame.xy(item.along_start, end)
         self._draw_line(
-            item.start_x,
-            axis_y,
-            item.start_x,
-            end_y,
+            x1,
+            y1,
+            x2,
+            y2,
             stroke=item.color,
             stroke_width=0.9,
             stroke_opacity=_dur_bar_style.opacity,
@@ -1735,41 +1593,35 @@ class TimelineRenderer(BaseSVGRenderer):
             css_class="ec-connector",
         )
         if not fits:
-            self._draw_missing_box_marker(config, item.start_x, end_y + bar_h / 2.0, bar_h, item.color)
+            mx, my = frame.xy(item.along_start, end + sign * (thickness / 2.0))
+            self._draw_missing_box_marker(config, mx, my, thickness, item.color)
 
     def _draw_duration(
         self,
         config: CalendarConfig,
         item: TimelineDuration,
-        axis_y: float,
+        frame: AxisFrame,
         limit: float | None = None,
     ) -> None:
-        """Draw one placed duration below a horizontal axis: the bar
-        rect (fill opacity token-first from ``line:duration_bar``),
-        start/end axis markers, continuation arrows when the event
-        extends past the visible range, and the name / notes / date
-        text block sized to the bar's lane.
+        """Draw one placed duration: the bar rect (fill opacity token-first
+        from ``line:duration_bar``), its start marker on the axis,
+        continuation icons when the event runs past the visible range, and
+        the name / notes / date grid inside the bar.
 
-        A bar whose lane falls past ``limit`` is not drawn at all — its
-        leader carries the missing-box icon instead (see
+        A bar whose lane falls past ``limit`` (distance from the axis) is not
+        drawn at all — its leader carries the missing-box icon instead (see
         :py:meth:`_draw_duration_connectors`), which says more than a bar
         printed off the edge of the paper.
         """
-        _probe_y, _probe_h = self._duration_bar_y(config, item, axis_y)
-        if not self._duration_fits(_probe_y + self._duration_row_extent(config), limit):
+        near, thickness, sign = self._duration_bar_across(config, item, frame)
+        if not self._duration_fits(abs(near + sign * thickness - frame.cross), limit):
             self._note_lane_clipped(item)
             return
 
-        _title_size, _notes_size, date_size, bar_h = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(config, date_size)
-        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
-        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_h + lane_gap
+        across_lo = near if sign > 0 else near - thickness
+        along_lo = item.along_start
+        length = max(1.0, item.along_end - along_lo)
 
-        bar_bottom = axis_y + duration_offset
-        bar_y = bar_bottom + (item.lane * lane_stride)
-
-        # Duration bar.
         _dur_bar_style = config.get_line_style("ec-duration-bar")
         # Bar-rect fill opacity is token-first: themes set it per-visualizer
         # via a line:duration_bar rule with select: {visualizer: timeline}.
@@ -1783,81 +1635,74 @@ class TimelineRenderer(BaseSVGRenderer):
             stroke_opacity=_dur_bar_style.opacity,
             stroke_dasharray=_dur_bar_style.dasharray or None,
         )
-        self._draw_rect(
-            item.start_x,
-            bar_y,
-            max(1.0, item.end_x - item.start_x),
-            bar_h,
-            css_class="ec-duration-bar",
-            **rect_kwargs,
-        )
+        self._draw_rect(*frame.rect(along_lo, length, across_lo, thickness), css_class="ec-duration-bar", **rect_kwargs)
         self._note_duration(item)
 
         # Start marker on the main axis.  The end date gets none: the bar's
-        # own right edge already stands on it, and a dot out on the axis
-        # with no leader running down to the bar belongs to no bar in
-        # particular once several lanes share the day.
+        # own far end already stands on it, and a dot out on the axis with no
+        # leader running to the bar belongs to no bar in particular once
+        # several lanes share the day.
         _marker_style = config.get_box_style("ec-milestone-marker")
         marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
         marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
         self._draw_circle(
-            item.start_x,
-            axis_y,
+            *frame.xy(along_lo, frame.cross),
             radius=max(2.7, config.timeline_marker_radius * 0.8),
             fill=marker_fill,
             stroke=marker_stroke,
             stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
         )
 
-        # Continuation icons for duration bars clipped by the visible range.
+        # Continuation icons for bars clipped by the visible range.
         # continues_left == event starts before the visualization start
-        # ("before"); continues_right == event ends after the visualization
-        # end ("after"). Driven by the global `continuation` theme section.
+        # ("before"); continues_right == event ends after it ("after").
+        # Driven by the global `continuation` theme section, whose
+        # [horizontal, vertical] icon pairs pick the glyph for this axis.
         if (item.continues_left or item.continues_right) and bool(getattr(config, "show_continuation_icon", True)):
             cont_h = float(getattr(config, "continuation_icon_height", 8.0))
             cont_color_cfg = getattr(config, "continuation_icon_color", None)
             cont_color = cont_color_cfg if cont_color_cfg else item.color
-            cont_baseline = bar_y + bar_h * 0.5 + cont_h * 0.3
-            if item.continues_left:
+            across_mid = across_lo + thickness * 0.5
+            orient = "vertical" if frame.vertical else "horizontal"
+            for flag, configured_icon, default_icon, along, anchor, role in (
+                (
+                    item.continues_left,
+                    getattr(config, "continuation_icon_before", None),
+                    "arrow-up" if frame.vertical else "arrow-left",
+                    item.along_start + cont_h * 0.5 if frame.vertical else item.along_start,
+                    "middle" if frame.vertical else "start",
+                    "continuation_before",
+                ),
+                (
+                    item.continues_right,
+                    getattr(config, "continuation_icon_after", None),
+                    "arrow-down" if frame.vertical else "arrow-right",
+                    item.along_end - cont_h * 0.5 if frame.vertical else item.along_end,
+                    "middle" if frame.vertical else "end",
+                    "continuation_after",
+                ),
+            ):
+                if not flag:
+                    continue
+                if frame.vertical:
+                    icon_x, icon_y = across_mid, along
+                else:
+                    icon_x, icon_y = along, across_mid + cont_h * 0.3
                 self._draw_icon_svg(
-                    resolve_continuation_icon(
-                        getattr(config, "continuation_icon_before", None),
-                        "horizontal",
-                        "arrow-left",
-                    ),
-                    item.start_x,
-                    cont_baseline,
+                    resolve_continuation_icon(configured_icon, orient, default_icon),
+                    icon_x,
+                    icon_y,
                     cont_h,
-                    anchor="start",
+                    anchor=anchor,
                     color=cont_color,
                     css_class="ec-duration-icon",
-                    details_role="continuation_before",
-                )
-            if item.continues_right:
-                self._draw_icon_svg(
-                    resolve_continuation_icon(
-                        getattr(config, "continuation_icon_after", None),
-                        "horizontal",
-                        "arrow-right",
-                    ),
-                    item.end_x,
-                    cont_baseline,
-                    cont_h,
-                    anchor="end",
-                    color=cont_color,
-                    css_class="ec-duration-icon",
-                    details_role="continuation_after",
+                    details_role=role,
                 )
 
-        self._draw_duration_contents(
-            config,
-            item,
-            item.start_x,
-            bar_y,
-            max(1.0, item.end_x - item.start_x),
-            bar_h,
-            _sr,
-        )
+        if frame.vertical:
+            self._draw_duration_contents_vertical(config, item, across_lo, along_lo, thickness, length, _sr)
+        else:
+            self._draw_duration_contents(config, item, along_lo, across_lo, length, thickness, _sr)
 
     def _duration_full_extent(
         self,
@@ -2383,163 +2228,6 @@ class TimelineRenderer(BaseSVGRenderer):
                 transform=rot,
                 squeeze=squeeze,
             )
-
-    def _draw_duration_connectors_vertical(
-        self,
-        config: CalendarConfig,
-        item: TimelineDuration,
-        axis_x: float,
-        limit: float | None = None,
-    ) -> None:
-        """Horizontal aligner line from the vertical axis to the duration bar.
-
-        Start edge only.  Both edges stand on real dates now (see
-        :py:meth:`_layout_durations_vertical`), but one leader is enough to
-        tie a lane back to the axis, and a second would cross every bar
-        stacked between them on the way.
-
-        ``limit`` is how far from the axis this side may reach; a lane past it
-        gets a leader that stops at the edge and ends in the missing-box icon
-        rather than one that runs off the page.
-        """
-        bar_near_axis_x, bar_thickness, sign = self._duration_bar_x(config, item, axis_x)
-        far_edge = bar_near_axis_x + sign * bar_thickness
-        fits = self._duration_fits(abs(far_edge - axis_x), limit)
-        end_x = bar_near_axis_x if fits or limit is None else axis_x + sign * (limit - bar_thickness)
-        _dur_bar_style = config.get_line_style("ec-duration-bar")
-        self._draw_line(
-            axis_x,
-            item.start_y,
-            end_x,
-            item.start_y,
-            stroke=item.color,
-            stroke_width=0.9,
-            stroke_opacity=_dur_bar_style.opacity,
-            stroke_dasharray=_dur_bar_style.dasharray or None,
-            css_class="ec-connector",
-        )
-        if not fits:
-            self._draw_missing_box_marker(
-                config,
-                end_x + sign * (bar_thickness / 2.0),
-                item.start_y,
-                bar_thickness,
-                item.color,
-            )
-
-    def _draw_duration_vertical(
-        self,
-        config: CalendarConfig,
-        item: TimelineDuration,
-        axis_x: float,
-        limit: float | None = None,
-    ) -> None:
-        """Draw a vertical-orientation duration bar (left of axis).
-
-        A lane past ``limit`` is skipped; its leader carries the missing-box
-        icon instead.
-        """
-        _near_x, _thickness, _sign = self._duration_bar_x(config, item, axis_x)
-        if not self._duration_fits(abs(_near_x + _sign * _thickness - axis_x), limit):
-            self._note_lane_clipped(item)
-            return
-
-        _title_size, _notes_size, date_size, bar_thickness = self._duration_metrics(config)
-        min_duration_offset = self._min_duration_offset(config, date_size)
-        duration_offset = max(config.timeline_duration_offset_y, min_duration_offset)
-        lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-        lane_stride = bar_thickness + lane_gap
-
-        if item.lane_side is Side.PRIMARY:
-            # Right of axis: bars grow rightward, bar_x is the left edge.
-            bar_x = axis_x + duration_offset + (item.lane * lane_stride)
-        else:
-            # Left of axis: bars grow leftward, bar_x is still the left
-            # edge of the rectangle (axis_x - offset - lane*stride - thickness).
-            bar_right = axis_x - duration_offset - (item.lane * lane_stride)
-            bar_x = bar_right - bar_thickness
-        bar_y = item.start_y
-        bar_h = max(1.0, item.end_y - item.start_y)
-
-        _dur_bar_style = config.get_line_style("ec-duration-bar")
-        # Bar-rect fill opacity is token-first: themes set it per-visualizer
-        # via a line:duration_bar rule with select: {visualizer: timeline}.
-        _tk_bar_opacity = self._tk("line:duration_bar").get("opacity")
-        _sr = item.style or StyleResult()
-        rect_kwargs = _sr.rect_overrides(
-            fill=item.color,
-            fill_opacity=(_tk_bar_opacity if _tk_bar_opacity is not None else _dur_bar_style.opacity),
-            stroke=item.color,
-            stroke_width=0.9,
-            stroke_opacity=_dur_bar_style.opacity,
-            stroke_dasharray=_dur_bar_style.dasharray or None,
-        )
-        self._draw_rect(
-            bar_x,
-            bar_y,
-            bar_thickness,
-            bar_h,
-            css_class="ec-duration-bar",
-            **rect_kwargs,
-        )
-        self._note_duration(item)
-
-        # Start marker on the main axis, at the bar's start y — the end
-        # date has none, for the reason given in :py:meth:`_draw_duration`.
-        _marker_style = config.get_box_style("ec-milestone-marker")
-        marker_fill = _sr.fill_color if _sr.fill_color is not None else item.color
-        marker_stroke = _sr.stroke_color if _sr.stroke_color is not None else _marker_style.stroke
-        self._draw_circle(
-            axis_x,
-            item.start_y,
-            radius=max(2.7, config.timeline_marker_radius * 0.8),
-            fill=marker_fill,
-            stroke=marker_stroke,
-            stroke_width=max(0.6, _marker_style.stroke_width * 0.8),
-        )
-
-        # Continuation icons for bars clipped above/below the visible range.
-        # continues_left == event starts before visualization start ("before");
-        # continues_right == event ends after visualization end ("after").
-        # On a vertical axis the second element of a [horizontal, vertical]
-        # icon-list pair selects the orientation-appropriate glyph.
-        if (item.continues_left or item.continues_right) and bool(getattr(config, "show_continuation_icon", True)):
-            cont_h = float(getattr(config, "continuation_icon_height", 8.0))
-            cont_color_cfg = getattr(config, "continuation_icon_color", None)
-            cont_color = cont_color_cfg if cont_color_cfg else item.color
-            cont_x = bar_x + bar_thickness * 0.5
-            if item.continues_left:
-                self._draw_icon_svg(
-                    resolve_continuation_icon(
-                        getattr(config, "continuation_icon_before", None),
-                        "vertical",
-                        "arrow-up",
-                    ),
-                    cont_x,
-                    item.start_y + cont_h * 0.5,
-                    cont_h,
-                    anchor="middle",
-                    color=cont_color,
-                    css_class="ec-duration-icon",
-                    details_role="continuation_before",
-                )
-            if item.continues_right:
-                self._draw_icon_svg(
-                    resolve_continuation_icon(
-                        getattr(config, "continuation_icon_after", None),
-                        "vertical",
-                        "arrow-down",
-                    ),
-                    cont_x,
-                    item.end_y - cont_h * 0.5,
-                    cont_h,
-                    anchor="middle",
-                    color=cont_color,
-                    css_class="ec-duration-icon",
-                    details_role="continuation_after",
-                )
-
-        self._draw_duration_contents_vertical(config, item, bar_x, bar_y, bar_thickness, bar_h, _sr)
 
     def _draw_timeline_marker(
         self,

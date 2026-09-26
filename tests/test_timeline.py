@@ -17,12 +17,40 @@ from shared.date_utils import format_arrow_date
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleResult
 from shared.wbs_filter import wbs_group
+from visualizers.timeline.axis import AxisFrame
 from visualizers.timeline.layout import TimelineLayout
 from visualizers.timeline.renderer import (
     TimelineCallout,
     TimelineDuration,
     TimelineRenderer,
 )
+
+# The duration layout and drawing take an AxisFrame; these build one.
+_FRAME_D0 = arrow.get("20260101", "YYYYMMDD")
+_FRAME_D1 = arrow.get("20261231", "YYYYMMDD")
+
+
+def _hframe(start, end, left: float, right: float, axis_y: float) -> AxisFrame:
+    return AxisFrame(Orientation.HORIZONTAL, start, end, left, right, axis_y)
+
+
+def _vframe(start, end, top: float, bottom: float, axis_x: float) -> AxisFrame:
+    return AxisFrame(Orientation.VERTICAL, start, end, top, bottom, axis_x)
+
+
+def _haxis(axis_y: float) -> AxisFrame:
+    """A horizontal axis at ``axis_y``, for draw calls that only read the axis line."""
+    return _hframe(_FRAME_D0, _FRAME_D1, 0.0, 1.0, axis_y)
+
+
+def _vaxis(axis_x: float) -> AxisFrame:
+    return _vframe(_FRAME_D0, _FRAME_D1, 0.0, 1.0, axis_x)
+
+
+def _bar_y(renderer, config, item, axis_y: float) -> tuple[float, float]:
+    """``(top edge, height)`` of a bar below a horizontal axis at ``axis_y``."""
+    near, thickness, _sign = renderer._duration_bar_across(config, item, _haxis(axis_y))
+    return near, thickness
 
 
 class _DummyDB(FakeCalendarDB):
@@ -190,7 +218,7 @@ def test_timeline_duration_bars_use_start_end_alignment(tmp_path):
         Event(task_name="A", start="20260110", end="20260210"),
         Event(task_name="B", start="20260301", end="20260401"),
     ]
-    laid_out = renderer._layout_durations(config, durations, start, end, axis_left, axis_right, axis_y)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, axis_left, axis_right, axis_y))
 
     assert len(laid_out) == 2
     assert laid_out[0].start_x < laid_out[0].end_x
@@ -309,9 +337,9 @@ def test_timeline_duration_dates_share_same_y_and_offset_is_configurable(tmp_pat
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
 
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     start_label = arrow.get("20260110", "YYYYMMDD").format("MMM D")
     end_label = arrow.get("20260210", "YYYYMMDD").format("MMM D")
@@ -336,9 +364,9 @@ def test_timeline_duration_minimum_offset_exceeds_timeline_date_height(tmp_path)
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260120")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
 
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     _, _, date_size, _ = renderer._duration_metrics(config)
     expected_min = renderer._min_duration_offset(config, date_size)
@@ -375,8 +403,8 @@ def test_timeline_date_format_is_configurable(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="Duration A", start="20260110", end="20260210")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 50.0, 700.0, 300.0)
-    renderer._draw_duration(config, laid_out[0], axis_y=300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 50.0, 700.0, 300.0))
+    renderer._draw_duration(config, laid_out[0], _haxis(300.0))
 
     labels = {c["text"] for c in renderer.text_calls}
     assert "2026-01-10" in labels
@@ -536,7 +564,7 @@ def test_timeline_duration_uses_configured_name_and_notes_font_sizes(tmp_path):
         lane=0,
         min_width=40.0,
     )
-    renderer._draw_duration(config, duration, axis_y=300.0)
+    renderer._draw_duration(config, duration, _haxis(300.0))
 
     name = [c for c in renderer.text_calls if c["text"] == "Imaginary Sprint 4"]
     notes = [c for c in renderer.text_calls if c["text"] == "Execution window"]
@@ -560,7 +588,7 @@ def test_timeline_duration_uses_configured_box_height_and_text_width(tmp_path):
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260331", "YYYYMMDD")
     durations = [Event(task_name="A", start="20260110", end="20260110", notes="B")]
-    laid_out = renderer._layout_durations(config, durations, start, end, 60.0, 730.0, 300.0)
+    laid_out = renderer._layout_durations(config, durations, _hframe(start, end, 60.0, 730.0, 300.0))
     assert len(laid_out) == 1
     assert laid_out[0].min_width == 140.0
     assert (laid_out[0].end_x - laid_out[0].start_x) < 140.0
@@ -1053,8 +1081,8 @@ def _duration_connector_xs(config, event, *, axis_left=60.0, axis_right=730.0):
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
     start = arrow.get("20260101", "YYYYMMDD")
     end = arrow.get("20260630", "YYYYMMDD")
-    laid_out = renderer._layout_durations(config, [event], start, end, axis_left, axis_right, 300.0)
-    renderer._draw_duration_connectors(config, laid_out[0], axis_y=300.0)
+    laid_out = renderer._layout_durations(config, [event], _hframe(start, end, axis_left, axis_right, 300.0))
+    renderer._draw_duration_connectors(config, laid_out[0], _haxis(300.0))
     return laid_out[0], [c["x1"] for c in renderer.line_calls]
 
 
@@ -1085,7 +1113,7 @@ def test_vertical_durations_also_only_connect_at_the_start(tmp_path):
         orientation=Orientation.VERTICAL,
         lane_side=Side.PRIMARY,
     )
-    renderer._draw_duration_connectors_vertical(config, item, axis_x=100.0)
+    renderer._draw_duration_connectors(config, item, _vaxis(100.0))
 
     assert [c["y1"] for c in renderer.line_calls] == [item.start_y]
 
@@ -1107,11 +1135,7 @@ def _grouped_bars(config, events):
     return renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
 
 
@@ -1207,15 +1231,11 @@ def test_vertical_duration_bars_group_by_wbs_too(tmp_path):
     renderer = _CaptureTimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
 
-    bars = renderer._layout_durations_vertical(
+    bars = renderer._layout_durations(
         config,
         _phase_events(),
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_x=200.0,
-        axis_top=50.0,
-        axis_bottom=700.0,
-        side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+        Side.PRIMARY,
     )
     by_group: dict[str, set[str]] = {}
     for bar in bars:
@@ -1389,11 +1409,7 @@ def _lay_out(config, events, axis_y=300.0):
     bars = renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        axis_y,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, axis_y),
     )
     return renderer, bars
 
@@ -1402,14 +1418,14 @@ def test_a_bar_past_the_limit_is_not_drawn(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_bar.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
 
     renderer.rect_calls.clear()
-    renderer._draw_duration(config, deep, 300.0, limit=bar_y - 1.0)
+    renderer._draw_duration(config, deep, _haxis(300.0), limit=(bar_y - 1.0) - (300.0))
     assert renderer.rect_calls == []
 
     # Same bar, room to spare: it draws.
-    renderer._draw_duration(config, deep, 300.0, limit=bar_y + 10_000.0)
+    renderer._draw_duration(config, deep, _haxis(300.0), limit=(bar_y + 10_000.0) - (300.0))
     assert renderer.rect_calls
 
 
@@ -1417,10 +1433,10 @@ def test_the_leader_stops_at_the_limit_and_marks_the_missing_box(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_leader.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
     limit = bar_y - 1.0
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
 
     assert len(renderer.line_calls) == 1
     end_y = renderer.line_calls[0]["y2"]
@@ -1437,9 +1453,9 @@ def test_a_bar_that_fits_gets_no_missing_marker(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_fits.svg")
     renderer, bars = _lay_out(config, events)
     shallow = min(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, shallow, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, shallow, 300.0)
 
-    renderer._draw_duration_connectors(config, shallow, 300.0, limit=bar_y + 10_000.0)
+    renderer._draw_duration_connectors(config, shallow, _haxis(300.0), limit=(bar_y + 10_000.0) - (300.0))
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] == pytest.approx(bar_y)
 
@@ -1450,7 +1466,7 @@ def test_no_limit_draws_every_bar(tmp_path):
     renderer, bars = _lay_out(config, events)
     renderer.rect_calls.clear()
     for bar in bars:
-        renderer._draw_duration(config, bar, 300.0, limit=None)
+        renderer._draw_duration(config, bar, _haxis(300.0), limit=None)
     # One bar rect each, and no leader was cut short.
     assert len(renderer.rect_calls) == len(bars)
     assert renderer.icon_calls == []
@@ -1461,9 +1477,9 @@ def test_a_theme_without_a_missing_icon_still_clamps_the_leader(tmp_path):
     config.default_missing_icon = None
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, _bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, _bar_h = _bar_y(renderer, config, deep, 300.0)
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=bar_y - 1.0)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(bar_y - 1.0) - (300.0))
     assert renderer.icon_calls == []
     assert renderer.line_calls[0]["y2"] < bar_y
 
@@ -1492,13 +1508,9 @@ def _drawn_duration(tmp_path, name, event, axis_y=300.0):
     bars = renderer._layout_durations(
         config,
         [event],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        axis_y,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, axis_y),
     )
-    renderer._draw_duration(config, bars[0], axis_y)
+    renderer._draw_duration(config, bars[0], _haxis(axis_y))
     return config, renderer, bars[0]
 
 
@@ -1509,7 +1521,7 @@ def _date_texts(renderer):
 def test_the_start_and_end_dates_are_drawn_inside_the_bar(tmp_path):
     event = Event(task_name="Build", start="20260210", end="20260320")
     config, renderer, bar = _drawn_duration(tmp_path, "in_bar.svg", event)
-    bar_y, bar_h = renderer._duration_bar_y(config, bar, 300.0)
+    bar_y, bar_h = _bar_y(renderer, config, bar, 300.0)
 
     dates = _date_texts(renderer)
     assert len(dates) == 2
@@ -1578,13 +1590,9 @@ def test_the_event_icon_leads_the_row_above_the_start_date(tmp_path):
     bars = renderer._layout_durations(
         config,
         [event],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
 
     icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
@@ -1602,11 +1610,7 @@ def test_a_bar_too_narrow_for_its_dates_overflows_instead_of_growing(tmp_path):
     bars = renderer._layout_durations(
         config,
         [Event(task_name="Ship", start="20260210", end="20260210")],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
     bar = bars[0]
     assert bar.end_x - bar.start_x < renderer._duration_full_extent(
@@ -1643,11 +1647,7 @@ def _aligned_bars(tmp_path, name, events, axis_left=50.0, axis_right=700.0, rend
         renderer._layout_durations(
             config,
             events,
-            arrow.get("20260101", "YYYYMMDD"),
-            arrow.get("20260630", "YYYYMMDD"),
-            axis_left,
-            axis_right,
-            300.0,
+            _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), axis_left, axis_right, 300.0),
         ),
     )
 
@@ -1720,7 +1720,7 @@ def test_the_axis_marker_sits_on_the_start_date_only(tmp_path):
         [Event(task_name="Ship it", start="20260316", end="20260320")],
         renderer=_CaptureCircleRenderer(),
     )
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
     marker_xs = [c["cx"] for c in renderer.circle_calls]
     assert marker_xs == [bars[0].start_x]
 
@@ -1732,7 +1732,7 @@ def test_a_vertical_bar_also_marks_only_its_start_date(tmp_path):
         [Event(task_name="Build", start="20260210", end="20260501")],
         renderer=_CaptureCircleRenderer(),
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     marker_ys = [c["cy"] for c in renderer.circle_calls]
     assert marker_ys == [bars[0].start_y]
 
@@ -1750,7 +1750,7 @@ def _overflow_drawn(tmp_path, name, event, config=None, **cfg):
     for key, value in cfg.items():
         setattr(config, key, value)
     config, renderer, bars = _aligned_bars(tmp_path, name, [event], config=config)
-    renderer._draw_duration(config, bars[0], 300.0)
+    renderer._draw_duration(config, bars[0], _haxis(300.0))
     return config, renderer, bars[0]
 
 
@@ -1898,19 +1898,15 @@ def test_the_row_no_longer_reserves_a_band_under_the_bar(tmp_path):
     bars = renderer._layout_durations(
         config,
         events,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        50.0,
-        700.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 300.0),
     )
     lanes = sorted({b.lane for b in bars})
     assert len(lanes) >= 2
 
     _t, _n, date_size, bar_h = renderer._duration_metrics(config)
     lane_gap = max(config.timeline_duration_lane_gap_y, date_size * 0.9)
-    y0, _ = renderer._duration_bar_y(config, bars[0], 300.0)
-    y1, _ = renderer._duration_bar_y(config, next(b for b in bars if b.lane == 1), 300.0)
+    y0, _ = _bar_y(renderer, config, bars[0], 300.0)
+    y1, _ = _bar_y(renderer, config, next(b for b in bars if b.lane == 1), 300.0)
     assert y1 - y0 == pytest.approx(bar_h + lane_gap)
 
 
@@ -1919,17 +1915,13 @@ def test_vertical_bars_carry_their_dates_inside_too(tmp_path):
     config.timeline_orientation = "vertical"
     renderer = _CaptureOverflowRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
-    bars = renderer._layout_durations_vertical(
+    bars = renderer._layout_durations(
         config,
         [Event(task_name="Build", start="20260210", end="20260320")],
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        axis_x=200.0,
-        axis_top=50.0,
-        axis_bottom=700.0,
-        side=Side.PRIMARY,
+        _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+        Side.PRIMARY,
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     dates = _date_texts(renderer)
     assert len(dates) == 2
@@ -1954,15 +1946,11 @@ def _vertical_bars(tmp_path, name, events, config=None, renderer=None):
     return (
         config,
         renderer,
-        renderer._layout_durations_vertical(
+        renderer._layout_durations(
             config,
             events,
-            arrow.get("20260101", "YYYYMMDD"),
-            arrow.get("20260630", "YYYYMMDD"),
-            axis_x=200.0,
-            axis_top=50.0,
-            axis_bottom=700.0,
-            side=Side.PRIMARY,
+            _vframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 50.0, 700.0, 200.0),
+            Side.PRIMARY,
         ),
     )
 
@@ -2011,7 +1999,7 @@ def test_an_overflowing_vertical_bar_breaks_its_name_over_two_rows(tmp_path):
     )
     bar = bars[0]
     assert bar.text_overflow
-    renderer._draw_duration_vertical(config, bar, 200.0)
+    renderer._draw_duration(config, bar, _vaxis(200.0))
 
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
 
@@ -2038,7 +2026,7 @@ def test_a_condensed_vertical_bar_condenses_its_icon_along_the_axis(tmp_path):
         [Event(task_name="A name much longer than this bar", icon="rocket", start="20260210", end="20260310")],
     )
     config.timeline_duration_icon_visible = True
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     icon = next(c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon")
     transform = icon.get("transform") or ""
@@ -2052,7 +2040,7 @@ def test_a_vertical_bar_with_room_keeps_its_full_label(tmp_path):
         [Event(task_name="Build", start="20260210", end="20260501")],
     )
     assert not bars[0].text_overflow
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-overflow-icon"] == []
     assert len(_date_texts(renderer)) == 2
 
@@ -2199,14 +2187,14 @@ def test_the_overflow_marker_takes_the_configured_missing_icon_size(tmp_path):
     config, events = _overflow_setup(tmp_path, "ovf_size.svg")
     renderer, bars = _lay_out(config, events)
     deep = max(bars, key=lambda b: b.lane)
-    bar_y, bar_h = renderer._duration_bar_y(config, deep, 300.0)
+    bar_y, bar_h = _bar_y(renderer, config, deep, 300.0)
     limit = bar_y - 1.0
 
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
     assert renderer.icon_calls[-1]["size"] == pytest.approx(bar_h)
 
     config.default_missing_icon_size = 21.0
-    renderer._draw_duration_connectors(config, deep, 300.0, limit=limit)
+    renderer._draw_duration_connectors(config, deep, _haxis(300.0), limit=(limit) - (300.0))
     assert renderer.icon_calls[-1]["size"] == pytest.approx(21.0)
 
 
@@ -2254,14 +2242,7 @@ def test_every_item_type_in_a_group_takes_one_color(tmp_path):
         group_colors=group_colors,
     )
     bars = renderer._layout_durations(
-        config,
-        durations,
-        start,
-        end,
-        60.0,
-        730.0,
-        300.0,
-        group_colors=group_colors,
+        config, durations, _hframe(start, end, 60.0, 730.0, 300.0), group_colors=group_colors
     )
 
     by_group: dict[str, set[str]] = {}
@@ -2297,11 +2278,7 @@ def test_a_milestone_matches_the_bars_in_its_phase(tmp_path):
     bars = renderer._layout_durations(
         config,
         durations,
-        arrow.get("20260101", "YYYYMMDD"),
-        arrow.get("20260630", "YYYYMMDD"),
-        60.0,
-        730.0,
-        300.0,
+        _hframe(arrow.get("20260101", "YYYYMMDD"), arrow.get("20260630", "YYYYMMDD"), 60.0, 730.0, 300.0),
         group_colors=group_colors,
     )
     milestone = next(c for c in callouts if c.event.task_name == "A gate")
@@ -2440,7 +2417,7 @@ def test_a_vertical_duration_bar_shows_the_event_icon(tmp_path):
         renderer=_CaptureOverflowRenderer(),
     )
     assert not bars[0].text_overflow
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
 
     icons = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
     assert [c["icon"] for c in icons] == ["rocket"]
@@ -2460,7 +2437,7 @@ def test_a_vertical_duration_bar_leaves_the_icon_out_when_told_to(tmp_path):
         config=config,
         renderer=_CaptureOverflowRenderer(),
     )
-    renderer._draw_duration_vertical(config, bars[0], 200.0)
+    renderer._draw_duration(config, bars[0], _vaxis(200.0))
     assert [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"] == []
 
 

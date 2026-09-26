@@ -20,6 +20,7 @@ import pytest
 from config.config import create_calendar_config, setfontsizes
 from shared.data_models import Event
 from shared.orientation import Orientation, Side
+from visualizers.timeline.axis import AxisFrame
 from visualizers.timeline.packing import pack_callouts, resolve_box_size
 
 AXIS_ORIGIN = (100.0, 400.0)
@@ -318,8 +319,17 @@ def test_shrink_bounds_contain_every_callout_box():
         )
         for p in _pack([_event("20260105", "a"), _event("20260301", "z")], config=config)
     ]
+    frame = AxisFrame(
+        Orientation.HORIZONTAL,
+        arrow.get("20260101", "YYYYMMDD"),
+        arrow.get("20261231", "YYYYMMDD"),
+        AXIS_ORIGIN[0],
+        AXIS_ORIGIN[0] + AXIS_LENGTH,
+        AXIS_ORIGIN[1],
+    )
     x, y, w, h = renderer._actual_content_bounds(
         config,
+        frame,
         callouts,
         [],
         axis_left=AXIS_ORIGIN[0],
