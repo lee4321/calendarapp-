@@ -377,8 +377,8 @@ class DayStyleResolver:
         ``colors.federal_holiday`` / ``colors.company_holiday``, and any
         explicit ``apply_to: box:day`` rules the theme declares.  Pass 2
         consumes the legacy ``apply_to: day_box`` form via ``StyleEngine``
-        for pre-migration themes that haven't been re-saved through
-        ``tools/migrate_theme.py``; ``_applicable_rules("day_box")`` ignores
+        for pre-migration themes that were never converted;
+        ``_applicable_rules("day_box")`` ignores
         the new ``box:day`` form so the two passes don't double up.
         """
         federal_holiday = bool(holidays)

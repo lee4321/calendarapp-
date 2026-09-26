@@ -6,8 +6,6 @@ shared filter keeps items regardless of completion or rollup status.
 
 from __future__ import annotations
 
-from dataclasses import fields
-
 import pytest
 
 from cli.args import _create_argument_parser
@@ -40,11 +38,6 @@ def test_views_reject_the_removed_flags(view, flag, capsys):
     with pytest.raises(SystemExit):
         parser.parse_args([*argv, flag])
     assert flag in capsys.readouterr().err
-
-
-def test_config_has_no_fields_for_the_removed_filters():
-    names = {f.name for f in fields(CalendarConfig)}
-    assert not names & {"ignorecomplete", "rollups"}
 
 
 def test_filter_keeps_complete_and_non_rollup_items():

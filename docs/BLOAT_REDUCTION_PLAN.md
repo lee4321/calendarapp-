@@ -320,6 +320,14 @@ merged result.
 
 ## Phase 4: Retire one-shot migration tooling (about 0.5 day, after a notice period)
 
+> **Status (2026-09-26):** done. Both tools, the end-to-end migration tests and
+> the converter-only tests are gone; every legacy-schema error names the tag
+> through one helper, `legacy_hint()`; `validate_theme.py --convert` is gone.
+> The tag `pre-migrator-retirement` points at `2452468`. The session could
+> not push tags (HTTP 403), so the owner pushes it before merging. Kept for
+> now: `tools/convert_style_keys.py`, the Phase 3 converter, which is itself a
+> candidate for the same retirement after a notice period.
+
 `tools/migrate_theme.py` (1,456 lines) and `tools/strip_element_bindings.py`
 convert the pre-July theme schema. The runtime already rejects that schema.
 All shipped themes are converted, and `tests/test_migration_e2e.py`,

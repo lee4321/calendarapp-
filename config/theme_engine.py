@@ -19,6 +19,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from config.unified_theme import legacy_hint
+
 if TYPE_CHECKING:
     from config.config import CalendarConfig
 
@@ -2071,21 +2073,21 @@ class ThemeEngine:
                         "supported in themes.  Element-to-token bindings live in "
                         "config/element_catalog.yaml; use the top-level "
                         "`element_overrides:` section for per-theme tweaks.  "
-                        "Run tools/strip_element_bindings.py to convert this theme."
+                        f"Or {legacy_hint('strip_element_bindings.py')}."
                     )
 
         if "excelheader" in self._theme_data:
             raise ThemeError(
                 "the excelheader section is now excelblockplan (the excelheader "
-                "command was removed) — rename the section, or run "
-                "tools/migrate_theme.py to convert this theme"
+                "command was removed) — rename the section, or "
+                f"{legacy_hint()}"
             )
 
         if "mini_details" in self._theme_data:
             raise ThemeError(
                 "mini_details: the companion details page was replaced by the run's details document -- "
-                "configure it under `details:` (its columns go in details.markdown.columns), or run "
-                "tools/migrate_theme.py to convert this theme"
+                "configure it under `details:` (its columns go in details.markdown.columns), or "
+                f"{legacy_hint()}"
             )
 
         retired = sorted(
@@ -2099,7 +2101,7 @@ class ThemeEngine:
             raise ThemeError(
                 f"{', '.join(retired)}: the companion details, key and overflow pages were replaced by "
                 "the run's details document -- configure it under `details:` (markdown, icons, csv), "
-                "or run tools/migrate_theme.py to convert this theme"
+                f"or {legacy_hint()}"
             )
 
         colors = self._theme_data.get("colors")
@@ -2107,14 +2109,16 @@ class ThemeEngine:
             raise ThemeError(
                 "colors.resource_groups is retired — event colors come from style_rules in every "
                 "visualizer: write `apply_to: [box:event, box:duration]`, `select: {resource_group: <name>}`, "
-                "`style: {fill: <color>}`, or run tools/migrate_theme.py to convert this theme"
+                "`style: {fill: <color>}`, or "
+                f"{legacy_hint()}"
             )
         compact_plan = self._theme_data.get("compact_plan")
         if isinstance(compact_plan, dict) and "color_rules" in compact_plan:
             raise ThemeError(
                 "compact_plan.color_rules is retired — event colors come from style_rules in every "
                 "visualizer: write each rule as `apply_to: [box:event, box:duration]` with its `select:` "
-                "and `style: {fill: <color>}` (later rules win), or run tools/migrate_theme.py to convert this theme"
+                "and `style: {fill: <color>}` (later rules win), or "
+                f"{legacy_hint()}"
             )
 
         weekly = self._theme_data.get("weekly", {}) or {}
@@ -2128,7 +2132,7 @@ class ThemeEngine:
         if isinstance(day_box, dict) and "hash_rules" in day_box:
             if day_box["hash_rules"]:  # non-empty list is an error; empty list is tolerated
                 raise ThemeError(
-                    "weekly.day_box.hash_rules is deprecated — run tools/migrate_theme.py to convert to style_rules"
+                    f"weekly.day_box.hash_rules is deprecated — write style_rules instead, or {legacy_hint()}"
                 )
 
         mini = self._theme_data.get("mini_calendar", {}) or {}
@@ -2136,8 +2140,7 @@ class ThemeEngine:
         if isinstance(mini_day_box, dict) and "hash_rules" in mini_day_box:
             if mini_day_box["hash_rules"]:
                 raise ThemeError(
-                    "mini_calendar.day_box.hash_rules is deprecated — run "
-                    "tools/migrate_theme.py to convert to style_rules"
+                    f"mini_calendar.day_box.hash_rules is deprecated — write style_rules instead, or {legacy_hint()}"
                 )
 
         blockplan = self._theme_data.get("blockplan", {}) or {}
@@ -2146,7 +2149,7 @@ class ThemeEngine:
             if isinstance(lane, dict) and "match" in lane:
                 raise ThemeError(
                     f"blockplan.swimlanes[{lane.get('name', '?')!r}].match is deprecated — "
-                    "run tools/migrate_theme.py to convert to swimlane_rules"
+                    f"write swimlane_rules instead, or {legacy_hint()}"
                 )
 
     def _load_rule_lists(self, config: CalendarConfig) -> None:

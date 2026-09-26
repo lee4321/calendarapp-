@@ -30,7 +30,7 @@ def test_sample_yaml_passes() -> None:
     assert rc == 0
 
 
-def test_legacy_theme_without_convert_fails_with_hint(
+def test_legacy_theme_fails_with_a_converter_hint(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -49,23 +49,7 @@ def test_legacy_theme_without_convert_fails_with_hint(
     assert rc == 2
     err = captured.err
     assert "legacy section" in err
-    assert "tools/migrate_theme.py" in err
-    assert "--convert" in err
-
-
-def test_legacy_theme_with_convert_passes(tmp_path: Path) -> None:
-    """The same synthetic legacy theme should pass with --convert."""
-    legacy = tmp_path / "legacy.yaml"
-    legacy.write_text(
-        yaml.safe_dump(
-            {
-                "theme": {"name": "legacy", "version": "2.0"},
-                "text_styles": {"heading": {"font": "Roboto-Regular", "size": 10, "color": "black"}},
-            }
-        )
-    )
-    rc = main([str(legacy), "--convert", "--quiet"])
-    assert rc == 0
+    assert "git checkout pre-migrator-retirement -- tools/migrate_theme.py" in err
 
 
 def test_missing_keys_exit_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

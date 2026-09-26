@@ -2,7 +2,7 @@
 
 It replaced the ``excelheader:`` section when the excelheader command was
 removed.  A theme still using the old name is rejected with a pointer to the
-new one, and tools/migrate_theme.py renames it.
+new one.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ import yaml
 from config import theme_engine, unified_theme
 from config.config import CalendarConfig
 from config.theme_engine import ThemeEngine
-from tools.migrate_theme import convert_theme
 
 _THEMES_DIR = Path(__file__).resolve().parent.parent / "config" / "themes"
 _META = {"theme": {"name": "Excel", "version": "3.0"}}
@@ -64,12 +63,6 @@ def test_unified_parser_names_the_replacement_section():
     with pytest.raises(unified_theme.ThemeError, match="renamed to 'excelblockplan'"):
         unified_theme.parse_theme({**_META, "excelheader": {}})
     unified_theme.parse_theme({**_META, "excelblockplan": {}})
-
-
-def test_migration_renames_the_section():
-    converted = convert_theme({**_META, "excelheader": {"font_name": "Calibri", "font_size": 9}})
-    assert "excelheader" not in converted
-    assert converted["excelblockplan"]["font_name"] == "Calibri"
 
 
 @pytest.mark.parametrize("name", ["basic", "SAMPLE", "TJX"])
