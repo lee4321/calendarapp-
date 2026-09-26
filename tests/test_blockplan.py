@@ -597,9 +597,6 @@ def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
     config = _base_config(output)
     config.blockplan_event_show_date = True
     config.blockplan_event_date_format = "MMM D"
-    config.blockplan_event_date_color = "purple"
-    config.blockplan_event_date_font = "Roboto-Bold"
-    config.blockplan_event_date_font_size = 11.0
     config.userstart = "20260210"
     config.userend = "20260212"
     config.adjustedstart = "20260210"
@@ -633,7 +630,7 @@ def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
     date_call = next(c for c in renderer.text_calls if c["text"] == "Feb 10")
     name_call = next(c for c in renderer.text_calls if c["text"] == "Launch Window")
     assert date_call["y"] < name_call["y"]  # SVG: above = smaller Y
-    assert date_call["font"] == "Roboto-Bold"
+    assert date_call["font"] == config.get_text_style("ec-event-date").font
 
     name_y_a = next(c["y"] for c in renderer.text_calls if c["text"] == "Launch Window")
     name_y_b = next(c["y"] for c in renderer.text_calls if c["text"] == "Launch Backup")

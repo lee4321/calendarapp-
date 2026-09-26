@@ -10,11 +10,6 @@ base:
   # Ink for that stand-in. It flags an event naming an icon the icons
   # table does not have, so it stays an alert colour by default.
   default_missing_icon_color: red
-header:
-  font_family: SairaExtraCondensed-Regular
-footer:
-  font_family: SairaExtraCondensed-Regular
-  font_color: dimgrey
 events:
   icon_color: deeppink
   item_placement_order:
@@ -124,7 +119,6 @@ mini_calendar:
   header_font_size: null
   day_number_glyphs: null
   day_number_digits: null
-  day_color: dimgrey
   adjacent_month_color: grey
   show_adjacent: false
   holiday_color: crimson

@@ -8,7 +8,7 @@ from typing import Any
 import arrow
 import drawsvg
 import pytest
-from fakes import FakeCalendarDB
+from fakes import FakeCalendarDB, apply_style_rules, define
 
 from config.config import create_calendar_config, setfontsizes
 from renderers.text_utils import string_width
@@ -190,7 +190,7 @@ def test_timeline_renderer_generates_svg(tmp_path):
 def test_timeline_background_none_is_transparent(tmp_path):
     output = tmp_path / "timeline_transparent.svg"
     config = _base_config(output)
-    config.timeline_background_color = "none"
+    apply_style_rules(config, [define("box", "default", fill="none")])
     coords = TimelineLayout().calculate(config)
 
     renderer = TimelineRenderer()

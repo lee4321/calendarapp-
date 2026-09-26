@@ -10,12 +10,6 @@ base:
   # Ink for that stand-in. It flags an event naming an icon the icons
   # table does not have, so it stays an alert colour by default.
   default_missing_icon_color: red
-header:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
-footer:
-  font_family: PlaywriteDEGrund-VariableFont_wght
-  font_color: grey
 events:
   icon_color: blue
   item_placement_order:
@@ -133,7 +127,6 @@ mini_calendar:
   header_font_size: 12
   day_number_glyphs: null
   day_number_digits: null
-  day_color: black
   adjacent_month_color: lightgrey
   show_adjacent: false
   holiday_color: red
