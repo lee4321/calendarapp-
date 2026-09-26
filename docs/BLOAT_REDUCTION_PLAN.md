@@ -323,8 +323,8 @@ merged result.
 > **Status (2026-09-26):** done. Both tools, the end-to-end migration tests and
 > the converter-only tests are gone; every legacy-schema error names the tag
 > through one helper, `legacy_hint()`; `validate_theme.py --convert` is gone.
-> The tag `pre-migrator-retirement` points at `2452468`. The session could
-> not push tags (HTTP 403), so the owner pushes it before merging. Kept for
+> The tag `pre-migrator-retirement` points at `2452468` and is pushed; the
+> restore command in the errors was checked against it. Kept for
 > now: `tools/convert_style_keys.py`, the Phase 3 converter, which is itself a
 > candidate for the same retirement after a notice period.
 
