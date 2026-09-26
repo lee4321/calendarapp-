@@ -58,6 +58,14 @@ Low risk and a large payoff. Do this first.
 
 ## Phase 1: Dead code (about 0.5 day)
 
+> **Status (2026-09-26):** done, apart from the vulture gate (see the last bullet).
+> Everything in the table was removed; the test-only items went with the tests
+> that only exercised them, and `_boxes_overlap` moved into `tests/test_timeline.py`
+> as a local helper. Removed in the same pass: `day_names` (also unused), the
+> duplicate `ICON_SETS` and the unused `ICON_SET_NAMES` in
+> `visualizers/mini_icon/renderer.py`, and the unused `side_config`
+> parameter of `PITRenderer._draw_callout_groups`.
+
 Each item below was flagged by `vulture` and then confirmed with `git grep`. None has a caller in app code.
 
 | Symbol | Location | Referenced by |
@@ -86,6 +94,13 @@ Also:
 - Add `uvx vulture --min-confidence 80` to the pre-commit hook with a
   whitelist file for dataclass fields and argparse callbacks, so dead
   code is caught when it is created.
+  **Not adopted.** vulture matches names across the whole program, so at 80%
+  it misses an unused import whenever the same name is used in another file,
+  and adds almost nothing beyond ruff's F401/F841. At 60% it reports about 150
+  false positives on `CalendarConfig` fields that the theme engine sets by
+  name. Ruff's `ARG` rules check per file but report 270 findings, mostly
+  override signatures. Periodic manual sweeps
+  (`uvx vulture --min-confidence 60 . --exclude vendor,.venv`) remain useful.
 
 About 450 lines saved.
 

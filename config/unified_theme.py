@@ -210,9 +210,6 @@ class UnifiedTheme:
         v = self.sections.get(name)
         return v if isinstance(v, dict) else {}
 
-    def has_section(self, name: str) -> bool:
-        return name in self.sections and self.sections[name] is not None
-
     # ----- Token resolution --------------------------------------------------
 
     def resolve_token(self, token: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -254,22 +251,6 @@ class UnifiedTheme:
                 continue
             out.append(rule)
         return out
-
-    def route_lane(self, context: dict[str, Any]) -> str | None:
-        """First-match-wins lane routing (design §9.9).
-
-        Returns the swimlane name for the first ``apply_to: lane`` rule whose
-        select matches the context.  Returns ``None`` if no rule matches.
-        """
-        for rule in self.rules:
-            if "lane" not in rule.apply_to:
-                continue
-            if not _select_matches(rule.select, context):
-                continue
-            lane = rule.style.get("swimlane")
-            if isinstance(lane, str):
-                return lane
-        return None
 
     # ----- Token introspection ----------------------------------------------
 

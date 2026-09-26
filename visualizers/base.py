@@ -394,16 +394,3 @@ class BaseVisualizer(ABC):
     ) -> list:
         """Delegate to the module-level :func:`filter_events` helper."""
         return filter_events(events, config)
-
-    def _should_include_event(
-        self,
-        event: dict,
-        config: CalendarConfig,
-    ) -> bool:
-        """
-        Check if a single event passes all active filters.
-
-        Delegates to :func:`filter_events` for consistency; kept for
-        backwards-compatibility with any subclass that may override it.
-        """
-        return bool(filter_events([event], config))

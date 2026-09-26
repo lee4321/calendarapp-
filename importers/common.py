@@ -19,7 +19,6 @@ import logging
 import os
 import sqlite3
 import sys
-from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -72,32 +71,6 @@ def setup_logging(module_name: str, log_file: str | None = None, level: str = "i
     log.addHandler(console_handler)
 
     return log
-
-
-def make_log_fn(logger_ref: list) -> Callable[..., None]:
-    """Return a log() helper that dispatches to a logger stored in a mutable container.
-
-    The container pattern allows the importer module to replace the logger after
-    calling setup_logging() while keeping the log() function reference stable.
-
-    Args:
-        logger_ref: A single-element list holding the logger (or None)
-
-    Returns:
-        A log(message, level) function
-    """
-    level_names = ("debug", "info", "warning", "error")
-
-    def _log(message: str, level: str = "info") -> None:
-        lg = logger_ref[0]
-        if lg is None:
-            print(message)
-            return
-        if level not in level_names:
-            level = "info"
-        getattr(lg, level)(message)
-
-    return _log
 
 
 # ============================================================================

@@ -91,6 +91,14 @@ class _CaptureMarkerRenderer(TimelineRenderer):
         self.text_calls.append({"x": x, "y": y, "text": text, "font": font_name, "size": font_size})
 
 
+def _boxes_overlap(
+    box_a: tuple[float, float, float, float], box_b: tuple[float, float, float, float], pad: float = 0.0
+) -> bool:
+    ax1, ay1, ax2, ay2 = box_a
+    bx1, by1, bx2, by2 = box_b
+    return not (ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1)
+
+
 def _base_config(output: Path):
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
@@ -628,7 +636,7 @@ def test_timeline_callouts_avoid_overlap_on_small_page(tmp_path):
     overlaps = 0
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
-            if renderer._boxes_overlap(boxes[i], boxes[j], pad=2.0):
+            if _boxes_overlap(boxes[i], boxes[j], pad=2.0):
                 overlaps += 1
     # On constrained pages, placement should strongly avoid collisions.
     assert overlaps <= 1

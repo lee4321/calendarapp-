@@ -1342,16 +1342,6 @@ class TimelineRenderer(BaseSVGRenderer):
             return 0
         return floors.get(group, -1) + 1
 
-    @staticmethod
-    def _boxes_overlap(
-        box_a: tuple[float, float, float, float],
-        box_b: tuple[float, float, float, float],
-        pad: float = 0.0,
-    ) -> bool:
-        ax1, ay1, ax2, ay2 = box_a
-        bx1, by1, bx2, by2 = box_b
-        return not (ax2 + pad <= bx1 or bx2 + pad <= ax1 or ay2 + pad <= by1 or by2 + pad <= ay1)
-
     @classmethod
     def _cell_baseline(
         cls,

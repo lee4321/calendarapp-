@@ -41,11 +41,6 @@ class CatalogEntry:
     scope: tuple[str, ...]  # visualizers that emit this class
     description: str = ""
 
-    @property
-    def token_ref(self) -> str:
-        """Return the ``kind:name`` form (matches ``style.use`` syntax)."""
-        return f"{self.kind}:{self.token}"
-
 
 _catalog_cache: dict[str, CatalogEntry] | None = None
 _defaults_cache: dict[str, dict[str, dict]] | None = None

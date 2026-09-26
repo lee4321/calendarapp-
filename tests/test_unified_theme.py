@@ -242,27 +242,6 @@ def test_find_rules_multi_target_fans_out() -> None:
     assert box_hits[0] is text_hits[0]
 
 
-# ─── lane routing ──────────────────────────────────────────────────────────
-
-
-def test_route_lane_first_match_wins() -> None:
-    raw = {
-        "style_rules": [
-            {
-                "name": "eng",
-                "apply_to": "lane",
-                "select": {"resource_group": ["engineering", "dev"]},
-                "style": {"swimlane": "Engineering"},
-            },
-            {"name": "catch-all", "apply_to": "lane", "select": {}, "style": {"swimlane": "Other"}},
-        ]
-    }
-    theme = parse_theme(raw)
-    assert theme.route_lane({"resource_group": "engineering"}) == "Engineering"
-    # No match on the first rule -> falls through to catch-all.
-    assert theme.route_lane({"resource_group": "sales"}) == "Other"
-
-
 # ─── value matchers ────────────────────────────────────────────────────────
 
 
