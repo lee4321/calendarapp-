@@ -53,13 +53,13 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-background` | `fill` | `white` | `style.fill` | `renderers/svg_base.py:750`, `renderers/svg_base.py:758` |
-| `ec-label` | `color` | `#888888` | `_lbl_ts.color` | `renderers/svg_base.py:1609` |
-| `ec-label` | `font` | `RobotoCondensed-Light` | `_lbl_ts.font` | `renderers/svg_base.py:1607` |
-| `ec-label` | `opacity` | `1` | `_lbl_ts.opacity` | `renderers/svg_base.py:1610` |
-| `ec-label` | `size` | `12.96` | `config.day_name_font_size or _lbl_ts.size` | `renderers/svg_base.py:1608` |
-| `ec-watermark` | `color` | `#333333` | `_wm_ts.color` | `renderers/svg_base.py:950` |
-| `ec-watermark` | `font` | `RobotoCondensed-Bold` | `_wm_ts.font` | `renderers/svg_base.py:948` |
+| `ec-background` | `fill` | `white` | `style.fill` | `renderers/svg_base.py:BaseSVGRenderer._append_page_background` |
+| `ec-label` | `color` | `#888888` | `_lbl_ts.color` | `renderers/svg_base.py:BaseSVGRenderer._render_decorations` |
+| `ec-label` | `font` | `RobotoCondensed-Light` | `_lbl_ts.font` | `renderers/svg_base.py:BaseSVGRenderer._render_decorations` |
+| `ec-label` | `opacity` | `1` | `_lbl_ts.opacity` | `renderers/svg_base.py:BaseSVGRenderer._render_decorations` |
+| `ec-label` | `size` | `12.96` | `config.day_name_font_size or _lbl_ts.size` | `renderers/svg_base.py:BaseSVGRenderer._render_decorations` |
+| `ec-watermark` | `color` | `#333333` | `_wm_ts.color` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
+| `ec-watermark` | `font` | `RobotoCondensed-Bold` | `_wm_ts.font` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
 
 <details><summary>Settings every SVG view reads (9)</summary>
 
@@ -81,39 +81,39 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `box:cell` | `dasharray` | *unset* | `tk_cell.get("dasharray") or _cell_style.stroke_dasharray or None` | `weekly/renderer.py:1003` |
-| `box:cell` | `stroke` | `#CCCCCC` | `tk_cell.get("stroke") or _cell_style.stroke` | `weekly/renderer.py:992` |
-| `box:cell` | `stroke_opacity` | `1` | `tk_cell.get("stroke_opacity") if tk_cell.get("stroke_opacity") is not None else _cell_style.stroke_opacity` | `weekly/renderer.py:995`, `weekly/renderer.py:996` |
-| `box:cell` | `stroke_width` | `0.5` | `tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else _cell_style.stroke_width` | `weekly/renderer.py:1000` |
-| `icon:event` | `color` | `#333333` | `tk_icon_ev.get("color") or _is_ei.color` | `weekly/renderer.py:889`, `weekly/renderer.py:1120` |
-| `icon:overflow` | `color` | `red` | `tk_overflow.get("color") or _is_oi.color` | `weekly/renderer.py:859` |
-| `line:hash` | `color` | `white` | `tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor` | `weekly/renderer.py:1008` |
-| `text:day_number` | `color` | `#333333` | `tk_dn.get("color") or _ts_dn.color` | `weekly/renderer.py:1020` |
-| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_dn.get("font") or config.get_text_style("ec-day-number").font` | `weekly/renderer.py:352`, `weekly/renderer.py:1018` |
-| `text:day_number` | `size` | `14.04` ¹ | `self._tk("text:day_number").get("size")` | `weekly/renderer.py:353`, `weekly/renderer.py:399`, `weekly/renderer.py:694` +4 |
-| `text:event_name` | `color` | `#333333` | `tk_en.get("color") or _ts_en.color` | `weekly/renderer.py:1119`, `weekly/renderer.py:1468` |
-| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_en.get("font") or _ts_en.font` | `weekly/renderer.py:1117`, `weekly/renderer.py:1466` |
-| `text:event_name` | `size` | `9.72` ¹ | `self._tk("text:event_name").get("size")` | `weekly/renderer.py:398`, `weekly/renderer.py:890`, `weekly/renderer.py:1118` +1 |
-| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _ts_notes.color` | `weekly/renderer.py:1286`, `weekly/renderer.py:1474` |
-| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _ts_notes.font` | `weekly/renderer.py:1284`, `weekly/renderer.py:1472` |
-| `text:event_notes` | `size` | `8.75` ¹ | `tk_notes.get("size")` | `weekly/renderer.py:1285`, `weekly/renderer.py:1473` |
-| `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `weekly/renderer.py:699` |
-| `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `weekly/renderer.py:698` |
-| `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or day_num_size * 0.7` | `weekly/renderer.py:695` |
-| `text:holiday_title` | `color` | `#333333` | `tk_ht.get("color") or _ts_ht.color` | `weekly/renderer.py:888` |
-| `text:holiday_title` | `font` | `RobotoCondensed-Light` | `tk_ht.get("font") or _ts_ht.font` | `weekly/renderer.py:887` |
-| `text:holiday_title` | `size` | `9.72` | `tk_ht.get("size") or tk_en.get("size")` | `weekly/renderer.py:890` |
-| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `weekly/renderer.py:777` |
-| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `weekly/renderer.py:776` |
-| `text:week_number` | `size` | `10.8` ¹ | `tk_wn.get("size")` | `weekly/renderer.py:763` |
+| `box:cell` | `dasharray` | *unset* | `tk_cell.get("dasharray") or _cell_style.stroke_dasharray or None` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `box:cell` | `stroke` | `#CCCCCC` | `tk_cell.get("stroke") or _cell_style.stroke` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `box:cell` | `stroke_opacity` | `1` | `tk_cell.get("stroke_opacity") if tk_cell.get("stroke_opacity") is not None else _cell_style.stroke_opacity` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `box:cell` | `stroke_width` | `0.5` | `tk_cell.get("stroke_width") if tk_cell.get("stroke_width") is not None else _cell_style.stroke_width` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `icon:event` | `color` | `#333333` | `tk_icon_ev.get("color") or _is_ei.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_text` |
+| `icon:overflow` | `color` | `red` | `tk_overflow.get("color") or _is_oi.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras` |
+| `line:hash` | `color` | `white` | `tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `text:day_number` | `color` | `#333333` | `tk_dn.get("color") or _ts_dn.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box` |
+| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_dn.get("font") or config.get_text_style("ec-day-number").font` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box`, `weekly/renderer.py:WeeklyCalendarRenderer._render_content` |
+| `text:day_number` | `size` | `14.04` ¹ | `self._tk("text:day_number").get("size")` | `weekly/renderer.py:WeeklyCalendarRenderer._day_box_coords`, `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_box`, `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras` +4 |
+| `text:event_name` | `color` | `#333333` | `tk_en.get("color") or _ts_en.color` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_text` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_en.get("font") or _ts_en.font` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_text` |
+| `text:event_name` | `size` | `9.72` ¹ | `self._tk("text:event_name").get("size")` | `weekly/renderer.py:WeeklyCalendarRenderer._day_box_coords`, `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras`, `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect` +1 |
+| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _ts_notes.color` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_and_notes` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _ts_notes.font` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_and_notes` |
+| `text:event_notes` | `size` | `8.75` ¹ | `tk_notes.get("size")` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect`, `weekly/renderer.py:WeeklyCalendarRenderer._place_event_and_notes` |
+| `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_fiscal_label` |
+| `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_fiscal_label` |
+| `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or day_num_size * 0.7` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_fiscal_label` |
+| `text:holiday_title` | `color` | `#333333` | `tk_ht.get("color") or _ts_ht.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras` |
+| `text:holiday_title` | `font` | `RobotoCondensed-Light` | `tk_ht.get("font") or _ts_ht.font` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras` |
+| `text:holiday_title` | `size` | `9.72` | `tk_ht.get("size") or tk_en.get("size")` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_day_top_row_extras` |
+| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_week_number_label` |
+| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_week_number_label` |
+| `text:week_number` | `size` | `10.8` ¹ | `tk_wn.get("size")` | `weekly/renderer.py:WeeklyCalendarRenderer._draw_week_number_label` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-day-box` | `fill_opacity` | `0.25` | `config.get_box_style("ec-day-box").fill_opacity` | `weekly/renderer.py:613` |
-| `ec-duration-bar` | `dasharray` | *unset* | `_ls_dur.dasharray or None` | `weekly/renderer.py:1459` |
-| `ec-duration-icon` | `color` | *depends on the item being drawn* | `dur_style.icon_color or _is_di.color` | `weekly/renderer.py:1479` |
-| `ec-duration-icon` | `size` | `10` | `_is_di.size if _is_di.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1482` |
-| `ec-event-icon` | `size` | `10` | `_is_ei.size if _is_ei.size is not None else _event_icon_size(config)` | `weekly/renderer.py:1171` |
+| `ec-day-box` | `fill_opacity` | `0.25` | `config.get_box_style("ec-day-box").fill_opacity` | `weekly/renderer.py:WeeklyCalendarRenderer._resolve_day_box_fill` |
+| `ec-duration-bar` | `dasharray` | *unset* | `_ls_dur.dasharray or None` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect` |
+| `ec-duration-icon` | `color` | *depends on the item being drawn* | `dur_style.icon_color or _is_di.color` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect` |
+| `ec-duration-icon` | `size` | `10` | `_is_di.size if _is_di.size is not None else _event_icon_size(config)` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect` |
+| `ec-event-icon` | `size` | `10` | `_is_ei.size if _is_ei.size is not None else _event_icon_size(config)` | `weekly/renderer.py:WeeklyCalendarRenderer._place_event_text` |
 
 <details><summary>Settings (12)</summary>
 
@@ -138,39 +138,39 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `icon:milestone` | `stroke_opacity` | *unset* | `tk_milestone.get("stroke_opacity")` | `mini/renderer.py:554` |
-| `icon:milestone` | `stroke_width` | *unset* | `tk_milestone.get("stroke_width")` | `mini/renderer.py:553` |
-| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or element.color` | `mini/renderer.py:470` |
-| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or element.dasharray or None` | `mini/renderer.py:473` |
-| `line:grid` | `opacity` | `0.5` | `float(tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity)` | `mini/renderer.py:472` |
-| `line:grid` | `width` | `0.5` | `float(tk_grid.get("width") if tk_grid.get("width") is not None else element.width)` | `mini/renderer.py:471` |
-| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_day.get("font") or _ts_day.font` | `mini/renderer.py:529` |
-| `text:day_number` | `size` | `12.96` ¹ | `tk_day.get("size")` | `mini/renderer.py:540` |
-| `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `mini/renderer.py:637` |
-| `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `mini/renderer.py:635` |
-| `text:fiscal_label` | `opacity` | *unset* | `tk_fiscal.get("opacity")` | `mini/renderer.py:629` |
-| `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or font_size * 0.6` | `mini/renderer.py:624` |
-| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `mini/renderer.py:311` |
-| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `mini/renderer.py:309` |
-| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `mini/renderer.py:273` |
-| `text:month_title` | `color` | `#333333` | `tk.get("color") or _ts.color` | `mini/renderer.py:246` |
-| `text:month_title` | `font` | `RobotoCondensed-Bold` | `tk.get("font") or _ts.font` | `mini/renderer.py:244` |
-| `text:month_title` | `size` | `15.12` ¹ | `tk.get("size")` | `mini/renderer.py:245` |
-| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `mini/renderer.py:294`, `mini/renderer.py:368` |
-| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `mini/renderer.py:292`, `mini/renderer.py:366` |
-| `text:week_number` | `size` | `12.96` ¹ | `tk_wn.get("size")` | `mini/renderer.py:293`, `mini/renderer.py:356` |
+| `icon:milestone` | `stroke_opacity` | *unset* | `tk_milestone.get("stroke_opacity")` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `icon:milestone` | `stroke_width` | *unset* | `tk_milestone.get("stroke_width")` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or element.color` | `mini/renderer.py:MiniCalendarRenderer._grid_line_style` |
+| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or element.dasharray or None` | `mini/renderer.py:MiniCalendarRenderer._grid_line_style` |
+| `line:grid` | `opacity` | `0.5` | `float(tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity)` | `mini/renderer.py:MiniCalendarRenderer._grid_line_style` |
+| `line:grid` | `width` | `0.5` | `float(tk_grid.get("width") if tk_grid.get("width") is not None else element.width)` | `mini/renderer.py:MiniCalendarRenderer._grid_line_style` |
+| `text:day_number` | `font` | `RobotoCondensed-Bold` | `tk_day.get("font") or _ts_day.font` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:day_number` | `size` | `12.96` ¹ | `tk_day.get("size")` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:fiscal_label` | `color` | `#666666` | `tk_fiscal.get("color") or _ts_fiscal.color` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:fiscal_label` | `font` | `RobotoCondensed-Light` | `tk_fiscal.get("font") or _ts_fiscal.font` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:fiscal_label` | `opacity` | *unset* | `tk_fiscal.get("opacity")` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:fiscal_label` | `size` | `9.83` ¹ | `tk_fiscal.get("size") or font_size * 0.6` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header` |
+| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header` |
+| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header` |
+| `text:month_title` | `color` | `#333333` | `tk.get("color") or _ts.color` | `mini/renderer.py:MiniCalendarRenderer._draw_month_title` |
+| `text:month_title` | `font` | `RobotoCondensed-Bold` | `tk.get("font") or _ts.font` | `mini/renderer.py:MiniCalendarRenderer._draw_month_title` |
+| `text:month_title` | `size` | `15.12` ¹ | `tk.get("size")` | `mini/renderer.py:MiniCalendarRenderer._draw_month_title` |
+| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header`, `mini/renderer.py:MiniCalendarRenderer._draw_week_number` |
+| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header`, `mini/renderer.py:MiniCalendarRenderer._draw_week_number` |
+| `text:week_number` | `size` | `12.96` ¹ | `tk_wn.get("size")` | `mini/renderer.py:MiniCalendarRenderer._draw_dow_header`, `mini/renderer.py:MiniCalendarRenderer._draw_week_number` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-cell` | `stroke_dasharray` | *unset* | `config.get_box_style("ec-cell").stroke_dasharray or None` | `mini/renderer.py:579` |
-| `ec-day-box` | `stroke` | *depends on the item being drawn* | `style.box_color or _day_box_style.stroke` | `mini/renderer.py:577` |
-| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else (_ls_dur.dasharray or None)` | `mini/renderer.py:939` |
-| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `sr.stroke_opacity if sr.stroke_opacity is not None else _ls_dur.opacity` | `mini/renderer.py:938` |
-| `ec-hash-line` | `color` | `#CCCCCC` | `_hash_style.color` | `mini/renderer.py:774` |
-| `ec-hash-line` | `dasharray` | *unset* | `_hash_style.dasharray or None` | `mini/renderer.py:777` |
-| `ec-hash-line` | `opacity` | `0.5` | `_hash_style.opacity` | `mini/renderer.py:776` |
-| `ec-hash-line` | `width` | `0.5` | `_hash_style.width` | `mini/renderer.py:775` |
-| `ec-strikethrough` | `dasharray` | *unset* | `config.get_line_style("ec-strikethrough").dasharray or None` | `mini/renderer.py:658` |
+| `ec-cell` | `stroke_dasharray` | *unset* | `config.get_box_style("ec-cell").stroke_dasharray or None` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `ec-day-box` | `stroke` | *depends on the item being drawn* | `style.box_color or _day_box_style.stroke` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
+| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else (_ls_dur.dasharray or None)` | `mini/renderer.py:MiniCalendarRenderer._draw_all_duration_bars` |
+| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `sr.stroke_opacity if sr.stroke_opacity is not None else _ls_dur.opacity` | `mini/renderer.py:MiniCalendarRenderer._draw_all_duration_bars` |
+| `ec-hash-line` | `color` | `#CCCCCC` | `_hash_style.color` | `mini/renderer.py:MiniCalendarRenderer._draw_mini_hash_lines` |
+| `ec-hash-line` | `dasharray` | *unset* | `_hash_style.dasharray or None` | `mini/renderer.py:MiniCalendarRenderer._draw_mini_hash_lines` |
+| `ec-hash-line` | `opacity` | `0.5` | `_hash_style.opacity` | `mini/renderer.py:MiniCalendarRenderer._draw_mini_hash_lines` |
+| `ec-hash-line` | `width` | `0.5` | `_hash_style.width` | `mini/renderer.py:MiniCalendarRenderer._draw_mini_hash_lines` |
+| `ec-strikethrough` | `dasharray` | *unset* | `config.get_line_style("ec-strikethrough").dasharray or None` | `mini/renderer.py:MiniCalendarRenderer._draw_day_cell_foreground` |
 
 <details><summary>Settings (15)</summary>
 
@@ -200,10 +200,10 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `icon:milestone` | `stroke_opacity` | *unset* | `milestone_icon.get("stroke_opacity")` | `mini_icon/renderer.py:139` |
-| `icon:milestone` | `stroke_width` | *unset* | `milestone_icon.get("stroke_width")` | `mini_icon/renderer.py:138` |
-| `text:day_number` | `font` | *depends on the item being drawn* | `config.mini_cell_bold_font if style.bold else (day_text.get("font") or config.get_text_style("ec-day-number").font)` | `mini_icon/renderer.py:177` |
-| `text:day_number` | `size` | `12.96` ¹ | `day_text.get("size")` | `mini_icon/renderer.py:179` |
+| `icon:milestone` | `stroke_opacity` | *unset* | `milestone_icon.get("stroke_opacity")` | `mini_icon/renderer.py:MiniIconRenderer._draw_day_cell_foreground` |
+| `icon:milestone` | `stroke_width` | *unset* | `milestone_icon.get("stroke_width")` | `mini_icon/renderer.py:MiniIconRenderer._draw_day_cell_foreground` |
+| `text:day_number` | `font` | *depends on the item being drawn* | `config.mini_cell_bold_font if style.bold else (day_text.get("font") or config.get_text_style("ec-day-number").font)` | `mini_icon/renderer.py:MiniIconRenderer._draw_day_cell_foreground` |
+| `text:day_number` | `size` | `12.96` ¹ | `day_text.get("size")` | `mini_icon/renderer.py:MiniIconRenderer._draw_day_cell_foreground` |
 
 <details><summary>Settings (17)</summary>
 
@@ -235,11 +235,11 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `candybar/renderer.py:205` |
-| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `candybar/renderer.py:203` |
-| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `candybar/renderer.py:204` |
-| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `candybar/renderer.py:223` |
-| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `candybar/renderer.py:221` |
+| `text:label` | `color` | `#888888` | `tk_label.get("color") or _ts_label.color` | `candybar/renderer.py:CandybarRenderer._draw_headers` |
+| `text:label` | `font` | `RobotoCondensed-Light` | `tk_label.get("font") or _ts_label.font` | `candybar/renderer.py:CandybarRenderer._draw_headers` |
+| `text:label` | `size` | `9.72` ¹ | `tk_label.get("size")` | `candybar/renderer.py:CandybarRenderer._draw_headers` |
+| `text:week_number` | `color` | `#888888` | `tk_wn.get("color") or _ts_wn.color` | `candybar/renderer.py:CandybarRenderer._draw_headers` |
+| `text:week_number` | `font` | `RobotoCondensed-Light` | `tk_wn.get("font") or _ts_wn.font` | `candybar/renderer.py:CandybarRenderer._draw_headers` |
 
 <details><summary>Settings (32)</summary>
 
@@ -284,59 +284,59 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `line:duration_bar` | `opacity` | *unset* | `self._tk("line:duration_bar").get("opacity")` | `timeline/renderer.py:1524` |
-| `line:grid` | `dasharray` | *unset* | `self._tk("line:grid").get("dasharray") or leader_style.dasharray or None` | `timeline/renderer.py:404` |
-| `text:duration_date` | `color` | `#666666` | `_date_style.color or tk_date.get("color") or text_color` | `timeline/renderer.py:1720` |
-| `text:duration_date` | `font` | `RobotoCondensed-Light` | `_date_style.font or tk_date.get("font")` | `timeline/renderer.py:1719` |
-| `text:duration_date` | `size` | `7.58` | `self._tk("text:duration_date").get("size") or ( float(config.timeline_duration_date_font_size) if config.timeline_duration_date_font_size is not None…` | `timeline/renderer.py:2210` |
-| `text:event_date` | `color` | `#666666` / `#AAAAAA` (differs by call site); some call sites depend on the item | `_event_date_style.color or tk_event_date.get("color") or event_text_color` | `timeline/renderer.py:1358`, `timeline/renderer.py:2573`, `timeline/renderer.py:2776` |
-| `text:event_date` | `font` | `RobotoCondensed-Light` | `self._tk("text:event_date").get("font") or config.get_text_style("ec-event-date").font` | `timeline/renderer.py:1357`, `timeline/renderer.py:2180` |
-| `text:event_date` | `size` | `9.23` | `self._tk("text:event_date").get("size") or max(8.0, _base_name_size(config) * 0.95)` | `timeline/renderer.py:3359` |
-| `text:event_name` | `color` | `#333333` | `tk_name.get("color") or _name_style.color or item.color` | `timeline/renderer.py:1286`, `timeline/renderer.py:1706` |
-| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_name.get("font") or _name_style.font` | `timeline/renderer.py:1283`, `timeline/renderer.py:1704` |
-| `text:event_name` | `size` | `11.72` ¹ | `self._tk("text:event_name").get("size") or ( float(config.timeline_name_text_font_size * 0.85) if config.timeline_name_text_font_size is not None els…` | `timeline/renderer.py:2200`, `timeline/renderer.py:3349` |
-| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _notes_style.color or event_text_color` | `timeline/renderer.py:1296`, `timeline/renderer.py:1716` |
-| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _notes_style.font` | `timeline/renderer.py:1284`, `timeline/renderer.py:1705` |
-| `text:event_notes` | `size` | `8.75` ¹ | `self._tk("text:event_notes").get("size") or ( float(config.timeline_notes_text_font_size * 0.82) if config.timeline_notes_text_font_size is not None …` | `timeline/renderer.py:2205`, `timeline/renderer.py:3354` |
-| `text:label` | `color` | `#888888` | `str(tk_band_label.get("color") or _band_text_style.color or "black")` | `timeline/renderer.py:2282` |
-| `text:label` | `font` | *depends on the item being drawn* | `str(band.get("font") or tk_band_label.get("font") or _band_text_style.font)` | `timeline/renderer.py:2341` |
-| `text:label` | `opacity` | `1` | `float( tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity )` | `timeline/renderer.py:2284` |
-| `text:label` | `size` | *depends on the item being drawn* | `float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))` | `timeline/renderer.py:2344` |
-| `text:today_label` | `color` | `#FF4444` | `tk_today_label.get("color") or _today_label_style.color` | `timeline/renderer.py:3213` |
-| `text:today_label` | `font` | `RobotoCondensed-Light` | `tk_today_label.get("font") or _today_label_style.font` | `timeline/renderer.py:3180` |
-| `text:today_label` | `size` | `7.78` | `tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)` | `timeline/renderer.py:3178` |
+| `line:duration_bar` | `opacity` | *unset* | `self._tk("line:duration_bar").get("opacity")` | `timeline/renderer.py:TimelineRenderer._draw_duration` |
+| `line:grid` | `dasharray` | *unset* | `self._tk("line:grid").get("dasharray") or leader_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `text:duration_date` | `color` | `#666666` | `_date_style.color or tk_date.get("color") or text_color` | `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:duration_date` | `font` | `RobotoCondensed-Light` | `_date_style.font or tk_date.get("font")` | `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:duration_date` | `size` | `7.58` | `self._tk("text:duration_date").get("size") or ( float(config.timeline_duration_date_font_size) if config.timeline_duration_date_font_size is not None…` | `timeline/renderer.py:TimelineRenderer._duration_metrics` |
+| `text:event_date` | `color` | `#666666` / `#AAAAAA` (differs by call site); some call sites depend on the item | `_event_date_style.color or tk_event_date.get("color") or event_text_color` | `timeline/renderer.py:TimelineRenderer._band_tick_style`, `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._draw_month_ticks` |
+| `text:event_date` | `font` | `RobotoCondensed-Light` | `self._tk("text:event_date").get("font") or config.get_text_style("ec-event-date").font` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._event_date_font` |
+| `text:event_date` | `size` | `9.23` | `self._tk("text:event_date").get("size") or max(8.0, _base_name_size(config) * 0.95)` | `timeline/renderer.py:TimelineRenderer._callout_metrics` |
+| `text:event_name` | `color` | `#333333` | `tk_name.get("color") or _name_style.color or item.color` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_name.get("font") or _name_style.font` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:event_name` | `size` | `11.72` ¹ | `self._tk("text:event_name").get("size") or ( float(config.timeline_name_text_font_size * 0.85) if config.timeline_name_text_font_size is not None els…` | `timeline/renderer.py:TimelineRenderer._callout_metrics`, `timeline/renderer.py:TimelineRenderer._duration_metrics` |
+| `text:event_notes` | `color` | `#666666` | `tk_notes.get("color") or _notes_style.color or event_text_color` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_notes.get("font") or _notes_style.font` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `text:event_notes` | `size` | `8.75` ¹ | `self._tk("text:event_notes").get("size") or ( float(config.timeline_notes_text_font_size * 0.82) if config.timeline_notes_text_font_size is not None …` | `timeline/renderer.py:TimelineRenderer._callout_metrics`, `timeline/renderer.py:TimelineRenderer._duration_metrics` |
+| `text:label` | `color` | `#888888` | `str(tk_band_label.get("color") or _band_text_style.color or "black")` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands` |
+| `text:label` | `font` | *depends on the item being drawn* | `str(band.get("font") or tk_band_label.get("font") or _band_text_style.font)` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands` |
+| `text:label` | `opacity` | `1` | `float( tk_band_label.get("opacity") if tk_band_label.get("opacity") is not None else _band_text_style.opacity )` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands` |
+| `text:label` | `size` | *depends on the item being drawn* | `float(band.get("font_size") or tk_band_label.get("size") or max(7.0, thickness * 0.55))` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands` |
+| `text:today_label` | `color` | `#FF4444` | `tk_today_label.get("color") or _today_label_style.color` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
+| `text:today_label` | `font` | `RobotoCondensed-Light` | `tk_today_label.get("font") or _today_label_style.font` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
+| `text:today_label` | `size` | `7.78` | `tk_today_label.get("size") or max(7.0, _base_name_size(config) * 0.8)` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `timeline/renderer.py:450` |
-| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `timeline/renderer.py:453` |
-| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `timeline/renderer.py:452` |
-| `ec-axis-line` | `width` | `2` | `_axis_style.width` | `timeline/renderer.py:451` |
-| `ec-axis-tick` | `color` | `#AAAAAA` | `config.get_line_style("ec-axis-tick").color` | `timeline/renderer.py:2763`, `timeline/renderer.py:3085` |
-| `ec-axis-tick` | `dasharray` | *unset* | `_tick_style.dasharray or None` | `timeline/renderer.py:2766` |
-| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `timeline/renderer.py:2309`, `timeline/renderer.py:2369` |
-| `ec-callout-box` | `fill_opacity` | `0.25` | `_callout_style.fill_opacity` | `timeline/renderer.py:1225` |
-| `ec-callout-box` | `stroke_dasharray` | *unset* | `_callout_style.stroke_dasharray or None` | `timeline/renderer.py:1229` |
-| `ec-callout-box` | `stroke_opacity` | `1` | `_callout_style.stroke_opacity` | `timeline/renderer.py:1228` |
-| `ec-callout-box` | `stroke_width` | `1` | `config.get_box_style("ec-callout-box").stroke_width` | `timeline/renderer.py:349`, `timeline/renderer.py:628`, `timeline/renderer.py:1227` |
-| `ec-callout-leader` | `opacity` | `0.5` | `leader_style.opacity or 0.75` | `timeline/renderer.py:403` |
-| `ec-callout-leader` | `width` | `0.5` | `leader_style.width or 1.25` | `timeline/renderer.py:402` |
-| `ec-duration-bar` | `dasharray` | *unset* | `_dur_bar_style.dasharray or None` | `timeline/renderer.py:1488`, `timeline/renderer.py:1532` |
-| `ec-duration-bar` | `opacity` | `0.9`; some call sites depend on the item | `_dur_bar_style.opacity` | `timeline/renderer.py:1487`, `timeline/renderer.py:1528`, `timeline/renderer.py:1531` |
-| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `timeline/renderer.py:755` |
-| `ec-event-name` | `opacity` | `1` | `_name_style.opacity` | `timeline/renderer.py:1291`, `timeline/renderer.py:1711` |
-| `ec-event-notes` | `color` | `#666666` | `_notes_style.color` | `timeline/renderer.py:855`, `timeline/renderer.py:927` |
-| `ec-event-notes` | `opacity` | `1` | `_notes_style.opacity` | `timeline/renderer.py:1297`, `timeline/renderer.py:1717` |
-| `ec-holiday-date` | `color` | `#666666` | `getattr(config, "timeline_holiday_date_color", None) or _date_style.color or color or "grey"` | `timeline/renderer.py:2929` |
-| `ec-holiday-date` | `font` | `RobotoCondensed-Light` | `_date_style.font` | `timeline/renderer.py:2927` |
-| `ec-holiday-date` | `opacity` | `1` | `_date_style.opacity` | `timeline/renderer.py:2960` |
-| `ec-month-tick` | `opacity` | `0.35` | `config.get_line_style("ec-month-tick").opacity` | `timeline/renderer.py:2765` |
-| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `timeline/renderer.py:2291` |
-| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `timeline/renderer.py:2293` |
-| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `timeline/renderer.py:2292` |
-| `ec-today-line` | `color` | `#FF4444` | `_today_line_style.color` | `timeline/renderer.py:3171` |
-| `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:3174` |
-| `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:3173` |
+| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-axis-line` | `width` | `2` | `_axis_style.width` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-axis-tick` | `color` | `#AAAAAA` | `config.get_line_style("ec-axis-tick").color` | `timeline/renderer.py:TimelineRenderer._draw_fiscal_bands`, `timeline/renderer.py:TimelineRenderer._draw_month_ticks` |
+| `ec-axis-tick` | `dasharray` | *unset* | `_tick_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_month_ticks` |
+| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands` |
+| `ec-callout-box` | `fill_opacity` | `0.25` | `_callout_style.fill_opacity` | `timeline/renderer.py:TimelineRenderer._draw_callout` |
+| `ec-callout-box` | `stroke_dasharray` | *unset* | `_callout_style.stroke_dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_callout` |
+| `ec-callout-box` | `stroke_opacity` | `1` | `_callout_style.stroke_opacity` | `timeline/renderer.py:TimelineRenderer._draw_callout` |
+| `ec-callout-box` | `stroke_width` | `1` | `config.get_box_style("ec-callout-box").stroke_width` | `timeline/renderer.py:TimelineRenderer._actual_content_bounds`, `timeline/renderer.py:TimelineRenderer._draw_callout`, `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-callout-leader` | `opacity` | `0.5` | `leader_style.opacity or 0.75` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-callout-leader` | `width` | `0.5` | `leader_style.width or 1.25` | `timeline/renderer.py:TimelineRenderer._render_content` |
+| `ec-duration-bar` | `dasharray` | *unset* | `_dur_bar_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_duration`, `timeline/renderer.py:TimelineRenderer._draw_duration_connectors` |
+| `ec-duration-bar` | `opacity` | `0.9`; some call sites depend on the item | `_dur_bar_style.opacity` | `timeline/renderer.py:TimelineRenderer._draw_duration`, `timeline/renderer.py:TimelineRenderer._draw_duration_connectors` |
+| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `timeline/renderer.py:TimelineRenderer._layout_callouts` |
+| `ec-event-name` | `opacity` | `1` | `_name_style.opacity` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `ec-event-notes` | `color` | `#666666` | `_notes_style.color` | `timeline/renderer.py:TimelineRenderer._order_durations`, `timeline/renderer.py:TimelineRenderer._wbs_group_colors` |
+| `ec-event-notes` | `opacity` | `1` | `_notes_style.opacity` | `timeline/renderer.py:TimelineRenderer._draw_callout_contents`, `timeline/renderer.py:TimelineRenderer._duration_text_fonts` |
+| `ec-holiday-date` | `color` | `#666666` | `getattr(config, "timeline_holiday_date_color", None) or _date_style.color or color or "grey"` | `timeline/renderer.py:TimelineRenderer._draw_holiday_icons` |
+| `ec-holiday-date` | `font` | `RobotoCondensed-Light` | `_date_style.font` | `timeline/renderer.py:TimelineRenderer._draw_holiday_icons` |
+| `ec-holiday-date` | `opacity` | `1` | `_date_style.opacity` | `timeline/renderer.py:TimelineRenderer._draw_holiday_icons` |
+| `ec-month-tick` | `opacity` | `0.35` | `config.get_line_style("ec-month-tick").opacity` | `timeline/renderer.py:TimelineRenderer._draw_month_ticks` |
+| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands._separator` |
+| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands._separator` |
+| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `timeline/renderer.py:TimelineRenderer._draw_timeline_bands._separator` |
+| `ec-today-line` | `color` | `#FF4444` | `_today_line_style.color` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
+| `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
+| `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 
 <details><summary>Settings (53)</summary>
 
@@ -502,58 +502,58 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `box:band` | `dasharray` | *unset* | `tk_band.get("dasharray") or None` | `blockplan/renderer.py:306` |
-| `box:band` | `fill_opacity` | *unset* | `self._tk("box:band").get("fill_opacity")` | `blockplan/renderer.py:793` |
-| `box:band` | `stroke` | *depends on the item being drawn* | `tk_band.get("stroke") or grid_color` | `blockplan/renderer.py:303` |
-| `box:band` | `stroke_opacity` | *unset* | `tk_band.get("stroke_opacity")` | `blockplan/renderer.py:301` |
-| `box:band` | `stroke_width` | *unset* | `tk_band.get("stroke_width")` | `blockplan/renderer.py:300` |
-| `box:duration` | `dasharray` | *unset* | `tk_dur_box.get("dasharray") or _dur_bar_style.dasharray` | `blockplan/renderer.py:1632` |
-| `box:duration` | `fill_opacity` | *unset* | `tk_dur_box.get("fill_opacity")` | `blockplan/renderer.py:1634` |
-| `box:duration` | `stroke` | `#AAAAAA` | `tk_dur_box.get("stroke") or _dur_bar_style.color` | `blockplan/renderer.py:1631` |
-| `box:duration` | `stroke_opacity` | *unset* | `tk_dur_box.get("stroke_opacity")` | `blockplan/renderer.py:1637` |
-| `box:duration` | `stroke_width` | *unset* | `tk_dur_box.get("stroke_width")` | `blockplan/renderer.py:1640` |
-| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or element.color` | `blockplan/renderer.py:320` |
-| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or None` | `blockplan/renderer.py:323` |
-| `line:grid` | `opacity` | `0.5` | `tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity` | `blockplan/renderer.py:322` |
-| `line:grid` | `width` | `0.5` | `tk_grid.get("width") if tk_grid.get("width") is not None else element.width` | `blockplan/renderer.py:321` |
-| `text:band_label` | `color` | *depends on the item being drawn* | `band.get("font_color") or tk_band_label.get("color") or _label_text_style.color` | `blockplan/renderer.py:687` |
-| `text:band_label` | `font` | *depends on the item being drawn* | `band.get("font") or tk_band_label.get("font") or _label_text_style.font` | `blockplan/renderer.py:697` |
-| `text:band_label` | `opacity` | *depends on the item being drawn* | `float( font_opacity_value if (font_opacity_value := band.get("font_opacity")) is not None else ( tk_band_label.get("opacity") if tk_band_label.get("o…` | `blockplan/renderer.py:692`, `blockplan/renderer.py:693` |
-| `text:band_label` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_band_label.get("size"))` | `blockplan/renderer.py:338`, `blockplan/renderer.py:703` |
-| `text:duration_date` | `color` | `#666666` | `tk_dur_date.get("color") or _dur_date_style.color` | `blockplan/renderer.py:1707` |
-| `text:duration_date` | `font` | `RobotoCondensed-Light` | `tk_dur_date.get("font") or _dur_date_style.font` | `blockplan/renderer.py:1709` |
-| `text:duration_date` | `size` | `8.64` ¹ | `float(tk_dur_date.get("size"))` | `blockplan/renderer.py:1706` |
-| `text:event_date` | `color` | `#666666` | `tk_event_date.get("color") or _evt_date_style.color` | `blockplan/renderer.py:2086` |
-| `text:event_date` | `font` | `RobotoCondensed-Light` | `tk_event_date.get("font") or _evt_date_style.font` | `blockplan/renderer.py:1995` |
-| `text:event_date` | `size` | `8.64` ¹ | `float(tk_event_date.get("size") or max(6.0, event_size * 0.9))` | `blockplan/renderer.py:1981` |
-| `text:event_name` | `color` | `#333333` | `tk_event_name.get("color") or _event_name_style.color` | `blockplan/renderer.py:1727`, `blockplan/renderer.py:2067` |
-| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_event_name.get("font") or _event_name_style.font` | `blockplan/renderer.py:1732`, `blockplan/renderer.py:1984` |
-| `text:event_name` | `size` | `9.72` / `11.88` (differs by call site) ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:1876`, `blockplan/renderer.py:1979`, `blockplan/renderer.py:2243` |
-| `text:event_notes` | `color` | `#666666` | `tk_event_notes.get("color") or _event_notes_style.color` | `blockplan/renderer.py:1728`, `blockplan/renderer.py:1990` |
-| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_event_notes.get("font") or _event_notes_style.font` | `blockplan/renderer.py:1729`, `blockplan/renderer.py:1989` |
-| `text:event_notes` | `size` | `8.26` ¹ | `float(tk_event_notes.get("size"))` | `blockplan/renderer.py:1617`, `blockplan/renderer.py:1853`, `blockplan/renderer.py:1866` +1 |
-| `text:heading` | `color` | *depends on the item being drawn* | `band.get("label_color") or tk_heading.get("color") or _heading_text_style.color` | `blockplan/renderer.py:605`, `blockplan/renderer.py:711` |
-| `text:heading` | `font` | *depends on the item being drawn* | `band.get("label_font") or tk_heading.get("font") or _heading_text_style.font` | `blockplan/renderer.py:601`, `blockplan/renderer.py:704` |
-| `text:heading` | `opacity` | *depends on the item being drawn* | `float( label_opacity_value if (label_opacity_value := band.get("label_opacity")) is not None else ( tk_heading.get("opacity") if tk_heading.get("opac…` | `blockplan/renderer.py:610`, `blockplan/renderer.py:611`, `blockplan/renderer.py:716` |
-| `text:heading` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_heading.get("size"))` | `blockplan/renderer.py:603`, `blockplan/renderer.py:710` |
-| `text:swimlane_label` | `color` | *depends on the item being drawn* | `lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color` | `blockplan/renderer.py:2300` |
-| `text:swimlane_label` | `font` | `RobotoCondensed-Bold` | `tk_swimlane_label.get("font") or _lane_label_style.font` | `blockplan/renderer.py:2301` |
-| `text:swimlane_label` | `size` | `11.88` ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:2243` |
+| `box:band` | `dasharray` | *unset* | `tk_band.get("dasharray") or None` | `blockplan/renderer.py:BlockPlanRenderer._timeband_stroke` |
+| `box:band` | `fill_opacity` | *unset* | `self._tk("box:band").get("fill_opacity")` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `box:band` | `stroke` | *depends on the item being drawn* | `tk_band.get("stroke") or grid_color` | `blockplan/renderer.py:BlockPlanRenderer._timeband_stroke` |
+| `box:band` | `stroke_opacity` | *unset* | `tk_band.get("stroke_opacity")` | `blockplan/renderer.py:BlockPlanRenderer._timeband_stroke` |
+| `box:band` | `stroke_width` | *unset* | `tk_band.get("stroke_width")` | `blockplan/renderer.py:BlockPlanRenderer._timeband_stroke` |
+| `box:duration` | `dasharray` | *unset* | `tk_dur_box.get("dasharray") or _dur_bar_style.dasharray` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `box:duration` | `fill_opacity` | *unset* | `tk_dur_box.get("fill_opacity")` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `box:duration` | `stroke` | `#AAAAAA` | `tk_dur_box.get("stroke") or _dur_bar_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `box:duration` | `stroke_opacity` | *unset* | `tk_dur_box.get("stroke_opacity")` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `box:duration` | `stroke_width` | *unset* | `tk_dur_box.get("stroke_width")` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `line:grid` | `color` | `#CCCCCC` | `tk_grid.get("color") or element.color` | `blockplan/renderer.py:BlockPlanRenderer._grid_stroke` |
+| `line:grid` | `dasharray` | *unset* | `tk_grid.get("dasharray") or None` | `blockplan/renderer.py:BlockPlanRenderer._grid_stroke` |
+| `line:grid` | `opacity` | `0.5` | `tk_grid.get("opacity") if tk_grid.get("opacity") is not None else element.opacity` | `blockplan/renderer.py:BlockPlanRenderer._grid_stroke` |
+| `line:grid` | `width` | `0.5` | `tk_grid.get("width") if tk_grid.get("width") is not None else element.width` | `blockplan/renderer.py:BlockPlanRenderer._grid_stroke` |
+| `text:band_label` | `color` | *depends on the item being drawn* | `band.get("font_color") or tk_band_label.get("color") or _label_text_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:band_label` | `font` | *depends on the item being drawn* | `band.get("font") or tk_band_label.get("font") or _label_text_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:band_label` | `opacity` | *depends on the item being drawn* | `float( font_opacity_value if (font_opacity_value := band.get("font_opacity")) is not None else ( tk_band_label.get("opacity") if tk_band_label.get("o…` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:band_label` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_band_label.get("size"))` | `blockplan/renderer.py:BlockPlanRenderer._band_row_h`, `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:duration_date` | `color` | `#666666` | `tk_dur_date.get("color") or _dur_date_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `text:duration_date` | `font` | `RobotoCondensed-Light` | `tk_dur_date.get("font") or _dur_date_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `text:duration_date` | `size` | `8.64` ¹ | `float(tk_dur_date.get("size"))` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations` |
+| `text:event_date` | `color` | `#666666` | `tk_event_date.get("color") or _evt_date_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_date` | `font` | `RobotoCondensed-Light` | `tk_event_date.get("font") or _evt_date_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_date` | `size` | `8.64` ¹ | `float(tk_event_date.get("size") or max(6.0, event_size * 0.9))` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_name` | `color` | `#333333` | `tk_event_name.get("color") or _event_name_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_name` | `font` | `RobotoCondensed-Light` | `tk_event_name.get("font") or _event_name_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_name` | `size` | `9.72` / `11.88` (differs by call site) ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_label` |
+| `text:event_notes` | `color` | `#666666` | `tk_event_notes.get("color") or _event_notes_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_notes` | `font` | `RobotoCondensed-LightItalic` | `tk_event_notes.get("font") or _event_notes_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:event_notes` | `size` | `8.26` ¹ | `float(tk_event_notes.get("size"))` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._draw_lane_events` |
+| `text:heading` | `color` | *depends on the item being drawn* | `band.get("label_color") or tk_heading.get("color") or _heading_text_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:heading` | `font` | *depends on the item being drawn* | `band.get("label_font") or tk_heading.get("font") or _heading_text_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:heading` | `opacity` | *depends on the item being drawn* | `float( label_opacity_value if (label_opacity_value := band.get("label_opacity")) is not None else ( tk_heading.get("opacity") if tk_heading.get("opac…` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:heading` | `size` | `10.8`; some call sites depend on the item ¹ | `float(tk_heading.get("size"))` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `text:swimlane_label` | `color` | *depends on the item being drawn* | `lane_cfg.get("label_color") or tk_swimlane_label.get("color") or _lane_label_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_label` |
+| `text:swimlane_label` | `font` | `RobotoCondensed-Bold` | `tk_swimlane_label.get("font") or _lane_label_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_label` |
+| `text:swimlane_label` | `size` | `11.88` ¹ | `float(tk_swimlane_label.get("size") or tk_event_name.get("size") or 9.0)` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_label` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-band-cell` | `fill` | `none` | `_band_cell_style.fill` | `blockplan/renderer.py:681` |
-| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `blockplan/renderer.py:659`, `blockplan/renderer.py:1413` |
-| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `blockplan/renderer.py:1232`, `blockplan/renderer.py:1623` |
-| `ec-event-name` | `font` | `RobotoCondensed-Light` | `_event_name_style.font` | `blockplan/renderer.py:1773` |
-| `ec-heading-cell` | `fill` | `none` | `_heading_cell_style.fill` | `blockplan/renderer.py:584`, `blockplan/renderer.py:719` |
-| `ec-heading-cell` | `fill_opacity` | `1` | `_lane_heading_cell_style.fill_opacity` | `blockplan/renderer.py:592`, `blockplan/renderer.py:729`, `blockplan/renderer.py:1400` |
-| `ec-vline` | `color` | *depends on the item being drawn* | `sr.stroke_color if sr.stroke_color is not None else _vline_style.color` | `blockplan/renderer.py:974` |
-| `ec-vline` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray` | `blockplan/renderer.py:977` |
-| `ec-vline` | `opacity` | *depends on the item being drawn* | `float(sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity)` | `blockplan/renderer.py:976` |
-| `ec-vline` | `width` | *depends on the item being drawn* | `float(sr.stroke_width if sr.stroke_width is not None else _vline_style.width)` | `blockplan/renderer.py:975` |
-| `ec-vline-fill` | `fill` | *depends on the item being drawn* | `sample_sr.fill_colors if sample_sr.fill_colors is not None else sample_sr.fill_color if sample_sr.fill_color is not None else _vline_fill_style.fill` | `blockplan/renderer.py:929` |
-| `ec-vline-fill` | `fill_opacity` | *depends on the item being drawn* | `sample_sr.fill_opacity if sample_sr.fill_opacity is not None else float(_vline_fill_style.fill_opacity)` | `blockplan/renderer.py:932` |
+| `ec-band-cell` | `fill` | `none` | `_band_cell_style.fill` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `blockplan/renderer.py:BlockPlanRenderer._draw_swimlanes`, `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `ec-event-name` | `color` | `#333333` | `config.get_text_style("ec-event-name").color` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations`, `blockplan/renderer.py:BlockPlanRenderer._wbs_group_colors` |
+| `ec-event-name` | `font` | `RobotoCondensed-Light` | `_event_name_style.font` | `blockplan/renderer.py:BlockPlanRenderer._draw_lane_durations._draw_icon_and_text` |
+| `ec-heading-cell` | `fill` | `none` | `_heading_cell_style.fill` | `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `ec-heading-cell` | `fill_opacity` | `1` | `_lane_heading_cell_style.fill_opacity` | `blockplan/renderer.py:BlockPlanRenderer._draw_swimlanes`, `blockplan/renderer.py:BlockPlanRenderer._draw_time_bands` |
+| `ec-vline` | `color` | *depends on the item being drawn* | `sr.stroke_color if sr.stroke_color is not None else _vline_style.color` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
+| `ec-vline` | `dasharray` | *depends on the item being drawn* | `sr.stroke_dasharray if sr.stroke_dasharray is not None else _vline_style.dasharray` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
+| `ec-vline` | `opacity` | *depends on the item being drawn* | `float(sr.stroke_opacity if sr.stroke_opacity is not None else _vline_style.opacity)` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
+| `ec-vline` | `width` | *depends on the item being drawn* | `float(sr.stroke_width if sr.stroke_width is not None else _vline_style.width)` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
+| `ec-vline-fill` | `fill` | *depends on the item being drawn* | `sample_sr.fill_colors if sample_sr.fill_colors is not None else sample_sr.fill_color if sample_sr.fill_color is not None else _vline_fill_style.fill` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
+| `ec-vline-fill` | `fill_opacity` | *depends on the item being drawn* | `sample_sr.fill_opacity if sample_sr.fill_opacity is not None else float(_vline_fill_style.fill_opacity)` | `blockplan/renderer.py:BlockPlanRenderer._draw_configured_vertical_lines` |
 
 <details><summary>Settings (46)</summary>
 
@@ -612,40 +612,40 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 | Token | Property | Default | Resolution order (first value that is set wins) | Source |
 |---|---|---|---|---|
-| `box:duration` | `fill` | `#888888` | `self._tk("box:duration").get("fill") or config.gantt_bar_fill_color` | `gantt/renderer.py:1280` |
-| `box:duration` | `fill_opacity` | *depends on the item being drawn* | `float( style.fill_opacity if style.fill_opacity is not None else (token.get("fill_opacity") or 0.85) )` | `gantt/renderer.py:1030` |
-| `box:duration` | `stroke` | *depends on the item being drawn* | `style.stroke_color or token.get("stroke") or "none"` | `gantt/renderer.py:1032` |
-| `box:duration` | `stroke_width` | *depends on the item being drawn* | `float(style.stroke_width or token.get("stroke_width") or 0)` | `gantt/renderer.py:1033` |
-| `icon:milestone` | `color` | *depends on the item being drawn* | `style.icon_color or self._tk("icon:milestone").get("color")` | `gantt/renderer.py:1233` |
-| `line:axis` | `color` | *depends on the item being drawn* | `style.stroke_color or token.get("color") or config.get_line_style("ec-axis-line").color` | `gantt/renderer.py:1190` |
-| `line:axis` | `width` | *depends on the item being drawn* | `float(style.stroke_width or token.get("width") or 1.5)` | `gantt/renderer.py:1191` |
-| `line:grid` | `color` | `grey`; some call sites depend on the item | `token.get("color") or "grey"` | `gantt/renderer.py:1492`, `gantt/renderer.py:1561` |
-| `line:grid` | `opacity` | `0.5`; some call sites depend on the item | `float(token.get("opacity") or 0.5)` | `gantt/renderer.py:1494`, `gantt/renderer.py:1563` |
-| `line:grid` | `width` | `0.5`; some call sites depend on the item | `float(token.get("width") or 0.5)` | `gantt/renderer.py:1493`, `gantt/renderer.py:1562` |
-| `line:today` | `color` | `#FF4444` | `token.get("color") or config.get_line_style("ec-today-line").color` | `gantt/renderer.py:900` |
-| `line:today` | `dasharray` | *unset* | `token.get("dasharray")` | `gantt/renderer.py:903` |
-| `line:today` | `opacity` | `1` | `float(token.get("opacity") or 1.0)` | `gantt/renderer.py:902` |
-| `line:today` | `width` | `1.5` | `float(token.get("width") or 1.5)` | `gantt/renderer.py:901` |
-| `text:band_label` | `color` | `#888888` | `token.get("color") or config.get_text_style("ec-tick-label").color` | `gantt/renderer.py:582` |
-| `text:band_label` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-tick-label").font` | `gantt/renderer.py:550` |
-| `text:band_label` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:551` |
-| `text:body` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:754` |
-| `text:body` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-task-cell").font` | `gantt/renderer.py:752` |
-| `text:body` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:753` |
-| `text:label` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:696` |
-| `text:label` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-column-header").font` | `gantt/renderer.py:662` |
-| `text:label` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:663` |
+| `box:duration` | `fill` | `#888888` | `self._tk("box:duration").get("fill") or config.gantt_bar_fill_color` | `gantt/renderer.py:GanttRenderer._bar_fill` |
+| `box:duration` | `fill_opacity` | *depends on the item being drawn* | `float( style.fill_opacity if style.fill_opacity is not None else (token.get("fill_opacity") or 0.85) )` | `gantt/renderer.py:GanttRenderer._draw_task_bar` |
+| `box:duration` | `stroke` | *depends on the item being drawn* | `style.stroke_color or token.get("stroke") or "none"` | `gantt/renderer.py:GanttRenderer._draw_task_bar` |
+| `box:duration` | `stroke_width` | *depends on the item being drawn* | `float(style.stroke_width or token.get("stroke_width") or 0)` | `gantt/renderer.py:GanttRenderer._draw_task_bar` |
+| `icon:milestone` | `color` | *depends on the item being drawn* | `style.icon_color or self._tk("icon:milestone").get("color")` | `gantt/renderer.py:GanttRenderer._draw_milestone` |
+| `line:axis` | `color` | *depends on the item being drawn* | `style.stroke_color or token.get("color") or config.get_line_style("ec-axis-line").color` | `gantt/renderer.py:GanttRenderer._draw_rollup_bracket` |
+| `line:axis` | `width` | *depends on the item being drawn* | `float(style.stroke_width or token.get("width") or 1.5)` | `gantt/renderer.py:GanttRenderer._draw_rollup_bracket` |
+| `line:grid` | `color` | `grey`; some call sites depend on the item | `token.get("color") or "grey"` | `gantt/renderer.py:GanttRenderer._draw_arrow`, `gantt/renderer.py:GanttRenderer._grid_style` |
+| `line:grid` | `opacity` | `0.5`; some call sites depend on the item | `float(token.get("opacity") or 0.5)` | `gantt/renderer.py:GanttRenderer._draw_arrow`, `gantt/renderer.py:GanttRenderer._grid_style` |
+| `line:grid` | `width` | `0.5`; some call sites depend on the item | `float(token.get("width") or 0.5)` | `gantt/renderer.py:GanttRenderer._draw_arrow`, `gantt/renderer.py:GanttRenderer._grid_style` |
+| `line:today` | `color` | `#FF4444` | `token.get("color") or config.get_line_style("ec-today-line").color` | `gantt/renderer.py:GanttRenderer._draw_today_line` |
+| `line:today` | `dasharray` | *unset* | `token.get("dasharray")` | `gantt/renderer.py:GanttRenderer._draw_today_line` |
+| `line:today` | `opacity` | `1` | `float(token.get("opacity") or 1.0)` | `gantt/renderer.py:GanttRenderer._draw_today_line` |
+| `line:today` | `width` | `1.5` | `float(token.get("width") or 1.5)` | `gantt/renderer.py:GanttRenderer._draw_today_line` |
+| `text:band_label` | `color` | `#888888` | `token.get("color") or config.get_text_style("ec-tick-label").color` | `gantt/renderer.py:GanttRenderer._draw_band_row` |
+| `text:band_label` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-tick-label").font` | `gantt/renderer.py:GanttRenderer._draw_band_row` |
+| `text:band_label` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_band_row` |
+| `text:body` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:GanttRenderer._draw_rows` |
+| `text:body` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-task-cell").font` | `gantt/renderer.py:GanttRenderer._draw_rows` |
+| `text:body` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_rows` |
+| `text:label` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `text:label` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-column-header").font` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `text:label` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-band-cell` | `fill` | `none` | `box.fill or "none"` | `gantt/renderer.py:568`, `gantt/renderer.py:617` |
-| `ec-band-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:569`, `gantt/renderer.py:618` |
-| `ec-cell` | `fill` | `#F8F8FF` | `style.fill` | `gantt/renderer.py:411` |
-| `ec-cell` | `fill_opacity` | `0.25` | `float(style.fill_opacity if style.fill_opacity is not None else 0.08)` | `gantt/renderer.py:412` |
-| `ec-heading-cell` | `fill` | `none` | `box.fill or "none"` | `gantt/renderer.py:666` |
-| `ec-heading-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:674` |
-| `ec-row-band` | `fill` | `#F8F8FF` | `band.fill or "none"` | `gantt/renderer.py:747` |
-| `ec-row-band` | `fill_opacity` | `0.25` | `float(band.fill_opacity if band.fill_opacity is not None else 0.15)` | `gantt/renderer.py:748` |
+| `ec-band-cell` | `fill` | `none` | `box.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_band_row`, `gantt/renderer.py:GanttRenderer._draw_holiday_band_row` |
+| `ec-band-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:GanttRenderer._draw_band_row`, `gantt/renderer.py:GanttRenderer._draw_holiday_band_row` |
+| `ec-cell` | `fill` | `#F8F8FF` | `style.fill` | `gantt/renderer.py:GanttRenderer._draw_nonworking_shading` |
+| `ec-cell` | `fill_opacity` | `0.25` | `float(style.fill_opacity if style.fill_opacity is not None else 0.08)` | `gantt/renderer.py:GanttRenderer._draw_nonworking_shading` |
+| `ec-heading-cell` | `fill` | `none` | `box.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `ec-heading-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `ec-row-band` | `fill` | `#F8F8FF` | `band.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_rows` |
+| `ec-row-band` | `fill_opacity` | `0.25` | `float(band.fill_opacity if band.fill_opacity is not None else 0.15)` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 
 <details><summary>Settings (24)</summary>
 
@@ -684,27 +684,27 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 | Element | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `compactplan/renderer.py:391`, `compactplan/renderer.py:804` |
-| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `compactplan/renderer.py:393` |
-| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `compactplan/renderer.py:394` |
-| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `compactplan/renderer.py:623` |
-| `ec-continuation-icon` | `color` | `#555555` | `style.color or config.continuation_icon_color or ""` | `compactplan/renderer.py:1406` |
-| `ec-continuation-icon` | `icon` | `arrow-right` | `str( style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right") )` | `compactplan/renderer.py:1403` |
-| `ec-continuation-icon` | `size` | `10` | `float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))` | `compactplan/renderer.py:1405` |
-| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `rule.stroke_dasharray if rule.stroke_dasharray is not None else (theme.dasharray or None)` | `compactplan/renderer.py:1184` |
-| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity` | `compactplan/renderer.py:1186` |
-| `ec-duration-date` | `opacity` | `1` | `config.get_text_style("ec-duration-date").opacity` | `compactplan/renderer.py:1281` |
-| `ec-duration-icon` | `color` | `#555555` | `str(config.get_icon_style("ec-duration-icon").color or "")` | `compactplan/renderer.py:1216` |
-| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.compactplan_duration_icon_height)` | `compactplan/renderer.py:1197` |
-| `ec-event-name` | `color` | `#333333` | `str(_name_style.color)` | `compactplan/renderer.py:1063` |
-| `ec-event-name` | `opacity` | `1` | `config.get_text_style("ec-event-name").opacity` | `compactplan/renderer.py:1064`, `compactplan/renderer.py:1321` |
-| `ec-label` | `color` | `#888888` | `str(_band_text_style.color)` | `compactplan/renderer.py:518` |
-| `ec-label` | `opacity` | `1` | `float(_band_text_style.opacity)` | `compactplan/renderer.py:519` |
-| `ec-legend-text` | `color` | `#333333`; some call sites depend on the item | `str(config.get_text_style("ec-legend-text").color)` | `compactplan/renderer.py:789`, `compactplan/renderer.py:1430` |
-| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `compactplan/renderer.py:570` |
-| `ec-separator` | `dasharray` | *unset* | `_sep_style.dasharray` | `compactplan/renderer.py:573` |
-| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:572` |
-| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:571` |
+| `ec-axis-line` | `color` | `#AAAAAA` | `_axis_style.color` | `compactplan/renderer.py:CompactPlanRenderer._note_key_symbols`, `compactplan/renderer.py:CompactPlanRenderer._render_content` |
+| `ec-axis-line` | `dasharray` | *unset* | `_axis_style.dasharray or None` | `compactplan/renderer.py:CompactPlanRenderer._render_content` |
+| `ec-axis-line` | `opacity` | `0.9` | `_axis_style.opacity` | `compactplan/renderer.py:CompactPlanRenderer._render_content` |
+| `ec-band-cell` | `fill_opacity` | `1` | `config.get_box_style("ec-band-cell").fill_opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands` |
+| `ec-continuation-icon` | `color` | `#555555` | `style.color or config.continuation_icon_color or ""` | `compactplan/renderer.py:CompactPlanRenderer._continuation_icon_style` |
+| `ec-continuation-icon` | `icon` | `arrow-right` | `str( style.icon or resolve_continuation_icon(config.continuation_icon_after, "horizontal", "arrow-right") )` | `compactplan/renderer.py:CompactPlanRenderer._continuation_icon_style` |
+| `ec-continuation-icon` | `size` | `10` | `float(style.size if style.size is not None else (config.continuation_icon_height or 8.0))` | `compactplan/renderer.py:CompactPlanRenderer._continuation_icon_style` |
+| `ec-duration-bar` | `dasharray` | *depends on the item being drawn* | `rule.stroke_dasharray if rule.stroke_dasharray is not None else (theme.dasharray or None)` | `compactplan/renderer.py:CompactPlanRenderer._bar_stroke` |
+| `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity` | `compactplan/renderer.py:CompactPlanRenderer._bar_stroke` |
+| `ec-duration-date` | `opacity` | `1` | `config.get_text_style("ec-duration-date").opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bar_content.draw_date` |
+| `ec-duration-icon` | `color` | `#555555` | `str(config.get_icon_style("ec-duration-icon").color or "")` | `compactplan/renderer.py:CompactPlanRenderer._draw_start_icon` |
+| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.compactplan_duration_icon_height)` | `compactplan/renderer.py:CompactPlanRenderer._duration_icon_height` |
+| `ec-event-name` | `color` | `#333333` | `str(_name_style.color)` | `compactplan/renderer.py:CompactPlanRenderer._draw_milestone` |
+| `ec-event-name` | `opacity` | `1` | `config.get_text_style("ec-event-name").opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bar_content`, `compactplan/renderer.py:CompactPlanRenderer._draw_milestone` |
+| `ec-label` | `color` | `#888888` | `str(_band_text_style.color)` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands` |
+| `ec-label` | `opacity` | `1` | `float(_band_text_style.opacity)` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands` |
+| `ec-legend-text` | `color` | `#333333`; some call sites depend on the item | `str(config.get_text_style("ec-legend-text").color)` | `compactplan/renderer.py:CompactPlanRenderer._draw_continuation_icon`, `compactplan/renderer.py:CompactPlanRenderer._note_key_symbols` |
+| `ec-separator` | `color` | `#CCCCCC` | `_sep_style.color` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
+| `ec-separator` | `dasharray` | *unset* | `_sep_style.dasharray` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
+| `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
+| `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
 
 <details><summary>Settings (46)</summary>
 
@@ -787,11 +787,11 @@ The workbook reads four style tokens; each falls back to the per-band value firs
 
 | Token | Property | Default | Resolution order | Source |
 |---|---|---|---|---|
-| `box:band` | `fill` | `none` | `tk_box_band.get("fill") or settings["timeband_fill_color"]` | `visualizers/excelblockplan.py:758` |
-| `box:vline` | `stroke` | `red` | `str(line.get("color") or tk_vline.get("stroke") or fallback_color)` | `visualizers/excelblockplan.py:554` |
-| `box:vline` | `stroke_width` | `1.5` | `float(line.get("width") or tk_vline.get("stroke_width") or fallback_width)` | `visualizers/excelblockplan.py:555` |
-| `text:band_label` | `color` | `black` | `str(band.get("font_color") or tk_band_label.get("color") or settings["timeband_label_color"])` | `visualizers/excelblockplan.py:763` |
-| `text:heading` | `color` | `black` | `str(band.get("label_color") or tk_heading.get("color") or settings["header_label_color"])` | `visualizers/excelblockplan.py:708` |
+| `box:band` | `fill` | `none` | `tk_box_band.get("fill") or settings["timeband_fill_color"]` | `visualizers/excelblockplan.py:_write_timebands` |
+| `box:vline` | `stroke` | `red` | `str(line.get("color") or tk_vline.get("stroke") or fallback_color)` | `visualizers/excelblockplan.py:_build_right_border_cols` |
+| `box:vline` | `stroke_width` | `1.5` | `float(line.get("width") or tk_vline.get("stroke_width") or fallback_width)` | `visualizers/excelblockplan.py:_build_right_border_cols` |
+| `text:band_label` | `color` | `black` | `str(band.get("font_color") or tk_band_label.get("color") or settings["timeband_label_color"])` | `visualizers/excelblockplan.py:_write_timebands` |
+| `text:heading` | `color` | `black` | `str(band.get("label_color") or tk_heading.get("color") or settings["header_label_color"])` | `visualizers/excelblockplan.py:_write_timebands` |
 
 <details><summary>Settings (16)</summary>
 

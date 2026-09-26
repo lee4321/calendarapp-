@@ -37,9 +37,14 @@ def patterns() -> dict[str, str]:
         pytest.skip(f"{DB_PATH} not present")
     con = sqlite3.connect(DB_PATH)
     try:
-        return dict(con.execute("SELECT name, svg FROM patterns").fetchall())
+        rows = dict(con.execute("SELECT name, svg FROM patterns").fetchall())
     finally:
         con.close()
+    if not rows:
+        # The tiles are not in the repo (tools/db/build_db.py leaves the table
+        # empty); load them with importers/import_patterns.py.
+        pytest.skip("the patterns table is empty")
+    return rows
 
 
 class TestColorizeSourceForms:

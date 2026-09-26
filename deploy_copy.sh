@@ -20,11 +20,7 @@ DEST="${1:?Usage: $0 <destination-folder>}"
 mkdir -p "$DEST"
 
 # --- Entry point and uv project files -------------------------------------
-cp "$SRC/ecalendar.py" "$SRC/pyproject.toml" "$SRC/uv.lock" "$DEST/"
-
-# Pin the Python minor version only. The local .python-version pins a full
-# platform triple (macos-aarch64) that would not resolve on other machines.
-echo "3.14" > "$DEST/.python-version"
+cp "$SRC/ecalendar.py" "$SRC/pyproject.toml" "$SRC/uv.lock" "$SRC/.python-version" "$DEST/"
 
 # --- Event/holiday/pattern/icon database (read from CWD by default) -------
 cp "$SRC/calendar.db" "$DEST/"
