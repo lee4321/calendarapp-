@@ -96,8 +96,8 @@ retirement — verify every one before trusting old code.
    importers. `docs/architecture/importers.md` describes the framework those
    share.
 6. **Output paths.** The Slint preview resolved `output/<stem>/<stem>.svg`. This
-   already changed once — the run-folder commit `d02e6b92` gave every run its own
-   folder, and `1bd9a4dd` retired the companion `_details`/`_key`/`_overflow`
+   already changed once — the run-folder commit `54b0769b` gave every run its own
+   folder, and `25661c58` retired the companion `_details`/`_key`/`_overflow`
    pages the UI knew about. Re-derive the layout; do not trust the old code.
 
 **The best live reference** for a rebuild is

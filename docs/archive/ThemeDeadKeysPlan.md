@@ -231,4 +231,4 @@ All recommendations in §5 were accepted and carried out.
   - Lane visuals stay on `blockplan.swimlanes[]` instead of becoming `select: {swimlane}` rules; only `match:` becomes a lane-routing rule.
   - Excel band fonts stay on the placement entry.
 - **USER_GUIDE lane docs rewritten.** "`swimlanes` — Blockplan Lane Definitions" now documents the per-lane keys the renderer reads. The `text:milestone_label` / `box:swimlane_*` references and the obsolete "required keys with no visible effect" caveat were removed.
-- **Pre-existing, not changed:** `default.yaml` fails `validate_theme.py` for `blockplan.swimlanes`. The lanes were commented out in `7f31ba0b` (default theme layout tuning), and the frozen pre-edit copy fails the same way.
+- **Pre-existing, not changed:** `default.yaml` fails `validate_theme.py` for `blockplan.swimlanes`. The lanes were commented out in `5454816d` (default theme layout tuning), and the frozen pre-edit copy fails the same way.

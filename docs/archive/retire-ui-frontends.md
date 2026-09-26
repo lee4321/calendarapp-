@@ -110,7 +110,7 @@ since been free to drift. It must contain:
     importers — the flag surfaces `docs/architecture/importers.md` describes.
   - Output-path assumption: the Slint preview resolved
     `output/<stem>/<stem>.svg`. This already changed once (the run-folder
-    commit `d02e6b92`); a rebuild must re-derive it, not trust the old code.
+    commit `54b0769b`); a rebuild must re-derive it, not trust the old code.
 - **Why they were retired**, so the decision is not re-litigated blind.
 - **What a rebuild would cost today**: the parser walk is still the cheapest
   path, and `tools/generate_option_catalog.py` is a live, tested example of

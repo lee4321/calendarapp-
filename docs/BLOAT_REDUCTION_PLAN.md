@@ -1,6 +1,6 @@
 # Code-bloat reduction plan
 
-**Status:** proposed (2026-09-26), baseline `339fb0d`
+**Status:** proposed (2026-09-26), baseline `88f2437`
 **Goal:** shrink the repository and the code a maintainer has to hold in their
 head, without changing rendered output. Every phase must leave
 `tools/refcorpus.sh check` byte-identical (modulo `<desc>`) and the test suite
@@ -41,7 +41,15 @@ Low risk and a large payoff. Do this first.
 
 > **Status (2026-09-26):** 0.1–0.4 done. `retire-ui-frontends.md` was moved to
 > `docs/archive/` rather than deleted, because `docs/archive/UI_FRONTENDS.md`
-> cites it as its source. 0.5 and 0.6 are still open and need an owner's decision.
+> cites it as its source. 0.5 is still open and needs an owner's decision.
+> 0.6 done for the sheets only: `git filter-repo --path-glob '_sh_*.svg' --invert-paths`
+> rewrote every branch and tag. A fresh clone now downloads 47.0 MiB instead
+> of 57.1 MiB; the SVGs compress well, so the 40.9 MB on disk was about
+> 10 MiB of pack. Every rewritten commit differs from its original only by
+> those files, and `main`'s tree is unchanged. Commit IDs cited in the docs
+> were updated to the new history. GitHub keeps the old objects reachable
+> through the pull-request refs of #3 until GitHub Support purges them. The
+> fonts are still in history; that belongs with 0.5.
 
 | # | Action | Saves |
 |---|---|---|
@@ -323,7 +331,7 @@ merged result.
 > **Status (2026-09-26):** done. Both tools, the end-to-end migration tests and
 > the converter-only tests are gone; every legacy-schema error names the tag
 > through one helper, `legacy_hint()`; `validate_theme.py --convert` is gone.
-> The tag `pre-migrator-retirement` points at `2452468` and is pushed; the
+> The tag `pre-migrator-retirement` points at `c6fbacc` and is pushed; the
 > restore command in the errors was checked against it. Kept for
 > now: `tools/convert_style_keys.py`, the Phase 3 converter, which is itself a
 > candidate for the same retirement after a notice period.
