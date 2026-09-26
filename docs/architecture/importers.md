@@ -26,9 +26,11 @@ flowchart TD
 | file helpers | `find_files`, `determine_file_type`, `read_file`, `compute_file_hash` |
 | date/value parsing | `convert_date` (dateutil, <1950 = parse failure), `process_dates` (missing-side fill + swap) |
 | CLI actions | `list_import_history`, `remove_import`, `parse_import_pattern` ("3", "1-5", "-3", "5-", "1,3", "all") |
+| CLI driver | `ImportLog` (the module-level `log()`), `add_import_arguments` / `add_history_and_log_arguments`, `start_import_run`, `handle_history_commands` (--list/--remove), `collect_import_files`, `log_import_result` / `log_import_totals`, `finish_import_run` |
 
 Each importer supplies only its column mapping, `transform_row()`,
-`import_file()` orchestration, and `main()`:
+`import_file()` orchestration, its own arguments and dry-run checks, and a
+short `main()` wired from the CLI driver pieces:
 
 - **import_events.py** → `events` table; also has generator-script mode
   (`--generate script.py` calls the script's `generate_events()` and
