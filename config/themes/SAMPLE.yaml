@@ -228,9 +228,8 @@ gantt:
   indent_per_level: 8.0     # WBS depth × this, applied to indent: columns
   bar_height: 8.0
   min_day_width: 4.0        # split the range across pages below this; 0 = never
-  sort:                     # WBS segments compare numerically: 1.9 before 1.10
-    - wbs
-    - start_date
+  # Item order (WBS-then-start-date, numerically: 1.9 before 1.10) comes from
+  # events.item_placement_order, shared with every other view.
   # ── Marks ───────────────────────────────────────────────────────────────
   milestone_icon: diamond-fill
   deadline_icon: square-fill

@@ -128,7 +128,7 @@ def test_theme_gantt_section_reaches_config(themed_config):
     assert themed_config.gantt_table_width_ratio == 0.38
     assert themed_config.gantt_row_height == 14.0
     assert themed_config.gantt_indent_per_level == 8.0
-    assert themed_config.gantt_sort == ["wbs", "start_date"]
+    assert themed_config.item_placement_order == ["wbs", "start_date"]
     assert themed_config.gantt_progress_color == "black"
 
 

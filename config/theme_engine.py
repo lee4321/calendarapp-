@@ -191,7 +191,6 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("gantt", "row_height"): "gantt_row_height",
     ("gantt", "header_row_height"): "gantt_header_row_height",
     ("gantt", "indent_per_level"): "gantt_indent_per_level",
-    ("gantt", "sort"): "gantt_sort",
     ("gantt", "top_time_bands"): "gantt_top_time_bands",
     ("gantt", "bottom_time_bands"): "gantt_bottom_time_bands",
     ("gantt", "band_row_height"): "gantt_band_row_height",
@@ -2080,6 +2079,14 @@ class ThemeEngine:
             raise ThemeError(
                 "the excelheader section is now excelblockplan (the excelheader "
                 "command was removed) — rename the section, or "
+                f"{legacy_hint()}"
+            )
+
+        if isinstance(self._theme_data.get("gantt"), dict) and "sort" in self._theme_data["gantt"]:
+            raise ThemeError(
+                "gantt.sort was retired — item ordering is now unified under "
+                "events.item_placement_order (gantt still defaults to WBS-then-start-date "
+                "when that key is left at its default), or "
                 f"{legacy_hint()}"
             )
 

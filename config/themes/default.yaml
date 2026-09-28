@@ -438,9 +438,8 @@ gantt:
   row_height: 14.0
   header_row_height: 18.0
   indent_per_level: 8.0
-  sort:
-    - wbs
-    - start_date
+  # Item order (WBS-then-start-date) comes from events.item_placement_order,
+  # shared with every other view.
   band_row_height: 10.0
   bar_height: 8.0
   min_day_width: 4.0     # 0 = never split the range across pages
