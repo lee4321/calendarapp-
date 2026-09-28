@@ -25,6 +25,7 @@ from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import NonWorkdayStyle, classify_day, nonworkday_override
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
+from shared.item_order import sort_events
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import (
     BandSegment as _BandSegment,
@@ -845,8 +846,8 @@ class CompactPlanRenderer(BaseSVGRenderer):
         # and text are capped at its height, so the bar is a row's ink.
         lane_spacing = max(float(config.compactplan_lane_spacing), line_w + _DURATION_ROW_GAP)
 
-        # Sort by start date for deterministic placement and stable icon assignment.
-        sorted_durations = sorted(durations, key=lambda e: e.start)
+        # Sort by item_placement_order for deterministic placement and stable icon assignment.
+        sorted_durations = sort_events(durations, config.item_placement_order)
 
         # row_occupancy[i] = list of (x1, x2) intervals already placed in row i
         row_occupancy: list[list[tuple[float, float]]] = []
