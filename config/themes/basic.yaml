@@ -5,7 +5,7 @@ theme:
 base:
   # size of the stand-in glyph; null = the size of what it replaces
   default_missing_icon_size: null
-  font_family: Roboto-Regular
+  font_family: RobotoCondensed-Regular
   default_missing_icon: applet-closed
   # Ink for that stand-in. It flags an event naming an icon the icons
   # table does not have, so it stays an alert colour by default.
@@ -96,7 +96,7 @@ weekly:
 mini_calendar:
   title_format: MMMM YYYY
   week_number_label_format: W{num}
-  icon_set: squares
+  icon_set: darksquircles
   # event / holiday / special-day icons in a day cell's corners, drawn
   # alongside the day number rather than in place of it: up to four, filled
   # top-right first and then clockwise
@@ -144,9 +144,9 @@ timeline:
   today_date: ''
   today_label_text: Today
   marker_radius: 4.0
-  icon_size: 8
+  icon_size: 10
   duration_offset_y: 30.0
-  duration_lane_gap_y: 8.0
+  duration_lane_gap_y: 10.0
 timeline_events:
   box_width: 120
   # how point-event boxes are placed: "packed" puts each box's leading
@@ -178,7 +178,7 @@ blockplan:
 excelblockplan:
   font_name: Calibri
   font_size: 9
-  band_row_height: 18.0
+  band_row_height: 110.0
   top_bands: []
   vertical_lines: []
 gantt:
@@ -187,12 +187,12 @@ gantt:
   arrow_marker_end_size: 6.0
   arrow_linecap: round
   arrow_linejoin: round
-  table_width_ratio: 0.38
+  table_width_ratio: 0.310
   row_height: 14.0
-  header_row_height: 18.0
+  header_row_height: 110.0
   band_row_height: 10.0
-  bar_height: 8.0
-  indent_per_level: 8.0
+  bar_height: 10.0
+  indent_per_level: 10.0
   min_day_width: 4.0
   progress_color: black
   float_opacity_scale: 0.4
@@ -206,118 +206,220 @@ time_bands:
     unit: week
     label: Date Range
     label_format: '{start} – {end}'
+pit:
+  direction: horizontal      # horizontal | vertical
+  label_side: both           # primary | secondary | both
+  labella:
+    layer_gap: 50
+    node_height: 24
+    density: 0.50
+  axis:
+    color: lightgrey
+    width: 1.5
+    marker_size: 7.0          # bounding box of built-in circle/diamond
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "arrow-head"
+    marker_end_size: 8
+  tick_color: grey
+  # tick_unit: month
+  # Two tick rows: bold month labels over a light weekly grid.
+  ticks:
+    - unit: month
+      show_labels: true
+      label_format: MMMM
+      label_align: start        # align the month name with its first-of-month tick
+      label_side: below         # month names beneath the axis
+      tick_length: 8.0
+      label_gap: 16.0
+    - unit: week
+      week_start: 0
+      label_align: start
+      label_format: M/D
+      label_side: above         # weekday labels above, clear of the month names
+      show_labels: true
+      max_label_count: 400      # raise the default 60-label cap so daily
+                                # numbers still show over multi-month ranges
+      tick_length: 4.0
+      label_gap: 4.0
+      tick_opacity: 0.5
+  date_format: "ddd MMM D"
+  name_text:
+    font_name: OfficinaSans-Book        # PIT callout event-name font
+  notes_text:
+    font_name: OfficinaSans-Book        # PIT callout notes font
+  date_text:
+    color: grey
+    font_name: OfficinaSans-Book
+    font_size: 9
+    offset: 6.0
+  # Optional DB icon names drawn INSIDE the callout label box,
+  # left of the event name. Leave null for plain text-only labels.
+  # The axis marker is always a built-in shape (circle for events,
+  # diamond for milestones) and is NOT affected by these settings.
+  default_event_icon: null
+  default_milestone_icon: null
+  dot_color: deepskyblue
+  milestone_color: gold
+  leader:
+    color: grey
+    width: 0.75
+    dasharray: null
+    opacity: 1.0
+    linecap: round
+    marker_start: "none"
+    marker_start_size: 3.0
+    marker_end: "arrow-head"
+    marker_end_size: 5.0
+  leader_primary:
+    color: deepskyblue
+  leader_secondary:
+    color: steelblue
+  today_line:
+    show: true
+    color: tomato
+    width: 1.0
+    dasharray: "4,2"
+    opacity: 0.85
+    linecap: round
+    linejoin: round
+    label: today
+    label_color: tomato
+    label_font_name: Roboto-Bold
+    label_font_size: 9
+    label_position: end
+    marker_start: "none"
+    marker_start_size: 4.0
+    marker_end: "none"
+    marker_end_size: 6.0
+  arrow_head:
+    color: grey
+  label:
+    stroke_color: lightgrey
+    stroke_width: 0.5
+    fill_color: aliceblue
+    fill_opacity: 0.85
+    pattern: null
+    text_color: "#1b1f24"
+    corner_radius: 2.0
+    padding_x: 6.0
+    padding_y: 3.0
+    icon_size: null            # null = match event-name font size
+    icon_gap: 4.0
+  label_palette: Pastel1
+
 style_rules:
   - name: define text:heading
     define: text
     as: heading
     style:
-      font: Roboto-Regular
+      font: RobotoCondensed-Regular
       size: 10
       color: black
   - name: define text:body
     define: text
     as: body
     style:
-      font: Roboto-Regular
-      size: 8
+      font: RobotoCondensed-Regular
+      size: 10
       color: black
   - name: define text:caption
     define: text
     as: caption
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:label
     define: text
     as: label
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:day_number
     define: text
     as: day_number
     style:
-      font: Roboto-Regular
+      font: RobotoCondensed-Regular
       size: 10
       color: black
   - name: define text:month_title
     define: text
     as: month_title
     style:
-      font: Roboto-Regular
-      size: 8
+      font: RobotoCondensed-Regular
+      size: 10
       color: black
   - name: define text:week_number
     define: text
     as: week_number
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:event_name
     define: text
     as: event_name
     style:
-      font: Roboto-Regular
-      size: 8
+      font: RobotoCondensed-Regular
+      size: 10
       color: black
   - name: define text:event_notes
     define: text
     as: event_notes
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Italic
+      size: 10
       color: grey
   - name: define text:event_date
     define: text
     as: event_date
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:duration_date
     define: text
     as: duration_date
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:holiday_title
     define: text
     as: holiday_title
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Italic
+      size: 10
       color: black
   - name: define text:today_label
     define: text
     as: today_label
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:fiscal_label
     define: text
     as: fiscal_label
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: grey
   - name: define text:swimlane_label
     define: text
     as: swimlane_label
     style:
-      font: Roboto-Regular
-      size: 8
+      font: RobotoCondensed-Regular
+      size: 10
       color: black
   - name: define text:band_label
     define: text
     as: band_label
     style:
-      font: Roboto-Regular
-      size: 7
+      font: RobotoCondensed-Regular
+      size: 10
       color: black
   - name: define box:default
     define: box
@@ -441,13 +543,13 @@ style_rules:
     as: event
     style:
       color: black
-      size: 8
+      size: 10
   - name: define icon:duration
     define: icon
     as: duration
     style:
       color: black
-      size: 8
+      size: 10
   - name: define icon:milestone
     define: icon
     as: milestone
@@ -461,7 +563,7 @@ style_rules:
     style:
       icon: warningtriangle
       color: grey
-      size: 8
+      size: 10
   - name: route everything to Other
     apply_to: lane
     select: {}
