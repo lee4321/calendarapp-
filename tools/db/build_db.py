@@ -30,11 +30,28 @@ SQL_SCRIPTS = ("create.calendar.db.sql", "load.colors.sql", "load.papersizes.sql
 SAMPLE_EVENTS = (ROOT / "importers" / "sample_data.csv", ROOT / "importers" / "nimbuspay_modernization.csv")
 
 
-def build(path: Path, *, events: bool = True) -> Path:
-    """Create the database at ``path`` (which must not exist)."""
+#: SVG tiles used to fill the ``patterns`` table of test databases.
+TEST_PATTERNS_DIR = ROOT / "testdb" / "patterns"
+
+
+def load_patterns(path: Path, folder: Path = TEST_PATTERNS_DIR) -> int:
+    """Insert every ``*.svg`` in ``folder`` into ``path``'s patterns table (name = file stem)."""
+    rows = [(f.stem, f.read_text(encoding="utf-8")) for f in sorted(folder.glob("*.svg"))]
+    with sqlite3.connect(path) as conn:
+        conn.executemany("INSERT INTO patterns (name, svg) VALUES (?, ?)", rows)
+    return len(rows)
+
+
+def build(path: Path, *, events: bool = True, patterns: Path | None = None) -> Path:
+    """Create the database at ``path`` (which must not exist).
+
+    ``patterns`` is a folder of ``.svg`` tiles to load into the patterns table.
+    """
     with sqlite3.connect(path) as conn:
         for script in SQL_SCRIPTS:
             conn.executescript((SQL_DIR / script).read_text(encoding="utf-8"))
+    if patterns is not None:
+        load_patterns(path, patterns)
     if events:
         for csv in SAMPLE_EVENTS:
             subprocess.run(

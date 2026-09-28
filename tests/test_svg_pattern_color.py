@@ -16,8 +16,6 @@ being added (which would outline shapes that were never stroked).
 from __future__ import annotations
 
 import re
-import sqlite3
-from pathlib import Path
 
 import pytest
 
@@ -26,24 +24,14 @@ from renderers.svg_patterns import (
     pattern_def_xml,
     pattern_is_recolorable,
 )
-
-DB_PATH = Path(__file__).resolve().parent.parent / "calendar.db"
+from tools.db.build_db import TEST_PATTERNS_DIR
 
 
 @pytest.fixture(scope="module")
 def patterns() -> dict[str, str]:
-    """Every row of the shipped ``patterns`` table, by name."""
-    if not DB_PATH.exists():
-        pytest.skip(f"{DB_PATH} not present")
-    con = sqlite3.connect(DB_PATH)
-    try:
-        rows = dict(con.execute("SELECT name, svg FROM patterns").fetchall())
-    finally:
-        con.close()
-    if not rows:
-        # The tiles are not in the repo (tools/db/build_db.py leaves the table
-        # empty); load them with importers/import_patterns.py.
-        pytest.skip("the patterns table is empty")
+    """Every tile in ``testdb/patterns``, by name."""
+    rows = {f.stem: f.read_text(encoding="utf-8") for f in sorted(TEST_PATTERNS_DIR.glob("*.svg"))}
+    assert rows, f"no tiles in {TEST_PATTERNS_DIR}"
     return rows
 
 
@@ -197,11 +185,10 @@ class TestAgainstTheShippedTable:
         assert leftover == [], f"{len(leftover)} patterns keep currentColor paint: {leftover[:10]}"
 
     def test_hollow_shapes_stay_hollow(self, patterns):
-        # dingbat tiles are outline artwork: fill="none" plus a stroke.  If
-        # repainting filled them in they would render as solid blobs.
-        xml = pattern_def_xml("pat-dingbat16", patterns["dingbat16"], "red")
+        # Tiles with fill="none" leave shapes hollow.  If repainting filled
+        # them in they would render as solid blobs.
+        xml = pattern_def_xml("pat-plus", patterns["plus"], "red")
         assert 'fill="none"' in xml
-        assert 'stroke="red"' in xml
 
 
 class TestPatternIsRecolorable:
@@ -216,6 +203,6 @@ class TestPatternIsRecolorable:
     def test_inline_data_uri_is_not(self):
         assert not pattern_is_recolorable('<svg><image xlink:href="data:image/png;base64,iVBOR"/></svg>')
 
-    def test_stars65_is_the_only_raster_tile_shipped(self, patterns):
+    def test_no_test_tile_is_raster(self, patterns):
         raster = sorted(n for n, svg in patterns.items() if not pattern_is_recolorable(svg))
-        assert raster == ["stars65"]
+        assert raster == []

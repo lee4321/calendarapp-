@@ -1,10 +1,10 @@
 """A pattern tile's own ids must not collide with another tile's.
 
 Tiles are authored as standalone documents, but `extract_pattern_inner`
-inlines their content into one shared `<defs>`. The 112 EMF-derived
-`stars*` tiles each carry the same six ids -- `defs2`, `layer1`, `base`,
-`grid8`, `metadata5` and the empty hatch-base `EMFhbasepattern` -- so a
-sheet of 24 of them used to emit 24 copies of each.
+inlines their content into one shared `<defs>`. The EMF-derived
+EMF-derived `stars*` tiles each carried the same six ids, so a sheet of 24 of
+them used to emit 24 copies of each.  The Sketch tiles in `testdb/patterns`
+(`bubbles`, `cage`, `rain`, ...) share `Page-1` and `Combined-Shape` the same way.
 
 No shipped tile references its own ids, so the collision was invalid
 markup rather than a wrong render. These tests pin the scoping that keeps
@@ -16,29 +16,18 @@ from __future__ import annotations
 
 import collections
 import re
-import sqlite3
-from pathlib import Path
 
 import pytest
 
 from renderers.svg_patterns import pattern_def_xml, scope_pattern_ids
-
-DB_PATH = Path(__file__).resolve().parent.parent / "calendar.db"
+from tools.db.build_db import TEST_PATTERNS_DIR
 
 
 @pytest.fixture(scope="module")
 def patterns() -> dict[str, str]:
-    if not DB_PATH.exists():
-        pytest.skip(f"{DB_PATH} not present")
-    con = sqlite3.connect(DB_PATH)
-    try:
-        rows = dict(con.execute("SELECT name, svg FROM patterns").fetchall())
-    finally:
-        con.close()
-    if not rows:
-        # The tiles are not in the repo (tools/db/build_db.py leaves the table
-        # empty); load them with importers/import_patterns.py.
-        pytest.skip("the patterns table is empty")
+    """Every tile in ``testdb/patterns``, by name."""
+    rows = {f.stem: f.read_text(encoding="utf-8") for f in sorted(TEST_PATTERNS_DIR.glob("*.svg"))}
+    assert rows, f"no tiles in {TEST_PATTERNS_DIR}"
     return rows
 
 
@@ -93,18 +82,18 @@ class TestScopePatternIds:
 
 class TestPatternDefScoping:
     def test_def_xml_scopes_with_the_def_id(self, patterns):
-        xml = pattern_def_xml("pat-stars1-red", patterns["stars1"], "red")
-        assert 'id="pat-stars1-red-EMFhbasepattern"' in xml
-        assert 'id="EMFhbasepattern"' not in xml
+        xml = pattern_def_xml("pat-bubbles-red", patterns["bubbles"], "red")
+        assert 'id="pat-bubbles-red-Page-1"' in xml
+        assert 'id="Page-1"' not in xml
 
     def test_two_tiles_no_longer_collide(self, patterns):
-        a = pattern_def_xml("pat-stars1-red", patterns["stars1"], "red")
-        b = pattern_def_xml("pat-stars10-red", patterns["stars10"], "red")
+        a = pattern_def_xml("pat-bubbles-red", patterns["bubbles"], "red")
+        b = pattern_def_xml("pat-cage-red", patterns["cage"], "red")
         assert set(_ids(a)).isdisjoint(_ids(b))
 
     def test_the_same_tile_in_two_colors_does_not_collide(self, patterns):
-        a = pattern_def_xml("pat-stars1-red", patterns["stars1"], "red")
-        b = pattern_def_xml("pat-stars1-blue", patterns["stars1"], "blue")
+        a = pattern_def_xml("pat-bubbles-red", patterns["bubbles"], "red")
+        b = pattern_def_xml("pat-bubbles-blue", patterns["bubbles"], "blue")
         assert set(_ids(a)).isdisjoint(_ids(b))
 
     def test_whole_table_in_one_document_has_no_duplicate_ids(self, patterns):
