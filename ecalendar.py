@@ -131,6 +131,44 @@ def _validate_pagination_args(args) -> int:
 # =============================================================================
 
 
+def _warn_unsupported_page_chrome(args, visualizer, view_type: str) -> None:
+    """Warn about page-chrome flags the visualizer does not support."""
+    # Warn about SVG layout options not applicable to text-only output.
+    # Options with per-view effects (--shade, --monthnames,
+    # --shrink, --weekend-days, --includenotes, --nodurations) are gated
+    # at the parser level instead — a view that never reads them does not
+    # accept them (docs/cli_theme_overrides.html, Appendix A).
+    _svg_layout_checks = [
+        ("margin", getattr(args, "margin", False), "--margin"),
+        ("header", getattr(args, "header", False), "--header"),
+        ("footer", getattr(args, "footer", False), "--footer"),
+        ("headerleft", bool(getattr(args, "headerleft", "")), "--headerleft"),
+        ("headercenter", bool(getattr(args, "headercenter", "")), "--headercenter"),
+        ("headerright", bool(getattr(args, "headerright", "")), "--headerright"),
+        ("footerleft", bool(getattr(args, "footerleft", "")), "--footerleft"),
+        ("footercenter", bool(getattr(args, "footercenter", "")), "--footercenter"),
+        ("footerright", bool(getattr(args, "footerright", "")), "--footerright"),
+        (
+            "watermark_text",
+            bool(getattr(args, "watermark_text", "")),
+            "--watermark-text",
+        ),
+        (
+            "watermark_rotation_angle",
+            getattr(args, "watermark_rotation_angle", None) is not None,
+            "--watermark-rotation-angle",
+        ),
+        (
+            "watermark_image",
+            bool(getattr(args, "watermark_image", "")),
+            "--watermark-image",
+        ),
+    ]
+    for opt_name, was_set, flag in _svg_layout_checks:
+        if was_set and opt_name not in visualizer.supported_options:
+            logger.warning(f"{flag} is not supported for '{view_type}' visualization and will be ignored")
+
+
 def run(argv: list[str] | None = None) -> int:
     """
     Top-level orchestrator for the EventCalendar CLI.
@@ -726,40 +764,7 @@ def run(argv: list[str] | None = None) -> int:
         for warning in warnings:
             logger.warning(warning)
 
-        # Warn about SVG layout options not applicable to text-only output.
-        # Options with per-view effects (--shade, --monthnames,
-        # --shrink, --weekend-days, --includenotes, --nodurations) are gated
-        # at the parser level instead — a view that never reads them does not
-        # accept them (docs/cli_theme_overrides.html, Appendix A).
-        _svg_layout_checks = [
-            ("margin", getattr(args, "margin", False), "--margin"),
-            ("header", getattr(args, "header", False), "--header"),
-            ("footer", getattr(args, "footer", False), "--footer"),
-            ("headerleft", bool(getattr(args, "headerleft", "")), "--headerleft"),
-            ("headercenter", bool(getattr(args, "headercenter", "")), "--headercenter"),
-            ("headerright", bool(getattr(args, "headerright", "")), "--headerright"),
-            ("footerleft", bool(getattr(args, "footerleft", "")), "--footerleft"),
-            ("footercenter", bool(getattr(args, "footercenter", "")), "--footercenter"),
-            ("footerright", bool(getattr(args, "footerright", "")), "--footerright"),
-            (
-                "watermark_text",
-                bool(getattr(args, "watermark_text", "")),
-                "--watermark-text",
-            ),
-            (
-                "watermark_rotation_angle",
-                getattr(args, "watermark_rotation_angle", None) is not None,
-                "--watermark-rotation-angle",
-            ),
-            (
-                "watermark_image",
-                bool(getattr(args, "watermark_image", "")),
-                "--watermark-image",
-            ),
-        ]
-        for opt_name, was_set, flag in _svg_layout_checks:
-            if was_set and opt_name not in visualizer.supported_options:
-                logger.warning(f"{flag} is not supported for '{view_type}' visualization and will be ignored")
+        _warn_unsupported_page_chrome(args, visualizer, view_type)
 
         # Generate the visualization into a fresh run folder
         run_paths.prepare()
