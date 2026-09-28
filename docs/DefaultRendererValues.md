@@ -123,7 +123,7 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `base.default_missing_icon_color` | `default_missing_icon_color` | `red` |
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |
 | `weekly.day_box.hash_pattern_opacity` | `hash_pattern_opacity` | `0.15` |
-| `events.item_placement_order` | `item_placement_order` | `[priority]` |
+| `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `mini_calendar.current_day_color` | `mini_current_day_color` | `lightblue` |
 | `overflow.icon` | `overflow_indicator_icon` | `warningtriangle` |
 | `weekly.day_box.hash_pattern` | `theme_weekly_hash_pattern` | *unset* |
@@ -338,7 +338,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 | `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 
-<details><summary>Settings (53)</summary>
+<details><summary>Settings (54)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -350,6 +350,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `base.default_missing_icon` | `default_missing_icon` | *unset* |
 | `base.default_missing_icon_color` | `default_missing_icon_color` | `red` |
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |
+| `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `continuation.show` | `show_continuation_icon` | `true` |
 | `timeline.axis_width` | `timeline_axis_width` | `2` |
 | `timeline.bottom_colors` | `timeline_bottom_colors` | `[midnightblue, springgreen, deepskyblue, gold, tomato]` |
@@ -603,7 +604,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `base.default_missing_icon` | `default_missing_icon` | *unset* |
 | `base.default_missing_icon_color` | `default_missing_icon_color` | `red` |
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |
-| `events.item_placement_order` | `item_placement_order` | `[priority]` |
+| `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `continuation.show` | `show_continuation_icon` | `true` |
 
 </details>
@@ -706,7 +707,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
 | `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
 
-<details><summary>Settings (46)</summary>
+<details><summary>Settings (47)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -755,6 +756,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `continuation.icon_before` | `continuation_icon_before` | `arrow-left` |
 | `continuation.icon_color` | `continuation_icon_color` | *unset* |
 | `continuation.icon_height` | `continuation_icon_height` | `8` |
+| `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `continuation.show` | `show_continuation_icon` | `true` |
 
 </details>
@@ -763,10 +765,11 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 
 Plain-text output: no fonts, colours or style tokens. Everything comes from settings.
 
-<details><summary>Settings (11)</summary>
+<details><summary>Settings (12)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
+| `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `mini_calendar.show_adjacent` | `mini_show_adjacent` | `true` |
 | `text_mini.cell_width` | `text_mini_cell_width` | `2` |
 | `text_mini.day_number_digits` | `text_mini_day_number_digits` | 10 items: `𜳰, 𜳱, 𜳲, 𜳳, …` |

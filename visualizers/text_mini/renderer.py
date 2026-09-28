@@ -16,6 +16,7 @@ import arrow
 
 from config.config import weekend_style_starts_sunday
 from renderers.details_record import DetailsRecord, IconUse
+from shared.data_models import Event
 from shared.date_utils import (
     get_months_in_range,
     get_week_number,
@@ -24,6 +25,7 @@ from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
 from shared.holiday_labels import format_holiday_label
+from shared.item_order import sort_key_for_stable
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -218,15 +220,19 @@ class TextMiniCalendarRenderer:
         event_symbol_map: dict[int, str] = {}
         duration_entries: list[tuple[str, str, str]] = []
 
-        # Symbols come off their cycles in calendar order, so the reader meets
-        # the first symbol of each list on the earliest day it applies to and
-        # the details list below reads top-to-bottom in date order.  Without
-        # this the cycles follow whatever order the query returned rows in,
-        # which scatters the symbols across the grid.  (The holiday and
-        # nonworkday cycles further down already walk _iter_daykeys(), which
-        # is ascending by construction.)  End date then name break ties so the
-        # assignment is stable for events that share a start date.
-        for event in sorted(events, key=self._symbol_order_key):
+        # Symbols come off their cycles in item_placement_order, so the reader
+        # meets the first symbol of each list on the highest-placed item it
+        # applies to and the details list below reads in that same order.
+        # Without this the cycles follow whatever order the query returned
+        # rows in, which scatters the symbols across the grid.  (The holiday
+        # and nonworkday cycles further down already walk _iter_daykeys(),
+        # which is ascending by construction.)  Events arrive as raw dicts,
+        # so each is paired with a normalized Event only to compute its sort
+        # key; the original dicts are what the rest of this loop (and
+        # event_symbol_map's id()-keying) needs to keep working with.
+        paired = [(Event.from_dict(ev), ev) for ev in events]
+        paired.sort(key=lambda pair: sort_key_for_stable(pair[0], config.item_placement_order))
+        for _, event in paired:
             start = (event.get("Start") or "")[:8]
             end = (event.get("End") or event.get("Finish") or "")[:8]
             if not start:
@@ -360,13 +366,6 @@ class TextMiniCalendarRenderer:
         record = getattr(self, "details_record", None)
         if record is not None and name:
             record.record_icon(IconUse(symbol, None, role), str(name))
-
-    @staticmethod
-    def _symbol_order_key(event: dict) -> tuple[str, str, str]:
-        """Sort key placing events in ascending date order for symbol assignment."""
-        start = (event.get("Start") or "")[:8]
-        end = (event.get("End") or event.get("Finish") or "")[:8]
-        return (start, end, event.get("Task_Name") or "")
 
     def _duration_name_for(self, events: list[dict], start: str, end: str) -> str:
         for event in events:

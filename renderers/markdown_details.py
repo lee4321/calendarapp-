@@ -130,7 +130,7 @@ def _scalar_key(value: Any) -> tuple[int, Any]:
 
 
 def sort_views(views: list[RowView], sort_fields: Sequence[str]) -> list[RowView]:
-    """Order rows by *sort_fields*, in the vocabulary ``gantt.sort`` uses."""
+    """Order rows by *sort_fields*, in the vocabulary ``events.item_placement_order`` uses."""
 
     def key(view: RowView) -> tuple:
         parts: list[Any] = []

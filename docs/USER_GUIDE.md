@@ -672,7 +672,7 @@ In weekly, day-box cells are drawn first, events and durations are placed into t
 - Fiscal period labels appear only when fiscal labeling is enabled and the date qualifies as a fiscal boundary according to the fiscal lookup.
 - Day-box pattern and color decorations come from top-level `style_rules` entries with `apply_to: day_box`. Rules can match on day context (federal/company holiday, nonworkday, weekend, date) and event criteria (task name, notes, WBS, percent complete, resource group/names, priority, milestone, rollup, event type). Rules layer additively in declaration order. If no rule supplies a pattern, `theme_weekly_hash_pattern` is used as the fallback pattern. See Complex Structures Reference for the full syntax.
 - Single-day event text and event icons use the event's resource-group color when that group maps to a configured resource-group color; otherwise they use the default weekly event colors.
-- Item placement order is controlled by `item_placement_order`. Type tokens (`milestones`, `events`, `durations`) determine grouping order, and `priority` or `alphabetical` determine ordering within each group.
+- Item placement order is controlled by `item_placement_order` (`events.item_placement_order`), shared by every visualizer that places or orders event data — not just weekly. Type tokens (`milestones`, `events`, `durations`) determine grouping order; `wbs` orders WBS-having rows first (numeric comparison) with WBS-less rows always last; `priority` or `alphabetical` determine ordering within a group or the whole list; any other string names an events-table field; a mapping (e.g. `{resource_group: "Executive"}`) is a criteria token using the same select vocabulary as `style_rules`/`swimlane_rules`, and matching events sort ahead of non-matching ones. Defaults to `[wbs, start_date]` when a theme doesn't set it.
 - Events with notes need two free rows in the day box when `-notes` is enabled. Durations with notes also require two stacked rows for their double-height bar; if that space is not available, they overflow instead of being compressed into a one-row notes layout.
 - Continuation dates on duration bars (drawn when a duration starts before the calendar's first visible day or ends after the last) sit **inside** the bar — the start date is drawn just right of the left continuation arrow, the end date is drawn just left of the right continuation arrow, both vertically centered with the bar's name baseline.
 
@@ -1635,7 +1635,7 @@ every visualization.
 | `details.markdown.icon_mode` | `file` / `name` / `none` | `file` | Show icons as images, as names, or not at all |
 | `details.markdown.color_mode` | `swatch` / `hex` / `name` | `swatch` | Show colors as a swatch and code, as code, or as plain text |
 | `details.markdown.group_by` | `str` | `none` | One Events sub-table per value of a field (`category`, `lane`, `resource_group`, `assigned_color` ...) |
-| `details.markdown.sort` | `list[str]` | `[start_date, end_date, name]` | Events order, in the vocabulary of `gantt.sort`, plus `color_rank` |
+| `details.markdown.sort` | `list[str]` | `[start_date, end_date, name]` | Events order, in the vocabulary of `events.item_placement_order`, plus `color_rank` |
 | `details.markdown.columns` | `list[column]` | 15 columns | The Events table |
 | `details.markdown.exception_columns` | `list[column]` | Issue, Task, Date, Ref, Detail | The Exceptions table, over `visualizer`, `kind`, `issue`, `task`, `date`, `start`, `end`, `ref`, `detail` |
 | `details.markdown.holiday_columns` | `list[column]` | Icon, Date, Name, Kind, Non-work, Notes | The holidays table, over `date`, `start_date`, `end_date`, `name`, `raw_name`, `kind`, `country`, `nonworkday`, `notes`, `icon`, `icons`, `company`, `language`, `fullday`, `starthour`, `endhour`, `tags` |
@@ -1719,7 +1719,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `header_left_font_size` | `header.left.size_rule` | `float | None` | `None` | Per-papersize header-left font size rule |
 | `header_right_font_size` | `header.right.size_rule` | `float | None` | `None` | Per-papersize header-right font size rule |
 | `watermark_image_rotation_angle` | `watermark.image_rotation_angle` | `float` | `0.0` | watermark image rotation angle |
-| `item_placement_order` | `events.item_placement_order` | `list[str]` | `field(default_factory=lambda: ['priority'])` | item placement order |
+| `item_placement_order` | `events.item_placement_order` | `list[str \| dict[str, Any]]` | `field(default_factory=lambda: ['wbs', 'start_date'])` | item placement order, shared by every visualizer |
 | `margin_bottom` | `layout.margin.bottom` | `float | None` | `None` | Bottom margin; supports points or units like in/mm |
 | `margin_left` | `layout.margin.left` | `float | None` | `None` | Left margin; supports points or units like in/mm |
 | `margin_right` | `layout.margin.right` | `float | None` | `None` | Right margin; supports points or units like in/mm |
