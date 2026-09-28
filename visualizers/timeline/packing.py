@@ -44,6 +44,7 @@ import arrow
 from config.config import CalendarConfig
 from renderers.text_utils import string_width
 from shared.data_models import Event
+from shared.item_order import sort_events
 from shared.labella_layout import partition_for_both, resolve_font_path
 from shared.orientation import Orientation, Side, axis_to_xy, perp_offset
 from visualizers.timeline.labella_adapter import event_font
@@ -316,14 +317,7 @@ def pack_callouts(
         u_min, u_max = 0.0, axis_length
     clamp_edge = min(axis_length, u_max)
 
-    ordered = sorted(
-        events,
-        key=lambda e: (
-            e.start,
-            e.priority,
-            e.task_name.lower() if e.task_name else "",
-        ),
-    )
+    ordered = sort_events(list(events), config.item_placement_order)
 
     rows: list[list[tuple[float, float]]] = [[] for _ in range(max(0, max_rows))]
     placements: list[PackedPlacement] = []

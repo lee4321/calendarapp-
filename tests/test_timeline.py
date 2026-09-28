@@ -1348,6 +1348,11 @@ def test_grouping_off_leaves_the_rollup_rule_inert(tmp_path):
     """Depth 0 means no hierarchy to express, so nothing is floored."""
     config = _base_config(tmp_path / "rollup_depth0.svg")
     config.timeline_wbs_group_depth = 0
+    # Pure date-order item_placement_order (no "wbs" token), to isolate this
+    # test's lane-packing assertion from item_placement_order's default WBS
+    # ordering -- every _rollup_phase_events() event has a WBS code, so a
+    # wbs-first order would reorder lane assignment before packing even runs.
+    config.item_placement_order = ["start_date"]
     bars = _grouped_bars(config, _rollup_phase_events())
 
     renderer = _CaptureTimelineRenderer()

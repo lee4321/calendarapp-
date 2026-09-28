@@ -24,6 +24,7 @@ from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.day_classifier import classify_day
 from shared.icon_band import compute_icon_band_days
+from shared.item_order import sort_events, sort_key_for_stable
 from shared.orientation import Orientation, Side
 from shared.rule_engine import StyleEngine, StyleResult
 from shared.timeband import build_segments as _build_band_segments
@@ -740,14 +741,7 @@ class TimelineRenderer(BaseSVGRenderer):
         if not in_range:
             return []
 
-        ordered = sorted(
-            in_range,
-            key=lambda e: (
-                e.start,
-                e.priority,
-                e.task_name.lower() if e.task_name else "",
-            ),
-        )
+        ordered = sort_events(in_range, config.item_placement_order)
 
         group_colors = group_colors or {}
         group_depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
@@ -887,13 +881,10 @@ class TimelineRenderer(BaseSVGRenderer):
         if not group_colors:
             group_colors = TimelineRenderer._wbs_group_colors(config, events)
 
-        def date_key(event: Event) -> tuple:
-            return (
-                event.start,
-                event.end,
-                event.priority,
-                event.task_name.lower() if event.task_name else "",
-            )
+        order = config.item_placement_order
+
+        def item_key(event: Event) -> tuple:
+            return sort_key_for_stable(event, order)
 
         depth = int(getattr(config, "timeline_wbs_group_depth", 0) or 0)
 
@@ -911,12 +902,12 @@ class TimelineRenderer(BaseSVGRenderer):
                     # them; this also covers one whose code is not.
                     0 if e.rollup else 1,
                     wbs_sort_key(e.wbs),
-                    date_key(e),
+                    item_key(e),
                 ),
             )
         else:
             groups = {id(e): "" for e in events}
-            ordered = sorted(events, key=date_key)
+            ordered = sorted(events, key=item_key)
 
         colors: dict[int, str] = {}
         if depth > 0:
