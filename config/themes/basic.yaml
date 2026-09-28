@@ -18,7 +18,8 @@ layout:
     left: 0.5in
 events:
   item_placement_order:
-    - priority
+    - wbs
+    - start_date
 overflow:
   icon: warningtriangle
 details:

@@ -18,7 +18,7 @@ theme:
 base: {default_missing_icon: star-dashed}
 events:
   icon_color: palette:Accent:4
-  item_placement_order: [milestones, events, durations]
+  item_placement_order: [wbs, start_date]
 overflow: {icon: send-backward}
 colors:
   month_palette: PuBuGn

@@ -36,6 +36,7 @@ from shared.fiscal_renderer import (
     format_fiscal_period_label,
     get_fiscal_period_color,
 )
+from shared.item_order import sort_events
 from shared.rule_engine import DayContext, StyleEngine, StyleResult
 
 if TYPE_CHECKING:
@@ -191,42 +192,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         return days_to_print, rows_on_days
 
-    @staticmethod
-    def _placement_sort_key(event: Event, order: list[str]) -> tuple:
-        """Return a sort key for event placement ordering.
-
-        Args:
-            event: The Event to classify.
-            order: List of placement tokens.  Type tokens ("milestones",
-                   "events", "durations") define grouping rank by their
-                   position in the list.  Special tokens "priority" and
-                   "alphabetical" control the secondary sort within groups.
-        """
-        is_milestone = event.milestone
-        is_duration = event.start != event.end
-
-        # Map this event to its type token
-        if is_milestone:
-            event_type = "milestones"
-        elif is_duration:
-            event_type = "durations"
-        else:
-            event_type = "events"
-
-        # Derive type rank from the ordered list (ignoring special tokens)
-        type_tokens = [o for o in order if o in ("milestones", "events", "durations")]
-        if type_tokens:
-            # Events whose type is not listed go after all listed types
-            type_rank = type_tokens.index(event_type) if event_type in type_tokens else len(type_tokens)
-        else:
-            # No type tokens (e.g. ["priority"] or ["alphabetical"]) — no grouping
-            type_rank = 0
-
-        name = (event.task_name or "").lower()
-        if "alphabetical" in order:
-            return (type_rank, name)
-        return (type_rank, event.priority, name)
-
     def _place_all_events(
         self,
         config: CalendarConfig,
@@ -249,12 +214,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         overflow_count = 0
         overflow_entries: list[OverflowEntry] = []
 
-        order = config.item_placement_order
-        if order != ["priority"]:
-            event_objects = sorted(
-                event_objects,
-                key=lambda e: self._placement_sort_key(e, order),
-            )
+        event_objects = sort_events(event_objects, config.item_placement_order)
 
         for t in event_objects:
             daystart = arrow.get(arrow.get(t.start).date())

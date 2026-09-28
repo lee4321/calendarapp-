@@ -46,6 +46,7 @@ from shared.date_utils import format_arrow_date, visible_days
 from shared.day_classifier import NonWorkdayStyle, classify_day, nonworkday_override
 from shared.holiday_band import compute_holiday_band_days
 from shared.icon_band import compute_icon_band_days
+from shared.item_order import TYPE_TOKENS, sort_events, sort_key_for_stable
 from shared.rule_engine import DayContext, StyleEngine, StyleResult, _build_style_result
 from shared.timeband import (
     BandSegment as _BandSegment,
@@ -1239,25 +1240,31 @@ class BlockPlanRenderer(BaseSVGRenderer):
         lane_top: float,
         lane_bottom: float,
         wbs_group_depth: int = 0,
+        order: list[str | dict[str, Any]] | None = None,
     ) -> list[tuple[Event, int]]:
         """Row packing for duration bars: each bar takes the first row
         where it overlaps no bar (dates compare as YYYYMMDD strings).
         Returns (event, row_index) pairs; row count drives the per-row
         height in `_draw_lane_durations`.
 
-        With ``wbs_group_depth`` 0 bars are placed in date order.  Above 0,
-        bars sharing their first ``wbs_group_depth`` WBS segments form a
-        family, placed in WBS order (numeric, WBS-less bars last).  A
-        family's leaders — its rollups, or the bar whose WBS is the family
-        code — go first, and its other bars are kept in rows below every
-        leader, so the root reads as the family's header.  Rows skipped
-        for that stay open to other families.
+        With ``wbs_group_depth`` 0 bars are placed in ``order`` (the shared
+        item_placement_order).  Above 0, bars sharing their first
+        ``wbs_group_depth`` WBS segments form a family, placed in WBS order
+        (numeric, WBS-less bars last) — this family/leader assignment is
+        blockplan's own higher-order placement and sits above the common
+        sort.  A family's leaders — its rollups, or the bar whose WBS is the
+        family code — go first, and its other bars are kept in rows below
+        every leader, so the root reads as the family's header, with
+        ``order`` as the tiebreak both within a family and for its leaders.
+        Rows skipped for that stay open to other families.
         """
         if not events:
             return []
 
-        def date_key(e: Event) -> tuple:
-            return (e.start, e.end, e.priority, e.task_name.lower())
+        order = order if order is not None else ["wbs", "start_date"]
+
+        def item_key(e: Event) -> tuple:
+            return sort_key_for_stable(e, order)
 
         groups: dict[int, str] = {}
         if wbs_group_depth > 0:
@@ -1275,11 +1282,11 @@ class BlockPlanRenderer(BaseSVGRenderer):
                     wbs_sort_key(groups[id(e)]),
                     0 if is_leader(e) else 1,
                     wbs_sort_key(e.wbs),
-                    date_key(e),
+                    item_key(e),
                 ),
             )
         else:
-            ordered = sorted(events, key=date_key)
+            ordered = sorted(events, key=item_key)
 
         row_spans: list[list[tuple[str, str]]] = []
         leader_rows: dict[str, int] = {}
@@ -1300,13 +1307,18 @@ class BlockPlanRenderer(BaseSVGRenderer):
         return placed
 
     @staticmethod
-    def _event_rows(events: list[Event], min_separation_days: int = 2) -> list[tuple[Event, int]]:
+    def _event_rows(
+        events: list[Event],
+        min_separation_days: int = 2,
+        order: list[str | dict[str, Any]] | None = None,
+    ) -> list[tuple[Event, int]]:
         """Row packing for point events (markers + labels): an event
         joins a row only when it starts ``min_separation_days`` after
         the row's previous event, so labels don't collide."""
         if not events:
             return []
-        ordered = sorted(events, key=lambda e: (e.start, e.priority, e.task_name.lower()))
+        order = order if order is not None else ["wbs", "start_date"]
+        ordered = sorted(events, key=lambda e: sort_key_for_stable(e, order))
         last_start: list[str] = []
         placed: list[tuple[Event, int]] = []
         for event in ordered:
@@ -1355,17 +1367,10 @@ class BlockPlanRenderer(BaseSVGRenderer):
         lane_h = total_h / lane_count
 
         # Determine from item_placement_order which content type occupies the upper section.
-        # "durations" before "events"/"milestones" → durations on top (default).
-        order = list(getattr(config, "item_placement_order", None) or ["priority"])
-        durations_upper = True
-        for token in order:
-            t = str(token).strip().lower()
-            if t in ("events", "milestones"):
-                durations_upper = False
-                break
-            if t == "durations":
-                durations_upper = True
-                break
+        # The first type token present decides; no type token → durations on top (default).
+        order = list(config.item_placement_order)
+        type_tokens_in_order = [t for t in order if isinstance(t, str) and t in TYPE_TOKENS]
+        durations_upper = not type_tokens_in_order or type_tokens_in_order[0] == "durations"
 
         global_split_ratio = float(getattr(config, "blockplan_lane_split_ratio", 0.5))
 
@@ -1450,10 +1455,16 @@ class BlockPlanRenderer(BaseSVGRenderer):
                 # When only one type is present, it gets the full lane.
                 if durations and events:
                     dur_placed = self._duration_rows(
-                        durations, lane_top, lane_bottom, int(config.blockplan_wbs_group_depth or 0)
+                        durations,
+                        lane_top,
+                        lane_bottom,
+                        int(config.blockplan_wbs_group_depth or 0),
+                        config.item_placement_order,
                     )
                     dur_row_count = max((r for _, r in dur_placed), default=0) + 1
-                    evt_row_count = max((r for _, r in self._event_rows(events)), default=0) + 1
+                    evt_row_count = (
+                        max((r for _, r in self._event_rows(events, order=config.item_placement_order)), default=0) + 1
+                    )
                     shared_row_h = lane_h / (dur_row_count + evt_row_count)
                     if durations_upper:
                         dur_sect_top = lane_top
@@ -1580,7 +1591,9 @@ class BlockPlanRenderer(BaseSVGRenderer):
         """
         if not events:
             return
-        rows = self._duration_rows(events, top, bottom, int(config.blockplan_wbs_group_depth or 0))
+        rows = self._duration_rows(
+            events, top, bottom, int(config.blockplan_wbs_group_depth or 0), config.item_placement_order
+        )
         max_row = max((r for _, r in rows), default=0)
         row_count = max(1, max_row + 1)
         row_h = (bottom - top) / row_count
@@ -1969,7 +1982,7 @@ class BlockPlanRenderer(BaseSVGRenderer):
         if not events or self._drawing is None:
             return
 
-        ordered = sorted(events, key=lambda e: (e.start, e.priority, e.task_name.lower()))
+        ordered = sort_events(events, config.item_placement_order)
         _evt_name_style = config.get_text_style("ec-event-name")
         _evt_notes_style = config.get_text_style("ec-event-notes")
         _evt_date_style = config.get_text_style("ec-event-date")

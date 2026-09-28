@@ -359,8 +359,8 @@ def _wbs_dur(name, start, end, wbs, *, rollup=False, color=None):
     return {"Task_Name": name, "Start": start, "End": end, "WBS": wbs, "Rollup": rollup, "Color": color, "Priority": 1}
 
 
-def _row_by_name(events, depth):
-    placed = BlockPlanRenderer._duration_rows([Event.from_dict(e) for e in events], 0.0, 100.0, depth)
+def _row_by_name(events, depth, order=None):
+    placed = BlockPlanRenderer._duration_rows([Event.from_dict(e) for e in events], 0.0, 100.0, depth, order)
     return {event.task_name: row for event, row in placed}
 
 
@@ -377,8 +377,9 @@ def test_blockplan_rollup_sits_above_its_wbs_family():
     assert rows["phase two"] == 0
     assert min(rows["one a"], rows["one b"], rows["two a"]) >= 1
 
-    # Without grouping, date order puts the shorter child first.
-    flat = _row_by_name(events, 0)
+    # Without grouping and with a pure date-order item_placement_order (no
+    # "wbs" token), date order puts the shorter child first.
+    flat = _row_by_name(events, 0, order=["start_date"])
     assert flat["one a"] == 0
     assert flat["phase one"] == 1
 

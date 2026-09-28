@@ -8,7 +8,7 @@ theme:
 base: {font_family: SairaExtraCondensed-Regular}
 events:
   icon_color: deeppink
-  item_placement_order: [milestones, events, alphabetical]
+  item_placement_order: [wbs, start_date]
 watermark:
   font_family: SairaExtraCondensed-Regular
   opacity: 0.5

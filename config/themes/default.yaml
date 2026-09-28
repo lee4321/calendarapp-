@@ -13,7 +13,8 @@ base:
 events:
   icon_color: navy
   item_placement_order:
-    - priority
+    - wbs
+    - start_date
 watermark:
   text: null
   font_family: OfficinaSans-Book

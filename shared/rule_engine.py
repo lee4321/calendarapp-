@@ -366,6 +366,11 @@ _EVENT_CRITERIA_KEYS: frozenset[str] = frozenset(
     }
 )
 
+#: Public alias -- other modules (e.g. config validation for
+#: item_placement_order criteria tokens) need this vocabulary without
+#: reaching into a private name.
+EVENT_CRITERIA_KEYS: frozenset[str] = _EVENT_CRITERIA_KEYS
+
 
 def _matches_event_fields(select: dict, event: Event) -> bool | None:
     """
@@ -453,6 +458,16 @@ def _matches_event_fields(select: dict, event: Event) -> bool | None:
             return False
 
     return True
+
+
+def matches_event_fields(select: dict, event: Event) -> bool:
+    """Public, tri-state-collapsed wrapper around :func:`_matches_event_fields`.
+
+    A select dict with no recognized criteria keys is treated as a match
+    (``None`` collapses to ``True``), the same way ``StyleEngine`` and
+    ``LaneEngine`` already treat an absent criterion as non-disqualifying.
+    """
+    return _matches_event_fields(select, event) is not False
 
 
 def _build_style_result(rule_style: dict) -> StyleResult:

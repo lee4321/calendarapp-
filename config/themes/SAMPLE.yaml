@@ -19,7 +19,8 @@ layout:
     left: 0.5in
 events:
   item_placement_order:
-    - priority
+    - wbs
+    - start_date
 watermark:
   text: ''
   rotation_angle: 45.0

@@ -13,7 +13,8 @@ base:
 events:
   icon_color: blue
   item_placement_order:
-    - priority
+    - wbs
+    - start_date
 watermark:
   text: null
   font_family: PlaywriteDEGrund-VariableFont_wght

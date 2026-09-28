@@ -1070,7 +1070,6 @@ class CalendarConfig:
     gantt_row_height: float = 14.0
     gantt_header_row_height: float = 18.0
     gantt_indent_per_level: float = 8.0
-    gantt_sort: list[str] = field(default_factory=lambda: ["wbs", "start_date"])
     # Timescale.  Bands use the blockplan band schema; bottom defaults to a
     # copy of the top (see __post_init__) so a theme declaring only top bands
     # gets a mirrored bottom axis.
@@ -1342,13 +1341,21 @@ class CalendarConfig:
     theme_style_rules: list[dict[str, Any]] | None = None
     theme_swimlane_rules: list[dict[str, Any]] | None = None
 
-    # Item placement order in day boxes (determines which type gets top rows).
-    # A list of tokens; the first token's item type is placed first, etc.
-    # Type tokens: "milestones", "events", "durations"
-    # Special tokens: "priority" (sort by priority field, no type grouping),
-    #                 "alphabetical" (sort by name)
-    # Example: ["milestones", "events", "durations"]
-    item_placement_order: list[str] = field(default_factory=lambda: ["priority"])
+    # Global item-placement/sort order, honored by every visualizer that
+    # places or orders event data (weekly day boxes, blockplan swimlanes,
+    # gantt rows, timeline callouts/bars, compactplan durations, text-mini
+    # symbol assignment). A list of tokens, consumed left-to-right; see
+    # shared/item_order.py for the full algorithm. Token kinds:
+    #   Type tokens: "milestones", "events", "durations" -- classify by
+    #     event shape; not-listed types sort after listed ones.
+    #   "wbs" -- WBS-having rows before WBS-less rows, numeric WBS compare.
+    #   "priority" -- sort by Event.priority.
+    #   "alphabetical" -- sort by lowercased task_name.
+    #   any other string -- an Event field name (via resolve_field).
+    #   a dict -- arbitrary event-selection criteria (same vocabulary as
+    #     style_rules/swimlane_rules' select:), matches sort first.
+    # Example: [{"resource_group": "Executive"}, "milestones", "priority"]
+    item_placement_order: list[str | dict[str, Any]] = field(default_factory=lambda: ["wbs", "start_date"])
     theme_federal_holiday_color: str | None = None
     theme_federal_holiday_opacity: float | None = None
     theme_company_holiday_color: str | None = None
@@ -1461,17 +1468,30 @@ class CalendarConfig:
                 raise ValueError(f"weekend_days must be a list of ints 0–6 (ISO weekday), got {self.weekend_days!r}")
             if len(set(self.weekend_days)) != len(self.weekend_days):
                 raise ValueError(f"weekend_days must not contain duplicates, got {self.weekend_days!r}")
-        _valid_placement_tokens = frozenset({"priority", "milestones", "events", "durations", "alphabetical"})
         if not isinstance(self.item_placement_order, list) or not self.item_placement_order:
             raise ValueError(
                 f"item_placement_order must be a non-empty list of placement tokens, got {self.item_placement_order!r}"
             )
-        _invalid_tokens = [t for t in self.item_placement_order if t not in _valid_placement_tokens]
-        if _invalid_tokens:
-            raise ValueError(
-                f"item_placement_order contains invalid tokens {_invalid_tokens!r}; "
-                f"valid tokens are {sorted(_valid_placement_tokens)}"
-            )
+        # Deferred import: shared/__init__.py pulls in shared.date_utils,
+        # which imports config.config -- importing shared.rule_engine at
+        # module load time would be circular, so it's done here instead.
+        from shared.rule_engine import EVENT_CRITERIA_KEYS
+
+        for _token in self.item_placement_order:
+            if isinstance(_token, dict):
+                _bad_keys = [k for k in _token if k not in EVENT_CRITERIA_KEYS]
+                if _bad_keys:
+                    raise ValueError(
+                        f"item_placement_order criteria token has unrecognized keys {_bad_keys!r}; "
+                        f"valid criteria keys are {sorted(EVENT_CRITERIA_KEYS)}"
+                    )
+            elif not isinstance(_token, str) or not _token.strip():
+                raise ValueError(
+                    f"item_placement_order tokens must be non-empty strings or criteria dicts, got {_token!r}"
+                )
+            # Any other string is a field token (resolved via resolve_field at
+            # sort time); unknown field names degrade to a no-op, so no
+            # closed-set check is applied here.
         if self.blockplan_lane_match_mode not in {"first", "all"}:
             raise ValueError(
                 f"blockplan_lane_match_mode must be 'first' or 'all', got {self.blockplan_lane_match_mode!r}"

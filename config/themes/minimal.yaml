@@ -50,7 +50,7 @@ colors:
   group_palette: Greys
   month_palette: Greys
 events:
-  item_placement_order: [priority]
+  item_placement_order: [wbs, start_date]
 excelblockplan:
   band_row_height: 18.0
   font_name: Calibri
