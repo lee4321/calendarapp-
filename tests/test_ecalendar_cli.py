@@ -316,3 +316,35 @@ def test_help_subcommand_choices_are_sorted_and_cover_every_command(capsys):
     with pytest.raises(SystemExit):
         parser.parse_args(["help", "bogus"])
     assert f"(choose from {', '.join(choices)})" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "flag,value",
+    [
+        ("headerleft", "Hi"),
+        ("headercenter", "Hi"),
+        ("headerright", "Hi"),
+        ("footerleft", "Hi"),
+        ("footercenter", "Hi"),
+        ("footerright", "Hi"),
+        ("watermark_rotation_angle", 30.0),
+    ],
+)
+def test_page_chrome_flags_do_not_warn_for_svg_views(flag, value, caplog):
+    from visualizers.factory import VisualizerFactory
+
+    args = argparse.Namespace(**{flag: value})
+    with caplog.at_level("WARNING"):
+        ecalendar._warn_unsupported_page_chrome(args, VisualizerFactory.create("weekly"), "weekly")
+
+    assert "not supported" not in caplog.text
+
+
+def test_page_chrome_flags_still_warn_for_text_mini(caplog):
+    from visualizers.factory import VisualizerFactory
+
+    args = argparse.Namespace(headerleft="Hi")
+    with caplog.at_level("WARNING"):
+        ecalendar._warn_unsupported_page_chrome(args, VisualizerFactory.create("text-mini"), "text-mini")
+
+    assert "--headerleft is not supported for 'text-mini'" in caplog.text
