@@ -200,6 +200,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Gantt.  `columns` is a list of column dicts (layout, not style) and
     # rides the same scalar path as blockplan.swimlanes.
     ("gantt", "columns"): "gantt_columns",
+    ("gantt", "header_label_align_h"): "gantt_header_label_align_h",
     ("gantt", "table_width_ratio"): "gantt_table_width_ratio",
     ("gantt", "row_height"): "gantt_row_height",
     ("gantt", "header_row_height"): "gantt_header_row_height",

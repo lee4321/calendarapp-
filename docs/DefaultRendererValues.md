@@ -653,7 +653,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `ec-row-band` | `fill` | `#F8F8FF` | `band.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 | `ec-row-band` | `fill_opacity` | `0.25` | `float(band.fill_opacity if band.fill_opacity is not None else 0.15)` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 
-<details><summary>Settings (24)</summary>
+<details><summary>Settings (25)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -666,6 +666,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `gantt.continuation_icon` | `gantt_continuation_icon` | `arrow-bar-right` |
 | `gantt.deadline_icon` | `gantt_deadline_icon` | `square-fill` |
 | `gantt.float_opacity_scale` | `gantt_float_opacity_scale` | `0.4` |
+| `gantt.header_label_align_h` | `gantt_header_label_align_h` | `left` |
 | `gantt.indent_per_level` | `gantt_indent_per_level` | `8` |
 | `gantt.link_ref_family_size` | `gantt_link_ref_family_size` | `100` |
 | `gantt.link_ref_icon_families` | `gantt_link_ref_icon_families` | `[circle-, darkcircle-, square-]` |

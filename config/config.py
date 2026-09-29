@@ -1124,6 +1124,7 @@ class CalendarConfig:
     )
     gantt_bottom_time_bands: list[dict[str, Any]] | None = None
     gantt_band_row_height: float = 10.0
+    gantt_header_label_align_h: str = "left"  # left | center | right; a band's label_align_h wins
     # Horizontal pagination: the narrowest a day column may get before the
     # date range is split across pages.  0 disables the split, fitting the
     # whole range onto one page however thin the columns become.
@@ -1523,6 +1524,10 @@ class CalendarConfig:
             raise ValueError(
                 "blockplan_lane_label_align_v must be 'top', 'middle', or 'bottom', "
                 f"got {self.blockplan_lane_label_align_v!r}"
+            )
+        if self.gantt_header_label_align_h not in {"left", "center", "right"}:
+            raise ValueError(
+                f"gantt_header_label_align_h must be 'left', 'center', or 'right', got {self.gantt_header_label_align_h!r}"
             )
         if self.blockplan_header_label_align_h not in {"left", "center", "right"}:
             raise ValueError(

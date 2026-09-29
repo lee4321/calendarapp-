@@ -565,6 +565,7 @@ class GanttRenderer(BaseSVGRenderer):
         token = self._tk("text:heading")
         font = band.get("label_font") or token.get("font") or text.font
         font_size = min(float(band.get("label_font_size") or token.get("size") or 8.0), max(h - 2.0, 4.0))
+        align = str(band.get("label_align_h") or config.gantt_header_label_align_h).strip().lower()
         self._draw_clipped_text(
             label,
             x + 6.0,
@@ -573,7 +574,7 @@ class GanttRenderer(BaseSVGRenderer):
             font,
             font_size,
             band.get("label_color") or token.get("color") or text.color,
-            align="left",
+            align=align if align in {"left", "center", "right"} else config.gantt_header_label_align_h,
             css_class="ec-heading",
         )
 

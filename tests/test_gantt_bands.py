@@ -192,3 +192,33 @@ def test_each_band_label_is_drawn_in_the_table_column():
     assert {h["y"] for h in headings} <= {c["y"] for c in renderer.of_class(renderer.rects, "ec-band-cell")}
     chart_left = min(c["x"] for c in renderer.of_class(renderer.rects, "ec-band-cell"))
     assert all(h["x"] + h["w"] <= chart_left + 0.01 for h in headings)
+
+
+@pytest.mark.parametrize(("setting", "anchor"), [("left", "start"), ("center", "middle"), ("right", "end")])
+def test_band_headings_follow_header_label_align_h(setting, anchor):
+    renderer = render(
+        [task()],
+        gantt_header_label_align_h=setting,
+        gantt_top_time_bands=[{"label": "Month", "unit": "month", "row_height": 8}],
+        gantt_bottom_time_bands=[],
+    )
+
+    (heading,) = [t for t in renderer.texts if t.get("css_class") == "ec-heading"]
+    assert heading["anchor"] == anchor
+
+
+def test_a_bands_label_align_h_beats_the_theme_setting():
+    renderer = render(
+        [task()],
+        gantt_header_label_align_h="left",
+        gantt_top_time_bands=[{"label": "Month", "unit": "month", "row_height": 8, "label_align_h": "right"}],
+        gantt_bottom_time_bands=[],
+    )
+
+    (heading,) = [t for t in renderer.texts if t.get("css_class") == "ec-heading"]
+    assert heading["anchor"] == "end"
+
+
+def test_an_unknown_header_label_align_h_is_rejected():
+    with pytest.raises(ValueError, match="gantt_header_label_align_h"):
+        CalendarConfig(gantt_header_label_align_h="middle")
