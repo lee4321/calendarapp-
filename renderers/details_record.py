@@ -377,6 +377,10 @@ class DetailsRecord:
         if note is not None:
             return note
         raw = dict(event) if isinstance(event, dict) else raw_row_for(parsed)
+        if parsed.original_icon is not None:
+            # A numbered icon stands in for the event's own; the row keeps the data.
+            raw["Icon"] = parsed.original_icon or None
+        raw.pop("Original_Icon", None)
         note = EventNote(event=parsed, raw=raw, order=len(self.events), category=event_category(parsed))
         self.events.append(note)
         self._by_key[key] = note

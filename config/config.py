@@ -448,6 +448,7 @@ class CalendarConfig:
         default_factory=lambda: [
             {"field": "source_id", "header": "ID", "align": "right"},
             {"field": "marker", "header": "Key", "align": "center"},
+            {"field": "original_icon", "header": "Event Icon"},
             {"field": "name", "header": "Task Name", "indent": True},
             {"field": "category", "header": "Type"},
             {"field": "status", "header": "Status"},
@@ -533,6 +534,26 @@ class CalendarConfig:
     # Event/Duration icon styling (not renamed — icon fields are out of scope)
     event_icon_color: str = "navy"
     duration_icon_color: str = "navy"
+    # Numbered duration icons (shared by every view).  A view whose
+    # ``<view>_number_duration_icons`` flag is on hands each duration one icon
+    # from ``duration_icon_list`` (a key into ICON_SETS) in place of the icon
+    # its event data names; the run details then report that number.  The
+    # background is a rect painted behind the glyph and the stroke is the
+    # glyph's outline ink; None leaves the glyph on the page, outlined in its
+    # own ink.
+    duration_icon_list: str = "darksquare"
+    duration_icon_size: float = 8.0
+    duration_icon_background_color: str | None = None
+    duration_icon_stroke_color: str | None = None
+    weekly_number_duration_icons: bool = False
+    mini_number_duration_icons: bool = False
+    candybar_number_duration_icons: bool = False
+    timeline_number_duration_icons: bool = False
+    blockplan_number_duration_icons: bool = False
+    gantt_number_duration_icons: bool = False
+    pit_number_duration_icons: bool = False
+    compactplan_number_duration_icons: bool = True
+    excelblockplan_number_duration_icons: bool = False
     duration_stroke_dasharray: str | None = None
 
     # ── Continuation icons (global) ────────────────────────────────────────
@@ -1171,9 +1192,6 @@ class CalendarConfig:
     compactplan_axis_padding: float = 4.0
     compactplan_duration_line_width: float = 5.0
     compactplan_lane_spacing: float = 6.0
-    compactplan_show_duration_icons: bool = True
-    compactplan_duration_icon_list: str = "darksquare"  # key into ICON_SETS
-    compactplan_duration_icon_height: float = 8.0
     # Each bar is three columns: start date | icon + name | end date.  The
     # date columns are each duration_date_column_ratio of the bar's width and
     # the icon and name are fitted to the middle one.  A color left None

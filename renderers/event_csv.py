@@ -34,6 +34,7 @@ RENDER_COLUMNS: tuple[str, ...] = (
     "assigned_color",
     "color_source",
     "icons",
+    "original_icon",
     "category",
     "lane",
     "drawn",

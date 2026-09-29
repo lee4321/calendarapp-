@@ -1391,6 +1391,11 @@ class TestElementCatalogBindings:
                 {"color_rules": [{"select": {"priority": 1}, "color": "red"}]},
                 r"compact_plan\.color_rules is retired",
             ),
+            (
+                "compact_plan",
+                {"show_duration_icons": True, "duration_icon_height": 8.0},
+                r"compact_plan\.duration_icon_height, compact_plan\.show_duration_icons: numbered duration icons",
+            ),
         ],
     )
     def test_retired_event_color_maps_raise(self, section, body, message):
@@ -1405,6 +1410,18 @@ class TestElementCatalogBindings:
             engine.load(f.name)
         with pytest.raises(ThemeError, match=message):
             engine.apply(CalendarConfig())
+
+    def test_numbered_duration_icon_keys_reach_the_config(self):
+        theme = self._minimal_theme()
+        theme["durations"] = {"icon_list": "circles", "icon_size": 6.0, "icon_background_color": "gold"}
+        theme["weekly"] = {**(theme.get("weekly") or {}), "number_duration_icons": True}
+        cfg = self._engine_for(theme).apply(CalendarConfig())
+        assert (cfg.duration_icon_list, cfg.duration_icon_size, cfg.duration_icon_background_color) == (
+            "circles",
+            6.0,
+            "gold",
+        )
+        assert cfg.weekly_number_duration_icons is True
 
     def test_top_level_overflow_section_sets_the_icon(self):
         theme = self._minimal_theme()

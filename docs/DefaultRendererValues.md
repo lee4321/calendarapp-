@@ -61,10 +61,12 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `ec-watermark` | `color` | `#333333` | `_wm_ts.color` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
 | `ec-watermark` | `font` | `RobotoCondensed-Bold` | `_wm_ts.font` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
 
-<details><summary>Settings every SVG view reads (9)</summary>
+<details><summary>Settings every SVG view reads (11)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
+| `durations.icon_background_color` | `duration_icon_background_color` | *unset* |
+| `durations.icon_stroke_color` | `duration_icon_stroke_color` | *unset* |
 | `weekly.day_box.hash_pattern_scale` | `hash_pattern_scale` | `1` |
 | `weekly.day_box.hash_pattern_target_size` | `hash_pattern_target_size` | `18` |
 | `watermark.font_family` | `watermark_font` | `CascadiaCode` |
@@ -696,7 +698,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `ec-duration-bar` | `opacity` | *depends on the item being drawn* | `rule.stroke_opacity if rule.stroke_opacity is not None else theme.opacity` | `compactplan/renderer.py:CompactPlanRenderer._bar_stroke` |
 | `ec-duration-date` | `opacity` | `1` | `config.get_text_style("ec-duration-date").opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bar_content.draw_date` |
 | `ec-duration-icon` | `color` | `#555555` | `str(config.get_icon_style("ec-duration-icon").color or "")` | `compactplan/renderer.py:CompactPlanRenderer._draw_start_icon` |
-| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.compactplan_duration_icon_height)` | `compactplan/renderer.py:CompactPlanRenderer._duration_icon_height` |
+| `ec-duration-icon` | `size` | `10` | `float(style.size if style.size is not None else config.duration_icon_size)` | `compactplan/renderer.py:CompactPlanRenderer._duration_icon_height` |
 | `ec-event-name` | `color` | `#333333` | `str(_name_style.color)` | `compactplan/renderer.py:CompactPlanRenderer._draw_milestone` |
 | `ec-event-name` | `opacity` | `1` | `config.get_text_style("ec-event-name").opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bar_content`, `compactplan/renderer.py:CompactPlanRenderer._draw_milestone` |
 | `ec-label` | `color` | `#888888` | `str(_band_text_style.color)` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands` |
@@ -707,7 +709,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `ec-separator` | `opacity` | `0.5` | `_sep_style.opacity` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
 | `ec-separator` | `width` | `0.5` | `_sep_style.width` | `compactplan/renderer.py:CompactPlanRenderer._draw_bands.separator` |
 
-<details><summary>Settings (47)</summary>
+<details><summary>Settings (45)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -723,8 +725,6 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `compact_plan.duration_date_color` | `compactplan_duration_date_color` | *unset* |
 | `compact_plan.duration_date_column_ratio` | `compactplan_duration_date_column_ratio` | `0.04` |
 | `compact_plan.duration_date_format` | `compactplan_duration_date_format` | `M/D` |
-| `compact_plan.duration_icon_height` | `compactplan_duration_icon_height` | `8` |
-| `compact_plan.duration_icon_list` | `compactplan_duration_icon_list` | `darksquare` |
 | `compact_plan.duration_line_width` | `compactplan_duration_line_width` | `5` |
 | `compact_plan.duration_name_color` | `compactplan_duration_name_color` | *unset* |
 | `compact_plan.duration_show_end_date` | `compactplan_duration_show_end_date` | `false` |
@@ -744,7 +744,6 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `compact_plan.palette` | `compactplan_palette` | 10 items: `#92d050, #6b9bc7, gold, tomato, …` |
 | `compact_plan.show_axis` | `compactplan_show_axis` | `true` |
 | `compact_plan.show_axis_legend` | `compactplan_show_axis_legend` | `true` |
-| `compact_plan.show_duration_icons` | `compactplan_show_duration_icons` | `true` |
 | `compact_plan.show_milestone_labels` | `compactplan_show_milestone_labels` | `true` |
 | `compact_plan.text.font_name` | `compactplan_text_font_name` | *unset* |
 | `compact_plan.text.font_size` | `compactplan_text_font_size` | *unset* |
@@ -756,6 +755,7 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `continuation.icon_before` | `continuation_icon_before` | `arrow-left` |
 | `continuation.icon_color` | `continuation_icon_color` | *unset* |
 | `continuation.icon_height` | `continuation_icon_height` | `8` |
+| `durations.icon_size` | `duration_icon_size` | `8` |
 | `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `continuation.show` | `show_continuation_icon` | `true` |
 

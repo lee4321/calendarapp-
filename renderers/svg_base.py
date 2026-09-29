@@ -1267,6 +1267,20 @@ class BaseSVGRenderer(ABC):
         # Halo / background rect — drawn first so the glyph layers on top.
         self._maybe_draw_icon_halo(box_token, box_ctx, draw_x, draw_y, size)
 
+        # A duration's own icon takes the shared badge colors: a background
+        # rect behind the glyph and a stroke ink for its outline.  Marks that
+        # carry a details role (continuation arrows) are not the badge.
+        stroke_ink = None
+        if css_class == "ec-duration-icon" and details_role is None:
+            config = getattr(self, "_config", None)
+            background = getattr(config, "duration_icon_background_color", None)
+            if self._is_drawable_color(background):
+                pad = size * 0.1
+                self._draw_rect(
+                    draw_x - pad, draw_y - pad, size + 2 * pad, size + 2 * pad, fill=str(background), stroke="none"
+                )
+            stroke_ink = getattr(config, "duration_icon_stroke_color", None)
+
         # Extract the icon's original viewBox before stripping the wrapper so
         # the nested <svg> preserves the icon's own coordinate space.  width
         # and height are always set to `size` (the caller's display size), and
@@ -1276,7 +1290,10 @@ class BaseSVGRenderer(ABC):
 
         inner = self._strip_svg_wrapper(svg_markup)
 
-        style_attr = icon_color_style(color)
+        stroke_ink = stroke_ink if self._is_drawable_color(stroke_ink) else None
+        vb = viewbox.split()
+        outline = float(vb[2]) * 0.04 if stroke_ink and len(vb) == 4 else None  # 4% of the glyph's width
+        style_attr = icon_color_style(color, stroke_ink, outline)
         class_attr = f' class="{css_class}"' if css_class else ""
         opacity_attr = f' opacity="{opacity:.3f}"' if opacity < 1.0 else ""
         nested_svg = (

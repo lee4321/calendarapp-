@@ -15,6 +15,14 @@ events:
   item_placement_order:
     - wbs
     - start_date
+durations:
+  # numbered duration icons, for every view that switches them on
+  # (<view>.number_duration_icons): one icon per duration from this list,
+  # in place of the icon its event names.  Ink is style_rules icon:duration.
+  icon_list: darksquare
+  icon_size: 8.0
+  icon_background_color: null
+  icon_stroke_color: null
 watermark:
   text: null
   font_family: PlaywriteDEGrund-VariableFont_wght
@@ -55,6 +63,7 @@ details:
     columns:
       - { field: source_id,        header: ID,        align: right }
       - { field: marker,           header: Key,       align: center }
+      - { field: original_icon,    header: Event Icon }
       - { field: name,             header: Task Name, indent: true }
       - { field: category,         header: Type }
       - { field: status,           header: Status }
@@ -289,9 +298,7 @@ compact_plan:
   show_axis: false
   duration_line_width: 9.0
   lane_spacing: 9.0
-  show_duration_icons: true
-  duration_icon_list: darksquare
-  duration_icon_height: 8.0
+  number_duration_icons: true
   palette_name: null
   milestone_flag_height: 9.0
   milestone_flag_width: 7.0

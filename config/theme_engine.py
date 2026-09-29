@@ -50,6 +50,19 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     # Durations (icon/stroke only — text fields moved to weekly.name_text/notes_text)
     ("durations", "icon_color"): "duration_icon_color",
     ("durations", "stroke_dasharray"): "duration_stroke_dasharray",
+    ("durations", "icon_list"): "duration_icon_list",
+    ("durations", "icon_size"): "duration_icon_size",
+    ("durations", "icon_background_color"): "duration_icon_background_color",
+    ("durations", "icon_stroke_color"): "duration_icon_stroke_color",
+    # One switch per view: number its durations' icons (see durations.icon_list).
+    ("weekly", "number_duration_icons"): "weekly_number_duration_icons",
+    ("mini_calendar", "number_duration_icons"): "mini_number_duration_icons",
+    ("candybar", "number_duration_icons"): "candybar_number_duration_icons",
+    ("timeline", "number_duration_icons"): "timeline_number_duration_icons",
+    ("blockplan", "number_duration_icons"): "blockplan_number_duration_icons",
+    ("gantt", "number_duration_icons"): "gantt_number_duration_icons",
+    ("pit", "number_duration_icons"): "pit_number_duration_icons",
+    ("excelblockplan", "number_duration_icons"): "excelblockplan_number_duration_icons",
     # Weekly text styling — kept survivors only.  Phase 2 stripped the
     # weekly_text_* set entirely (font_name/color/size/opacity/alignment),
     # plus name_text_alignment + notes_text_alignment (no readers).
@@ -257,9 +270,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("compact_plan", "axis_width"): "compactplan_axis_width",
     ("compact_plan", "axis_padding"): "compactplan_axis_padding",
     ("compact_plan", "duration_line_width"): "compactplan_duration_line_width",
-    ("compact_plan", "show_duration_icons"): "compactplan_show_duration_icons",
-    ("compact_plan", "duration_icon_list"): "compactplan_duration_icon_list",
-    ("compact_plan", "duration_icon_height"): "compactplan_duration_icon_height",
+    ("compact_plan", "number_duration_icons"): "compactplan_number_duration_icons",
     ("compact_plan", "duration_show_start_date"): "compactplan_duration_show_start_date",
     ("compact_plan", "duration_show_end_date"): "compactplan_duration_show_end_date",
     ("compact_plan", "duration_date_format"): "compactplan_duration_date_format",
@@ -2120,6 +2131,18 @@ class ThemeEngine:
                 f"{legacy_hint()}"
             )
         compact_plan = self._theme_data.get("compact_plan")
+        if isinstance(compact_plan, dict):
+            moved = sorted(
+                f"compact_plan.{key}"
+                for key in ("show_duration_icons", "duration_icon_list", "duration_icon_height")
+                if key in compact_plan
+            )
+            if moved:
+                raise ThemeError(
+                    f"{', '.join(moved)}: numbered duration icons are shared by every view now -- "
+                    "set `durations.icon_list` / `durations.icon_size` once, and switch a view on with "
+                    "`compact_plan.number_duration_icons` (show_duration_icons became that switch)"
+                )
         if isinstance(compact_plan, dict) and "color_rules" in compact_plan:
             raise ThemeError(
                 "compact_plan.color_rules is retired — event colors come from style_rules in every "

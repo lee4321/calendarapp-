@@ -358,4 +358,6 @@ class BaseVisualizer:
             config.adjustedstart,
             config.adjustedend,
         )
-        return filter_events(events, config)
+        from shared.number_icons import number_duration_icons
+
+        return number_duration_icons(filter_events(events, config), config, self.name)

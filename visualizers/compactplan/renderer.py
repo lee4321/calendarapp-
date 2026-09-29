@@ -831,22 +831,15 @@ class CompactPlanRenderer(BaseSVGRenderer):
         config: CalendarConfig,
         axis_y: float,
     ) -> list[_PlacedDuration]:
-        from config.config import ICON_SETS
-
         axis_padding = float(config.compactplan_axis_padding)
         line_w = float(config.compactplan_duration_line_width)
-
-        # Build per-duration icon list (one unique icon per line, cycling by index).
-        show_dur_icons = bool(getattr(config, "compactplan_show_duration_icons", True))
-        list_name = str(getattr(config, "compactplan_duration_icon_list", "darksquare") or "darksquare")
-        icon_list: list[str] = ICON_SETS.get(list_name, []) if show_dur_icons else []
 
         # Rows must clear whatever is actually drawn on them.  The configured
         # spacing is a request, not a licence to overlap.  A bar's start icon
         # and text are capped at its height, so the bar is a row's ink.
         lane_spacing = max(float(config.compactplan_lane_spacing), line_w + _DURATION_ROW_GAP)
 
-        # Sort by item_placement_order for deterministic placement and stable icon assignment.
+        # Sort by item_placement_order for deterministic placement.
         sorted_durations = sort_events(durations, config.item_placement_order)
 
         # row_occupancy[i] = list of (x1, x2) intervals already placed in row i
@@ -855,7 +848,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
         placed: list[_PlacedDuration] = []
         first_day = min(day_x) if day_x else None
 
-        for evt_idx, evt in enumerate(sorted_durations):
+        for evt in sorted_durations:
             start_d = self._parse_date(evt.start)
             end_d = self._parse_date(evt.end)
             if start_d is None or end_d is None:
@@ -873,8 +866,11 @@ class CompactPlanRenderer(BaseSVGRenderer):
             if _sr is not None and _sr.fill_color:
                 color = _sr.fill_color
 
-            # Assign a unique icon to each duration by cycling through the list.
-            icon_name: str | None = icon_list[evt_idx % len(icon_list)] if icon_list else None
+            # The bar's icon is a style rule's, else its event's own -- which
+            # is the numbered one when numbering is on (see shared.number_icons).
+            icon_name: str | None = (
+                (_sr.icon if _sr is not None and _sr.icon is not None else evt.icon) or ""
+            ).strip() or None
 
             # Find the first row that (a) has no x-overlap with this event, and
             # (b) whose y-position is at least line_w away from every other row
@@ -1192,10 +1188,10 @@ class CompactPlanRenderer(BaseSVGRenderer):
         """Size of a bar's start icon.
 
         Theme-declared `icon:duration size:` overrides the per-visualizer
-        default; falls back to compactplan_duration_icon_height when absent.
+        default; falls back to the shared duration_icon_size when absent.
         """
         style = config.get_icon_style("ec-duration-icon")
-        return float(style.size if style.size is not None else config.compactplan_duration_icon_height)
+        return float(style.size if style.size is not None else config.duration_icon_size)
 
     def _draw_start_icon(
         self,
@@ -1311,7 +1307,7 @@ class CompactPlanRenderer(BaseSVGRenderer):
 
         text_x = mid_x1
         icon_size = min(icon_h, bar_h, mid_x2 - mid_x1)
-        if config.compactplan_show_duration_icons and p.icon_name and icon_size > 0:
+        if p.icon_name and icon_size > 0:
             self._draw_start_icon(p, mid_x1, p.row_y, icon_size, config)
             text_x += icon_size + _BAR_ICON_GAP
         if font_path:

@@ -424,6 +424,7 @@ details:
     columns:
       - { field: source_id,        header: ID,        align: right }
       - { field: marker,           header: Key,       align: center }
+      - { field: original_icon,    header: Event Icon }
       - { field: name,             header: Task Name, indent: true }
       - { field: category,         header: Type }
       - { field: status,           header: Status }

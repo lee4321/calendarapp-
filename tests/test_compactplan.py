@@ -8,7 +8,8 @@ from typing import ClassVar
 
 from fakes import FakeCalendarDB
 
-from config.config import create_calendar_config, setfontsizes
+from config.config import ICON_SETS, create_calendar_config, setfontsizes
+from shared.number_icons import number_duration_icons
 from visualizers.compactplan.layout import CompactPlanLayout
 from visualizers.compactplan.renderer import CompactPlanRenderer
 
@@ -538,7 +539,12 @@ def _render(tmp_path, events, db=None, **overrides):
     for key, value in overrides.items():
         setattr(config, key, value)
     renderer = _CaptureCompactPlanRenderer()
-    result = renderer.render(config, CompactPlanLayout().calculate(config), events, db or _DummyDB())
+    result = renderer.render(
+        config,
+        CompactPlanLayout().calculate(config),
+        number_duration_icons(events, config, "compactplan"),
+        db or _DummyDB(),
+    )
     return renderer, result, output
 
 
@@ -717,7 +723,7 @@ def test_a_start_icon_is_no_taller_than_its_bar(tmp_path):
         tmp_path,
         [_dur("Build", "20260309", "20260320")],
         compactplan_duration_line_width=5.0,
-        compactplan_duration_icon_height=8.0,
+        duration_icon_size=8.0,
     )
 
     (icon,) = [c for c in renderer.icon_calls if c.get("css_class") == "ec-duration-icon"]
@@ -1016,7 +1022,9 @@ def _render_bars(tmp_path, events, **overrides):
     for key, value in overrides.items():
         setattr(config, key, value)
     renderer = _BarTextRenderer()
-    renderer.render(config, CompactPlanLayout().calculate(config), events, _IconDB())
+    renderer.render(
+        config, CompactPlanLayout().calculate(config), number_duration_icons(events, config, "compactplan"), _IconDB()
+    )
     placed = sorted(renderer._placed_durations, key=lambda p: p.event.start)
     return renderer, config, placed
 
@@ -1220,3 +1228,23 @@ def test_symbols_explain_the_before_arrow_only_when_a_bar_starts_early(tmp_path)
 
     renderer, _, _ = _render(tmp_path, [_dur("Early", "20260201", "20260313", group="A")])
     assert "activity began earlier" in [symbol.meaning for symbol in renderer.details_record.symbols]
+
+
+def test_a_duration_icon_takes_the_shared_background_and_stroke(tmp_path, monkeypatch):
+    monkeypatch.setitem(ICON_SETS, "test-diamond", ["diamond"])  # the one icon _IconDB serves
+    output = tmp_path / "compact.svg"
+    config = _base_config(output)
+    config.duration_icon_list = "test-diamond"
+    config.duration_icon_background_color = "gold"
+    config.duration_icon_stroke_color = "crimson"
+    renderer = CompactPlanRenderer()
+    renderer.render(
+        config,
+        CompactPlanLayout().calculate(config),
+        number_duration_icons([_dur("Build", "20260309", "20260320")], config, "compactplan"),
+        _IconDB(),
+    )
+
+    svg = output.read_text()
+    assert 'fill="gold"' in svg
+    assert "stroke:crimson" in svg

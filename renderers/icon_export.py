@@ -58,9 +58,15 @@ def icon_viewbox(svg_markup: str) -> str:
     return f"0 0 {match.group(1)} {match.group(2)}" if match else "0 0 24 24"
 
 
-def icon_color_style(color: str | None) -> str:
-    """The style attribute that paints an icon in *color*."""
-    return f' style="color:{color};stroke:{color};fill:{color};"' if color else ""
+def icon_color_style(color: str | None, stroke: str | None = None, stroke_width: float | None = None) -> str:
+    """The style attribute that paints an icon in *color*, outlined in *stroke* when given.
+
+    *stroke_width* is in the icon's own viewBox units.
+    """
+    if not color:
+        return ""
+    width = f"stroke-width:{stroke_width:g};" if stroke and stroke_width else ""
+    return f' style="color:{color};stroke:{stroke or color};{width}fill:{color};"'
 
 
 def icon_filename(use: IconUse) -> str:

@@ -79,6 +79,10 @@ class Event:
     db_id: int | None = None
     user_id: int | None = None
     import_id: int | None = None
+    # Set when a view swapped a numbered icon into ``icon`` (see
+    # shared.number_icons): the icon the event data named, "" when it named
+    # none.  None means ``icon`` is the event's own.
+    original_icon: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> Event:
@@ -97,6 +101,7 @@ class Event:
             end=str(data.get("End") or data.get("Finish") or data.get("Start", "")),
             notes=data.get("Notes"),
             icon=data.get("Icon"),
+            original_icon=data.get("Original_Icon"),
             resource_group=data.get("Resource_Group"),
             resource_names=data.get("Resource_Name") or data.get("Resource_Names"),
             percent_complete=data.get("Percent_Complete", 0.0) or 0.0,

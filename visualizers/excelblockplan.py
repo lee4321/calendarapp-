@@ -59,6 +59,7 @@ from PIL import ImageColor
 from shared.data_models import Event
 from shared.day_classifier import classify_days, day_rule_matches
 from shared.icon_band import compute_icon_band_days
+from shared.number_icons import number_duration_icons
 from shared.rule_engine import DayContext, StyleEngine
 from visualizers.base import filter_events
 from visualizers.blockplan.renderer import BlockPlanRenderer, _BandSegment
@@ -1156,7 +1157,7 @@ def generate_excel_blockplan(
         str(config.userstart or config.adjustedstart),
         str(config.userend or config.adjustedend),
     )
-    filtered_raw = filter_events(raw_dicts, config)
+    filtered_raw = number_duration_icons(filter_events(raw_dicts, config), config, "excelblockplan")
     # Sort the (dict, Event) pairs together so the row index used to look up
     # field values stays aligned with the sort order.
     paired: list[tuple[dict, Event]] = [(d, Event.from_dict(d)) for d in filtered_raw]
