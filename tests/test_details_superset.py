@@ -53,9 +53,33 @@ _EXCEPTION_COLUMNS = [
 ]
 
 
+#: The gantt task table as the retired gantt details page wrote it: every
+#: column it had.  Kept here, not read from the default theme, so a theme
+#: that trims its table does not shrink what this test demands of the document.
+_GANTT_COLUMNS = [
+    {"field": "link_ref", "header": "Ref", "width": 0.03, "render": "icon", "align": "center"},
+    {"field": "source_id", "header": "ID", "width": 0.035, "align": "right"},
+    {"field": "name", "header": "Task Name", "width": 0.215, "max_lines": 2, "indent": True},
+    {"field": "status", "header": "Status", "width": 0.045},
+    {"field": "priority", "header": "Pri", "width": 0.025, "align": "right"},
+    {"field": "wbs", "header": "WBS", "width": 0.05},
+    {"field": "rollup", "header": "Roll", "width": 0.02, "render": "icon", "align": "center"},
+    {"field": "milestone", "header": "MS", "width": 0.02, "render": "icon", "align": "center"},
+    {"field": "percent_complete", "header": "%", "width": 0.035, "align": "right", "format": "{:.0%}"},
+    {"field": "effort_text", "header": "Effort", "width": 0.045, "align": "right"},
+    {"field": "duration_text", "header": "Duration", "width": 0.045, "align": "right"},
+    {"field": "start_date", "header": "Start", "width": 0.08, "date_format": "dd MM/DD/YY"},
+    {"field": "end_date", "header": "Finish", "width": 0.08, "date_format": "dd MM/DD/YY"},
+    {"field": "resource_names", "header": "Resources", "width": 0.065, "max_lines": 1},
+    {"field": "resource_group", "header": "Group", "width": 0.055},
+    {"field": "notes", "header": "Notes", "width": 0.075, "max_lines": 2},
+    {"field": "deadline", "header": "Deadline", "width": 0.08, "date_format": "dd MM/DD/YY"},
+]
+
+
 def _superset_theme(tmp_path: Path) -> Path:
     theme = yaml.safe_load((REPO_ROOT / "config" / "themes" / "default.yaml").read_text(encoding="utf-8"))
-    columns = [dict(column) for column in theme["gantt"]["columns"]]
+    columns = [dict(column) for column in _GANTT_COLUMNS]
     columns += [
         {"field": "marker", "header": "Key"},
         {"field": "start_date", "header": "Start ISO", "date_format": "YYYY-MM-DD"},

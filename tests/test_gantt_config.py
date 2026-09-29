@@ -98,15 +98,14 @@ def test_bottom_bands_mirror_the_top_when_unset():
     assert mirrored is not config.gantt_top_time_bands
 
 
-def test_mirror_follows_the_theme_not_the_dataclass_default(themed_config):
-    """The mirror has to be resolved after the theme applies, not at __init__."""
+def test_the_theme_declares_both_band_stacks(themed_config):
+    """Both stacks come from default.yaml, not the dataclass default (which
+    carries no row_height at all, so matching these proves the theme won)."""
     top = themed_config.gantt_top_time_bands
-    # default.yaml declares month / week / holiday, with these row heights —
-    # the dataclass default carries no row_height at all, so matching these
-    # proves the theme won.
-    assert [band.get("row_height") for band in top] == [12, 10, 10]
-    assert [band.get("unit") for band in top] == ["month", "week", "holiday"]
-    assert themed_config.get_gantt_bottom_bands() == top
+    assert [band.get("unit") for band in top] == ["fiscal_quarter", "month", "date", "date", "holiday"]
+    assert [band.get("row_height") for band in top] == [12, 12, 10, 10, 10]
+    bottom = themed_config.get_gantt_bottom_bands()
+    assert [band.get("unit") for band in bottom] == ["holiday", "date", "date", "month", "fiscal_quarter"]
 
 
 def test_explicit_bottom_bands_win_over_the_mirror():
@@ -127,7 +126,7 @@ def test_mirror_edits_cannot_leak_between_axes():
 def test_theme_gantt_section_reaches_config(themed_config):
     assert themed_config.gantt_table_width_ratio == 0.38
     assert themed_config.gantt_row_height == 14.0
-    assert themed_config.gantt_indent_per_level == 8.0
+    assert themed_config.gantt_indent_per_level == 5.0
     assert themed_config.item_placement_order == ["wbs", "start_date"]
     assert themed_config.gantt_progress_color == "black"
 
@@ -136,8 +135,7 @@ def test_theme_columns_carry_their_layout_keys(themed_config):
     by_field = {col["field"]: col for col in themed_config.gantt_columns}
     assert by_field["name"]["indent"] is True
     assert by_field["name"]["max_lines"] == 2
-    assert by_field["rollup"]["render"] == "icon"
-    assert by_field["start_date"]["date_format"] == "dd MM/DD/YY"
+    assert by_field["start_date"]["date_format"] == "dd MM/DD"
     assert by_field["percent_complete"]["align"] == "right"
 
 
