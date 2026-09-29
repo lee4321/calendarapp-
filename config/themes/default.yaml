@@ -182,6 +182,7 @@ candybar:
     opacity: 1.0
 timeline:
   number_duration_icons: true
+  duration_icon_visible: true
   leader:
     # one curve per leader instead of one per row it crosses
     direct: true
