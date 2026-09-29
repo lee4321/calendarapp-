@@ -456,6 +456,7 @@ gantt:
   # Item order (WBS-then-start-date) comes from events.item_placement_order,
   # shared with every other view.
   band_row_height: 10.0
+  header_label_align_h: right
   bar_height: 8.0
   min_day_width: 4.0     # 0 = never split the range across pages
   # Marks.  Icon names resolve against the `icon` table.
