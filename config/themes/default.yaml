@@ -20,7 +20,7 @@ durations:
   # (<view>.number_duration_icons): one icon per duration from this list,
   # in place of the icon its event names.  Ink is style_rules icon:duration.
   icon_list: darksquare
-  icon_size: 8.0
+  icon_size: 10.0
   icon_background_color: null
   icon_stroke_color: null
 watermark:
@@ -113,11 +113,13 @@ colors:
     color: green
     opacity: 0.25
 weekly:
+  number_duration_icons: true
   week_numbers:
     label_format: W{num:02d}
   day_box:
     hash_pattern_opacity: 0.1
 mini_calendar:
+  number_duration_icons: true
   # mini-icon day glyphs: squares | darksquare | circles |
   # darkcircles | squircles | darksquircles
   icon_set: squircles
@@ -155,6 +157,7 @@ text_mini:
   duration_symbols: null
   duration_fill: null
 candybar:
+  number_duration_icons: true
   show_week_numbers: true
   cell_width: 0            # 0 = square cells (width == row height)
   weeknum_col_ratio: 1.0   # week-number column width / day-cell width
@@ -178,6 +181,7 @@ candybar:
     stroke: lightgrey
     opacity: 1.0
 timeline:
+  number_duration_icons: true
   leader:
     # one curve per leader instead of one per row it crosses
     direct: true
@@ -236,6 +240,7 @@ timeline_durations:
   box_height: 14
   date_font_size: 9
 pit:
+  number_duration_icons: true
   direction: horizontal      # horizontal | vertical
   label_side: both           # primary | secondary | both
   labella:
@@ -373,6 +378,7 @@ compact_plan:
     - date
 
 blockplan:
+  number_duration_icons: true
   fiscal_year_start_month: 2
   week_start: 0
   show_unmatched_lane: false
@@ -434,6 +440,7 @@ blockplan:
       # label_font_size: 10
 
 gantt:
+  number_duration_icons: true
   # dependency arrowhead; none to omit
   arrow_marker_end: arrow-head
   arrow_marker_end_size: 6.0
@@ -534,6 +541,7 @@ time_bands:
     label_format: Week {n}
 
 excelblockplan:
+  number_duration_icons: true
   band_row_height: 18.0
   font_name: Calibri
   font_size: 9

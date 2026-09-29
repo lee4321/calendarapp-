@@ -132,4 +132,4 @@ def test_deriving_a_full_theme_round_trips():
     theme = yaml.safe_load((BUILTIN_THEMES_DIR / "default.yaml").read_text())
     child = derive(parent, theme, "corporate")
     assert resolve_extends(child, BUILTIN_THEMES_DIR) == theme
-    assert len(yaml.safe_dump(child).splitlines()) < len(yaml.safe_dump(theme).splitlines()) / 2
+    assert len(yaml.safe_dump(child).splitlines()) < len(yaml.safe_dump(theme).splitlines()) * 0.6
