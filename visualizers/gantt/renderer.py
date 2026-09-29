@@ -52,7 +52,7 @@ from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import HolidayMark, compute_holiday_band_days
 from shared.rule_engine import StyleEngine, StyleResult
-from shared.timeband import BandSegment, build_segments
+from shared.timeband import BandSegment, build_segments, group_segments
 from visualizers.gantt.bars import (
     BarGeometry,
     DayAxis,
@@ -468,6 +468,9 @@ class GanttRenderer(BaseSVGRenderer):
         """Draw the top and bottom time-band stacks for this page's days."""
         top = coordinates.get("GanttTopBands")
         bottom = coordinates.get("GanttBottomBands")
+        # Each band's heading sits in the table's column, level with its row.
+        table = coordinates.get("GanttTableArea")
+        heading_span = (table[0], table[2]) if table else None
         if top:
             self._draw_band_stack(
                 config,
@@ -476,6 +479,7 @@ class GanttRenderer(BaseSVGRenderer):
                 days,
                 segments,
                 "top",
+                heading_span,
             )
         if bottom:
             self._draw_band_stack(
@@ -485,6 +489,7 @@ class GanttRenderer(BaseSVGRenderer):
                 days,
                 segments,
                 "bottom",
+                heading_span,
             )
 
     def _draw_band_stack(
@@ -495,8 +500,13 @@ class GanttRenderer(BaseSVGRenderer):
         days: list[date],
         segments: dict[tuple[str, int], list[BandSegment]],
         stack: str,
+        heading_span: tuple[float, float] | None = None,
     ) -> None:
-        """Draw one stack of band rows, top to bottom, within *region*."""
+        """Draw one stack of band rows, top to bottom, within *region*.
+
+        *heading_span* is the ``(x, width)`` of the column each band's
+        ``label`` is written in; without it no headings are drawn.
+        """
         region_x, region_y, region_w, region_h = region
         bands = [band for band in (bands or []) if isinstance(band, dict)]
         if not bands or region_h <= 0:
@@ -510,6 +520,8 @@ class GanttRenderer(BaseSVGRenderer):
         cursor_y = region_y
         for index, (band, height) in enumerate(zip(bands, heights, strict=False)):
             row_h = height * scale
+            if heading_span is not None:
+                self._draw_band_heading(config, band, heading_span[0], cursor_y, heading_span[1], row_h)
             self._draw_band_row(
                 config,
                 band,
@@ -521,6 +533,49 @@ class GanttRenderer(BaseSVGRenderer):
                 row_h,
             )
             cursor_y += row_h
+
+    def _draw_band_heading(
+        self,
+        config: CalendarConfig,
+        band: dict[str, Any],
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+    ) -> None:
+        """Write a band's ``label`` in a heading cell level with its row."""
+        label = str(band.get("label") or "").strip()
+        if not label or w <= 0 or h <= 0:
+            return
+        cell = config.get_box_style("ec-heading-cell")
+        color, width, opacity = self._grid_style()
+        self._draw_rect(
+            x,
+            y,
+            w,
+            h,
+            fill=cell.fill or "none",
+            fill_opacity=float(cell.fill_opacity if cell.fill_opacity is not None else 1.0),
+            stroke=color,
+            stroke_width=width,
+            stroke_opacity=opacity,
+            css_class="ec-heading-cell",
+        )
+        text = config.get_text_style("ec-heading")
+        token = self._tk("text:heading")
+        font = band.get("label_font") or token.get("font") or text.font
+        font_size = min(float(band.get("label_font_size") or token.get("size") or 8.0), max(h - 2.0, 4.0))
+        self._draw_clipped_text(
+            label,
+            x + 6.0,
+            y + h / 2 + font_size / 3,
+            max(w - 12.0, 8.0),
+            font,
+            font_size,
+            band.get("label_color") or token.get("color") or text.color,
+            align="left",
+            css_class="ec-heading",
+        )
 
     def _draw_band_row(
         self,
@@ -550,8 +605,13 @@ class GanttRenderer(BaseSVGRenderer):
         font = token.get("font") or config.get_text_style("ec-tick-label").font
         font_size = min(float(token.get("size") or 8.0), max(h - 2.0, 4.0))
 
-        for segment in segments:
-            span = [index for day, index in day_index.items() if segment.start <= day < segment.end_exclusive]
+        # ``show_every: N`` draws every N segments as one cell, labelled by
+        # its first.  Grouping runs over the whole range so a merged cell keeps
+        # its boundaries on every page.
+        for group in group_segments(segments, band):
+            segment = group[0]
+            end_exclusive = group[-1].end_exclusive
+            span = [index for day, index in day_index.items() if segment.start <= day < end_exclusive]
             if not span:
                 # Every day of this segment is hidden (a weekend-only
                 # segment under weekend_style 0) — nothing to draw.

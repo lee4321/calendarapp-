@@ -3145,6 +3145,8 @@ If your export has no predecessor data, no arrows are drawn and nothing else cha
 Both `gantt.top_bands` and `gantt.bottom_bands` take as many bands as you want, drawn
 top to bottom in the order listed, each with its own `row_height`:
 
+A band's `label` is written in a heading cell in the task table's column, level with its row (leave it empty for no heading), and `show_every: N` draws every N segments as one cell, labelled by its first.
+
 ```yaml
 gantt:
   top_bands:

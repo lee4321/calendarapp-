@@ -635,6 +635,9 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `text:body` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 | `text:body` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-task-cell").font` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 | `text:body` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_rows` |
+| `text:heading` | `color` | *depends on the item being drawn* | `band.get("label_color") or token.get("color") or text.color` | `gantt/renderer.py:GanttRenderer._draw_band_heading` |
+| `text:heading` | `font` | *depends on the item being drawn* | `band.get("label_font") or token.get("font") or text.font` | `gantt/renderer.py:GanttRenderer._draw_band_heading` |
+| `text:heading` | `size` | *depends on the item being drawn* | `float(band.get("label_font_size") or token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_band_heading` |
 | `text:label` | `color` | `black` | `token.get("color") or "black"` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
 | `text:label` | `font` | `RobotoCondensed-Light` | `token.get("font") or config.get_text_style("ec-column-header").font` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
 | `text:label` | `size` | `8` | `float(token.get("size") or 8.0)` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
@@ -645,8 +648,8 @@ PIT reads no style tokens: its colours, sizes and geometry come from the `pit:` 
 | `ec-band-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:GanttRenderer._draw_band_row`, `gantt/renderer.py:GanttRenderer._draw_holiday_band_row` |
 | `ec-cell` | `fill` | `#F8F8FF` | `style.fill` | `gantt/renderer.py:GanttRenderer._draw_nonworking_shading` |
 | `ec-cell` | `fill_opacity` | `0.25` | `float(style.fill_opacity if style.fill_opacity is not None else 0.08)` | `gantt/renderer.py:GanttRenderer._draw_nonworking_shading` |
-| `ec-heading-cell` | `fill` | `none` | `box.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
-| `ec-heading-cell` | `fill_opacity` | `1` | `float(box.fill_opacity if box.fill_opacity is not None else 1.0)` | `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `ec-heading-cell` | `fill` | `none` | `cell.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_band_heading`, `gantt/renderer.py:GanttRenderer._draw_column_headers` |
+| `ec-heading-cell` | `fill_opacity` | `1` | `float(cell.fill_opacity if cell.fill_opacity is not None else 1.0)` | `gantt/renderer.py:GanttRenderer._draw_band_heading`, `gantt/renderer.py:GanttRenderer._draw_column_headers` |
 | `ec-row-band` | `fill` | `#F8F8FF` | `band.fill or "none"` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 | `ec-row-band` | `fill_opacity` | `0.25` | `float(band.fill_opacity if band.fill_opacity is not None else 0.15)` | `gantt/renderer.py:GanttRenderer._draw_rows` |
 

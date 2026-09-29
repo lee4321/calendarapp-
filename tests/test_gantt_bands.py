@@ -162,3 +162,33 @@ def test_top_and_bottom_stacks_both_draw():
 
     # Three distinct band rows means three distinct y positions.
     assert len({round(cell["y"], 2) for cell in cells}) == 3
+
+
+def test_show_every_merges_segments_into_one_cell():
+    """`show_every: 2` on a week band draws half as many cells as 1."""
+    every = {"label": "w", "unit": "week", "row_height": 8}
+    each = render([task()], gantt_top_time_bands=[every], gantt_bottom_time_bands=[])
+    merged = render([task()], gantt_top_time_bands=[{**every, "show_every": 2}], gantt_bottom_time_bands=[])
+
+    single_cells = each.of_class(each.rects, "ec-band-cell")
+    merged_cells = merged.of_class(merged.rects, "ec-band-cell")
+    assert len(merged_cells) == (len(single_cells) + 1) // 2
+    assert max(c["w"] for c in merged_cells) > max(c["w"] for c in single_cells)
+
+
+def test_each_band_label_is_drawn_in_the_table_column():
+    renderer = render(
+        [task()],
+        gantt_top_time_bands=[
+            {"label": "Month", "unit": "month", "row_height": 8},
+            {"label": "Holidays", "unit": "holiday", "row_height": 8},
+            {"label": "", "unit": "week", "row_height": 8},
+        ],
+        gantt_bottom_time_bands=[],
+    )
+
+    headings = renderer.of_class(renderer.rects, "ec-heading-cell")
+    assert len(headings) == 2  # a band with no label has no heading
+    assert {h["y"] for h in headings} <= {c["y"] for c in renderer.of_class(renderer.rects, "ec-band-cell")}
+    chart_left = min(c["x"] for c in renderer.of_class(renderer.rects, "ec-band-cell"))
+    assert all(h["x"] + h["w"] <= chart_left + 0.01 for h in headings)
