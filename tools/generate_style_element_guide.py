@@ -9,6 +9,12 @@ binds that class to a token.  This script renders every SVG view, reads the
 one self-contained HTML page.  Clicking an element in the page highlights every
 place it is drawn in that view, so the page is always in step with the code.
 
+Some elements only appear when an option is on (``--weeknumbers`` draws
+``text:week_number``).  The script finds those by rendering each view plain and
+again once per candidate option in ``PROBES``; a class that appears only with an
+option is reported as "enabled by" that option.  The page shows every view with
+all additive options on, so every element can be highlighted.
+
 Usage::
 
     uv run python tools/generate_style_element_guide.py
@@ -25,6 +31,7 @@ import shutil
 import subprocess
 import sys
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
@@ -45,13 +52,28 @@ VIEWS: list[tuple[str, str]] = [
     ("blockplan", "Block plan"),
     ("gantt", "Gantt"),
 ]
-_EXTRA_FLAGS: dict[str, list[str]] = {
-    v: ["--header", "--footer", "--headerleft", "Header", "--footerleft", "Footer"]
-    for v in ("weekly", "timeline", "pit", "compactplan", "blockplan", "gantt")
-}
-_EXTRA_FLAGS.update({v: ["--header", "--footer"] for v in ("mini", "mini-icon", "candybar")})
-for _v in ("weekly", "timeline", "pit", "compactplan", "blockplan", "gantt"):
-    _EXTRA_FLAGS[_v] += ["--includenotes"]
+# Candidate options that can add elements to a view.  Each probe is applied to
+# a view only when that view's --help lists every flag in it.  ``rich`` probes
+# are combined into the page's all-options render; ``--milestones`` filters
+# content down instead of adding, so it is probed alone.
+Probe = tuple[str, dict[str, list[str]], bool]
+PROBES: list[Probe] = [
+    ("--header", {"--header": [], "--headerleft": ["Left"], "--headercenter": ["Center"], "--headerright": ["Right"]}, True),
+    ("--footer", {"--footer": [], "--footerleft": ["Left"], "--footercenter": ["Center"], "--footerright": ["Right"]}, True),
+    ("--watermark-text", {"--watermark-text": ["DRAFT"]}, True),
+    ("--includenotes", {"--includenotes": []}, True),
+    ("--weeknumbers", {"--weeknumbers": []}, True),
+    ("--monthnames", {"--monthnames": []}, True),
+    ("--durations", {"--durations": []}, True),
+    ("--mini-grid-lines", {"--mini-grid-lines": []}, True),
+    ("--candybar-month-shading", {"--candybar-month-shading": []}, True),
+    ("--date-placement axis", {"--date-placement": ["axis"]}, True),
+    ("--fiscal", {"--fiscal": ["nrf-454"]}, True),
+    ("--fiscal --fiscal-colors", {"--fiscal": ["nrf-454"], "--fiscal-colors": []}, True),
+    ("--fiscal --fiscal-show-periods", {"--fiscal": ["nrf-454"], "--fiscal-show-periods": []}, True),
+    ("--fiscal --fiscal-show-quarters", {"--fiscal": ["nrf-454"], "--fiscal-show-quarters": []}, True),
+    ("--milestones", {"--milestones": []}, False),
+]  # fmt: skip
 
 # Findings from a colour probe (every text token given its own colour, theme
 # bindings removed), 2026-09-30.  They describe where a token's *colour* did
@@ -91,13 +113,24 @@ OBSERVED_TOKEN: dict[tuple[str, str], str] = {
 }
 
 
-def render(view: str, start: str, end: str, theme: str) -> str:
-    """Render *view* with the CLI and return the SVG text (output is removed)."""
-    stem = f"_styleguide_{view}"
+def _help(view: str) -> str:
+    out = subprocess.run(
+        ["uv", "run", "python", "ecalendar.py", view, "--help"], cwd=ROOT, capture_output=True, text=True, check=True
+    )
+    return out.stdout + out.stderr
+
+
+def _argv(flags: dict[str, list[str]]) -> list[str]:
+    return [tok for flag, vals in flags.items() for tok in (flag, *vals)]
+
+
+def render(view: str, tag: str, flags: dict[str, list[str]], start: str, end: str, theme: str) -> str:
+    """Render *view* with extra *flags* via the CLI and return the SVG (output is removed)."""
+    stem = f"_styleguide_{view}_{tag}"
     cmd = [
         "uv", "run", "python", "ecalendar.py", view, "--theme", theme,
         "--outputfile", f"{stem}.svg", "--no-details-md", "--no-icons", "--no-csv",
-        *_EXTRA_FLAGS.get(view, []), start, end,
+        *_argv(flags), start, end,
     ]  # fmt: skip
     subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True, text=True)
     out_dir = ROOT / "output" / stem
@@ -127,17 +160,59 @@ def theme_rebindings(theme: str) -> dict[str, str]:
     }
 
 
+def probe_view(view: str, start: str, end: str, theme: str) -> tuple[str, dict[str, list[str]], list[str]]:
+    """Render *view* plain, once per applicable probe, and once with every additive probe on.
+
+    Returns the all-options SVG, ``{class: [options that add it]}`` and the
+    labels of the options this view accepts.
+    """
+    help_text = _help(view)
+    applicable = [p for p in PROBES if all(f in help_text for f in p[1])]
+    jobs: dict[str, dict[str, list[str]]] = {"plain": {}}
+    jobs.update({f"p{i}": p[1] for i, p in enumerate(applicable)})
+    rich_flags: dict[str, list[str]] = {}
+    for _, flags, rich in applicable:
+        if rich:
+            rich_flags.update(flags)
+    jobs["rich"] = rich_flags
+
+    def run(item: tuple[str, dict[str, list[str]]]) -> tuple[str, str | None]:
+        tag, flags = item
+        try:
+            return tag, render(view, tag, flags, start, end, theme)
+        except subprocess.CalledProcessError as exc:
+            print(f"warning: {view} {tag} {_argv(flags)} failed: {exc.stderr.strip()[-200:]}", file=sys.stderr)
+            return tag, None
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        svgs = dict(pool.map(run, jobs.items()))
+
+    plain = set(emitted_classes(svgs["plain"] or ""))
+    added: dict[str, list[str]] = {}
+    for i, (label, _, _) in enumerate(applicable):
+        for cls in emitted_classes(svgs.get(f"p{i}") or ""):
+            if cls not in plain:
+                added.setdefault(cls, []).append(label)
+    rich_svg = svgs["rich"] or svgs["plain"]
+    if rich_svg is None:
+        raise RuntimeError(f"{view}: plain render failed")
+    return rich_svg, added, [p[0] for p in applicable]
+
+
 def build_data(start: str, end: str, theme: str) -> dict:
     catalog = load_catalog()
     rebound = theme_rebindings(theme)
     views = []
     for view, title in VIEWS:
-        svg = render(view, start, end, theme)
+        print(f"probing {view} ...", file=sys.stderr)
+        svg, added, accepted = probe_view(view, start, end, theme)
+        plain_seen = set()
         rows = []
         for cls, n in sorted(emitted_classes(svg).items()):
             entry = catalog.get(cls)
             if entry is None:
                 continue  # modifier / structural class: not a styling target
+            plain_seen.add(cls)
             rows.append({
                 "cls": cls,
                 "kind": entry.kind,
@@ -147,32 +222,71 @@ def build_data(start: str, end: str, theme: str) -> dict:
                 "count": n,
                 "rebound": rebound.get(cls, ""),
                 "note": NOTES.get((view, cls)) or NOTES.get(("*", cls), ""),
+                "options": added.get(cls, []),
             })  # fmt: skip
-        views.append({"id": view, "title": title, "svg": svg, "rows": rows})
+        declared = [
+            {"cls": c, "kind": e.kind, "token": f"{e.kind}:{e.token}", "desc": e.description}
+            for c, e in sorted(catalog.items())
+            if c not in plain_seen and (view in e.scope or "all" in e.scope)
+        ]  # fmt: skip
+        views.append({"id": view, "title": title, "svg": svg, "rows": rows, "declared": declared, "accepts": accepted})
     return {"views": views, "theme": theme, "range": f"{start}–{end}"}
 
 
 def matrix(views: list[dict]) -> str:
-    """Text-token × view table listing which elements draw with each token."""
-    tokens: dict[str, dict[str, list[str]]] = {}
+    """Text-token × view table listing which elements draw with each token.
+
+    An element that needs an option is dashed and carries the option in its tooltip.
+    """
+    tokens: dict[str, dict[str, list[dict]]] = {}
     for v in views:
         for r in v["rows"]:
             if r["kind"] == "text":
-                tokens.setdefault(r["token"], {}).setdefault(v["id"], []).append(r["cls"][3:])
+                tokens.setdefault(r["token"], {}).setdefault(v["id"], []).append(r)
     head = "".join(f"<th>{html.escape(v['title'])}</th>" for v in views)
     body = []
     for tok in sorted(tokens):
         cells = []
         for v in views:
             els = tokens[tok].get(v["id"])
-            cells.append(
-                "<td>" + "".join(f"<code>{html.escape(e)}</code>" for e in els) + "</td>"
-                if els
-                else "<td class=no>–</td>"
-            )
+            if not els:
+                cells.append("<td class=no>–</td>")
+                continue
+            codes = []
+            for r in els:
+                name = html.escape(r["cls"][3:])
+                if r["options"]:
+                    tip = html.escape("needs " + " or ".join(r["options"]))
+                    codes.append(f'<code class=opt title="{tip}">{name}</code>')
+                else:
+                    codes.append(f"<code>{name}</code>")
+            cells.append("<td>" + "".join(codes) + "</td>")
         body.append(f"<tr><th scope=row><code>{html.escape(tok)}</code></th>{''.join(cells)}</tr>")
     return (
         f"<div class=mx><table><thead><tr><th>Token</th>{head}</tr></thead><tbody>{''.join(body)}</tbody></table></div>"
+    )
+
+
+def options_table(views: list[dict]) -> str:
+    """Option → (view, element, token) rows for every element an option adds."""
+    by_opt: dict[str, list[tuple[str, dict]]] = {}
+    for v in views:
+        for r in v["rows"]:
+            for opt in r["options"]:
+                by_opt.setdefault(opt, []).append((v["title"], r))
+    order = {p[0]: i for i, p in enumerate(PROBES)}
+    rows = []
+    for opt in sorted(by_opt, key=lambda o: order.get(o, 99)):
+        items = sorted(by_opt[opt], key=lambda x: (x[0], x[1]["kind"] != "text", x[1]["cls"]))
+        for n, (title, r) in enumerate(items):
+            first = f"<th scope=row rowspan={len(items)}><code>{html.escape(opt)}</code></th>" if n == 0 else ""
+            rows.append(
+                f"<tr>{first}<td>{html.escape(title)}</td><td><code>{html.escape(r['cls'])}</code></td>"
+                f"<td><code class=k-{r['kind']}>{html.escape(r['token'])}</code></td><td>{html.escape(r['desc'])}</td></tr>"
+            )
+    return (
+        "<div class=mx><table><thead><tr><th>Option</th><th>View</th><th>Element</th><th>Token</th><th>What it draws</th>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
     )
 
 
@@ -208,6 +322,11 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:8px;paddin
 .mx{overflow:auto;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;font-size:13px;width:100%}
 th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}thead th{background:var(--card);position:sticky;top:0}td.no{color:var(--mut)}
 .hint{color:var(--mut);font-size:13px}
+code.opt{border-style:dashed}
+code.k-text{color:var(--text)}code.k-box{color:var(--box)}code.k-line{color:var(--line-k)}code.k-icon{color:var(--icon)}
+.row .need{display:block;margin-top:3px;font-size:12.5px;color:var(--acc);font-weight:600}
+.leg details{border-bottom:1px solid var(--line)}.leg summary{cursor:pointer;padding:8px 12px;font-size:13px;color:var(--mut)}
+.dec{padding:5px 12px 5px 10px;border-left:4px solid var(--k);border-top:1px solid var(--line);font-size:13px}.dec .d{color:var(--mut)}
 </style></head><body><div class="w">
 <h1>Style Rule Element Guide</h1>
 <p>Which drawn element a style rule reaches, in which visualization. Generated from the real SVG output of the <code>__THEME__</code> theme (__RANGE__) and <code>config/element_catalog.yaml</code>.</p>
@@ -221,11 +340,15 @@ th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertic
 <p>A rule names a <b>token</b>; every element bound to that token in every view changes together. To restyle a single element without touching the others, rebind it with <code>element_overrides: {ec-foo: {use: text:other}}</code>. A theme may already rebind some elements — those rows are marked below.</p>
 
 <h2>Text tokens across visualizations</h2>
-<p>Each cell lists the elements (<code>ec-</code> prefix dropped) that draw with that token in that view. Empty means the view never uses it.</p>
+<p>Each cell lists the elements (<code>ec-</code> prefix dropped) that draw with that token in that view. Empty means the view never uses it. A dashed element only appears when an option is on; hover it to see which.</p>
 __MATRIX__
 
+<h2>Elements that need an option</h2>
+<p>These are not drawn by a plain run. Each row is an element (and so a token) that becomes available when the option is enabled. Found by rendering every view with and without each option, so the list follows the code.</p>
+__OPTIONS__
+
 <h2>See it in each view</h2>
-<p class="hint">Pick a view, then click (or hover) an element in the list to highlight every place it is drawn. Colour of the left bar: <b style="color:var(--text)">text</b>, <b style="color:var(--box)">box</b>, <b style="color:var(--line-k)">line</b>, <b style="color:var(--icon)">icon</b>.</p>
+<p class="hint">Every view is shown with all additive options on. Pick a view, then click (or hover) an element in the list to highlight every place it is drawn. Colour of the left bar: <b style="color:var(--text)">text</b>, <b style="color:var(--box)">box</b>, <b style="color:var(--line-k)">line</b>, <b style="color:var(--icon)">icon</b>.</p>
 <div class="tabs" role="tablist" id="tabs"></div>
 <div class="cols"><div class="pane" id="pane"></div><div class="leg" id="leg"></div></div>
 
@@ -247,6 +370,7 @@ function show(i){cur=DATA.views[i];pinned=null;
   for(const r of rows){
    const b=document.createElement('button');b.className='row k-'+kind;b.setAttribute('aria-pressed','false');
    let extra='';
+   if(r.options.length)extra+='<span class=need>Needs '+r.options.join(' or ')+'</span>';
    if(r.rebound)extra+='<span class=w2>Theme rebinds this to <code>'+r.rebound+'</code>.</span>';
    if(r.catalog)extra+='<span class=w2>Catalog binds this to <code>'+r.catalog+'</code>, but this view draws it with <code>'+r.token+'</code>.</span>';
    if(r.note)extra+='<span class=w2>Observed: '+r.note+'</span>';
@@ -254,6 +378,11 @@ function show(i){cur=DATA.views[i];pinned=null;
    b.onmouseenter=()=>hl(r.cls);b.onmouseleave=()=>hl(pinned);
    b.onclick=()=>{pinned=pinned===r.cls?null:r.cls;[...leg.querySelectorAll('.row')].forEach(x=>x.setAttribute('aria-pressed','false'));if(pinned)b.setAttribute('aria-pressed','true');hl(pinned)};
    leg.append(b);}}
+ if(cur.declared.length){
+  const d=document.createElement('details');
+  d.innerHTML='<summary>Declared for this view, not drawn by any probed option ('+cur.declared.length+')</summary>'+
+   cur.declared.map(r=>'<div class="dec k-'+r.kind+'"><span class=n>'+r.cls+'</span> <code class=k-'+r.kind+'>'+r.token+'</code><br><span class=d>'+r.desc+'</span></div>').join('');
+  leg.append(d);}
 }
 function hl(cls){
  const svg=pane.querySelector('svg');if(!svg)return;
@@ -293,6 +422,7 @@ def main() -> None:
         PAGE.replace("__THEME__", html.escape(data["theme"]))
         .replace("__RANGE__", html.escape(data["range"]))
         .replace("__MATRIX__", matrix(data["views"]))
+        .replace("__OPTIONS__", options_table(data["views"]))
         .replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     )
     Path(args.out).write_text(page)
