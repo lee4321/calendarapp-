@@ -285,6 +285,7 @@ table by hand.
 | `--today-line` |  | `pit` | Draw the today line (default: on). |  |
 | `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | choices `above, below, both` |
 | `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
+| `--trace-style` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Trace how theme style_rules and decoration change each day, event and duration (which rules applied, what they overrode, which were skipped and why) to stderr | default `False` |
 | `--verbose`, `-v` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | default `0` |
 | `--watermark-image`, `-wi` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark image file |  |
 | `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise coordinates) |  |
@@ -3307,6 +3308,7 @@ ecalendar.py excelblockplan 20260101 20260630 --theme corporate --empty -of temp
 | `--status` |  | `active` | Event statuses to include (`all` for no filter) |
 | `--database` | `-db` | `calendar.db` | SQLite database path |
 | `--verbose` | `-v` | — | Increase verbosity (`-v`, `-vv`, `-vvv`) |
+| `--trace-style` | — | — | Theme trace to stderr: for each day, event and duration, which `style_rules` applied, what each overrode (`was X from rule 'name'`), which were skipped and why, and the final result |
 | `--quiet` | `-q` | — | Suppress output path echo |
 
 ### Workbook Layout

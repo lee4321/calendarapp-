@@ -1666,6 +1666,15 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             help="Increase verbosity (-v, -vv, -vvv)",
         )
         logging_group.add_argument(
+            "--trace-style",
+            action="store_true",
+            help=(
+                "Trace how theme style_rules and decoration change each day, "
+                "event and duration (which rules applied, what they "
+                "overrode, which were skipped and why) to stderr"
+            ),
+        )
+        logging_group.add_argument(
             "--quiet",
             "-q",
             action="store_true",

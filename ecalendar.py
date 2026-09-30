@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.19.0"
+__version__ = "26.09.30.0"
 
 import logging
 import sys
@@ -21,6 +21,7 @@ from config.config import (
     create_calendar_config,
     setfontsizes,
 )
+from shared import style_trace
 from shared.date_utils import InvalidDateError, calc_calendar_range, parse_date
 from visualizers.factory import VisualizerFactory
 from visualizers.weekly.layout import WeeklyCalendarLayout
@@ -266,6 +267,8 @@ def run(argv: list[str] | None = None) -> int:
 
     # Configure logging
     _configure_logging(args.verbose, args.quiet)
+    if getattr(args, "trace_style", False):
+        style_trace.enable()
 
     # When the user did not pass --outputfile, derive the default name from
     # the subcommand so each visualizer produces a recognizable file

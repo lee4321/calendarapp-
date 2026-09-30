@@ -28,6 +28,7 @@ from config.config import (
 from renderers.details_record import DRAWN_PARTIAL
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
+from shared import style_trace
 from shared.data_models import Event
 from shared.date_utils import get_week_number
 from shared.day_classifier import classify_day
@@ -936,10 +937,25 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         # Background fill (style_result overrides holiday/fiscal defaults)
         fill_color, fill_opacity = self._resolve_day_box_fill(config, oneday_str, month, shadespecialday)
+        if style_trace.enabled():
+            _why = (
+                "federal holiday color"
+                if shadespecialday == "government"
+                else "company holiday color"
+                if shadespecialday
+                else "fiscal period color"
+                if config.fiscal_use_period_colors and config.fiscal_lookup
+                else f"month {month} color"
+            )
+            style_trace.emit(
+                f"day {oneday_str}", "BASE", f"fill={fill_color} opacity={fill_opacity} (theme default: {_why})"
+            )
         if style_result is not None and style_result.fill_color is not None:
             fill_color = style_result.fill_color
         if style_result is not None and style_result.fill_opacity is not None:
             fill_opacity = style_result.fill_opacity
+        if style_trace.enabled():
+            style_trace.emit(f"day {oneday_str}", "DRAWN", f"fill={fill_color} opacity={fill_opacity}")
         tk_cell = self._tk("box:cell")
         tk_hash = self._tk("line:hash")
         _cell_style = config.get_box_style("ec-cell")
@@ -966,6 +982,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         # SVG pattern decoration from style_rules
         hash_color_default = tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor
+        if style_trace.enabled():
+            if style_result is not None and style_result.pattern:
+                _traced = f"{style_result.pattern!r} from style rule"
+            elif config.theme_weekly_hash_pattern:
+                _traced = f"{config.theme_weekly_hash_pattern!r} from theme day_box.hash_pattern"
+            else:
+                _traced = "none (no style rule or theme pattern)"
+            style_trace.emit(f"day {oneday_str}", "PATTERN", _traced)
         if style_result is not None and style_result.pattern:
             _color = style_result.pattern_color or hash_color_default
             self._draw_svg_pattern(config, X, Y, W, H, style_result.pattern, _color, style_result.pattern_opacity)

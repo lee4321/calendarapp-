@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
+from shared import style_trace
 from shared.fiscal_renderer import get_fiscal_period_color
 from shared.rule_engine import DayContext, StyleEngine
 
@@ -403,6 +404,7 @@ class DayStyleResolver:
             return
 
         ctx = DayContext(
+            date=style.daykey,
             federal_holiday=federal_holiday,
             company_holiday=company_holiday,
             nonworkday=nonworkday,
@@ -466,6 +468,12 @@ class DayStyleResolver:
         rules = theme.find_rules("box:day", ctx)
         for rule in rules:
             sty = rule.style or {}
+            if style_trace.enabled():
+                style_trace.emit(
+                    f"day {style.daykey} (mini)",
+                    f"rule {getattr(rule, 'name', None) or '<unnamed>'!r}",
+                    "APPLY  " + ("; ".join(f"{k}={v!r}" for k, v in sty.items()) or "sets nothing"),
+                )
             fill = sty.get("fill")
             if fill:
                 style.shade_color = fill

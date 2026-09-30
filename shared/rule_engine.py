@@ -12,11 +12,13 @@ Provides:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 if TYPE_CHECKING:
     from shared.data_models import Event
+
+from shared import style_trace
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +212,19 @@ class StyleResult:
             ts.font_color if ts.font_color else color,
             ts.font_opacity if ts.font_opacity is not None else opacity,
         )
+
+    def snapshot(self) -> dict[str, Any]:
+        """Flat ``{field: value}`` of every field that is set (for the style trace)."""
+        flat: dict[str, Any] = {}
+        for key, value in asdict(self).items():
+            if key in ("fill_source", "text") or value is None:
+                continue
+            flat[key] = value
+        for element, ts in self.text.items():
+            for key, value in asdict(ts).items():
+                if value is not None:
+                    flat[f"text.{element}.{key}"] = value
+        return flat
 
     def merge(self, other: StyleResult) -> None:
         """Layer non-None fields from other on top of self (later rules win)."""
@@ -634,6 +649,29 @@ class StyleEngine:
                 out.append(rule)
         return out
 
+    @staticmethod
+    def _layer(result: StyleResult, rule: dict, subject: str, owners: dict, index: int | None = None) -> None:
+        """Merge ``rule``'s style into ``result``, tracing what it changed."""
+        rule_result = _rule_result(rule)
+        if not style_trace.enabled():
+            result.merge(rule_result)
+            return
+        label = style_trace.rule_label(rule, index)
+        before = result.snapshot()
+        result.merge(rule_result)
+        detail = style_trace.layer_changes(before, result.snapshot(), rule_result.snapshot(), owners, label)
+        style_trace.emit(subject, label, f"APPLY  {detail}")
+
+    @staticmethod
+    def _trace_skip(subject: str, rule: dict, reason: str) -> None:
+        if style_trace.enabled():
+            style_trace.emit(subject, style_trace.rule_label(rule), f"SKIP   {reason}")
+
+    @staticmethod
+    def _trace_result(subject: str, result: StyleResult, owners: dict) -> None:
+        if style_trace.enabled():
+            style_trace.emit(subject, "RESULT", style_trace.summary(owners, result.snapshot()))
+
     def event_fills(self) -> list[tuple[str, str]]:
         """``(rule name, fill)`` of every event or duration rule that sets a
         single fill color, in declaration order.
@@ -662,6 +700,8 @@ class StyleEngine:
         """
         result = StyleResult()
         events = events or []
+        subject = f"day {ctx.date}" if style_trace.enabled() else ""
+        owners: dict[str, str] = {}
 
         for rule in self._applicable_rules("day_box"):
             select = rule.get("select", {})
@@ -670,14 +710,17 @@ class StyleEngine:
 
             day_match = _matches_day_context(select, ctx)
             if day_match is False:
+                self._trace_skip(subject, rule, "select: day context did not match")
                 continue
 
             event_ok = self._eval_event_criteria_for_day(select, events, rule)
             if event_ok is False:
+                self._trace_skip(subject, rule, "select: no event on this day matched")
                 continue
 
-            result.merge(_rule_result(rule))
+            self._layer(result, rule, subject, owners)
 
+        self._trace_result(subject, result, owners)
         return result
 
     def _eval_event_criteria_for_day(
@@ -731,6 +774,10 @@ class StyleEngine:
         instance, select on the successor task's fields.
         """
         result = StyleResult()
+        subject = ""
+        if style_trace.enabled():
+            subject = f"{target} {event.task_name!r} [{event.start}]"
+        owners: dict[str, str] = {}
 
         for rule in self._applicable_rules(target):
             select = rule.get("select", {})
@@ -740,18 +787,22 @@ class StyleEngine:
             if ctx is not None:
                 day_match = _matches_day_context(select, ctx)
                 if day_match is False:
+                    self._trace_skip(subject, rule, "select: day context did not match")
                     continue
 
             event_match = _matches_event_fields(select, event)
             if event_match is False:
+                self._trace_skip(subject, rule, "select: event fields did not match")
                 continue
 
             if bool(rule.get("date_overlap", False)) and "date" in (select or {}):
                 if not _matches_date_overlap(select["date"], event):
+                    self._trace_skip(subject, rule, "select: date does not overlap the event")
                     continue
 
-            result.merge(_rule_result(rule))
+            self._layer(result, rule, subject, owners)
 
+        self._trace_result(subject, result, owners)
         return result
 
     def evaluate_band_segment(
@@ -813,6 +864,17 @@ class StyleEngine:
                 if day_match is False:
                     continue
 
+            if style_trace.enabled():
+                rr = _rule_result(rule)
+                style_trace.emit(
+                    f"band {band_name!r} segment {segment_label!r}",
+                    style_trace.rule_label(rule, rule_index),
+                    "APPLY  "
+                    + (
+                        "; ".join(f"{k}={style_trace.fmt(v)}" for k, v in rr.snapshot().items())
+                        or "matched, sets nothing"
+                    ),
+                )
             out.append((rule_index, _rule_result(rule)))
 
         return out
