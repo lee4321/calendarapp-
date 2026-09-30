@@ -460,3 +460,29 @@ def test_the_icon_baseline_helper_centres_the_glyph_box():
         top = baseline - size * 0.80
         bottom = baseline + size * 0.20
         assert (top + bottom) / 2 == pytest.approx(100.0)
+
+
+def test_box_day_rules_tint_nonworking_columns():
+    """A box:day rule sets a non-working column's fill; a workday stays unshaded."""
+    rules = [
+        {
+            "name": "weekend",
+            "apply_to": "box:day",
+            "select": {"weekend": True},
+            "style": {"fill": "gold", "fill_opacity": 0.4},
+        },
+        {"name": "holiday", "apply_to": "box:day", "select": {"federal_holiday": True}, "style": {"fill": "tomato"}},
+    ]
+    _DummyDB.holidays = {"20260204"}  # a Wednesday
+    try:
+        r = render([], weekend_style=1, theme_style_rules=rules)
+    finally:
+        _DummyDB.holidays = set()
+    shaded = r.of_class(r.rects, "ec-cell")
+    col_w = min(c["w"] for c in shaded)
+    cols = {round(c["x"], 3): c for c in shaded if abs(c["w"] - col_w) < 1e-6}
+    fills = sorted((c["fill"], c["fill_opacity"]) for c in cols.values())
+    assert ("gold", 0.4) in fills
+    assert any(f == "tomato" for f, _ in fills)
+    # 2026-02-02..13 has 2 weekend days + 1 holiday; workdays are not shaded.
+    assert len(cols) == 3

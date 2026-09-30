@@ -48,10 +48,11 @@ from renderers.details_record import (
     split_reference,
 )
 from renderers.svg_base import BaseSVGRenderer
+from shared import style_trace
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
 from shared.holiday_band import HolidayMark, compute_holiday_band_days
-from shared.rule_engine import StyleEngine, StyleResult
+from shared.rule_engine import DayContext, StyleEngine, StyleResult
 from shared.timeband import BandSegment, build_segments, group_segments
 from visualizers.gantt.bars import (
     BarGeometry,
@@ -397,6 +398,10 @@ class GanttRenderer(BaseSVGRenderer):
     ) -> None:
         """Shade non-working day columns behind everything else.
 
+        The fill and opacity come from matching ``box:day`` style rules
+        (federal holiday, company nonworkday, weekend), falling back to the
+        ``ec-cell`` box style.
+
         Only reachable when the weekend style keeps weekends on the axis;
         under ``weekend_style == 0`` those days are not columns at all.
         Holidays are always columns and always shaded, so the axis does
@@ -411,16 +416,38 @@ class GanttRenderer(BaseSVGRenderer):
         fill = style.fill
         opacity = float(style.fill_opacity if style.fill_opacity is not None else 0.08)
 
+        engine = getattr(self, "_style_engine", None)
         for index, day in enumerate(days):
-            if not classify_day(day, db, config):
+            classes = classify_day(day, db, config)
+            if not classes:
                 continue
+            col_fill, col_opacity = fill, opacity
+            daykey = day.strftime("%Y%m%d")
+            if engine is not None:
+                # ``box:day`` rules (including the ones synthesized from
+                # colors.federal_holiday / colors.company_holiday) tint the
+                # column; nothing else about a column is rule-styled.
+                ctx = DayContext(
+                    date=daykey,
+                    federal_holiday="federal_holiday" in classes,
+                    company_holiday="company_holiday" in classes,
+                    nonworkday=True,
+                    workday=False,
+                    weekend="weekend" in classes,
+                )
+                sr = engine.evaluate_day(ctx)
+                if sr.fill_color is not None:
+                    col_fill = sr.fill_color
+                if sr.fill_opacity is not None:
+                    col_opacity = float(sr.fill_opacity)
+            style_trace.emit(f"day {daykey} (gantt column)", "DRAWN", f"fill={col_fill} opacity={col_opacity}")
             self._draw_rect(
                 chart_x + index * day_w,
                 chart_y,
                 day_w,
                 chart_h,
-                fill=fill,
-                fill_opacity=opacity,
+                fill=col_fill,
+                fill_opacity=col_opacity,
                 css_class="ec-cell",
             )
 
