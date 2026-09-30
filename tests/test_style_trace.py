@@ -40,3 +40,19 @@ class StyleTraceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CellTraceTest(unittest.TestCase):
+    def test_mini_family_cell_reports_drawn_fill_and_pattern(self):
+        from visualizers.mini.day_styles import DayStyle, HashDecoration
+
+        style = DayStyle(daykey="20260601", shade_color="gold", hash_decorations=[HashDecoration("dots", "red", 0.2)])
+        style_trace.TRACE.setLevel(logging.DEBUG)
+        try:
+            with self.assertLogs(style_trace.TRACE, level="DEBUG") as cm:
+                style.trace_drawn("candybar")
+        finally:
+            style_trace.TRACE.setLevel(logging.NOTSET)
+        text = "\n".join(cm.output)
+        self.assertIn("day 20260601 (candybar)  DRAWN  fill=gold", text)
+        self.assertIn("PATTERN  'dots' color=red", text)

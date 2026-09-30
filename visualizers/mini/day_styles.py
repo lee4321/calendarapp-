@@ -134,6 +134,27 @@ class DayStyle:
     # Fiscal period start label (e.g. "P1", "Q1 FY26 P1") — None if not a period start
     fiscal_period_label: str | None = None
 
+    def trace_drawn(self, view: str) -> None:
+        """Style trace: the shade and patterns the cell background draws."""
+        if not style_trace.enabled():
+            return
+        subject = f"day {self.daykey} ({view})"
+        if self.shade_color:
+            style_trace.emit(subject, "DRAWN", f"fill={self.shade_color} opacity={self.shade_opacity}")
+        else:
+            style_trace.emit(
+                subject, "DRAWN", "no rule or holiday shade on this cell (view-level base shading is drawn separately)"
+            )
+        if self.hash_decorations:
+            for dec in self.hash_decorations:
+                style_trace.emit(
+                    subject, "PATTERN", f"{dec.pattern!r} color={dec.color} opacity={dec.opacity} (from style rule)"
+                )
+        elif self.hash_pattern > 0:
+            style_trace.emit(subject, "PATTERN", f"legacy hash {self.hash_pattern}")
+        else:
+            style_trace.emit(subject, "PATTERN", "none")
+
     def add_icon(
         self,
         name: str | None,

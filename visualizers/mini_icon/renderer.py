@@ -57,6 +57,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
         Order (back to front): shade → SVG patterns → legacy hash → grid line.
         """
 
+        style.trace_drawn(self.DETAILS_VISUALIZER)
+
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):
             self._draw_rect(
