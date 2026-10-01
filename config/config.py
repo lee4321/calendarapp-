@@ -420,7 +420,7 @@ class CalendarConfig:
     status_filter: frozenset[str] | None = field(default_factory=lambda: frozenset({"active"}))
 
     # Display options
-    shade_current_day: bool = True
+    shade_current_day: bool = False
     include_month_name: bool = True
     include_margin: bool = True
     include_color_key: bool = False

@@ -60,18 +60,11 @@ Probe = tuple[str, dict[str, list[str]], bool]
 PROBES: list[Probe] = [
     ("--header", {"--header": [], "--headerleft": ["Left"], "--headercenter": ["Center"], "--headerright": ["Right"]}, True),
     ("--footer", {"--footer": [], "--footerleft": ["Left"], "--footercenter": ["Center"], "--footerright": ["Right"]}, True),
-    ("--watermark-text", {"--watermark-text": ["DRAFT"]}, True),
     ("--includenotes", {"--includenotes": []}, True),
     ("--weeknumbers", {"--weeknumbers": []}, True),
     ("--monthnames", {"--monthnames": []}, True),
     ("--durations", {"--durations": []}, True),
-    ("--mini-grid-lines", {"--mini-grid-lines": []}, True),
-    ("--candybar-month-shading", {"--candybar-month-shading": []}, True),
-    ("--date-placement axis", {"--date-placement": ["axis"]}, True),
     ("--fiscal", {"--fiscal": ["nrf-454"]}, True),
-    ("--fiscal --fiscal-colors", {"--fiscal": ["nrf-454"], "--fiscal-colors": []}, True),
-    ("--fiscal --fiscal-show-periods", {"--fiscal": ["nrf-454"], "--fiscal-show-periods": []}, True),
-    ("--fiscal --fiscal-show-quarters", {"--fiscal": ["nrf-454"], "--fiscal-show-quarters": []}, True),
     ("--milestones", {"--milestones": []}, False),
 ]  # fmt: skip
 

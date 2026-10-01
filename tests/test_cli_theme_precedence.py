@@ -90,17 +90,25 @@ def test_override_table_targets_real_config_fields():
     assert not missing, f"table targets unknown CalendarConfig fields: {missing}"
 
 
-def test_reapply_restores_text_options_over_theme():
-    """Watermark text/rotation flow through _apply_text_options, which the
-    post-theme pass re-runs so explicit CLI text beats theme watermark keys."""
+def test_reapply_restores_header_text_over_theme():
+    """Header/footer text flows through _apply_text_options, which the
+    post-theme pass re-runs so explicit CLI text beats theme values."""
     config = create_calendar_config()
     config.adjustedstart = "20260105"
     config.adjustedend = "20260630"
-    args = argparse.Namespace(watermark_text="CLI_WM", watermark_rotation_angle=33.0)
+    args = argparse.Namespace(headerleft="CLI_HDR")
 
-    config.watermark_text = "THEME_WM"
-    config.watermark_rotation_angle = 77.0
+    config.header_left_text = "THEME_HDR"
     _reapply_post_theme_cli_overrides(args, config)
 
-    assert config.watermark_text == "CLI_WM"
-    assert config.watermark_rotation_angle == 33.0
+    assert config.header_left_text == "CLI_HDR"
+
+
+def test_watermark_text_comes_from_the_theme_with_template_vars_expanded():
+    config = create_calendar_config()
+    config.adjustedstart = "20260105"
+    config.adjustedend = "20260630"
+    config.watermark_text = "From [startdate]"
+    _reapply_post_theme_cli_overrides(argparse.Namespace(), config)
+
+    assert config.watermark_text == "From 20260105"

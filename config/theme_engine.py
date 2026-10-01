@@ -41,6 +41,7 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("weekly.day_box", "hash_pattern_target_size"): "hash_pattern_target_size",
     ("weekly.day_box", "hash_pattern_scale"): "hash_pattern_scale",
     # Base / global
+    ("base", "shade_current_day"): "shade_current_day",
     ("base", "default_missing_icon"): "default_missing_icon",
     ("base", "default_missing_icon_size"): "default_missing_icon_size",
     ("base", "default_missing_icon_color"): "default_missing_icon_color",
@@ -85,6 +86,8 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("timeline", "today_label_text"): "timeline_today_label_text",
     ("timeline", "today_label_offset_y"): "timeline_today_label_offset_y",
     ("timeline", "today_line_color"): "timeline_today_line_color",
+    ("timeline", "today_line_length"): "timeline_today_line_length",
+    ("timeline", "today_line_direction"): "timeline_today_line_direction",
     ("timeline", "marker_stroke_color"): "timeline_marker_stroke_color",
     ("timeline", "marker_stroke_width"): "timeline_marker_stroke_width",
     ("timeline", "marker_radius"): "timeline_marker_radius",
@@ -318,11 +321,13 @@ THEME_TO_CONFIG_MAP: dict[tuple[str, str], str] = {
     ("watermark", "resize_mode"): "watermark_resize_mode",
     ("watermark", "opacity"): "watermark_opacity",
     ("watermark", "rotation_angle"): "watermark_rotation_angle",
+    ("watermark", "image"): "watermark_image",
     ("watermark", "image_rotation_angle"): "watermark_image_rotation_angle",
     # Fiscal labels
     ("fiscal", "label_format"): "fiscal_period_label_format",
     ("fiscal", "end_label_format"): "fiscal_period_end_label_format",
     ("fiscal", "year_offset"): "fiscal_year_offset",
+    ("fiscal", "use_period_colors"): "fiscal_use_period_colors",
     # Mini calendar
     # mini-icon has no section of its own — it is the mini renderer with day
     # numbers swapped for glyphs, so it reads mini_calendar like the rest.
@@ -631,6 +636,7 @@ _PIT_BLOCK_KEYS: dict[str, frozenset[str]] = {
     "today_line": frozenset(
         {
             "show",
+            "date",
             "color",
             "width",
             "dasharray",
@@ -1422,6 +1428,8 @@ class ThemeEngine:
         if isinstance(tl, dict):
             if "show" in tl:
                 config.pit_show_today_line = bool(tl["show"])
+            if "date" in tl and tl["date"] is not None:
+                config.pit_today_date = str(tl["date"])
             if "color" in tl:
                 config.theme_pit_today_line_color = _str(tl["color"])
             if "width" in tl:

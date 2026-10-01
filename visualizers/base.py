@@ -284,9 +284,6 @@ PAGE_CHROME_OPTIONS = frozenset(
         "footerleft",
         "footercenter",
         "footerright",
-        "watermark_text",
-        "watermark_rotation_angle",
-        "watermark_image",
     }
 )
 

@@ -138,14 +138,14 @@ PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260131 -th corporate -
 # Mini calendar with week numbers (output/mini/: mini.svg, mini.md, mini.csv, icons/)
 PYTHONPATH=. uv run python ecalendar.py mini 20260101 20261231 --weeknumbers -of mini.svg
 
-# Mini-icon calendar with squircle day-number icons, 4 columns, landscape
-PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 -mis squircles --mini-columns 4 -o landscape -of mini_icon.svg
+# Mini-icon calendar, 4 columns, landscape (icon set comes from the theme: mini_calendar.icon_set)
+PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 --mini-columns 4 -o landscape -of mini_icon.svg
 
 # Candybar vertical year-strip for a full year
 PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 -th corporate -of candybar.svg
 
-# Candybar with weekends suppressed and vertical (rotated) month names
-PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 --candybar-suppress-weekends --candybar-month-rotation -90 -of candybar.svg
+# Candybar with weekends suppressed (rotate month names with candybar.month.rotation in the theme)
+PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 --candybar-suppress-weekends -of candybar.svg
 
 # Timeline with custom today-line styling
 PYTHONPATH=. uv run python ecalendar.py timeline 20260101 20261231 -tll 120 -tld below -of timeline.svg
@@ -201,30 +201,20 @@ table by hand.
 | `--WBS` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | WBS filter expression. Comma-separated tokens; '!' excludes. Segments are dot-separated. '*' matches a segment, '**' matches any remaining segments (implicit if omitted). |  |
 | `--candybar-cell-width` | `POINTS` | `candybar` | Fixed day-cell width in points (default: 0 = square, width == row height) |  |
 | `--candybar-max-rows-per-page` | `N` | `candybar` | Split into side-by-side strips after N week rows (0 = single strip) |  |
-| `--candybar-month-rotation` | `DEGREES` | `candybar` | Rotate the month-name label (e.g. -90 for vertical, reading up) |  |
-| `--candybar-month-shading` |  | `candybar` | Tint day cells per month (alternating bands; theme can set colors) |  |
-| `--candybar-month-side` |  | `candybar` | Side for the merged month-name box (default: right) | choices `left, right` |
-| `--candybar-no-week-numbers` |  | `candybar` | Hide the week-number column (shown by default) | default `False` |
 | `--candybar-row-height` | `POINTS` | `candybar` | Fixed week-row height in points (default: 0 = auto-fit to page) |  |
 | `--candybar-suppress-weekends` |  | `candybar` | Drop Sat/Sun columns (default: weekends are shown) |  |
-| `--candybar-weekend-fill` | `COLOR` | `candybar` | Shade Sat/Sun day cells with this color (default: no weekend shading) |  |
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Glyph color (default: #222222) (`iconsheet`: Stroke color for icons (default: #333333)) (`patternsheet`: Fill color for pattern tiles (default: #333333)) | `fontsheet`: default `#222222`; `iconsheet`, `patternsheet`: default `#333333` |
 | `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch columns per page (requires --paginate; default: 8) (`fontsheet`: Font columns per page (requires --paginate; default: 2). Ignored with --fullset, which is always a single column.) (`iconsheet`: Icon columns per page (requires --paginate; default: 8)) (`palettesheet`: Swatch columns per page (requires --paginate; default: 12)) |  |
 | `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. |  |
 | `--csv` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write the event CSV into the run folder (on by default) | default `False` |
 | `--database`, `-db` | `PATH` | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `timeline`, `weekly` | Path to SQLite database file (default: calendar.db) | default `calendar.db` |
-| `--date-placement` |  | `pit` | Where each event date is drawn: inline (a line inside the label box, with the name/notes — never collides; default), axis (opposite the axis at the marker — the ruler look, but dates collide when events cluster), or none. | choices `inline, axis, none` |
 | `--details-md` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write the Markdown details document into the run folder (on by default) | default `False` |
 | `--direction` |  | `pit`, `timeline` | Axis direction (default: horizontal). Note: --orientation remains the page-orientation flag (portrait/landscape). (`timeline`: Axis direction (default: horizontal). Vertical runs the axis top-to-bottom with labels to the right (primary) / left (secondary). Note: --orientation remains the page-orientation flag (portrait/landscape).) | choices `horizontal, vertical` |
 | `--durations`, `-du` |  | `candybar`, `mini`, `mini-icon`, `text-mini` | Include multi-day durations (excluded by default) | default `False` |
 | `--embed-data` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Embed source event data (CSV) inside SVG metadata | default `False` |
 | `--empty`, `-e` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Create blank calendar (no events) (`excelblockplan`: Create blank workbook (no events)) | default `False` |
-| `--event-icon` | `NAME` | `pit` | DB icon name drawn inside each event's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |  |
 | `--filter`, `-f` | `TEXT` | `colorsheet`, `fontsheet`, `iconsheet`, `patternsheet` | Filter colors by name substring (case-insensitive) (`fontsheet`: Filter fonts by name substring (case-insensitive)) (`iconsheet`: Filter icons by name substring (case-insensitive)) (`patternsheet`: Filter patterns by name substring (case-insensitive)) |  |
-| `--fiscal` | `TYPE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). weekly/mini: period labels and day-box colors. text-mini: period start markers. timeline: fiscal period/quarter bands (see --fiscal-show-periods/quarters). blockplan/compactplan: NRF-aware fiscal_quarter bands. | choices `nrf-454, nrf-445, nrf-544, 13-period` |
-| `--fiscal-colors` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Use fiscal period colors instead of Gregorian month colors for day box backgrounds | default `False` |
-| `--fiscal-show-periods` |  | `timeline` | Show a fiscal period band row above the timeline axis (requires --fiscal) | default `False` |
-| `--fiscal-show-quarters` |  | `timeline` | Show a fiscal quarter band row above the timeline axis (requires --fiscal) | default `False` |
+| `--fiscal` | `TYPE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). weekly/mini: period labels (period colors come from the theme). text-mini: period start markers. timeline: fiscal period/quarter bands (theme timeline.show_fiscal_*). blockplan/compactplan: NRF-aware fiscal_quarter bands. | choices `nrf-454, nrf-445, nrf-544, 13-period` |
 | `--fiscal-year-offset` | `N` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Offset added to the fiscal period start year to produce the displayed fiscal year number. 0 = start year (e.g. FY starting Feb 2026 → FY2026), 1 = start year + 1 (e.g. FY starting Oct 2025 → FY2026, US federal default), -1 = start year − 1. Default: auto (0 for NRF). |  |
 | `--footer`, `-ft` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Include page footer | default `False` |
 | `--footercenter`, `-fc` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Center footer text |  |
@@ -237,31 +227,14 @@ table by hand.
 | `--headerright`, `-hr` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Right header text |  |
 | `--icons` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Write one SVG per icon the chart drew into the run folder (on by default) | default `False` |
 | `--includenotes`, `-notes` |  | `blockplan`, `compactplan`, `gantt`, `pit`, `timeline`, `weekly` | Show notes with event names | default `False` |
-| `--label-fill-opacity`, `-lfo` | `0.0-1.0` | `timeline` | Fill opacity for callout label boxes (default: 0.25). |  |
-| `--label-icon-gap` | `POINTS` | `pit` | Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0). |  |
-| `--label-icon-size` | `POINTS` | `pit` | Longest viewBox side of the label-box icon, in points. Defaults to the event-name font size so the glyph fits cleanly on the name baseline. |  |
-| `--label-side` |  | `pit` | Which side(s) of the axis the labels occupy. primary = above (horizontal) / right (vertical); secondary = below / left; both = chronologically alternating. Default: both. | choices `primary, secondary, both` |
-| `--leader-dash` | `DASHARRAY` | `pit` | SVG stroke-dasharray for leaders, e.g. "4,2". |  |
-| `--leader-label-anchor` |  | `pit` | Where the leader meets the label box along the axis. center (default) joins the box middle and never collides; start/end join the leading/trailing edge and may overlap on dense timelines. | choices `start, center, end` |
-| `--leader-length` | `POINTS` | `pit` | Distance from the axis to the first row of labels, i.e. the leader length (default: 8.0). Larger values lengthen leaders and widen row-to-row spacing. |  |
-| `--leader-stub` | `POINTS` | `pit` | Length of the straight perpendicular segment where each leader meets its label box (default: 6.0). Keeps the arrowhead flush with the line; 0 disables. Equivalent to pit.leader.end_stub. |  |
 | `--margin`, `-m` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Add page margins | default `False` |
-| `--marker-size` | `POINTS` | `pit` | Bounding-box size of the axis marker (built-in circle / diamond) in points (default: 7.0). |  |
-| `--milestone-icon` | `NAME` | `pit` | DB icon name drawn inside each milestone's label box, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |  |
 | `--milestones`, `-mo` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Show only milestones | default `False` |
 | `--mini-columns`, `-mc` | `N` | `mini`, `mini-icon`, `text-mini` | Number of months per row in mini calendar (default: 3) |  |
-| `--mini-grid-lines` |  | `mini`, `mini-icon` | Draw grid lines between day cells | default `False` |
-| `--mini-icon-set`, `-mis` | `SET` | `mini-icon` | Icon set to use for day numbers (choices: squares, darksquare, darkcircles, circles, squircles, darksquircles; default: squares) | choices `squares, darksquare, darkcircles, circles, squircles, darksquircles` |
-| `--mini-no-adjacent`, `-mna` |  | `mini`, `mini-icon`, `text-mini` | Hide leading/trailing days from adjacent months | default `False` |
 | `--mini-rows`, `-mr` | `N` | `mini`, `mini-icon`, `text-mini` | Number of rows of months (0 = auto from date range) |  |
-| `--mini-title-format` | `FMT` | `mini`, `mini-icon` | Format string for month title (default: MMM YY) |  |
 | `--monthnames`, `-mn` |  | `weekly` | Show month names on calendar | default `False` |
 | `--no-csv` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write the event CSV | default `False` |
 | `--no-details-md` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write the Markdown details document | default `False` |
 | `--no-icons` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Do not write one SVG per icon the chart drew | default `False` |
-| `--no-tick-labels` |  | `pit` | Draw tick marks but no tick labels. |  |
-| `--no-ticks` |  | `pit` | Suppress axis tick marks and labels. |  |
-| `--no-today-line` |  | `pit` | Suppress the today line. | default `True` |
 | `--nodurations`, `-nd` |  | `blockplan`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `timeline`, `weekly` | Exclude multi-day durations | default `False` |
 | `--noevents`, `-ne` |  | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Exclude single-day events | default `False` |
 | `--orientation`, `-o` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Page orientation (default: landscape) | default `landscape`; choices `portrait, landscape` |
@@ -270,26 +243,13 @@ table by hand.
 | `--papersize`, `-ps` | `SIZE` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Paper size (default: Widescreen). | default `Widescreen` |
 | `--quiet`, `-q` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Suppress all output except errors | default `False` |
 | `--rows`, `-rows` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch rows per page (requires --paginate; default: 10) (`fontsheet`: Font rows per page (requires --paginate; default: 10)) (`iconsheet`: Icon rows per page (requires --paginate; default: 10)) (`palettesheet`: Swatch rows per page — with no palette name this is the page's height budget for packing whole palettes (requires --paginate; default: 10)) |  |
-| `--shade`, `-sh` |  | `candybar`, `mini`, `mini-icon`, `weekly` | Shade current date | default `False` |
 | `--shrink` |  | `blockplan`, `candybar`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Shrink SVG width/height/viewBox to the bounding box of rendered content, removing blank page whitespace. | default `False` |
 | `--sized` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch box width in points (the height scales with it to keep the sheet's aspect ratio; the label/spacing gaps are unchanged). Requires --paginate; default: 110. (`fontsheet`: Sample text size in points; entry heights follow it. Requires --paginate; default: 16.) (`iconsheet`: Icon cell size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 24.) (`palettesheet`: Swatch box size in points (one integer sets both width and height; the label/spacing gaps are unchanged). Requires --paginate; default: 80.) |  |
 | `--status` | `LIST` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Comma-separated event statuses to include (active, draft, cancelled, archived, on-hold). Use 'all' for no filter. Default: active. |  |
 | `--theme`, `-th` | `THEME` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | Theme name or path to .yaml theme file (e.g., 'corporate', 'dark') (`excelblockplan`: Theme name or path to .yaml theme file) |  |
-| `--tick-interval` | `DAYS` | `pit` | For --tick-unit interval, days between ticks (default: 1). |  |
-| `--tick-label-format` | `FMT` | `pit` | Arrow date format for tick labels (e.g. 'MMM D'). For week/interval units the timeband label is used when omitted. |  |
-| `--tick-length` | `POINTS` | `pit` | Half-length of each axis tick mark, per side (default: 5.0). |  |
-| `--tick-unit` |  | `pit` | Axis tick granularity (timeband unit). Default: month. | choices `month, week, fiscal_quarter, fiscal_period, interval, date, year` |
 | `--tile-size`, `-ts` | `PTS` | `patternsheet` | Largest tile dimension after auto-normalization, in points (default: 18); 0 previews tiles at native size | default `18.0` |
-| `--today-date` | `YYYYMMDD` | `pit` | Override the today-line position. Lets a forward-dated presentation be prepared with the 'correct' today indicator. |  |
-| `--today-label` | `TEXT` | `pit` | Today-line label text (default: "today"; "" suppresses). |  |
-| `--today-line` |  | `pit` | Draw the today line (default: on). |  |
-| `--today-line-direction`, `-tld` |  | `timeline` | Which side of the timeline axis the today line extends to: 'above' (upward only), 'below' (downward only), or 'both' (default). | choices `above, below, both` |
-| `--today-line-length`, `-tll` | `POINTS` | `timeline` | Length of the today line in points (default: 0 = full available area). When direction is 'both', length is split equally above and below the axis. |  |
 | `--trace-style` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Trace how theme style_rules and decoration change each day, event and duration (which rules applied, what they overrode, which were skipped and why) to stderr | default `False` |
 | `--verbose`, `-v` |  | `blockplan`, `candybar`, `colors`, `colorsheet`, `compactplan`, `excelblockplan`, `exportdata`, `fonts`, `fontsheet`, `gantt`, `help`, `icons`, `iconsheet`, `mini`, `mini-icon`, `palettes`, `palettesheet`, `papersizes`, `patterns`, `patternsheet`, `pit`, `text-mini`, `themes`, `timeline`, `weekly` | Increase verbosity (-v, -vv, -vvv) | default `0` |
-| `--watermark-image`, `-wi` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark image file |  |
-| `--watermark-rotation-angle` | `DEGREES` | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Rotate text watermark by degrees (clockwise coordinates) |  |
-| `--watermark-text`, `-wt` |  | `blockplan`, `candybar`, `compactplan`, `gantt`, `mini`, `mini-icon`, `pit`, `timeline`, `weekly` | Watermark text |  |
 | `--week-number-mode`, `-wnm` |  | `mini`, `mini-icon`, `text-mini`, `weekly` | Week number mode (iso or custom) | default `iso`; choices `iso, custom` |
 | `--week1-start` | `YYYYMMDD` | `mini`, `mini-icon`, `text-mini`, `weekly` | Anchor date for week 1 (YYYYMMDD). Implies --weeknumbers and custom mode. |  |
 | `--weekend-days` | `DAYS` | `blockplan`, `compactplan`, `excelblockplan`, `gantt`, `timeline`, `weekly` | Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification. Defaults to Sat/Sun when weekends are shown. (`excelblockplan`: Comma-separated ISO weekday list (0=Mon..6=Sun) marking non-working days for holiday/weekend classification.) |  |
@@ -405,7 +365,7 @@ In compactplan, durations and milestones are rendered relative to a horizontal d
   - A bar name shortened to fit, or a date left out for want of room, is listed under **Exceptions**.
 - **Continuation icons**: when a duration event's end date extends beyond the specified calendar end date the line is clamped to the right edge of the timeline. If the global `continuation.show` is `true` (the default), a small icon is drawn at the right edge of the clamped line and listed in the details document's Icons & Symbols table. The icon name (default `"arrow-right"`), display height in points (default `8.0`), and color (default: inherits the line color) come from the global `continuation.icon_after`, `continuation.icon_height`, and `continuation.icon_color` keys (compactplan is horizontal-only and only clips on its trailing end, so it reads `icon_after`). A theme may instead `define icon:continuation` and bind it to `ec-continuation-icon` — values declared there (`icon`, `size`, `color`) override the global defaults. Icons are loaded from the `icons` table in the database. See [Continuation Icons](#continuation-icons-global-theme-section) for the full key catalog and orientation-aware list form.
 - The chart's text areas (band headers, milestone labels) support independent font name, font size, color, and opacity settings in the theme via the `compact_plan` section.
-- `--shade` highlights the current day column when today falls within the date range.
+- The current day column is highlighted when today falls within the date range and the theme sets `base.shade_current_day`.
 - `--weekends` controls whether weekend columns are included in the x-axis day list (same as all other commands).
 
 ### `gantt`
@@ -437,11 +397,11 @@ In the SVG mini calendar, day-level styling is driven by holidays, special days,
 - A day number is circled when any event on that day has `Milestone` set and `mini_calendar.circle_milestones` is enabled.
 - A day number is bold when the day contains a milestone, or when any event on that day has `Priority <= 1`.
 - A day number changes color when one of these applies: the day is from an adjacent month, the day is a holiday, or an event's `Resource_Group` maps to a configured resource-group color.
-- Adjacent-month day cells can be shown or hidden with `mini_calendar.show_adjacent` (default: `true`) or `--mini-no-adjacent`.
+- Adjacent-month day cells can be shown or hidden with `mini_calendar.show_adjacent` (default: `true`).
 - A configurable outline can be drawn around each entire month grid (title + DOW header + day cells) using `mini_calendar.month_outline_color/width/opacity/dasharray`; the outline is disabled by default (color is `null`).
 - Day cells can also receive SVG pattern decorations from top-level `style_rules` entries with `apply_to: day_box` (the mini renderer reads the same `style_rules` list as weekly).
 - If none of those overrides apply, the day number uses the base day-number color, resolved by one chain shared with `mini-icon` and `candybar` (highest priority first): the `text:day_number` token from `style_rules`, then an `ec-day-number` entry in `element_overrides`, then `colors.mini_calendar.day_color`, then `mini_calendar.day_color` (default `black`).
-- `--shade` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
+- `base.shade_current_day` affects the current day by shading the cell background only; it does not by itself make the number bold or change the number color.
 
 #### Details
 
@@ -468,7 +428,7 @@ icons; an icon it had no corner for is listed under **Exceptions**.
 3. Day-number icon from the configured icon set — one of 31 per-day icons (1–31) looked up by name from the icon database.
 4. Plain day-number text — rendered as a fallback if the icon name is not found in the database.
 
-**Available icon sets** (`--mini-icon-set` / `-mis`):
+**Available icon sets** (theme key `mini_calendar.icon_set`):
 
 | Set name | Style |
 |---|---|
@@ -482,7 +442,7 @@ icons; an icon it had no corner for is listed under **Exceptions**.
 **Layout auto-scaling:** The grid always fits all requested rows within the available content area. When the width-derived square-cell size would cause the bottom rows to overflow the page (common in landscape orientation with many rows), the cell height is reduced to fit — cells become slightly shorter than wide but remain visually compact.
 
 **Inherited `mini` options** — all flags and config fields that apply to `mini` also apply to `mini-icon`, including:
-`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--mini-no-adjacent` (`-mna`), `--mini-grid-lines`, `--mini-title-format`, `--shade`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
+`--mini-columns`, `--mini-rows`, `--weeknumbers`, `--week1-start`, `--week-number-mode`, `--weekends`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, and all filter flags.
 
 ### `candybar`
 
@@ -507,14 +467,14 @@ The number of rows is derived from the start/end dates — a full year produces 
 
 `cell_width` can also be set on the command line with `--candybar-cell-width POINTS`; the two column ratios are theme-only.
 
-**Month box.** The right-hand column (or left, via `--candybar-month-side`) holds a **merged month-name box** that spans every week row belonging to that month. A week is attributed to the month of its last visible day, so a boundary week such as Jan 27–Feb 2 is labeled *Feb* (matching the spreadsheet reference). The month label supports the full set of SVG text attributes — font, size, color, opacity, anchor, and **rotation** (e.g. `--candybar-month-rotation -90` runs the name vertically, reading up the box). Box fill/stroke and label styling are theme-configurable under the `candybar:` section.
+**Month box.** The right-hand column (or left, via `candybar.month_label_side`) holds a **merged month-name box** that spans every week row belonging to that month. A week is attributed to the month of its last visible day, so a boundary week such as Jan 27–Feb 2 is labeled *Feb* (matching the spreadsheet reference). The month label supports the full set of SVG text attributes — font, size, color, opacity, anchor, and **rotation** (e.g. `candybar.month.rotation: -90` runs the name vertically, reading up the box). Box fill/stroke and label styling are theme-configurable under the `candybar:` section.
 
 **Decoration and icons.** Day cells use the **same rule engine as `mini`/`mini-icon`** — holidays, special days, events, and theme `style_rules` / `box:day` rules drive cell shading, SVG pattern decorations, milestone circles, and icon placement (`icon_replace` / `icon_append`). Day cells show the day number by default and swap in an icon only when a rule requests one.
 
 **Cell shading (months & weekends).** In addition to the rule engine, candybar has two built-in base shades drawn *under* the rule/holiday shade (so holidays still win):
 
-- **Month banding** — enable with `--candybar-month-shading` (or `candybar.month_shading: true`). Day cells are tinted per calendar month, cycling through `candybar.month_shade_colors` (a list of colors; `none` skips shading that month). With no colors set it defaults to `["none", "gainsboro"]` so alternate months are tinted. Opacity via `candybar.month_shade_opacity` (default 0.12).
-- **Weekend tint** — set `--candybar-weekend-fill COLOR` (or `candybar.weekend_fill`) to shade the Sat/Sun day cells, with `candybar.weekend_opacity` (default 0.15). Independent of the rule engine — plain weekends are tinted even when they aren't holidays. (Only visible when weekends are shown.)
+- **Month banding** — enable with `candybar.month_shading: true`. Day cells are tinted per calendar month, cycling through `candybar.month_shade_colors` (a list of colors; `none` skips shading that month). With no colors set it defaults to `["none", "gainsboro"]` so alternate months are tinted. Opacity via `candybar.month_shade_opacity` (default 0.12).
+- **Weekend tint** — set `candybar.weekend_fill` to a color to shade the Sat/Sun day cells, with `candybar.weekend_opacity` (default 0.15). Independent of the rule engine — plain weekends are tinted even when they aren't holidays. (Only visible when weekends are shown.)
 
 The `corporate` theme ships with both enabled as a demonstration.
 
@@ -528,13 +488,8 @@ The `corporate` theme ships with both enabled as a demonstration.
 | `--candybar-cell-width` | `POINTS` | Fixed day-cell width (default: 0 = square, width == row height). |
 | `--candybar-max-rows-per-page` | `N` | Split into side-by-side strips after N rows (0 = single strip). |
 | `--candybar-suppress-weekends` |  | Drop Sat/Sun columns (default: weekends are shown). |
-| `--candybar-no-week-numbers` |  | Hide the week-number column (shown by default). |
-| `--candybar-month-side` | `{left,right}` | Side for the merged month box (default: right). |
-| `--candybar-month-rotation` | `DEGREES` | Rotate the month-name label (e.g. -90 for vertical). |
-| `--candybar-weekend-fill` | `COLOR` | Shade Sat/Sun day cells (default: no weekend shading). |
-| `--candybar-month-shading` |  | Tint day cells per month (alternating bands; theme sets colors). |
 
-Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--shade`, `--fiscal` / `--fiscal-colors`, and the event filter flags `--noevents`, `--durations`, `--milestones`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
+Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--fiscal`, and the event filter flags `--noevents`, `--durations`, `--milestones`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
 
 ### `palettesheet`
 
@@ -650,7 +605,7 @@ In timeline, single-day events and multi-day durations are rendered differently 
   - *Holiday icons* sit between the axis and the first lane of duration bars, on the side the tick dates leave free (the bars' side, or the primary side when the bars take both), with each date written past its icon; on a vertical axis dates that would collide step further out instead of down.
   - *Timebands* stack as columns off the ends of the content area — `timeline.top_time_bands` to the left of the chart, `bottom_time_bands` to the right — with each band's `row_height` read as its column width and its labels rotated. A band's `text_align` lands along the segment there: `left` pins the label where its rotated line starts reading (the segment's bottom edge), `right` where it ends. The axis is placed in what is left over, exactly as a horizontal chart places it between its band rows.
 - With `--noevents` the axis moves to the edge of the area the bars leave free — the top of a horizontal chart when the bars are below, the bottom when they are above, the middle when they take both sides — kept far enough in for its own tick dates to be printed.
-- The timeline does not take a `--shade` flag. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
+- The timeline does not shade the current day. Instead, it has a dedicated today marker: a vertical line and label rendered only when the resolved today date falls inside the displayed date range.
 
 ### `weekly`
 
@@ -663,7 +618,7 @@ In timeline, single-day events and multi-day durations are rendered differently 
 
 In weekly, day-box cells are drawn first, events and durations are placed into the available rows inside each visible day, then the day-number row is laid out with full knowledge of which days overflowed:
 
-- Day-box background color is chosen from month colors by default, from fiscal-period colors when fiscal colors are enabled, or from holiday/company nonworkday colors when the date is marked as a special day. `--shade` overrides that fill for the current day only.
+- Day-box background color is chosen from month colors by default, from fiscal-period colors when `fiscal.use_period_colors` is enabled, or from holiday/company nonworkday colors when the date is marked as a special day. `base.shade_current_day` overrides that fill for the current day only.
 - The number of event rows per day box is derived from the box height, day-number height, and event-row height so the bottom row never bleeds into the next week's cell.
 - Day-number row layout (left → right): fiscal label, week number, overflow icon, holiday/special-day icon(s), holiday name, day number. Every element is vertically centered with the day number — text/icon baselines shift by `0.3 × (day_num_size − element_size)` so labels with smaller fonts share a midline with the day number rather than a baseline.
   - **Week numbers** appear only on week-start days when `--weeknumbers` is enabled. They sit either in the left page margin (when one is present) or inside the day box past the fiscal label.
@@ -1780,7 +1735,7 @@ Grouped by visualization type. Within each group, rows are sorted alphabetically
 | `mini_day_number_glyphs` | `mini_calendar.day_number_glyphs` | `list[str] \| None` | `None` | Optional explicit glyphs for day numbers 1-31 in SVG mini calendars |
 | `mini_day_number_digits` | `mini_calendar.day_number_digits` | `list[str] \| None` | `None` | Optional digit glyph substitutions for SVG mini day numbers |
 | *(replaced)* | `style_rules` (top-level) | `list[dict]` | `[]` | Replaces legacy `mini_calendar.day_box.hash_rules`. Mini renderer reads the same top-level `style_rules` filtered by `apply_to: day_box`. |
-| `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell (also enabled by `--mini-grid-lines`) |
+| `mini_grid_lines` | `mini_calendar.grid_lines` | `bool` | `False` | Draw a stroked outline around every day cell |
 | `mini_month_outline_color` | `mini_calendar.month_outline_color` | `str | None` | `None` | Outline color drawn around each entire month grid; `None` disables the outline |
 | `mini_month_outline_width` | `mini_calendar.month_outline_width` | `float` | `0.5` | Month outline stroke width in points |
 | `mini_month_outline_opacity` | `mini_calendar.month_outline_opacity` | `float` | `1.0` | Month outline stroke opacity (0–1) |
@@ -2513,44 +2468,40 @@ The `pit` subcommand generates a clean **Points-in-Time** SVG: a single axis lin
 
 ### Visual aesthetic
 
-A single horizontal (or vertical) axis spans the project date range. Each event appears as a marker (filled circle, diamond, or DB icon glyph) on the axis, with a curved leader rising to a labeled box on the primary or secondary side. The box holds the event name, optional notes, and (by default) the date — see `--date-placement` to move the date back onto the axis or hide it. An optional "today" line crosses the axis as a perpendicular dashed rule.
+A single horizontal (or vertical) axis spans the project date range. Each event appears as a marker (filled circle, diamond, or DB icon glyph) on the axis, with a curved leader rising to a labeled box on the primary or secondary side. The box holds the event name, optional notes, and (by default) the date — see `pit.date_text.placement` to move the date back onto the axis or hide it. An optional "today" line crosses the axis as a perpendicular dashed rule.
 
 ### Usage examples
 
 ```bash
 # Horizontal, both-side labels, default theme (landscape page)
 uv run python ecalendar.py pit 20260101 20261231 \
-  --orientation landscape --direction horizontal --label-side both \
-  --tick-unit month --outputfile output/pit_2026.svg
+  --orientation landscape --direction horizontal \
+  --outputfile output/pit_2026.svg
 
 # Vertical poster, milestones only, label-box trophy icons, accent theme
 # (axis still uses the built-in diamond for each milestone — icons live in the box.)
 uv run python ecalendar.py pit 20260101 20261231 \
   --orientation portrait --papersize tabloid \
-  --direction vertical --label-side primary \
+  --direction vertical \
   --milestones \
-  --milestone-icon trophy --marker-size 11 \
-  --tick-unit fiscal_quarter \
   --theme accent \
   --outputfile output/pit_milestones_2026.svg
 
-# Fiscal-quarter ticks, dashed leaders, includes notes
+# Fiscal calendar, includes notes (set pit.tick_unit: fiscal_quarter and pit.leader.dasharray in the theme)
 uv run python ecalendar.py pit 20260101 20271231 \
-  --fiscal "4-5-4" --tick-unit fiscal_quarter \
-  --includenotes --leader-dash "3,2" \
+  --fiscal "4-5-4" \
+  --includenotes \
   --outputfile output/pit_program.svg
 
-# Future-dated "today" line for a board presentation
+# Future-dated "today" line: set pit.today_line.date / pit.today_line.label in the theme
 uv run python ecalendar.py pit 20260101 20261231 \
-  --today-date 20260901 --today-label "As of Q3" \
   --outputfile output/pit_q3_presentation.svg
 
 # Custom themed output (dark theme, vertical direction) — DB icons
 # in the label boxes alongside the event names, axis still uses the
 # built-in circle/diamond shapes.
 uv run python ecalendar.py pit 20260101 20261231 \
-  --theme dark --direction vertical --label-side both \
-  --event-icon dot --milestone-icon diamond \
+  --theme dark --direction vertical \
   --outputfile output/pit_dark.svg
 ```
 
@@ -2574,26 +2525,28 @@ Multi-day duration events are **always dropped** — PIT renders only point-in-t
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--direction` | | `horizontal` | Axis direction: `horizontal` or `vertical`. **Note:** this is distinct from `--orientation` which controls page rotation. Equivalent to `pit.direction`. |
-| `--label-side` | | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. Equivalent to `pit.label_side`. |
-| `--tick-unit` | | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. A perpendicular tick mark is drawn at each segment boundary with the segment label centered in its span. |
-| `--tick-interval` | | `1` | For `--tick-unit interval`, the number of days between ticks. |
-| `--tick-label-format` | | unit default | Arrow date format applied to each tick's own date (e.g. `MMM D`, `M/D`, `D`), for any `--tick-unit` including `interval`. When omitted, the unit's own label is used instead (the running index for `interval`, `Week N` for `week`, `FY26 Q1` for `fiscal_quarter`, etc.). |
-| `--tick-length` | | `5.0` | Half-length (points) of each tick mark, drawn on each side of the axis. |
-| `--no-ticks` | | (ticks on) | Suppress axis tick marks and labels entirely. |
-| `--no-tick-labels` | | (labels on) | Draw the tick marks but omit their labels. |
-| `--date-placement` | | `inline` | Where each event date is drawn: `inline` (a line inside the label box, alongside the name/notes — the box grows to fit, and dates inherit the boxes' collision-free multi-row spacing so they never overlap), `axis` (opposite the axis at the marker — the "ruler tick" look, but dates collide when events cluster), or `none`. Equivalent to `pit.date_text.placement`. |
-| `--today-line` / `--no-today-line` | | `--today-line` | Draw (or suppress) a perpendicular "today" line. Equivalent to `pit.today_line.show`. |
-| `--today-date` | | real today | Override the today-line position with a fixed date (`YYYY-MM-DD` or `YYYYMMDD`). Useful for forward-dated presentation decks. |
-| `--today-label` | | theme: `"today"` | Override the label text on the today line for this run. |
-| `--event-icon` | | none | DB icon name drawn **inside each event's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in circle). |
-| `--milestone-icon` | | none | DB icon name drawn **inside each milestone's label box**, on the name line and to the left of the name. Does NOT change the axis marker (always a built-in diamond). |
-| `--label-icon-size` | | name font size | Longest viewBox side (points) of the label-box icon. Equivalent to `pit.label.icon_size`. |
-| `--label-icon-gap` | | `4.0` | Horizontal gap (points) between the label-box icon and the start of the event name. Equivalent to `pit.label.icon_gap`. |
-| `--marker-size` | | `7.0` | Bounding-box size (in points) of the axis marker (built-in circle / diamond). Equivalent to `pit.axis.marker_size`. |
-| `--leader-dash` | | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
-| `--leader-label-anchor` | | `center` | Where the leader meets the label box along the axis: `center`, `start`, or `end`. `center` joins the middle of the box and is collision-free (it matches labella's centered placement model). `start`/`end` join the leading/trailing edge and can overlap on dense timelines. |
-| `--leader-length` | | `8.0` | Distance (in points) from the axis to the first row of labels — i.e. the leader length. Larger values lengthen leaders and widen row-to-row spacing. Equivalent to the theme's `pit.labella.layer_gap`. |
-| `--leader-stub` | | `6.0` | Length (in points) of the straight, axis-perpendicular segment where each leader meets its label box. labella's leader béziers arrive at a shallow angle while an `orient="auto"` arrowhead points perpendicular, leaving the head visually detached; the stub gives the arrowhead a genuinely perpendicular segment to sit on. `0` disables (pure bézier). Equivalent to `pit.leader.end_stub`. |
+
+All other PIT styling is theme-only (decoration CLI flags were removed). Set these in the `pit:` block of a theme YAML:
+
+| Theme key | Default | Description |
+|---|---|---|
+| `pit.label_side` | `both` | Which side of the axis labels occupy: `primary`, `secondary`, or `both`. |
+| `pit.tick_unit` | `month` | Axis tick granularity: `month`, `week`, `fiscal_quarter`, `fiscal_period`, `interval`, `date`, or `year`. A perpendicular tick mark is drawn at each segment boundary with the segment label centered in its span. |
+| `pit.tick_interval` | `1` | For `tick_unit: interval`, the number of days between ticks. |
+| `pit.tick_label_format` | unit default | Arrow date format applied to each tick's own date (e.g. `MMM D`, `M/D`, `D`). When omitted, the unit's own label is used. |
+| `pit.tick_length` | `5.0` | Half-length (points) of each tick mark, drawn on each side of the axis. |
+| `pit.show_ticks` / `pit.show_tick_labels` | `true` | Set `show_ticks: false` to suppress ticks and labels; `show_tick_labels: false` keeps the marks but omits labels. |
+| `pit.date_text.placement` | `inline` | Where each event date is drawn: `inline` (inside the label box), `axis` (opposite the axis at the marker; dates can collide when events cluster), or `none`. |
+| `pit.today_line.show` | `true` | Draw or suppress the perpendicular "today" line. |
+| `pit.today_line.date` | real today | Fixed date for the today line (`YYYY-MM-DD` or `YYYYMMDD`), useful for forward-dated decks. |
+| `pit.today_line.label` | `"today"` | Label text on the today line. |
+| `pit.default_event_icon` / `pit.default_milestone_icon` | none | DB icon name drawn inside each event's / milestone's label box, left of the name. Does not change the axis marker. |
+| `pit.label.icon_size` / `pit.label.icon_gap` | name font size / `4.0` | Longest viewBox side of the label-box icon, and the gap (points) between icon and name. |
+| `pit.axis.marker_size` | `7.0` | Bounding-box size (points) of the axis marker (built-in circle / diamond). |
+| `pit.leader.dasharray` | none (solid) | SVG `stroke-dasharray` for leader lines, e.g. `"4,2"`. |
+| `pit.leader_label_anchor` | `center` | Where the leader meets the label box: `center`, `start`, or `end`. `center` is collision-free. |
+| `pit.labella.layer_gap` | `8.0` | Distance (points) from the axis to the first row of labels, i.e. the leader length. |
+| `pit.leader.end_stub` | `6.0` | Length (points) of the straight, axis-perpendicular segment where each leader meets its label box; `0` disables (pure bezier). |
 
 ### Theme bindings
 
@@ -2799,9 +2752,9 @@ horizontal one.
 
 By default tick labels are drawn on the **opposite side of the axis from the
 callout label boxes**, so they never overlap the events. With
-`--label-side primary` the boxes sit above (horizontal) / right (vertical) and
-the tick labels go below / left; with `--label-side secondary` the boxes and
-tick labels swap sides. `--label-side both` keeps the default below / left
+`pit.label_side: primary` the boxes sit above (horizontal) / right (vertical) and
+the tick labels go below / left; with `secondary` the boxes and
+tick labels swap sides. `both` keeps the default below / left
 placement for the tick labels.
 
 To pin a band's labels to a specific side regardless of the callout side — or

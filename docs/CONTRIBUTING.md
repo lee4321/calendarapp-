@@ -62,7 +62,7 @@ The architecture reading order lives in `docs/architecture/README.md`
   `uv run python tools/generate_default_renderer_values.py` and review the
   diff.
 - Content filters (`--noevents`, `--nodurations`/`--durations`, `--milestones`,
-  `--WBS`, `--status`, `--country`, `--empty`, and the gated `--shade`,
+  `--WBS`, `--status`, `--country`, `--empty`, and the gated
   `--includenotes`) are defined once: register them with
   `_add_content_filter_args()` in `cli/args.py` and wire them in
   `_apply_content_filters()` in `cli/config_assembly.py`. The SVG views,

@@ -113,15 +113,16 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
 # milestones only.  Keep in step with _durations_optin_views in cli/args.py.
 _DURATIONS_OPTIN_COMMANDS = frozenset({"mini", "mini-icon", "text-mini", "candybar"})
 
-# Simple one-to-one CLI → config assignments for the mini, candybar,
-# timeline, PIT, and fiscal option groups.  One row per option:
+# Simple one-to-one CLI → config assignments for layout/content options of the
+# mini, candybar, timeline, PIT, fiscal and run-details groups.  Decoration
+# (colours, shading, icons, ticks, leaders, watermark, ...) is theme-only and
+# has no CLI option.  One row per option:
 # (args attribute, config attribute, kind).
 #
 # kind:
 #   "value"   — argparse default is None; assign when the user passed a value.
 #               store_true/store_false actions whose default is None (e.g.
-#               --candybar-suppress-weekends, --no-ticks, --today-line) also
-#               use this kind: the attribute is non-None only when given.
+#               --candybar-suppress-weekends) also use this kind: the attribute is non-None only when given.
 #   "enable"  — store_true with default False; set the config field True.
 #   "disable" — store_true with default False; set the config field False.
 #
@@ -135,10 +136,6 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     # Mini calendar
     ("mini_columns", "mini_columns", "value"),
     ("mini_rows", "mini_rows", "value"),
-    ("mini_title_format", "mini_title_format", "value"),
-    ("mini_no_adjacent", "mini_show_adjacent", "disable"),
-    ("mini_grid_lines", "mini_grid_lines", "enable"),
-    ("mini_icon_set", "mini_icon_set", "value"),
     # Run details (every visualization)
     ("details_md", "include_details_markdown", "enable"),
     ("no_details_md", "include_details_markdown", "disable"),
@@ -151,42 +148,12 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("candybar_cell_width", "candybar_cell_width", "value"),
     ("candybar_max_rows_per_page", "candybar_max_rows_per_page", "value"),
     ("candybar_suppress_weekends", "candybar_suppress_weekends", "value"),
-    ("candybar_no_week_numbers", "candybar_show_week_numbers", "disable"),
-    ("candybar_month_side", "candybar_month_label_side", "value"),
-    ("candybar_month_rotation", "candybar_month_rotation", "value"),
-    ("candybar_weekend_fill", "candybar_weekend_fill", "value"),
-    ("candybar_month_shading", "candybar_month_shading", "value"),
     # Timeline
     ("timeline_direction", "timeline_orientation", "value"),
-    ("today_line_length", "timeline_today_line_length", "value"),
-    ("today_line_direction", "timeline_today_line_direction", "value"),
-    ("label_fill_opacity", "timeline_label_fill_opacity", "value"),
     # PIT
     ("direction", "pit_direction", "value"),
-    ("label_side", "pit_label_side", "value"),
-    ("tick_unit", "pit_tick_unit", "value"),
-    ("tick_interval", "pit_tick_interval", "value"),
-    ("tick_label_format", "pit_tick_label_format", "value"),
-    ("tick_length", "pit_tick_length", "value"),
-    ("pit_show_ticks", "pit_show_ticks", "value"),
-    ("pit_show_tick_labels", "pit_show_tick_labels", "value"),
-    ("date_placement", "pit_date_placement", "value"),
-    ("pit_today_line", "pit_show_today_line", "value"),
-    ("today_date", "pit_today_date", "value"),
-    ("today_label", "pit_today_line_label", "value"),
-    ("event_icon", "pit_default_event_icon", "value"),
-    ("milestone_icon", "pit_default_milestone_icon", "value"),
-    ("marker_size", "pit_marker_size", "value"),
-    ("label_icon_size", "pit_label_icon_size", "value"),
-    ("label_icon_gap", "pit_label_icon_gap", "value"),
-    ("leader_dash", "pit_leader_stroke_dasharray", "value"),
-    ("leader_label_anchor", "pit_leader_label_anchor", "value"),
-    ("leader_length", "pit_labella_layer_gap", "value"),
-    ("leader_stub", "pit_leader_end_stub", "value"),
     # Fiscal
     ("fiscal_year_offset", "fiscal_year_offset", "value"),
-    ("fiscal_show_periods", "timeline_show_fiscal_periods", "enable"),
-    ("fiscal_show_quarters", "timeline_show_fiscal_quarters", "enable"),
 )
 
 
@@ -350,7 +317,6 @@ def _apply_args_to_config(
 
     # Display options, then the event filters shared with excelblockplan and
     # exportdata.
-    config.shade_current_day = getattr(args, "shade", False)
     config.include_notes = getattr(args, "includenotes", False)
     _apply_content_filters(args, config)
 
@@ -358,15 +324,14 @@ def _apply_args_to_config(
     # table-driven so the post-theme re-apply pass uses the identical list.
     _apply_cli_config_overrides(args, config)
 
-    # Fiscal calendar type + period-colour flag (paired, so not in the table)
     if getattr(args, "fiscal", None):
         config.fiscal_calendar_type = args.fiscal
-        config.fiscal_use_period_colors = getattr(args, "fiscal_colors", False)
 
 
 def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
     """
-    Map CLI header/footer/watermark text arguments into CalendarConfig.
+    Map CLI header/footer text arguments into CalendarConfig, and expand the
+    template variables in the theme-supplied watermark text and image path.
 
     Each non-empty text field is passed through replace_template_vars() so
     that tokens like ``[startdate]`` and ``[enddate]`` are expanded using the
@@ -380,9 +345,8 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
         --footerleft            → config.footer_left_text
         --footercenter          → config.footer_center_text
         --footerright           → config.footer_right_text
-        --watermark-text        → config.watermark_text
-        --watermark-rotation-angle → config.watermark_rotation_angle
-        --watermark-image       → config.watermark_image
+    The watermark (text, rotation, image) is decoration, so it comes from
+    the theme only; its text and image path are expanded here.
 
     Called by:
         run() after calc_calendar_range() has populated adjustedstart/adjustedend.
@@ -403,17 +367,16 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
         ("footerleft", "footer_left_text"),
         ("footercenter", "footer_center_text"),
         ("footerright", "footer_right_text"),
-        ("watermark_text", "watermark_text"),
     )
     for arg_name, config_attr in template_text_fields:
         value = getattr(args, arg_name, "")
         if value:
             setattr(config, config_attr, replace_template_vars(config, value))
 
-    if getattr(args, "watermark_rotation_angle", None) is not None:
-        config.watermark_rotation_angle = float(args.watermark_rotation_angle)
-    if getattr(args, "watermark_image", ""):
-        config.watermark_image = replace_template_vars(config, args.watermark_image)
+    if config.watermark_text:
+        config.watermark_text = replace_template_vars(config, config.watermark_text)
+    if config.watermark_image:
+        config.watermark_image = replace_template_vars(config, config.watermark_image)
 
 
 def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -> None:

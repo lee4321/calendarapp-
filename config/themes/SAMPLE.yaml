@@ -103,7 +103,7 @@ weekly:
 mini_calendar:
   # Glyph set the mini-icon variant draws day numbers from:
   # squares | darksquare | circles | darkcircles | squircles |
-  # darksquircles. --mini-icon-set overrides it.
+  # darksquircles. (Theme-only; there is no CLI flag.)
   icon_set: squares
   title_format: MMMM YYYY
   week_number_label_format: W{num}

@@ -20,7 +20,6 @@ from config.config import create_calendar_config
 _FILTER_FLAGS = frozenset(
     {
         "--empty",
-        "--shade",
         "--noevents",
         "--durations",
         "--nodurations",
@@ -34,11 +33,11 @@ _FILTER_FLAGS = frozenset(
 
 _COMMON = {"--noevents", "--milestones", "--WBS", "--status", "--country"}
 _PLAN = _COMMON | {"--empty", "--nodurations", "--includenotes"}
-_MINI = _COMMON | {"--empty", "--shade", "--durations"}
+_MINI = _COMMON | {"--empty", "--durations"}
 
 #: The per-view gating: which filter flags each subcommand registers.
 _EXPECTED = {
-    "weekly": _PLAN | {"--shade"},
+    "weekly": _PLAN,
     "timeline": _PLAN,
     "blockplan": _PLAN,
     "gantt": _PLAN,

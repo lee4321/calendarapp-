@@ -227,11 +227,11 @@ all subcommands and their option groups.
 - Output Options (`--outputfile`, `--papersize`, `--orientation`, `--shrink`)
 - Layout Options (`--weekends`, `--header`, `--footer`, `--margin`)
 - Header/Footer text (`--headerleft`, `--headercenter`, `--headerright`, …)
-- Watermark Options (`--watermark`, `--watermark-rotation-angle`, `--imagemark`)
-- Content Filtering (`--empty`, `--noevents`, `--nodurations`/`--durations`, `--milestones`, `--WBS`, `--status`, `--country`; gated per view: `--shade`, `--includenotes`) — defined once in `_add_content_filter_args()` and shared with text-mini, excelblockplan and exportdata
-- Mini Calendar Options (`--mini-columns`, `--mini-rows`, `--mini-no-adjacent`, …)
-- Timeline Options (`--today-line-length`, `--today-line-direction`, `--label-fill-opacity`)
-- Fiscal Options (`--fiscal`, `--fiscal-colors`, `--fiscal-year-offset`)
+- Watermark Options (`--watermark`, `--imagemark`; text rotation and images are theme-only: `watermark.rotation_angle`, `watermark.image`)
+- Content Filtering (`--empty`, `--noevents`, `--nodurations`/`--durations`, `--milestones`, `--WBS`, `--status`, `--country`; gated per view: `--includenotes`) — defined once in `_add_content_filter_args()` and shared with text-mini, excelblockplan and exportdata
+- Mini Calendar Options (`--mini-columns`, `--mini-rows`, …; decoration such as `mini_calendar.show_adjacent` is theme-only)
+- Timeline decoration (`timeline.today_line_length`, `today_line_direction`, `label_fill_opacity`) is theme-only; no CLI flags
+- Fiscal Options (`--fiscal`, `--fiscal-year-offset`; `fiscal.use_period_colors` is theme-only)
 - Week Number Options (`--weeknumbers`, `--week-number-mode`, `--week1-start`)
 - Theme (`--theme`)
 - Logging (`--verbose`, `--quiet`)
@@ -308,7 +308,6 @@ entry-point readable and makes it easy to unit-test config wiring in isolation.
 | `--footercenter` | `config.footer_center_text` |
 | `--footerright` | `config.footer_right_text` |
 | `--watermark` | `config.watermark` |
-| `--watermark-rotation-angle` | `config.watermark_rotation_angle` |
 | `--imagemark` | `config.imagemark` |
 
 **Called by:** `run()` after `calc_calendar_range()` (so `[startdate]`/`[enddate]`
@@ -327,8 +326,8 @@ separate from the larger `_apply_args_to_config()` which handles structural opti
 silently overwritten.
 
 **Currently handles:**
-- `--mini-no-adjacent` → forces `config.mini_show_adjacent = False` even if the
-  theme sets it `True`.
+- No decoration flags remain (they were removed; decoration is theme-only), so it
+  now re-asserts only non-decoration CLI values.
 
 **Called by:** `run()` immediately after the second `theme_engine.apply(config)` call
 (the call that follows `setfontsizes()`).

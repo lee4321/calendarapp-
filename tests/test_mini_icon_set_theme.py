@@ -3,7 +3,7 @@
 mini-icon has no theme section of its own: MiniIconRenderer subclasses the
 mini renderer and swaps day numbers for glyphs, so it reads ``mini_*`` like
 the rest of that family. The one thing only it uses — which of the six
-31-glyph sets to draw from — was reachable from ``--mini-icon-set`` alone.
+31-glyph sets to draw from — is set by ``mini_calendar.icon_set`` (theme-only).
 """
 
 from __future__ import annotations
@@ -41,13 +41,6 @@ def test_the_renderer_resolves_what_the_theme_asked_for():
     circles = ICON_SETS[_themed("darkcircles").mini_icon_set]
     assert len(squares) == len(circles) == 31
     assert squares != circles
-
-
-def test_an_explicit_flag_still_beats_the_theme():
-    """CLI precedence is the engine's contract; the theme is the default."""
-    config = _themed("squircles")
-    _reapply_post_theme_cli_overrides(Namespace(mini_icon_set="darksquare"), config)
-    assert config.mini_icon_set == "darksquare"
 
 
 def test_the_theme_survives_when_no_flag_is_given():

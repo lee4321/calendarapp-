@@ -1,12 +1,6 @@
-import tempfile
 import unittest
-from argparse import Namespace
-
-import yaml
 
 from config.config import create_calendar_config
-from config.theme_engine import ThemeEngine
-from ecalendar import _reapply_post_theme_cli_overrides
 from shared.date_utils import calc_calendar_range
 
 
@@ -39,26 +33,6 @@ class TestCalendarRange(unittest.TestCase):
 
         self.assertEqual(config.adjustedstart, "20250105")
         self.assertEqual(config.adjustedend, "20250118")
-
-    def test_cli_mini_no_adjacent_overrides_theme(self):
-        config = create_calendar_config()
-        engine = ThemeEngine()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump(
-                {
-                    "theme": {"name": "Mini"},
-                    "mini_calendar": {"show_adjacent": True},
-                },
-                f,
-            )
-            f.flush()
-            engine.load(f.name)
-        engine.apply(config)
-        args = Namespace(mini_no_adjacent=True)
-
-        _reapply_post_theme_cli_overrides(args, config)
-
-        self.assertFalse(config.mini_show_adjacent)
 
 
 if __name__ == "__main__":

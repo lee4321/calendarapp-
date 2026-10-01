@@ -33,7 +33,7 @@ exceptions in the run's details document.
 ## mini-icon — mini with glyph day numbers
 
 Extends the mini family; day numbers render as icon glyphs from a named
-set (`--mini-icon-set`, e.g. `squircles` — the `klee/` SVG collection
+set (theme key `mini_calendar.icon_set`, e.g. `squircles` — the `klee/` SVG collection
 loaded into the DB icon table).
 
 ## candybar — vertical year strip
@@ -51,7 +51,7 @@ only visualizer with zero styling reads.
 ## timeline — labella callouts on a time axis
 
 Continuous date axis (horizontal or vertical, `--orientation` +
-`--label-side`). Point events become callouts placed by the shared
+`pit.label_side` in the theme). Point events become callouts placed by the shared
 labella engine (`shared/labella_layout.py` — Force/VPSC label
 de-collision); durations pack into greedy lanes on the other side of the
 axis. Month ticks, optional timebands (horizontal only), today line.

@@ -8,7 +8,6 @@ import pytest
 
 import ecalendar
 from cli.errors import ConfigError
-from config.config import create_calendar_config
 
 
 def _create_icons_db(path: Path) -> None:
@@ -112,40 +111,6 @@ def test_fonts_subcommand_lists_registered_fonts(capsys):
     assert "Roboto-Regular" in out
 
 
-def test_weekly_parser_accepts_watermark_rotation_angle():
-    parser = ecalendar._create_argument_parser("calendar.svg")
-    args = parser.parse_args(
-        [
-            "weekly",
-            "20260101",
-            "20260131",
-            "--watermark-rotation-angle",
-            "22.5",
-        ]
-    )
-    assert args.watermark_rotation_angle == 22.5
-
-
-def test_apply_text_options_sets_watermark_rotation_angle():
-    parser = ecalendar._create_argument_parser("calendar.svg")
-    args = parser.parse_args(
-        [
-            "weekly",
-            "20260101",
-            "20260131",
-            "--watermark-text",
-            "WM",
-            "--watermark-rotation-angle",
-            "-15",
-        ]
-    )
-    config = create_calendar_config()
-    ecalendar._apply_text_options(args, config)
-
-    assert config.watermark_text == "WM"
-    assert config.watermark_rotation_angle == -15.0
-
-
 def test_parse_atfile_lines_strips_comments_and_preserves_hash_numbers(tmp_path):
     atfile = tmp_path / "weekly_args.txt"
     atfile.write_text(
@@ -153,7 +118,7 @@ def test_parse_atfile_lines_strips_comments_and_preserves_hash_numbers(tmp_path)
             [
                 "",
                 "# full line comment",
-                "--watermark-text=Build # 42",
+                "--headercenter=Build # 42",
                 "--headerleft=Sprint#2",
                 "--footerleft=Release #1",
                 "weekly # inline comment",
@@ -165,7 +130,7 @@ def test_parse_atfile_lines_strips_comments_and_preserves_hash_numbers(tmp_path)
 
     lines = ecalendar._parse_atfile_lines(str(atfile))
 
-    assert "--watermark-text=Build" in lines
+    assert "--headercenter=Build" in lines
     assert "--headerleft=Sprint#2" in lines
     assert "--footerleft=Release #1" in lines
     assert "weekly" in lines
@@ -327,7 +292,6 @@ def test_help_subcommand_choices_are_sorted_and_cover_every_command(capsys):
         ("footerleft", "Hi"),
         ("footercenter", "Hi"),
         ("footerright", "Hi"),
-        ("watermark_rotation_angle", 30.0),
     ],
 )
 def test_page_chrome_flags_do_not_warn_for_svg_views(flag, value, caplog):

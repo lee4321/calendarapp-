@@ -909,7 +909,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # Build daykey → all cell keys (primary + adjacent) from coordinates.
         # Adjacent keys have format Cell_{month_key}_{daykey}__adj; primary
         # keys have format Cell_{daykey}. Adjacent cells are absent from
-        # coordinates when --mini-no-adjacent is active, so that case is
+        # coordinates when mini_calendar.show_adjacent is false, so that case is
         # handled automatically.
         day_cell_keys: dict[str, list[str]] = {}
         for key in coordinates:

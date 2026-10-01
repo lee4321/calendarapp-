@@ -380,7 +380,7 @@ def test_pit_tick_units(tmp_path):
 
 
 def test_pit_today_date_override(tmp_path):
-    """--today-date moves the today line to the specified date."""
+    """pit.today_line.date moves the today line to the specified date."""
     config = _make_config(tmp_path)
     config.pit_today_date = "20260601"
     config.pit_show_today_line = True

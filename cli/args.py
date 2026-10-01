@@ -239,7 +239,6 @@ def _add_content_filter_args(
     *,
     durations: Literal["optout", "optin", "none"] = "optout",
     empty_help: str | None = "Create blank calendar (no events)",
-    shade: bool = False,
     includenotes: bool = False,
 ) -> None:
     """
@@ -259,7 +258,6 @@ def _add_content_filter_args(
                       family, whose day cells a duration would bury); "none"
                       registers neither (PIT always drops durations).
         empty_help:   Help text for --empty, or None to leave the flag out.
-        shade:        Register --shade (day-grid views).
         includenotes: Register --includenotes (views that draw a notes line).
     """
     group = parser.add_argument_group("Content Filtering")
@@ -269,13 +267,6 @@ def _add_content_filter_args(
             "-e",
             action="store_true",
             help=empty_help,
-        )
-    if shade:
-        group.add_argument(
-            "--shade",
-            "-sh",
-            action="store_true",
-            help="Shade current date",
         )
     group.add_argument(
         "--noevents",
@@ -371,19 +362,15 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
 
     Options that a view's renderer never reads are not registered on that
     view's parser (per-view audit: docs/cli_theme_overrides.html, Appendix A).
-    E.g. --monthnames is weekly-only, --shade exists only on
-    the day-grid views, and pit has no --nodurations (it always drops
+    E.g. --monthnames is weekly-only, and pit has no --nodurations (it always drops
     multi-day durations).  The mini family (mini, mini-icon, text-mini, and
     candybar, which reuses the mini day-cell engine) drops durations by default
     and takes --durations to opt back in, so it has no --nodurations either.
     - Header/Footer text      --headerleft, --headercenter, --headerright, …
-    - Watermark Options       --watermark-text, --watermark-rotation-angle, --watermark-image
     - Content Filtering       --noevents, --nodurations (--durations on the
                               mini family), --milestones, --WBS, --empty
-    - Mini Calendar Options   --mini-columns, --mini-rows, --mini-no-adjacent, …
-    - Timeline Options        --today-line-length, --today-line-direction, …
-    - Fiscal Options          --fiscal, --fiscal-colors, --fiscal-year-offset,
-                              --fiscal-show-periods, --fiscal-show-quarters (timeline)
+    - Mini Calendar Options   --mini-columns, --mini-rows
+    - Fiscal Options          --fiscal, --fiscal-year-offset
     - Week Number Options     --weeknumbers, --week-number-mode, --week1-start
     - Theme                   --theme
     - Logging                 --verbose, --quiet
@@ -946,10 +933,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     # Per-view option gating.  A flag whose value a view's renderer never
     # reads is not registered on that view's parser at all
     # (docs/cli_theme_overrides.html, Appendix A):
-    #   --shade         day-grid views only (shared day-style resolver)
     #   --weekend-days  views that classify days via config.get_weekend_days()
     #   --includenotes  views that render a notes line with event names
-    _shade_views = (weekly, mini, mini_icon, candybar)
     # Mini calendars are day-per-cell grids: a multi-day duration paints a run
     # of cells and buries the single-day marks under it, so the mini family
     # shows single-day events and milestones only unless --durations is given.
@@ -1098,25 +1083,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         text_group.add_argument("--footercenter", "-fc", type=str, default="", help="Center footer text")
         text_group.add_argument("--footerright", "-fr", type=str, default="", help="Right footer text")
 
-        # Watermark options
-        watermark_group = view_parser.add_argument_group("Watermark Options")
-        watermark_group.add_argument("--watermark-text", "-wt", type=str, default="", help="Watermark text")
-        watermark_group.add_argument(
-            "--watermark-rotation-angle",
-            type=float,
-            default=None,
-            metavar="DEGREES",
-            help="Rotate text watermark by degrees (clockwise coordinates)",
-        )
-        watermark_group.add_argument(
-            "--watermark-image",
-            "-wi",
-            type=str,
-            default="",
-            help="Watermark image file",
-        )
-
-        # Content filtering (day-grid views additionally get --shade)
+        # Content filtering
         durations: Literal["optout", "optin", "none"] = "optout"
         if view_parser in _durations_optin_views:
             durations = "optin"
@@ -1125,12 +1092,11 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         _add_content_filter_args(
             view_parser,
             durations=durations,
-            shade=view_parser in _shade_views,
             includenotes=view_parser in _includenotes_views,
         )
 
     # text-mini: weekends + content filtering only (no SVG layout,
-    # header/footer, watermark, shade; its renderer also never
+    # header/footer, watermark; its renderer also never
     # reads weekend_days or include_notes)
     _tm_layout = text_mini.add_argument_group("Layout Options")
     _tm_layout.add_argument(
@@ -1174,54 +1140,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             metavar="N",
             help="Number of rows of months (0 = auto from date range)",
         )
-        g.add_argument(
-            "--mini-no-adjacent",
-            "-mna",
-            action="store_true",
-            help="Hide leading/trailing days from adjacent months",
-        )
-    # SVG mini views only — the text-mini month title is hardcoded.
-    for g in (mini_group, mini_icon_group):
-        g.add_argument(
-            "--mini-title-format",
-            type=str,
-            default=None,
-            metavar="FMT",
-            help="Format string for month title (default: MMM YY)",
-        )
-    mini_group.add_argument(
-        "--mini-grid-lines",
-        action="store_true",
-        help="Draw grid lines between day cells",
-    )
-
-    # Mini-icon-specific options
-    mini_icon_group.add_argument(
-        "--mini-grid-lines",
-        action="store_true",
-        help="Draw grid lines between day cells",
-    )
-    mini_icon_group.add_argument(
-        "--mini-icon-set",
-        "-mis",
-        type=str,
-        default=None,
-        metavar="SET",
-        choices=[
-            "squares",
-            "darksquare",
-            "darkcircles",
-            "circles",
-            "squircles",
-            "darksquircles",
-        ],
-        help=(
-            "Icon set to use for day numbers "
-            "(choices: squares, darksquare, darkcircles, circles, squircles, darksquircles; "
-            "default: squares)"
-        ),
-    )
-
     # Candybar-specific options (vertical year-strip)
     candybar_group = candybar.add_argument_group("Candybar Options")
     candybar_group.add_argument(
@@ -1250,38 +1168,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         action="store_true",
         default=None,
         help="Drop Sat/Sun columns (default: weekends are shown)",
-    )
-    candybar_group.add_argument(
-        "--candybar-no-week-numbers",
-        action="store_true",
-        help="Hide the week-number column (shown by default)",
-    )
-    candybar_group.add_argument(
-        "--candybar-month-side",
-        type=str,
-        default=None,
-        choices=["left", "right"],
-        help="Side for the merged month-name box (default: right)",
-    )
-    candybar_group.add_argument(
-        "--candybar-month-rotation",
-        type=float,
-        default=None,
-        metavar="DEGREES",
-        help="Rotate the month-name label (e.g. -90 for vertical, reading up)",
-    )
-    candybar_group.add_argument(
-        "--candybar-weekend-fill",
-        type=str,
-        default=None,
-        metavar="COLOR",
-        help="Shade Sat/Sun day cells with this color (default: no weekend shading)",
-    )
-    candybar_group.add_argument(
-        "--candybar-month-shading",
-        action="store_true",
-        default=None,
-        help="Tint day cells per month (alternating bands; theme can set colors)",
     )
 
     # Week number options (weekly, mini, mini-icon, text-mini)
@@ -1324,36 +1210,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "flag (portrait/landscape)."
         ),
     )
-    timeline_group.add_argument(
-        "--today-line-length",
-        "-tll",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=(
-            "Length of the today line in points (default: 0 = full available area). "
-            "When direction is 'both', length is split equally above and below the axis."
-        ),
-    )
-    timeline_group.add_argument(
-        "--today-line-direction",
-        "-tld",
-        type=str,
-        default=None,
-        choices=["above", "below", "both"],
-        help=(
-            "Which side of the timeline axis the today line extends to: "
-            "'above' (upward only), 'below' (downward only), or 'both' (default)."
-        ),
-    )
-    timeline_group.add_argument(
-        "--label-fill-opacity",
-        "-lfo",
-        type=float,
-        default=None,
-        metavar="0.0-1.0",
-        help="Fill opacity for callout label boxes (default: 0.25).",
-    )
 
     # =====================================================================
     # PIT (Points in Time) options
@@ -1367,200 +1223,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         help=(
             "Axis direction (default: horizontal). Note: --orientation "
             "remains the page-orientation flag (portrait/landscape)."
-        ),
-    )
-    pit_group.add_argument(
-        "--label-side",
-        type=str,
-        default=None,
-        choices=["primary", "secondary", "both"],
-        help=(
-            "Which side(s) of the axis the labels occupy. primary = above "
-            "(horizontal) / right (vertical); secondary = below / left; "
-            "both = chronologically alternating. Default: both."
-        ),
-    )
-    pit_group.add_argument(
-        "--tick-unit",
-        type=str,
-        default=None,
-        choices=[
-            "month",
-            "week",
-            "fiscal_quarter",
-            "fiscal_period",
-            "interval",
-            "date",
-            "year",
-        ],
-        help="Axis tick granularity (timeband unit). Default: month.",
-    )
-    pit_group.add_argument(
-        "--tick-interval",
-        type=int,
-        default=None,
-        metavar="DAYS",
-        help="For --tick-unit interval, days between ticks (default: 1).",
-    )
-    pit_group.add_argument(
-        "--tick-label-format",
-        type=str,
-        default=None,
-        metavar="FMT",
-        help=(
-            "Arrow date format for tick labels (e.g. 'MMM D'). For week/"
-            "interval units the timeband label is used when omitted."
-        ),
-    )
-    pit_group.add_argument(
-        "--tick-length",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help="Half-length of each axis tick mark, per side (default: 5.0).",
-    )
-    pit_group.add_argument(
-        "--no-ticks",
-        dest="pit_show_ticks",
-        action="store_false",
-        default=None,
-        help="Suppress axis tick marks and labels.",
-    )
-    pit_group.add_argument(
-        "--no-tick-labels",
-        dest="pit_show_tick_labels",
-        action="store_false",
-        default=None,
-        help="Draw tick marks but no tick labels.",
-    )
-    pit_group.add_argument(
-        "--date-placement",
-        type=str,
-        default=None,
-        choices=["inline", "axis", "none"],
-        help=(
-            "Where each event date is drawn: inline (a line inside the "
-            "label box, with the name/notes — never collides; default), "
-            "axis (opposite the axis at the marker — the ruler look, but "
-            "dates collide when events cluster), or none."
-        ),
-    )
-    pit_group.add_argument(
-        "--today-line",
-        dest="pit_today_line",
-        action="store_true",
-        default=None,
-        help="Draw the today line (default: on).",
-    )
-    pit_group.add_argument(
-        "--no-today-line",
-        dest="pit_today_line",
-        action="store_false",
-        help="Suppress the today line.",
-    )
-    pit_group.add_argument(
-        "--today-date",
-        type=str,
-        default=None,
-        metavar="YYYYMMDD",
-        help=(
-            "Override the today-line position. Lets a forward-dated "
-            "presentation be prepared with the 'correct' today indicator."
-        ),
-    )
-    pit_group.add_argument(
-        "--today-label",
-        type=str,
-        default=None,
-        metavar="TEXT",
-        help='Today-line label text (default: "today"; "" suppresses).',
-    )
-    pit_group.add_argument(
-        "--event-icon",
-        type=str,
-        default=None,
-        metavar="NAME",
-        help=(
-            "DB icon name drawn inside each event's label box, on the "
-            "name line and to the left of the name. Does NOT change the "
-            "axis marker (always a built-in circle)."
-        ),
-    )
-    pit_group.add_argument(
-        "--milestone-icon",
-        type=str,
-        default=None,
-        metavar="NAME",
-        help=(
-            "DB icon name drawn inside each milestone's label box, on "
-            "the name line and to the left of the name. Does NOT change "
-            "the axis marker (always a built-in diamond)."
-        ),
-    )
-    pit_group.add_argument(
-        "--marker-size",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=("Bounding-box size of the axis marker (built-in circle / diamond) in points (default: 7.0)."),
-    )
-    pit_group.add_argument(
-        "--label-icon-size",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=(
-            "Longest viewBox side of the label-box icon, in points. "
-            "Defaults to the event-name font size so the glyph fits "
-            "cleanly on the name baseline."
-        ),
-    )
-    pit_group.add_argument(
-        "--label-icon-gap",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=("Horizontal gap (points) between the label-box icon and the start of the event name (default: 4.0)."),
-    )
-    pit_group.add_argument(
-        "--leader-dash",
-        type=str,
-        default=None,
-        metavar="DASHARRAY",
-        help='SVG stroke-dasharray for leaders, e.g. "4,2".',
-    )
-    pit_group.add_argument(
-        "--leader-label-anchor",
-        type=str,
-        default=None,
-        choices=["start", "center", "end"],
-        help=(
-            "Where the leader meets the label box along the axis. "
-            "center (default) joins the box middle and never collides; "
-            "start/end join the leading/trailing edge and may overlap on "
-            "dense timelines."
-        ),
-    )
-    pit_group.add_argument(
-        "--leader-length",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=(
-            "Distance from the axis to the first row of labels, i.e. the "
-            "leader length (default: 8.0). Larger values lengthen leaders "
-            "and widen row-to-row spacing."
-        ),
-    )
-    pit_group.add_argument(
-        "--leader-stub",
-        type=float,
-        default=None,
-        metavar="POINTS",
-        help=(
-            "Length of the straight perpendicular segment where each leader "
-            "meets its label box (default: 6.0). Keeps the arrowhead flush "
-            "with the line; 0 disables. Equivalent to pit.leader.end_stub."
         ),
     )
 
@@ -1587,9 +1249,9 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             metavar="TYPE",
             help=(
                 "Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). "
-                "weekly/mini: period labels and day-box colors. "
+                "weekly/mini: period labels (period colors come from the theme). "
                 "text-mini: period start markers. "
-                "timeline: fiscal period/quarter bands (see --fiscal-show-periods/quarters). "
+                "timeline: fiscal period/quarter bands (theme timeline.show_fiscal_*). "
                 "blockplan/compactplan: NRF-aware fiscal_quarter bands."
             ),
         )
@@ -1605,29 +1267,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "-1 = start year − 1. Default: auto (0 for NRF)."
             ),
         )
-
-    # --fiscal-colors: day-box period fill (weekly and mini)
-    for _vp in (weekly, mini, mini_icon, candybar):
-        _vp._option_string_actions.get("--fiscal") and None  # guard: group already added above
-        _fiscal_color_group = next(g for g in _vp._action_groups if g.title == "Fiscal Calendar Options")
-        _fiscal_color_group.add_argument(
-            "--fiscal-colors",
-            action="store_true",
-            help="Use fiscal period colors instead of Gregorian month colors for day box backgrounds",
-        )
-
-    # --fiscal-show-periods / --fiscal-show-quarters: timeline band rows
-    _timeline_fiscal_group = next(g for g in timeline._action_groups if g.title == "Fiscal Calendar Options")
-    _timeline_fiscal_group.add_argument(
-        "--fiscal-show-periods",
-        action="store_true",
-        help="Show a fiscal period band row above the timeline axis (requires --fiscal)",
-    )
-    _timeline_fiscal_group.add_argument(
-        "--fiscal-show-quarters",
-        action="store_true",
-        help="Show a fiscal quarter band row above the timeline axis (requires --fiscal)",
-    )
 
     # Logging options
     for view_parser in (
@@ -1707,9 +1346,6 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     mini / mini-icon / text-mini:
         Mini calendar column/row option guidance
 
-    timeline only:
-        Today-line direction values
-
     All subcommands:
         Available fonts, available colors (with guidance to list commands)
 
@@ -1757,7 +1393,6 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     }
     weekly_only = {"weekly"}
     mini_subcommands = {"mini", "mini-icon", "text-mini"}
-    timeline_only = {"timeline"}
     week_number_views = {"weekly", "mini", "mini-icon", "text-mini"}
 
     print("\n" + "=" * 60)
@@ -1812,11 +1447,10 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  nrf-544    NRF 5-4-4 retail calendar")
         print("  13-period  13 equal 4-week periods")
         print("\nFiscal features by visualizer:")
-        print("  weekly      Period labels on day boxes; --fiscal-colors for period-shaded backgrounds")
-        print("  mini        Period labels at bottom of day cells; --fiscal-colors for backgrounds")
+        print("  weekly      Period labels on day boxes")
+        print("  mini        Period labels at bottom of day cells")
         print("  text-mini   Period short name (e.g. P1) as day symbol on period-start days")
-        print("  timeline    --fiscal-show-periods: period band row above axis")
-        print("              --fiscal-show-quarters: quarter band row above axis")
+        print("  timeline    theme timeline.show_fiscal_periods / show_fiscal_quarters: band rows above axis")
         print("  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set")
         print("  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available")
 
@@ -1831,13 +1465,6 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("\nMini calendar options:")
         print("  --mini-columns N   Months per row (default: 3, minimum: 1)")
         print("  --mini-rows N      Rows of months (0 = auto from date range)")
-
-    # --- Timeline today-line direction (timeline only) ---
-    if subcommand in timeline_only:
-        print("\nToday-line direction (--today-line-direction):")
-        print("  above  Extend today line above the axis only")
-        print("  below  Extend today line below the axis only")
-        print("  both   Extend today line above and below the axis (default)")
 
     # --- Icons (SVG views only — icons are SVG elements) ---
     if subcommand in svg_calendar_subcommands:

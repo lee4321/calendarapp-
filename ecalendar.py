@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.09.30.0"
+__version__ = "26.10.01.0"
 
 import logging
 import sys
@@ -135,7 +135,7 @@ def _validate_pagination_args(args) -> int:
 def _warn_unsupported_page_chrome(args, visualizer, view_type: str) -> None:
     """Warn about page-chrome flags the visualizer does not support."""
     # Warn about SVG layout options not applicable to text-only output.
-    # Options with per-view effects (--shade, --monthnames,
+    # Options with per-view effects (--monthnames,
     # --shrink, --weekend-days, --includenotes, --nodurations) are gated
     # at the parser level instead — a view that never reads them does not
     # accept them (docs/cli_theme_overrides.html, Appendix A).
@@ -149,21 +149,6 @@ def _warn_unsupported_page_chrome(args, visualizer, view_type: str) -> None:
         ("footerleft", bool(getattr(args, "footerleft", "")), "--footerleft"),
         ("footercenter", bool(getattr(args, "footercenter", "")), "--footercenter"),
         ("footerright", bool(getattr(args, "footerright", "")), "--footerright"),
-        (
-            "watermark_text",
-            bool(getattr(args, "watermark_text", "")),
-            "--watermark-text",
-        ),
-        (
-            "watermark_rotation_angle",
-            getattr(args, "watermark_rotation_angle", None) is not None,
-            "--watermark-rotation-angle",
-        ),
-        (
-            "watermark_image",
-            bool(getattr(args, "watermark_image", "")),
-            "--watermark-image",
-        ),
     ]
     for opt_name, was_set, flag in _svg_layout_checks:
         if was_set and opt_name not in visualizer.supported_options:

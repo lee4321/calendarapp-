@@ -61,7 +61,7 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `ec-watermark` | `color` | `#333333` | `_wm_ts.color` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
 | `ec-watermark` | `font` | `RobotoCondensed-Bold` | `_wm_ts.font` | `renderers/svg_base.py:BaseSVGRenderer._render_text_watermark` |
 
-<details><summary>Settings every SVG view reads (11)</summary>
+<details><summary>Settings every SVG view reads (12)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -71,6 +71,7 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `weekly.day_box.hash_pattern_target_size` | `hash_pattern_target_size` | `18` |
 | `watermark.font_family` | `watermark_font` | `CascadiaCode` |
 | `watermark.font_size` | `watermark_font_size` | `108` |
+| `watermark.image` | `watermark_image` | `""` |
 | `watermark.image_rotation_angle` | `watermark_image_rotation_angle` | `0` |
 | `watermark.opacity` | `watermark_opacity` | `0.3` |
 | `watermark.resize_mode` | `watermark_resize_mode` | `fit` |
@@ -117,17 +118,19 @@ Background, header/footer labels and watermark, drawn by the common SVG base ren
 | `ec-duration-icon` | `size` | `10` | `_is_di.size if _is_di.size is not None else _event_icon_size(config)` | `weekly/renderer.py:WeeklyCalendarRenderer._place_duration_rect` |
 | `ec-event-icon` | `size` | `10` | `_is_ei.size if _is_ei.size is not None else _event_icon_size(config)` | `weekly/renderer.py:WeeklyCalendarRenderer._place_event_text` |
 
-<details><summary>Settings (12)</summary>
+<details><summary>Settings (14)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
 | `base.default_missing_icon` | `default_missing_icon` | *unset* |
 | `base.default_missing_icon_color` | `default_missing_icon_color` | `red` |
 | `base.default_missing_icon_size` | `default_missing_icon_size` | *unset* |
+| `fiscal.use_period_colors` | `fiscal_use_period_colors` | `false` |
 | `weekly.day_box.hash_pattern_opacity` | `hash_pattern_opacity` | `0.15` |
 | `events.item_placement_order` | `item_placement_order` | `[wbs, start_date]` |
 | `mini_calendar.current_day_color` | `mini_current_day_color` | `lightblue` |
 | `overflow.icon` | `overflow_indicator_icon` | `warningtriangle` |
+| `base.shade_current_day` | `shade_current_day` | `false` |
 | `weekly.day_box.hash_pattern` | `theme_weekly_hash_pattern` | *unset* |
 | `weekly.week_numbers.label_format` | `week_number_label_format` | `W{num:02d}` |
 | `weekly.duration_fill_color` | `weekly_duration_fill_color` | `lightsteelblue` |
@@ -340,7 +343,7 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `ec-today-line` | `dasharray` | *unset* | `_today_line_style.dasharray or None` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 | `ec-today-marker` | `opacity` | `0.55` | `config.get_line_style("ec-today-marker").opacity` | `timeline/renderer.py:TimelineRenderer._draw_today_marker` |
 
-<details><summary>Settings (54)</summary>
+<details><summary>Settings (56)</summary>
 
 | Theme key | Config field | Default |
 |---|---|---|
@@ -394,6 +397,8 @@ Draws its day grid with the mini renderer, so everything under [mini](#mini) app
 | `timeline.today_date` | `timeline_today_date` | `""` |
 | `timeline.today_label_offset_y` | `timeline_today_label_offset_y` | `10` |
 | `timeline.today_label_text` | `timeline_today_label_text` | `Today` |
+| `timeline.today_line_direction` | `timeline_today_line_direction` | `both` |
+| `timeline.today_line_length` | `timeline_today_line_length` | `0` |
 | `timeline.top_colors` | `timeline_top_colors` | `[deepskyblue, gold, tomato, springgreen, lightskyblue]` |
 | `timeline.top_time_bands` | `timeline_top_time_bands` | `[]` |
 | `timeline.wbs_group_depth`, `timeline_durations.wbs_group_depth` | `timeline_wbs_group_depth` | `2` |

@@ -36,7 +36,7 @@ Usage::
     uv run python tools/generate_gallery.py 20260105 20260630 --milestones --status all
 
 The ecalendar content filters (``--empty``, ``--noevents``, ``--nodurations``,
-``--milestones``, ``--shade``,
+``--milestones``,
 ``--includenotes``, ``--WBS``, ``--status``) are accepted here
 and forwarded to every run, so a batch can be narrowed to one slice of the data
 and still be compared theme by theme.  ecalendar registers those flags per view,
@@ -149,11 +149,6 @@ CONTENT_FILTERS = (
         "Include multi-day durations (excluded by default)",
     ),
     Filter("--milestones", FILTERABLE_VIEWS, "Show only milestones"),
-    Filter(
-        "--shade",
-        frozenset({"weekly", "mini", "mini-icon", "candybar"}),
-        "Shade the current date",
-    ),
     Filter(
         "--includenotes",
         frozenset({"weekly", "timeline", "pit", "blockplan", "gantt", "compactplan"}),
