@@ -68,8 +68,7 @@ renders).
 
 Top/bottom time-band rows around a swimlane region; see the page-anatomy
 diagram in `visualizers/blockplan/renderer.py`'s module docstring. Lane
-routing: theme `swimlane_rules` (LaneEngine) or legacy per-lane `match:`
-dicts. Rule-driven vertical lines/column fills pin to band segments.
+routing: per-lane `match:` criteria in the theme's `blockplan.swimlanes`. Rule-driven vertical lines/column fills pin to band segments.
 
 ## gantt — task table plus dependency chart
 

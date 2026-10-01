@@ -33,13 +33,13 @@ class FiscalSegment:
 def get_fiscal_period_color(fiscal_info: FiscalPeriodInfo, config: CalendarConfig) -> str:
     """Resolve the fill color for a fiscal period.
 
-    Returns the color from config.theme_fiscal_period_colors keyed by
+    Returns the color from ``palettes.fiscal_period_colors`` keyed by
     zero-padded period number (e.g. "01"), falling back to the
     module-level fiscalperiodcolors default, then "lightgrey".
     """
     from config.config import fiscalperiodcolors as _default_colors
 
-    colors = config.theme_fiscal_period_colors or _default_colors
+    colors = config.theme_v3.palettes.fiscal_period_colors or _default_colors
     period_key = str(fiscal_info.fiscal_period).zfill(2)
     return colors.get(period_key, "lightgrey")
 
@@ -52,13 +52,17 @@ def get_fiscal_period_color(fiscal_info: FiscalPeriodInfo, config: CalendarConfi
 def format_fiscal_period_label(
     fiscal_info: FiscalPeriodInfo,
     config: CalendarConfig,
+    template: str | None = None,
 ) -> str:
-    """Format a fiscal period start label string using config template.
+    """Format a fiscal period start label string.
+
+    *template* is a ``fiscal_period`` timescale row's ``format``; without one the
+    theme's ``fiscal.label_format`` applies.
 
     Returns the formatted label (e.g. "Q1 FY26 P1") or falls back to
     the period_short_name ("P1") on template errors.
     """
-    _fy_offset = config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
+    _fy_offset = config.theme_v3.fiscal.year_offset if config.theme_v3.fiscal.year_offset is not None else 0
     effective_year = fiscal_info.fiscal_year + _fy_offset
     quarter_label = (
         f"Q{fiscal_info.fiscal_quarter}" if config.fiscal_show_quarter_labels and fiscal_info.is_quarter_start else ""
@@ -69,7 +73,7 @@ def format_fiscal_period_label(
         prefix = f"{year_label} {prefix}".strip() + " "
 
     try:
-        return config.fiscal_period_label_format.format(
+        return (template or config.theme_v3.fiscal.label_format).format(
             prefix=prefix,
             period_short=fiscal_info.period_short_name,
             period=fiscal_info.fiscal_period,
@@ -83,54 +87,16 @@ def format_fiscal_period_label(
         return f"{prefix}{fiscal_info.period_short_name}".strip()
 
 
-def period_label_days(
-    fiscal_lookup: dict[str, FiscalPeriodInfo] | None,
-    weekend_style: int,
-) -> dict[str, FiscalPeriodInfo]:
-    """Map daykey -> period info for every period label that should be drawn.
-
-    A period's label belongs on its ``is_period_start`` day, but that day is
-    not always rendered: NRF periods begin on a Sunday and a workweek-only
-    calendar draws no Sunday, so the label would simply vanish. When the start
-    day is hidden the label falls forward to the period's first visible day.
-    The weekly renderer does the same thing inline for its Monday-start
-    layouts, one day at a time; this walks forward instead, so a period that
-    opens on a Saturday is caught too.
-
-    A period whose start day is outside *fiscal_lookup* — the calendar range
-    opens part-way through it — gets no label, which is what the callers did
-    before this fell the labels forward.
-    """
-    if not fiscal_lookup:
-        return {}
-
-    from config.config import weekend_style_is_workweek
-
-    workweek_only = weekend_style_is_workweek(weekend_style)
-    labels: dict[str, FiscalPeriodInfo] = {}
-    pending: dict[tuple[int, int], FiscalPeriodInfo] = {}
-    for daykey in sorted(fiscal_lookup):
-        info = fiscal_lookup[daykey]
-        ident = (info.fiscal_year, info.fiscal_period)
-        if info.is_period_start:
-            pending[ident] = info
-        if ident not in pending:
-            continue
-        if workweek_only and date(int(daykey[:4]), int(daykey[4:6]), int(daykey[6:8])).weekday() >= 5:
-            continue
-        labels[daykey] = pending.pop(ident)
-    return labels
-
-
 def format_fiscal_period_end_label(
     fiscal_info: FiscalPeriodInfo,
     config: CalendarConfig,
+    template: str,
 ) -> str:
-    """Format a fiscal period end label string using config template."""
-    _fy_offset = config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
+    """Format a fiscal period end label from a ``fiscal_period`` row's ``end_format``."""
+    _fy_offset = config.theme_v3.fiscal.year_offset if config.theme_v3.fiscal.year_offset is not None else 0
     effective_year = fiscal_info.fiscal_year + _fy_offset
     try:
-        return config.fiscal_period_end_label_format.format(
+        return template.format(
             period_short=fiscal_info.period_short_name,
             period=fiscal_info.fiscal_period,
             quarter=fiscal_info.fiscal_quarter,
@@ -174,6 +140,7 @@ def build_fiscal_period_segments(
     start: date,
     end: date,
     config: CalendarConfig,
+    label_format: str | None = None,
 ) -> list[FiscalSegment]:
     """Build one FiscalSegment per fiscal period in [start, end].
 
@@ -204,7 +171,7 @@ def build_fiscal_period_segments(
                         FiscalSegment(
                             start=seg_start,
                             end_exclusive=cursor,
-                            label=format_fiscal_period_label(seg_first_info, config),
+                            label=format_fiscal_period_label(seg_first_info, config, label_format),
                         )
                     )
                 seg_start = cursor
@@ -218,7 +185,7 @@ def build_fiscal_period_segments(
             FiscalSegment(
                 start=seg_start,
                 end_exclusive=end + one_day,
-                label=format_fiscal_period_label(seg_first_info, config),
+                label=format_fiscal_period_label(seg_first_info, config, label_format),
             )
         )
 
@@ -243,13 +210,13 @@ def build_fiscal_quarter_segments(
     When config.fiscal_lookup is available (NRF-based), derives quarter
     boundaries directly from the lookup.  Falls back to Gregorian quarter
     calculation using fiscal_start_month (or
-    config.blockplan_fiscal_year_start_month when not provided).
+    config.theme_v3.fiscal.year_start_month when not provided).
     """
     one_day = timedelta(days=1)
     segments: list[FiscalSegment] = []
 
     def _make_label(fy_raw: int, q: int) -> str:
-        _fy_offset = config.fiscal_year_offset if config.fiscal_year_offset is not None else 0
+        _fy_offset = config.theme_v3.fiscal.year_offset if config.theme_v3.fiscal.year_offset is not None else 0
         fy = fy_raw + _fy_offset
         try:
             return label_format.format(fy=fy, fy2=fy % 100, q=q)
@@ -293,17 +260,13 @@ def build_fiscal_quarter_segments(
         return segments
 
     # Gregorian fallback path (no fiscal_lookup / --fiscal not set).
-    fs_month = (
-        fiscal_start_month
-        if fiscal_start_month is not None
-        else getattr(config, "blockplan_fiscal_year_start_month", 10)
-    )
+    fs_month = fiscal_start_month if fiscal_start_month is not None else config.theme_v3.fiscal.year_start_month
     cursor_date = _fiscal_quarter_start_gregorian(start, fs_month)
     while cursor_date <= end:
         next_cursor = _shift_months(cursor_date, 3)
         if next_cursor > start:
             q_num = (((cursor_date.month - fs_month) % 12) // 3) + 1
-            _offset = config.fiscal_year_offset
+            _offset = config.theme_v3.fiscal.year_offset
             if _offset is None:
                 fy_raw = cursor_date.year if fs_month == 1 else cursor_date.year + 1
             else:

@@ -1,8 +1,8 @@
 """
 Gantt bar geometry over the visible-day axis.
 
-The axis is a list of *visible* days, so x is a column index rather than
-a linear function of the date: under ``weekend_style == 0`` Saturday and
+The axis is a :class:`shared.span.Span` of *visible* days, so x is a column
+index rather than a linear function of the date: under ``weekend_style == 0`` Saturday and
 Sunday are not columns at all, and a bar spanning a weekend is drawn
 across the working days it actually covers.
 
@@ -13,70 +13,10 @@ details page can be tested directly.
 
 from __future__ import annotations
 
-from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from datetime import date
 
-
-@dataclass(frozen=True)
-class DayAxis:
-    """The horizontal axis: which days are drawn, and where.
-
-    Attributes:
-        days: Visible days in ascending order (see
-            :func:`shared.date_utils.visible_days`).
-        x: Left edge of the chart area in page units.
-        width: Full chart width; every day gets an equal slice.
-    """
-
-    days: list[date]
-    x: float
-    width: float
-
-    @property
-    def day_width(self) -> float:
-        """Width of one day column."""
-        return self.width / len(self.days) if self.days else 0.0
-
-    @property
-    def first(self) -> date:
-        """First visible day.  Check ``days`` first: an empty axis has none."""
-        return self.days[0]
-
-    @property
-    def last(self) -> date:
-        """Last visible day.  Check ``days`` first: an empty axis has none."""
-        return self.days[-1]
-
-    def index_at_or_after(self, day: date) -> int | None:
-        """Index of the first visible day not before *day*."""
-        index = bisect_left(self.days, day)
-        return index if index < len(self.days) else None
-
-    def index_at_or_before(self, day: date) -> int | None:
-        """Index of the last visible day not after *day*."""
-        index = bisect_right(self.days, day) - 1
-        return index if index >= 0 else None
-
-    def left_of(self, index: int) -> float:
-        """Left edge of the column at *index*."""
-        return self.x + index * self.day_width
-
-    def center_of(self, index: int) -> float:
-        """Horizontal center of the column at *index*."""
-        return self.x + (index + 0.5) * self.day_width
-
-    def snap_forward(self, day: date) -> int | None:
-        """Column for *day*, moving to the next visible day when hidden.
-
-        Returns ``None`` when nothing on or after *day* is visible.
-        """
-        return self.index_at_or_after(day)
-
-    def is_visible(self, day: date) -> bool:
-        """True when *day* has a column of its own."""
-        index = bisect_left(self.days, day)
-        return index < len(self.days) and self.days[index] == day
+from shared.span import Span
 
 
 @dataclass(frozen=True)
@@ -106,7 +46,7 @@ class BarGeometry:
 _INVISIBLE = BarGeometry()
 
 
-def bar_geometry(axis: DayAxis, start: date, end: date) -> BarGeometry:
+def bar_geometry(axis: Span, start: date, end: date) -> BarGeometry:
     """Place the span *start*..*end* (inclusive) on *axis*.
 
     A span reaching past either edge of the chart is clipped to the edge
@@ -115,7 +55,7 @@ def bar_geometry(axis: DayAxis, start: date, end: date) -> BarGeometry:
     all hidden -- a task falling entirely on a weekend under
     ``weekend_style == 0`` -- comes back invisible.
     """
-    if not axis.days or axis.day_width <= 0:
+    if axis.day_width <= 0:
         return _INVISIBLE
 
     if end < start:

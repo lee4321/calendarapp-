@@ -12,8 +12,10 @@ Covers:
 
 from collections import defaultdict
 
+from band_helpers import update_theme
+
 from config.config import create_calendar_config, setfontsizes
-from config.theme_engine import ThemeEngine
+from config.role_styles import role_text
 from shared.data_models import Event
 from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
@@ -70,7 +72,7 @@ def _make_rowcoords(config, days, x=0.0, base_y=100.0, w=158.4):
     Mirrors production SVG layout: row 0 has the smallest Y (top of page),
     each subsequent row sits below it (Y increases downward).
     """
-    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
+    textrowheight = round(role_text(config, "event_name").size * 1.3, 2)
     rowcoords = defaultdict(dict)
     for day in days:
         y = base_y
@@ -116,7 +118,7 @@ def _get_duration_rect_height(config, event, days):
     """Run _place_duration_rect and return the height of the drawn rect(s)."""
     renderer = _CaptureDurationRenderer()
     rowcoords = _make_rowcoords(config, days)
-    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
+    textrowheight = round(role_text(config, "event_name").size * 1.3, 2)
 
     # Determine rowids the same way _place_duration does
     has_notes = bool(event.notes and str(event.notes).strip())
@@ -125,7 +127,7 @@ def _get_duration_rect_height(config, event, days):
     renderer._place_duration_rect(config, event, days, rowcoords, rowids)
 
     # Filter to only duration rects (lightsteelblue fill), not day box backgrounds
-    duration_rects = [r for r in renderer.rects if r[4].get("fill") == "lightsteelblue"]
+    duration_rects = [r for r in renderer.rects if r[4].get("fill") == config.theme_v3.boxes.duration.fill]
     assert duration_rects, "No duration rect was drawn"
     return duration_rects[0][3], textrowheight  # (height, single_row_height)
 
@@ -320,15 +322,14 @@ def test_duration_without_notes_does_not_render_notes_text():
 
 
 def _style_text(config, *, name: tuple[str, str], notes: tuple[str, str]) -> None:
-    """Define text:event_name / text:event_notes (font, color) through a theme."""
-    engine = ThemeEngine()
-    engine._theme_data = {
-        "style_rules": [
-            {"name": f"define text:{token}", "define": "text", "as": token, "style": {"font": font, "color": color}}
-            for token, (font, color) in (("event_name", name), ("event_notes", notes))
-        ]
-    }
-    engine.apply(config)
+    """Set the event_name / event_notes text roles (font, colour)."""
+    update_theme(
+        config,
+        text={
+            "event_name": {"font": name[0], "color": name[1]},
+            "event_notes": {"font": notes[0], "color": notes[1]},
+        },
+    )
 
 
 def test_duration_with_notes_uses_duration_specific_fonts_and_colors():
@@ -439,13 +440,13 @@ def test_place_duration_with_notes_does_not_overlap_occupied_upper_row():
     # Row 0 has smallest Y (top), rows 1 and 2 sit below it.
     row0_y = rowcoords[days[0]][0][1]
     row1_y = rowcoords[days[0]][1][1]
-    textrowheight = round(config.weekly_name_text_font_size * 1.3, 2)
+    textrowheight = round(role_text(config, "event_name").size * 1.3, 2)
 
     rowcoords = _mark_row_used(rowcoords, days, 0)
 
     renderer._place_duration(config, days, rowcoords, event, days[0])
 
-    duration_rects = [r for r in renderer.rects if r[4].get("fill") == "lightsteelblue"]
+    duration_rects = [r for r in renderer.rects if r[4].get("fill") == config.theme_v3.boxes.duration.fill]
     assert duration_rects, "Expected at least one duration rect to be drawn"
 
     drawn_y = duration_rects[0][1]

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from band_helpers import update_theme
+
 from config.config import CalendarConfig
 from shared.data_models import Event
 from shared.item_order import sort_events
@@ -155,13 +157,14 @@ def test_equal_keys_break_ties_deterministically_regardless_of_input_order():
 
 
 def test_config_accepts_criteria_dicts():
-    config = CalendarConfig(item_placement_order=[{"resource_group": "Executive"}, "priority"])
-    assert config.item_placement_order == [{"resource_group": "Executive"}, "priority"]
+    config = CalendarConfig()
+    update_theme(config, events={"item_placement_order": [{"resource_group": "Executive"}, "priority"]})
+    assert config.theme_v3.events.item_placement_order == [{"resource_group": "Executive"}, "priority"]
 
 
 def test_config_rejects_unrecognized_criteria_key():
     try:
-        CalendarConfig(item_placement_order=[{"not_a_criterion": "x"}])
+        update_theme(CalendarConfig(), events={"item_placement_order": [{"not_a_criterion": "x"}]})
     except ValueError as exc:
         assert "not_a_criterion" in str(exc)
     else:

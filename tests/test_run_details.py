@@ -8,10 +8,10 @@ import re
 from datetime import datetime
 
 import pytest
-import yaml
+from band_helpers import set_fields
 
 from config.config import CalendarConfig
-from config.theme_engine import ThemeEngine, ThemeError
+from config.theme_loader import ThemeError, load_theme
 from importers.import_events import normalize_row
 from renderers.details_record import (
     DRAWN_NO,
@@ -65,8 +65,7 @@ def _config(**overrides) -> CalendarConfig:
     config = CalendarConfig()
     config.adjustedstart = "20260105"
     config.adjustedend = "20260111"
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, **overrides)
     return config
 
 
@@ -186,7 +185,7 @@ def test_group_by_and_color_rank_sort(tmp_path):
 
 def test_icon_mode_name_and_empty_exceptions(tmp_path):
     record = DetailsRecord("gantt", [_row("A", "20260105")])
-    config = _config(details_md_icon_mode="name")
+    config = _config(details_md_icon_mode="inline")
     record.record_icon(IconUse("check", None, "event"), record.events[0])
     text = build_markdown(record, config, RunPaths.for_output("c.svg", root=tmp_path), [], {})
     assert "`check`" in text
@@ -237,29 +236,21 @@ def test_write_run_details_honours_each_switch(tmp_path):
     assert "`diamond-fill #1f77b4`" not in paths.markdown.read_text()
 
 
-def _theme_with_details(tmp_path, details: dict):
-    base = yaml.safe_load((ThemeEngine.BUILTIN_THEMES_DIR / "basic.yaml").read_text())
-    base["details"] = details
-    path = tmp_path / "t.yaml"
-    path.write_text(yaml.safe_dump(base))
-    engine = ThemeEngine()
-    engine.load(str(path))
-    return engine
+def _theme_with_details(details: dict) -> dict:
+    return {"theme": {"name": "t", "version": "3.0"}, "details": details}
 
 
-def test_unknown_details_field_is_a_theme_error(tmp_path):
-    engine = _theme_with_details(tmp_path, {"markdown": {"columns": [{"field": "nmae"}]}})
+def test_unknown_details_field_is_a_theme_error():
     with pytest.raises(ThemeError, match="nmae"):
-        engine.apply(CalendarConfig())
+        load_theme(_theme_with_details({"markdown": {"columns": [{"field": "nmae"}]}}))
 
 
-def test_gantt_columns_paste_into_details_columns(tmp_path):
-    engine = _theme_with_details(tmp_path, {"markdown": {"columns": CalendarConfig().gantt_columns}})
-    config = engine.apply(CalendarConfig())
-    assert config.details_md_columns == CalendarConfig().gantt_columns
+def test_gantt_columns_paste_into_details_columns():
+    columns = [{"field": "name", "header": "Task", "width": 0.3, "max_lines": 2, "indent": True}]
+    theme = load_theme(_theme_with_details({"markdown": {"columns": columns}}))
+    assert theme.details.markdown.columns == columns
 
 
-def test_csv_columns_string_must_be_exportdata(tmp_path):
-    engine = _theme_with_details(tmp_path, {"csv": {"columns": "everything"}})
+def test_csv_columns_string_must_be_exportdata():
     with pytest.raises(ThemeError, match="exportdata"):
-        engine.apply(CalendarConfig())
+        load_theme(_theme_with_details({"csv": {"columns": "everything"}}))

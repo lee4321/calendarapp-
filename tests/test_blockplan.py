@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 from itertools import pairwise
 from pathlib import Path
 
 import pytest
+from band_helpers import set_bands, set_fields, update_theme
 from fakes import FakeCalendarDB
 
 from config.config import (
@@ -85,10 +87,13 @@ def _base_config(output: Path):
     config.outputfile = str(output)
     config.include_header = True
     config.include_footer = True
-    config.blockplan_swimlanes = [
-        {"name": "Engineering", "match": {"resource_groups": ["dev"]}},
-        {"name": "Operations", "match": {"resource_groups": ["ops"]}},
-    ]
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {"name": "Engineering", "match": {"resource_groups": ["dev"]}},
+            {"name": "Operations", "match": {"resource_groups": ["ops"]}},
+        ],
+    )
     return config
 
 
@@ -123,6 +128,15 @@ def test_blockplan_renderer_renders_bands_and_lanes(tmp_path):
         },
     ]
 
+    set_bands(
+        config,
+        primary=[
+            {"label": "Fiscal Quarter", "unit": "fiscal_quarter"},
+            {"label": "PI", "unit": "interval", "interval_days": 84, "prefix": "PI "},
+            {"label": "Sprint", "unit": "interval", "interval_days": 14, "prefix": "Sprint "},
+        ],
+    )
+
     renderer = _CaptureBlockPlanRenderer()
     result = renderer.render(config, coords, events, _DummyDB())
 
@@ -137,15 +151,11 @@ def test_blockplan_renderer_renders_bands_and_lanes(tmp_path):
 
 
 def test_blockplan_without_swimlanes_draws_one_unlabeled_lane(tmp_path):
-    """No swimlanes configured → no lane labels, and every item is drawn even
-    when the theme's swimlane_rules route to lanes that don't exist."""
+    """No swimlanes configured → no lane labels, and every item is drawn."""
     output = tmp_path / "blockplan_no_lanes.svg"
     config = _base_config(output)
-    config.blockplan_swimlanes = create_calendar_config().blockplan_swimlanes
-    assert config.blockplan_swimlanes == []
-    config.theme_swimlane_rules = [
-        {"apply_to": "lane", "select": {"resource_group": ["dev"]}, "style": {"swimlane": "Engineering"}},
-    ]
+    set_fields(config, blockplan_swimlanes=[])
+    assert config.theme_v3.blockplan.swimlanes == []
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -169,10 +179,13 @@ def test_blockplan_duration_text_is_vertically_centred_on_the_bar(tmp_path):
 
     output = tmp_path / "blockplan_dur_dates.svg"
     config = _base_config(output)
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
-    config.blockplan_duration_show_start_date = True
-    config.blockplan_duration_show_end_date = True
-    config.blockplan_duration_icon_visible = True
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
+    set_fields(
+        config,
+        blockplan_duration_show_start_date=True,
+        blockplan_duration_show_end_date=True,
+        blockplan_duration_icon_visible=True,
+    )
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -205,17 +218,18 @@ def test_blockplan_uses_user_date_range_for_timebands(tmp_path):
     config.weekend_style = 1
     # Simulate weekly-adjusted range differing from user request.
     config.userstart = "20260201"
-    config.userend = "20260430"
+    config.userend = "20260415"
     config.adjustedstart = "20260202"
     config.adjustedend = "20260501"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "D", "show_every": 1}])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    assert "20260201" in renderer.text_values
-    assert "20260202" in renderer.text_values
+    cells = [kw for kw in renderer.rect_calls if kw.get("css_class") == "ec-band-cell"]
+    # 1 Feb through mid April (a week-aligned visible range), not the adjusted 2 Feb through 1 May.
+    assert 74 <= len(cells) < 89
 
 
 def test_blockplan_interval_anchor_date(tmp_path):
@@ -236,18 +250,21 @@ def test_blockplan_interval_anchor_date(tmp_path):
     config.userend = "20260228"
     config.adjustedstart = "20260128"
     config.adjustedend = "20260228"
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Sprint",
-            "unit": "interval",
-            "interval_days": 14,
-            "prefix": "Sprint ",
-            "start_index": 1,
-            "anchor_date": "2026-01-05",
-            "fill_color": "none",
-            "show_every": 1,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Sprint",
+                "unit": "interval",
+                "interval_days": 14,
+                "prefix": "Sprint ",
+                "start_index": 1,
+                "anchor_date": "2026-01-05",
+                "fill_color": "none",
+                "show_every": 1,
+            }
+        ],
+    )
     renderer = _CaptureBlockPlanRenderer()
     coords = BlockPlanLayout().calculate(config)
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -258,100 +275,73 @@ def test_blockplan_interval_anchor_date(tmp_path):
     assert "Sprint 1" not in renderer.text_values
 
 
-def test_blockplan_vertical_line_style_from_style_rules(tmp_path):
+def test_blockplan_row_vline_draws_a_line_at_every_segment_start(tmp_path):
     output = tmp_path / "blockplan_lines.svg"
     config = _base_config(output)
     config.userstart = "20260202"  # Monday
     config.userend = "20260210"
     config.adjustedstart = "20260202"
     config.adjustedend = "20260210"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
-    config.theme_style_rules = [
-        {
-            "name": "highlight_one_day",
-            "apply_to": "vertical_line",
-            "select": {"band": "Date", "value": "20260205"},
-            "style": {
-                "stroke_color": "orange",
-                "stroke_width": 3.0,
-                "stroke_dasharray": "5,2",
-                "stroke_opacity": 0.5,
-            },
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Date",
+                "unit": "date",
+                "date_format": "YYYYMMDD",
+                "vline": {"color": "orange", "width": 3.0, "dasharray": "5,2", "opacity": 0.5},
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    styled = [
-        kw
-        for (x1, y1, x2, y2), kw in zip(renderer.line_calls, renderer.line_kwargs, strict=True)
-        if x1 == x2 and y1 < y2 and kw.get("stroke") == "orange"
-    ]
-    assert styled
-    assert styled[0]["stroke_width"] == 3.0
-    assert styled[0]["stroke_opacity"] == 0.5
-    assert styled[0]["stroke_dasharray"] == "5,2"
+    svg = output.read_text()
+    lines = re.findall(r'<path d="M ([\d.]+) ([\d.]+) L \1 ([\d.]+)"[^>]*stroke="orange"[^>]*class="ec-vline"', svg)
+    assert len(lines) == 7  # one per weekday, Monday 2 Feb to Tuesday 10 Feb
+    assert 'stroke-width="3"' in svg and 'stroke-dasharray="5,2"' in svg and 'stroke-opacity="0.5"' in svg
 
 
-def test_blockplan_band_style_rule_sets_band_cell_stroke(tmp_path):
-    output = tmp_path / "blockplan_band_stroke.svg"
-    config = _base_config(output)
-    config.userstart = "20260202"
-    config.userend = "20260210"
-    config.adjustedstart = "20260202"
-    config.adjustedend = "20260210"
-    config.blockplan_top_time_bands = [
-        {"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1},
-        {"label": "Week", "unit": "week", "show_every": 1},
-    ]
-    config.blockplan_bottom_time_bands = []
-    config.theme_style_rules = [
-        {
-            "name": "date band outline",
-            "apply_to": "box:band",
-            "select": {"band": "date"},
-            "style": {"stroke": "orange", "stroke_width": 2.5, "stroke_opacity": 0.4, "dasharray": "3,1"},
-        }
-    ]
+def test_blockplan_band_box_role_sets_the_cell_stroke(tmp_path):
+    config = _base_config(tmp_path / "blockplan_band_stroke.svg")
+    config.userstart, config.userend = "20260202", "20260210"
+    config.adjustedstart, config.adjustedend = "20260202", "20260210"
+    set_bands(
+        config,
+        primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD"}, {"label": "Week", "unit": "week"}],
+    )
+    update_theme(
+        config,
+        boxes={"band": {"stroke": "orange", "stroke_width": 2.5, "stroke_opacity": 0.4, "stroke_dasharray": "3,1"}},
+    )
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
     styled = [kw for kw in renderer.rect_calls if kw.get("stroke") == "orange"]
-    # One heading cell (Date only — Week matches no rule) plus Date's segment cells.
-    assert [kw["css_class"] for kw in styled].count("ec-heading-cell") == 1
-    assert [kw["css_class"] for kw in styled].count("ec-band-cell") > 1
+    classes = [kw["css_class"] for kw in styled]
+    assert classes.count("ec-heading-cell") == 2  # both rows' heading cells
+    assert classes.count("ec-band-cell") > 2
     for kw in styled:
-        assert kw["stroke_width"] == 2.5
-        assert kw["stroke_opacity"] == 0.4
-        assert kw["stroke_dasharray"] == "3,1"
+        assert (kw["stroke_width"], kw["stroke_opacity"], kw["stroke_dasharray"]) == (2.5, 0.4, "3,1")
 
 
-def test_blockplan_band_stroke_color_beats_band_style_rule(tmp_path):
-    output = tmp_path / "blockplan_band_stroke_color.svg"
-    config = _base_config(output)
-    config.userstart = "20260202"
-    config.userend = "20260210"
-    config.adjustedstart = "20260202"
-    config.adjustedend = "20260210"
-    config.blockplan_top_time_bands = [
-        {"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "stroke_color": "purple"},
-    ]
-    config.blockplan_bottom_time_bands = []
-    config.theme_style_rules = [
-        {"apply_to": "box:band", "select": {"band": "date"}, "style": {"stroke": "orange", "stroke_width": 2.5}},
-    ]
+def test_blockplan_row_border_beats_the_band_box_role(tmp_path):
+    config = _base_config(tmp_path / "blockplan_band_stroke_color.svg")
+    config.userstart, config.userend = "20260202", "20260210"
+    config.adjustedstart, config.adjustedend = "20260202", "20260210"
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "stroke_color": "purple"}])
+    update_theme(config, boxes={"band": {"stroke": "orange", "stroke_width": 2.5}})
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    band_cells = [kw for kw in renderer.rect_calls if kw.get("stroke") == "purple"]
-    assert band_cells
-    assert all(kw["stroke_width"] == 2.5 for kw in band_cells)
+    purple = [kw for kw in renderer.rect_calls if kw.get("stroke") == "purple"]
+    assert purple
     assert not [kw for kw in renderer.rect_calls if kw.get("stroke") == "orange"]
 
 
@@ -400,8 +390,7 @@ def _wbs_render_fills(tmp_path, depth):
     config = _base_config(tmp_path / f"blockplan_wbs_{depth}.svg")
     config.userstart = config.adjustedstart = "20260202"
     config.userend = config.adjustedend = "20260331"
-    config.blockplan_palette = ["red", "green", "blue"]
-    config.blockplan_wbs_group_depth = depth
+    set_fields(config, blockplan_palette=["red", "green", "blue"], blockplan_wbs_group_depth=depth)
     events = [
         _wbs_dur("phase one", "20260202", "20260227", "NP.1", rollup=True),
         _wbs_dur("one a", "20260202", "20260213", "NP.1.1", color="skyblue"),
@@ -424,72 +413,6 @@ def test_blockplan_wbs_group_depth_zero_keeps_event_colors(tmp_path):
     assert {"skyblue", "steelblue", "gold"} <= set(fills)
 
 
-def test_blockplan_vertical_line_value_match_is_case_insensitive(tmp_path):
-    output = tmp_path / "blockplan_vline_ci.svg"
-    config = _base_config(output)
-    config.userstart = "20260202"
-    config.userend = "20260210"
-    config.adjustedstart = "20260202"
-    config.adjustedend = "20260210"
-    config.blockplan_top_time_bands = [
-        # Mon/Tue/Wed/... so segments are labeled "MON", "TUE", ...
-        {"label": "Day", "unit": "dow", "date_format": "ddd"},
-    ]
-    config.theme_style_rules = [
-        {
-            "name": "tuesday_marker",
-            "apply_to": "vertical_line",
-            # Lowercased select.value should still match the upper-case "Tue".
-            "select": {"band": "day", "value": "tue"},
-            "style": {"stroke_color": "magenta", "stroke_width": 2.0},
-        }
-    ]
-    coords = BlockPlanLayout().calculate(config)
-
-    renderer = _CaptureBlockPlanRenderer()
-    renderer.render(config, coords, events=[], db=_DummyDB())
-
-    styled = [kw for kw in renderer.line_kwargs if kw.get("stroke") == "magenta"]
-    assert styled, "Expected case-insensitive value match to draw a vertical line"
-
-
-def test_blockplan_vertical_line_repeat_with_align_and_fill_cycle(tmp_path):
-    output = tmp_path / "blockplan_vline_repeat.svg"
-    config = _base_config(output)
-    config.userstart = "20260202"
-    config.userend = "20260213"
-    config.adjustedstart = "20260202"
-    config.adjustedend = "20260213"
-    config.blockplan_top_time_bands = [
-        {"label": "Week", "unit": "week"},
-    ]
-    config.theme_style_rules = [
-        {
-            "name": "every_week_end",
-            "apply_to": "vertical_line",
-            "select": {"band": "Week", "repeat": True},
-            "style": {
-                "align": "end",
-                "stroke_color": "navy",
-                "stroke_width": 1.0,
-                "fill_color": ["red", "blue"],
-                "fill_opacity": 0.3,
-            },
-        }
-    ]
-    coords = BlockPlanLayout().calculate(config)
-
-    renderer = _CaptureBlockPlanRenderer()
-    renderer.render(config, coords, events=[], db=_DummyDB())
-
-    # Two-week range → two matching segments → fill colors cycle red, blue.
-    fills = [kw.get("fill") for kw in renderer.rect_calls if kw.get("css_class") == "ec-vline-fill"]
-    assert "red" in fills and "blue" in fills
-
-    strokes = [kw for kw in renderer.line_kwargs if kw.get("stroke") == "navy"]
-    assert len(strokes) >= 2
-
-
 def test_blockplan_weekends_zero_shows_only_weekdays_in_date_band(tmp_path):
     output = tmp_path / "blockplan_weekdays_only.svg"
     config = _base_config(output)
@@ -498,7 +421,7 @@ def test_blockplan_weekends_zero_shows_only_weekdays_in_date_band(tmp_path):
     config.userend = "20260203"
     config.adjustedstart = "20260201"
     config.adjustedend = "20260203"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -540,7 +463,7 @@ def test_blockplan_event_icon_is_rendered_when_present(tmp_path):
     config.userend = "20260212"
     config.adjustedstart = "20260210"
     config.adjustedend = "20260212"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}])
     coords = BlockPlanLayout().calculate(config)
     events = [
         {
@@ -571,7 +494,7 @@ def test_blockplan_event_icon_aligns_with_name_when_notes_included(tmp_path):
     config.userend = "20260212"
     config.adjustedstart = "20260210"
     config.adjustedend = "20260212"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}])
     coords = BlockPlanLayout().calculate(config)
     events = [
         {
@@ -596,14 +519,13 @@ def test_blockplan_event_icon_aligns_with_name_when_notes_included(tmp_path):
 def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
     output = tmp_path / "blockplan_event_date.svg"
     config = _base_config(output)
-    config.blockplan_event_show_date = True
-    config.blockplan_event_date_format = "MMM D"
+    set_fields(config, blockplan_event_show_date=True, blockplan_event_date_format="MMM D")
     config.userstart = "20260210"
     config.userend = "20260212"
     config.adjustedstart = "20260210"
     config.adjustedend = "20260212"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
-    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}])
+    set_fields(config, blockplan_swimlanes=[{"name": "Engineering", "match": {"resource_groups": ["dev"]}}])
     coords = BlockPlanLayout().calculate(config)
     events = [
         {
@@ -641,14 +563,17 @@ def test_blockplan_event_date_drawn_above_name_and_no_overwrite(tmp_path):
 def test_blockplan_lane_label_alignment_and_multiline(tmp_path):
     output = tmp_path / "blockplan_lane_label_align.svg"
     config = _base_config(output)
-    config.blockplan_swimlanes = [
-        {
-            "name": "Lane A\nLane B",
-            "label_align_h": "center",
-            "label_align_v": "top",
-            "match": {"resource_groups": ["dev"]},
-        }
-    ]
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {
+                "name": "Lane A\nLane B",
+                "label_align_h": "center",
+                "label_align_v": "top",
+                "match": {"resource_groups": ["dev"]},
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -667,17 +592,20 @@ def test_blockplan_lane_label_rotation(tmp_path):
     config = _base_config(output)
 
     # Global rotation applied to all lanes
-    config.blockplan_lane_label_rotation = -90.0
-    config.blockplan_swimlanes = [
-        {"name": "Alpha", "match": {}},
-        {"name": "Beta", "label_rotation": 45.0, "match": {}},  # per-lane override
-        {
-            "name": "Gamma",
-            "label_rotation": 0.0,
-            "match": {},
-        },  # explicit zero = no transform
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(config, blockplan_lane_label_rotation=-90.0)
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {"name": "Alpha", "match": {}},
+            {"name": "Beta", "label_rotation": 45.0, "match": {}},  # per-lane override
+            {
+                "name": "Gamma",
+                "label_rotation": 0.0,
+                "match": {},
+            },  # explicit zero = no transform
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -706,33 +634,29 @@ def test_blockplan_timeband_per_band_style_and_palette(tmp_path):
     config.userend = "20260206"
     config.adjustedstart = "20260202"
     config.adjustedend = "20260206"
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Date Band",
-            "unit": "date",
-            "date_format": "D",
-            "font": "Roboto-Bold",
-            "font_size": 13.0,
-            "font_color": "darkred",
-            "fill_palette": ["#111111", "#222222"],
-            "label_font": "Roboto-BoldItalic",
-            "label_font_size": 15.0,
-            "label_color": "teal",
-            "label_align_h": "right",
-            "label_fill_color": "beige",
-            "show_every": 1,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Date Band",
+                "unit": "date",
+                "date_format": "D",
+                "font": "Roboto-Bold",
+                "font_size": 13.0,
+                "font_color": "darkred",
+                "fill_palette": ["#111111", "#222222"],
+                "show_every": 1,
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
 
-    # Left heading label styling/alignment
+    # The heading is styled like the row's cells and aligned by the timescale.
     heading = next(c for c in renderer.text_calls if c["text"] == "Date Band")
-    assert heading["font"] == "Roboto-BoldItalic"
-    assert heading["size"] == 15.0
-    assert heading["fill"] == "teal"
+    assert (heading["font"], heading["size"], heading["fill"]) == ("Roboto-Bold", 13.0, "darkred")
     assert heading["anchor"] == "end"
 
     # Segment labels use per-band font config.
@@ -755,8 +679,8 @@ def test_blockplan_event_notes_and_y_adjustment_for_collisions(tmp_path):
     config.userend = "20260212"
     config.adjustedstart = "20260210"
     config.adjustedend = "20260212"
-    config.blockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}]
-    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "YYYYMMDD", "show_every": 1}])
+    set_fields(config, blockplan_swimlanes=[{"name": "Engineering", "match": {"resource_groups": ["dev"]}}])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -793,8 +717,8 @@ def test_blockplan_split_ratio_zero_removes_dividing_line(tmp_path):
     """split_ratio=0.0 must not draw a dividing line inside any swimlane."""
     output = tmp_path / "blockplan_split_zero.svg"
     config = _base_config(output)
-    config.blockplan_lane_split_ratio = 0.0
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
+    set_fields(config, blockplan_lane_split_ratio=0.0)
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -821,9 +745,9 @@ def test_blockplan_split_ratio_zero_gives_full_lane_to_both_types(tmp_path):
     their vertical extents must not overlap each other."""
     output = tmp_path / "blockplan_split_zero_full.svg"
     config = _base_config(output)
-    config.blockplan_lane_split_ratio = 0.0
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
-    config.blockplan_top_time_bands = []
+    set_fields(config, blockplan_lane_split_ratio=0.0)
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -876,9 +800,9 @@ def test_blockplan_split_ratio_custom_value_draws_line_at_correct_position(tmp_p
     """split_ratio=0.3 draws the divider at 70% from the bottom (30% from top)."""
     output = tmp_path / "blockplan_split_custom.svg"
     config = _base_config(output)
-    config.blockplan_lane_split_ratio = 0.3
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
-    config.blockplan_top_time_bands = []
+    set_fields(config, blockplan_lane_split_ratio=0.3)
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -899,15 +823,18 @@ def test_blockplan_per_lane_split_ratio_overrides_global(tmp_path):
     """A per-lane split_ratio key overrides the global blockplan_lane_split_ratio."""
     output = tmp_path / "blockplan_per_lane_split.svg"
     config = _base_config(output)
-    config.blockplan_lane_split_ratio = 0.5  # global
-    config.blockplan_swimlanes = [
-        {
-            "name": "NoSplit",
-            "split_ratio": 0.0,  # per-lane override
-            "match": {},
-        }
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(config, blockplan_lane_split_ratio=0.5)  # global
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {
+                "name": "NoSplit",
+                "split_ratio": 0.0,  # per-lane override
+                "match": {},
+            }
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -926,10 +853,10 @@ def test_blockplan_item_placement_order_events_first_puts_events_on_top(tmp_path
     """item_placement_order=['events','durations'] should place events in the upper section."""
     output = tmp_path / "blockplan_events_top.svg"
     config = _base_config(output)
-    config.item_placement_order = ["events", "durations"]
-    config.blockplan_lane_split_ratio = 0.5
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
-    config.blockplan_top_time_bands = []
+    set_fields(config, item_placement_order=["events", "durations"])
+    set_fields(config, blockplan_lane_split_ratio=0.5)
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -973,10 +900,10 @@ def test_blockplan_item_placement_order_durations_first_default_behavior(tmp_pat
     """Default item_placement_order keeps durations in the upper section."""
     output = tmp_path / "blockplan_durations_top.svg"
     config = _base_config(output)
-    config.item_placement_order = ["priority"]  # default — durations stay on top
-    config.blockplan_lane_split_ratio = 0.5
-    config.blockplan_swimlanes = [{"name": "All", "match": {}}]
-    config.blockplan_top_time_bands = []
+    set_fields(config, item_placement_order=["priority"])  # default — durations stay on top
+    set_fields(config, blockplan_lane_split_ratio=0.5)
+    set_fields(config, blockplan_swimlanes=[{"name": "All", "match": {}}])
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -1017,18 +944,21 @@ def test_blockplan_per_lane_fill_color_applied_to_heading_cell(tmp_path):
     output = tmp_path / "blockplan_per_lane_fill.svg"
     config = _base_config(output)
     config.blockplan_lane_heading_fill_color = "white"  # global default
-    config.blockplan_swimlanes = [
-        {
-            "name": "Highlight",
-            "fill_color": "gold",
-            "match": {"resource_groups": ["dev"]},
-        },
-        {
-            "name": "Normal",
-            "match": {"resource_groups": ["ops"]},
-        },
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {
+                "name": "Highlight",
+                "fill_color": "gold",
+                "match": {"resource_groups": ["dev"]},
+            },
+            {
+                "name": "Normal",
+                "match": {"resource_groups": ["ops"]},
+            },
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -1043,14 +973,17 @@ def test_blockplan_per_lane_label_color_applied_to_label_text(tmp_path):
     output = tmp_path / "blockplan_per_lane_label_color.svg"
     config = _base_config(output)
     config.blockplan_lane_label_color = "black"  # global default
-    config.blockplan_swimlanes = [
-        {
-            "name": "Teal Lane",
-            "label_color": "teal",
-            "match": {},
-        },
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {
+                "name": "Teal Lane",
+                "label_color": "teal",
+                "match": {},
+            },
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -1065,14 +998,17 @@ def test_blockplan_per_lane_timeline_fill_color_paints_content_area(tmp_path):
     """timeline_fill_color on a swimlane dict fills the content area of that lane."""
     output = tmp_path / "blockplan_timeline_fill.svg"
     config = _base_config(output)
-    config.blockplan_swimlanes = [
-        {
-            "name": "Shaded",
-            "timeline_fill_color": "lightyellow",
-            "match": {},
-        },
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {
+                "name": "Shaded",
+                "timeline_fill_color": "lightyellow",
+                "match": {},
+            },
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -1082,7 +1018,7 @@ def test_blockplan_per_lane_timeline_fill_color_paints_content_area(tmp_path):
     assert shaded, "Expected a rect with timeline_fill_color 'lightyellow'"
     # The timeline rect has x >= the label column boundary.
     area_x, _area_y, area_w, _area_h = coords["BlockPlanArea"]
-    label_w = min(area_w * 0.45, max(80.0, area_w * config.blockplan_label_column_ratio))
+    label_w = min(area_w * 0.45, max(80.0, area_w * config.theme_v3.blockplan.label_column_ratio))
     timeline_x = area_x + label_w
     assert any(r["x"] >= timeline_x - 1.0 for r in shaded), "Shaded rect should be in timeline area"
 
@@ -1091,11 +1027,14 @@ def test_blockplan_match_priority_exact_filters_events(tmp_path):
     """match.priority filters events to only those with the specified priority."""
     output = tmp_path / "blockplan_match_priority.svg"
     config = _base_config(output)
-    config.blockplan_swimlanes = [
-        {"name": "Critical", "match": {"priority": 1}},
-        {"name": "Normal", "match": {"priority": [2, 3]}},
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {"name": "Critical", "match": {"priority": 1}},
+            {"name": "Normal", "match": {"priority": [2, 3]}},
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -1144,11 +1083,14 @@ def test_blockplan_match_priority_range_filters_events(tmp_path):
     """match.priority_min / priority_max filter events by priority range."""
     output = tmp_path / "blockplan_match_priority_range.svg"
     config = _base_config(output)
-    config.blockplan_show_unmatched_lane = False
-    config.blockplan_swimlanes = [
-        {"name": "High", "match": {"priority_max": 2}},
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(config, blockplan_show_unmatched_lane=False)
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {"name": "High", "match": {"priority_max": 2}},
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -1181,12 +1123,15 @@ def test_blockplan_theme_swimlane_labels_and_criteria_via_config(tmp_path):
     output = tmp_path / "blockplan_theme_swimlanes.svg"
     config = _base_config(output)
     # Simulate what ThemeEngine.apply() does: overwrite blockplan_swimlanes entirely.
-    config.blockplan_swimlanes = [
-        {"name": "Frontend", "match": {"resource_groups": ["frontend", "ui"]}},
-        {"name": "Backend", "match": {"resource_groups": ["backend", "api"]}},
-        {"name": "DevOps", "match": {"wbs_prefixes": ["3."]}},
-    ]
-    config.blockplan_top_time_bands = []
+    set_fields(
+        config,
+        blockplan_swimlanes=[
+            {"name": "Frontend", "match": {"resource_groups": ["frontend", "ui"]}},
+            {"name": "Backend", "match": {"resource_groups": ["backend", "api"]}},
+            {"name": "DevOps", "match": {"wbs_prefixes": ["3."]}},
+        ],
+    )
+    set_bands(config, primary=[])
     coords = BlockPlanLayout().calculate(config)
 
     events = [
@@ -1238,14 +1183,17 @@ def test_blockplan_week_band_skips_segments_without_drawn_dates_when_weekdays_on
     config.userend = "20260203"  # Monday/Tuesday (ISO week 6)
     config.adjustedstart = "20260201"
     config.adjustedend = "20260203"
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Week Number",
-            "unit": "week",
-            "label_format": "Week {week}",
-            "show_every": 1,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Week Number",
+                "unit": "week",
+                "label_format": "Week {week}",
+                "show_every": 1,
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
 
     renderer = _CaptureBlockPlanRenderer()
@@ -1264,13 +1212,16 @@ def test_blockplan_countdown_band_calendar_days(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260206"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Countdown",
-            "unit": "countdown",
-            "target_date": "2026-02-10",  # 8 cal days from Mon Feb 2
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Countdown",
+                "unit": "countdown",
+                "target_date": "2026-02-10",  # 8 cal days from Mon Feb 2
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -1291,14 +1242,17 @@ def test_blockplan_countdown_skip_weekends(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260209"
     config.weekend_style = 0  # only weekdays shown
-    config.blockplan_top_time_bands = [
-        {
-            "label": "WD Countdown",
-            "unit": "countdown",
-            "target_date": "2026-02-10",  # Tuesday
-            "skip_weekends": True,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "WD Countdown",
+                "unit": "countdown",
+                "target_date": "2026-02-10",  # Tuesday
+                "skip_weekends": True,
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -1319,14 +1273,17 @@ def test_blockplan_countdown_skip_nonworkdays(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260204"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Biz Countdown",
-            "unit": "countdown",
-            "target_date": "2026-02-06",  # Friday
-            "skip_nonworkdays": True,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Biz Countdown",
+                "unit": "countdown",
+                "target_date": "2026-02-06",  # Friday
+                "skip_nonworkdays": True,
+            }
+        ],
+    )
 
     class _HolidayDB(_DummyDB):
         def is_nonworkday(self, daykey, country=None):
@@ -1351,13 +1308,16 @@ def test_blockplan_countup_band_calendar_days(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260206"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Countup",
-            "unit": "countup",
-            "start_date": "2026-01-30",  # Friday before range
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Countup",
+                "unit": "countup",
+                "start_date": "2026-01-30",  # Friday before range
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -1377,14 +1337,17 @@ def test_blockplan_countup_skip_weekends(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260206"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
-        {
-            "label": "WD Countup",
-            "unit": "countup",
-            "start_date": "2026-01-30",  # Friday
-            "skip_weekends": True,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "WD Countup",
+                "unit": "countup",
+                "start_date": "2026-01-30",  # Friday
+                "skip_weekends": True,
+            }
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -1404,14 +1367,17 @@ def test_blockplan_countup_skip_nonworkdays(tmp_path):
     config.adjustedstart = "20260202"
     config.adjustedend = "20260204"
     config.weekend_style = 0
-    config.blockplan_top_time_bands = [
-        {
-            "label": "Biz Countup",
-            "unit": "countup",
-            "start_date": "2026-01-30",  # Friday
-            "skip_nonworkdays": True,
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Biz Countup",
+                "unit": "countup",
+                "start_date": "2026-01-30",  # Friday
+                "skip_nonworkdays": True,
+            }
+        ],
+    )
 
     class _HolidayDB(_DummyDB):
         def is_nonworkday(self, daykey, country=None):
@@ -1463,9 +1429,9 @@ def _holiday_row(icon, name, nonworkday=1, country="US"):
 def _render_with_holiday_band(tmp_path, db, **band_overrides):
     config = _base_config(tmp_path / "blockplan_holiday.svg")
     config.adjustedstart, config.adjustedend = "20260202", "20260227"
-    band = {"label": "Holidays", "unit": "holiday"}
+    band = {"label": "Holidays", "unit": "holiday", "holidays": {"nonworkdays_only": False}}
     band.update(band_overrides)
-    config.blockplan_top_time_bands = [band]
+    set_bands(config, primary=[band])
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, [], db)
@@ -1511,16 +1477,14 @@ def test_blockplan_holiday_band_can_hide_observances(tmp_path):
     """nonworkdays_only narrows the band to days that close the office."""
     db = _BlockPlanFlagDB({"20260202": [_holiday_row("us", "Groundhog Day", nonworkday=0)]})
     assert _render_with_holiday_band(tmp_path, db).icon_calls
-    shown = _render_with_holiday_band(tmp_path, db, nonworkdays_only=True)
+    shown = _render_with_holiday_band(tmp_path, db, holidays={"nonworkdays_only": True})
     assert shown.icon_calls == []
 
 
 # ── Band heading alignment ────────────────────────────────────────────────
 #
-# Every band's heading shares one column, so `header_label_align_h` has to
-# move all of them. The per-day glyph bands (`icon` / `holiday`) once drew
-# their heading at a hard-coded left edge, so a right-aligned theme left the
-# Holidays label sitting under the others' left margin.
+# Every row's heading shares one column, so `timescale.heading_align` moves
+# all of them, glyph rows (`icon` / `holiday`) included.
 
 
 def _heading_call(renderer, label):
@@ -1529,16 +1493,19 @@ def _heading_call(renderer, label):
 
 @pytest.mark.parametrize(
     "align, anchor",
-    [("left", "start"), ("center", "middle"), ("right", "end")],
+    [("start", "start"), ("middle", "middle"), ("end", "end")],
 )
-def test_blockplan_glyph_band_heading_follows_the_theme_alignment(tmp_path, align, anchor):
+def test_blockplan_every_heading_follows_the_timescale_alignment(tmp_path, align, anchor):
     config = _base_config(tmp_path / f"blockplan_align_{align}.svg")
     config.adjustedstart, config.adjustedend = "20260202", "20260227"
-    config.blockplan_header_label_align_h = align
-    config.blockplan_top_time_bands = [
-        {"label": "Month", "unit": "month", "date_format": "MMM"},
-        {"label": "Holidays", "unit": "holiday"},
-    ]
+    update_theme(config, timescale={"heading_align": align})
+    set_bands(
+        config,
+        primary=[
+            {"label": "Month", "unit": "month", "date_format": "MMM"},
+            {"label": "Holidays", "unit": "holiday"},
+        ],
+    )
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, [], _BlockPlanFlagDB())
@@ -1550,28 +1517,13 @@ def test_blockplan_glyph_band_heading_follows_the_theme_alignment(tmp_path, alig
     assert holidays["x"] == pytest.approx(month["x"])
 
 
-def test_blockplan_band_can_override_the_theme_alignment(tmp_path):
-    """A per-band label_align_h still wins over the blockplan-wide setting."""
-    config = _base_config(tmp_path / "blockplan_align_override.svg")
-    config.adjustedstart, config.adjustedend = "20260202", "20260227"
-    config.blockplan_header_label_align_h = "right"
-    config.blockplan_top_time_bands = [
-        {"label": "Holidays", "unit": "holiday", "label_align_h": "left"},
-    ]
-    coords = BlockPlanLayout().calculate(config)
-    renderer = _CaptureBlockPlanRenderer()
-    renderer.render(config, coords, [], _BlockPlanFlagDB())
-
-    assert _heading_call(renderer, "Holidays")["anchor"] == "start"
-
-
 def _stacked_duration_bars(tmp_path, row_gap):
     """Render three overlapping durations (three rows) in one lane; return bar rects top-down."""
     config = _base_config(tmp_path / "blockplan_row_gap.svg")
-    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
-    config.blockplan_lane_split_ratio = 0.0
-    config.blockplan_duration_bar_height = 500.0  # far taller than a row
-    config.blockplan_duration_row_gap = row_gap
+    set_fields(config, blockplan_swimlanes=[{"name": "Engineering", "match": {"resource_groups": ["dev"]}}])
+    set_fields(config, blockplan_lane_split_ratio=0.0)
+    set_fields(config, blockplan_duration_bar_height=500.0)  # far taller than a row
+    set_fields(config, blockplan_duration_row_gap=row_gap)
     coords = BlockPlanLayout().calculate(config)
     events = [
         {"Task_Name": f"Bar {i}", "Start": "20260106", "End": "20260120", "Priority": 1, "Resource_Group": "dev"}
@@ -1599,10 +1551,10 @@ def test_blockplan_duration_row_gap_unset_keeps_95_percent_row_fill(tmp_path):
 def _heading_cells(tmp_path, band_ratio):
     """Render with one top band and one lane; return (band heading rect, lane heading rect, area)."""
     config = _base_config(tmp_path / "blockplan_band_label_col.svg")
-    config.blockplan_swimlanes = [{"name": "Engineering", "match": {"resource_groups": ["dev"]}}]
-    config.blockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
-    config.blockplan_label_column_ratio = 0.3
-    config.blockplan_band_label_column_ratio = band_ratio
+    set_fields(config, blockplan_swimlanes=[{"name": "Engineering", "match": {"resource_groups": ["dev"]}}])
+    set_bands(config, primary=[{"label": "Month", "unit": "month"}])
+    set_fields(config, blockplan_label_column_ratio=0.3)
+    set_fields(config, blockplan_band_label_column_ratio=band_ratio)
     coords = BlockPlanLayout().calculate(config)
     renderer = _CaptureBlockPlanRenderer()
     renderer.render(config, coords, events=[], db=_DummyDB())
@@ -1623,3 +1575,25 @@ def test_blockplan_band_label_column_ratio_sizes_band_cells_separately(tmp_path)
 def test_blockplan_band_label_column_ratio_unset_matches_lane_column(tmp_path):
     band_cell, lane_cell, _area = _heading_cells(tmp_path, band_ratio=None)
     assert (band_cell["x"], band_cell["w"]) == pytest.approx((lane_cell["x"], lane_cell["w"]))
+
+
+def test_blockplan_row_vfill_shades_the_columns_behind_the_lanes(tmp_path):
+    config = _base_config(tmp_path / "blockplan_vfill.svg")
+    config.userstart = config.adjustedstart = "20260202"
+    config.userend = config.adjustedend = "20260227"
+    set_bands(
+        config,
+        primary=[
+            {"label": "Month", "unit": "month", "date_format": "MMM", "vfill": {"fill": "gold", "fill_opacity": 0.2}}
+        ],
+    )
+    coords = BlockPlanLayout().calculate(config)
+    renderer = _CaptureBlockPlanRenderer()
+    renderer.render(config, coords, events=[], db=_DummyDB())
+
+    fills = [kw for kw in renderer.rect_calls if kw.get("css_class") == "ec-vline-fill"]
+    assert len(fills) == 1  # February only
+    assert fills[0]["fill"] == "gold" and fills[0]["fill_opacity"] == 0.2
+    heading = next(kw for kw in renderer.rect_calls if kw.get("css_class") == "ec-heading-cell")
+    bands_bottom = heading["y"] + heading["h"]
+    assert fills[0]["y"] == pytest.approx(bands_bottom)  # starts under the rows, runs down the lanes

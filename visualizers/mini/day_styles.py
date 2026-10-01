@@ -18,8 +18,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import TYPE_CHECKING
 
+from config import role_styles
 from shared import style_trace
 from shared.fiscal_renderer import get_fiscal_period_color
+from shared.holidays import style_for
 from shared.rule_engine import DayContext, StyleEngine
 
 if TYPE_CHECKING:
@@ -28,13 +30,8 @@ if TYPE_CHECKING:
 
 
 def _mini_style_rules(config: CalendarConfig) -> list:
-    """Return the raw style_rules list (UnifiedTheme-preferred, legacy fallback)."""
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules."""
+    return role_styles.style_rules(config.theme_v3)
 
 
 logger = logging.getLogger(__name__)
@@ -205,12 +202,12 @@ class DayStyleResolver:
     def __init__(self, config: CalendarConfig, db: CalendarDB):
         self._config = config
         self._db = db
-        # Which day carries each fiscal period's label. Computed once: an NRF
-        # period opens on a Sunday, which a workweek-only mini never draws, so
+        # The labels of the timescale's fiscal_period row, on the day each period opens.
+        # An NRF period opens on a Sunday, which a workweek-only mini never draws, so
         # the label falls forward to the period's first visible day.
-        from shared.fiscal_renderer import period_label_days
+        from renderers.timescale import grid_period_labels
 
-        self._fiscal_label_days = period_label_days(config.fiscal_lookup, config.weekend_style)
+        self.period_labels = grid_period_labels(config)
 
     def resolve(
         self,
@@ -232,8 +229,9 @@ class DayStyleResolver:
         style = DayStyle(is_adjacent_month=is_adjacent, daykey=daykey)
 
         if is_adjacent:
-            style.text_color = self._config.theme_mini_adjacent_month_color or self._config.mini_adjacent_month_color
-            style.text_opacity = self._config.mini_adjacent_month_opacity
+            mini = self._config.theme_v3.mini_calendar
+            style.text_color = mini.adjacent_month_color
+            style.text_opacity = mini.adjacent_month_opacity
             return style
 
         holidays = self._db.get_holidays_for_date(daykey, self._config.country)
@@ -243,14 +241,15 @@ class DayStyleResolver:
         if self._config.fiscal_lookup:
             fiscal_info = self._config.fiscal_lookup.get(daykey)
             if fiscal_info:
-                if self._config.fiscal_use_period_colors:
+                if self._config.theme_v3.fiscal.use_period_colors:
                     style.shade_color = get_fiscal_period_color(fiscal_info, self._config)
-                    style.shade_opacity = self._config.mini_fiscal_period_opacity
-                label_info = self._fiscal_label_days.get(daykey)
-                if self._config.fiscal_show_period_labels and label_info is not None:
-                    from shared.fiscal_renderer import format_fiscal_period_label
-
-                    style.fiscal_period_label = format_fiscal_period_label(label_info, self._config)
+                    style.shade_opacity = self._config.theme_v3.fiscal.period_opacity
+                if self.period_labels is not None:
+                    day = date(int(daykey[:4]), int(daykey[4:6]), int(daykey[6:8]))
+                    label = " ".join(
+                        p for p in (self.period_labels.start.get(day), self.period_labels.end.get(day)) if p
+                    )
+                    style.fiscal_period_label = label or None
 
         # Layer 1: Government holidays
         self._apply_holidays(style, holidays)
@@ -271,11 +270,10 @@ class DayStyleResolver:
         )
 
         # Layer 4: Current day shading (applied last so it overlays other styles)
-        if self._config.shade_current_day:
-            today_key = date.today().strftime("%Y%m%d")
-            if daykey == today_key:
-                style.shade_color = self._config.theme_mini_current_day_color or self._config.mini_current_day_color
-                style.shade_opacity = self._config.mini_current_day_opacity
+        highlight = self._config.theme_v3.today.highlight
+        if highlight.show and daykey == date.today().strftime("%Y%m%d"):
+            style.shade_color = highlight.color
+            style.shade_opacity = highlight.opacity
 
         return style
 
@@ -300,15 +298,13 @@ class DayStyleResolver:
 
         # Text color stays on the legacy chain — text:day_number is a
         # separate concern from box:day.
-        style.text_color = (
-            self._config.theme_federal_holiday_color
-            or self._config.theme_mini_holiday_color
-            or self._config.mini_holiday_color
-        )
+        theme_holidays = self._config.theme_v3.holidays
+        style.text_color = theme_holidays.federal.color or "red"
 
         if any(h.get("nonworkday") for h in holidays):
-            style.shade_color = self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
-            style.shade_opacity = self._config.mini_nonworkday_fill_opacity
+            fill, opacity, _ = style_for(frozenset({"federal_holiday"}), theme_holidays)
+            if fill:
+                style.shade_color, style.shade_opacity = fill, opacity
 
         for holiday in holidays:
             style.add_icon(
@@ -328,10 +324,9 @@ class DayStyleResolver:
         """
         for sd in special_days:
             if sd.get("nonworkday"):
-                style.shade_color = (
-                    self._config.theme_mini_nonworkday_fill_color or self._config.mini_nonworkday_fill_color
-                )
-                style.shade_opacity = self._config.mini_special_nonworkday_opacity
+                fill, opacity, _ = style_for(frozenset({"company_holiday"}), self._config.theme_v3.holidays)
+                if fill:
+                    style.shade_color, style.shade_opacity = fill, opacity
 
             pattern = sd.get("pattern", 0)
             if pattern:
@@ -342,16 +337,17 @@ class DayStyleResolver:
 
     def _apply_events(self, style: DayStyle, events: list[dict]) -> None:
         """Apply event-driven styling."""
-        engine = StyleEngine(_mini_style_rules(self._config), "mini")
+        engine = StyleEngine(_mini_style_rules(self._config))
 
         for event in events:
             # Milestones get circled
-            if event.get("Milestone") and self._config.mini_circle_milestones:
+            if event.get("Milestone") and self._config.theme_v3.mini_calendar.circle_milestones:
                 style.circled = True
+                milestone_box = self._config.theme_v3.boxes.milestone
                 style.circle_color = (
-                    self._config.theme_mini_milestone_color
-                    or self._config.mini_milestone_stroke_color
-                    or self._config.mini_milestone_color
+                    milestone_box.stroke
+                    if milestone_box.stroke not in ("", "none")
+                    else self._config.theme_v3.icons.milestone.color
                 )
                 style.bold = True
                 style.priority = max(style.priority, 10)
@@ -407,15 +403,6 @@ class DayStyleResolver:
         company_holiday = any(bool(sd.get("nonworkday")) for sd in special_days)
         nonworkday = federal_holiday or company_holiday
 
-        # Pass 1 — UnifiedTheme box:day rules
-        self._apply_box_day_rules(
-            style,
-            federal_holiday=federal_holiday,
-            company_holiday=company_holiday,
-            nonworkday=nonworkday,
-            events=events,
-        )
-
         # Pass 2 — legacy StyleEngine (apply_to: day_box).  Sourced from the
         # same style_rules list; rules with the new ``box:day`` apply_to form
         # are ignored by _applicable_rules("day_box") so this only handles
@@ -432,7 +419,7 @@ class DayStyleResolver:
             workday=not nonworkday,
         )
         event_objects = [self._dict_to_event(e) for e in events]
-        style_result = StyleEngine(style_rules, "mini").evaluate_day(ctx, event_objects)
+        style_result = StyleEngine(style_rules).evaluate_day(ctx, event_objects)
 
         if style_result.fill_color:
             style.shade_color = style_result.fill_color
@@ -458,59 +445,6 @@ class DayStyleResolver:
                 style.text_opacity = float(day_text.font_opacity)
             if day_text.font is not None:
                 style.font_name = day_text.font
-
-    def _apply_box_day_rules(
-        self,
-        style: DayStyle,
-        *,
-        federal_holiday: bool,
-        company_holiday: bool,
-        nonworkday: bool,
-        events: list[dict],
-    ) -> None:
-        """Apply every UnifiedTheme ``apply_to: box:day`` rule matching this day.
-
-        ``find_rules`` already filters by selector against the context dict;
-        each matching rule's ``style`` bag is layered onto ``style`` in
-        declaration order (later overrides earlier), mirroring the unified
-        resolver semantics from design §6.
-        """
-        theme = getattr(self._config, "theme", None)
-        if theme is None:
-            return
-        ctx = {
-            "visualizer": "mini",
-            "papersize": getattr(self._config, "papersize", ""),
-            "federal_holiday": federal_holiday,
-            "company_holiday": company_holiday,
-            "nonworkday": nonworkday,
-            "workday": not nonworkday,
-        }
-        rules = theme.find_rules("box:day", ctx)
-        for rule in rules:
-            sty = rule.style or {}
-            if style_trace.enabled():
-                style_trace.emit(
-                    f"day {style.daykey} (mini)",
-                    f"rule {getattr(rule, 'name', None) or '<unnamed>'!r}",
-                    "APPLY  " + ("; ".join(f"{k}={v!r}" for k, v in sty.items()) or "sets nothing"),
-                )
-            fill = sty.get("fill")
-            if fill:
-                style.shade_color = fill
-                fop = sty.get("fill_opacity")
-                if fop is not None:
-                    style.shade_opacity = float(fop)
-            pattern = sty.get("pattern")
-            if pattern:
-                style.hash_decorations = [
-                    HashDecoration(
-                        pattern=pattern,
-                        color=sty.get("pattern_color"),
-                        opacity=sty.get("pattern_opacity"),
-                    )
-                ]
-            style.add_icon(sty.get("icon"), ICON_RANK_STYLE_RULE)
 
     @staticmethod
     def _dict_to_event(d: dict):

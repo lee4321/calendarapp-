@@ -151,7 +151,7 @@ def ordered_event_views(record: DetailsRecord, config: CalendarConfig) -> list[R
     """Every event row, in the order the Events table lists them."""
     ranks = record.color_ranks()
     views = [event_view(record, note, ranks) for note in record.events]
-    sort_fields = list(getattr(config, "details_md_sort", None) or ["start_date", "end_date", "name"])
+    sort_fields = list(config.theme_v3.details.markdown.sort or ["start_date", "end_date", "name"])
     return sort_views(views, sort_fields)
 
 
@@ -256,7 +256,7 @@ def table(columns: Sequence[TableColumn], rows: Iterable[list[str]]) -> list[str
 def document_icon_uses(record: DetailsRecord, config: CalendarConfig, holiday_rows: list[dict]) -> list[IconUse]:
     """Every icon the document shows, once each: what the export writes."""
     seen: dict[IconUse, None] = dict.fromkeys(record.all_icon_uses())
-    for column in resolve_table_columns(getattr(config, "details_md_columns", None), config):
+    for column in resolve_table_columns(config.theme_v3.details.markdown.columns, config):
         if column.render == "icon" and column.icon and column.attr not in ICON_FIELDS:
             use = IconUse(column.icon.strip().lower(), None, column.field)
             if any(cell_icon_visible(column, note.event) for note in record.events):
@@ -285,12 +285,12 @@ def build_markdown(
     generated: datetime | None = None,
 ) -> str:
     """The details document for one run."""
-    links = IconLinks(icon_paths, str(getattr(config, "details_md_icon_mode", "file") or "file").lower())
-    color_mode = str(getattr(config, "details_md_color_mode", "swatch") or "swatch").lower()
-    empty = escape_cell(getattr(config, "details_md_empty_cell_text", "") or "")
+    links = IconLinks(icon_paths, str(config.theme_v3.details.markdown.icon_mode or "file").lower())
+    color_mode = str(config.theme_v3.details.markdown.color_mode or "swatch").lower()
+    empty = escape_cell(config.theme_v3.details.markdown.empty_cell_text or "")
 
     lines = _metadata(record, config, run_paths, generated)
-    sections = list(getattr(config, "details_md_sections", None) or DEFAULT_SECTIONS)
+    sections = list(config.theme_v3.details.markdown.sections or DEFAULT_SECTIONS)
     for section in sections:
         name = str(section).strip().lower()
         if name == SECTION_EVENTS:
@@ -312,7 +312,7 @@ def _metadata(
     run_paths: RunPaths,
     generated: datetime | None,
 ) -> list[str]:
-    title = getattr(config, "details_md_title_text", None) or "Calendar Details"
+    title = config.theme_v3.details.markdown.title_text or "Calendar Details"
     start = format_datekey(getattr(config, "adjustedstart", ""))
     end = format_datekey(getattr(config, "adjustedend", ""))
     lines = [f"# {escape_text(title)}", "", f"- **Visualization:** {escape_text(record.visualizer)}"]
@@ -327,7 +327,7 @@ def _metadata(
     if command:
         lines.append(f"- **Command:** `{str(command).replace('`', "'")}`")
     files = [f"[{run_paths.main.name}]({run_paths.main.name})"]
-    if getattr(config, "include_details_csv", False):
+    if config.theme_v3.details.csv.enable:
         files.append(f"[{run_paths.csv.name}]({run_paths.csv.name})")
     lines += [f"- **Files:** {' · '.join(files)}", ""]
     return lines
@@ -335,19 +335,11 @@ def _metadata(
 
 def _theme_name(config: CalendarConfig) -> str:
     """The applied theme's ``theme.name``, or ``""``."""
-    theme = getattr(config, "theme", None)
-    section = getattr(theme, "section", None)
-    if not callable(section):
-        return ""
-    try:
-        name = (section("theme") or {}).get("name")
-    except (AttributeError, KeyError, TypeError):
-        return ""
-    return str(name) if name else ""
+    return str(config.theme_v3.theme.name or "")
 
 
 def _heading(config: CalendarConfig, attr: str, default: str) -> list[str]:
-    return [f"## {escape_text(getattr(config, attr, None) or default)}", ""]
+    return [f"## {escape_text(getattr(config.theme_v3.details.markdown, attr, None) or default)}", ""]
 
 
 def _plain_columns(entries: Any, config: CalendarConfig) -> list[TableColumn]:
@@ -366,13 +358,13 @@ def _events_section(
     color_mode: str,
     empty: str,
 ) -> list[str]:
-    lines = _heading(config, "details_md_events_section_text", "Events")
-    columns = resolve_table_columns(getattr(config, "details_md_columns", None), config)
+    lines = _heading(config, "events_section_text", "Events")
+    columns = resolve_table_columns(config.theme_v3.details.markdown.columns, config)
     views = ordered_event_views(record, config)
     if not views or not columns:
         return [*lines, "No events in the range.", ""]
 
-    group_by = str(getattr(config, "details_md_group_by", "none") or "none").strip()
+    group_by = str(config.theme_v3.details.markdown.group_by or "none").strip()
     if group_by.lower() in ("", "none"):
         rows = [[render_cell(c, v, links, color_mode, empty) for c in columns] for v in views]
         return [*lines, *table(columns, rows), ""]
@@ -390,7 +382,7 @@ def _events_section(
 
 
 def _colors_section(record: DetailsRecord, config: CalendarConfig, links: IconLinks) -> list[str]:
-    lines = _heading(config, "details_md_colors_section_text", "Color Key")
+    lines = _heading(config, "colors_section_text", "Color Key")
     entries: dict[str, tuple[str, list[str], list[str]]] = {}
     for entry in record.colors:
         _color, labels, sources = entries.setdefault(entry.color.strip().lower(), (entry.color, [], []))
@@ -431,7 +423,7 @@ def _symbols_section(
     links: IconLinks,
     holiday_rows: list[dict],
 ) -> list[str]:
-    lines = _heading(config, "details_md_symbols_section_text", "Icons & Symbols")
+    lines = _heading(config, "symbols_section_text", "Icons & Symbols")
     uses = document_icon_uses(record, config, holiday_rows)
     if not uses:
         return [*lines, "No icons were drawn.", ""]
@@ -466,10 +458,10 @@ def _exceptions_section(
     color_mode: str,
     empty: str,
 ) -> list[str]:
-    lines = _heading(config, "details_md_exceptions_section_text", "Exceptions")
-    columns = _plain_columns(getattr(config, "details_md_exception_columns", None), config)
+    lines = _heading(config, "exceptions_section_text", "Exceptions")
+    columns = _plain_columns(config.theme_v3.details.markdown.exception_columns, config)
     if not record.exceptions or not columns:
-        text = getattr(config, "details_md_empty_exceptions_text", None) or "Every item was drawn as scheduled."
+        text = config.theme_v3.details.markdown.empty_exceptions_text or "Every item was drawn as scheduled."
         return [*lines, escape_cell(text), ""]
     views = [
         RowView(
@@ -499,8 +491,8 @@ def _holidays_section(
     empty: str,
     holiday_rows: list[dict],
 ) -> list[str]:
-    lines = _heading(config, "details_md_holidays_section_text", "Holidays & Special Days")
-    columns = _plain_columns(getattr(config, "details_md_holiday_columns", None), config)
+    lines = _heading(config, "holidays_section_text", "Holidays & Special Days")
+    columns = _plain_columns(config.theme_v3.details.markdown.holiday_columns, config)
     if not holiday_rows or not columns:
         return [*lines, "No holidays or special days in the range.", ""]
     views = [RowView({**row, "icons": holiday_icons(record, row)}) for row in holiday_rows]

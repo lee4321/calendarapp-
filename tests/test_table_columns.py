@@ -40,7 +40,7 @@ def test_bookkeeping_columns_come_through_from_dict():
 def test_gantt_column_is_the_shared_column():
     assert GanttColumn is TableColumn
     config = CalendarConfig()
-    assert resolve_columns(config) == resolve_table_columns(config.gantt_columns, config)
+    assert resolve_columns(config) == resolve_table_columns(config.theme_v3.gantt.columns, config)
 
 
 def test_max_chars_is_parsed_and_non_positive_ignored():

@@ -32,10 +32,11 @@ rows past the bottom of the body are not drawn yet.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import arrow
 
+from config import role_styles
 from renderers.details_record import (
     DRAWN_PARTIAL,
     KIND_CLIPPED_END,
@@ -48,15 +49,24 @@ from renderers.details_record import (
     split_reference,
 )
 from renderers.svg_base import BaseSVGRenderer
+from renderers.timescale import (
+    ScaleContext,
+    draw_cells,
+    draw_headings,
+    draw_vfills,
+    draw_vlines,
+    plan_rows,
+    row_segments,
+)
+from renderers.today_line import draw_today
 from shared import style_trace
 from shared.date_utils import visible_days
 from shared.day_classifier import classify_day
-from shared.holiday_band import HolidayMark, compute_holiday_band_days
-from shared.rule_engine import DayContext, StyleEngine, StyleResult
-from shared.timeband import BandSegment, build_segments, group_segments
+from shared.holidays import resolve_day_styles
+from shared.rule_engine import StyleEngine, StyleResult
+from shared.span import Frame, Span, paginate
 from visualizers.gantt.bars import (
     BarGeometry,
-    DayAxis,
     bar_geometry,
     float_spans,
     progress_width,
@@ -110,16 +120,8 @@ def _page_output_path(output_path: str, page_number: int) -> str:
 
 
 def _gantt_style_rules(config: CalendarConfig) -> list:
-    """Source the raw style_rules list for StyleEngine, UnifiedTheme-first.
-
-    Mirrors blockplan / compactplan / weekly.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules, for the StyleEngine."""
+    return role_styles.style_rules(config.theme_v3)
 
 
 def _to_date(value) -> date | None:
@@ -166,13 +168,6 @@ class GanttRenderer(BaseSVGRenderer):
         "icon:milestone",
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        #: Holiday marks per visible day, resolved once per render in
-        #: _render_content.  Empty until then so a band row drawn without a
-        #: render pass (tests, subclasses) simply shows no flags.
-        self._holiday_days: dict[date, list[HolidayMark]] = {}
-
     def _render_content(
         self,
         config: CalendarConfig,
@@ -200,19 +195,11 @@ class GanttRenderer(BaseSVGRenderer):
 
         self._ensure_details_record(events)
         self._extra_page_count = 0
-        self._style_engine = StyleEngine(_gantt_style_rules(config), self.TOKEN_VISUALIZER)
+        self._style_engine = StyleEngine(_gantt_style_rules(config))
 
         rows = build_rows(events, config)
         columns = resolve_columns(config)
 
-        # Band segments are built once over the whole range and sliced per
-        # page, so a sprint or month keeps its identity and its numbering
-        # across horizontal page breaks (answer 11).
-        segments = self._build_all_segments(config, start, end, days, db)
-        # Holiday bands draw the flag on the holiday row itself, so the marks
-        # are resolved once here (db in hand) and sliced per page like the
-        # band segments are.
-        self._holiday_days = compute_holiday_band_days(days, db, config)
         self._log_hidden_holidays(config, start, end, days, db)
         self._note_visible_days(day.strftime("%Y%m%d") for day in days)
 
@@ -228,13 +215,13 @@ class GanttRenderer(BaseSVGRenderer):
                 self._content_bbox_svg = None
                 self._add_desc(config)
                 self._inject_css()
-                if config.watermark_text:
+                if config.theme_v3.watermark.text:
                     self._render_text_watermark(config)
-                if config.watermark_image:
+                if config.theme_v3.watermark.image:
                     self._render_image_watermark(config)
                 self._render_decorations(config, coordinates)
 
-            self._draw_page(config, coordinates, page, rows, columns, days, segments, db)
+            self._draw_page(config, coordinates, page, rows, columns, days, db)
 
             if not page.is_first:
                 self.drawing.save_svg(_page_output_path(config.outputfile, page.number))
@@ -268,14 +255,25 @@ class GanttRenderer(BaseSVGRenderer):
         _tx, _ty, _tw, table_h = coordinates["GanttTableBody"]
         _cx, _cy, chart_w, _ch = coordinates["GanttChartBody"]
 
-        min_day_width = max(float(config.gantt_min_day_width), 0.0)
+        min_day_width = max(float(config.theme_v3.gantt.min_day_width), 0.0)
         days_per_page = int(chart_w // min_day_width) if min_day_width > 0 else len(days)
+
+        days_per_page = max(1, min(days_per_page or 1, len(days)))
+
+        # Break the days where no timescale segment that fits a page is cut:
+        # pages come out a little shorter rather than splitting a month or week.
+        theme = config.theme_v3
+        ctx = ScaleContext(theme, config, None, [r.event for r in rows])
+        segments = row_segments([*theme.timescale.primary, *theme.timescale.secondary], days, ctx)
+        index = {day: i for i, day in enumerate(days)}
+        day_ranges = [(index[page[0]], index[page[-1]] + 1) for page in paginate(days, days_per_page, segments)]
 
         return plan_pages(
             row_count=len(rows),
             day_count=len(days),
             rows_per_page=self._rows_that_fit(config, table_h),
-            days_per_page=max(1, min(days_per_page or 1, len(days))),
+            days_per_page=days_per_page,
+            day_ranges=day_ranges,
         )
 
     def _draw_page(
@@ -286,7 +284,6 @@ class GanttRenderer(BaseSVGRenderer):
         rows: list,
         columns: list[GanttColumn],
         days: list[date],
-        segments: dict[tuple[str, int], list[BandSegment]],
         db: CalendarDB,
     ) -> None:
         """Draw one page: its slice of rows over its slice of the axis."""
@@ -300,13 +297,13 @@ class GanttRenderer(BaseSVGRenderer):
             return
 
         chart_x, _cy, chart_w, _ch = coordinates["GanttChartBody"]
-        axis = DayAxis(days=page_days, x=chart_x, width=chart_w)
+        axis = Span(page_days, chart_x, chart_x + chart_w)
 
         # Back to front: shading, bands and table first, then the today
         # line, then the marks that must sit above it.
         self._draw_frame(coordinates)
         self._draw_nonworking_shading(config, coordinates, page_days, db)
-        self._draw_bands(config, coordinates, page_days, segments)
+        self._draw_bands(config, coordinates, page_days, days, [r.event for r in rows], db)
         self._draw_column_headers(config, coordinates, columns)
         self._draw_rows(config, coordinates, page_rows, columns, page.row_start)
         self._draw_today_line(config, coordinates, axis)
@@ -354,7 +351,7 @@ class GanttRenderer(BaseSVGRenderer):
         Rows past this are dropped for now; phase 6 turns the remainder
         into continuation pages rather than discarding it.
         """
-        row_h = max(float(config.gantt_row_height), 1.0)
+        row_h = max(float(config.theme_v3.gantt.row_height), 1.0)
         return max(0, int(body_h // row_h))
 
     # ── Drawing ───────────────────────────────────────────────────────────
@@ -398,340 +395,71 @@ class GanttRenderer(BaseSVGRenderer):
     ) -> None:
         """Shade non-working day columns behind everything else.
 
-        The fill and opacity come from matching ``box:day`` style rules
-        (federal holiday, company nonworkday, weekend), falling back to the
-        ``ec-cell`` box style.
-
-        Only reachable when the weekend style keeps weekends on the axis;
-        under ``weekend_style == 0`` those days are not columns at all.
-        Holidays are always columns and always shaded, so the axis does
-        not silently change shape with ``--country`` (answer 14).
+        The tint is the theme's ``holidays`` fill for the day's class (federal
+        holiday, company nonworkday, weekend).  Weekend columns exist only when
+        the weekend style keeps weekends on the axis; holidays are always
+        columns and always shaded, so the axis does not silently change shape
+        with ``--country`` (answer 14).
         """
         chart_x, chart_y, chart_w, chart_h = coordinates["GanttChartBody"]
-        day_w = self._day_width(chart_w, days)
-        if day_w <= 0:
-            return
-
-        style = config.get_box_style("ec-cell")
-        fill = style.fill
-        opacity = float(style.fill_opacity if style.fill_opacity is not None else 0.08)
-
-        engine = getattr(self, "_style_engine", None)
+        span = Span(days, chart_x, chart_x + chart_w)
+        styles = resolve_day_styles(days, db, config, config.theme_v3.holidays)
         for index, day in enumerate(days):
-            classes = classify_day(day, db, config)
-            if not classes:
+            style = styles[day]
+            if not style.is_nonworkday or style.fill is None:
                 continue
-            col_fill, col_opacity = fill, opacity
-            daykey = day.strftime("%Y%m%d")
-            if engine is not None:
-                # ``box:day`` rules (including the ones synthesized from
-                # colors.federal_holiday / colors.company_holiday) tint the
-                # column; nothing else about a column is rule-styled.
-                ctx = DayContext(
-                    date=daykey,
-                    federal_holiday="federal_holiday" in classes,
-                    company_holiday="company_holiday" in classes,
-                    nonworkday=True,
-                    workday=False,
-                    weekend="weekend" in classes,
-                )
-                sr = engine.evaluate_day(ctx)
-                if sr.fill_color is not None:
-                    col_fill = sr.fill_color
-                if sr.fill_opacity is not None:
-                    col_opacity = float(sr.fill_opacity)
-            style_trace.emit(f"day {daykey} (gantt column)", "DRAWN", f"fill={col_fill} opacity={col_opacity}")
+            style_trace.emit(
+                f"day {day:%Y%m%d} (gantt column)", "DRAWN", f"fill={style.fill} opacity={style.fill_opacity}"
+            )
             self._draw_rect(
-                chart_x + index * day_w,
+                span.left_of(index),
                 chart_y,
-                day_w,
+                span.day_width,
                 chart_h,
-                fill=col_fill,
-                fill_opacity=col_opacity,
+                fill=style.fill,
+                fill_opacity=style.fill_opacity,
                 css_class="ec-cell",
             )
-
-    def _build_all_segments(
-        self,
-        config: CalendarConfig,
-        start: date,
-        end: date,
-        days: list[date],
-        db: CalendarDB | None,
-    ) -> dict[tuple[str, int], list[BandSegment]]:
-        """Build every band's segments once, over the whole date range.
-
-        Building per page would restart interval counters at each break,
-        so ``Sprint 7`` would come back as ``Sprint 1`` on page 2.  Pages
-        slice these instead, and a segment straddling a break simply
-        draws its overlapping part on both pages under the same label.
-        """
-        segments: dict[tuple[str, int], list[BandSegment]] = {}
-        stacks = (
-            ("top", config.gantt_top_time_bands),
-            ("bottom", config.get_gantt_bottom_bands()),
-        )
-        for stack, bands in stacks:
-            for index, band in enumerate(bands or []):
-                if not isinstance(band, dict):
-                    continue
-                segments[(stack, index)] = build_segments(
-                    band,
-                    start,
-                    end,
-                    config,
-                    visible_days=days,
-                    db=db,
-                )
-        return segments
 
     def _draw_bands(
         self,
         config: CalendarConfig,
         coordinates: CoordinateDict,
         days: list[date],
-        segments: dict[tuple[str, int], list[BandSegment]],
+        all_days: list[date],
+        events: list,
+        db: CalendarDB,
     ) -> None:
-        """Draw the top and bottom time-band stacks for this page's days."""
-        top = coordinates.get("GanttTopBands")
-        bottom = coordinates.get("GanttBottomBands")
-        # Each band's heading sits in the table's column, level with its row.
+        """Draw the primary rows on top and the secondary rows on the bottom, for this page's *days*.
+
+        Rows are planned over the whole range (*all_days*) and clipped to the
+        page, so a sprint or month keeps its identity and its numbering across
+        horizontal page breaks.  Each row's heading sits in the task table's
+        column, level with its row.
+        """
+        theme = config.theme_v3
+        chart_x, _cy, chart_w, _ch = coordinates["GanttChartBody"]
+        span = Span(days, chart_x, chart_x + chart_w)
+        frame = Frame(span)
+        ctx = ScaleContext(theme, config, db, events)
         table = coordinates.get("GanttTableArea")
-        heading_span = (table[0], table[2]) if table else None
-        if top:
-            self._draw_band_stack(
-                config,
-                top,
-                config.gantt_top_time_bands,
-                days,
-                segments,
-                "top",
-                heading_span,
-            )
-        if bottom:
-            self._draw_band_stack(
-                config,
-                bottom,
-                config.get_gantt_bottom_bands(),
-                days,
-                segments,
-                "bottom",
-                heading_span,
-            )
-
-    def _draw_band_stack(
-        self,
-        config: CalendarConfig,
-        region: tuple[float, float, float, float],
-        bands: list[dict[str, Any]],
-        days: list[date],
-        segments: dict[tuple[str, int], list[BandSegment]],
-        stack: str,
-        heading_span: tuple[float, float] | None = None,
-    ) -> None:
-        """Draw one stack of band rows, top to bottom, within *region*.
-
-        *heading_span* is the ``(x, width)`` of the column each band's
-        ``label`` is written in; without it no headings are drawn.
-        """
-        region_x, region_y, region_w, region_h = region
-        bands = [band for band in (bands or []) if isinstance(band, dict)]
-        if not bands or region_h <= 0:
-            return
-
-        default_h = float(config.gantt_band_row_height)
-        heights = [float(band.get("row_height", default_h)) for band in bands]
-        total = sum(heights) or 1.0
-        scale = region_h / total if total > region_h else 1.0
-
-        cursor_y = region_y
-        for index, (band, height) in enumerate(zip(bands, heights, strict=False)):
-            row_h = height * scale
-            if heading_span is not None:
-                self._draw_band_heading(config, band, heading_span[0], cursor_y, heading_span[1], row_h)
-            self._draw_band_row(
-                config,
-                band,
-                segments.get((stack, index), []),
-                days,
-                region_x,
-                cursor_y,
-                region_w,
-                row_h,
-            )
-            cursor_y += row_h
-
-    def _draw_band_heading(
-        self,
-        config: CalendarConfig,
-        band: dict[str, Any],
-        x: float,
-        y: float,
-        w: float,
-        h: float,
-    ) -> None:
-        """Write a band's ``label`` in a heading cell level with its row."""
-        label = str(band.get("label") or "").strip()
-        if not label or w <= 0 or h <= 0:
-            return
-        cell = config.get_box_style("ec-heading-cell")
-        color, width, opacity = self._grid_style()
-        self._draw_rect(
-            x,
-            y,
-            w,
-            h,
-            fill=cell.fill or "none",
-            fill_opacity=float(cell.fill_opacity if cell.fill_opacity is not None else 1.0),
-            stroke=color,
-            stroke_width=width,
-            stroke_opacity=opacity,
-            css_class="ec-heading-cell",
-        )
-        text = config.get_text_style("ec-heading")
-        token = self._tk("text:heading")
-        font = band.get("label_font") or token.get("font") or text.font
-        font_size = min(float(band.get("label_font_size") or token.get("size") or 8.0), max(h - 2.0, 4.0))
-        align = str(band.get("label_align_h") or config.gantt_header_label_align_h).strip().lower()
-        self._draw_clipped_text(
-            label,
-            x + 6.0,
-            y + h / 2 + font_size / 3,
-            max(w - 12.0, 8.0),
-            font,
-            font_size,
-            band.get("label_color") or token.get("color") or text.color,
-            align=align if align in {"left", "center", "right"} else config.gantt_header_label_align_h,
-            css_class="ec-heading",
-        )
-
-    def _draw_band_row(
-        self,
-        config: CalendarConfig,
-        band: dict[str, Any],
-        segments: list[BandSegment],
-        days: list[date],
-        x: float,
-        y: float,
-        w: float,
-        h: float,
-    ) -> None:
-        """Draw one band row: a cell per segment, each with a centered label."""
-        day_w = self._day_width(w, days)
-        if day_w <= 0 or h <= 0:
-            return
-
-        # A holiday band has no labeled segments — it draws one flag per day.
-        if str(band.get("unit", "date")).strip().lower() == "holiday":
-            self._draw_holiday_band_row(config, band, days, x, y, w, h)
-            return
-
-        day_index = {day: index for index, day in enumerate(days)}
-        color, width, opacity = self._grid_style()
-        box = config.get_box_style("ec-band-cell")
-        token = self._tk("text:band_label")
-        font = token.get("font") or config.get_text_style("ec-tick-label").font
-        font_size = min(float(token.get("size") or 8.0), max(h - 2.0, 4.0))
-
-        # ``show_every: N`` draws every N segments as one cell, labelled by
-        # its first.  Grouping runs over the whole range so a merged cell keeps
-        # its boundaries on every page.
-        for group in group_segments(segments, band):
-            segment = group[0]
-            end_exclusive = group[-1].end_exclusive
-            span = [index for day, index in day_index.items() if segment.start <= day < end_exclusive]
-            if not span:
-                # Every day of this segment is hidden (a weekend-only
-                # segment under weekend_style 0) — nothing to draw.
+        for stack, rows in (
+            ("GanttTopBands", theme.timescale.primary),
+            ("GanttBottomBands", theme.timescale.secondary),
+        ):
+            region = coordinates.get(stack)
+            if not region or region[3] <= 0 or not rows:
                 continue
-
-            seg_x = x + min(span) * day_w
-            seg_w = (max(span) - min(span) + 1) * day_w
-
-            self._draw_rect(
-                seg_x,
-                y,
-                seg_w,
-                h,
-                fill=box.fill or "none",
-                fill_opacity=float(box.fill_opacity if box.fill_opacity is not None else 1.0),
-                stroke=color,
-                stroke_width=width,
-                stroke_opacity=opacity,
-                css_class="ec-band-cell",
-            )
-            self._draw_clipped_text(
-                segment.label,
-                seg_x,
-                y + h / 2 + font_size / 3,
-                seg_w,
-                font,
-                font_size,
-                token.get("color") or config.get_text_style("ec-tick-label").color,
-                align="center",
-                css_class="ec-tick-label",
-            )
-
-    def _draw_holiday_band_row(
-        self,
-        config: CalendarConfig,
-        band: dict[str, Any],
-        days: list[date],
-        x: float,
-        y: float,
-        w: float,
-        h: float,
-    ) -> None:
-        """Draw one flag per holiday in this page's day columns.
-
-        Unlike a labelled band every cell is a single day, so the row is drawn
-        per day rather than per segment.  Days with no holiday still get their
-        cell, keeping the row's grid continuous with the bands above it.
-        """
-        day_w = self._day_width(w, days)
-        color, width, opacity = self._grid_style()
-        box = config.get_box_style("ec-band-cell")
-        # Leave a little air around the flag so it does not touch the grid.
-        icon_size = max(min(h - 2.0, day_w - 2.0), 3.0)
-        show_all = not bool(band.get("nonworkdays_only", False))
-
-        for index, day in enumerate(days):
-            cell_x = x + index * day_w
-            self._draw_rect(
-                cell_x,
-                y,
-                day_w,
-                h,
-                fill=box.fill or "none",
-                fill_opacity=float(box.fill_opacity if box.fill_opacity is not None else 1.0),
-                stroke=color,
-                stroke_width=width,
-                stroke_opacity=opacity,
-                css_class="ec-band-cell",
-            )
-
-            marks = [m for m in self._holiday_days.get(day, ()) if show_all or m.nonworkday]
-            if not marks:
-                continue
-
-            # More flags than the column can hold would overlap illegibly;
-            # draw what fits, centred as a group.
-            per_icon = icon_size + _HOLIDAY_FLAG_GAP
-            max_icons = max(int((day_w - 1.0) // per_icon), 1)
-            drawn = marks[:max_icons]
-            group_w = len(drawn) * per_icon - _HOLIDAY_FLAG_GAP
-            icon_x = cell_x + (day_w - group_w) / 2.0
-            baseline = self._icon_baseline(y + h / 2.0, icon_size)
-
-            for mark in drawn:
-                self._draw_icon_svg(
-                    mark.icon,
-                    icon_x,
-                    baseline,
-                    icon_size,
-                    css_class="ec-holiday-icon",
+            _rx, region_y, _rw, region_h = region
+            plan = plan_rows(rows, span, ctx, full_days=all_days, max_height=region_h)
+            draw_cells(self, plan, frame, region_y)
+            _bx, body_y, _bw, body_h = coordinates["GanttChartBody"]
+            draw_vfills(self, plan, frame, body_y, body_y + body_h)
+            draw_vlines(self, plan, frame, body_y, body_y + body_h)
+            if table is not None:
+                draw_headings(
+                    self, plan, table[0], table[2], region_y, theme.timescale.heading_align, theme.boxes.header
                 )
-                icon_x += per_icon
 
     def _draw_column_headers(
         self,
@@ -828,7 +556,7 @@ class GanttRenderer(BaseSVGRenderer):
 
         table_x, table_y, table_w, _table_h = table
         _chart_x, _cy, chart_w, _ch = chart
-        row_h = max(float(config.gantt_row_height), 1.0)
+        row_h = max(float(config.theme_v3.gantt.row_height), 1.0)
         visible_rows = rows
 
         band = config.get_box_style("ec-row-band")
@@ -893,7 +621,7 @@ class GanttRenderer(BaseSVGRenderer):
         text_color: str,
     ) -> None:
         """Draw one row's cells across every column."""
-        indent = float(config.gantt_indent_per_level) * row.depth
+        indent = float(config.theme_v3.gantt.indent_per_level) * row.depth
 
         for column, (col_x, col_w) in zip(columns, positions, strict=False):
             left = col_x + _CELL_PAD + (indent if column.indent else 0.0)
@@ -958,46 +686,18 @@ class GanttRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         coordinates: CoordinateDict,
-        axis: DayAxis,
+        axis: Span,
     ) -> None:
-        """Vertical rule at the as-of date, PIT semantics (answer 32).
-
-        ``gantt_today_date`` overrides the wall clock so a forward-dated
-        presentation still lines up; a date outside the range draws
-        nothing.  A hidden day snaps forward to the next column so a
-        Saturday "today" does not silently vanish.
-        """
-        if not config.gantt_show_today_line or not axis.days:
-            return
-
-        today = _to_date(config.gantt_today_date) or arrow.now().date()
-        if today < axis.first or today > axis.last:
-            return
-
-        index = axis.snap_forward(today)
-        if index is None:
-            return
-
+        """The shared today mark across the chart body (see :mod:`renderers.today_line`)."""
         _bx, body_y, _bw, body_h = coordinates["GanttChartBody"]
-        token = self._tk("line:today")
-        self._draw_line(
-            axis.left_of(index),
-            body_y,
-            axis.left_of(index),
-            body_y + body_h,
-            stroke=token.get("color") or config.get_line_style("ec-today-line").color,
-            stroke_width=float(token.get("width") or 1.5),
-            stroke_opacity=float(token.get("opacity") or 1.0),
-            stroke_dasharray=token.get("dasharray"),
-            css_class="ec-today-line",
-        )
+        draw_today(self, config.theme_v3, Frame(axis), body_y, body_y + body_h)
 
     def _draw_marks(
         self,
         config: CalendarConfig,
         coordinates: CoordinateDict,
         rows: list,
-        axis: DayAxis,
+        axis: Span,
         row_offset: int = 0,
     ) -> dict[int, RowAnchor]:
         """Draw this page's chart-side marks; return where each one landed.
@@ -1011,7 +711,7 @@ class GanttRenderer(BaseSVGRenderer):
             return anchors
 
         _tx, table_y, _tw, _table_h = table
-        row_h = max(float(config.gantt_row_height), 1.0)
+        row_h = max(float(config.theme_v3.gantt.row_height), 1.0)
 
         for row in rows:
             with self._event_scope(row.event):
@@ -1030,7 +730,7 @@ class GanttRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         row,
-        axis: DayAxis,
+        axis: Span,
         row_y: float,
         row_h: float,
     ) -> RowAnchor | None:
@@ -1047,7 +747,7 @@ class GanttRenderer(BaseSVGRenderer):
         engine = getattr(self, "_style_engine", None)
         style = engine.evaluate_event(event) if engine is not None else StyleResult()
 
-        bar_h = max(min(float(config.gantt_bar_height), row_h - 2.0), 1.0)
+        bar_h = max(min(float(config.theme_v3.gantt.bar_height), row_h - 2.0), 1.0)
         bar_y = row_y + (row_h - bar_h) / 2
 
         if event.rollup:
@@ -1075,7 +775,7 @@ class GanttRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         event,
-        axis: DayAxis,
+        axis: Span,
         start: date,
         end: date,
         bar_y: float,
@@ -1150,7 +850,7 @@ class GanttRenderer(BaseSVGRenderer):
             # A single-day event whose own day is not on the axis was
             # moved forward; mark it and report it (answer 22).
             self._draw_icon_svg(
-                config.gantt_snapped_event_icon,
+                config.theme_v3.gantt.marks.snapped_event,
                 geometry.x + geometry.width / 2,
                 self._icon_baseline(bar_y + bar_h / 2, bar_h),
                 bar_h,
@@ -1175,13 +875,13 @@ class GanttRenderer(BaseSVGRenderer):
         self,
         config: CalendarConfig,
         event,
-        axis: DayAxis,
+        axis: Span,
         bar_y: float,
         bar_h: float,
         fill: str,
     ) -> None:
         """Draw the earliest/latest windows around the task's own dates."""
-        scale = float(config.gantt_float_opacity_scale)
+        scale = float(config.theme_v3.gantt.float_opacity_scale)
         for _name, begin, finish in float_spans(event):
             begin_date, finish_date = _to_date(begin), _to_date(finish)
             if begin_date is None or finish_date is None:
@@ -1219,8 +919,8 @@ class GanttRenderer(BaseSVGRenderer):
             line_y,
             geometry.x + width,
             line_y,
-            stroke=config.gantt_progress_color,
-            stroke_width=float(config.gantt_progress_width),
+            stroke=config.theme_v3.lines.progress.color,
+            stroke_width=float(config.theme_v3.lines.progress.width),
             stroke_dasharray=style.stroke_dasharray,
             css_class="ec-progress-line",
         )
@@ -1245,7 +945,7 @@ class GanttRenderer(BaseSVGRenderer):
             )
         if geometry.clipped_end:
             self._draw_icon_svg(
-                config.gantt_continuation_icon,
+                config.theme_v3.continuation.icon_after,
                 geometry.x + geometry.width - bar_h / 2,
                 self._icon_baseline(bar_y + bar_h / 2, bar_h),
                 bar_h,
@@ -1257,7 +957,7 @@ class GanttRenderer(BaseSVGRenderer):
     def _draw_rollup_bracket(
         self,
         config: CalendarConfig,
-        axis: DayAxis,
+        axis: Span,
         start: date,
         end: date,
         bar_y: float,
@@ -1299,7 +999,7 @@ class GanttRenderer(BaseSVGRenderer):
     def _draw_milestone(
         self,
         config: CalendarConfig,
-        axis: DayAxis,
+        axis: Span,
         event,
         anchor_day: date,
         row_y: float,
@@ -1307,13 +1007,13 @@ class GanttRenderer(BaseSVGRenderer):
         style: StyleResult,
     ) -> RowAnchor | None:
         """Milestone glyph, anchored on the end date (answer 23)."""
-        index = axis.snap_forward(anchor_day)
+        index = axis.index_at_or_after(anchor_day)
         if index is None or anchor_day < axis.first or anchor_day > axis.last:
             return None
 
-        size = max(min(float(config.gantt_bar_height) * 1.3, row_h - 1.0), 1.0)
+        size = max(min(float(config.theme_v3.gantt.bar_height) * 1.3, row_h - 1.0), 1.0)
         self._draw_icon_svg(
-            style.icon or config.gantt_milestone_icon,
+            style.icon or config.theme_v3.gantt.marks.milestone,
             axis.center_of(index),
             self._icon_baseline(row_y + row_h / 2, size),
             size,
@@ -1332,7 +1032,7 @@ class GanttRenderer(BaseSVGRenderer):
     def _draw_deadline(
         self,
         config: CalendarConfig,
-        axis: DayAxis,
+        axis: Span,
         event,
         row_y: float,
         row_h: float,
@@ -1344,13 +1044,13 @@ class GanttRenderer(BaseSVGRenderer):
         if deadline < axis.first or deadline > axis.last:
             return
 
-        index = axis.snap_forward(deadline)
+        index = axis.index_at_or_after(deadline)
         if index is None:
             return
 
-        size = max(min(float(config.gantt_bar_height), row_h - 2.0), 1.0)
+        size = max(min(float(config.theme_v3.gantt.bar_height), row_h - 2.0), 1.0)
         self._draw_icon_svg(
-            config.gantt_deadline_icon,
+            config.theme_v3.gantt.marks.deadline,
             axis.center_of(index),
             self._icon_baseline(row_y + row_h / 2, size),
             size,
@@ -1365,7 +1065,7 @@ class GanttRenderer(BaseSVGRenderer):
             return str(style.fill_color)
         if event.color:
             return str(event.color)
-        return self._tk("box:duration").get("fill") or config.gantt_bar_fill_color
+        return self._tk("box:duration").get("fill") or config.theme_v3.boxes.duration.fill
 
     def _log_hidden_holidays(
         self,
@@ -1434,8 +1134,8 @@ class GanttRenderer(BaseSVGRenderer):
         references, _unnumbered = assign_cross_page_references(
             dependencies,
             same_page,
-            list(config.gantt_link_ref_icon_families),
-            int(config.gantt_link_ref_family_size),
+            list(config.theme_v3.gantt.marks.link_ref_icon_families),
+            int(config.theme_v3.gantt.marks.link_ref_family_size),
             set(getattr(self, "_icon_svg_map", {}) or {}) or None,
         )
         self._references = references
@@ -1469,7 +1169,7 @@ class GanttRenderer(BaseSVGRenderer):
         off-chart icon, and every unresolved or unparseable reference is
         reported for the details page (answer 27).
         """
-        if not config.gantt_show_dependencies or not anchors:
+        if not config.theme_v3.gantt.show_dependencies or not anchors:
             return
 
         dependencies = list(getattr(self, "_dependencies", []))
@@ -1501,7 +1201,7 @@ class GanttRenderer(BaseSVGRenderer):
                 tail_x, tail_y = route.points[0]
                 with self._event_scope(row.event if row is not None else None):
                     self._draw_icon_svg(
-                        config.gantt_offchart_dep_icon,
+                        config.theme_v3.gantt.marks.offchart_dependency,
                         tail_x,
                         self._icon_baseline(tail_y, DEFAULT_STUB * 2),
                         DEFAULT_STUB * 2,
@@ -1576,20 +1276,24 @@ class GanttRenderer(BaseSVGRenderer):
         callout leaders.  A ``style_rule`` may override the stroke and the
         marker kind/size through the usual vocabulary.
         """
-        token = self._tk("line:grid")
-        color = style.stroke_color or token.get("color") or config.get_line_style("ec-grid-line").color
-        width = float(style.stroke_width or token.get("width") or 1.0)
-        opacity = float(style.stroke_opacity if style.stroke_opacity is not None else (token.get("opacity") or 0.9))
+        dep = config.theme_v3.lines.dependency
+        color = style.stroke_color or dep.color
+        width = float(style.stroke_width or dep.width)
+        opacity = float(style.stroke_opacity if style.stroke_opacity is not None else dep.opacity)
 
         override = style.leader_override or {}
-        marker_kind = override.get("marker_end") or config.gantt_arrow_marker_end
-        marker_size = float(override.get("marker_end_size") or config.gantt_arrow_marker_end_size)
-        marker_id = self._ensure_arrow_marker_def(
-            marker_kind,
-            override.get("arrow_color") or color,
-            marker_size,
-            prefix="gantt-marker",
-            css_class="ec-dependency-arrow",
+        marker_kind = override.get("marker_end") or dep.marker_end or "arrow-head"
+        marker_size = float(override.get("marker_end_size") or dep.marker_end_size)
+        marker_id = (
+            None
+            if marker_kind == "none"
+            else self._ensure_arrow_marker_def(
+                marker_kind,
+                override.get("arrow_color") or color,
+                marker_size,
+                prefix="gantt-marker",
+                css_class="ec-dependency-arrow",
+            )
         )
 
         self._draw_path(
@@ -1597,9 +1301,9 @@ class GanttRenderer(BaseSVGRenderer):
             stroke=color,
             stroke_width=width,
             stroke_opacity=opacity,
-            stroke_dasharray=style.stroke_dasharray,
-            stroke_linecap=override.get("linecap") or config.gantt_arrow_linecap,
-            stroke_linejoin=override.get("linejoin") or config.gantt_arrow_linejoin,
+            stroke_dasharray=style.stroke_dasharray or dep.dasharray,
+            stroke_linecap=override.get("linecap") or dep.linecap,
+            stroke_linejoin=override.get("linejoin") or dep.linejoin,
             marker_end=marker_id,
             css_class="ec-dependency-arrow",
         )
@@ -1624,7 +1328,7 @@ class GanttRenderer(BaseSVGRenderer):
         if not icons:
             return
 
-        icons = icons[: max(1, int(config.gantt_link_ref_max_icons))]
+        icons = icons[: max(1, int(config.theme_v3.gantt.marks.link_ref_max_icons))]
         size = min(font_size, row_h - 1.0)
         step = min(size, col_w / len(icons))
         # Centre the run of icons within the cell.

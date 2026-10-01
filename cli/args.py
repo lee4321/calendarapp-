@@ -349,7 +349,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     ──────────────────────
     Calendar visualizers : weekly, mini, mini-icon, text-mini, timeline, blockplan
     Output utilities     : excelblockplan, exportdata
-    Inspection / listing : themes, fonts, fontsheet, papersizes, patterns,
+    Inspection / listing : themes, fonts, fontsheet, papersizes, patterns, glyphs,
                            patternsheet, icons, iconsheet, colors, colorsheet,
                            palettes, palettesheet
     Help                 : help <subcommand>
@@ -428,6 +428,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     themes = sub.add_parser("themes", help="List available themes")
     papers = sub.add_parser("papersizes", help="List available paper sizes")
     patterns = sub.add_parser("patterns", help="List available day-box patterns")
+    glyphs = sub.add_parser("glyphs", help="List glyph groups from database")
     icons = sub.add_parser("icons", help="List available icons from database")
     colors = sub.add_parser("colors", help="List available colors from database")
     palettes = sub.add_parser("palettes", help="List available color palettes from database")
@@ -459,6 +460,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             "fonts",
             "fontsheet",
             "gantt",
+            "glyphs",
             "icons",
             "iconsheet",
             "mini",
@@ -898,6 +900,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         excelblockplan,
         papers,
         patterns,
+        glyphs,
         icons,
         colors,
         palettes,
@@ -962,7 +965,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
             type=str,
             default=None,
             metavar="THEME",
-            help="Theme name or path to .yaml theme file (e.g., 'corporate', 'dark')",
+            help="Theme name or path to a version-3.0 .yaml theme file (default: 'default'; see `themes`)",
         )
         output_group.add_argument(
             "--papersize",
@@ -1015,7 +1018,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         type=str,
         default=None,
         metavar="THEME",
-        help="Theme name or path to .yaml theme file (e.g., 'corporate', 'dark')",
+        help="Theme name or path to a version-3.0 .yaml theme file (default: 'default'; see `themes`)",
     )
 
     for view_parser in _svg_views:
@@ -1193,7 +1196,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
     timeline_group = timeline.add_argument_group("Timeline Options")
     timeline_group.add_argument(
         "--direction",
-        dest="timeline_direction",
         type=str,
         default=None,
         choices=["horizontal", "vertical"],
@@ -1245,8 +1247,8 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
                 "Enable fiscal calendar overlay (nrf-454, nrf-445, nrf-544, 13-period). "
                 "weekly/mini: period labels (period colors come from the theme). "
                 "text-mini: period start markers. "
-                "timeline: fiscal period/quarter bands (theme timeline.show_fiscal_*). "
-                "blockplan/compactplan: NRF-aware fiscal_quarter bands."
+                "timeline/pit: fiscal rows of the theme's timescale. "
+                "blockplan/compactplan/gantt: NRF-aware fiscal_quarter and fiscal_period rows."
             ),
         )
         _fg.add_argument(
@@ -1278,6 +1280,7 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         themes,
         papers,
         patterns,
+        glyphs,
         icons,
         colors,
         palettes,
@@ -1347,7 +1350,7 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         run() when args.command == "help".
 
     Calls:
-        ThemeEngine.list_available_themes(), WEEKEND_STYLES from config.config.
+        theme_loader.list_builtin_themes(), WEEKEND_STYLES from config.config.
 
     Args:
         subcommand: The subcommand name whose help should be printed.
@@ -1418,9 +1421,9 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
     if subcommand in svg_calendar_subcommands:
         print("\nThemes (--theme):")
         try:
-            from config.theme_engine import ThemeEngine
+            from config.theme_loader import list_builtin_themes
 
-            available = ThemeEngine.list_available_themes()
+            available = list_builtin_themes()
             for t in available:
                 print(f"  {t}")
             print("  <path/to/custom.yaml>  (custom theme file)")
@@ -1441,12 +1444,12 @@ def _print_subcommand_help(subcommand: str, parser: argparse.ArgumentParser) -> 
         print("  nrf-544    NRF 5-4-4 retail calendar")
         print("  13-period  13 equal 4-week periods")
         print("\nFiscal features by visualizer:")
-        print("  weekly      Period labels on day boxes")
+        print("  weekly      Period labels on day boxes (the theme's fiscal_period timescale row)")
         print("  mini        Period labels at bottom of day cells")
         print("  text-mini   Period short name (e.g. P1) as day symbol on period-start days")
-        print("  timeline    theme timeline.show_fiscal_periods / show_fiscal_quarters: band rows above axis")
-        print("  blockplan   fiscal_quarter bands use NRF-aware boundaries when --fiscal is set")
-        print("  compactplan fiscal_quarter bands use NRF-aware boundaries; fiscal_period band unit available")
+        print("  timeline    fiscal_quarter / fiscal_period rows of the theme's timescale")
+        print("  blockplan   fiscal_quarter rows use NRF-aware boundaries when --fiscal is set")
+        print("  compactplan fiscal_quarter rows use NRF-aware boundaries; fiscal_period rows available")
 
     # --- Week number modes (weekly, mini, mini-icon, text-mini) ---
     if subcommand in week_number_views:

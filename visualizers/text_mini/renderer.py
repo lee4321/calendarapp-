@@ -16,6 +16,7 @@ import arrow
 
 from config.config import weekend_style_starts_sunday
 from renderers.details_record import DetailsRecord, IconUse
+from renderers.timescale import grid_period_labels
 from shared.data_models import Event
 from shared.date_utils import (
     get_months_in_range,
@@ -24,6 +25,7 @@ from shared.date_utils import (
 from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
+from shared.glyphs import TextMiniGlyphSets, text_mini_glyph_sets
 from shared.holiday_labels import format_holiday_label
 from shared.item_order import sort_key_for_stable
 
@@ -56,6 +58,9 @@ DETAIL_HEADING = "Calendar Details"
 
 class TextMiniCalendarRenderer:
     """Render the text-mini view to a UTF-8 text file."""
+
+    #: The theme's glyph groups, loaded from the database at the start of a render.
+    _glyphs: TextMiniGlyphSets
 
     def render(
         self,
@@ -126,7 +131,7 @@ class TextMiniCalendarRenderer:
         symbol_map: dict[str, str],
         week_start_sunday: bool,
     ) -> list[str]:
-        gap = " " * max(1, config.text_mini_month_gap)
+        gap = " " * max(1, config.theme_v3.text_mini.month_gap)
 
         month_blocks: list[list[str]] = []
         max_rows = 0
@@ -154,7 +159,7 @@ class TextMiniCalendarRenderer:
         symbol_map: dict[str, str],
         week_start_sunday: bool,
     ) -> list[str]:
-        cell_w = max(1, config.text_mini_cell_width)
+        cell_w = max(1, config.theme_v3.text_mini.cell_width)
         sep = " "
 
         month_name = arrow.Arrow(year, month, 1).format("MMMM")
@@ -177,7 +182,7 @@ class TextMiniCalendarRenderer:
             row_cells = []
             for d in week:
                 key = d.strftime("%Y%m%d")
-                if d.month != month and not config.mini_show_adjacent:
+                if d.month != month and not config.theme_v3.mini_calendar.show_adjacent:
                     row_cells.append(" " * cell_w)
                     continue
                 symbol = symbol_map.get(key)
@@ -212,10 +217,14 @@ class TextMiniCalendarRenderer:
         symbol_map: dict[str, str] = {}
         details: list[DetailEntry] = []
 
+        # The theme's glyph groups, from the database.
+        self._glyphs = text_mini_glyph_sets(config, db)
+
         # Assign symbols to events
-        milestone_symbols = self._cycle(config.text_mini_milestone_symbols)
-        event_symbols = self._cycle(config.text_mini_event_symbols)
-        duration_symbols = self._cycle(config.text_mini_duration_symbols)
+        glyphs = self._glyphs
+        milestone_symbols = self._cycle(glyphs.milestone)
+        event_symbols = self._cycle(glyphs.event)
+        duration_symbols = self._cycle(glyphs.duration)
 
         event_symbol_map: dict[int, str] = {}
         duration_entries: list[tuple[str, str, str]] = []
@@ -231,7 +240,7 @@ class TextMiniCalendarRenderer:
         # key; the original dicts are what the rest of this loop (and
         # event_symbol_map's id()-keying) needs to keep working with.
         paired = [(Event.from_dict(ev), ev) for ev in events]
-        paired.sort(key=lambda pair: sort_key_for_stable(pair[0], config.item_placement_order))
+        paired.sort(key=lambda pair: sort_key_for_stable(pair[0], config.theme_v3.events.item_placement_order))
         for _, event in paired:
             start = (event.get("Start") or "")[:8]
             end = (event.get("End") or event.get("Finish") or "")[:8]
@@ -290,7 +299,7 @@ class TextMiniCalendarRenderer:
                     self._set_symbol(
                         symbol_map,
                         dt.format("YYYYMMDD"),
-                        config.text_mini_duration_fill,
+                        glyphs.duration_fill,
                         60,
                     )
             details.append(
@@ -303,8 +312,8 @@ class TextMiniCalendarRenderer:
             )
 
         # Holidays and special days
-        holiday_symbols = self._cycle(config.text_mini_holiday_symbols)
-        nonwork_symbols = self._cycle(config.text_mini_nonworkday_symbols)
+        holiday_symbols = self._cycle(glyphs.holiday)
+        nonwork_symbols = self._cycle(glyphs.nonworkday)
 
         for daykey in self._iter_daykeys(config):
             holidays = db.get_holidays_for_date(daykey, config.country)
@@ -341,14 +350,10 @@ class TextMiniCalendarRenderer:
                     )
 
         # Fiscal period start indicators (lower priority than events/holidays)
-        if config.fiscal_show_period_labels and config.fiscal_lookup:
-            from shared.fiscal_renderer import format_fiscal_period_label
-
-            for daykey in self._iter_daykeys(config):
-                fiscal_info = config.fiscal_lookup.get(daykey)
-                if fiscal_info and fiscal_info.is_period_start:
-                    label = format_fiscal_period_label(fiscal_info, config)
-                    self._set_symbol(symbol_map, daykey, label, 20)
+        labels = grid_period_labels(config)
+        if labels is not None:
+            for day, label in labels.start.items():
+                self._set_symbol(symbol_map, day.strftime("%Y%m%d"), label, 20)
 
         return symbol_map, details
 
@@ -394,13 +399,13 @@ class TextMiniCalendarRenderer:
         return _index_events_by_day(events)
 
     def _format_day_number(self, day: int, config: CalendarConfig, width: int) -> str:
-        digits = config.text_mini_day_number_digits
-        text = "".join(digits[int(d)] for d in str(day))
+        digits = self._glyphs.day_number_digits
+        text = "".join(digits[int(d)] for d in str(day)) if digits else str(day)
         return text.rjust(width)
 
     def _format_week_number(self, wn: int, config: CalendarConfig) -> str:
-        digits = config.text_mini_week_number_digits
-        text = "".join(digits[int(d)] for d in str(max(0, wn)))
+        digits = self._glyphs.week_number_digits
+        text = "".join(digits[int(d)] for d in str(max(0, wn))) if digits else str(max(0, wn))
         return text.rjust(2)
 
     def _format_short_date(self, yyyymmdd: str) -> str:
@@ -420,7 +425,7 @@ class TextMiniCalendarRenderer:
         return (" " * left) + text + (" " * right)
 
     def _month_line_width(self, config: CalendarConfig) -> int:
-        cell_w = max(1, config.text_mini_cell_width)
+        cell_w = max(1, config.theme_v3.text_mini.cell_width)
         base = (cell_w * 7) + 6
         if config.mini_show_week_numbers:
             base += 3

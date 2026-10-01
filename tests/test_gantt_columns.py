@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from band_helpers import set_fields
 
 from config.config import CalendarConfig
 from shared.data_models import Event
@@ -24,7 +25,7 @@ def measure(text: str) -> float:
 def column(**overrides) -> CalendarConfig:
     """A config whose gantt_columns is exactly the given entries."""
     config = CalendarConfig()
-    config.gantt_columns = overrides["entries"]
+    set_fields(config, gantt_columns=overrides["entries"])
     return config
 
 
@@ -33,7 +34,7 @@ def column(**overrides) -> CalendarConfig:
 
 def test_default_widths_sum_to_one():
     """Widths renormalize, so defaults that do not sum to 1 silently shrink."""
-    total = sum(col["width"] for col in CalendarConfig().gantt_columns)
+    total = sum(col.width for col in CalendarConfig().theme_v3.gantt.columns)
     assert total == pytest.approx(1.0)
 
 
@@ -62,14 +63,10 @@ def test_unsized_columns_take_the_average_of_the_sized_ones():
 
 
 def test_columns_without_a_field_are_dropped():
-    config = column(
-        entries=[
-            {"field": "name", "width": 1},
-            {"header": "Oops", "width": 1},
-            "not a dict",
-        ]
-    )
-    assert [col.field for col in resolve_columns(config)] == ["name"]
+    from renderers.table_columns import resolve_table_columns
+
+    entries = [{"field": "name", "width": 1}, {"header": "Oops", "width": 1}, "not a dict"]
+    assert [col.field for col in resolve_table_columns(entries, CalendarConfig())] == ["name"]
 
 
 def test_header_defaults_to_the_field_name():
@@ -104,7 +101,7 @@ def test_icon_columns_take_their_default_icon_from_config():
         ]
     )
     icons = [col.icon for col in resolve_columns(config)]
-    assert icons == [config.gantt_rollup_icon, config.gantt_milestone_flag_icon]
+    assert icons == [config.theme_v3.gantt.marks.rollup, config.theme_v3.gantt.marks.milestone_flag]
 
 
 def test_explicit_icon_beats_the_default():

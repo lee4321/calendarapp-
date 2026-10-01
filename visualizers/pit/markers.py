@@ -24,8 +24,8 @@ Resolution precedence for the **label icon** (highest → lowest):
 
   1. Per-event ``event.icon`` (DB column ``Icon``)
   2. Style-rule ``marker_icon: "name"`` from a matched StyleResult
-  3. Config default — ``pit_default_event_icon`` for non-milestones,
-     ``pit_default_milestone_icon`` for milestones
+  3. Config default — ``icons.event.name`` for non-milestones,
+     ``icons.milestone.name`` for milestones
   4. None — no icon, label name starts at the left padding edge.
 
 This module is the single source of truth for what shape/icon to draw;
@@ -118,8 +118,8 @@ def resolve_label_icon(
 
       1. Per-event ``event.icon`` (DB column)
       2. Per-rule ``marker_icon`` from ``style_result``
-      3. Config default (``pit_default_event_icon`` /
-         ``pit_default_milestone_icon``)
+      3. Config default (``icons.event.name`` /
+         ``icons.milestone.name``)
       4. None — no icon should be drawn in the label box.
 
     The returned string is the raw glyph SVG as stored in the
@@ -145,7 +145,7 @@ def resolve_label_icon(
 
     # 3) Config default for this event type.
     is_milestone = bool(event.milestone)
-    default_name = config.pit_default_milestone_icon if is_milestone else config.pit_default_event_icon
+    default_name = config.theme_v3.icons.milestone.name if is_milestone else config.theme_v3.icons.event.name
     svg = _lookup(default_name or "")
     if svg:
         return svg

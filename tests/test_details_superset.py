@@ -78,7 +78,7 @@ _GANTT_COLUMNS = [
 
 
 def _superset_theme(tmp_path: Path) -> Path:
-    theme = yaml.safe_load((REPO_ROOT / "config" / "themes" / "default.yaml").read_text(encoding="utf-8"))
+    theme = {"theme": {"name": "Superset", "version": "3.0"}, "details": {"markdown": {}}}
     columns = [dict(column) for column in _GANTT_COLUMNS]
     columns += [
         {"field": "marker", "header": "Key"},

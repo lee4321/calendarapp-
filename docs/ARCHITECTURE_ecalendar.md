@@ -9,7 +9,7 @@
 > | Exceptions | `cli/errors.py` |
 > | CLI argument layer (atfiles, parser, help) | `cli/args.py` |
 > | Configuration assembly + validation | `cli/config_assembly.py` |
-> | Palette resolution | `config/palette_resolver.py` |
+> | Palette resolution | `shared/palettes.py` |
 > | Export CSV helpers | `cli/exportdata.py` |
 > | SVG preview generators (sheets) | `visualizers/sheets.py` |
 > | `run()` | `ecalendar.py` (all that remains, plus re-exports) |
@@ -329,8 +329,7 @@ silently overwritten.
 - No decoration flags remain (they were removed; decoration is theme-only), so it
   now re-asserts only non-decoration CLI values.
 
-**Called by:** `run()` immediately after the second `theme_engine.apply(config)` call
-(the call that follows `setfontsizes()`).
+**Called by:** `run()` after `load_run_theme` and `_apply_args_to_config`.
 
 **Why it exists:** The theme engine is applied *twice* — once before `setfontsizes()`
 to expose size rules, and once after to lock in theme font sizes. This double-apply
@@ -664,8 +663,8 @@ single place to trace the full execution path.
 | `InvalidDateError` / `calc_calendar_range` | `shared.date_utils` | Date-range calculation and validation |
 | `VisualizerFactory` | `visualizers.factory` | Creates the correct visualizer for each subcommand |
 | `WeeklyCalendarLayout` | `visualizers.weekly.layout` | Pre-computes page coordinates for weekly view |
-| `ThemeEngine` | `config.theme_engine` | Loads and applies YAML themes to config |
-| `load_catalog` / `iter_required_tokens` | `config.element_catalog` | Loader for the built-in `ec-*` → token catalog (`config/element_catalog.yaml`) consumed by `ThemeEngine._build_element_bindings_from_catalog`. Themes no longer ship element bindings. |
+| `load_theme` / `ThemeError` | `config.theme_loader` | Strictly loads a version-3.0 YAML theme into the typed `Theme` (`config.theme_v3`) |
+| `load_catalog` / `iter_required_tokens` | `config.element_catalog` | Loader for the built-in `ec-*` → token catalog (`config/element_catalog.yaml`) consumed by `config.role_styles`. Themes ship no element bindings. |
 | `generate_excel_blockplan` | `visualizers.excelblockplan` | Produces the Excel workbook for `excelblockplan` |
 | `create_fiscal_calendar` / `build_fiscal_lookup` | `shared.fiscal_calendars` | Fiscal calendar computation |
 | `text_to_svg_group` | `renderers.glyph_cache` | Converts text to SVG glyph path group |

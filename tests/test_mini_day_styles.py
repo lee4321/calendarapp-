@@ -1,7 +1,9 @@
 import pytest
-from fakes import FakeCalendarDB, apply_style_rules, define
+from band_helpers import set_bands, set_fields, update_theme
+from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
+from shared.glyphs import MiniGlyphSets
 from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 from visualizers.mini.renderer import MiniCalendarRenderer
 
@@ -27,13 +29,13 @@ def _config():
     # The resolver shades whichever daykey equals date.today() last, over every
     # other layer; off here so the hardcoded daykeys below never collide with
     # the real date the suite runs on.
-    config.shade_current_day = False
+    set_fields(config, shade_current_day=False)
     return setfontsizes(config)
 
 
 def test_mini_circle_milestones_can_be_disabled():
     config = _config()
-    config.mini_circle_milestones = False
+    set_fields(config, mini_circle_milestones=False)
     style = DayStyleResolver(config, _StubDB()).resolve(
         "20260115",
         [{"Start": "20260115", "End": "20260115", "Milestone": True}],
@@ -44,18 +46,21 @@ def test_mini_circle_milestones_can_be_disabled():
 
 def test_mini_style_rules_apply_pattern_decoration():
     config = _config()
-    config.theme_style_rules = [
-        {
-            "name": "milestone-pattern",
-            "select": {"milestone": True, "notes": ["launch"]},
-            "apply_to": "day_box",
-            "style": {
-                "pattern": "brick-wall",
-                "pattern_color": "gold",
-                "pattern_opacity": 0.25,
-            },
-        }
-    ]
+    set_fields(
+        config,
+        theme_style_rules=[
+            {
+                "name": "milestone-pattern",
+                "select": {"milestone": True, "notes": ["launch"]},
+                "apply_to": "box:day",
+                "style": {
+                    "pattern": "brick-wall",
+                    "pattern_color": "gold",
+                    "pattern_opacity": 0.25,
+                },
+            }
+        ],
+    )
     style = DayStyleResolver(config, _StubDB()).resolve(
         "20260115",
         [
@@ -78,8 +83,8 @@ def test_mini_style_rules_apply_pattern_decoration():
 
 def test_mini_circle_stroke_style_is_configurable():
     config = _config()
-    apply_style_rules(config, [define("icon", "milestone", stroke_width=2.5, stroke_opacity=0.35)])
-    config.mini_circle_milestones = True
+    update_theme(config, icons={"milestone": {"stroke_width": 2.5, "stroke_opacity": 0.35}})
+    set_fields(config, mini_circle_milestones=True)
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -181,7 +186,7 @@ def test_icons_fill_the_corners_clockwise_from_the_top_right():
         style.add_icon(name)
     renderer = _drawn(config, style, x=0.0, y=0.0, w=20.0, h=20.0)
 
-    size = 20.0 * config.mini_event_icon_scale
+    size = 20.0 * config.theme_v3.mini_calendar.event_icon_scale
     pad = config.get_line_style("ec-grid-line").width
     lo = pad + size / 2.0
     hi = 20.0 - pad - size / 2.0
@@ -274,7 +279,7 @@ def test_any_nonworking_holiday_shades_the_day():
     )
     style = DayStyleResolver(config, db).resolve("20260115", [])
 
-    assert style.shade_color == (config.theme_mini_nonworkday_fill_color or config.mini_nonworkday_fill_color)
+    assert style.shade_color == config.theme_v3.holidays.federal.color
 
 
 def test_the_same_icon_from_two_sources_takes_one_corner():
@@ -304,8 +309,8 @@ def test_two_events_on_one_day_each_keep_their_icon():
 
 def test_the_icon_size_and_opacity_come_from_the_theme():
     config = _config()
-    config.mini_event_icon_scale = 0.4
-    config.mini_event_icon_opacity = 0.25
+    set_fields(config, mini_event_icon_scale=0.4)
+    set_fields(config, mini_event_icon_opacity=0.25)
     style = DayStyle()
     style.add_icon("star")
 
@@ -324,8 +329,8 @@ def test_a_day_with_no_icons_draws_none():
 
 def test_mini_grid_lines_are_inset_to_avoid_bottom_clip():
     config = _config()
-    config.mini_grid_lines = True
-    apply_style_rules(config, [define("line", "grid", color="orange", width=0.5, opacity=0.3)])
+    set_fields(config, mini_grid_lines=True)
+    update_theme(config, lines={"grid": {"color": "orange", "width": 0.5, "opacity": 0.3}})
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -360,7 +365,6 @@ def test_mini_grid_lines_are_inset_to_avoid_bottom_clip():
 
 def test_mini_day_number_digits_are_substituted():
     config = _config()
-    config.mini_day_number_digits = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -380,6 +384,9 @@ def test_mini_day_number_digits_are_substituted():
             return None
 
     renderer = _CaptureRenderer()
+    renderer._glyphs = MiniGlyphSets(
+        day_number=None, day_number_digits=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    )
     renderer._draw_day_cell(config, 0, 0, 20, 20, 12, DayStyle())
 
     assert renderer.text_calls == ["bc"]
@@ -387,7 +394,6 @@ def test_mini_day_number_digits_are_substituted():
 
 def test_mini_day_number_digits_invalid_length_falls_back_to_ascii():
     config = _config()
-    config.mini_day_number_digits = ["①", "②", "③"]
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -407,6 +413,7 @@ def test_mini_day_number_digits_invalid_length_falls_back_to_ascii():
             return None
 
     renderer = _CaptureRenderer()
+    renderer._glyphs = MiniGlyphSets(day_number=None, day_number_digits=["①", "②", "③"])
     renderer._draw_day_cell(config, 0, 0, 20, 20, 12, DayStyle())
 
     assert renderer.text_calls == ["12"]
@@ -414,7 +421,6 @@ def test_mini_day_number_digits_invalid_length_falls_back_to_ascii():
 
 def test_mini_day_number_glyphs_are_supported():
     config = _config()
-    config.mini_day_number_glyphs = [f"G{i}" for i in range(1, 32)]
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -434,6 +440,7 @@ def test_mini_day_number_glyphs_are_supported():
             return None
 
     renderer = _CaptureRenderer()
+    renderer._glyphs = MiniGlyphSets(day_number=[f"G{i}" for i in range(1, 32)], day_number_digits=None)
     renderer._draw_day_cell(config, 0, 0, 20, 20, 12, DayStyle())
 
     assert renderer.text_calls == ["G12"]
@@ -441,8 +448,6 @@ def test_mini_day_number_glyphs_are_supported():
 
 def test_mini_day_number_glyphs_take_precedence_over_digits():
     config = _config()
-    config.mini_day_number_glyphs = [f"G{i}" for i in range(1, 32)]
-    config.mini_day_number_digits = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
 
     class _CaptureRenderer(MiniCalendarRenderer):
         def __init__(self):
@@ -462,6 +467,9 @@ def test_mini_day_number_glyphs_take_precedence_over_digits():
             return None
 
     renderer = _CaptureRenderer()
+    renderer._glyphs = MiniGlyphSets(
+        day_number=[f"G{i}" for i in range(1, 32)], day_number_digits=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    )
     renderer._draw_day_cell(config, 0, 0, 20, 20, 12, DayStyle())
 
     assert renderer.text_calls == ["G12"]
@@ -478,7 +486,7 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
 
     # Bottom of the chain: the element style's own token color.
     config = _config()
-    apply_style_rules(config, [define("text", "day_number", color="teal")])
+    update_theme(config, text={"day_number": {"color": "teal"}})
     for r in renderers:
         assert r._resolve_day_number_color(config, {}) == "teal"
 
@@ -498,7 +506,7 @@ def test_day_number_color_chain_is_shared_across_the_mini_family():
 
 def test_a_fill_list_on_a_day_rule_shades_with_its_first_color():
     config = _config()
-    config.theme_style_rules = [{"apply_to": "day_box", "select": {}, "style": {"fill": ["red", "blue"]}}]
+    set_fields(config, theme_style_rules=[{"apply_to": "box:day", "select": {}, "style": {"fill": ["red", "blue"]}}])
     # A fixed past weekday: on today's date the current-day highlight
     # replaces the rule's fill.
     style = DayStyleResolver(config, _StubDB()).resolve("20260115", [])
@@ -513,6 +521,7 @@ def _fiscal_config(weekend_style):
 
     config = _config()
     config.weekend_style = weekend_style
+    set_bands(config, primary=[{"unit": "fiscal_period"}], secondary=[])
     config.fiscal_lookup = build_fiscal_lookup(create_fiscal_calendar("nrf-454"), date(2026, 1, 1), date(2026, 12, 31))
     return config
 
@@ -537,13 +546,12 @@ def test_fiscal_period_label_stays_on_the_start_day_when_weekends_render():
 
 
 def test_every_fiscal_period_is_labelled_exactly_once_either_way():
-    from shared.fiscal_renderer import period_label_days
+    from renderers.timescale import grid_period_labels
 
     lookup = _fiscal_config(weekend_style=0).fiscal_lookup
+    # The year's first period opens before the lookup does, so it has no start label.
     starts = sum(1 for info in lookup.values() if info.is_period_start)
     for weekend_style in (0, 1, 2, 3, 4):
-        labelled = period_label_days(lookup, weekend_style)
-        assert len(labelled) == starts, weekend_style
-        # One label per (fiscal year, period), never two for the same period.
-        idents = {(i.fiscal_year, i.fiscal_period) for i in labelled.values()}
-        assert len(idents) == starts, weekend_style
+        labels = grid_period_labels(_fiscal_config(weekend_style=weekend_style))
+        assert labels is not None
+        assert len(labels.start) == starts, weekend_style

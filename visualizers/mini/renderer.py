@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import arrow
 
+from config import role_styles
 from config.config import (
     day_short,
     weekend_style_is_workweek,
@@ -25,6 +26,8 @@ from shared.date_utils import (
 from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
+from shared.glyphs import MiniGlyphSets, mini_glyph_sets
+from shared.palettes import resolve_theme_palettes
 from shared.rule_engine import StyleEngine
 from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 
@@ -37,17 +40,8 @@ logger = logging.getLogger(__name__)
 
 
 def _mini_style_rules(config: CalendarConfig) -> list:
-    """Return the raw style_rules list to feed StyleEngine.
-
-    Prefers the parsed UnifiedTheme's section so the renderer no longer
-    depends on the legacy ``theme_style_rules`` field.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules, for the StyleEngine."""
+    return role_styles.style_rules(config.theme_v3)
 
 
 def _first_set(value: Any, default: float) -> Any:
@@ -62,6 +56,9 @@ class MiniCalendarRenderer(BaseSVGRenderer):
     Draws month titles, day-of-week headers, styled day numbers,
     week numbers, and duration color bars.
     """
+
+    #: The theme's day-number glyph groups, loaded from the database at the start of a render.
+    _glyphs: MiniGlyphSets = MiniGlyphSets()
 
     # Tokens pre-resolved once per render; see BaseSVGRenderer._populate_tokens.
     # Candybar inherits these (it reuses the mini decoration engine).
@@ -120,8 +117,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         Returns:
             Tuple of (overflow_count, overflow_entries) — always (0, []).
         """
+        resolve_theme_palettes(config, db)
+        self._glyphs = mini_glyph_sets(config, db)
         self._populate_tokens(config)
         resolver = DayStyleResolver(config, db)
+        self._period_text = resolver.period_labels.text if resolver.period_labels else None
         self._load_icon_svg_cache(db)
         self._pattern_svg_cache = db.get_all_patterns()
         self._registered_pattern_ids = set()
@@ -137,8 +137,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         # The outline is a mini-specific border around the whole month grid
         # (not the cell stroke), so no unified token applies — these reads
         # stay on CalendarConfig and will be reconsidered in Phase 2.
-        outline_color = config.mini_month_outline_color
-        if outline_color and not _is_none_color(outline_color):
+        outline = config.theme_v3.mini_calendar.month_outline
+        if outline is not None and not _is_none_color(outline.color):
             for key in sorted(coordinates):
                 if not key.startswith("MonthGrid_"):
                     continue
@@ -149,10 +149,10 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     w,
                     h,
                     fill="none",
-                    stroke=outline_color,
-                    stroke_width=config.mini_month_outline_width,
-                    stroke_opacity=config.mini_month_outline_opacity,
-                    stroke_dasharray=config.mini_month_outline_dasharray or None,
+                    stroke=outline.color,
+                    stroke_width=outline.width,
+                    stroke_opacity=outline.opacity,
+                    stroke_dasharray=outline.dasharray or None,
                 )
 
         # Second pass: titles, headers, week numbers
@@ -233,7 +233,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         year = int(month_key[:4])
         month = int(month_key[4:6])
         dt = arrow.Arrow(year, month, 1)
-        title = format_arrow_date(dt, config.mini_title_format)
+        title = format_arrow_date(dt, config.theme_v3.mini_calendar.title_format)
 
         tk = self._tk("text:month_title")
         _ts = config.get_text_style("ec-month-title")
@@ -355,7 +355,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         tk = self._tk("text:week_number")
         font_size = tk.get("size")
         try:
-            label = config.mini_week_number_label_format.format(num=wn_value)
+            label = config.theme_v3.week_numbers.label_format.format(num=wn_value)
         except (KeyError, ValueError):
             label = f"W{wn_value}"
 
@@ -448,7 +448,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             self._draw_mini_hash_lines(config, x, y, w, h)
 
         # 4. Grid lines
-        if config.mini_grid_lines:
+        if config.theme_v3.mini_calendar.grid_lines:
             grid = self._grid_line_style(config)
             inset = grid.width / 2
             self._draw_rect(
@@ -526,7 +526,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if style.font_name:
             font = style.font_name
         elif style.bold:
-            font = config.mini_cell_bold_font
+            font = role_styles.role_text(config, "label_bold").font
         else:
             font = tk_day.get("font") or _ts_day.font
 
@@ -621,23 +621,18 @@ class MiniCalendarRenderer(BaseSVGRenderer):
 
         # 7b. Fiscal period start label (small text at bottom of cell)
         if style.fiscal_period_label:
-            _ts_fiscal = config.get_text_style("ec-fiscal-label")
-            tk_fiscal = self._tk("text:fiscal_label")
-            label_font_size = max(4.0, tk_fiscal.get("size") or font_size * 0.6)
-            label_y = y + h - label_font_size * 0.3
-            # 0.85 was hardcoded here; it stays the default so shipped themes
-            # render unchanged, but a theme can now set text:fiscal_label
-            # opacity like any other text token.
-            _fiscal_opacity = tk_fiscal.get("opacity")
-            fiscal_opacity = float(_fiscal_opacity if _fiscal_opacity is not None else 0.85)
+            period = getattr(self, "_period_text", None)
+            if period is None:
+                period = role_styles.role_text(config, "fiscal_label")
+            label_font_size = max(4.0, period.size)
             self._draw_text(
                 cx,
-                label_y,
+                y + h - label_font_size * 0.3,
                 style.fiscal_period_label,
-                tk_fiscal.get("font") or _ts_fiscal.font,
+                period.font,
                 label_font_size,
-                fill=tk_fiscal.get("color") or _ts_fiscal.color,
-                fill_opacity=fiscal_opacity,
+                fill=period.color,
+                fill_opacity=period.opacity,
                 anchor="middle",
                 css_class="ec-fiscal-label",
             )
@@ -672,8 +667,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         for daykey in daykeys:
             for event in events_by_day.get(daykey, []):
                 self._note_drawn(event)
-        self._note_color(config.theme_federal_holiday_color, "Federal holiday", "colors.federal_holiday")
-        self._note_color(config.theme_company_holiday_color, "Company holiday", "colors.company_holiday")
+        self._note_color(config.theme_v3.holidays.federal.color, "Federal holiday", "holidays.federal")
+        self._note_color(config.theme_v3.holidays.company.color, "Company holiday", "holidays.company")
 
     def _day_icon_scope(self, icon):
         """The render-record scope a corner icon is drawn in: its event's or holiday's."""
@@ -724,11 +719,11 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         if not icons:
             return
 
-        scale = max(0.0, float(config.mini_event_icon_scale))
+        scale = max(0.0, float(config.theme_v3.mini_calendar.event_icon_scale))
         size = min(w, h) * scale
         if size <= 0:
             return
-        opacity = max(0.0, min(1.0, float(config.mini_event_icon_opacity)))
+        opacity = max(0.0, min(1.0, float(config.theme_v3.mini_calendar.event_icon_opacity)))
         # A stroke's width keeps an icon off the grid line it would otherwise
         # sit on; the cell's own inset is already applied by the caller.
         pad = self._grid_line_style(config).width
@@ -744,8 +739,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                     size,
                     anchor="middle",
                     color=default_color,
-                    fallback_name=config.default_missing_icon,
-                    fallback_size=config.default_missing_icon_size,
+                    fallback_name=config.theme_v3.icons.missing.name,
+                    fallback_size=config.theme_v3.icons.missing.size,
                     fallback_color=default_color,
                     css_class="ec-event-icon",
                     opacity=opacity,
@@ -780,16 +775,15 @@ class MiniCalendarRenderer(BaseSVGRenderer):
                 css_class="ec-hash-line",
             )
 
-    @staticmethod
-    def _format_day_number(day_num: int, config: CalendarConfig) -> str:
-        """Format a mini SVG day number with optional digit substitutions."""
-        glyphs = config.mini_day_number_glyphs
+    def _format_day_number(self, day_num: int, config: CalendarConfig) -> str:
+        """Format a mini SVG day number with the theme's glyph substitutions, if any."""
+        glyphs = self._glyphs.day_number
         if glyphs and len(glyphs) >= 31 and 1 <= day_num <= 31:
             try:
                 return str(glyphs[day_num - 1])
             except (TypeError, ValueError, IndexError):
                 return str(day_num)
-        digits = config.mini_day_number_digits
+        digits = self._glyphs.day_number_digits
         if digits and len(digits) == 10:
             try:
                 return "".join(digits[int(d)] for d in str(day_num))
@@ -817,7 +811,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             logger.warning("SVG pattern '%s' not found in database", pattern_name)
             return
 
-        effective_opacity = opacity if opacity is not None else config.hash_pattern_opacity
+        effective_opacity = opacity if opacity is not None else config.theme_v3.weekly.day_box.hash_pattern_opacity
         self._draw_rect(
             x,
             y,
@@ -861,8 +855,8 @@ class MiniCalendarRenderer(BaseSVGRenderer):
             return
 
         # Assign a distinct color and StyleResult to each duration event.
-        palette = config.group_colors or ["lightsteelblue"]
-        style_engine = StyleEngine(_mini_style_rules(config), self.TOKEN_VISUALIZER)
+        palette = config.theme_v3.palettes.group_colors or ["lightsteelblue"]
+        style_engine = StyleEngine(_mini_style_rules(config))
         from shared.rule_engine import StyleResult
         from visualizers.mini.day_styles import DayStyleResolver
 

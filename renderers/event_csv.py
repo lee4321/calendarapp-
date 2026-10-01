@@ -76,8 +76,8 @@ def build_event_csv(record: DetailsRecord, config: CalendarConfig) -> str:
     from renderers.markdown_details import ordered_event_views
 
     views = ordered_event_views(record, config)
-    spec = getattr(config, "details_csv_columns", EXPORTDATA)
-    with_render = bool(getattr(config, "details_csv_render_columns", True))
+    spec = config.theme_v3.details.csv.columns
+    with_render = bool(config.theme_v3.details.csv.render_columns)
     buffer = io.StringIO()
 
     if not spec or isinstance(spec, str):

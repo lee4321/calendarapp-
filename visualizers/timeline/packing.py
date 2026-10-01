@@ -42,6 +42,7 @@ from dataclasses import dataclass
 import arrow
 
 from config.config import CalendarConfig
+from config.role_styles import role_text
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.item_order import sort_events
@@ -75,9 +76,7 @@ class PackedPlacement:
     ``placed`` — false when the box did not fit anywhere and only its
     leader and the missing-box icon should be drawn.
 
-    All coordinates are absolute SVG (Y-down) except ``leader_path_d``,
-    which is axis-local and pairs with ``axis_origin`` via a
-    ``<g transform="translate(ox,oy)">`` wrapper.
+    All coordinates are absolute SVG (Y-down).
     """
 
     event: Event
@@ -88,7 +87,6 @@ class PackedPlacement:
     label_w: float
     label_h: float
     layer: int
-    leader_path_d: str
     axis_origin: tuple[float, float]
     side: Side
     orientation: Orientation
@@ -104,16 +102,16 @@ def resolve_box_size(events: Sequence[Event], config: CalendarConfig) -> tuple[f
     width is derived for the whole chart from the widest event, so the
     fixed-width invariant still holds.
     """
-    height = float(config.timeline_event_box_height or config.timeline_labella_node_height or 24.0)
+    height = float(config.theme_v3.timeline.events.box_height or config.theme_v3.timeline.labella.node_height or 24.0)
 
-    configured = config.timeline_event_box_width
+    configured = config.theme_v3.timeline.events.box_width
     if configured is not None and configured > 0:
         return float(configured), height
 
     name_path = resolve_font_path(event_font(config, "name"))
     notes_path = resolve_font_path(event_font(config, "notes"))
-    name_size = float(config.timeline_name_text_font_size or 12.0)
-    notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
+    name_size = role_text(config, "event_name").size
+    notes_size = role_text(config, "event_notes").size
 
     def measure(text: str, path: str, size: float) -> float:
         if not text:
@@ -142,7 +140,7 @@ def resolve_box_size(events: Sequence[Event], config: CalendarConfig) -> tuple[f
 
 def _icon_column_ratio(config: CalendarConfig) -> float:
     """Share of the box's inner width given to the icon / date column."""
-    ratio = getattr(config, "timeline_event_icon_column_ratio", 0.15)
+    ratio = config.theme_v3.timeline.events.icon_column_ratio
     try:
         ratio = float(ratio)
     except (TypeError, ValueError):
@@ -154,15 +152,15 @@ def _icon_column_ratio(config: CalendarConfig) -> float:
 
 def _row_gap(config: CalendarConfig) -> float:
     """Clear space between two adjacent rows of boxes."""
-    configured = getattr(config, "timeline_event_row_gap", None)
+    configured = config.theme_v3.timeline.events.row_gap
     if configured is not None and float(configured) >= 0:
         return float(configured)
-    return float(config.timeline_labella_layer_gap)
+    return float(config.theme_v3.timeline.labella.layer_gap)
 
 
 def _box_gap(config: CalendarConfig) -> float:
     """Clear space between two boxes sharing a row."""
-    return max(0.0, float(getattr(config, "timeline_event_box_gap", 2.0) or 0.0))
+    return max(0.0, float(config.theme_v3.timeline.events.box_gap or 0.0))
 
 
 def _marker_allowance(config: CalendarConfig) -> float:
@@ -174,7 +172,7 @@ def _marker_allowance(config: CalendarConfig) -> float:
     is what has to know something sits at the end of it — the same reason
     ``_duration_row_extent`` lives beside the bar layout.
     """
-    size = getattr(config, "default_missing_icon_size", None) or getattr(config, "timeline_icon_size", None) or 8.0
+    size = config.theme_v3.icons.missing.size or config.theme_v3.icons.event.size or 8.0
     return max(8.0, float(size)) / 2.0
 
 
@@ -317,7 +315,7 @@ def pack_callouts(
         u_min, u_max = 0.0, axis_length
     clamp_edge = min(axis_length, u_max)
 
-    ordered = sort_events(list(events), config.item_placement_order)
+    ordered = sort_events(list(events), config.theme_v3.events.item_placement_order)
 
     rows: list[list[tuple[float, float]]] = [[] for _ in range(max(0, max_rows))]
     placements: list[PackedPlacement] = []
@@ -427,14 +425,6 @@ def _placed(
     x_label = min(near_corner[0], far_corner[0])
     y_label = min(near_corner[1], far_corner[1])
 
-    # One expression for all three leader cases.  When the date falls inside
-    # the box's span — the aligned case and the end-of-range case alike —
-    # the clamp is a no-op and the leader is perpendicular; only a nudged
-    # box pulls the anchor to its corner and slants the line.
-    u_anchor = min(max(u_date, u_left), u_left + extent_u)
-    p0 = axis_to_xy(u_date, orientation, (0.0, 0.0))
-    p1 = _to_svg(u_anchor, v_near, orientation, side, (0.0, 0.0))
-
     return PackedPlacement(
         event=event,
         x_dot=axis_to_xy(u_date, orientation, axis_origin)[0],
@@ -444,7 +434,6 @@ def _placed(
         label_w=abs(far_corner[0] - near_corner[0]),
         label_h=abs(far_corner[1] - near_corner[1]),
         layer=row,
-        leader_path_d=f"M {p0[0]:.4f} {p0[1]:.4f} L {p1[0]:.4f} {p1[1]:.4f}",
         axis_origin=axis_origin,
         side=side,
         orientation=orientation,
@@ -468,8 +457,6 @@ def _unplaced(
     missing-box icon, the same treatment a duration bar past its limit gets.
     """
     end = _to_svg(u_date, v_edge, orientation, side, axis_origin)
-    p0 = axis_to_xy(u_date, orientation, (0.0, 0.0))
-    p1 = _to_svg(u_date, v_edge, orientation, side, (0.0, 0.0))
     dot = axis_to_xy(u_date, orientation, axis_origin)
 
     return PackedPlacement(
@@ -481,7 +468,6 @@ def _unplaced(
         label_w=0.0,
         label_h=0.0,
         layer=-1,
-        leader_path_d=f"M {p0[0]:.4f} {p0[1]:.4f} L {p1[0]:.4f} {p1[1]:.4f}",
         axis_origin=axis_origin,
         side=side,
         orientation=orientation,

@@ -17,3 +17,13 @@ class ConfigError(CalendarError):
     """Raised when configuration is invalid."""
 
     pass
+
+
+class GlyphsTableMissingError(DatabaseError):
+    """Raised when a run needs glyphs and the database has no ``glyphs`` table."""
+
+    def __init__(self, database: str) -> None:
+        super().__init__(
+            f"database '{database}' has no glyphs table; create and seed it with: "
+            f"uv run python tools/db/create_glyphs.py --database {database}"
+        )

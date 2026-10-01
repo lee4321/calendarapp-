@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import pytest
+from band_helpers import set_fields
 from fakes import FakeCalendarDB
 
 from config.config import ICON_SETS, create_calendar_config
 from shared.data_models import Event
-from shared.number_icons import NUMBER_ICON_FLAGS, number_duration_icons, numbering_enabled
+from shared.number_icons import number_duration_icons
 from visualizers.factory import VisualizerFactory
 
 
@@ -17,15 +18,8 @@ def _dur(name: str, start: str, end: str, icon: str | None = "star") -> dict:
 
 def _config(**overrides):
     config = create_calendar_config()
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, **overrides)
     return config
-
-
-def test_every_flag_names_a_config_field():
-    config = create_calendar_config()
-    for flag in NUMBER_ICON_FLAGS.values():
-        assert isinstance(getattr(config, flag), bool)
 
 
 def test_a_view_with_numbering_off_keeps_its_events_icons():
@@ -33,10 +27,6 @@ def test_a_view_with_numbering_off_keeps_its_events_icons():
     config = _config(weekly_number_duration_icons=False)
 
     assert number_duration_icons(events, config, "weekly") is events
-
-
-def test_unknown_views_are_never_numbered():
-    assert not numbering_enabled(create_calendar_config(), "text-mini")
 
 
 def test_durations_are_numbered_in_placement_order_and_replace_the_event_icon():
@@ -82,7 +72,7 @@ def test_event_objects_are_replaced_not_mutated():
 
 @pytest.mark.parametrize("view", ["weekly", "timeline", "blockplan", "gantt", "compactplan", "pit", "mini", "candybar"])
 def test_the_visualizer_numbers_its_events(view, monkeypatch):
-    config = _config(**{NUMBER_ICON_FLAGS[view]: True})
+    config = _config()
     visualizer = VisualizerFactory.create(view)
 
     class _DB(FakeCalendarDB):
@@ -95,10 +85,13 @@ def test_the_visualizer_numbers_its_events(view, monkeypatch):
     assert event["Icon"] == ICON_SETS["darksquare"][0]
 
 
-def test_only_compactplan_numbers_by_default():
+def test_numbering_is_on_by_default_and_one_switch_turns_it_off():
     config = create_calendar_config()
+    assert config.theme_v3.durations.replace_icons_with_numbers is True
 
-    assert [v for v in NUMBER_ICON_FLAGS if numbering_enabled(config, v)] == ["compactplan"]
+    set_fields(config, weekly_number_duration_icons=False)
+    events = [_dur("A", "20260309", "20260313")]
+    assert number_duration_icons(events, config, "weekly") is events
 
 
 def test_the_original_icon_is_kept_beside_the_number():

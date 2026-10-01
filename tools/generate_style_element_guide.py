@@ -82,7 +82,6 @@ NOTES: dict[tuple[str, str], str] = {
     ): "Probe coloured the one continuation date with text:event_notes, not text:duration_date.",
     ("mini", "ec-day-number"): "Holiday / today days take their colour from day rules (red in the probe).",
     ("candybar", "ec-day-number"): "Holiday / today days take their colour from day rules (red in the probe).",
-    ("candybar", "ec-month-box-label"): _FIXED,
     ("candybar", "ec-label"): "One label (the week column heading) took text:week_number in the probe.",
     ("timeline", "ec-label"): "Axis date labels took text:event_date in the probe, not text:label.",
     ("timeline", "ec-duration-date"): _FIXED,

@@ -12,15 +12,16 @@ from __future__ import annotations
 
 import itertools
 import logging
-import re
 
 import arrow
 import pytest
+from band_helpers import set_fields
 
 from config.config import create_calendar_config, setfontsizes
+from shared.callouts import leader_ends
 from shared.data_models import Event
 from shared.orientation import Orientation, Side
-from visualizers.timeline.axis import AxisFrame
+from shared.span import Frame
 from visualizers.timeline.packing import pack_callouts, resolve_box_size
 
 AXIS_ORIGIN = (100.0, 400.0)
@@ -36,12 +37,11 @@ def _config(**overrides):
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
     config = setfontsizes(config)
-    config.timeline_event_box_width = BOX_W
-    config.timeline_event_box_height = BOX_H
-    config.timeline_event_row_gap = 4.0
-    config.timeline_event_box_gap = 0.0
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, timeline_event_box_width=BOX_W)
+    set_fields(config, timeline_event_box_height=BOX_H)
+    set_fields(config, timeline_event_row_gap=4.0)
+    set_fields(config, timeline_event_box_gap=0.0)
+    set_fields(config, **overrides)
     return config
 
 
@@ -68,10 +68,16 @@ def _event(day: str, name: str = "E", **kwargs) -> Event:
     return Event(task_name=name, start=day, end=day, **kwargs)
 
 
-def _leader_points(path_d: str) -> tuple[tuple[float, float], tuple[float, float]]:
-    nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", path_d)]
-    assert len(nums) == 4, path_d
-    return (nums[0], nums[1]), (nums[2], nums[3])
+def _leader_points(placed) -> tuple[tuple[float, float], tuple[float, float]]:
+    """The leader's two ends relative to the axis origin, as the shared geometry draws them."""
+    ends = leader_ends(
+        (placed.x_dot, placed.y_dot),
+        (placed.x_label, placed.y_label, placed.label_w, placed.label_h),
+        placed.side,
+        placed.orientation,
+    )
+    ox, oy = AXIS_ORIGIN
+    return (ends.start[0] - ox, ends.start[1] - oy), (ends.end[0] - ox, ends.end[1] - oy)
 
 
 # ── Alignment with the start date ──────────────────────────────────────────
@@ -113,7 +119,7 @@ def test_a_row_is_reused_once_the_boxes_no_longer_collide():
 
 def test_the_leader_is_a_straight_perpendicular_run_to_the_near_corner():
     placed = _pack([_event("20260115")])[0]
-    (x0, y0), (x1, y1) = _leader_points(placed.leader_path_d)
+    (x0, y0), (x1, y1) = _leader_points(placed)
     assert y0 == pytest.approx(0.0)  # starts on the axis
     assert x0 == pytest.approx(x1)  # perpendicular
     assert y1 < 0  # runs up, on the primary side
@@ -125,8 +131,8 @@ def test_the_leader_is_a_straight_perpendicular_run_to_the_near_corner():
 def test_a_leader_below_the_axis_mirrors_the_one_above():
     above = _pack([_event("20260115")], side=Side.PRIMARY)[0]
     below = _pack([_event("20260115")], side=Side.SECONDARY)[0]
-    (_s, (_x_a, y_a)) = _leader_points(above.leader_path_d)
-    (_s2, (_x_b, y_b)) = _leader_points(below.leader_path_d)
+    (_s, (_x_a, y_a)) = _leader_points(above)
+    (_s2, (_x_b, y_b)) = _leader_points(below)
     assert y_a == pytest.approx(-y_b)
     assert below.y_label > above.y_label
     # The near edge below the axis is the box's top.
@@ -146,7 +152,7 @@ def test_a_box_near_the_end_is_pushed_back_to_finish_flush_with_it():
 def test_a_pushed_back_box_keeps_a_perpendicular_leader():
     """The date still falls inside the box, so the leader stays straight up."""
     placed = _pack([_event("20260301")])[0]
-    (x0, _y0), (x1, y1) = _leader_points(placed.leader_path_d)
+    (x0, _y0), (x1, y1) = _leader_points(placed)
     assert x0 == pytest.approx(x1)
     landing = AXIS_ORIGIN[0] + x1
     assert placed.x_label <= landing <= placed.x_label + placed.label_w
@@ -171,7 +177,7 @@ def test_a_full_column_slides_the_box_along_the_axis():
     # points at the correct day — slanted, but straight.
     assert nudged[0].layer == 0
     assert nudged[0].x_label > placed[0].x_label
-    (x0, _y0), (x1, _y1) = _leader_points(nudged[0].leader_path_d)
+    (x0, _y0), (x1, _y1) = _leader_points(nudged[0])
     assert x0 != pytest.approx(x1)
 
 
@@ -187,7 +193,7 @@ def test_an_event_with_nowhere_to_go_is_marked_unplaced(caplog):
     assert len(unplaced) == 2
     for p in unplaced:
         assert p.label_w == 0.0 and p.label_h == 0.0
-        assert p.leader_path_d.startswith("M ")
+        assert _leader_points(p)[0] == (p.x_dot - AXIS_ORIGIN[0], p.y_dot - AXIS_ORIGIN[1])  # still leaves its dot
 
     # The warning has to name the event well enough to find it in the data.
     messages = " ".join(r.getMessage() for r in caplog.records)
@@ -236,7 +242,7 @@ def test_a_vertical_axis_packs_along_y_and_stacks_along_x(side):
     assert {p.layer for p in placed} == {0}
     assert placed[0].y_label < placed[1].y_label
 
-    (x0, _y0), (x1, y1) = _leader_points(placed[0].leader_path_d)
+    (x0, _y0), (x1, y1) = _leader_points(placed[0])
     assert x0 == pytest.approx(0.0)  # starts on the axis
     assert y1 == pytest.approx(_y0)  # perpendicular is horizontal now
     assert (x1 > 0) is (side is Side.PRIMARY)
@@ -283,7 +289,8 @@ def test_no_two_boxes_on_a_row_ever_overlap():
 def test_a_stopped_leader_leaves_room_for_the_missing_icon():
     """The glyph is centred on the leader's end, so the end must not be
     the very edge of the drawable area — half the icon would fall outside."""
-    config = _config(default_missing_icon_size=12.0)
+    config = _config()
+    set_fields(config, default_missing_icon_size=12.0)
     events = [_event("20260220", f"E{i}") for i in range(3)]
     placed = _pack(events, config=config, max_extent=BOX_H + 4.0)
 
@@ -319,7 +326,7 @@ def test_shrink_bounds_contain_every_callout_box():
         )
         for p in _pack([_event("20260105", "a"), _event("20260301", "z")], config=config)
     ]
-    frame = AxisFrame(
+    frame = Frame.over_range(
         Orientation.HORIZONTAL,
         arrow.get("20260101", "YYYYMMDD"),
         arrow.get("20261231", "YYYYMMDD"),

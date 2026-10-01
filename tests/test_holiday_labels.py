@@ -10,13 +10,13 @@ country, and are never prefixed.
 from datetime import date, timedelta
 
 import pytest
-from fakes import FakeCalendarDB
+from fakes import FakeCalendarDB, GlyphsFromSeed
 
 from config.config import create_calendar_config, setfontsizes
 from shared.holiday_labels import format_holiday_label
 
 
-class _StubDB(FakeCalendarDB):
+class _StubDB(GlyphsFromSeed, FakeCalendarDB):
     """Holidays keyed by daykey; special days likewise."""
 
     def __init__(self, holidays=None, specials=None):

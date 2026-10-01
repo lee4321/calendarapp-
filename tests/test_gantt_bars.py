@@ -8,18 +8,18 @@ import pytest
 
 from shared.data_models import Event
 from shared.date_utils import visible_days
+from shared.span import Span
 from visualizers.gantt.bars import (
-    DayAxis,
     bar_geometry,
     float_spans,
     progress_width,
 )
 
 #: Mon 2 Feb 2026 through Fri 13 Feb 2026, workweek only: 10 columns of 10pt.
-WORKWEEK = DayAxis(days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 0), x=100.0, width=100.0)
+WORKWEEK = Span(visible_days(date(2026, 2, 2), date(2026, 2, 15), 0), 100.0, 200.0)
 
 #: The same fortnight with every day shown: 14 columns.
-ALL_DAYS = DayAxis(days=visible_days(date(2026, 2, 2), date(2026, 2, 15), 1), x=0.0, width=140.0)
+ALL_DAYS = Span(visible_days(date(2026, 2, 2), date(2026, 2, 15), 1), 0.0, 140.0)
 
 
 # ── The axis ──────────────────────────────────────────────────────────────
@@ -42,16 +42,12 @@ def test_hidden_days_are_not_visible_but_snap_forward():
     saturday = date(2026, 2, 7)
     assert WORKWEEK.is_visible(saturday) is False
     # Monday the 9th is column 5 (Mon-Fri, then the next Monday).
-    assert WORKWEEK.snap_forward(saturday) == 5
+    assert WORKWEEK.index_at_or_after(saturday) == 5
     assert ALL_DAYS.is_visible(saturday) is True
 
 
 def test_snapping_past_the_end_has_no_column():
-    assert WORKWEEK.snap_forward(date(2026, 3, 1)) is None
-
-
-def test_an_empty_axis_has_no_width():
-    assert DayAxis(days=[], x=0.0, width=100.0).day_width == 0.0
+    assert WORKWEEK.index_at_or_after(date(2026, 3, 1)) is None
 
 
 # ── Placement ─────────────────────────────────────────────────────────────
@@ -152,11 +148,6 @@ def test_clipping_at_the_start_is_not_reported_as_snapping():
     """A bar clipped to the first column has not been moved off its own day."""
     bar = bar_geometry(WORKWEEK, date(2026, 1, 1), date(2026, 2, 4))
     assert bar.snapped is False
-
-
-def test_nothing_is_drawn_on_an_empty_axis():
-    empty = DayAxis(days=[], x=0.0, width=100.0)
-    assert bar_geometry(empty, date(2026, 2, 2), date(2026, 2, 3)).visible is False
 
 
 # ── Progress ──────────────────────────────────────────────────────────────

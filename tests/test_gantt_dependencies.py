@@ -275,7 +275,7 @@ def test_a_style_rule_restyles_the_arrows():
     rule = {
         "apply_to": ARROW_STYLE_TARGET,
         "select": {"resource_group": "Delivery"},
-        "style": {"stroke": "crimson", "stroke_width": 2.0},
+        "style": {"color": "crimson", "width": 2.0},
     }
     events = linked_tasks()
     events[1]["Resource_Group"] = "Delivery"
@@ -290,7 +290,7 @@ def test_a_dashed_arrow_keeps_a_solid_head():
     """The marker is a filled glyph, so the dash pattern cannot reach it."""
     rule = {
         "apply_to": ARROW_STYLE_TARGET,
-        "style": {"stroke": "black", "stroke_dasharray": "4 2"},
+        "style": {"color": "black", "dasharray": "4 2"},
     }
     renderer = render(linked_tasks(), theme_style_rules=[rule])
     arrow = renderer.of_class(renderer.paths, "ec-dependency-arrow")[0]

@@ -18,6 +18,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from config.config import weekend_style_is_workweek, weekend_style_starts_sunday
+from config.role_styles import role_text
 from shared.date_utils import get_months_in_range, get_week_number
 from visualizers.base import BaseLayout, CoordinateDict
 
@@ -30,10 +31,9 @@ logger = logging.getLogger(__name__)
 def _title_header_heights(config: CalendarConfig) -> tuple[float, float]:
     """Heights reserved for a month's title row and weekday header row.
 
-    setfontsizes() sets both font sizes before layout runs.
+    Both sizes are the theme's ``text.month_title`` and ``text.label`` roles.
     """
-    title, header = config.mini_title_font_size, config.mini_header_font_size
-    assert title is not None and header is not None, "setfontsizes() must run before mini layout"
+    title, header = role_text(config, "month_title").size, role_text(config, "label").size
     return title * 1.8, header * 1.8
 
 
@@ -274,7 +274,7 @@ class MiniCalendarLayout(BaseLayout):
                 cell_x = day_area_x + col_idx * day_col_width
                 is_adj = d.month != month
 
-                if is_adj and not config.mini_show_adjacent:
+                if is_adj and not config.theme_v3.mini_calendar.show_adjacent:
                     continue
 
                 daykey = d.strftime("%Y%m%d")

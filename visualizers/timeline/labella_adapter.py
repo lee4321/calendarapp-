@@ -13,19 +13,17 @@ dependency.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import replace
 
 import arrow
 
 from config.config import CalendarConfig
+from config.role_styles import role_text
 from renderers.glyph_cache import get_font_metrics
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
-    append_perp_stub,
-    prepend_perp_stub,
 )
 from shared.labella_layout import (
     layout_callouts as _layout_callouts_shared,
@@ -66,13 +64,7 @@ def event_font(config: CalendarConfig, part: str) -> str:
     ``text:event_<part>`` token resolved for the timeline, then the element
     style.
     """
-    theme = getattr(config, "theme", None)
-    token = (
-        theme.resolve_token(f"text:event_{part}", {"visualizer": "timeline", "papersize": config.papersize})
-        if theme
-        else {}
-    )
-    return token.get("font") or config.get_text_style(f"ec-event-{part}").font
+    return role_text(config, f"event_{part}").font
 
 
 def _measured_text_width(event: Event, config: CalendarConfig) -> float:
@@ -85,8 +77,8 @@ def _measured_text_width(event: Event, config: CalendarConfig) -> float:
     """
     name_font_path = _resolve_font_path(event_font(config, "name"))
     notes_font_path = _resolve_font_path(event_font(config, "notes"))
-    name_size = float(config.timeline_name_text_font_size or 12.0)
-    notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
+    name_size = role_text(config, "event_name").size
+    notes_size = role_text(config, "event_notes").size
 
     name_w = (
         string_width(event.task_name, name_font_path, name_size)
@@ -109,16 +101,15 @@ def _date_extent_for(event: Event, config: CalendarConfig) -> float:
         day = arrow.get(str(event.start)[:8], "YYYYMMDD")
     except (arrow.ParserError, ValueError, TypeError):
         return 0.0
-    label = format_arrow_date(day, config.timeline_date_format)
+    label = format_arrow_date(day, config.theme_v3.events.date.format)
     # Mirrors TimelineRenderer._callout_metrics()'s date fallback.  A theme
     # that sets a larger text:event_date size is only visible to the renderer,
     # which then fits the title into whatever room is left — the title shrinks
     # slightly rather than the date colliding with it.
     # weekly_name_text_font_size is None until setfontsizes() runs, and the
     # layout is exercised without it in tests.
-    base = config.weekly_name_text_font_size or config.timeline_name_text_font_size or 12.0
-    size = max(8.0, float(base) * 0.95)
-    return callout_date_extent(label, config.get_text_style("ec-event-date").font, size)
+    date = role_text(config, "event_date")
+    return callout_date_extent(label, date.font, date.size)
 
 
 def _line_height_extent(config: CalendarConfig) -> float:
@@ -129,8 +120,8 @@ def _line_height_extent(config: CalendarConfig) -> float:
     as the along-axis dimension for vertical labels.
     """
     name_font_path = _resolve_font_path(event_font(config, "name"))
-    name_size = float(config.timeline_name_text_font_size or 12.0)
-    notes_size = float(config.timeline_notes_text_font_size or name_size * 0.85)
+    name_size = role_text(config, "event_name").size
+    notes_size = role_text(config, "event_notes").size
     if name_font_path:
         upm, asc, desc = get_font_metrics(name_font_path)
         line_h = (asc - desc) / upm * name_size
@@ -147,13 +138,13 @@ def _node_along_axis_extent(event: Event, config: CalendarConfig, orientation: O
     width; for a vertical axis it's the label's vertical (line) height.
     """
     if orientation is Orientation.HORIZONTAL:
-        configured = config.timeline_event_box_width
+        configured = config.theme_v3.timeline.events.box_width
         if configured is not None and configured > 0:
             return float(configured)
         measured = _measured_text_width(event, config) + 2.0 * _LABEL_PAD_X
         return max(measured, 24.0)
     # Vertical: along-axis extent is the box's vertical height.
-    configured = config.timeline_event_box_height
+    configured = config.theme_v3.timeline.events.box_height
     if configured is not None and configured > 0:
         return float(configured)
     return _line_height_extent(config)
@@ -173,13 +164,13 @@ def _renderer_node_height(
     text width across all events so the widest one fits.
     """
     if orientation is Orientation.HORIZONTAL:
-        if config.timeline_event_box_height is not None and config.timeline_event_box_height > 0:
-            return float(config.timeline_event_box_height)
-        if config.timeline_labella_node_height > 0:
-            return float(config.timeline_labella_node_height)
+        if config.theme_v3.timeline.events.box_height is not None and config.theme_v3.timeline.events.box_height > 0:
+            return float(config.theme_v3.timeline.events.box_height)
+        if config.theme_v3.timeline.labella.node_height > 0:
+            return float(config.theme_v3.timeline.labella.node_height)
         return _line_height_extent(config)
     # Vertical: per-layer horizontal extent = widest text + padding.
-    configured = config.timeline_event_box_width
+    configured = config.theme_v3.timeline.events.box_width
     if configured is not None and configured > 0:
         return float(configured)
     widest = max(
@@ -240,50 +231,22 @@ def layout_callouts(
         pos_for_day=pos_for_day,
         node_width=lambda ev: _node_along_axis_extent(ev, config, orientation),
         node_height=lambda evs: _renderer_node_height(evs, config, orientation),
-        density=float(config.timeline_labella_density),
+        density=float(config.theme_v3.timeline.labella.density),
         # The theme's gap is the row stride; the axis-label clearance is a
         # one-off offset of the whole stack. Folding the clearance into the
         # gap, as this used to, charged it again for every row — a 24-row
         # stack paid ~26pt of tick-label clearance 24 times over.
-        layer_gap=float(config.timeline_labella_layer_gap),
+        layer_gap=float(config.theme_v3.timeline.labella.layer_gap),
         stack_offset=max(
             0.0,
-            float(min_layer_gap) - float(config.timeline_labella_layer_gap),
+            float(min_layer_gap) - float(config.theme_v3.timeline.labella.layer_gap),
         ),
-        min_pos=config.timeline_labella_min_pos,
-        max_pos=config.timeline_labella_max_pos,
+        min_pos=config.theme_v3.timeline.labella.min_pos,
+        max_pos=config.theme_v3.timeline.labella.max_pos,
         max_extent=max_extent,
         label_bounds=label_bounds,
-        direct_leaders=bool(config.timeline_leader_direct),
         # Centre each box on the position labella solved for it, which is
         # the position it optimised toward the event's own date.
         label_anchor="center",
     )
-    return _add_leader_stubs(placements, config, orientation)
-
-
-def _add_leader_stubs(
-    placements: list[CalloutPlacement],
-    config: CalendarConfig,
-    orientation: Orientation,
-) -> list[CalloutPlacement]:
-    """Straighten both ends of every leader with a perpendicular stub.
-
-    labella's bezier leaves the axis dot and meets the box at a shallow
-    angle, so a leader reads as grazing its anchors rather than arriving at
-    them.  The stubs pull each end back along the perpendicular and finish
-    the run with a straight segment, which is what makes the join look
-    deliberate — and, where a theme turns markers on, gives an
-    ``orient="auto"`` arrowhead a segment to sit flush on.
-    """
-    start_stub = float(config.timeline_leader_start_stub)
-    end_stub = float(config.timeline_leader_end_stub)
-    if start_stub <= 0 and end_stub <= 0:
-        return placements
-
-    out: list[CalloutPlacement] = []
-    for p in placements:
-        leader = append_perp_stub(p.leader_path_d, orientation, end_stub)
-        leader = prepend_perp_stub(leader, orientation, start_stub)
-        out.append(replace(p, leader_path_d=leader))
-    return out
+    return placements

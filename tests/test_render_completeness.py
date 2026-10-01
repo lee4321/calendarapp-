@@ -1,6 +1,6 @@
 """
 CI completeness probe — every visualizer must render against both reference
-themes (basic.yaml, SAMPLE.yaml) over a small fixture date range.
+themes (default.yaml, demonstration.yaml) over a small fixture date range.
 
 This is the test the design calls for in §11.3 / §11.4:
 
@@ -57,7 +57,7 @@ SUBCOMMAND_META: dict[str, dict[str, object]] = {
 }
 
 
-REFERENCE_THEMES = ("basic", "SAMPLE")
+REFERENCE_THEMES = ("default", "demonstration")
 
 
 @pytest.fixture

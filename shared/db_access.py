@@ -682,6 +682,46 @@ class CalendarDB:
             cursor.execute("SELECT name, svg FROM patterns")
             return {row["name"]: row["svg"] for row in cursor.fetchall()}
 
+    def list_glyph_groups(self) -> dict[str, int]:
+        """Return ``{group: glyph count}`` from the ``glyphs`` table.
+
+        Raises:
+            GlyphsTableMissingError: the database has no ``glyphs`` table.
+        """
+        with self._get_connection() as conn:
+            try:
+                rows = conn.execute(
+                    "SELECT glyph_group, COUNT(*) AS n FROM glyphs GROUP BY glyph_group ORDER BY glyph_group"
+                ).fetchall()
+            except sqlite3.OperationalError as exc:
+                raise self._glyphs_error(exc) from exc
+            return {row["glyph_group"]: row["n"] for row in rows}
+
+    def get_glyphs(self, group: str) -> list[str]:
+        """Return the glyphs of *group* in ``seq`` order.
+
+        Raises:
+            GlyphsTableMissingError: the database has no ``glyphs`` table.
+            KeyError: no such group; the message lists the groups that exist.
+        """
+        with self._get_connection() as conn:
+            try:
+                rows = conn.execute("SELECT glyph FROM glyphs WHERE glyph_group = ? ORDER BY seq", (group,)).fetchall()
+            except sqlite3.OperationalError as exc:
+                raise self._glyphs_error(exc) from exc
+        if not rows:
+            known = ", ".join(self.list_glyph_groups()) or "none"
+            raise KeyError(f"glyph group '{group}' not found; groups in the database: {known}")
+        return [row["glyph"] for row in rows]
+
+    def _glyphs_error(self, exc: sqlite3.OperationalError) -> Exception:
+        """The error for a failed glyphs query: a missing table gets the how-to-fix message."""
+        if "no such table" in str(exc):
+            from cli.errors import GlyphsTableMissingError
+
+            return GlyphsTableMissingError(self.db_path)
+        return exc
+
     def get_palette(self, name: str) -> list[str] | None:
         """
         Return the color list for a named palette, or None if not found.

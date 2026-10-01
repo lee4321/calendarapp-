@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import openpyxl
+from band_helpers import set_bands, update_theme
 from fakes import FakeCalendarDB
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter
@@ -108,9 +109,7 @@ def _cfg(out_path: Path):
     c.adjustedend = "20260123"
     c.weekend_style = 0
     c.country = None
-    c.excelblockplan_font = "Calibri"
-    c.excelblockplan_font_size = 9
-    c.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
+    set_bands(c, primary=[{"label": "Month", "unit": "month"}])
     return c
 
 
@@ -328,7 +327,7 @@ def test_excelblockplan_timeband_heading_right_aligned_in_merged_a_w(tmp_path):
     visually sits in column W."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month"}]
+    set_bands(cfg, primary=[{"label": "Month", "unit": "month"}])
     generate_excel_blockplan(cfg, _BaseDB(), out)
     wb = openpyxl.load_workbook(str(out))
     ws = wb.active
@@ -396,7 +395,7 @@ def test_excelblockplan_day_columns_follow_the_continuation_column(tmp_path):
     column shifts the grid rather than breaking this test."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "D"}]
+    set_bands(cfg, primary=[{"label": "Date", "unit": "date", "date_format": "D"}])
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -435,7 +434,7 @@ def test_excelblockplan_multi_day_band_segments_are_merged(tmp_path):
     """A month segment spanning several day columns is one merged cell."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [{"label": "Month", "unit": "month", "date_format": "MMM"}]
+    set_bands(cfg, primary=[{"label": "Month", "unit": "month", "date_format": "MMM"}])
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -449,7 +448,7 @@ def test_excelblockplan_holiday_shades_header_and_empty_day_cells(tmp_path):
     data row whose own item falls on another day."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.theme_federal_holiday_color = "#FF0000"
+    update_theme(cfg, holidays={"federal": {"color": "#FF0000", "opacity": 1.0}})
 
     class _DB(_BaseDB):
         EVENTS: ClassVar[list[dict]] = [_event(eid=1, name="Kickoff", start="20260106")]
@@ -472,10 +471,12 @@ def test_excelblockplan_vertical_lines_become_right_borders(tmp_path):
     """Theme vertical lines are drawn as right-cell borders on the day grid."""
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [{"label": "Week", "unit": "week", "label_format": "W{week}"}]
-    cfg.excelblockplan_vertical_lines = [
-        {"band": "Week", "repeat": True, "align": "end", "color": "navy", "width": 2.0},
-    ]
+    set_bands(
+        cfg,
+        primary=[
+            {"label": "Week", "unit": "week", "label_format": "W{week}", "vline": {"color": "navy", "width": 2.0}}
+        ],
+    )
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -493,7 +494,7 @@ def test_excelblockplan_weekends_excluded_when_style_zero(tmp_path):
     cfg = _cfg(out)
     cfg.userstart = cfg.adjustedstart = "20260105"  # Mon
     cfg.userend = cfg.adjustedend = "20260111"  # Sun
-    cfg.excelblockplan_top_time_bands = [{"label": "Date", "unit": "date", "date_format": "D"}]
+    set_bands(cfg, primary=[{"label": "Date", "unit": "date", "date_format": "D"}])
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -508,7 +509,7 @@ def test_excelblockplan_weekends_excluded_when_style_zero(tmp_path):
 def test_excelblockplan_icon_band_marks_days_with_matching_events(tmp_path):
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [_icon_band()]
+    set_bands(cfg, primary=[_icon_band()])
 
     class _DB(_BaseDB):
         EVENTS: ClassVar[list[dict]] = [
@@ -526,7 +527,7 @@ def test_excelblockplan_icon_band_marks_days_with_matching_events(tmp_path):
 def test_excelblockplan_icon_band_empty_without_events(tmp_path):
     out = tmp_path / "bp.xlsx"
     cfg = _cfg(out)
-    cfg.excelblockplan_top_time_bands = [_icon_band()]
+    set_bands(cfg, primary=[_icon_band()])
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -537,7 +538,7 @@ def test_excelblockplan_icon_band_empty_without_events(tmp_path):
 def test_excelblockplan_weekend_fill_applied_when_configured(tmp_path):
     out = tmp_path / "bp.xlsx"
     cfg = _weekend_cfg(out)
-    cfg.excelblockplan_weekend_fill_color = "#DDDDDD"
+    update_theme(cfg, holidays={"weekend": {"color": "#DDDDDD", "opacity": 1.0}})
     generate_excel_blockplan(cfg, _BaseDB(), out)
     ws = openpyxl.load_workbook(str(out)).active
 
@@ -573,3 +574,30 @@ def test_excelblockplan_empty_workbook_is_a_blank_template(tmp_path):
     assert ws.cell(row=1, column=1).value == "Month"  # timeband row
     assert ws.cell(row=2, column=1).value == "id"  # column-header row
     assert ws.max_row == 2
+
+
+def test_excelblockplan_secondary_rows_follow_the_last_data_row(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    set_bands(cfg, primary=[{"label": "Month", "unit": "month"}], secondary=[{"label": "Footer", "unit": "month"}])
+
+    class _DB(_BaseDB):
+        EVENTS: ClassVar[list[dict]] = [_event(eid=1, name="Kickoff", start="20260106")]
+
+    generate_excel_blockplan(cfg, _DB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+
+    # Row 1 timescale, row 2 column headers, row 3 the one data row, row 4 the secondary row.
+    assert ws.cell(row=1, column=1).value == "Month"
+    assert ws.cell(row=3, column=3).value is not None
+    assert ws.cell(row=4, column=1).value == "Footer"
+    assert ws.cell(row=5, column=1).value is None
+
+
+def test_excelblockplan_secondary_rows_follow_the_headers_when_there_are_no_events(tmp_path):
+    out = tmp_path / "bp.xlsx"
+    cfg = _cfg(out)
+    set_bands(cfg, secondary=[{"label": "Footer", "unit": "month"}])
+    generate_excel_blockplan(cfg, _BaseDB(), out)
+    ws = openpyxl.load_workbook(str(out)).active
+    assert ws.cell(row=3, column=1).value == "Footer"

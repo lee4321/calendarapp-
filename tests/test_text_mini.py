@@ -2,7 +2,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from fakes import FakeCalendarDB
+from band_helpers import update_theme
+from fakes import FakeCalendarDB, GlyphsFromSeed, seeded_glyphs
 
 import ecalendar
 from config.config import create_calendar_config, setfontsizes
@@ -12,7 +13,7 @@ from visualizers.text_mini.visualizer import TextMiniCalendarVisualizer
 _PAPER_SIZES = {"Widescreen": (1056.0, 594.0), "Letter": (792.0, 612.0)}
 
 
-class _FakeDB(FakeCalendarDB):
+class _FakeDB(GlyphsFromSeed, FakeCalendarDB):
     def __init__(self, events, holidays=None, specials=None):
         self._events = events
         self._holidays = holidays or {}
@@ -213,9 +214,8 @@ def test_symbols_are_assigned_in_ascending_date_order():
     ]
     symbol_map, details = _symbol_map_for(events)
 
-    config = create_calendar_config()
-    first_event, second_event, third_event = config.text_mini_event_symbols[:3]
-    first_ms, second_ms = config.text_mini_milestone_symbols[:2]
+    first_event, second_event, third_event = seeded_glyphs("text-mini-event")[:3]
+    first_ms, second_ms = seeded_glyphs("text-mini-milestone")[:2]
 
     assert symbol_map["20260106"] == first_event
     assert symbol_map["20260113"] == second_event
@@ -266,8 +266,8 @@ def test_holiday_and_nonworkday_symbols_run_in_date_order():
     renderer = TextMiniCalendarRenderer()
     symbol_map, details = renderer._build_symbol_map(config, [], {}, db)
 
-    first_hol, second_hol = config.text_mini_holiday_symbols[:2]
-    first_nwd, second_nwd = config.text_mini_nonworkday_symbols[:2]
+    first_hol, second_hol = seeded_glyphs("text-mini-holiday")[:2]
+    first_nwd, second_nwd = seeded_glyphs("text-mini-nonworkday")[:2]
 
     assert symbol_map["20260101"] == first_hol
     assert symbol_map["20260119"] == second_hol
@@ -293,8 +293,6 @@ def test_text_mini_accepts_a_theme():
 def test_text_mini_honors_mini_calendar_show_adjacent():
     """The theme key reaches the renderer, which blanks the leading/trailing
     cells that belong to a neighbouring month."""
-    from config.theme_engine import ThemeEngine
-
     db = _FakeDB([])
     texts = {}
     for show_adjacent in (True, False):
@@ -302,11 +300,9 @@ def test_text_mini_honors_mini_calendar_show_adjacent():
             config = _config_for(td)
             config.userstart = config.adjustedstart = "20260201"
             config.userend = config.adjustedend = "20260228"
-            theme = ThemeEngine()
-            theme._theme_data = {"mini_calendar": {"show_adjacent": show_adjacent}}
-            theme.apply(config)
+            update_theme(config, mini_calendar={"show_adjacent": show_adjacent})
 
-            assert config.mini_show_adjacent is show_adjacent
+            assert config.theme_v3.mini_calendar.show_adjacent is show_adjacent
             TextMiniCalendarVisualizer().generate(config, db)
             texts[show_adjacent] = Path(config.outputfile).read_text(encoding="utf-8")
 

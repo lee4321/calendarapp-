@@ -6,13 +6,19 @@ Sets default values that will be used unless overridden
 
 from __future__ import annotations
 
-import copy
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import arrow
+
+
+def _default_theme_v3() -> Any:
+    """A version-3.0 theme made only of schema defaults (what a config has before a theme is applied)."""
+    from config.theme_schema import Theme, ThemeMeta
+
+    return Theme(theme=ThemeMeta(name="default"))
 
 
 def get_creation_date() -> str:
@@ -82,16 +88,13 @@ class CalendarConfig:
     command_line: str = ""
     embed_data: bool = False
 
-    # Unified theme styles (new system — populated by theme engine for new-format themes)
-    theme_styles: Any = None  # config.styles.ThemeStyles | None
+    # Element styles bound from the theme's roles (config.role_styles), and the theme and
+    # paper they were built for; rebuilt when either changes.
+    theme_styles: Any = None
+    theme_styles_key: Any = None
 
-    # Parsed unified-schema theme (post-migration runtime API).  Populated by
-    # ThemeEngine.load() alongside theme_styles.  Renderer consumers should
-    # query this directly via .resolve_token() / .find_rules() instead of
-    # reading legacy CalendarConfig styling fields; once every consumer has
-    # migrated, the legacy fields and the decompiler bridge can be removed.
-    # See config/unified_theme.py and design §6.
-    theme: Any = None  # config.unified_theme.UnifiedTheme | None
+    # The theme (config/theme_schema.py): every decoration and structure value a view reads.
+    theme_v3: Any = field(default_factory=lambda: _default_theme_v3())
 
     # Data source description (for header/footer expansion)
     events: str = ""
@@ -101,7 +104,6 @@ class CalendarConfig:
     pageY: float = 0.0
     papersize: str = "Widescreen"
     orientation: str = "landscape"
-    desired_font_size: float | None = None  # Theme-selected target base size
 
     # Output file
     outputfile: str = ""
@@ -141,271 +143,43 @@ class CalendarConfig:
     fiscal_calendar_type: str | None = None  # "nrf-454", "nrf-445", "nrf-544", "13-period"
     fiscal_show_period_labels: bool = True
     fiscal_show_quarter_labels: bool = True
-    fiscal_use_period_colors: bool = False
-    fiscal_period_label_font_size: float | None = None  # Set in setfontsizes()
-    fiscal_period_label_format: str = "{prefix}{period_short}"
-    fiscal_period_end_label_format: str = "{period_short} End"
     # How the displayed fiscal year number relates to the calendar year in which
     # the fiscal period *starts*.  None = auto (blockplan: +1 for non-Jan starts,
     # 0 for Jan; weekly/NRF: 0).  Set to an integer to override globally:
     #   0  → fiscal year name == start calendar year  (e.g. FY starting Feb 2026 → "FY2026")
     #   1  → fiscal year name == start calendar year + 1  (e.g. FY starting Oct 2025 → "FY2026")
     #  -1  → fiscal year name == start calendar year − 1  (unusual)
-    fiscal_year_offset: int | None = None
     fiscal_lookup: dict | None = None  # Runtime: populated by build_fiscal_lookup()
 
     # Mini calendar settings
     mini_columns: int = 3  # Months per row
     mini_rows: int = 0  # 0 = auto from date range
     mini_month_gap: float = 18.0  # Points between month grids
-    mini_cell_bold_font: str = Fonts.R_BOLD  # Bold variant
-    mini_title_font_size: float | None = None
-    mini_title_format: str = "MMMM YYYY"  # Arrow format string for title
-    mini_header_font_size: float | None = None
-    mini_adjacent_month_color: str = "lightgrey"  # Leading/trailing days
-    mini_holiday_color: str = "red"  # Holiday day number color
-    mini_nonworkday_fill_color: str = "lightblue"  # Non-work day background
-    mini_milestone_color: str = "navy"  # Milestone circle color
-    mini_milestone_stroke_color: str = "navy"  # Milestone circle stroke color
-    mini_day_number_glyphs: list[str] | None = None
-    mini_day_number_digits: list[str] | None = None
-    mini_cell_font_size: float | None = None
-    mini_show_adjacent: bool = True  # Show leading/trailing days
-    mini_circle_milestones: bool = False
     # Event / holiday / special-day icons drawn in a day cell's corners,
     # alongside the day number (or day glyph in mini-icon) rather than in
     # place of it. Scale is a fraction of the cell's shorter side; the
     # opacity keeps the number legible where an icon overlaps it.
-    mini_event_icon_scale: float = 0.25
-    mini_event_icon_opacity: float = 0.6
     mini_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
     mini_duration_bar_height: float = 3.0  # Stroke width of duration bar lines
-    mini_grid_lines: bool = False  # Draw grid lines between cells
-    mini_month_outline_color: str | None = None  # None disables the outline
-    mini_month_outline_width: float = 0.5
-    mini_month_outline_opacity: float = 1.0
-    mini_month_outline_dasharray: str | None = None
     mini_show_week_numbers: bool = False  # Show W# column on left
     mini_week_number_mode: str = "iso"  # "iso" or "custom"
     mini_week1_start: str = ""  # YYYYMMDD anchor for custom week 1
-    mini_week_number_font_size: float | None = None  # Week number font size
-    mini_week_number_label_format: str = "W{num}"
-    mini_icon_set: str = "squares"  # Icon set for mini-icon view
 
     # Candybar calendar settings (vertical year-strip: one row per ISO week)
-    candybar_row_height: float = 0.0  # 0 = auto-fit rows to page height
-    candybar_cell_width: float = 0.0  # day-cell width; 0 = square (== row height)
-    candybar_weeknum_col_ratio: float = 0.6  # week-number col width / day-cell width
-    candybar_month_col_ratio: float = 1.6  # month-box col width / day-cell width
-    candybar_week_start: int = -1  # -1=inherit weekend_style, 0=Sunday, 1=Monday
-    candybar_suppress_weekends: bool | None = None  # None = inherit weekend_style
-    candybar_show_week_numbers: bool = True  # Show week-number column on the left
-    candybar_max_rows_per_page: int = 0  # 0 = single fit-to-page column (no paging)
-    candybar_grid_lines: bool = True  # Draw grid lines around day cells
-    candybar_grid_line_color: str = "lightgrey"
     # Base cell shading (drawn under holiday/rule shade so those override it)
-    candybar_weekend_fill: str | None = None  # Sat/Sun column tint (None = off)
-    candybar_weekend_opacity: float = 0.15
-    candybar_month_shading: bool = False  # Alternate/per-month day-cell tint
-    candybar_month_shade_colors: list[str] = field(default_factory=list)  # cycled by month
-    candybar_month_shade_opacity: float = 0.12
     # Month-name box (right-hand column spanning all of a month's week rows)
-    candybar_month_label_side: str = "right"  # "right" or "left"
-    candybar_month_font: str = Fonts.RC_BOLD
-    candybar_month_font_size: float | None = None  # None = derive from row height
-    candybar_month_color: str = "navy"
-    candybar_month_opacity: float = 1.0
-    candybar_month_anchor: str = "middle"  # SVG text-anchor: start/middle/end
-    candybar_month_rotation: float = 0.0  # Degrees; e.g. -90 = vertical, reading up
-    candybar_month_format: str = "MMM"  # Arrow format string for month label
-    candybar_month_box_fill: str | None = None  # None = no fill
-    candybar_month_box_stroke: str | None = "lightgrey"
-    candybar_month_box_opacity: float = 1.0
 
     # Text mini calendar settings
-    text_mini_cell_width: int = 2
-    text_mini_month_gap: int = 4
-    text_mini_week_number_digits: list[str] = field(
-        default_factory=lambda: ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"]
-    )
-    text_mini_day_number_digits: list[str] = field(
-        # default_factory=lambda: list("0123456789")
-        default_factory=lambda: ["𜳰", "𜳱", "𜳲", "𜳳", "𜳴", "𜳵", "𜳶", "𜳷", "𜳸", "𜳹"]
-    )
-    text_mini_event_symbols: list[str] = field(
-        # default_factory=lambda: ["⚐", "⚑", "⛿", "⛳"]
-        default_factory=lambda: [
-            "⯍",
-            "⯏",
-            "🟈",
-            "🟃",
-            "🟎",
-            "🟉",
-            "⯌",
-            "🟒",
-            "🟋",
-            "🞻",
-            "🞯",
-            "🟂",
-            "🟐",
-            "🞿",
-            "🞭",
-            "🞹",
-            "⭐",
-            "🃟",
-            "⊛",
-            "⋇",
-            "⊗",
-            "⨳",
-            "⧾",
-            "⟡",
-            "⟐",
-            "❖",
-            "◊",
-            "⯪",
-            "⯫",
-            "꥟",
-            "𜱃",
-            "𜱪",
-            "𜱩",
-            "𜸂",
-            "𜻏",
-            "🟙",
-            "🝴",
-            "🩔",
-            "🮻",
-            "🯀",
-            "🮽",
-            "",
-            "",
-            "",
-            "",
-            "󰘳",
-            "⟠",
-            "⨷",
-            "✢",
-            "✨",
-            "❂",
-        ]
-    )
-    text_mini_milestone_symbols: list[str] = field(
-        # default_factory=lambda: ["⸸","⹋","«","¤","‼","ʬ","ʭ","ᖚ","䷀","𝚵","ᛝ","ⵙ","꩜","ᕲ","ᛃ","߷","⁌","֎","𜰕","𜱊","𜲉","𜲌","𜳺","𜳻","🮽","","","","","󰘳","⟠","⨷","✢","✨","❂","Ꝏ","Ꙫ","ꙮ",]
-        # default_factory=lambda: ["Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ","Ⅷ","Ⅸ","Ⅹ","Ⅺ","Ⅻ",]
-        default_factory=lambda: [
-            "🄰",
-            "🄱",
-            "🄲",
-            "🄳",
-            "🄴",
-            "🄵",
-            "🄶",
-            "🄷",
-            "🄸",
-            "🄹",
-            "🄺",
-            "🄻",
-            "🄼",
-            "🄽",
-            "🄾",
-            "🄿",
-            "🅀",
-            "🅁",
-            "🅂",
-            "🅃",
-            "🅄",
-            "🅅",
-            "🅆",
-            "🅇",
-            "🅈",
-            "🅉",
-        ]
-    )
-    text_mini_holiday_symbols: list[str] = field(
-        default_factory=lambda: [
-            "🅰",
-            "🅱",
-            "🅲",
-            "🅳",
-            "🅴",
-            "🅵",
-            "🅶",
-            "🅷",
-            "🅸",
-            "🅹",
-            "🅺",
-            "🅻",
-            "🅼",
-            "🅽",
-            "🅾",
-            "🅿",
-            "🆀",
-            "🆁",
-            "🆂",
-            "🆃",
-            "🆄",
-            "🆅",
-            "🆆",
-            "🆇",
-            "🆈",
-            "🆉",
-        ]
-    )
-    text_mini_nonworkday_symbols: list[str] = field(
-        default_factory=lambda: [
-            "𝒂",
-            "𝒃",
-            "𝒄",
-            "𝒅",
-            "𝒆",
-            "𝒇",
-            "𝒈",
-            "𝒉",
-            "𝒊",
-            "𝒋",
-            "𝒌",
-            "𝒍",
-            "𝒎",
-            "𝒏",
-            "𝒐",
-            "𝒑",
-            "𝒒",
-            "𝒓",
-            "𝒔",
-            "𝒕",
-            "𝒖",
-            "𝒗",
-            "𝒘",
-            "𝒙",
-            "𝒚",
-            "𝒛",
-        ]
-    )
-    text_mini_duration_symbols: list[str] = field(
-        default_factory=lambda: ["❶", "❷", "❸", "❹", "❺", "❻", "❼", "❽", "❾", "❿"]
-    )
-    text_mini_duration_fill: str = "⸬"
 
     # Weekly week number settings
     week_number_mode: str = "iso"  # "iso" or "custom"
     week1_start: str = ""  # YYYYMMDD anchor for custom week 1
-    mini_current_day_color: str = "lightblue"  # Current day shade color
 
     # Day-cell shade strengths. These were hardcoded in
     # visualizers/mini/day_styles.py until 2026-09-18; a theme sets them
     # through `colors.mini_calendar.*_opacity`. Holidays and company special
     # days share nonworkday_fill_color but have always shaded at different
     # strengths, so both values are kept rather than reconciled here.
-    mini_adjacent_month_opacity: float = 0.4
-    mini_fiscal_period_opacity: float = 0.50
-    mini_current_day_opacity: float = 0.25
-    mini_nonworkday_fill_opacity: float = 0.2
-    mini_special_nonworkday_opacity: float = 0.25
-
-    theme_mini_adjacent_month_color: str | None = None
-    theme_mini_holiday_color: str | None = None
-    theme_mini_nonworkday_fill_color: str | None = None
-    theme_mini_milestone_color: str | None = None
-    theme_mini_current_day_color: str | None = None
 
     # Content filtering options
     includeevents: bool = True
@@ -420,7 +194,6 @@ class CalendarConfig:
     status_filter: frozenset[str] | None = field(default_factory=lambda: frozenset({"active"}))
 
     # Display options
-    shade_current_day: bool = False
     include_month_name: bool = True
     include_margin: bool = True
     include_color_key: bool = False
@@ -428,66 +201,6 @@ class CalendarConfig:
     # Run details (theme `details:` section): the details document, icon
     # files and event CSV every visualization run writes into its folder.
     # Table columns use the gantt.columns schema (renderers/table_columns).
-    include_details_markdown: bool = True
-    details_md_title_text: str = "Calendar Details"
-    details_md_sections: list[str] = field(
-        default_factory=lambda: ["events", "colors", "symbols", "exceptions", "holidays"]
-    )
-    details_md_events_section_text: str = "Events"
-    details_md_colors_section_text: str = "Color Key"
-    details_md_symbols_section_text: str = "Icons & Symbols"
-    details_md_exceptions_section_text: str = "Exceptions"
-    details_md_holidays_section_text: str = "Holidays & Special Days"
-    details_md_empty_exceptions_text: str = "Every item was drawn as scheduled."
-    details_md_empty_cell_text: str = ""
-    details_md_icon_mode: str = "file"  # file | name | none
-    details_md_color_mode: str = "swatch"  # swatch | hex | name
-    details_md_group_by: str = "none"
-    details_md_sort: list[str] = field(default_factory=lambda: ["start_date", "end_date", "name"])
-    details_md_columns: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {"field": "source_id", "header": "ID", "align": "right"},
-            {"field": "marker", "header": "Key", "align": "center"},
-            {"field": "original_icon", "header": "Event Icon"},
-            {"field": "name", "header": "Task Name", "indent": True},
-            {"field": "category", "header": "Type"},
-            {"field": "status", "header": "Status"},
-            {"field": "priority", "header": "Pri", "align": "right"},
-            {"field": "wbs", "header": "WBS"},
-            {"field": "percent_complete", "header": "%", "align": "right", "format": "{:.0%}"},
-            {"field": "start_date", "header": "Start", "date_format": "YYYY-MM-DD"},
-            {"field": "end_date", "header": "Finish", "date_format": "YYYY-MM-DD"},
-            {"field": "resource_names", "header": "Resources"},
-            {"field": "resource_group", "header": "Group"},
-            {"field": "assigned_color", "header": "Color"},
-            {"field": "notes", "header": "Notes", "max_lines": 3},
-            {"field": "drawn", "header": "Drawn"},
-        ]
-    )
-    details_md_exception_columns: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {"field": "issue", "header": "Issue"},
-            {"field": "task", "header": "Task"},
-            {"field": "date", "header": "Date", "date_format": "YYYY-MM-DD"},
-            {"field": "ref", "header": "Ref"},
-            {"field": "detail", "header": "Detail"},
-        ]
-    )
-    details_md_holiday_columns: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {"field": "icons", "header": "Icon", "align": "center"},
-            {"field": "date", "header": "Date"},
-            {"field": "name", "header": "Name"},
-            {"field": "kind", "header": "Kind"},
-            {"field": "nonworkday", "header": "Non-work"},
-            {"field": "notes", "header": "Notes"},
-        ]
-    )
-    include_details_icons: bool = True
-    details_icons_size: float = 16.0
-    include_details_csv: bool = True
-    details_csv_columns: Any = "exportdata"  # "exportdata" | list of column entries
-    details_csv_render_columns: bool = True
     include_notes: bool = False
     include_week_numbers: bool = False
     include_day_names: bool = True
@@ -507,19 +220,13 @@ class CalendarConfig:
     footer_percent: float = 0.015
     day_name_percent: float = 0.02
 
-    # Font sizes (set by setfontsizes)
-    week_number_font_size: float | None = None
-    day_name_font_size: float | None = None
+    # Page-chrome font sizes (set by setfontsizes from the page height)
     header_left_font_size: float | None = None
     header_center_font_size: float | None = None
     header_right_font_size: float | None = None
     footer_left_font_size: float | None = None
     footer_center_font_size: float | None = None
     footer_right_font_size: float | None = None
-    day_box_number_font_size: float | None = None
-    event_icon_size: float | None = None
-
-    week_number_label_format: str = "W{num:02d}"
 
     # Header text and styling
     header_left_text: str = ""
@@ -530,31 +237,6 @@ class CalendarConfig:
     footer_left_text: str = ""
     footer_center_text: str = ""
     footer_right_text: str = ""
-
-    # Event/Duration icon styling (not renamed — icon fields are out of scope)
-    event_icon_color: str = "navy"
-    duration_icon_color: str = "navy"
-    # Numbered duration icons (shared by every view).  A view whose
-    # ``<view>_number_duration_icons`` flag is on hands each duration one icon
-    # from ``duration_icon_list`` (a key into ICON_SETS) in place of the icon
-    # its event data names; the run details then report that number.  The
-    # background is a rect painted behind the glyph and the stroke is the
-    # glyph's outline ink; None leaves the glyph on the page, outlined in its
-    # own ink.
-    duration_icon_list: str = "darksquare"
-    duration_icon_size: float = 8.0
-    duration_icon_background_color: str | None = None
-    duration_icon_stroke_color: str | None = None
-    weekly_number_duration_icons: bool = False
-    mini_number_duration_icons: bool = False
-    candybar_number_duration_icons: bool = False
-    timeline_number_duration_icons: bool = False
-    blockplan_number_duration_icons: bool = False
-    gantt_number_duration_icons: bool = False
-    pit_number_duration_icons: bool = False
-    compactplan_number_duration_icons: bool = True
-    excelblockplan_number_duration_icons: bool = False
-    duration_stroke_dasharray: str | None = None
 
     # ── Continuation icons (global) ────────────────────────────────────────
     # When a duration event's start date precedes the visualization start
@@ -570,11 +252,6 @@ class CalendarConfig:
     # timelines — letting a theme pair, e.g., `move-left` (horizontal
     # "before") with `move-up` (vertical "before"). A bare string applies
     # to both orientations.
-    show_continuation_icon: bool = True
-    continuation_icon_before: str | list[str] = "arrow-left"
-    continuation_icon_after: str | list[str] = "arrow-right"
-    continuation_icon_height: float = 8.0
-    continuation_icon_color: str | None = None  # None = inherit from bar/line color
 
     # ── Overflow indicator (global) ────────────────────────────────────────
     # Drawn wherever a visualizer has more to say than the box it was given
@@ -583,7 +260,6 @@ class CalendarConfig:
     # the condensed name). Configured under the top-level `overflow:`
     # section in theme YAMLs; themes can also paint a halo behind it with a
     # `box:overflow` rule.
-    overflow_indicator_icon: str = "warningtriangle"
 
     # ── Weekly text styling — kept survivors only.  Phase 2 stripped
     # weekly_text_* (the full font_name/_color/_opacity/_alignment +
@@ -592,216 +268,42 @@ class CalendarConfig:
     # Day-box month shade and duration-bar base colours. Hardcoded in
     # visualizers/weekly/renderer.py until 2026-09-18; the bar colours are the
     # values a style rule starts from, so a rule still overrides them.
-    weekly_month_shade_opacity: float = 0.50
-    weekly_duration_fill_color: str = "lightsteelblue"
-    weekly_duration_stroke_color: str = "white"
 
-    weekly_name_text_font_size: float | None = None
-    weekly_notes_text_font_size: float | None = None
-    hash_pattern_opacity: float = 0.15
-    # Auto-normalization of pattern tile sizes.  Native tiles in the DB
-    # span 16 to 1920 pt, so at native size the large ones show a single
-    # crop of the artwork instead of a texture.  Tiles larger than
-    # hash_pattern_target_size are scaled down to it; smaller tiles are
-    # left alone (shrink-only).  Set the target to 0 to tile every
-    # pattern at its native size.  hash_pattern_scale is an extra
-    # multiplier applied on top, for themes that want a finer or coarser
-    # grain without restating the target.
-    hash_pattern_target_size: float = DEFAULT_PATTERN_TARGET_SIZE
-    hash_pattern_scale: float = 1.0
-
-    timeline_axis_width: float = 2.0
-    timeline_date_format: str = "MMM D"
-    timeline_tick_label_format: str = "MMM D"
-    # Distance from a tick mark's tip to its date label, in points. None
-    # falls back to 1.5 label heights. Mirrors a tick band's ``label_gap``;
-    # without it the built-in month ticks could only be moved by changing
-    # timeline.axis_width, which resizes the tick marks as well.
-    timeline_tick_label_gap: float | None = None
-    # The whole distance from the axis to the label, tick length included.
-    # Wins over the gap when both are set, like a band's label_offset_y.
-    timeline_tick_label_offset_y: float | None = None
-    timeline_today_date: str = ""
-    timeline_today_label_text: str = "Today"
-    timeline_today_label_offset_y: float = 10.0
-    timeline_today_line_color: str = "grey"
-    # Length of the today line in points (0 = full available area height).
-    timeline_today_line_length: float = 0.0
-    # Which side of the timeline axis the today line extends to.
-    # "above" = from axis upward, "below" = from axis downward, "both" = both directions.
-    timeline_today_line_direction: str = "both"
-    timeline_marker_stroke_color: str = "black"
-    timeline_marker_stroke_width: float = 1.0
-    timeline_marker_radius: float = 6
-    timeline_icon_size: float = 8.0
     # Extra padding (pts) added between the timeline axis and the bottom of
     # event callouts above the axis. Use this to push events away from tick
     # labels. Stacks on top of callout_offset_y / min-callout-offset.
-    timeline_duration_offset_y: float = 44.0
-    timeline_duration_lane_gap_y: float = 8.0
-    timeline_duration_icon_visible: bool = False
-    timeline_name_text_font_size: float | None = None
-    timeline_notes_text_font_size: float | None = None
     # Timeline box/date fields (not renamed — not event name/notes text)
-    timeline_event_box_width: float | None = None
-    timeline_event_box_height: float | None = None
-    timeline_duration_box_width: float | None = None
     # Share of a duration bar's width given to each of its two side columns
     # (icon over start date, overflow mark over end date). None follows
     # timeline_event_icon_column_ratio, so the two kinds of box line up
     # without a theme saying so twice.
-    timeline_duration_icon_column_ratio: float | None = None
-    timeline_duration_box_height: float | None = None
     # How point-event callouts are placed. "packed" lays them on a grid of
     # rows with each box's leading edge on its own start date; "labella"
     # keeps the force-solved placement that centres a box on its date.
-    timeline_event_placement: str = "packed"
     # Packed placement only. None follows timeline_labella_layer_gap, so a
     # theme that tuned the labella gap does not have to restate it.
-    timeline_event_row_gap: float | None = None
-    timeline_event_box_gap: float = 2.0
     # Inner border kept clear inside a callout box, all four sides.
-    timeline_event_box_pad: float = 2.0
     # Share of a callout box's inner width given to the icon / date column;
     # the name and notes get the rest.
-    timeline_event_icon_column_ratio: float = 0.15
     # How many leading WBS segments group chart items: 2 makes NP.3.S1.4 and
     # NP.3.S2.1 both "NP.3", so a phase's events, milestones and duration
     # bars share one color and its bars sort together. 0 disables grouping —
     # each layout cycles its own palette per item, as before.
-    timeline_wbs_group_depth: int = 2
-    timeline_duration_date_font_size: float | None = None
-    timeline_label_fill_opacity: float = 0.25
-    timeline_top_colors: list[str] = field(
-        default_factory=lambda: [
-            "deepskyblue",
-            "gold",
-            "tomato",
-            "springgreen",
-            "lightskyblue",
-        ]
-    )
-    timeline_bottom_colors: list[str] = field(
-        default_factory=lambda: [
-            "midnightblue",
-            "springgreen",
-            "deepskyblue",
-            "gold",
-            "tomato",
-        ]
-    )
-    # Fiscal period/quarter bands in timeline header (requires --fiscal)
-    timeline_show_fiscal_periods: bool = False
-    timeline_show_fiscal_quarters: bool = False
 
-    # Timebands rendered above/below the timeline axis — left/right of a
-    # vertical one, where a band's row_height is read as its column width.
-    # Each band is a dict accepted by shared.timeband.build_segments(); see
-    # blockplan / compactplan for examples. Empty list = no bands and no
-    # space reserved for them.
-    timeline_top_time_bands: list = field(default_factory=list)
-    timeline_bottom_time_bands: list = field(default_factory=list)
-
-    # Tick mark frequency along the timeline axis. Same dict shape as a single
-    # entry in *_time_bands (any unit accepted by shared.timeband.build_segments).
-    # Accepts a single dict or a list of dicts — every entry draws onto the same
-    # timeline axis, so callers can stack a coarse band (e.g. months with bold
-    # ticks and labels) over a finer band (e.g. weeks with thin unlabelled ticks).
-    # None = legacy month-start ticks.
-    timeline_ticks: dict | list | None = None
-
-    # Government holiday icons rendered in a row below the timeline axis,
-    # one icon per holiday date positioned at that date's x-coordinate.
-    timeline_show_holiday_icons: bool = True
-    timeline_holiday_icon_size: float = 10.0
-    timeline_holiday_icon_color: str | None = None  # None = leave icon's native colors
-    timeline_holiday_icon_y_offset: float = 4.0  # gap below axis_y to icon top
-
-    # Date label drawn under each holiday icon, so a reader can name the day
-    # the icon sits on without counting axis ticks.
-    timeline_show_holiday_dates: bool = True
-    # None = follow timeline_date_format.
-    timeline_holiday_date_format: str | None = None
-    # None = size relative to the icon (see _holiday_date_font_size()).
-    timeline_holiday_date_font_size: float | None = None
-    # None = follow the ec-holiday-date element color.
-    timeline_holiday_date_color: str | None = None
-
-    # ---- labella-driven label placement ----
-    # Axis orientation. "horizontal" → axis runs left-to-right, labels above
-    # (primary) or below (secondary). "vertical" → axis runs top-to-bottom,
-    # labels right (primary) or left (secondary).
-    timeline_orientation: str = "horizontal"
     # Which side(s) of the axis labels appear on. "primary" / "secondary" /
     # "both"; meaning depends on `timeline_orientation` (see above).
-    timeline_label_side: str = "primary"
     # Which side a vertical axis's duration bars stack on. "opposite" (the
     # default) puts them across the axis from the event callouts, the way a
     # horizontal timeline reads with callouts above and bars below; the
     # concrete sides pin them regardless of where the callouts went.
     # Ignored on a horizontal axis, where bars are always below.
-    timeline_duration_side: str = "opposite"
     # Vertical (or horizontal, for vertical orientation) gap between label
     # rows when labella stacks overlapping labels onto multiple layers.
-    timeline_labella_layer_gap: float = 8.0
     # Label-row thickness used by labella's Renderer.layout() to position
     # successive layers away from the axis.
-    timeline_labella_node_height: float = 24.0
     # Force density (0.0–1.0); higher → tighter packing, may oscillate at
     # extremes. Passed to labella.Force as the 'density' option.
-    timeline_labella_density: float = 0.75
-    # Override the labella minPos/maxPos constraints (in axis-local units).
-    # None → defaults to the axis bounds (axis_left/axis_top → axis_right/
-    # axis_bottom) at render time.
-    # Straight perpendicular segments at each end of a callout leader, in
-    # points. labella's bezier leaves the axis dot and arrives at the box at
-    # a shallow angle; a short straight stub makes both ends meet their
-    # anchor square-on, the same treatment PIT gives its leaders. 0 disables.
-    # Route each callout leader straight from its axis dot to its own box.
-    # False restores labella's own routing, which threads a leader through
-    # the solved position of every ancestor stub — one curve-and-line pair
-    # per row, all funnelled through the same channel and crossing the boxes
-    # between.
-    timeline_leader_direct: bool = True
-    timeline_leader_start_stub: float = 4.0
-    timeline_leader_end_stub: float = 4.0
-    timeline_labella_min_pos: float | None = None
-    timeline_labella_max_pos: float | None = None
 
-    # =========================================================================
-    # PIT (Points in Time) visualizer config
-    # =========================================================================
-    # Axis direction. Renamed from --orientation (which is page orientation)
-    # to --direction to avoid collision.
-    pit_direction: str = "horizontal"  # "horizontal" | "vertical"
-    pit_label_side: str = "both"  # "primary" | "secondary" | "both"
-    # Tick granularity uses the project-wide timeband units.
-    pit_tick_unit: str = "month"  # month|week|fiscal_quarter|fiscal_period|interval|date|year
-    pit_tick_interval: int = 1  # for unit == "interval"
-    pit_tick_label_format: str | None = None
-    pit_show_ticks: bool = True  # draw axis ticks at all
-    pit_tick_length: float = 5.0  # half-length of each tick mark (each side of axis)
-    pit_show_tick_labels: bool = True  # draw the per-segment tick label
-    # Multiple tick bands (mirrors ``timeline_ticks``). When set, this
-    # overrides the single-band scalar fields above and draws one row of
-    # ticks per band. Accepts a dict (one band) or a list of dicts. Per-band
-    # keys: unit, interval_days, label_format, show_labels, tick_length,
-    # tick_color, tick_width, tick_opacity, tick_dasharray, label_color,
-    # label_font_size/font_size, font, label_opacity, label_offset/label_gap,
-    # max_label_count, label_align, label_side. ``label_side`` pins the band's
-    # labels to a side of the axis ("above"/"below" horizontal, "left"/"right"
-    # vertical, or "primary"/"secondary"); default follows the callout side.
-    pit_ticks: dict | list | None = None
-
-    pit_show_today_line: bool = True
-    pit_today_date: str | None = None  # YYYYMMDD; None → real today
-    pit_today_line_label: str = "today"  # "" suppresses the label
-
-    pit_marker_size: float = 7.0
-    pit_dot_radius: float = 4.0
-    pit_axis_stroke_width: float = 1.0
-    pit_date_format: str = "MMM D"
-    pit_date_text_offset: float = 6.0
     # Where the event date is drawn:
     #   "inline" — as a line inside the label box (with name/notes); the
     #              box grows to fit. Dates inherit the boxes' collision-free
@@ -809,7 +311,6 @@ class CalendarConfig:
     #   "axis"   — on the opposite side of the axis at the marker. The
     #              "ruler tick" look, but dates collide when events cluster.
     #   "none"   — suppress the date entirely.
-    pit_date_placement: str = "inline"
 
     # Label-box icons (DB icon names; None = no icon).
     # The PIT axis marker is ALWAYS a built-in shape (circle for events,
@@ -818,39 +319,13 @@ class CalendarConfig:
     # on the same baseline as the event name and to its left. They
     # apply when the event has no per-event ``Icon`` column value and
     # no matched style rule supplied a ``marker_icon`` override.
-    pit_default_event_icon: str | None = None
-    pit_default_milestone_icon: str | None = None
 
     # Label-icon sizing. ``size`` defaults to the name font size so the
     # glyph fits cleanly on the name baseline; ``gap`` is the horizontal
     # space (points) between the icon's right edge and the start of the
     # name text.
-    pit_label_icon_size: float | None = None
-    pit_label_icon_gap: float = 4.0
-
-    # Leader stroke defaults (per-rule / per-side may override)
-    pit_leader_stroke_width: float = 0.75
-    pit_leader_stroke_dasharray: str | None = None
-    pit_leader_stroke_opacity: float = 1.0
-    pit_leader_stroke_linecap: str = "round"
-    pit_leader_stroke_linejoin: str = "round"
-    # Length (points) of the straight perpendicular segment at the box end
-    # of each leader. labella's bezier arrives at the box at a shallow
-    # angle while an orient="auto" arrowhead points perpendicular, leaving
-    # the head visually detached. A short straight perpendicular stub gives
-    # the arrowhead a genuinely perpendicular segment to sit on. 0 disables.
-    pit_leader_end_stub: float = 6.0
-    # Same idea on the axis side: a straight perpendicular stub at the dot
-    # so a marker_start with orient="auto" sits flush on the leader. 0
-    # disables.
-    pit_leader_start_stub: float = 6.0
 
     # Label box defaults
-    pit_label_stroke_width: float = 0.5
-    pit_label_fill_opacity: float = 0.0  # 0 = no fill (transparent box)
-    pit_label_corner_radius: float = 2.0
-    pit_label_padding_x: float = 6.0
-    pit_label_padding_y: float = 3.0
     # Where, along the axis, the leader meets the label box.
     #   "center" — leader joins the middle of the box (default; matches
     #              labella's centered overlap model, so boxes never collide)
@@ -858,28 +333,8 @@ class CalendarConfig:
     #   "end"    — leader joins the trailing edge (bottom/right) of the box
     # "start"/"end" can overlap on dense timelines because labella reserves
     # space centered on the marker; "center" is the collision-free choice.
-    pit_leader_label_anchor: str = "center"
-
-    # SVG markers — each slot has its own kind + size, independently.
-    pit_axis_marker_start: str = "none"
-    pit_axis_marker_start_size: float = 4.0
-    pit_axis_marker_end: str = "arrow-head"
-    pit_axis_marker_end_size: float = 6.0
-
-    pit_leader_marker_start: str = "none"
-    pit_leader_marker_start_size: float = 3.0
-    pit_leader_marker_end: str = "arrow-head"
-    pit_leader_marker_end_size: float = 5.0
-
-    pit_today_line_marker_start: str = "none"
-    pit_today_line_marker_start_size: float = 4.0
-    pit_today_line_marker_end: str = "none"
-    pit_today_line_marker_end_size: float = 6.0
 
     # Labella tuning (PIT-local copies so timeline and PIT can diverge)
-    pit_labella_layer_gap: float = 8.0
-    pit_labella_node_height: float = 24.0
-    pit_labella_density: float = 0.75
 
     # Theme overrides (None → use module defaults). All color slots accept
     # CSS / hex / "palette:NAME:INDEX" via _resolve_palette_overrides.
@@ -891,288 +346,31 @@ class CalendarConfig:
     # the gantt duration-bar fill. All three were inlined as `or "<literal>"`
     # fallbacks in their renderers until 2026-09-18.
     nonworkday_fill_color: str = "#333333"
-    gantt_bar_fill_color: str = "#888888"
 
-    pit_axis_color: str = "#333333"
-    pit_tick_color: str = "#666666"
-    pit_leader_color: str = "#555555"
-    pit_dot_color: str = "#2d5fae"
-    pit_milestone_color: str = "#c0392b"
-    pit_label_stroke_color: str = "#444444"
-    pit_name_text_color: str = "#1b1f24"
-    pit_notes_text_color: str = "#5a6470"
-    pit_date_text_color: str = "#444444"
-    pit_today_line_color: str = "#c00000"
-    pit_today_line_width: float = 1.0
-    pit_today_line_opacity: float = 0.85
-
-    theme_pit_axis_color: str | None = None
-    theme_pit_tick_color: str | None = None
-    theme_pit_date_text_color: str | None = None
-    theme_pit_date_text_font_name: str | None = None
-    theme_pit_date_text_font_size: float | None = None
-    theme_pit_today_line_color: str | None = None
-    theme_pit_today_line_width: float | None = None
-    theme_pit_today_line_dasharray: str | None = None
-    theme_pit_today_line_opacity: float | None = None
-    theme_pit_today_line_linecap: str | None = None
-    theme_pit_today_line_linejoin: str | None = None
-    theme_pit_today_line_label_color: str | None = None
-    theme_pit_today_line_label_font_name: str | None = None
-    theme_pit_today_line_label_font_size: float | None = None
-    theme_pit_today_line_label_position: str | None = None  # start|middle|end
-    theme_pit_dot_color: str | None = None
-    theme_pit_milestone_color: str | None = None
-    theme_pit_leader_color: str | None = None
-    theme_pit_leader_primary_color: str | None = None
-    theme_pit_leader_secondary_color: str | None = None
-    theme_pit_label_stroke_color: str | None = None
-    theme_pit_label_fill_color: str | None = None
-    theme_pit_label_pattern: str | None = None
-    theme_pit_label_text_color: str | None = None
-    theme_pit_label_palette: str | None = None
-    theme_pit_arrow_head_color: str | None = None
     # Per-event font fields (mirror timeline_* equivalents)
-    pit_name_text_font_name: str | None = None
-    pit_name_text_font_size: float | None = None
-    pit_notes_text_font_name: str | None = None
-    pit_notes_text_font_size: float | None = None
 
-    blockplan_label_column_ratio: float = 0.16
     # Width of the time-band name cells; None = same as label_column_ratio.
-    blockplan_band_label_column_ratio: float | None = None
-    blockplan_fiscal_year_start_month: int = 10
-    blockplan_week_start: int = 0  # 0=Monday
-    blockplan_show_unmatched_lane: bool = True
-    blockplan_unmatched_lane_name: str = "Unmatched"
-    blockplan_lane_match_mode: str = "first"  # "first" or "all"
-    blockplan_palette: list[str] = field(
-        default_factory=lambda: [
-            "lightskyblue",
-            "gold",
-            "tomato",
-            "springgreen",
-            "plum",
-            "khaki",
-        ]
-    )
-    # Leading WBS segments that group duration bars: a group's bars share one
-    # blockplan_palette color and its rollups are packed in rows above the
-    # group's other bars.  0 disables grouping (event color, then priority).
-    blockplan_wbs_group_depth: int = 2
-    blockplan_top_time_bands: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {
-                "label": "Fiscal Quarter",
-                "unit": "fiscal_quarter",
-                "label_format": "FY{fy} Q{q}",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "PI",
-                "unit": "interval",
-                "interval_days": 70,
-                "prefix": "PI ",
-                "start_index": 1,
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Sprint",
-                "unit": "interval",
-                "interval_days": 14,
-                "prefix": "Sprint ",
-                "start_index": 1,
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Month",
-                "unit": "month",
-                "date_format": "MMM YYYY",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Week Number",
-                "unit": "week",
-                "label_format": "Week {week}",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Date",
-                "unit": "date",
-                "date_format": "D",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "DoW",
-                "unit": "dow",
-                "date_format": "ddd",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-        ]
-    )
-    blockplan_bottom_time_bands: list[dict[str, Any]] = field(default_factory=list)
     # Empty → no swimlanes: one unlabeled lane holds every item.
-    blockplan_swimlanes: list[dict[str, Any]] = field(default_factory=list)
-    blockplan_header_font_size: float | None = None
-    blockplan_header_label_align_h: str = "left"  # left | center | right
-    blockplan_band_font_size: float | None = None
-    blockplan_timeband_fill_color: str = "none"  # consumed by ec-band-cell BoxStyle factory
-    blockplan_timeband_fill_palette: list[str] = field(default_factory=list)
-    blockplan_timeband_fill_opacity: float = 1.0
-    # Non-workday highlighting for timeband date/dow cells.  None → disabled.
-    # Applied in priority order: federal_holiday → company_holiday → weekend.
-    blockplan_federal_holiday_fill_color: str | None = None
-    blockplan_federal_holiday_fill_opacity: float | None = None  # None → blockplan_timeband_fill_opacity
-    blockplan_company_holiday_fill_color: str | None = None
-    blockplan_company_holiday_fill_opacity: float | None = None
-    blockplan_weekend_fill_color: str | None = None
-    blockplan_weekend_fill_opacity: float | None = None
-    blockplan_federal_holiday_icon: str | None = None
-    blockplan_company_holiday_icon: str | None = None
-    blockplan_weekend_icon: str | None = None
-    blockplan_lane_label_font_size: float | None = None
-    blockplan_lane_label_align_h: str = "left"  # left | center | right
-    blockplan_lane_label_align_v: str = "middle"  # top | middle | bottom
-    blockplan_lane_label_rotation: float = 0.0  # clockwise degrees; -90 → bottom-to-top, +90 → top-to-bottom
-    blockplan_lane_split_ratio: float = (
-        0.5  # divider position within the lane (0.0–1.0); 0.0 or 1.0 = no divider, both types share the full lane
-    )
     # ── Blockplan text styling — kept survivors only (font_size + name fields).
-    blockplan_name_text_font_size: float | None = None
-    blockplan_notes_text_font_size: float | None = None
     # Blockplan event/duration date & marker fields (not renamed)
-    blockplan_event_show_date: bool = False
-    blockplan_event_date_font_size: float | None = None
-    blockplan_event_date_format: str = "YYYY-MM-DD"
-    blockplan_marker_radius: float = 2.0
-    blockplan_duration_bar_height: float = 8.0
     # Space (pt) between duration bars in adjacent rows; bars shrink below
     # duration_bar_height to keep it.  None = bars may fill 95% of the row.
-    blockplan_duration_row_gap: float | None = None
-    blockplan_duration_icon_visible: bool = False
-    blockplan_duration_show_start_date: bool = False
-    blockplan_duration_show_end_date: bool = False
-    blockplan_duration_date_format: str = "MMM D"
-    blockplan_duration_date_font_size: float | None = None
 
     # ── Gantt ─────────────────────────────────────────────────────────────────
     # Task table on the left, timescale chart on the right.  Column layout is
     # configuration rather than style, so it lives here and in the theme's
     # `gantt.columns:` section; style_rules govern only the visuals.
-    gantt_columns: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {"field": "link_ref", "header": "Ref", "width": 0.03, "render": "icon", "align": "center"},
-            {"field": "source_id", "header": "ID", "width": 0.035, "align": "right"},
-            {"field": "name", "header": "Task Name", "width": 0.215, "max_lines": 2, "indent": True},
-            {"field": "status", "header": "Status", "width": 0.045},
-            {"field": "priority", "header": "Pri", "width": 0.025, "align": "right"},
-            {"field": "wbs", "header": "WBS", "width": 0.05},
-            {"field": "rollup", "header": "Roll", "width": 0.02, "render": "icon", "align": "center"},
-            {"field": "milestone", "header": "MS", "width": 0.02, "render": "icon", "align": "center"},
-            {"field": "percent_complete", "header": "%", "width": 0.035, "align": "right", "format": "{:.0%}"},
-            {"field": "effort_text", "header": "Effort", "width": 0.045, "align": "right"},
-            {"field": "duration_text", "header": "Duration", "width": 0.045, "align": "right"},
-            {"field": "start_date", "header": "Start", "width": 0.08, "date_format": "dd MM/DD/YY"},
-            {"field": "end_date", "header": "Finish", "width": 0.08, "date_format": "dd MM/DD/YY"},
-            {"field": "resource_names", "header": "Resources", "width": 0.065, "max_lines": 1},
-            {"field": "resource_group", "header": "Group", "width": 0.055},
-            {"field": "notes", "header": "Notes", "width": 0.075, "max_lines": 2},
-            {"field": "deadline", "header": "Deadline", "width": 0.08, "date_format": "dd MM/DD/YY"},
-        ]
-    )
-    gantt_table_width_ratio: float = 0.38
-    gantt_row_height: float = 14.0
-    gantt_header_row_height: float = 18.0
-    gantt_indent_per_level: float = 8.0
-    # Timescale.  Bands use the blockplan band schema; bottom defaults to a
-    # copy of the top (see __post_init__) so a theme declaring only top bands
-    # gets a mirrored bottom axis.
-    gantt_top_time_bands: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {
-                "label": "Month",
-                "unit": "month",
-                "date_format": "MMM YYYY",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Week",
-                "unit": "week",
-                "label_format": "W{n}",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                # Country flags for the holidays on each day.  Sits closest to
-                # the chart so a flag lines up with the bars under it.  Set
-                # nonworkdays_only to hide observances that do not close the
-                # office (Groundhog Day and the like).
-                "label": "Holidays",
-                "unit": "holiday",
-                "fill_color": "none",
-                "nonworkdays_only": False,
-            },
-        ]
-    )
-    gantt_bottom_time_bands: list[dict[str, Any]] | None = None
-    gantt_band_row_height: float = 10.0
-    gantt_header_label_align_h: str = "left"  # left | center | right; a band's label_align_h wins
     # Horizontal pagination: the narrowest a day column may get before the
     # date range is split across pages.  0 disables the split, fitting the
     # whole range onto one page however thin the columns become.
-    gantt_min_day_width: float = 4.0
     # Marks.  Icon names resolve against the `icon` table.
-    gantt_milestone_icon: str = "diamond-fill"
-    gantt_deadline_icon: str = "square-fill"
-    gantt_rollup_icon: str = "check"
-    gantt_milestone_flag_icon: str = "check"
-    gantt_snapped_event_icon: str = "arrow-left-circle"
-    gantt_offchart_dep_icon: str = "crosssquare"
     # Cross-page dependency references.  Families are consumed in order, so
     # numbering survives 300 breaks before falling back to the unnumbered
     # marker above.
-    gantt_link_ref_icon_families: list[str] = field(default_factory=lambda: ["circle-", "darkcircle-", "square-"])
-    gantt_link_ref_family_size: int = 100
-    gantt_link_ref_max_icons: int = 2
-    gantt_continuation_icon: str = "arrow-bar-right"
-    gantt_bar_height: float = 8.0
-    gantt_progress_color: str = "black"
-    gantt_progress_width: float = 1.5
-    gantt_float_opacity_scale: float = 0.4
-    gantt_show_dependencies: bool = True
     # Dependency arrows are curved leaders drawn the way PIT draws its
     # callout leaders, so they take the same styling vocabulary: an SVG
     # marker that orients itself along the curve, plus stroke joins.
-    gantt_arrow_marker_end: str = "arrow-head"
-    gantt_arrow_marker_end_size: float = 6.0
-    gantt_arrow_linecap: str = "round"
-    gantt_arrow_linejoin: str = "round"
-    # Today line — mirrors the PIT semantics exactly.
-    gantt_show_today_line: bool = True
-    gantt_today_date: str | None = None
 
-    # ── Compact Activities Plan ───────────────────────────────────────────────
-    compactplan_time_bands: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {
-                "label": "Week",
-                "unit": "week",
-                "label_format": "Week {n}",
-                "fill_color": "none",
-                "alt_fill_color": "#f2f2f2",
-                "show_every": 1,
-            }
-        ]
-    )
-    compactplan_band_row_height: float = 22.0
     # ── Compact plan text styling (uniform) ──────────────────────────────────
     # Phase 2 strip — fields with no consumers post-Phase-1 dropped:
     #   text_font_color/opacity/alignment, name_text_font_color/opacity/alignment,
@@ -1183,182 +381,35 @@ class CalendarConfig:
     #   duration_icon_color, milestone_color, milestone_list_date_color,
     #   milestone_list_section_gap, continuation_section_gap, legend_area_ratio,
     #   background_color (compactplan inherits the page background).
-    compactplan_text_font_name: str | None = None
-    compactplan_text_font_size: float | None = None
-    compactplan_name_text_font_name: str | None = None
-    compactplan_name_text_font_size: float | None = None
-    compactplan_notes_text_font_name: str | None = None
-    compactplan_show_axis: bool = True
-    compactplan_axis_width: float = 1.75
-    compactplan_axis_padding: float = 4.0
-    compactplan_duration_line_width: float = 5.0
-    compactplan_lane_spacing: float = 6.0
     # Each bar is three columns: start date | icon + name | end date.  The
     # date columns are each duration_date_column_ratio of the bar's width and
     # the icon and name are fitted to the middle one.  A color left None
     # takes black or white, whichever reads against the bar.
-    compactplan_duration_show_start_date: bool = False
-    compactplan_duration_show_end_date: bool = False
-    compactplan_duration_date_format: str = "M/D"
-    compactplan_duration_date_column_ratio: float = 0.04
-    compactplan_duration_date_color: str | None = None
-    compactplan_duration_name_color: str | None = None
-    compactplan_palette: list[str] = field(
-        default_factory=lambda: [
-            "#92d050",
-            "#6b9bc7",
-            "gold",
-            "tomato",
-            "plum",
-            "khaki",
-            "deepskyblue",
-            "coral",
-            "mediumseagreen",
-            "mediumpurple",
-        ]
-    )
-    compactplan_milestone_icon: str | None = None
-    compactplan_milestone_flag_width: float = 7.0
-    compactplan_milestone_flag_height: float = 9.0
-    compactplan_show_milestone_labels: bool = True
-    compactplan_header_bottom_y: float | None = None
 
     # ── Continuation icon ─────────────────────────────────────────────────────
     # The global continuation_icon_after / _color / _height fields drive the
     # compactplan continuation icon (the line only clips on its "after" end).
     # What its symbols mean -- listed in the run's details document -- is
     # compactplan-specific.
-    compactplan_continuation_legend_text: str = "activity continues"
-    compactplan_continuation_before_legend_text: str = "activity began earlier"
-    compactplan_show_axis_legend: bool = True  # explain the axis among the document's symbols
-    compactplan_legend_axis_text: str = "timeline"  # meaning beside the axis sample
-
-    # Non-workday highlighting for date/dow timeband cells.  None → disabled.
-    # Applied in priority order: federal_holiday → company_holiday → weekend.
-    compactplan_federal_holiday_fill_color: str | None = None
-    compactplan_federal_holiday_fill_opacity: float | None = None
-    compactplan_company_holiday_fill_color: str | None = None
-    compactplan_company_holiday_fill_opacity: float | None = None
-    compactplan_weekend_fill_color: str | None = None
-    compactplan_weekend_fill_opacity: float | None = None
-    compactplan_federal_holiday_icon: str | None = None
-    compactplan_company_holiday_icon: str | None = None
-    compactplan_weekend_icon: str | None = None
-
-    # ── ExcelBlockplan ────────────────────────────────────────────────────────
-    # Settings for the excelblockplan subcommand (Excel workbook output).
-    excelblockplan_font: str = "Calibri"  # System-installed Excel font for all cells
-    excelblockplan_font_size: int = 9  # Font size in points
-    excelblockplan_top_time_bands: list[dict[str, Any]] = field(
-        default_factory=lambda: [
-            {
-                "label": "Fiscal Quarter",
-                "unit": "fiscal_quarter",
-                "label_format": "FY{fy} Q{q}",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "PI",
-                "unit": "interval",
-                "interval_days": 70,
-                "prefix": "PI ",
-                "start_index": 1,
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Sprint",
-                "unit": "interval",
-                "interval_days": 14,
-                "prefix": "Sprint ",
-                "start_index": 1,
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Month",
-                "unit": "month",
-                "date_format": "MMM YYYY",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Week Number",
-                "unit": "week",
-                "label_format": "Week {week}",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "Date",
-                "unit": "date",
-                "date_format": "D",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-            {
-                "label": "DoW",
-                "unit": "dow",
-                "date_format": "ddd",
-                "fill_color": "none",
-                "show_every": 1,
-            },
-        ]
-    )
-    excelblockplan_vertical_lines: list[dict[str, Any]] = field(default_factory=list)
-    excelblockplan_vertical_line_color: str = "red"
-    excelblockplan_vertical_line_width: float = 1.5
-    excelblockplan_band_row_height: float = 18.0
-    excelblockplan_header_heading_fill_color: str = "none"
-    excelblockplan_header_label_color: str = "black"
-    excelblockplan_header_label_align_h: str = "right"  # left | center | right
-    excelblockplan_timeband_fill_color: str = "none"
-    excelblockplan_timeband_fill_palette: list[str] = field(default_factory=list)
-    excelblockplan_timeband_label_color: str = "black"
-    # Non-workday highlighting for the day columns.  None → fall
-    # back to the global `theme_federal_holiday_color` / `theme_company_holiday_color`
-    # so the existing behaviour is preserved when a theme does not opt in.
-    excelblockplan_federal_holiday_fill_color: str | None = None
-    excelblockplan_company_holiday_fill_color: str | None = None
-    excelblockplan_weekend_fill_color: str | None = None
 
     # Default icon shown when an event's icon name cannot be found in the icons table
-    default_missing_icon: str | None = None
     # Drawn size of that stand-in glyph, in points. None keeps it the size of
     # whatever it replaces — the icon the caller asked for, or the mark the
     # visualizer would have drawn — which is right when the substitute should
     # sit in the same hole, and wrong when it should be conspicuous.
-    default_missing_icon_size: float | None = None
     # Ink for that stand-in. It marks a data problem — an event naming an icon
     # the icons table does not have — so it defaults to an alert colour rather
     # than inheriting the ink of whatever it replaced, which would let the
     # substitution pass unnoticed. Set `base.default_missing_icon_color` in a
     # theme to tune it.
-    default_missing_icon_color: str = "red"
 
     # Watermark text
-    watermark_text: str = ""
-    watermark_font: str = "CascadiaCode"
-    watermark_font_size: int | None = None
-    watermark_resize_mode: str = "fit"  # "fit" (default) or "stretch"
-    watermark_opacity: float = 0.3
-    watermark_rotation_angle: float = 0.0
 
     # Watermark image
-    watermark_image: str = ""
     watermark_image_width: int = 300
     watermark_image_height: int = 300
-    watermark_image_rotation_angle: float = 0.0
 
     # Theme-overridable color maps (None = use module-level defaults)
-    theme_fiscal_period_colors: dict[str, str] | None = None
-    theme_month_colors: dict[str, str] | None = None
-    theme_hash_line_color: str | None = None
-    theme_weekly_hash_pattern: str | None = None
-    # Unified rule lists (style_rules / swimlane_rules from theme YAML)
-    theme_style_rules: list[dict[str, Any]] | None = None
-    theme_swimlane_rules: list[dict[str, Any]] | None = None
 
     # Global item-placement/sort order, honored by every visualizer that
     # places or orders event data (weekly day boxes, blockplan swimlanes,
@@ -1372,62 +423,12 @@ class CalendarConfig:
     #   "alphabetical" -- sort by lowercased task_name.
     #   any other string -- an Event field name (via resolve_field).
     #   a dict -- arbitrary event-selection criteria (same vocabulary as
-    #     style_rules/swimlane_rules' select:), matches sort first.
+    #     style_rules' select:), matches sort first.
     # Example: [{"resource_group": "Executive"}, "milestones", "priority"]
-    item_placement_order: list[str | dict[str, Any]] = field(default_factory=lambda: ["wbs", "start_date"])
-    theme_federal_holiday_color: str | None = None
-    theme_federal_holiday_opacity: float | None = None
-    theme_company_holiday_color: str | None = None
-    theme_company_holiday_opacity: float | None = None
 
     # DB palette names — resolved at render time from calendar.db palettes table
-    theme_month_palette: str | None = None
-    theme_fiscal_palette: str | None = None
-    theme_group_palette: str | None = None
-    theme_timeline_palette: str | None = None
-    theme_blockplan_palette_name: str | None = None
-    theme_compactplan_palette_name: str | None = None
 
     # Group colors for event categorization
-    group_colors: list = field(
-        default_factory=lambda: [
-            "bisque",
-            "skyblue",
-            "lawngreen",
-            "cyan",
-            "purple",
-            "silver",
-            "burlywood",
-            "cornsilk",
-            "goldenrod",
-            "plum",
-            "slategrey",
-            "yellowgreen",
-            "linen",
-            "gold",
-            "plum",
-            "orchid",
-            "chocolate",
-            "brown",
-            "maroon",
-            "indigo",
-            "lime",
-            "forestgreen",
-        ]
-    )
-
-    def get_gantt_bottom_bands(self) -> list[dict[str, Any]]:
-        """The Gantt's bottom time bands, mirroring the top when unset.
-
-        ``gantt_bottom_time_bands`` stays ``None`` until a theme declares
-        ``gantt.bottom_bands``, so "unset" survives theme application and
-        the mirror reflects the theme's *own* top bands rather than the
-        dataclass defaults.  Deep-copied so per-band edits made while
-        drawing one axis cannot reach the other.
-        """
-        if self.gantt_bottom_time_bands is None:
-            return copy.deepcopy(self.gantt_top_time_bands)
-        return self.gantt_bottom_time_bands
 
     def __post_init__(self) -> None:
         """Validate configuration invariants after construction."""
@@ -1435,51 +436,6 @@ class CalendarConfig:
             raise ValueError(f"weekend_style must be 0–4, got {self.weekend_style}")
         if self.mini_columns < 1:
             raise ValueError(f"mini_columns must be >= 1, got {self.mini_columns}")
-        if self.hash_pattern_target_size < 0:
-            raise ValueError(
-                f"hash_pattern_target_size must be >= 0 (0 disables auto-normalization), "
-                f"got {self.hash_pattern_target_size}"
-            )
-        if self.hash_pattern_scale <= 0:
-            raise ValueError(f"hash_pattern_scale must be > 0, got {self.hash_pattern_scale}")
-        if self.timeline_orientation not in ("horizontal", "vertical"):
-            raise ValueError(
-                f"timeline_orientation must be 'horizontal' or 'vertical', got {self.timeline_orientation!r}"
-            )
-        if self.timeline_label_side not in ("primary", "secondary", "both"):
-            raise ValueError(
-                f"timeline_label_side must be 'primary', 'secondary', or 'both', got {self.timeline_label_side!r}"
-            )
-        if self.timeline_duration_side not in ("opposite", "primary", "secondary", "both"):
-            raise ValueError(
-                f"timeline_duration_side must be 'opposite', 'primary', "
-                f"'secondary', or 'both', got {self.timeline_duration_side!r}"
-            )
-        if self.timeline_event_placement not in ("packed", "labella"):
-            raise ValueError(
-                f"timeline_event_placement must be 'packed' or 'labella', got {self.timeline_event_placement!r}"
-            )
-        if self.pit_direction not in ("horizontal", "vertical"):
-            raise ValueError(f"pit_direction must be 'horizontal' or 'vertical', got {self.pit_direction!r}")
-        if self.pit_label_side not in ("primary", "secondary", "both"):
-            raise ValueError(f"pit_label_side must be 'primary', 'secondary', or 'both', got {self.pit_label_side!r}")
-        if self.pit_leader_label_anchor not in ("start", "center", "end"):
-            raise ValueError(
-                f"pit_leader_label_anchor must be 'start', 'center', or 'end', got {self.pit_leader_label_anchor!r}"
-            )
-        if self.pit_date_placement not in ("inline", "axis", "none"):
-            raise ValueError(f"pit_date_placement must be 'inline', 'axis', or 'none', got {self.pit_date_placement!r}")
-        _pit_tick_units = {
-            "month",
-            "week",
-            "fiscal_quarter",
-            "fiscal_period",
-            "interval",
-            "date",
-            "year",
-        }
-        if self.pit_tick_unit not in _pit_tick_units:
-            raise ValueError(f"pit_tick_unit must be one of {sorted(_pit_tick_units)}, got {self.pit_tick_unit!r}")
         if self.weekend_days is not None:
             if not isinstance(self.weekend_days, list) or not all(
                 isinstance(d, int) and 0 <= d <= 6 for d in self.weekend_days
@@ -1487,53 +443,6 @@ class CalendarConfig:
                 raise ValueError(f"weekend_days must be a list of ints 0–6 (ISO weekday), got {self.weekend_days!r}")
             if len(set(self.weekend_days)) != len(self.weekend_days):
                 raise ValueError(f"weekend_days must not contain duplicates, got {self.weekend_days!r}")
-        if not isinstance(self.item_placement_order, list) or not self.item_placement_order:
-            raise ValueError(
-                f"item_placement_order must be a non-empty list of placement tokens, got {self.item_placement_order!r}"
-            )
-        # Deferred import: shared/__init__.py pulls in shared.date_utils,
-        # which imports config.config -- importing shared.rule_engine at
-        # module load time would be circular, so it's done here instead.
-        from shared.rule_engine import EVENT_CRITERIA_KEYS
-
-        for _token in self.item_placement_order:
-            if isinstance(_token, dict):
-                _bad_keys = [k for k in _token if k not in EVENT_CRITERIA_KEYS]
-                if _bad_keys:
-                    raise ValueError(
-                        f"item_placement_order criteria token has unrecognized keys {_bad_keys!r}; "
-                        f"valid criteria keys are {sorted(EVENT_CRITERIA_KEYS)}"
-                    )
-            elif not isinstance(_token, str) or not _token.strip():
-                raise ValueError(
-                    f"item_placement_order tokens must be non-empty strings or criteria dicts, got {_token!r}"
-                )
-            # Any other string is a field token (resolved via resolve_field at
-            # sort time); unknown field names degrade to a no-op, so no
-            # closed-set check is applied here.
-        if self.blockplan_lane_match_mode not in {"first", "all"}:
-            raise ValueError(
-                f"blockplan_lane_match_mode must be 'first' or 'all', got {self.blockplan_lane_match_mode!r}"
-            )
-        if self.blockplan_lane_label_align_h not in {"left", "center", "right"}:
-            raise ValueError(
-                "blockplan_lane_label_align_h must be 'left', 'center', or 'right', "
-                f"got {self.blockplan_lane_label_align_h!r}"
-            )
-        if self.blockplan_lane_label_align_v not in {"top", "middle", "bottom"}:
-            raise ValueError(
-                "blockplan_lane_label_align_v must be 'top', 'middle', or 'bottom', "
-                f"got {self.blockplan_lane_label_align_v!r}"
-            )
-        if self.gantt_header_label_align_h not in {"left", "center", "right"}:
-            raise ValueError(
-                f"gantt_header_label_align_h must be 'left', 'center', or 'right', got {self.gantt_header_label_align_h!r}"
-            )
-        if self.blockplan_header_label_align_h not in {"left", "center", "right"}:
-            raise ValueError(
-                "blockplan_header_label_align_h must be 'left', 'center', or 'right', "
-                f"got {self.blockplan_header_label_align_h!r}"
-            )
 
     def get_weekend_days(self) -> frozenset[int]:
         """Resolve weekend days (ISO weekday 0=Mon..6=Sun).
@@ -1553,11 +462,13 @@ class CalendarConfig:
     # ``style_rules`` theme loaded, the built-in catalog defaults.
 
     def _styles(self) -> Any:
-        if self.theme_styles is not None:
-            return self.theme_styles
-        from config.theme_engine import builtin_theme_styles
+        key = (id(self.theme_v3), self.papersize)
+        if self.theme_styles is None or self.theme_styles_key != key:
+            from config import role_styles
 
-        return builtin_theme_styles()
+            self.theme_styles = role_styles.theme_styles(self.theme_v3, self.papersize)
+            self.theme_styles_key = key
+        return self.theme_styles
 
     def get_text_style(self, element_class: str) -> Any:
         """Look up the TextStyle bound to a CSS element class."""
@@ -1938,313 +849,27 @@ def resolve_page_margins(config: CalendarConfig) -> dict[str, float]:
     }
 
 
-# Phase 2 wave 2 — heuristic-token injection map.
-#
-# Each entry is ``(token, visualizer, legacy_field_name)``.
-# `_inject_heuristic_size_tokens` walks this list after the second
-# `theme_engine.apply()` and synthesizes a `text:<name>` rule for every
-# token whose resolved style lacks `size:` in the current ctx, using the
-# value setfontsizes() already wrote into ``legacy_field_name``.
-#
-# The result: `theme.resolve_token("text:foo", {visualizer, papersize})`
-# always returns a numeric `size:`, so renderers can drop their
-# `tk.get("size") or config.<legacy>` fallback chain.
-_HEURISTIC_TOKEN_FIELDS: tuple[tuple[str, str | None, str], ...] = (
-    # Weekly text sizes (token reads via tk_*.get("size") in
-    # visualizers/weekly/renderer.py).
-    ("text:week_number", "weekly", "week_number_font_size"),
-    ("text:label", "weekly", "day_name_font_size"),
-    ("text:day_number", "weekly", "day_box_number_font_size"),
-    ("text:event_name", "weekly", "weekly_name_text_font_size"),
-    ("text:event_notes", "weekly", "weekly_notes_text_font_size"),
-    # Fiscal label is shared between weekly and mini — no visualizer ctx.
-    ("text:fiscal_label", None, "fiscal_period_label_font_size"),
-    # Mini.
-    ("text:day_number", "mini", "mini_cell_font_size"),
-    ("text:month_title", "mini", "mini_title_font_size"),
-    ("text:label", "mini", "mini_header_font_size"),
-    ("text:week_number", "mini", "mini_week_number_font_size"),
-    # Timeline.
-    ("text:event_name", "timeline", "timeline_name_text_font_size"),
-    ("text:event_notes", "timeline", "timeline_notes_text_font_size"),
-    # Blockplan.
-    ("text:heading", "blockplan", "blockplan_header_font_size"),
-    ("text:band_label", "blockplan", "blockplan_band_font_size"),
-    ("text:swimlane_label", "blockplan", "blockplan_lane_label_font_size"),
-    ("text:event_name", "blockplan", "blockplan_name_text_font_size"),
-    ("text:event_notes", "blockplan", "blockplan_notes_text_font_size"),
-    ("text:event_date", "blockplan", "blockplan_event_date_font_size"),
-    ("text:duration_date", "blockplan", "blockplan_duration_date_font_size"),
-)
-
-
-def _inject_heuristic_size_tokens(config: CalendarConfig) -> None:
-    """Inject synthesized ``text:<name>`` rules into ``config.theme.rules``
-    for every entry in :data:`_HEURISTIC_TOKEN_FIELDS` whose token doesn't
-    already define ``size:`` for the current ctx.
-
-    Called from :py:meth:`ThemeEngine.apply` right after
-    ``config.theme = parse_theme(...)``, and again at the end of
-    :py:func:`setfontsizes` so test fixtures that skip the theme-engine
-    boot sequence still get a populated token registry.  The heuristic
-    value comes from ``getattr(config, legacy_field_name)``, which
-    setfontsizes() populated earlier.
-
-    When ``config.theme`` is None (no theme was loaded), creates a
-    minimal :py:class:`UnifiedTheme` to hold the synthesized rules
-    so renderers can read ``tk.get("size")`` without falling back.
-
-    No-op for tokens that already resolve to a numeric ``size:``
-    (theme-defined or previously injected).
-    """
-    from config.unified_theme import Rule, UnifiedTheme, _build_token_index
-
-    theme = getattr(config, "theme", None)
-    if theme is None:
-        # Bootstrap a stub theme so test fixtures (which call setfontsizes
-        # but never theme_engine.apply) still populate the token registry
-        # with heuristic sizes.  Real boots overwrite config.theme via
-        # ThemeEngine.apply() before any rendering.
-        theme = UnifiedTheme(sections={}, rules=[])
-        config.theme = theme
-
-    papersize = str(getattr(config, "papersize", "") or "")
-    new_rules: list[Rule] = []
-    for token, visualizer, field_name in _HEURISTIC_TOKEN_FIELDS:
-        ctx: dict[str, str] = {}
-        if papersize:
-            ctx["papersize"] = papersize
-        if visualizer:
-            ctx["visualizer"] = visualizer
-        if (theme.resolve_token(token, ctx) or {}).get("size") is not None:
-            continue
-        value = getattr(config, field_name, None)
-        if value is None:
-            continue
-        try:
-            size_val = float(value)
-        except (TypeError, ValueError):
-            continue
-        select: dict[str, str] = {}
-        if papersize:
-            select["papersize"] = papersize
-        if visualizer:
-            select["visualizer"] = visualizer
-        new_rules.append(
-            Rule(
-                name=f"setfontsizes heuristic: {token}" + (f" (visualizer={visualizer})" if visualizer else ""),
-                define=None,
-                as_name=None,
-                apply_to=(token,),
-                select=select,
-                style={"size": size_val},
-            )
-        )
-    if not new_rules:
-        return
-    theme.rules.extend(new_rules)
-    theme._token_index = _build_token_index(theme.rules)
-
-
-def _theme_size(
-    config: CalendarConfig,
-    token: str,
-    *,
-    visualizer: str | None = None,
-) -> float | None:
-    """Return the unified-theme ``size:`` for *token* if defined, else None.
-
-    Resolved against ``config.theme`` with a context that always carries
-    ``papersize`` and (when supplied) ``visualizer``, so themes can scope
-    size rules with ``select: { papersize: tabloid }`` or
-    ``select: { visualizer: weekly }``.  Returns ``None`` when no theme is
-    loaded, the token isn't defined, or its resolved style bag has no
-    numeric ``size:``.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is None:
-        return None
-    ctx: dict[str, str] = {}
-    papersize = getattr(config, "papersize", None)
-    if papersize:
-        ctx["papersize"] = str(papersize)
-    if visualizer:
-        ctx["visualizer"] = visualizer
-    style = theme.resolve_token(token, ctx) or {}
-    raw = style.get("size")
-    if raw is None:
-        return None
-    try:
-        return float(raw)
-    except (TypeError, ValueError):
-        return None
-
-
 def setfontsizes(config: CalendarConfig) -> CalendarConfig:
-    """
-    Set font sizes using page-dimension-derived formulas, with unified-theme
-    token sizes taking precedence when defined.
+    """Set the page-layout ratios (margins, header, footer, day names, colour key) and the
+    header and footer text sizes, which follow the page height.
 
-    For every field that has a unified-theme analogue, the corresponding
-    ``text:<name>`` token is consulted first via :func:`_theme_size`; the
-    token's ``size:`` wins when set.  Otherwise the page-height heuristic
-    runs unchanged — proportional to ``pageY`` with min/max clamps that
-    keep text readable across paper sizes.  Page-chrome fields
-    (header / footer / watermark / blockplan_header) have no token analogue
-    and always use the heuristic.
-
-    Args:
-        config: Calendar configuration to update
+    Every other text size is the theme's ``text`` role, scaled by paper size with
+    the role's ``size_by_paper``.
 
     Returns:
-        The same config instance with font sizes set
+        The same config instance.
     """
-    h = config.pageY
-
-    def _size(token: str, fallback: float, *, visualizer: str | None = None) -> float:
-        sz = _theme_size(config, token, visualizer=visualizer)
-        return fallback if sz is None else sz
-
-    # Layout percentages (fixed ratios, work for all sizes)
     config.margin_percent = 0.05
     config.color_key_percent = 0.15
     config.header_percent = 0.020
     config.footer_percent = 0.018
     config.day_name_percent = 0.02
 
-    # Font sizes — proportional to page height, with optional theme-selected
-    # desired base size (event text) that scales all related sizes.
-    base_event_size = _clamp(h * 0.009, 6.0, 32.0)
-    scale = 1.0
-    if config.desired_font_size is not None:
-        desired = float(config.desired_font_size)
-        # Reference desired size on Letter-height pages and scale with page height.
-        target_event_size = _clamp(desired * (h / 792.0), 6.0, 32.0)
-        if base_event_size > 0:
-            scale = target_event_size / base_event_size
-
-    config.week_number_font_size = _size(
-        "text:week_number",
-        _clamp(_clamp(h * 0.01, 6.0, 32.0) * scale, 6.0, 32.0),
-        visualizer="weekly",
-    )
-    config.day_name_font_size = _size(
-        "text:label",
-        _clamp(_clamp(h * 0.012, 6.0, 32.0) * scale, 6.0, 32.0),
-        visualizer="weekly",
-    )
-
-    # Header / footer are page chrome — no token analogue, heuristic only.
-    config.header_left_font_size = _clamp(_clamp(h * 0.013, 6.0, 32.0) * scale, 6.0, 32.0)
+    h = config.pageY
+    config.header_left_font_size = _clamp(h * 0.013, 6.0, 32.0)
     config.header_center_font_size = config.header_left_font_size
     config.header_right_font_size = config.header_left_font_size
-
-    config.footer_left_font_size = _clamp(_clamp(h * 0.010, 6.0, 32.0) * scale, 6.0, 32.0)
+    config.footer_left_font_size = _clamp(h * 0.010, 6.0, 32.0)
     config.footer_center_font_size = config.footer_left_font_size
     config.footer_right_font_size = config.footer_left_font_size
-
-    config.day_box_number_font_size = _size(
-        "text:day_number",
-        _clamp(_clamp(h * 0.013, 8.0, 32.0) * scale, 8.0, 32.0),
-        visualizer="weekly",
-    )
-
-    # Shared between weekly + mini; no visualizer ctx so a single rule applies
-    # to both unless a theme adds a per-visualizer override.
-    config.fiscal_period_label_font_size = _size(
-        "text:fiscal_label",
-        config.day_box_number_font_size * 0.7,
-    )
-
-    # Weekly text sizes
-    config.weekly_name_text_font_size = _size(
-        "text:event_name",
-        _clamp(base_event_size * scale, 6.0, 32.0),
-        visualizer="weekly",
-    )
-    config.weekly_notes_text_font_size = _size(
-        "text:event_notes",
-        config.weekly_name_text_font_size * 0.9,
-        visualizer="weekly",
-    )
-    config.event_icon_size = config.weekly_name_text_font_size
-
-    # Mini calendar font sizes
-    config.mini_cell_font_size = _size(
-        "text:day_number",
-        _clamp(_clamp(h * 0.012, 6.0, 20.0) * scale, 6.0, 20.0),
-        visualizer="mini",
-    )
-    config.mini_title_font_size = _size(
-        "text:month_title",
-        _clamp(_clamp(h * 0.014, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-    config.mini_header_font_size = _size(
-        "text:label",
-        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-    config.mini_week_number_font_size = _size(
-        "text:week_number",
-        _clamp(_clamp(h * 0.012, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="mini",
-    )
-
-    # Timeline text sizes
-    base_event = config.weekly_name_text_font_size
-    config.timeline_name_text_font_size = _size(
-        "text:event_name",
-        max(10.0, base_event + 2.0),
-        visualizer="timeline",
-    )
-    config.timeline_notes_text_font_size = _size(
-        "text:event_notes",
-        max(8.0, base_event * 0.9),
-        visualizer="timeline",
-    )
-
-    # Blockplan font sizes — header is page chrome (no token).
-    config.blockplan_header_font_size = _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0)
-    config.blockplan_band_font_size = _size(
-        "text:band_label",
-        _clamp(_clamp(h * 0.010, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="blockplan",
-    )
-    config.blockplan_lane_label_font_size = _size(
-        "text:swimlane_label",
-        _clamp(_clamp(h * 0.011, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="blockplan",
-    )
-    config.blockplan_name_text_font_size = _size(
-        "text:event_name",
-        _clamp(_clamp(h * 0.009, 6.0, 24.0) * scale, 6.0, 24.0),
-        visualizer="blockplan",
-    )
-    config.blockplan_notes_text_font_size = _size(
-        "text:event_notes",
-        config.blockplan_name_text_font_size * 0.85,
-        visualizer="blockplan",
-    )
-    config.blockplan_event_date_font_size = _size(
-        "text:event_date",
-        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
-        visualizer="blockplan",
-    )
-    config.blockplan_duration_date_font_size = _size(
-        "text:duration_date",
-        _clamp(_clamp(h * 0.008, 6.0, 20.0) * scale, 6.0, 20.0),
-        visualizer="blockplan",
-    )
-
-    # Watermark base font size (paper-size aware, theme-overridable)
-    config.watermark_font_size = round(_clamp(h * 0.10, 24.0, 256.0))
-
-    # Phase 2 wave 2: inject heuristic-derived size tokens so renderers'
-    # `tk.get("size")` reads always return a value, even from test fixtures
-    # that skip the theme_engine boot sequence.  ThemeEngine.apply() also
-    # calls this — both call sites are idempotent (already-defined tokens
-    # are skipped).
-    _inject_heuristic_size_tokens(config)
-
     return config

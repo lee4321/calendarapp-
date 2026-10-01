@@ -14,9 +14,9 @@ import re
 
 import drawsvg
 import pytest
+from band_helpers import update_theme
 
 from config.config import CalendarConfig
-from config.theme_engine import ThemeEngine
 from renderers.svg_base import BaseSVGRenderer
 
 _ICON = '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>'
@@ -94,11 +94,8 @@ def test_a_nonpositive_configured_size_is_ignored(bad):
     assert probe.last_icon_size() == pytest.approx(6.0)
 
 
-def test_the_theme_key_reaches_config():
+def test_the_theme_key_reaches_the_icon_role():
     config = CalendarConfig()
-    assert config.default_missing_icon_size is None
-
-    engine = ThemeEngine()
-    engine._theme_data = {"base": {"default_missing_icon_size": 14.0}}
-    engine.apply(config)
-    assert config.default_missing_icon_size == pytest.approx(14.0)
+    assert config.theme_v3.icons.missing.size is None
+    update_theme(config, icons={"missing": {"size": 14.0}})
+    assert config.theme_v3.icons.missing.size == pytest.approx(14.0)

@@ -9,6 +9,7 @@ and database open/validation.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,6 +18,7 @@ import arrow
 
 from cli.errors import ConfigError, DatabaseError
 from config.config import CalendarConfig
+from config.theme_paths import set_path
 from shared.db_access import CalendarDB
 
 if TYPE_CHECKING:
@@ -126,33 +128,26 @@ _DURATIONS_OPTIN_COMMANDS = frozenset({"mini", "mini-icon", "text-mini", "candyb
 #   "enable"  — store_true with default False; set the config field True.
 #   "disable" — store_true with default False; set the config field False.
 #
-# Every row is applied twice: once in _apply_args_to_config() and again in
-# _reapply_post_theme_cli_overrides() after the final theme.apply(), so an
-# explicit CLI value always beats a theme value for the same field — the
-# theme engine's documented contract.  Add new simple options here, not as
-# ad-hoc assignments, or the theme will silently win over the CLI
-# (docs/cli_theme_overrides.html, Section 2).
+# Every row is applied in _apply_args_to_config(), after the theme is loaded, so an
+# explicit CLI value always beats a theme value for the same setting.  A target
+# written ``theme:<path>`` is a value in the theme (``candybar.row_height``).
 _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     # Mini calendar
     ("mini_columns", "mini_columns", "value"),
     ("mini_rows", "mini_rows", "value"),
     # Run details (every visualization)
-    ("details_md", "include_details_markdown", "enable"),
-    ("no_details_md", "include_details_markdown", "disable"),
-    ("icons", "include_details_icons", "enable"),
-    ("no_icons", "include_details_icons", "disable"),
-    ("csv", "include_details_csv", "enable"),
-    ("no_csv", "include_details_csv", "disable"),
+    ("details_md", "theme:details.markdown.enable", "enable"),
+    ("no_details_md", "theme:details.markdown.enable", "disable"),
+    ("icons", "theme:details.icons.enable", "enable"),
+    ("no_icons", "theme:details.icons.enable", "disable"),
+    ("csv", "theme:details.csv.enable", "enable"),
+    ("no_csv", "theme:details.csv.enable", "disable"),
     # Candybar
-    ("candybar_row_height", "candybar_row_height", "value"),
-    ("candybar_cell_width", "candybar_cell_width", "value"),
-    ("candybar_max_rows_per_page", "candybar_max_rows_per_page", "value"),
-    # Timeline
-    ("timeline_direction", "timeline_orientation", "value"),
-    # PIT
-    ("direction", "pit_direction", "value"),
+    ("candybar_row_height", "theme:candybar.row_height", "value"),
+    ("candybar_cell_width", "theme:candybar.cell_width", "value"),
+    ("candybar_max_rows_per_page", "theme:candybar.max_rows_per_page", "value"),
     # Fiscal
-    ("fiscal_year_offset", "fiscal_year_offset", "value"),
+    ("fiscal_year_offset", "theme:fiscal.year_offset", "value"),
 )
 
 
@@ -164,13 +159,25 @@ def _apply_cli_config_overrides(args: Namespace, config: CalendarConfig) -> None
     theme-set values survive.  Idempotent — safe to call both before the theme
     is applied and again afterwards to restore CLI precedence.
     """
-    for arg_name, config_attr, kind in _CLI_CONFIG_OVERRIDES:
+    direction = getattr(args, "direction", None)
+    if direction:
+        # One axis direction for every axis view; it lives in the theme's timescale block.
+        axis = dataclasses.replace(config.theme_v3.timescale.axis, orientation=direction)
+        timescale = dataclasses.replace(config.theme_v3.timescale, axis=axis)
+        config.theme_v3 = dataclasses.replace(config.theme_v3, timescale=timescale)
+    for arg_name, target, kind in _CLI_CONFIG_OVERRIDES:
         if kind == "value":
             val = getattr(args, arg_name, None)
-            if val is not None:
-                setattr(config, config_attr, val)
+            if val is None:
+                continue
         elif getattr(args, arg_name, False):  # "enable" / "disable"
-            setattr(config, config_attr, kind == "enable")
+            val = kind == "enable"
+        else:
+            continue
+        if target.startswith("theme:"):
+            config.theme_v3 = set_path(config.theme_v3, target[len("theme:") :], val)
+        else:
+            setattr(config, target, val)
 
 
 def _apply_content_filters(args: Namespace, config: CalendarConfig) -> None:
@@ -237,8 +244,7 @@ def _apply_args_to_config(
                                --empty) via _apply_content_filters
     8. Simple field overrides→ mini / candybar / timeline / PIT / fiscal
                                options via _CLI_CONFIG_OVERRIDES (applied only
-                               when explicitly given, and re-asserted after
-                               the theme by _reapply_post_theme_cli_overrides)
+                               when explicitly given, after the theme loads)
     9. Fiscal calendar type  → type string + per-period colour flag
     10. Week number mode     → ISO vs. custom-anchor
 
@@ -372,42 +378,35 @@ def _apply_text_options(args: Namespace, config: CalendarConfig) -> None:
         if value:
             setattr(config, config_attr, replace_template_vars(config, value))
 
-    if config.watermark_text:
-        config.watermark_text = replace_template_vars(config, config.watermark_text)
-    if config.watermark_image:
-        config.watermark_image = replace_template_vars(config, config.watermark_image)
+    if config.theme_v3.watermark.text:
+        config.theme_v3.watermark.text = replace_template_vars(config, config.theme_v3.watermark.text)
+    if config.theme_v3.watermark.image:
+        config.theme_v3.watermark.image = replace_template_vars(config, config.theme_v3.watermark.image)
 
 
-def _reapply_post_theme_cli_overrides(args: Namespace, config: CalendarConfig) -> None:
+def load_run_theme(config: CalendarConfig, name: str | None) -> None:
+    """Load the run's theme (``default`` unless *name* is given) into *config*.
+
+    The theme is loaded before any command-line option is applied, so an
+    explicit option always wins over the theme's value for the same setting.
+    Side margins the theme sets become the page margins.
+
+    Raises:
+        config.theme_loader.ThemeError: the theme is not found, not supported, or invalid.
     """
-    Re-assert every explicit CLI value that the theme may have overwritten.
+    from config.config import parse_length_to_points
+    from config.theme_loader import load_theme
 
-    The theme engine is applied *twice* in run():
-      1. Before setfontsizes() — so base.size_rule can influence auto-scaling.
-      2. After setfontsizes()  — so explicit theme font sizes take precedence.
-
-    The second apply silently overwrites any CLI option whose config field
-    the loaded theme also sets, violating the theme engine's contract that
-    CLI arguments always override theme values (the Section-2 finding of
-    docs/cli_theme_overrides.html).  This function therefore re-applies,
-    after the final theme.apply() call:
-
-      * every explicitly-given option in _CLI_CONFIG_OVERRIDES (the mini,
-        candybar, timeline, PIT, and fiscal simple fields), and
-      * the header/footer/watermark text options (_apply_text_options).
-
-    Options the user left at their defaults are not touched, so theme values
-    still take effect for everything not on the command line.
-
-    Called by:
-        run() immediately after the second theme_engine.apply(config) call.
-
-    Args:
-        args:   Namespace from argparse.parse_args() (checked for explicit flags).
-        config: CalendarConfig instance to correct (mutated in-place).
-    """
-    _apply_cli_config_overrides(args, config)
-    _apply_text_options(args, config)
+    config.theme_v3 = load_theme(name or "default")
+    margin = config.theme_v3.layout.margin
+    sides = {"left": "margin_left", "right": "margin_right", "top": "margin_top", "bottom": "margin_bottom"}
+    for side, attr in sides.items():
+        raw = getattr(margin, side)
+        points = float(parse_length_to_points(raw))
+        if points < 0:
+            raise ConfigError(f"layout.margin.{side} must be >= 0; got {raw!r}")
+        setattr(config, attr, points)
+    config.include_margin = True
 
 
 def _parse_status_filter(raw: str | None) -> frozenset[str] | None:

@@ -2,6 +2,7 @@
 
 One or two sentences per change, with the commit that made it; the commit message holds the detail (`git show <sha>`). Newest first.
 
+- 2026-10-01 themes: one version-3.0 theme schema read by every view (**breaking**) — decoration (timescale, today line, palettes, fonts, holidays, numbered icons, lines) is declared once at the top level; `extends:`, `ThemeEngine`, `UnifiedTheme`, `required_keys`, `DefaultRendererValues` and every built-in theme except `default` are removed; `demonstration.yaml` is generated and lists every attribute; the User Guide and architecture docs are rewritten.
 - 2026-09-26 repo: history rewritten to drop the generated `_sh_*.svg` reference sheets (fresh clone 57.1 → 47.0 MiB); every commit ID changed, and the IDs below are the new ones. Re-clone any copy made before this.
 - 2026-09-26 21a450d dev: a fresh clone's tests build `calendar.db` themselves (`tools/db/build_db.py`), `DefaultRendererValues.md` cites `file:function` instead of line numbers, `.python-version` pins `3.14` so `uv sync` works off macOS, and this changelog keeps entries short.
 - 2026-09-26 fc382e5 tools: retire `tools/migrate_theme.py` and `tools/strip_element_bindings.py`; legacy-schema errors say how to restore them from tag `pre-migrator-retirement`.

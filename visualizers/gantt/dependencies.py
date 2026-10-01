@@ -63,7 +63,7 @@ DEFAULT_STUB = 4.0
 #: ``apply_to`` target a theme uses to style dependency arrows.  Spelled
 #: as a ``<kind>:<name>`` token because that is the only form the unified
 #: theme parser accepts alongside ``element`` and ``lane``.
-ARROW_STYLE_TARGET = "line:dependency_arrow"
+ARROW_STYLE_TARGET = "line:dependency"
 
 #: Which edge each link type leaves and enters.  ``exit_dir`` and
 #: ``entry_dir`` are +1 for the right side and -1 for the left, where

@@ -16,18 +16,24 @@ The renderer never imports labella directly — it goes through
 
 from __future__ import annotations
 
-from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 import arrow
 import drawsvg
 
+from config import role_styles
+from config.role_styles import role_text
+from renderers.lines import draw_line
 from renderers.svg_base import BaseSVGRenderer
+from renderers.timescale import ScaleContext, draw_axis_beside, draw_axis_edges, plan_axis_scale
+from renderers.today_line import draw_today
+from shared.callouts import evaluate_callout_style, leader_ends, leader_style
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.orientation import Orientation, Side, opposite
+from shared.palettes import resolve_palette
 from shared.rule_engine import StyleEngine, StyleResult
-from shared.timeband import build_segments
+from shared.span import Frame
 from visualizers.pit.labella_adapter import (
     PITPlacement,
     layout_pit_callouts,
@@ -57,17 +63,8 @@ def _xml_escape(s: str) -> str:
 
 
 def _pit_style_rules(config: CalendarConfig) -> list:
-    """Source the raw style_rules list for the PIT StyleEngine.
-
-    Mirrors _timeline_style_rules: prefers the parsed UnifiedTheme so the
-    renderer doesn't depend on the legacy theme_style_rules bridge.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules, for the StyleEngine."""
+    return role_styles.style_rules(config.theme_v3)
 
 
 class PITRenderer(BaseSVGRenderer):
@@ -95,6 +92,7 @@ class PITRenderer(BaseSVGRenderer):
         db: CalendarDB,
     ) -> tuple[int, list]:
         """Render the PIT axis + callouts. Returns (overflow_count, [])."""
+        self._adopt_theme_roles(config)
         # Reset per-render state.
         self._pit_marker_ids = {}
         # Reset SVG pattern dedup caches (mirrors weekly renderer pattern).
@@ -141,38 +139,53 @@ class PITRenderer(BaseSVGRenderer):
                 dropped,
             )
 
-        # 3) Compute axis geometry. Phase 1 is horizontal-only.
-        direction = Orientation(config.pit_direction)
-        side = Side(config.pit_label_side)
+        # 3) Compute axis geometry.
+        direction = Orientation(config.theme_v3.timescale.axis.orientation)
+        side = Side(config.theme_v3.pit.label_side)
+
+        # The theme's timescale, planned for this axis: rows beside the axis (ticks,
+        # holiday marks) and bands at the outer edges, which the axis makes room for.
+        theme = config.theme_v3
+        if direction is Orientation.HORIZONTAL:
+            along0, along1 = area_x + (area_w * _AXIS_INSET), area_x + (area_w * (1.0 - _AXIS_INSET))
+        else:
+            along0, along1 = area_y + (area_h * _AXIS_INSET), area_y + (area_h * (1.0 - _AXIS_INSET))
+        scale_frame = Frame.over_range(direction, start, end, along0, along1, 0.0)
+        scale = plan_axis_scale(theme, scale_frame.span, ScaleContext(theme, config, db, event_objs))
+        edge_low, edge_high = scale.edge_low(scale_frame), scale.edge_high(scale_frame)
 
         if direction is Orientation.HORIZONTAL:
-            axis_left = area_x + (area_w * _AXIS_INSET)
-            axis_right = area_x + (area_w * (1.0 - _AXIS_INSET))
-            axis_y = area_y + (area_h * 0.5)  # mid-band horizontally
+            axis_left, axis_right = along0, along1
+            axis_y = area_y + edge_low + ((area_h - edge_low - edge_high) * 0.5)  # mid-band horizontally
             axis_origin = (axis_left, axis_y)
             axis_length = axis_right - axis_left
             axis_end = (axis_right, axis_y)
         else:
-            axis_top = area_y + (area_h * _AXIS_INSET)
-            axis_bottom = area_y + (area_h * (1.0 - _AXIS_INSET))
+            axis_top, axis_bottom = along0, along1
+            inner_x, inner_w = area_x + edge_low, area_w - edge_low - edge_high
             # Center the vertical axis when labels are on both sides;
             # bias to one side otherwise so the labels have room.
             if side is Side.BOTH:
-                axis_x = area_x + (area_w * 0.5)
+                axis_x = inner_x + (inner_w * 0.5)
             elif side is Side.SECONDARY:
-                axis_x = area_x + (area_w * (1.0 - _AXIS_INSET * 4))
+                axis_x = inner_x + (inner_w * (1.0 - _AXIS_INSET * 4))
             else:
-                axis_x = area_x + (area_w * (_AXIS_INSET * 4))
+                axis_x = inner_x + (inner_w * (_AXIS_INSET * 4))
             axis_origin = (axis_x, axis_top)
             axis_length = axis_bottom - axis_top
             axis_end = (axis_x, axis_bottom)
 
-        # 4) Date → axis-position mapping. Linear over the project range.
-        total_days = max(1, (end - start).days)
+        # 4) Date → axis-position mapping: every day of the range owns a cell.
+        along0, along1, cross = (
+            (axis_origin[0], axis_end[0], axis_origin[1])
+            if direction is Orientation.HORIZONTAL
+            else (axis_origin[1], axis_end[1], axis_origin[0])
+        )
+        frame = Frame.over_range(direction, start, end, along0, along1, cross)
+        local_span = Frame.over_range(direction, start, end, 0.0, axis_length, 0.0).span
 
         def pos_for_day(day: arrow.Arrow) -> float:
-            offset = (day - start).days
-            return max(0.0, min(float(offset) / total_days * axis_length, axis_length))
+            return local_span.center(day.date())
 
         # 5) Load DB caches (icons + patterns) and build StyleEngine BEFORE
         #    layout, so the label-box icon width can be reserved per event.
@@ -183,7 +196,7 @@ class PITRenderer(BaseSVGRenderer):
         except Exception:
             self._pattern_svg_cache = {}
 
-        style_engine = StyleEngine(_pit_style_rules(config), "pit")
+        style_engine = StyleEngine(_pit_style_rules(config))
         icon_map = getattr(self, "_icon_svg_map", {}) or {}
 
         # Pre-resolve per-event style + label-icon presence so the layout
@@ -191,7 +204,7 @@ class PITRenderer(BaseSVGRenderer):
         event_styles: dict[int, StyleResult] = {}
         event_icon_svgs: dict[int, str | None] = {}
         for ev in point_events:
-            sr = style_engine.evaluate_event(ev)
+            sr = evaluate_callout_style(style_engine, ev)
             event_styles[id(ev)] = sr
             event_icon_svgs[id(ev)] = resolve_label_icon(
                 ev,
@@ -201,10 +214,8 @@ class PITRenderer(BaseSVGRenderer):
             )
 
         # Label-icon geometry constants used both here and in the draw pass.
-        label_icon_size = float(
-            getattr(config, "pit_label_icon_size", None) or (config.pit_name_text_font_size or 11.0)
-        )
-        label_icon_gap = float(getattr(config, "pit_label_icon_gap", 4.0) or 0.0)
+        label_icon_size = float(config.theme_v3.pit.label.icon_size or role_text(config, "event_name").size)
+        label_icon_gap = float(config.theme_v3.pit.label.icon_gap or 0.0)
         icon_extra = label_icon_size + label_icon_gap
 
         def _extra_width_for_event(ev: Event) -> float:
@@ -220,6 +231,7 @@ class PITRenderer(BaseSVGRenderer):
             config=config,
             pos_for_day=pos_for_day,
             extra_width_for_event=_extra_width_for_event,
+            min_layer_gap=scale.beside_height(*((Side.PRIMARY, Side.SECONDARY) if side is Side.BOTH else (side,))),
         )
 
         # Map placement index → StyleResult so callout drawing can read it.
@@ -240,27 +252,18 @@ class PITRenderer(BaseSVGRenderer):
         #   - <g class="ec-pit-axis-group"> axis + ticks
         #   - today line (above axis, below callouts)
         #   - per-event callout groups
-        self._draw_axis_group(
-            config,
-            axis_origin,
-            axis_end,
-            start,
-            end,
-            direction,
-            pos_for_day,
-            db,
-            side,
-        )
-        if config.pit_show_today_line:
-            self._draw_today_line(
-                config,
-                start,
-                end,
-                axis_origin,
-                axis_end,
-                direction,
-                pos_for_day,
-            )
+        self.drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
+        draw_axis_beside(self, theme, scale, frame)
+        self._draw_axis(config, axis_origin, axis_end)
+        self.drawing.append(drawsvg.Raw("</g>"))
+        if direction is Orientation.HORIZONTAL:
+            draw_axis_edges(self, scale, frame, area_y, area_y + area_h)
+        else:
+            draw_axis_edges(self, scale, frame, area_x, area_x + area_w)
+        if direction is Orientation.HORIZONTAL:
+            draw_today(self, config.theme_v3, frame, area_y, area_y + area_h)
+        else:
+            draw_today(self, config.theme_v3, frame, area_x, area_x + area_w)
         self._draw_callout_groups(config, placements, direction, per_event_styles)
 
         return 0, []
@@ -270,353 +273,9 @@ class PITRenderer(BaseSVGRenderer):
     # ------------------------------------------------------------------
     # SVG <marker> defs (arrow-head etc.) — independent start/end per line
     # ------------------------------------------------------------------
-    def _ensure_marker_def(
-        self,
-        kind: str,
-        color: str,
-        size: float,
-    ) -> str | None:
-        """Inject (once) and return the id of a built-in SVG marker.
-
-        Delegates to :py:meth:`BaseSVGRenderer._ensure_arrow_marker_def`,
-        which the Gantt's dependency leaders share.  The ``pit-marker``
-        prefix and the element class are kept so ids and markup are
-        unchanged from when this was PIT's own implementation.
-
-        Args:
-            kind: "arrow-head" or "none". Anything else degrades to a
-                no-op return.
-            color: Fill color for the marker glyph.
-            size: ``markerWidth`` / ``markerHeight`` in user units.
-
-        Returns:
-            The fragment id (without the leading ``#``) suitable for
-            embedding in a ``marker-start="url(#…)"`` attribute, or
-            ``None`` when ``kind`` is "none" / unknown / size <= 0.
-        """
-        return self._ensure_arrow_marker_def(
-            kind,
-            color,
-            size,
-            prefix="pit-marker",
-            css_class="ec-pit-marker-arrow-head",
-        )
-
-    def _draw_axis_group(
-        self,
-        config: CalendarConfig,
-        axis_origin: tuple[float, float],
-        axis_end: tuple[float, float],
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        direction: Orientation,
-        pos_for_day,
-        db: CalendarDB,
-        side: Side = Side.PRIMARY,
-    ) -> None:
-        """Wrap the axis line and its ticks in ec-pit-axis-group."""
-        self.drawing.append(drawsvg.Raw('<g class="ec-pit-axis-group">'))
-        if config.pit_show_ticks:
-            self._draw_axis_ticks(
-                config,
-                start,
-                end,
-                axis_origin,
-                direction,
-                pos_for_day,
-                db,
-                side,
-            )
-        self._draw_axis(config, axis_origin, axis_end)
-        self.drawing.append(drawsvg.Raw("</g>"))
-
     # ------------------------------------------------------------------
     # Axis ticks (timeband segments → perpendicular marks + labels)
     # ------------------------------------------------------------------
-    def _pit_tick_bands(self, config: CalendarConfig) -> list[dict]:
-        """Return the list of tick-band dicts to draw on the axis.
-
-        When ``config.pit_ticks`` is set it takes precedence (a single dict is
-        normalized to a one-element list); otherwise a single band is
-        synthesized from the scalar ``pit_tick_*`` fields for backward
-        compatibility.
-        """
-        raw = getattr(config, "pit_ticks", None)
-        if raw:
-            bands = [raw] if isinstance(raw, dict) else list(raw)
-            return [b for b in bands if isinstance(b, dict)]
-
-        band: dict = {
-            "unit": config.pit_tick_unit or "month",
-            "interval_days": config.pit_tick_interval,
-            "show_labels": config.pit_show_tick_labels,
-            "tick_length": config.pit_tick_length,
-        }
-        if config.pit_tick_label_format:
-            band["label_format"] = config.pit_tick_label_format
-        return [band]
-
-    def _pit_tick_segments(
-        self,
-        config: CalendarConfig,
-        band: dict,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        db: CalendarDB | None,
-    ) -> list[tuple[date, date, str]]:
-        """Return (start, end_exclusive, label) tick segments for one band.
-
-        Delegates unit handling to shared.timeband.build_segments so PIT
-        ticks match every other timeband-driven visualizer. ``year`` is
-        handled locally since build_segments has no year unit.
-
-        Label rule (matches the timeline visualizer): when ``label_format``
-        (or ``date_format``) is given it is treated as an Arrow *date* format
-        applied to each tick's own date — independent of the band unit. This
-        lets any unit (including ``interval``) produce dated tick labels like
-        "MMM D". A ``prefix`` string, when present, is prepended to the
-        formatted date so e.g. ``prefix: "Week of "`` + ``label_format:
-        "MM/DD"`` yields "Week of 02/01". When no format is given, the unit's
-        own generated label is used (e.g. the running index for ``interval``
-        — which also honors ``prefix`` — "Week N" for ``week``, "FY26 Q1" for
-        ``fiscal_quarter``).
-        """
-        start_d = start.floor("day").date()
-        end_d = end.floor("day").date()
-        unit = str(band.get("unit") or "month").strip().lower()
-        label_fmt = band.get("label_format") or band.get("date_format")
-        prefix = str(band.get("prefix") or "")
-
-        if unit == "year":
-            segs: list[tuple[date, date, str]] = []
-            fmt = label_fmt or "YYYY"
-            for yr in range(start_d.year, end_d.year + 1):
-                seg_start = max(date(yr, 1, 1), start_d)
-                seg_end = min(date(yr + 1, 1, 1), end_d + timedelta(days=1))
-                if seg_start < seg_end:
-                    label = prefix + format_arrow_date(arrow.get(date(yr, 1, 1)), fmt)
-                    segs.append((seg_start, seg_end, label))
-            return segs
-
-        # Forward the full band so unit-specific keys (interval prefix,
-        # start_index, anchor_date, week start, etc.) reach build_segments;
-        # it reads only the keys it knows and ignores PIT styling keys.
-        seg_band: dict = dict(band)
-        seg_band["unit"] = unit
-        if "interval_days" not in seg_band and band.get("interval") is not None:
-            seg_band["interval_days"] = int(band.get("interval") or 1)
-
-        visible_days: list[date] = []
-        d = start_d
-        while d <= end_d:
-            visible_days.append(d)
-            d += timedelta(days=1)
-
-        segments = build_segments(
-            seg_band,
-            start_d,
-            end_d,
-            config,
-            visible_days=visible_days,
-            db=db,
-            week_start_default=0,
-            fiscal_year_start_month_default=int(getattr(config, "blockplan_fiscal_year_start_month", 2) or 2),
-        )
-        out: list[tuple[date, date, str]] = []
-        for s in segments:
-            # With a date format, the prefix is prepended here (build_segments
-            # only applies prefix to its own index labels). Without a format,
-            # the unit's generated label already includes any prefix.
-            label = prefix + format_arrow_date(arrow.get(s.start), label_fmt) if label_fmt else s.label
-            out.append((s.start, s.end_exclusive, label))
-        return out
-
-    def _draw_axis_ticks(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_origin: tuple[float, float],
-        direction: Orientation,
-        pos_for_day,
-        db: CalendarDB,
-        side: Side = Side.PRIMARY,
-    ) -> None:
-        """Draw one row of ticks per band, each perpendicular tick at a
-        segment boundary with the segment label positioned per the band's
-        ``label_align`` (``center`` by default, ``start`` to align with the
-        boundary tick, ``end`` with the next boundary).
-
-        By default tick labels are placed on the opposite side of the axis
-        from the callout label boxes: for ``Side.SECONDARY`` the boxes occupy
-        the below/left side, so the labels flip to above/right; ``Side.PRIMARY``
-        and ``Side.BOTH`` keep the default below/left placement. A band may
-        override this with ``label_side`` to pin its labels to a specific side
-        of the axis regardless of the callout side: ``above``/``below`` for a
-        horizontal axis, ``left``/``right`` for a vertical one (``primary`` /
-        ``secondary`` work for either orientation).
-
-        A single band reproduces the legacy single-tick behavior; multiple
-        bands (via ``config.pit_ticks``) stack additional tick rows, each
-        with its own unit, styling, and label offset away from the axis.
-        """
-        bands = self._pit_tick_bands(config)
-        if not bands:
-            return
-
-        default_tick_color = config.theme_pit_tick_color or config.theme_pit_axis_color or config.pit_tick_color
-        default_tick_len = float(config.pit_tick_length)
-        default_show_labels = bool(config.pit_show_tick_labels)
-        default_label_size = float(
-            config.theme_pit_date_text_font_size or (float(config.pit_name_text_font_size or 11.0) * 0.8)
-        )
-        default_label_font = config.theme_pit_date_text_font_name or config.pit_name_text_font_name or "Roboto-Regular"
-        ox, oy = axis_origin
-
-        # Tick labels go on the opposite side of the axis from the callout
-        # boxes. Boxes occupy below/left for SECONDARY, so labels flip to
-        # above/right; PRIMARY and BOTH keep the default below/left.
-        flip_labels = side is Side.SECONDARY
-
-        def _pos(d: date) -> float:
-            return pos_for_day(arrow.Arrow(d.year, d.month, d.day))
-
-        for band in bands:
-            segments = self._pit_tick_segments(config, band, start, end, db)
-            if not segments:
-                continue
-
-            tick_len = float(band.get("tick_length", default_tick_len))
-            tick_color = str(band.get("tick_color") or default_tick_color)
-            tick_width = float(band.get("tick_width", 1.0))
-            _t_op = band.get("tick_opacity")
-            tick_opacity = float(_t_op) if _t_op is not None else 1.0
-            tick_dash = band.get("tick_dasharray")
-
-            label_size = float(band.get("label_font_size") or band.get("font_size") or default_label_size)
-            label_font = str(band.get("font") or default_label_font)
-            label_color = str(band.get("label_color") or band.get("font_color") or tick_color)
-            _l_op = band.get("label_opacity")
-            label_opacity = float(_l_op) if _l_op is not None else 1.0
-            show_labels = bool(band.get("show_labels", default_show_labels)) and len(segments) <= int(
-                band.get("max_label_count", 60)
-            )
-
-            # Distance of the label baseline away from the axis (on the label
-            # side). Defaults preserve the legacy single-band placement.
-            _l_off = band.get("label_offset")
-            _l_gap = band.get("label_gap")
-            if _l_off is not None:
-                label_off = float(_l_off)
-            elif _l_gap is not None:
-                label_off = tick_len + float(_l_gap)
-            elif direction is Orientation.HORIZONTAL:
-                label_off = tick_len + label_size
-            else:
-                label_off = tick_len
-
-            # How the label sits relative to its segment along the axis:
-            #   "center" (default) — centered in the span between this tick
-            #                        and the next.
-            #   "start"            — anchored at this tick (the segment's
-            #                        start boundary, e.g. the first of the
-            #                        month) so the label aligns with it.
-            #   "end"              — anchored at the next boundary.
-            # "left"/"right" are accepted as synonyms for start/end.
-            label_align = str(band.get("label_align", "center")).strip().lower()
-            if label_align in ("left", "top"):
-                label_align = "start"
-            elif label_align in ("right", "bottom"):
-                label_align = "end"
-
-            # Which side of the axis this band's labels sit on. Defaults to
-            # the callout-driven side (``flip_labels``); a band can override:
-            #   horizontal axis: "above"/"top" vs "below"/"bottom"
-            #   vertical axis:   "right" vs "left"
-            #   "secondary"/"primary" work for either orientation.
-            _side = str(band.get("label_side", "")).strip().lower()
-            if _side in ("above", "top", "right", "secondary"):
-                band_flip = True
-            elif _side in ("below", "bottom", "left", "primary"):
-                band_flip = False
-            else:
-                band_flip = flip_labels
-
-            for seg_start, seg_end, label in segments:
-                p0 = _pos(seg_start)
-                p1 = _pos(seg_end)
-                if direction is Orientation.HORIZONTAL:
-                    tx = ox + p0
-                    self._draw_line(
-                        tx,
-                        oy - tick_len,
-                        tx,
-                        oy + tick_len,
-                        stroke=tick_color,
-                        stroke_width=tick_width,
-                        stroke_opacity=tick_opacity,
-                        stroke_dasharray=tick_dash,
-                        css_class="ec-axis-tick",
-                    )
-                    if show_labels and label:
-                        if label_align == "start":
-                            lx, l_anchor = tx, "start"
-                        elif label_align == "end":
-                            lx, l_anchor = ox + p1, "end"
-                        else:
-                            lx, l_anchor = ox + (p0 + p1) / 2.0, "middle"
-                        ly = oy - label_off if band_flip else oy + label_off
-                        self._draw_text(
-                            lx,
-                            ly,
-                            label,
-                            label_font,
-                            label_size,
-                            fill=label_color,
-                            fill_opacity=label_opacity,
-                            anchor=l_anchor,
-                            css_class="ec-label",
-                        )
-                else:
-                    ty = oy + p0
-                    self._draw_line(
-                        ox - tick_len,
-                        ty,
-                        ox + tick_len,
-                        ty,
-                        stroke=tick_color,
-                        stroke_width=tick_width,
-                        stroke_opacity=tick_opacity,
-                        stroke_dasharray=tick_dash,
-                        css_class="ec-axis-tick",
-                    )
-                    if show_labels and label:
-                        if label_align == "start":
-                            lpos = p0
-                        elif label_align == "end":
-                            lpos = p1
-                        else:
-                            lpos = (p0 + p1) / 2.0
-                        ly = oy + lpos + label_size * 0.35
-                        if band_flip:
-                            lx, l_anchor = ox + label_off + 2.0, "start"
-                        else:
-                            lx, l_anchor = ox - label_off - 2.0, "end"
-                        self._draw_text(
-                            lx,
-                            ly,
-                            label,
-                            label_font,
-                            label_size,
-                            fill=label_color,
-                            fill_opacity=label_opacity,
-                            anchor=l_anchor,
-                            css_class="ec-label",
-                        )
-
-    # _ensure_svg_pattern_def() is inherited from BaseSVGRenderer; the
-    # pattern string helpers live in renderers/svg_patterns.py.
-
     # ------------------------------------------------------------------
     # Label fill resolution
     # ------------------------------------------------------------------
@@ -637,27 +296,20 @@ class PITRenderer(BaseSVGRenderer):
           4. theme_pit_label_palette (round-robin by chronological index)
           5. module default: ("none", 0.0)
         """
+        box = config.theme_v3.boxes.callout
         # 1) Per-rule override.
         if label_override:
             fc = label_override.get("fill_color")
             fo = label_override.get("fill_opacity")
             if fc is not None:
-                return str(fc), float(fo) if fo is not None else float(config.pit_label_fill_opacity)
+                return str(fc), float(fo) if fo is not None else float(box.fill_opacity)
 
-        # 3) Global theme fill color.
-        if config.theme_pit_label_fill_color:
-            return config.theme_pit_label_fill_color, float(config.pit_label_fill_opacity)
+        # 2) The callout box's palette, round-robin by chronological index.
+        if self._label_palette:
+            return str(self._label_palette[event_index % len(self._label_palette)]), float(box.fill_opacity)
 
-        # 4) Palette round-robin.
-        palette_name = config.theme_pit_label_palette
-        if palette_name:
-            palette = self._label_palette_cache.get(palette_name)
-            if palette and len(palette) > 0:
-                color = palette[event_index % len(palette)]
-                return str(color), float(config.pit_label_fill_opacity) or 0.85
-
-        # 5) Default.
-        return "none", float(config.pit_label_fill_opacity)
+        # 3) The callout box's own fill.
+        return box.fill, float(box.fill_opacity)
 
     def _draw_callout_groups(
         self,
@@ -675,101 +327,43 @@ class PITRenderer(BaseSVGRenderer):
 
         per_event_styles = per_event_styles or {}
 
-        # Build label palette cache for round-robin fill resolution.
-        self._label_palette_cache: dict[str, list] = {}
-        palette_name = config.theme_pit_label_palette
-        if palette_name and hasattr(self, "_db") and self._db:
-            try:
-                palettes = self._db.get_all_palettes()
-                if palette_name in palettes:
-                    self._label_palette_cache[palette_name] = palettes[palette_name]
-            except Exception:
-                pass
+        self._label_palette = resolve_palette(config.theme_v3.boxes.callout.fill_palette, self._db)
 
-        # Pre-compute shared (non-per-rule) styling values once.
-        # Leader defaults — per-rule overrides are applied inside the loop.
-        global_leader_color = config.theme_pit_leader_color or config.pit_leader_color
-        global_leader_width = float(config.pit_leader_stroke_width)
-        global_leader_opacity = float(config.pit_leader_stroke_opacity)
-        global_leader_dasharray = config.pit_leader_stroke_dasharray
-        global_leader_linecap = config.pit_leader_stroke_linecap
-        global_leader_linejoin = config.pit_leader_stroke_linejoin
-        leader_arrow_color = config.theme_pit_arrow_head_color or global_leader_color
-
-        # Marker defaults
-        dot_color_default = config.theme_pit_dot_color or config.pit_dot_color
-        ms_color_default = config.theme_pit_milestone_color or config.pit_milestone_color
-        marker_size = float(config.pit_marker_size)
-        dot_size = float(config.pit_dot_radius) * 2.0
+        theme = config.theme_v3
+        callout = theme.boxes.callout
+        dot_color_default = theme.icons.event.color
+        ms_color_default = theme.icons.milestone.color
+        marker_size = float(theme.timescale.axis.marker_size)
+        dot_size = float(theme.events.marker.radius) * 2.0
 
         # Label-box defaults (per-rule can override)
-        default_label_stroke = config.theme_pit_label_stroke_color or config.pit_label_stroke_color
-        default_label_sw = float(config.pit_label_stroke_width)
-        default_label_rx = float(config.pit_label_corner_radius)
-        default_label_pattern = config.theme_pit_label_pattern
-        default_label_pattern_opacity = float(getattr(config, "hash_pattern_opacity", 0.15))
+        default_label_stroke = callout.stroke
+        default_label_sw = float(callout.stroke_width)
+        default_label_rx = float(callout.corner_radius)
+        default_label_pattern = callout.pattern
+        default_label_pattern_opacity = float(callout.pattern_opacity)
 
-        # Label text fonts: pit.*_text.font_name, else the event text tokens
-        # resolved for this view.
-        view = {"visualizer": "pit", "papersize": config.papersize}
-        name_font = (
-            config.pit_name_text_font_name
-            or self._resolve_token(config, "text:event_name", view).get("font")
-            or config.get_text_style("ec-event-name").font
-        )
-        notes_font = (
-            config.pit_notes_text_font_name
-            or self._resolve_token(config, "text:event_notes", view).get("font")
-            or config.get_text_style("ec-event-notes").font
-        )
-        name_size = float(config.pit_name_text_font_size or 11.0)
-        notes_size = float(config.pit_notes_text_font_size or name_size * 0.85)
-        name_color = config.theme_pit_label_text_color or config.pit_name_text_color
-        notes_color = config.theme_pit_label_text_color or config.pit_notes_text_color
-        pad_x = float(config.pit_label_padding_x)
-        pad_y = float(config.pit_label_padding_y)
+        name = role_text(config, "event_name")
+        notes = role_text(config, "event_notes")
+        date = role_text(config, "event_date")
+        name_font, notes_font = name.font, notes.font
+        name_size, notes_size = name.size, notes.size
+        name_color, notes_color = name.color, notes.color
+        pad_x = float(config.theme_v3.pit.label.padding_x)
+        pad_y = float(config.theme_v3.pit.label.padding_y)
         show_notes = bool(config.include_notes)
 
         # Date-label style
-        date_color = config.theme_pit_date_text_color or config.pit_date_text_color
-        date_font = config.theme_pit_date_text_font_name or config.pit_name_text_font_name or "Roboto-Regular"
-        date_size = float(config.theme_pit_date_text_font_size or (name_size * 0.85))
-        date_offset = float(config.pit_date_text_offset)
-        date_fmt = config.pit_date_format
-        date_placement = getattr(config, "pit_date_placement", "inline")
+        date_color, date_font, date_size = date.color, date.font, date.size
+        date_offset = float(config.theme_v3.pit.date_offset)
+        date_fmt = theme.events.date.format
+        date_placement = config.theme_v3.pit.date_placement
 
         for i, p in enumerate(placements):
             ev = p.event
             sr: StyleResult = per_event_styles.get(i, StyleResult())
             leader_ovr: dict = sr.leader_override or {}
             label_ovr: dict = sr.label_override or {}
-
-            # Per-side leader color override.
-            if p.side is Side.PRIMARY:
-                side_leader_color = config.theme_pit_leader_primary_color
-            else:
-                side_leader_color = config.theme_pit_leader_secondary_color
-
-            # Resolve effective leader attributes (per-rule > per-side > global).
-            leader_color = leader_ovr.get("color") or side_leader_color or global_leader_color
-            leader_width = float(leader_ovr.get("width") or global_leader_width)
-            leader_opacity = float(leader_ovr.get("opacity") or global_leader_opacity)
-            leader_dasharray = leader_ovr.get("dasharray") or global_leader_dasharray
-            leader_linecap = leader_ovr.get("linecap") or global_leader_linecap
-            leader_linejoin = leader_ovr.get("linejoin") or global_leader_linejoin
-
-            # Per-rule leader markers (fall back to global config).
-            l_ms_kind = leader_ovr.get("marker_start") or config.pit_leader_marker_start
-            l_ms_size = float(leader_ovr.get("marker_start_size") or config.pit_leader_marker_start_size)
-            l_me_kind = leader_ovr.get("marker_end") or config.pit_leader_marker_end
-            l_me_size = float(leader_ovr.get("marker_end_size") or config.pit_leader_marker_end_size)
-            l_arrow_color = leader_ovr.get("arrow_color") or leader_arrow_color
-
-            ms_id = self._ensure_marker_def(l_ms_kind, l_arrow_color, l_ms_size)
-            me_id = self._ensure_marker_def(l_me_kind, l_arrow_color, l_me_size)
-            ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
-            me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
-            dash_attr = f' stroke-dasharray="{leader_dasharray}"' if leader_dasharray else ""
 
             side_class = "ec-pit-side-primary" if p.side is Side.PRIMARY else "ec-pit-side-secondary"
             groups_attr = ev.resource_group or ""
@@ -784,22 +378,17 @@ class PITRenderer(BaseSVGRenderer):
                 )
             )
 
-            # Leader (axis-local path inside a translate() group).
-            ox, oy = p.axis_origin
-            if p.leader_path_d:
-                self.drawing.append(
-                    drawsvg.Raw(
-                        f'<g transform="translate({ox:.2f},{oy:.2f})" '
-                        f'class="ec-callout-leader">'
-                        f'<path d="{p.leader_path_d}" '
-                        f'stroke="{leader_color}" stroke-width="{leader_width:.3f}" '
-                        f'stroke-opacity="{leader_opacity}" '
-                        f'stroke-linecap="{leader_linecap}" '
-                        f'stroke-linejoin="{leader_linejoin}" '
-                        f'fill="none"{dash_attr}{ms_attr}{me_attr}/>'
-                        f"</g>"
-                    )
-                )
+            # Leader: dot to label box, styled by lines.leader (+ side colour, + rule override).
+            ends = leader_ends((p.x_dot, p.y_dot), (p.x_label, p.y_label, p.label_w, p.label_h), p.side, direction)
+            draw_line(
+                self,
+                leader_style(config.theme_v3, p.side, leader_ovr),
+                ends.start,
+                ends.end,
+                start_heading=ends.start_heading,
+                end_heading=ends.end_heading,
+                css_class="ec-callout-leader",
+            )
 
             # Axis marker — always a built-in shape (circle for events,
             # diamond for milestones). DB icons are drawn inside the
@@ -891,7 +480,7 @@ class PITRenderer(BaseSVGRenderer):
                 label_icon_name = (
                     sr.icon
                     or ev.icon
-                    or (config.pit_default_milestone_icon if ev.milestone else config.pit_default_event_icon)
+                    or (config.theme_v3.icons.milestone.name if ev.milestone else config.theme_v3.icons.event.name)
                 )
                 with self._event_scope(ev):
                     self._record_icon(label_icon_name, color, None, "milestone" if ev.milestone else "event")
@@ -988,150 +577,5 @@ class PITRenderer(BaseSVGRenderer):
         axis_origin: tuple[float, float],
         axis_end: tuple[float, float],
     ) -> None:
-        """Draw the main axis line, with optional marker-start/end."""
-        color = config.theme_pit_axis_color or config.pit_axis_color
-        width = float(config.pit_axis_stroke_width)
-        arrow_color = config.theme_pit_arrow_head_color or color
-
-        ms_id = self._ensure_marker_def(
-            config.pit_axis_marker_start,
-            arrow_color,
-            float(config.pit_axis_marker_start_size),
-        )
-        me_id = self._ensure_marker_def(
-            config.pit_axis_marker_end,
-            arrow_color,
-            float(config.pit_axis_marker_end_size),
-        )
-        ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
-        me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
-
-        self.drawing.append(
-            drawsvg.Raw(
-                f'<line x1="{axis_origin[0]:.2f}" y1="{axis_origin[1]:.2f}" '
-                f'x2="{axis_end[0]:.2f}" y2="{axis_end[1]:.2f}" '
-                f'stroke="{color}" stroke-width="{width:.3f}" '
-                f'class="ec-axis-line"{ms_attr}{me_attr}/>'
-            )
-        )
-
-    def _draw_today_line(
-        self,
-        config: CalendarConfig,
-        start: arrow.Arrow,
-        end: arrow.Arrow,
-        axis_origin: tuple[float, float],
-        axis_end: tuple[float, float],
-        direction: Orientation,
-        pos_for_day,
-    ) -> None:
-        """Draw a perpendicular "today" line at the configured as-of date.
-
-        Honors ``pit_today_date`` for forward-dated presentations. All
-        stroke attributes are themeable; an optional label is drawn on
-        a configurable side.
-        """
-        # Resolve the "today" date — config override beats the wall clock.
-        today_arrow: arrow.Arrow
-        if config.pit_today_date:
-            try:
-                today_arrow = arrow.get(str(config.pit_today_date), "YYYYMMDD")
-            except (arrow.ParserError, ValueError):
-                today_arrow = arrow.now().floor("day")
-        else:
-            today_arrow = arrow.now().floor("day")
-        # Bail if outside the project range.
-        if today_arrow < start or today_arrow > end:
-            return
-
-        pos = pos_for_day(today_arrow)
-
-        # Today line stroke vocabulary — theme overrides → config defaults.
-        color = (
-            config.theme_pit_today_line_color
-            or getattr(config, "timeline_today_line_color", None)
-            or config.pit_today_line_color
-        )
-        width = float(config.theme_pit_today_line_width or config.pit_today_line_width)
-        opacity = float(config.theme_pit_today_line_opacity or config.pit_today_line_opacity)
-        dasharray = config.theme_pit_today_line_dasharray or config.pit_leader_stroke_dasharray or "4,2"
-        linecap = config.theme_pit_today_line_linecap or "round"
-        linejoin = config.theme_pit_today_line_linejoin or "round"
-
-        # Geometry — perpendicular to the axis.
-        ox, oy = axis_origin
-        _ex, _ey = axis_end
-        if direction is Orientation.HORIZONTAL:
-            x = ox + pos
-            # Half the axis-perp clearance — use the page-area band as
-            # an approximation. For MVP we extend by ±32 points.
-            line_x1, line_y1 = x, oy - 32
-            line_x2, line_y2 = x, oy + 32
-            label_anchor = "middle"
-            # Label position controls which side of the axis the text sits.
-            label_pos = config.theme_pit_today_line_label_position or "end"
-            if label_pos == "start":
-                label_x, label_y = x, line_y1 - 2
-            elif label_pos == "middle":
-                label_x, label_y = x, oy - 4
-            else:
-                label_x, label_y = x, line_y2 + 10
-        else:
-            y = oy + pos
-            line_x1, line_y1 = ox - 32, y
-            line_x2, line_y2 = ox + 32, y
-            label_anchor = "start"
-            label_pos = config.theme_pit_today_line_label_position or "end"
-            if label_pos == "start":
-                label_x, label_y = line_x1 - 4, y + 3
-                label_anchor = "end"
-            elif label_pos == "middle":
-                label_x, label_y = ox + 4, y - 3
-            else:
-                label_x, label_y = line_x2 + 4, y + 3
-
-        # marker-start / marker-end (independent, per v5).
-        arrow_color = config.theme_pit_arrow_head_color or color
-        ms_id = self._ensure_marker_def(
-            config.pit_today_line_marker_start,
-            arrow_color,
-            float(config.pit_today_line_marker_start_size),
-        )
-        me_id = self._ensure_marker_def(
-            config.pit_today_line_marker_end,
-            arrow_color,
-            float(config.pit_today_line_marker_end_size),
-        )
-        ms_attr = f' marker-start="url(#{ms_id})"' if ms_id else ""
-        me_attr = f' marker-end="url(#{me_id})"' if me_id else ""
-        dash_attr = f' stroke-dasharray="{dasharray}"' if dasharray else ""
-
-        self.drawing.append(
-            drawsvg.Raw(
-                f'<line x1="{line_x1:.2f}" y1="{line_y1:.2f}" '
-                f'x2="{line_x2:.2f}" y2="{line_y2:.2f}" '
-                f'stroke="{color}" stroke-width="{width:.3f}" '
-                f'stroke-opacity="{opacity}" '
-                f'stroke-linecap="{linecap}" stroke-linejoin="{linejoin}" '
-                f'class="ec-today-line"{dash_attr}{ms_attr}{me_attr}/>'
-            )
-        )
-
-        # Today-line label — empty string suppresses.
-        label_text = config.pit_today_line_label or ""
-        if label_text:
-            label_color = config.theme_pit_today_line_label_color or color
-            label_font = config.theme_pit_today_line_label_font_name or config.pit_name_text_font_name or "Roboto-Bold"
-            label_size = float(
-                config.theme_pit_today_line_label_font_size or (float(config.pit_name_text_font_size or 11.0) * 0.85)
-            )
-            self._draw_text(
-                label_x,
-                label_y,
-                label_text,
-                label_font,
-                label_size,
-                fill=label_color,
-                anchor=label_anchor,
-                css_class="ec-today-label",
-            )
+        """Draw the main axis line, styled by ``lines.axis`` (markers included)."""
+        draw_line(self, config.theme_v3.lines.axis, axis_origin, axis_end, css_class="ec-axis-line")

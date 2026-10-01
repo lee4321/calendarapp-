@@ -65,9 +65,9 @@ def write_run_details(
     generated: datetime | None = None,
 ) -> list[Path]:
     """Write every enabled output for one run; returns the files written."""
-    want_markdown = bool(getattr(config, "include_details_markdown", True))
-    want_icons = bool(getattr(config, "include_details_icons", True))
-    want_csv = bool(getattr(config, "include_details_csv", True))
+    want_markdown = bool(config.theme_v3.details.markdown.enable)
+    want_icons = bool(config.theme_v3.details.icons.enable)
+    want_csv = bool(config.theme_v3.details.csv.enable)
     written: list[Path] = []
 
     holiday_rows: list[dict] = []
@@ -78,7 +78,7 @@ def write_run_details(
 
     icon_paths: dict[IconUse, str] = {}
     if want_icons:
-        size = float(getattr(config, "details_icons_size", None) or DEFAULT_ICON_SIZE)
+        size = float(config.theme_v3.details.icons.size or DEFAULT_ICON_SIZE)
         icon_paths = export_icons(document_icon_uses(record, config, holiday_rows), run_paths, size, resolve_markup)
         written.extend(run_paths.folder / path for path in sorted(set(icon_paths.values())))
 

@@ -10,23 +10,24 @@ What this renderer adds on top:
   * a per-strip header row (week-number column + weekday labels),
   * a week-number column down the left edge,
   * a table grid around every cell, and
-  * a merged month-name box spanning each month's week rows, whose label
-    supports the full SVG text attribute set including rotation.
+  * the timescale's month row laid down the week rows, one merged cell per month.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import date
 from typing import TYPE_CHECKING
 
-import arrow
-
 from renderers.svg_base import _is_none_color
-from shared.date_utils import (
-    format_arrow_date,
-)
+from renderers.timescale import ScaleContext, draw_cells, plan_rows
 from shared.date_utils import (
     index_events_by_day as _index_events_by_day,
 )
+from shared.glyphs import mini_glyph_sets
+from shared.orientation import Orientation
+from shared.palettes import resolve_theme_palettes
+from shared.span import Frame, Span
 from visualizers.candybar.layout import compute_columns
 from visualizers.mini.day_styles import DayStyle, DayStyleResolver
 from visualizers.mini.renderer import MiniCalendarRenderer
@@ -49,8 +50,12 @@ class CandybarRenderer(MiniCalendarRenderer):
         events: list,
         db: CalendarDB,
     ) -> tuple[int, list]:
+        self._db = db
+        resolve_theme_palettes(config, db)
+        self._glyphs = mini_glyph_sets(config, db)
         self._populate_tokens(config)
         resolver = DayStyleResolver(config, db)
+        self._period_text = resolver.period_labels.text if resolver.period_labels else None
         self._load_icon_svg_cache(db)
         self._pattern_svg_cache = db.get_all_patterns()
         self._registered_pattern_ids = set()
@@ -70,8 +75,8 @@ class CandybarRenderer(MiniCalendarRenderer):
 
         self._note_grid_days(config, (state[4] for state in cell_state), events_by_day)
 
-        # Pass 1 — month box fills (behind everything in the right column)
-        self._draw_month_boxes(config, coordinates, fills_only=True)
+        # Pass 1 — the month column
+        self._draw_month_column(config, coordinates)
 
         # Pass 1b — base cell shading (month banding + weekends), drawn under
         # the holiday/rule shade so those override it.
@@ -99,9 +104,6 @@ class CandybarRenderer(MiniCalendarRenderer):
         # Pass 6 — header row (week-number header + weekday labels)
         self._draw_headers(config, coordinates)
 
-        # Pass 7 — month-box labels (rotated text)
-        self._draw_month_boxes(config, coordinates, fills_only=False)
-
         return 0, []
 
     # ------------------------------------------------------------------
@@ -110,9 +112,10 @@ class CandybarRenderer(MiniCalendarRenderer):
 
     def _draw_base_shading(self, config: CalendarConfig, cell_state: list) -> None:
         """Shade day cells by month band and/or weekend, under the rule shade."""
-        month_colors = self._resolve_month_shade_colors(config)
-        weekend_fill = config.candybar_weekend_fill
-        weekend_on = bool(weekend_fill) and not _is_none_color(weekend_fill)
+        theme = config.theme_v3
+        month_colors = theme.palettes.month_colors if config.theme_v3.candybar.month_shading else {}
+        weekend = theme.holidays.weekend
+        weekend_on = bool(weekend.color) and not _is_none_color(weekend.color)
 
         if not month_colors and not weekend_on:
             return
@@ -122,10 +125,9 @@ class CandybarRenderer(MiniCalendarRenderer):
             month = int(daykey[4:6])
             day = int(daykey[6:8])
 
-            # Month banding: cycle the palette by absolute calendar month so
-            # consecutive months alternate deterministically.
+            # Month banding: each calendar month takes its own palette colour.
             if month_colors:
-                color = month_colors[(year * 12 + month) % len(month_colors)]
+                color = month_colors.get(f"{month:02d}")
                 if color and not _is_none_color(color):
                     self._draw_rect(
                         x,
@@ -133,7 +135,7 @@ class CandybarRenderer(MiniCalendarRenderer):
                         w,
                         h,
                         fill=color,
-                        fill_opacity=config.candybar_month_shade_opacity,
+                        fill_opacity=theme.shading.month_opacity,
                         css_class="ec-month-band",
                     )
 
@@ -147,30 +149,19 @@ class CandybarRenderer(MiniCalendarRenderer):
                         y,
                         w,
                         h,
-                        fill=weekend_fill,
-                        fill_opacity=config.candybar_weekend_opacity,
+                        fill=weekend.color,
+                        fill_opacity=weekend.opacity,
                         css_class="ec-weekend",
                     )
-
-    @staticmethod
-    def _resolve_month_shade_colors(config: CalendarConfig) -> list[str]:
-        """Return the month-band color cycle, or [] when banding is off."""
-        if not config.candybar_month_shading:
-            return []
-        colors = list(config.candybar_month_shade_colors or [])
-        if not colors:
-            # Default: every other month gets a subtle tint.
-            colors = ["none", "gainsboro"]
-        return colors
 
     # ------------------------------------------------------------------
     # Grid
     # ------------------------------------------------------------------
 
     def _draw_grid(self, config: CalendarConfig, coordinates: CoordinateDict) -> None:
-        if not config.candybar_grid_lines:
+        if not config.theme_v3.candybar.grid_lines:
             return
-        color = config.candybar_grid_line_color
+        color = config.theme_v3.lines.grid.color
         if _is_none_color(color):
             return
         for key, (x, y, w, h) in coordinates.items():
@@ -243,55 +234,36 @@ class CandybarRenderer(MiniCalendarRenderer):
     # Month box
     # ------------------------------------------------------------------
 
-    def _draw_month_boxes(
-        self,
-        config: CalendarConfig,
-        coordinates: CoordinateDict,
-        *,
-        fills_only: bool,
-    ) -> None:
-        for key in sorted(coordinates):
-            if not key.startswith("MonthBox_"):
-                continue
-            x, y, w, h = coordinates[key]
-            ym = key.rsplit("_", 1)[1]  # YYYYMM
-            year, month = int(ym[:4]), int(ym[4:6])
+    @staticmethod
+    def _month_row(config: CalendarConfig):
+        """The timescale row that makes the month column: the first ``month`` row on the primary side."""
+        return next((r for r in config.theme_v3.timescale.primary if r.unit == "month"), None)
 
-            if fills_only:
-                fill = config.candybar_month_box_fill
-                stroke = config.candybar_month_box_stroke
-                if (fill and not _is_none_color(fill)) or (stroke and not _is_none_color(stroke)):
-                    self._draw_rect(
-                        x,
-                        y,
-                        w,
-                        h,
-                        fill=fill if (fill and not _is_none_color(fill)) else "none",
-                        fill_opacity=config.candybar_month_box_opacity,
-                        stroke=stroke if (stroke and not _is_none_color(stroke)) else None,
-                        stroke_width=0.5,
-                        css_class="ec-month-box",
-                    )
-                continue
+    def _draw_month_column(self, config: CalendarConfig, coordinates: CoordinateDict) -> None:
+        """Lay the month row of the timescale down each strip's week rows.
 
-            # Label text
-            label = format_arrow_date(arrow.Arrow(year, month, 1), config.candybar_month_format)
-            font = config.candybar_month_font
-            font_size = config.candybar_month_font_size or max(6.0, min(w * 0.55, 12.0))
-            cx = x + w / 2
-            cy = y + h / 2
-            text_y = cy + font_size / 3
-            rotation = config.candybar_month_rotation or 0.0
-            transform = f"rotate({rotation} {cx:.3f} {cy:.3f})" if rotation else None
-            self._draw_text(
-                cx,
-                text_y,
-                label,
-                font,
-                font_size,
-                fill=config.candybar_month_color,
-                fill_opacity=config.candybar_month_opacity,
-                anchor=config.candybar_month_anchor,
-                transform=transform,
-                css_class="ec-month-box-label",
-            )
+        A strip's rows are positions on a vertical span, each owned by the last
+        visible day of its week, so the engine groups consecutive rows of one
+        month into a single cell and styles it like any month row.
+        """
+        row = self._month_row(config)
+        if row is None:
+            return
+        theme = config.theme_v3
+        ctx = ScaleContext(theme, config, self._db, [])
+        rows_by_chunk: dict[str, list[tuple[date, tuple[float, float, float, float]]]] = {}
+        for key, rect in coordinates.items():
+            if key.startswith("MonthRow_"):
+                _, chunk, stamp = key.split("_")
+                day = date(int(stamp[:4]), int(stamp[4:6]), int(stamp[6:8]))
+                rows_by_chunk.setdefault(chunk, []).append((day, rect))
+        for chunk_rows in rows_by_chunk.values():
+            chunk_rows.sort(key=lambda item: item[0])
+            days = [d for d, _ in chunk_rows]
+            x, _, width, _ = chunk_rows[0][1]
+            top = min(r[1] for _, r in chunk_rows)
+            bottom = max(r[1] + r[3] for _, r in chunk_rows)
+            frame = Frame(Span(days, top, bottom), Orientation.VERTICAL, x)
+            column = replace(row, height=width)
+            plan = plan_rows([column], frame.span, ctx, full_days=days, min_segment_width=0)
+            draw_cells(self, plan, frame, x)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from band_helpers import set_bands, set_fields
 
 from config.config import CalendarConfig
 from visualizers.gantt.layout import GanttLayout
@@ -60,37 +61,31 @@ def test_bands_headers_and_body_stack_without_overlap(config):
 
 
 def test_band_heights_come_from_the_band_definitions(config):
-    config.gantt_top_time_bands = [
-        {"label": "Month", "unit": "month", "row_height": 20},
-        {"label": "Week", "unit": "week", "row_height": 10},
-    ]
+    set_bands(
+        config,
+        primary=[
+            {"label": "Month", "unit": "month", "row_height": 20},
+            {"label": "Week", "unit": "week", "row_height": 10},
+        ],
+    )
     assert regions(config)["GanttTopBands"][3] == pytest.approx(30.0, abs=0.01)
 
 
-def test_a_band_without_a_row_height_uses_the_config_default(config):
-    config.gantt_band_row_height = 12.0
-    config.gantt_top_time_bands = [{"label": "Month", "unit": "month"}]
+def test_a_band_without_a_row_height_uses_the_schema_default(config):
+    set_bands(config, primary=[{"label": "Month", "unit": "month"}])
     assert regions(config)["GanttTopBands"][3] == pytest.approx(12.0, abs=0.01)
 
 
-def test_the_bottom_stack_mirrors_the_top_when_unset(config):
-    config.gantt_top_time_bands = [
-        {"label": "Month", "unit": "month", "row_height": 20},
-    ]
-    coords = regions(config)
-    assert coords["GanttBottomBands"][3] == pytest.approx(coords["GanttTopBands"][3], abs=0.01)
-
-
 def test_explicit_bottom_bands_size_independently(config):
-    config.gantt_top_time_bands = [{"label": "Month", "unit": "month", "row_height": 20}]
-    config.gantt_bottom_time_bands = [{"label": "Week", "unit": "week", "row_height": 6}]
+    set_bands(config, primary=[{"label": "Month", "unit": "month", "row_height": 20}])
+    set_bands(config, secondary=[{"label": "Week", "unit": "week", "row_height": 6}])
     coords = regions(config)
     assert coords["GanttTopBands"][3] == pytest.approx(20.0, abs=0.01)
     assert coords["GanttBottomBands"][3] == pytest.approx(6.0, abs=0.01)
 
 
 def test_column_header_height_comes_from_config(config):
-    config.gantt_header_row_height = 24.0
+    set_fields(config, gantt_header_row_height=24.0)
     assert regions(config)["GanttColumnHeader"][3] == pytest.approx(24.0, abs=0.01)
 
 
@@ -99,9 +94,9 @@ def test_column_header_height_comes_from_config(config):
 
 def test_oversized_chrome_is_capped_so_the_body_survives(config):
     """A theme asking for more chrome than the page has must still leave rows."""
-    config.gantt_header_row_height = 400.0
-    config.gantt_top_time_bands = [{"label": "A", "unit": "month", "row_height": 400}]
-    config.gantt_bottom_time_bands = [{"label": "B", "unit": "week", "row_height": 400}]
+    set_fields(config, gantt_header_row_height=400.0)
+    set_bands(config, primary=[{"label": "A", "unit": "month", "row_height": 400}])
+    set_bands(config, secondary=[{"label": "B", "unit": "week", "row_height": 400}])
 
     coords = regions(config)
     assert coords["GanttChartBody"][3] > 0
@@ -109,9 +104,9 @@ def test_oversized_chrome_is_capped_so_the_body_survives(config):
 
 
 def test_no_bands_leaves_the_body_the_whole_height(config):
-    config.gantt_top_time_bands = []
-    config.gantt_bottom_time_bands = []
-    config.gantt_header_row_height = 0.0
+    set_bands(config, primary=[])
+    set_bands(config, secondary=[])
+    set_fields(config, gantt_header_row_height=0.0)
     coords = regions(config)
     assert coords["GanttChartBody"][3] == pytest.approx(coords["GanttArea"][3], abs=0.01)
 

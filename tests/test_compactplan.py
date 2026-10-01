@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 from typing import ClassVar
 
+from band_helpers import set_bands, set_fields
 from fakes import FakeCalendarDB
 
 from config.config import ICON_SETS, create_calendar_config, setfontsizes
 from shared.number_icons import number_duration_icons
+from shared.span import Span
 from visualizers.compactplan.layout import CompactPlanLayout
 from visualizers.compactplan.renderer import CompactPlanRenderer
 
@@ -200,27 +203,27 @@ class TestResolveFont:
 
     def test_unknown_setting_falls_back_to_config_base(self):
         config = create_calendar_config()
-        config.compactplan_text_font_name = "AmericanTypewriter-Light"
+        set_fields(config, compactplan_text_font_name="AmericanTypewriter-Light")
         font = CompactPlanRenderer._resolve_font("NotARealFont", config)
         assert font == "AmericanTypewriter-Light"
 
     def test_none_setting_uses_config_base(self):
         config = create_calendar_config()
-        config.compactplan_text_font_name = "AmericanTypewriter-Medium"
+        set_fields(config, compactplan_text_font_name="AmericanTypewriter-Medium")
         font = CompactPlanRenderer._resolve_font(None, config)
         assert font == "AmericanTypewriter-Medium"
 
     def test_italic_prefers_notes_font(self):
         config = create_calendar_config()
-        config.compactplan_notes_text_font_name = "AmericanTypewriter-Cond"
-        config.compactplan_text_font_name = "AmericanTypewriter-Bold"
+        set_fields(config, compactplan_notes_text_font_name="AmericanTypewriter-Cond")
+        set_fields(config, compactplan_text_font_name="AmericanTypewriter-Bold")
         font = CompactPlanRenderer._resolve_font(None, config, italic=True)
         assert font == "AmericanTypewriter-Cond"
 
     def test_italic_falls_back_to_base_font(self):
         config = create_calendar_config()
-        config.compactplan_notes_text_font_name = None
-        config.compactplan_text_font_name = "AmericanTypewriter-Bold"
+        set_fields(config, compactplan_notes_text_font_name=None)
+        set_fields(config, compactplan_text_font_name="AmericanTypewriter-Bold")
         font = CompactPlanRenderer._resolve_font(None, config, italic=True)
         assert font == "AmericanTypewriter-Bold"
 
@@ -228,8 +231,8 @@ class TestResolveFont:
         from config.config import Fonts
 
         config = create_calendar_config()
-        config.compactplan_text_font_name = None
-        config.compactplan_notes_text_font_name = None
+        set_fields(config, compactplan_text_font_name=None)
+        set_fields(config, compactplan_notes_text_font_name=None)
         font = CompactPlanRenderer._resolve_font(None, config)
         assert font == Fonts.RC_LIGHT
 
@@ -254,9 +257,7 @@ class TestVisibleDays:
 # ---------------------------------------------------------------------------
 
 
-def test_assign_group_colors_cycles_palette(tmp_path):
-    config = _base_config(tmp_path / "out.svg")
-    config.compactplan_palette = ["red", "blue", "green"]
+def test_assign_group_colors_cycles_palette():
     from shared.data_models import Event
 
     events = [
@@ -266,7 +267,7 @@ def test_assign_group_colors_cycles_palette(tmp_path):
         Event.from_dict(_dur("T4", "20260309", "20260313", group="Delta")),  # cycles
     ]
     renderer = CompactPlanRenderer()
-    color_map = renderer._assign_group_colors(events, config)
+    color_map = renderer._assign_group_colors(events, ["red", "blue", "green"])
 
     # Groups are sorted alphabetically: Alpha, Beta, Delta, Gamma
     assert color_map["Alpha"] == "red"
@@ -277,7 +278,7 @@ def test_assign_group_colors_cycles_palette(tmp_path):
 
 def test_event_color_overrides_group_color(tmp_path):
     config = _base_config(tmp_path / "out.svg")
-    config.compactplan_palette = ["#92d050"]
+    set_fields(config, compactplan_palette=["#92d050"])
     config.adjustedstart = "20260309"
     config.adjustedend = "20260424"
     from shared.data_models import Event
@@ -293,7 +294,7 @@ def test_event_color_overrides_group_color(tmp_path):
 
 def test_overlapping_durations_go_to_different_rows(tmp_path):
     config = _base_config(tmp_path / "out.svg")
-    config.compactplan_palette = ["#92d050", "#6b9bc7"]
+    set_fields(config, compactplan_palette=["#92d050", "#6b9bc7"])
     from shared.data_models import Event
 
     # Two overlapping durations in the same group → should land on different rows
@@ -301,15 +302,14 @@ def test_overlapping_durations_go_to_different_rows(tmp_path):
     d2 = Event.from_dict(_dur("D2", "20260310", "20260317", group="Team1"))
 
     renderer = CompactPlanRenderer()
-    # Build minimal day_x covering the range (Mon–Fri workweek)
+    # A span covering the range (Mon–Fri workweek)
     start = date(2026, 3, 9)
     end = date(2026, 3, 20)
     visible = renderer._visible_days(start, end, 0)
-    px = 500.0 / len(visible)
-    day_x = {d: i * px for i, d in enumerate(visible)}
+    span = Span(visible, 0.0, 500.0)
     color_map = {"Team1": "#92d050"}
 
-    placed = renderer._place_durations([d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0)
+    placed = renderer._place_durations([d1, d2], color_map, span, config, axis_y=100.0)
 
     assert len(placed) == 2
     assert placed[0].row_y != placed[1].row_y
@@ -317,7 +317,7 @@ def test_overlapping_durations_go_to_different_rows(tmp_path):
 
 def test_non_overlapping_durations_share_row(tmp_path):
     config = _base_config(tmp_path / "out.svg")
-    config.compactplan_palette = ["#92d050"]
+    set_fields(config, compactplan_palette=["#92d050"])
     from shared.data_models import Event
 
     d1 = Event.from_dict(_dur("D1", "20260309", "20260313", group="Team1"))
@@ -327,11 +327,10 @@ def test_non_overlapping_durations_share_row(tmp_path):
     start = date(2026, 3, 9)
     end = date(2026, 3, 22)
     visible = renderer._visible_days(start, end, 0)
-    px = 500.0 / len(visible)
-    day_x = {d: i * px for i, d in enumerate(visible)}
+    span = Span(visible, 0.0, 500.0)
     color_map = {"Team1": "#92d050"}
 
-    placed = renderer._place_durations([d1, d2], color_map, day_x, 0.0, 500.0, px, config, axis_y=100.0)
+    placed = renderer._place_durations([d1, d2], color_map, span, config, axis_y=100.0)
 
     assert len(placed) == 2
     assert placed[0].row_y == placed[1].row_y
@@ -367,14 +366,17 @@ def test_renderer_draws_axis_line(tmp_path):
     renderer = _CaptureCompactPlanRenderer()
     renderer.render(config, coords, [], _DummyDB())
 
-    # The axis line is a full-width horizontal line
+    # The axis line is a full-width horizontal line, drawn through the shared line engine.
     _area_x, _, area_w, _ = coords["CompactPlanArea"]
-    axis_lines = [
-        (x1, y1, x2, y2)
-        for x1, y1, x2, y2 in renderer.line_calls
-        if abs(y1 - y2) < 0.01 and abs(x2 - x1 - area_w) < 1.0
+    svg = output.read_text()
+    runs = [
+        (float(x1), float(x2))
+        for x1, y1, x2, y2 in re.findall(
+            r'<path d="M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)"[^>]*class="ec-axis-line"', svg
+        )
+        if y1 == y2
     ]
-    assert axis_lines, "Expected at least one full-width horizontal axis line"
+    assert runs and abs((runs[0][1] - runs[0][0]) - area_w) < 1.0
 
 
 def test_renderer_draws_duration_lines(tmp_path):
@@ -395,7 +397,7 @@ def test_renderer_draws_duration_lines(tmp_path):
 def test_renderer_milestone_at_correct_x(tmp_path):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    config.compactplan_show_milestone_labels = False  # suppress label text lines
+    set_fields(config, compactplan_show_milestone_labels=False)  # suppress label text lines
 
     coords = CompactPlanLayout().calculate(config)
     events = [_milestone("Launch", "20260316", group="Team1")]
@@ -411,7 +413,7 @@ def test_renderer_milestone_at_correct_x(tmp_path):
 def test_renderer_milestone_label_rendered(tmp_path):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    config.compactplan_show_milestone_labels = True
+    set_fields(config, compactplan_show_milestone_labels=True)
 
     coords = CompactPlanLayout().calculate(config)
     events = [_milestone("Go Live", "20260316", group="Team1")]
@@ -459,16 +461,19 @@ class _IconCaptureRenderer(_CaptureCompactPlanRenderer):
 
 def _icon_band_config(output: Path):
     config = _base_config(output)
-    config.compactplan_time_bands = [
-        {
-            "label": "Events",
-            "unit": "icon",
-            "fill_color": "#eeeeee",
-            "icon_rules": [
-                {"milestone": True, "icon": "diamond", "color": "#4472c4"},
-            ],
-        }
-    ]
+    set_bands(
+        config,
+        primary=[
+            {
+                "label": "Events",
+                "unit": "icon",
+                "fill_color": "#eeeeee",
+                "icon_rules": [
+                    {"milestone": True, "icon": "diamond", "color": "#4472c4"},
+                ],
+            }
+        ],
+    )
     return config
 
 
@@ -536,8 +541,7 @@ class _HolidayDB(_DummyDB):
 def _render(tmp_path, events, db=None, **overrides):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, **overrides)
     renderer = _CaptureCompactPlanRenderer()
     result = renderer.render(
         config,
@@ -553,7 +557,7 @@ def _names_by_color_rank(renderer):
     from renderers.markdown_details import ordered_event_views
 
     config = renderer._config
-    config.details_md_sort = ["color_rank", "start_date"]
+    set_fields(config, details_md_sort=["color_rank", "start_date"])
     return [view.task_name for view in ordered_event_views(renderer.details_record, config)]
 
 
@@ -714,7 +718,9 @@ def test_chart_page_keeps_the_bottom_rows_icons(tmp_path):
     assert match is not None
     _, top, _, height = (float(v) for v in match.group(1).split())
     lowest = max(p.row_y for p in renderer._placed_durations)
-    icon_h = min(renderer._duration_icon_height(renderer._config), renderer._config.compactplan_duration_line_width)
+    icon_h = min(
+        renderer._duration_icon_height(renderer._config), renderer._config.theme_v3.compact_plan.duration_line_width
+    )
     assert top + height >= lowest + icon_h / 2.0
 
 
@@ -756,8 +762,7 @@ def _milestone_with_icon(icon, color="#2e8b57"):
 def _render_milestone(tmp_path, event, **overrides):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, **overrides)
     renderer = _LabelCaptureRenderer()
     renderer.render(config, CompactPlanLayout().calculate(config), [event], _IconDB())
     return renderer
@@ -832,7 +837,7 @@ class _FlagDB(_DummyDB):
 def _render_bands(tmp_path, bands, db=None):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    config.compactplan_time_bands = bands
+    set_bands(config, primary=bands)
     renderer = _IconCaptureRenderer()
     renderer.render(
         config,
@@ -848,7 +853,7 @@ def _band_rects(renderer):
 
 
 def test_the_holiday_band_draws_each_holidays_own_flag(tmp_path):
-    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays"}])
+    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays", "nonworkdays_only": False}])
 
     flags = {c["icon_name"] for c in renderer.icon_calls}
     assert {"flag-us", "flag-ca"} <= flags
@@ -865,7 +870,7 @@ def test_the_holiday_band_can_hide_observances(tmp_path):
 
 
 def test_the_holiday_band_puts_the_flag_on_its_day(tmp_path):
-    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays"}])
+    renderer = _render_bands(tmp_path, [{"unit": "holiday", "label": "Holidays", "nonworkdays_only": False}])
 
     us = next(c for c in renderer.icon_calls if c["icon_name"] == "flag-us")
     # Mon 16 Mar is the 6th weekday of a range starting Mon 9 Mar.
@@ -886,7 +891,7 @@ def test_each_band_takes_its_own_row_height(tmp_path):
     week = [r for r in _band_rects(renderer) if r["fill"] == "#eeeeee"]
     day = [r for r in _band_rects(renderer) if r["fill"] == "#dddddd"]
     assert {r["h"] for r in week} == {30.0}
-    assert {r["h"] for r in day} == {renderer._config.compactplan_band_row_height}
+    assert {r["h"] for r in day} == {12.0}  # the schema's default row height
     # The rows stack: the date row starts where the week row ends.
     assert day[0]["y"] == week[0]["y"] + 30.0
 
@@ -947,7 +952,7 @@ def test_a_matching_fill_rule_colors_the_bar(tmp_path):
         [_fill_rule({"priority_min": 4}, "#aa0000")],
     )
 
-    palette_color = renderer._config.compactplan_palette[0]
+    palette_color = renderer._config.theme_v3.palettes.event[0]
     assert _bar_strokes(renderer) == {"#aa0000", palette_color}
 
 
@@ -1019,8 +1024,7 @@ class _BarTextRenderer(_IconCaptureRenderer):
 def _render_bars(tmp_path, events, **overrides):
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    for key, value in overrides.items():
-        setattr(config, key, value)
+    set_fields(config, **overrides)
     renderer = _BarTextRenderer()
     renderer.render(
         config, CompactPlanLayout().calculate(config), number_duration_icons(events, config, "compactplan"), _IconDB()
@@ -1151,7 +1155,7 @@ def test_a_continuing_bars_end_date_fits_beside_its_arrow(tmp_path):
 
     assert bar.continues
     _, _, mid_x2, x2 = renderer._bar_columns(bar, config)
-    arrow_w = min(renderer._continuation_icon_style(config)[1], config.compactplan_duration_line_width)
+    arrow_w = min(renderer._continuation_icon_style(config)[1], config.theme_v3.compact_plan.duration_line_width)
     (end,) = _texts(renderer, "ec-duration-date")
     assert end["text"] == "5/15"
     assert abs(end["x"] - (mid_x2 + x2 - arrow_w) / 2.0) < 1e-6
@@ -1234,9 +1238,9 @@ def test_a_duration_icon_takes_the_shared_background_and_stroke(tmp_path, monkey
     monkeypatch.setitem(ICON_SETS, "test-diamond", ["diamond"])  # the one icon _IconDB serves
     output = tmp_path / "compact.svg"
     config = _base_config(output)
-    config.duration_icon_list = "test-diamond"
-    config.duration_icon_background_color = "gold"
-    config.duration_icon_stroke_color = "crimson"
+    set_fields(config, duration_icon_list="test-diamond")
+    set_fields(config, duration_icon_background_color="gold")
+    set_fields(config, duration_icon_stroke_color="crimson")
     renderer = CompactPlanRenderer()
     renderer.render(
         config,

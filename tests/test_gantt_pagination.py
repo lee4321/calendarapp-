@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from band_helpers import set_bands, set_fields
 from test_gantt_marks import render, task
 
-from config.config import create_calendar_config, setfontsizes
+from config.config import create_calendar_config
 from shared.date_utils import visible_days
 from visualizers.gantt.layout import GanttLayout, plan_pages
-from visualizers.gantt.renderer import GanttRenderer, _page_output_path
+from visualizers.gantt.renderer import _page_output_path
 
 # ── Page planning ─────────────────────────────────────────────────────────
 
@@ -87,47 +88,36 @@ def test_a_path_without_an_extension_still_gets_one():
 # ── Timescale continuity (answer 11) ──────────────────────────────────────
 
 
-def build_segments_over(start: date, end: date):
-    config = create_calendar_config()
-    config.pageX, config.pageY = 1920.0, 1080.0
-    config.userstart = config.adjustedstart = start.strftime("%Y%m%d")
-    config.userend = config.adjustedend = end.strftime("%Y%m%d")
-    config = setfontsizes(config)
+def week_row_over(start: date, end: date, page_slice: slice | None = None):
+    """The week row planned over the whole range, drawn on the page ``days[page_slice]``."""
+    from renderers.timescale import ScaleContext, plan_rows
+    from shared.span import Span
 
-    renderer = GanttRenderer()
-    renderer._populate_tokens(config)
+    config = create_calendar_config()
+    set_bands(config, primary=[{"label": "Week", "unit": "week", "label_format": "W{n}"}])
     days = visible_days(start, end, int(config.weekend_style))
-    return renderer._build_all_segments(config, start, end, days, None), days
+    page = days[page_slice] if page_slice else days
+    ctx = ScaleContext(config.theme_v3, config, None, [], measure=lambda *_: 0.0)
+    plan = plan_rows(config.theme_v3.timescale.primary, Span(page, 0, 1000), ctx, full_days=days, min_segment_width=0)
+    return plan.rows[0].cells, days
 
 
 def test_band_segments_are_built_once_for_the_whole_range():
     """Per-page building would restart interval counters at each break."""
-    segments, _days = build_segments_over(date(2026, 2, 2), date(2027, 6, 30))
-    weeks = segments[("top", 1)]
+    cells, _days = week_row_over(date(2026, 2, 2), date(2027, 6, 30))
 
-    first = weeks[0].label
-    last = weeks[-1].label
-    assert first == "W1"
-    assert last != "W1", "week numbering must not restart mid-range"
+    assert cells[0].label == "W1"
+    assert cells[-1].label != "W1", "week numbering must not restart mid-range"
 
 
 def test_a_later_page_keeps_the_running_label():
-    segments, days = build_segments_over(date(2026, 2, 2), date(2028, 12, 31))
-    weeks = segments[("top", 1)]
+    whole, _days = week_row_over(date(2026, 2, 2), date(2028, 12, 31))
+    page, _ = week_row_over(date(2026, 2, 2), date(2028, 12, 31), slice(240, 480))
+    by_start = {c.start: c.label for c in whole}
 
-    def label_for(day):
-        return next((s.label for s in weeks if s.start <= day < s.end_exclusive), None)
-
-    # Whatever the page break, the label depends only on the date.
-    assert label_for(days[0]) == "W1"
-    boundary = label_for(days[240])
-    assert boundary is not None and boundary != "W1"
-
-
-def test_every_configured_band_gets_its_own_segment_list():
-    segments, _days = build_segments_over(date(2026, 2, 2), date(2026, 3, 31))
-    assert ("top", 0) in segments and ("top", 1) in segments
-    assert ("bottom", 0) in segments
+    # Whatever the page break, a week's label depends only on the date, never on the page.
+    assert page[0].label != "W1"
+    assert all(by_start[c.start] == c.label for c in page if not c.continues_before)
 
 
 # ── Rendering across pages ────────────────────────────────────────────────
@@ -211,3 +201,42 @@ def test_rows_on_a_later_page_start_at_the_top_of_the_body(tmp_path):
 
     bars = renderer.of_class(renderer.rects, "ec-duration-bar")
     assert min(bar["y"] for bar in bars) < body_top + 40.0
+
+
+def test_a_page_break_never_cuts_a_month_that_fits_a_page():
+    """Pages come out a little shorter rather than splitting a month (decision 24)."""
+    from visualizers.gantt.renderer import GanttRenderer
+
+    config = create_calendar_config()
+    config.pageX, config.pageY = 792.0, 612.0
+    config.weekend_style = 1
+    config.userstart = config.adjustedstart = "20260101"
+    config.userend = config.adjustedend = "20260630"
+    set_fields(config, gantt_min_day_width=5.0)
+    set_bands(config, primary=[{"label": "Month", "unit": "month"}, {"label": "Date", "unit": "date"}], secondary=[])
+    coords = GanttLayout().calculate(config)
+    days = visible_days(date(2026, 1, 1), date(2026, 6, 30), 1)
+
+    pages = GanttRenderer()._plan_pages(config, coords, [], days)
+
+    assert len(pages) > 1
+    starts = [days[p.day_start] for p in pages]
+    assert all(d.day == 1 for d in starts), starts  # every page begins on the first of a month
+    assert [days[p.day_end - 1] for p in pages[:-1]] == [
+        d - __import__("datetime").timedelta(days=1) for d in starts[1:]
+    ]
+
+
+def test_a_segment_longer_than_a_page_is_clipped_on_every_page_it_crosses():
+    from renderers.timescale import ScaleContext, plan_rows
+    from shared.span import Span
+
+    config = create_calendar_config()
+    set_bands(config, primary=[{"label": "Year", "unit": "year", "date_format": "YYYY"}])
+    days = visible_days(date(2026, 1, 1), date(2026, 12, 31), 1)
+    ctx = ScaleContext(config.theme_v3, config, None, [], measure=lambda *_: 0.0)
+    for page_days in (days[0:100], days[100:200]):
+        (row,) = plan_rows(
+            config.theme_v3.timescale.primary, Span(page_days, 0, 500), ctx, full_days=days, min_segment_width=0
+        ).rows
+        assert [c.label for c in row.cells] == ["2026"]  # the label is repeated on every page

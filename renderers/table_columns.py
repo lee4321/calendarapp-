@@ -20,6 +20,7 @@ on the chart, or a view that layers render-derived fields over one.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
@@ -38,11 +39,11 @@ if TYPE_CHECKING:
 LINK_REF_FIELD = "link_ref"
 
 #: Fields rendered as an icon when the value is truthy and the column
-#: asks for ``render: icon`` without naming one.  The values are config
-#: attributes holding the icon name.
+#: asks for ``render: icon`` without naming one.  The values are attribute
+#: paths under ``gantt.marks`` holding the icon name.
 _DEFAULT_FIELD_ICONS: dict[str, str] = {
-    "rollup": "gantt_rollup_icon",
-    "milestone": "gantt_milestone_flag_icon",
+    "rollup": "rollup",
+    "milestone": "milestone_flag",
 }
 
 #: Themes name fields after the `events` **table**, which is the
@@ -51,6 +52,16 @@ _DEFAULT_FIELD_ICONS: dict[str, str] = {
 #: the attribute that actually holds the value.  Anything absent here is
 #: used as-is, which covers the majority of fields: every other `events`
 #: column is spelled the same on the table and on ``Event``.
+#: Column alignments as authored (``start`` / ``middle`` / ``end``, or ``left`` / ``center`` / ``right``).
+_ALIGNS: dict[str, str] = {
+    "start": "left",
+    "left": "left",
+    "middle": "center",
+    "center": "center",
+    "end": "right",
+    "right": "right",
+}
+
 FIELD_ALIASES: dict[str, str] = {
     "id": "db_id",
     "name": "task_name",
@@ -97,6 +108,8 @@ def resolve_table_columns(entries: Iterable[Any] | None, config: CalendarConfig)
     """
     parsed: list[TableColumn] = []
     for entry in list(entries or []):
+        if dataclasses.is_dataclass(entry) and not isinstance(entry, type):
+            entry = {k: v for k, v in dataclasses.asdict(entry).items() if v is not None}
         if not isinstance(entry, dict):
             continue
         field = str(entry.get("field") or "").strip()
@@ -107,7 +120,7 @@ def resolve_table_columns(entries: Iterable[Any] | None, config: CalendarConfig)
         icon = entry.get("icon")
         if render == "icon" and not icon:
             icon_field = _DEFAULT_FIELD_ICONS.get(field)
-            icon = getattr(config, icon_field, None) if icon_field else None
+            icon = getattr(config.theme_v3.gantt.marks, icon_field, None) if icon_field else None
 
         parsed.append(
             TableColumn(
@@ -115,7 +128,7 @@ def resolve_table_columns(entries: Iterable[Any] | None, config: CalendarConfig)
                 attr=resolve_field(field),
                 header=str(entry.get("header") or field),
                 width=_positive_float(entry.get("width")),
-                align=str(entry.get("align") or "left").strip().lower(),
+                align=_ALIGNS.get(str(entry.get("align") or "left").strip().lower(), "left"),
                 max_lines=max(1, int(entry.get("max_lines") or 1)),
                 truncate=bool(entry.get("truncate", True)),
                 render="icon" if render == "icon" else "text",

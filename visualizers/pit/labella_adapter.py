@@ -23,13 +23,12 @@ from dataclasses import replace
 import arrow
 
 from config.config import CalendarConfig
+from config.role_styles import role_text
 from renderers.text_utils import string_width
 from shared.data_models import Event
 from shared.date_utils import format_arrow_date
 from shared.labella_layout import (
     CalloutPlacement,
-    append_perp_stub,
-    prepend_perp_stub,
 )
 from shared.labella_layout import (
     layout_callouts as _layout_callouts_shared,
@@ -61,27 +60,27 @@ _LABEL_PAD_X: float = 6.0
 
 
 def _name_size(config: CalendarConfig) -> float:
-    return float(config.pit_name_text_font_size or 11.0)
+    return role_text(config, "event_name").size
 
 
 def _notes_size(config: CalendarConfig) -> float:
-    return float(config.pit_notes_text_font_size or _name_size(config) * 0.85)
+    return role_text(config, "event_notes").size
 
 
 def _date_size(config: CalendarConfig) -> float:
-    return float(getattr(config, "theme_pit_date_text_font_size", None) or _name_size(config) * 0.85)
+    return role_text(config, "event_date").size
 
 
 def _inline_date(config: CalendarConfig) -> bool:
     """True when the event date is rendered inside the label box."""
-    return getattr(config, "pit_date_placement", "inline") == "inline"
+    return config.theme_v3.pit.date_placement == "inline"
 
 
 def _date_string(event: Event, config: CalendarConfig) -> str:
     """Formatted event date, or '' if it can't be parsed."""
     try:
         day = arrow.get(event.start, "YYYYMMDD")
-        return format_arrow_date(day, config.pit_date_format)
+        return format_arrow_date(day, config.theme_v3.events.date.format)
     except Exception:
         return ""
 
@@ -98,8 +97,8 @@ def _measured_text_width(
     label icon (when present) is drawn left of the name on the same
     baseline, so notes and inline-date lines are unaffected.
     """
-    name_path = _resolve_font_path(config.pit_name_text_font_name)
-    notes_path = _resolve_font_path(config.pit_notes_text_font_name)
+    name_path = _resolve_font_path(role_text(config, "event_name").font)
+    notes_path = _resolve_font_path(role_text(config, "event_notes").font)
     name_size = _name_size(config)
     notes_size = _notes_size(config)
 
@@ -117,9 +116,7 @@ def _measured_text_width(
     date_w = 0.0
     if _inline_date(config):
         date_text = _date_string(event, config)
-        date_path = _resolve_font_path(
-            getattr(config, "theme_pit_date_text_font_name", None) or config.pit_name_text_font_name
-        )
+        date_path = _resolve_font_path(role_text(config, "event_date").font)
         date_size = _date_size(config)
         date_w = string_width(date_text, date_path, date_size) if date_path else len(date_text) * date_size * 0.5
     return max(name_w, notes_w, date_w)
@@ -190,7 +187,7 @@ def _renderer_node_height(
     Vertical   → widest text + padding (so all vertical labels align).
     """
     if direction is Orientation.HORIZONTAL:
-        return max(_line_height_extent(config), config.pit_labella_node_height)
+        return max(_line_height_extent(config), config.theme_v3.pit.labella.node_height)
 
     extra = _extra_width_fn(extra_width_for_event)
     widest = max(
@@ -205,7 +202,7 @@ def _re_anchor_and_stub(
     config: CalendarConfig,
     direction: Orientation,
 ) -> list[CalloutPlacement]:
-    """PIT post-pass over shared placements: re-anchor labels, add stubs.
+    """PIT post-pass over shared placements: re-anchor labels.
 
     Re-anchoring: labella reserves space centered on each node's
     currentPos, but its renderer reports the box origin (n.x / n.y) at
@@ -214,9 +211,7 @@ def _re_anchor_and_stub(
     overlap model, so boxes that labella placed without collision
     actually render without collision.
     """
-    anchor = getattr(config, "pit_leader_label_anchor", "center")
-    end_stub = float(config.pit_leader_end_stub)
-    start_stub = float(config.pit_leader_start_stub)
+    anchor = config.theme_v3.pit.leader_label_anchor
 
     out: list[CalloutPlacement] = []
     for p in placements:
@@ -233,10 +228,7 @@ def _re_anchor_and_stub(
             elif anchor == "end":
                 y_label -= p.label_h
 
-        leader = append_perp_stub(p.leader_path_d, direction, end_stub)
-        leader = prepend_perp_stub(leader, direction, start_stub)
-
-        out.append(replace(p, x_label=x_label, y_label=y_label, leader_path_d=leader))
+        out.append(replace(p, x_label=x_label, y_label=y_label))
     return out
 
 
@@ -250,6 +242,7 @@ def layout_pit_callouts(
     config: CalendarConfig,
     pos_for_day: Callable[[arrow.Arrow], float],
     extra_width_for_event: Callable[[Event], float] | None = None,
+    min_layer_gap: float = 0.0,
 ) -> list[PITPlacement]:
     """Return labella-placed PIT callouts for the given events.
 
@@ -267,6 +260,8 @@ def layout_pit_callouts(
             [0, axis_length].
         extra_width_for_event: Optional per-event extra width for the
             name line (label icon + gap).
+        min_layer_gap: Floor on the axis-to-first-row gap: the room the
+            timescale's rows beside the axis take.
 
     Returns:
         List of PITPlacement records. For BOTH, primary placements
@@ -297,8 +292,8 @@ def layout_pit_callouts(
             direction,
             extra_width_for_event=extra_width_for_event,
         ),
-        density=float(config.pit_labella_density),
-        layer_gap=float(config.pit_labella_layer_gap),
+        density=float(config.theme_v3.pit.labella.density),
+        layer_gap=max(float(config.theme_v3.pit.labella.layer_gap), float(min_layer_gap)),
         on_side_events=_warn_over_cap,
     )
     return _re_anchor_and_stub(placements, config, direction)

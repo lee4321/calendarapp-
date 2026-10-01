@@ -14,10 +14,10 @@ flowchart LR
 
     subgraph CONF["config/"]
         CC["CalendarConfig<br/>(~536 fields: geometry,<br/>filters, fiscal, runtime)"]
-        TE["theme_engine.ThemeEngine<br/>YAML → config + UnifiedTheme"]
-        UT["UnifiedTheme<br/>resolve_token / find_rules"]
+        TL["theme_loader.load_theme<br/>YAML → Theme (strict)"]
+        UT["config.theme_v3<br/>+ role_styles"]
         CAT["element_catalog.yaml<br/>ec-* → token bindings"]
-        PAL["palette_resolver"]
+        PAL["shared/palettes<br/>resolve_theme_palettes"]
     end
 
     subgraph DATA["shared/"]
@@ -25,7 +25,7 @@ flowchart LR
         HOL["holidays pkg<br/>(in-memory gov holidays)"]
         EV["data_models.Event"]
         CLS["day_classifier"]
-        RE["rule_engine<br/>StyleEngine / LaneEngine"]
+        RE["rule_engine<br/>StyleEngine"]
     end
 
     subgraph VIZ["visualizers/"]
@@ -37,9 +37,8 @@ flowchart LR
     BASE["renderers/svg_base.py<br/>BaseSVGRenderer:<br/>draw helpers, tokens,<br/>patterns, glyph text"]
 
     ARGS --> RUN --> ASM --> CC
-    TE --> CC
-    TE --> UT
-    CAT --> TE
+    TL --> UT --> CC
+    CAT --> UT
     RUN --> PAL --> CC
     RUN --> FACT --> LAY --> REND
     DB --> EV --> REND

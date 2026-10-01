@@ -12,9 +12,6 @@
 # tests/test_element_catalog.py enforces that every `ec-*` literal grep'd from
 # renderers/ and visualizers/ appears here, so missing entries fail CI.
 #
-# To override an entry from a single theme (e.g., bind ec-today-label to
-# text:label-with-red-color), use `element_overrides:` in the theme YAML —
-# see USER_GUIDE.md "Overriding a built-in element binding".
 # ══════════════════════════════════════════════════════════════════════════════
 
 elements:
@@ -25,7 +22,6 @@ elements:
   ec-tick-label:     { kind: text, token: label,          scope: [timeline, blockplan, compactplan, gantt],   description: "Axis tick label" }
   ec-day-number:     { kind: text, token: day_number,     scope: [weekly, mini, mini-icon],            description: "Day-of-month number" }
   ec-month-title:    { kind: text, token: month_title,    scope: [weekly, mini, mini-icon],            description: "Mini calendar month heading" }
-  ec-month-box-label: { kind: text, token: month_title,   scope: [candybar],                           description: "Candybar merged month-box label" }
   ec-week-number:    { kind: text, token: week_number,    scope: [weekly, mini, mini-icon],            description: "Week-number label" }
   ec-fiscal-label:   { kind: text, token: fiscal_label,   scope: [weekly, blockplan, compactplan],     description: "Fiscal period label" }
   ec-event-name:     { kind: text, token: event_name,     scope: [all],                                description: "Event/task name" }
@@ -45,15 +41,12 @@ elements:
   ec-background:     { kind: box, token: default,  scope: [all],                                description: "Page / area background" }
   ec-cell:           { kind: box, token: cell,     scope: [all],                                description: "Generic content cell background" }
   ec-day-box:        { kind: box, token: day,      scope: [weekly, mini, mini-icon],            description: "Day-box rectangle" }
-  ec-month-box:      { kind: box, token: cell,     scope: [candybar],                           description: "Candybar merged month-box rectangle" }
   ec-month-band:     { kind: box, token: cell,     scope: [candybar],                           description: "Candybar per-month day-cell band shade" }
   ec-weekend:        { kind: box, token: cell,     scope: [candybar],                           description: "Candybar weekend day-cell tint" }
   ec-heading-cell:   { kind: box, token: header,   scope: [blockplan, compactplan, excelblockplan, gantt], description: "Lane / heading-column cell" }
+  ec-vline-fill:     { kind: box, token: band,     scope: [blockplan, compactplan, gantt],      description: "Column fill under a timescale row's segments" }
   ec-band-cell:      { kind: box, token: band,     scope: [blockplan, compactplan, excelblockplan, gantt], description: "Time-band segment cell" }
   ec-callout-box:    { kind: box, token: callout,  scope: [timeline],                           description: "Timeline event callout box" }
-  ec-fiscal-band:    { kind: box, token: fiscal_band,     scope: [timeline],                   description: "Timeline fiscal period / quarter band segment" }
-  ec-fiscal-band-alt: { kind: box, token: fiscal_band_alt, scope: [timeline],                  description: "Timeline fiscal band segment, alternating shade" }
-  ec-vline-fill:     { kind: box, token: vline,    scope: [blockplan],                          description: "Vertical-line column fill" }
   ec-pattern-fill:   { kind: box, token: default,  scope: [weekly, mini, mini-icon],            description: "SVG pattern overlay rect" }
   ec-pit-label-pattern: { kind: box, token: default, scope: [pit],                              description: "PIT pattern-fill overlay rect on a callout label box" }
 
@@ -61,8 +54,6 @@ elements:
   ec-grid-line:      { kind: line, token: grid,      scope: [all],                              description: "Cell / grid boundary" }
   ec-axis-line:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Timeline / blockplan axis" }
   ec-axis-tick:      { kind: line, token: axis,      scope: [timeline, blockplan, compactplan, gantt], description: "Axis tick mark" }
-  ec-month-tick:     { kind: line, token: month_tick,   scope: [timeline],                        description: "Month boundary tick, drawn fainter than the axis tick" }
-  ec-today-marker:   { kind: line, token: today_marker, scope: [timeline],                        description: "Timeline today marker, drawn fainter than the today line" }
   ec-today-line:     { kind: line, token: today,     scope: [all],                              description: "Today indicator vertical line" }
   ec-separator:      { kind: line, token: separator, scope: [all],                              description: "Section / row separator" }
   ec-connector:      { kind: line, token: grid,      scope: [timeline],                         description: "Dependency / callout connector line" }

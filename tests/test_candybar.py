@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import itertools
 
+from band_helpers import set_bands, set_fields, update_theme
 from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
@@ -31,11 +32,18 @@ def _config(start: str, end: str, **overrides) -> CalendarConfig:
     cfg.userstart = start
     cfg.userend = end
     # Candybar shows every weekday by default for these structural tests.
-    cfg.candybar_suppress_weekends = False
+    set_fields(cfg, candybar_suppress_weekends=False)
     cfg.weekend_style = 1  # Sunday-start weekend style (includes weekends)
-    cfg.candybar_week_start = 1  # Monday/ISO
-    for k, v in overrides.items():
-        setattr(cfg, k, v)
+    set_fields(cfg, candybar_week_start=1)  # Monday/ISO
+    # One month row styles the month boxes: abbreviated names, no fill.
+    month_row = {"unit": "month", "date_format": "MMM"}
+    rotation = overrides.pop("candybar_month_rotation", None)
+    if rotation is not None:
+        month_row["text"] = {"rotation": rotation}
+    set_bands(cfg, primary=[month_row], secondary=[])
+    weekend_fill = overrides.pop("candybar_weekend_fill", None)
+    update_theme(cfg, holidays={"weekend": {"color": weekend_fill}})
+    set_fields(cfg, **overrides)
     setfontsizes(cfg)
     return cfg
 
@@ -104,53 +112,47 @@ def test_rows_are_full_after_boundary_expansion():
     assert len(cells) == 7 * len(weeknums)  # weekends shown → 7 cells/row
 
 
+def _month_cells(cfg):
+    """The month column's cells as drawn by the timescale engine, top to bottom."""
+    r = _render(cfg)
+    cells = [rc for rc in r.rects if rc.get("css_class") == "ec-band-cell"]
+    return sorted(cells, key=lambda c: c["y"])
+
+
 def test_month_box_spans_attributed_rows():
-    """Each month box height equals (its week-row count) × row height."""
+    """Each month's cell spans the week rows attributed to it."""
     cfg = _config("20260101", "20260228")
-    layout = CandybarLayout()
-    coords = layout.calculate(cfg)
+    coords = CandybarLayout().calculate(cfg)
+    row_h = next(v for k, v in coords.items() if k.startswith("Cell_"))[3]
 
-    # One row's height, from any day cell.
-    cell = next(v for k, v in coords.items() if k.startswith("Cell_"))
-    row_h = cell[3]
-
-    jan = next(v for k, v in coords.items() if k.endswith("_202601"))
-    feb = next(v for k, v in coords.items() if k.endswith("_202602"))
+    jan, feb = _month_cells(cfg)
 
     # 2026 Jan1–Feb28 spans 9 Monday-start weeks. The Jan26–Feb1 boundary
     # week is attributed to Feb (last visible day rule), giving Jan 4 rows
     # (incl. the Dec29–Jan4 partial week) and Feb 5 rows.
-    assert round(jan[3] / row_h) == 4
-    assert round(feb[3] / row_h) == 5
+    assert round(jan["h"] / row_h) == 4
+    assert round(feb["h"] / row_h) == 5
 
 
 def test_month_boxes_are_contiguous_and_non_overlapping():
-    """Stacked month boxes tile the strip with no gaps or overlap."""
-    cfg = _config("20260101", "20261231")
-    layout = CandybarLayout()
-    coords = layout.calculate(cfg)
-    boxes = sorted(
-        (v for k, v in coords.items() if k.startswith("MonthBox_")),
-        key=lambda b: b[1],  # SVG y (top-down)
-    )
-    assert len(boxes) == 12
-    for upper, lower in itertools.pairwise(boxes):
-        # bottom edge of the upper box meets the top edge of the next
-        assert abs((upper[1] + upper[3]) - lower[1]) < 0.01
+    """Stacked month cells tile the strip with no gaps or overlap."""
+    cells = _month_cells(_config("20260101", "20261231"))
+    assert len(cells) == 12
+    for upper, lower in itertools.pairwise(cells):
+        assert abs((upper["y"] + upper["h"]) - lower["y"]) < 0.01
 
 
 def test_boundary_week_attributed_to_new_month():
     """The Jan 27–Feb 2 week is labeled Feb (last visible day rule)."""
     cfg = _config("20260101", "20260228")
-    layout = CandybarLayout()
-    coords = layout.calculate(cfg)
+    coords = CandybarLayout().calculate(cfg)
     # Feb 1 (Sun) and Jan 27 (Tue) live in the same week row.
     jan27 = coords["Cell_20260127"]
     feb01 = coords["Cell_20260201"]
     assert jan27[1] == feb01[1]  # same row (same SVG y)
-    feb_box = next(v for k, v in coords.items() if k.endswith("_202602"))
-    # The shared row's top must fall within the Feb box's vertical span.
-    assert feb_box[1] <= feb01[1] + 0.01
+    _jan, feb_cell = _month_cells(cfg)
+    # The shared row's top must fall within the Feb cell's vertical span.
+    assert feb_cell["y"] <= feb01[1] + 0.01
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -212,7 +214,7 @@ def test_suppress_weekends_drops_saturday_sunday():
 def test_weekends_shown_by_default_regardless_of_weekend_style():
     """Candybar shows weekends by default and does not inherit weekend_style."""
     cfg = _config("20260105", "20260111")
-    cfg.candybar_suppress_weekends = None
+    set_fields(cfg, candybar_suppress_weekends=None)
     cfg.weekend_style = 0  # workweek style must NOT suppress candybar weekends
     assert candybar_suppress_weekends(cfg) is False
 
@@ -224,7 +226,7 @@ def test_explicit_flag_suppresses_weekends():
     """Weekends are dropped only when the flag is explicitly set."""
     cfg = _config("20260105", "20260111")
     cfg.weekend_style = 1
-    cfg.candybar_suppress_weekends = True
+    set_fields(cfg, candybar_suppress_weekends=True)
     assert candybar_suppress_weekends(cfg) is True
 
 
@@ -264,7 +266,7 @@ def test_header_labels_reflect_weekend_suppression():
     cols = compute_columns(cfg, 0.0, 100.0)
     assert cols.day_labels == ["Mon", "Tue", "Wed", "Thu", "Fri"]
 
-    cfg.candybar_suppress_weekends = False
+    set_fields(cfg, candybar_suppress_weekends=False)
     cols = compute_columns(cfg, 0.0, 100.0)
     assert cols.day_labels == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -373,13 +375,15 @@ def test_no_weekend_fill_by_default():
 
 
 def test_month_shading_bands_alternate_months():
-    # Default cycle ["none", "gainsboro"] keyed by (year*12+month) % 2:
-    # 2026-01 -> gainsboro (shaded), 2026-02 -> none (unshaded).
+    # Each calendar month takes its own colour from palettes.month_colors.
     cfg = _config("20260105", "20260211", candybar_month_shading=True)
+    update_theme(
+        cfg, palettes={"month_colors": {f"{m:02d}": c for m, c in zip(range(1, 13), "abcdefghijkl", strict=True)}}
+    )
     r = _render(cfg)
     bands = [rc for rc in r.rects if rc.get("css_class") == "ec-month-band"]
     assert bands
-    assert all(rc.get("fill") == "gainsboro" for rc in bands)
+    assert {rc.get("fill") for rc in bands} == {"a", "b"}
 
 
 def test_no_month_shading_by_default():

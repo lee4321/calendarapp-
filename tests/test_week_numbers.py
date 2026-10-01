@@ -1,4 +1,5 @@
 import arrow
+from band_helpers import set_bands, set_fields
 
 from config.config import create_calendar_config, setfontsizes
 from shared.fiscal_calendars import FiscalPeriodInfo
@@ -98,7 +99,7 @@ def test_week_number_drawn_in_left_margin_when_present():
 def test_week_number_formatting_applied():
     config = _base_config()
     config.weekend_style = 1  # Sunday start
-    config.week_number_label_format = "WK{num}"
+    set_fields(config, week_number_label_format="WK{num}")
     renderer = _CaptureRenderer()
 
     oneday = arrow.get("20250105", "YYYYMMDD")  # Sunday
@@ -112,7 +113,11 @@ def test_fiscal_label_formatting_applied():
     config.weekend_style = 1
     config.fiscal_show_period_labels = True
     config.fiscal_show_quarter_labels = True
-    config.fiscal_period_label_format = "{year_label}{quarter_label}{period_short}"
+    set_bands(
+        config,
+        primary=[{"unit": "fiscal_period", "date_format": "{year_label}{quarter_label}{period_short}"}],
+        secondary=[],
+    )
 
     info = FiscalPeriodInfo(
         fiscal_year=2025,
@@ -136,7 +141,7 @@ def test_fiscal_label_formatting_applied():
 
 def test_mini_week_number_formatting_applied():
     config = _base_config()
-    config.mini_week_number_label_format = "WN{num}"
+    set_fields(config, mini_week_number_label_format="WN{num}")
 
     renderer = _CaptureRenderer()
     mini = MiniCalendarRenderer()
@@ -151,7 +156,7 @@ def test_fiscal_period_end_label_applied():
     config = _base_config()
     config.weekend_style = 1
     config.fiscal_show_period_labels = True
-    config.fiscal_period_end_label_format = "END{period_short}"
+    set_bands(config, primary=[{"unit": "fiscal_period", "end_format": "END{period_short}"}], secondary=[])
 
     info_p1 = FiscalPeriodInfo(
         fiscal_year=2025,

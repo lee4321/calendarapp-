@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import arrow
+from band_helpers import set_bands, set_fields, update_theme
 from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
@@ -120,10 +121,10 @@ def _blockplan(tmp_path: Path, rows: list[dict]) -> _BlockPlan:
     config.userstart = config.adjustedstart = "20260209"
     config.userend = config.adjustedend = "20260220"
     config.outputfile = str(tmp_path / "bp.svg")
-    config.blockplan_top_time_bands = [{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}]
-    config.blockplan_bottom_time_bands = []
-    config.blockplan_swimlanes = [{"name": "Lane", "match": {}}]
-    config.blockplan_federal_holiday_icon = "star"
+    set_bands(config, primary=[{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}])
+    set_bands(config, secondary=[])
+    set_fields(config, blockplan_swimlanes=[{"name": "Lane", "match": {}}])
+    update_theme(config, holidays={"federal": {"icon": "star"}})
     renderer = _BlockPlan()
     renderer.render(
         config,
@@ -144,8 +145,8 @@ def _compactplan(tmp_path: Path, rows: list[dict]) -> _CompactPlan:
     config.outputfile = str(tmp_path / "cp.svg")
     config.include_header = False
     config.include_footer = False
-    config.compactplan_time_bands = [{"label": "Date", "unit": "date", "date_format": "D", "show_every": 1}]
-    config.compactplan_federal_holiday_icon = "star"
+    set_bands(config, primary=[{"label": "Date", "unit": "date", "date_format": "D", "show_every": 1}])
+    update_theme(config, holidays={"federal": {"icon": "star"}})
     renderer = _CompactPlan()
     renderer.render(
         config,

@@ -3,7 +3,7 @@ Gantt task-table column model.
 
 Columns are *layout* configuration, not style: which fields appear, in
 what order, how wide, how aligned, and how a value becomes text.  They
-come from ``config.gantt_columns`` (themes write ``gantt.columns:``);
+come from ``config.theme_v3.gantt.columns`` (themes write ``gantt.columns:``);
 ``style_rules`` govern only how the resulting cells look.
 
 The model itself is shared with the run's details document and event
@@ -41,8 +41,8 @@ GanttColumn = TableColumn
 
 
 def resolve_columns(config: CalendarConfig) -> list[GanttColumn]:
-    """Build the task-table column list from ``config.gantt_columns``."""
-    return resolve_table_columns(getattr(config, "gantt_columns", None), config)
+    """Build the task-table column list from ``config.theme_v3.gantt.columns``."""
+    return resolve_table_columns(config.theme_v3.gantt.columns, config)
 
 
 def column_x_positions(columns: list[GanttColumn], table_x: float, table_w: float) -> list[tuple[float, float]]:

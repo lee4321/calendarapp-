@@ -2,7 +2,7 @@
 """Build a working calendar.db from the SQL scripts and sample data in the repo.
 
 A fresh clone has no database (``calendar.db`` is gitignored).  This builds
-one with the schema, the named colors, the paper sizes and the icon set,
+one with the schema, the named colors, the paper sizes, the icon set and the glyph groups,
 and imports the sample events.  Pattern tiles and palettes are not in the
 repo; load your own with ``importers/import_patterns.py`` and the palette
 commands.
@@ -50,6 +50,9 @@ def build(path: Path, *, events: bool = True, patterns: Path | None = None) -> P
     with sqlite3.connect(path) as conn:
         for script in SQL_SCRIPTS:
             conn.executescript((SQL_DIR / script).read_text(encoding="utf-8"))
+    from tools.db.create_glyphs import DEFAULT_SEED, create_glyphs, load_seed
+
+    create_glyphs(path, load_seed(DEFAULT_SEED))
     if patterns is not None:
         load_patterns(path, patterns)
     if events:

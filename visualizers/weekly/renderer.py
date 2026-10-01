@@ -13,14 +13,9 @@ from typing import TYPE_CHECKING
 
 import arrow
 
+from config import role_styles
 from config.config import (
-    CompanyHolidayAlpha,
-    CompanyHolidayColor,
-    FederalHolidayAlpha,
-    FederalHolidayColor,
     get_font_path,
-    hashlinecolor,
-    monthcolors,
     resolve_page_margins,
     weekend_style_is_workweek,
     weekend_style_starts_sunday,
@@ -28,16 +23,14 @@ from config.config import (
 from renderers.details_record import DRAWN_PARTIAL
 from renderers.svg_base import BaseSVGRenderer
 from renderers.text_utils import shrinktext, string_width
+from renderers.timescale import PeriodLabels, grid_period_labels
 from shared import style_trace
 from shared.data_models import Event
 from shared.date_utils import get_week_number
 from shared.day_classifier import classify_day
-from shared.fiscal_renderer import (
-    format_fiscal_period_end_label,
-    format_fiscal_period_label,
-    get_fiscal_period_color,
-)
+from shared.fiscal_renderer import get_fiscal_period_color
 from shared.item_order import sort_events
+from shared.palettes import resolve_theme_palettes
 from shared.rule_engine import DayContext, StyleEngine, StyleResult
 
 if TYPE_CHECKING:
@@ -69,19 +62,8 @@ def _status_opacity(status: str | None) -> float:
 
 
 def _weekly_style_rules(config: CalendarConfig) -> list:
-    """Source the raw style_rules list for StyleEngine.
-
-    Prefers the parsed UnifiedTheme (``config.theme``) so the renderer no
-    longer depends on the legacy ``theme_style_rules`` decompiler bridge.
-    Mirrors ``compactplan/renderer.py::_resolve_style_rules`` and
-    ``mini/day_styles.py::_mini_style_rules``.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules, for the StyleEngine."""
+    return role_styles.style_rules(config.theme_v3)
 
 
 @dataclass(frozen=True)
@@ -95,10 +77,8 @@ class OverflowEntry:
 
 
 def _event_icon_size(config: CalendarConfig) -> float:
-    """Default event and duration icon size; setfontsizes() sets it."""
-    size = config.event_icon_size
-    assert size is not None, "setfontsizes() must run before the weekly view renders"
-    return size
+    """Default event and duration icon size: the height of the event name text."""
+    return role_styles.role_text(config, "event_name").size
 
 
 class WeeklyCalendarRenderer(BaseSVGRenderer):
@@ -119,7 +99,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         "text:week_number",
         "text:holiday_title",
         "box:cell",
-        "line:hash",
         "icon:event",
         "icon:overflow",
     )
@@ -149,7 +128,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         """
         rows_on_days = defaultdict(dict)
         days_to_print = []
-        style_engine = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER)
+        style_engine = StyleEngine(_weekly_style_rules(config))
 
         for oneday in arrow.Arrow.range("day", adjustedstart, adjustedend):
             daykey = oneday.format("YYYYMMDD")
@@ -215,7 +194,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         overflow_count = 0
         overflow_entries: list[OverflowEntry] = []
 
-        event_objects = sort_events(event_objects, config.item_placement_order)
+        event_objects = sort_events(event_objects, config.theme_v3.events.item_placement_order)
 
         for t in event_objects:
             daystart = arrow.get(arrow.get(t.start).date())
@@ -285,7 +264,10 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         self._pattern_svg_cache = db.get_all_patterns()
         self._registered_pattern_ids = set()
         self._load_icon_svg_cache(db)
+        resolve_theme_palettes(config, db)
         self._populate_tokens(config)
+        if hasattr(self, "_period_label_cache"):
+            del self._period_label_cache
 
         # Reset per-page overflow tracker. _process_overflow appends to this
         # set; _draw_day_top_row_extras consults it to lay out the day-number
@@ -546,32 +528,27 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         shadespecialday: str | bool,
     ) -> tuple[str, float]:
         """Return (fill_color, fill_opacity) for a day box."""
-        _monthcolors = config.theme_month_colors or monthcolors
+        theme = config.theme_v3
+        month_colors = theme.palettes.month_colors
 
         if shadespecialday == "government":
-            fill_color = config.theme_federal_holiday_color or FederalHolidayColor
-            fill_alpha = config.theme_federal_holiday_opacity
-            fill_opacity = fill_alpha if fill_alpha is not None else FederalHolidayAlpha
+            fill_color = theme.holidays.federal.color or "red"
+            fill_opacity = theme.holidays.federal.opacity
         elif shadespecialday:
-            fill_color = config.theme_company_holiday_color or CompanyHolidayColor
-            fill_alpha = config.theme_company_holiday_opacity
-            fill_opacity = fill_alpha if fill_alpha is not None else CompanyHolidayAlpha
-        elif config.fiscal_use_period_colors and config.fiscal_lookup:
+            fill_color = theme.holidays.company.color or "green"
+            fill_opacity = theme.holidays.company.opacity
+        elif theme.fiscal.use_period_colors and config.fiscal_lookup:
             fiscal_info = config.fiscal_lookup.get(oneday_str)
-            fill_color = get_fiscal_period_color(fiscal_info, config) if fiscal_info else _monthcolors[month]
-            fill_opacity = config.weekly_month_shade_opacity
+            fill_color = get_fiscal_period_color(fiscal_info, config) if fiscal_info else month_colors[month]
+            fill_opacity = theme.shading.month_opacity
         else:
-            fill_color = _monthcolors[month]
-            fill_opacity = config.weekly_month_shade_opacity
+            fill_color = month_colors[month]
+            fill_opacity = theme.shading.month_opacity
 
-        # Shade current day if option enabled (applied last, overrides above)
-        if config.shade_current_day:
-            today = arrow.now().format("YYYYMMDD")
-            if today == oneday_str:
-                # Same surface the mini calendar uses, rather than a second
-                # hardcoded "lightblue" that no theme could reach.
-                fill_color = config.theme_mini_current_day_color or config.mini_current_day_color
-                fill_opacity = config.get_box_style("ec-day-box").fill_opacity
+        # Highlight the current day if the theme asks (applied last, overrides above)
+        highlight = theme.today.highlight
+        if highlight.show and arrow.now().format("YYYYMMDD") == oneday_str:
+            fill_color, fill_opacity = highlight.color, highlight.opacity
 
         return fill_color, fill_opacity
 
@@ -601,6 +578,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
 
         return boxdate
 
+    def _period_labels(self, config: CalendarConfig) -> PeriodLabels | None:
+        """The fiscal period labels of the page, from the timescale's ``fiscal_period`` row (cached per render)."""
+        if not hasattr(self, "_period_label_cache"):
+            self._period_label_cache = grid_period_labels(config)
+        return self._period_label_cache
+
     def _draw_fiscal_label(
         self,
         config: CalendarConfig,
@@ -609,67 +592,31 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         dbc: dict,
         label_x: float,
     ) -> float:
-        """Draw fiscal period label on the left side of the day number row.
+        """Draw the fiscal period label on the left side of the day number row.
 
-        Returns the pixel width of the drawn label (0.0 if nothing drawn).
+        The label is the one the theme's ``fiscal_period`` timescale row gives
+        the day: the period's start label, the end label, or both.  Returns the
+        width of the drawn label (0.0 if nothing drawn).
         """
-        if not (config.fiscal_lookup and config.fiscal_show_period_labels):
+        labels = self._period_labels(config)
+        if labels is None:
+            return 0.0
+        day = oneday.date()
+        fiscal_label = " ".join(p for p in (labels.start.get(day), labels.end.get(day)) if p).strip()
+        if not fiscal_label:
             return 0.0
 
-        fiscal_info = config.fiscal_lookup.get(oneday_str)
-        is_week_start = (
-            oneday.isoweekday() == 7 if weekend_style_starts_sunday(config.weekend_style) else oneday.isoweekday() == 1
-        )
-
-        # If weeks start on Monday but fiscal period starts on Sunday,
-        # render the label in the first column (Monday) instead.
-        if (
-            not (fiscal_info and fiscal_info.is_period_start)
-            and is_week_start
-            and not weekend_style_starts_sunday(config.weekend_style)
-        ):
-            prev_day = oneday.shift(days=-1)
-            prev_info = config.fiscal_lookup.get(prev_day.format("YYYYMMDD"))
-            if prev_info and prev_info.is_period_start:
-                fiscal_info = prev_info
-
-        is_period_end = False
-        if fiscal_info:
-            next_day = oneday.shift(days=1)
-            next_info = config.fiscal_lookup.get(next_day.format("YYYYMMDD"))
-            is_period_end = next_info is None or next_info.fiscal_period != fiscal_info.fiscal_period
-
-        label_parts = []
-        if fiscal_info and fiscal_info.is_period_start:
-            label_parts.append(format_fiscal_period_label(fiscal_info, config))
-
-        if fiscal_info and is_period_end:
-            label_parts.append(format_fiscal_period_end_label(fiscal_info, config))
-
-        if not label_parts:
-            return 0.0
-
-        fiscal_label = " ".join(label_parts).strip()
-        tk_fiscal = self._tk("text:fiscal_label")
-        tk_dn = self._tk("text:day_number")
-        day_num_size = tk_dn.get("size")
-        label_font_size = tk_fiscal.get("size") or day_num_size * 0.7
-        label_y = dbc["Number"][1]
-        _ts_fiscal = config.get_text_style("ec-fiscal-label")
-        label_font = tk_fiscal.get("font") or _ts_fiscal.font
-        label_color = tk_fiscal.get("color") or _ts_fiscal.color
-        font_path = get_font_path(label_font)
-        label_width = 0.0
-        if font_path:
-            label_width = string_width(fiscal_label, font_path, label_font_size)
+        style = labels.text
+        font_path = get_font_path(style.font)
+        label_width = string_width(fiscal_label, font_path, style.size) if font_path else 0.0
         self._draw_text(
             label_x,
-            label_y,
+            dbc["Number"][1],
             fiscal_label,
-            label_font,
-            label_font_size,
-            fill=label_color,
-            fill_opacity=self._tk_opacity("text:fiscal_label", _ts_fiscal),
+            style.font,
+            style.size,
+            fill=style.color,
+            fill_opacity=style.opacity,
             css_class="ec-fiscal-label",
         )
         return label_width
@@ -694,7 +641,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         Returns 0.0 when nothing was drawn inside the box (skipped, or drawn
         in the left page margin).
         """
-        if not (config.include_week_numbers and config.week_number_font_size):
+        if not (config.include_week_numbers):
             return 0.0
 
         week_start_sunday = weekend_style_starts_sunday(config.weekend_style)
@@ -717,7 +664,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             return 0.0
 
         try:
-            week_text = config.week_number_label_format.format(num=week_num)
+            week_text = config.theme_v3.week_numbers.label_format.format(num=week_num)
         except (KeyError, ValueError):
             week_text = f"W{week_num:02d}"
         tk_wn = self._tk("text:week_number")
@@ -821,14 +768,14 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
             of_size = day_num_size
             of_baseline_y = y1 - 0.3 * (day_num_size - of_size)
             self._draw_icon_svg(
-                config.overflow_indicator_icon,
+                config.theme_v3.overflow.icon,
                 next_x,
                 of_baseline_y,
                 of_size,
                 color=of_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=config.default_missing_icon_color,
+                fallback_name=config.theme_v3.icons.missing.name,
+                fallback_size=config.theme_v3.icons.missing.size,
+                fallback_color=config.theme_v3.icons.missing.color,
                 css_class="ec-overflow-icon",
                 box_token="box:overflow",
                 box_ctx={"date": daykey},
@@ -944,7 +891,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 else "company holiday color"
                 if shadespecialday
                 else "fiscal period color"
-                if config.fiscal_use_period_colors and config.fiscal_lookup
+                if config.theme_v3.fiscal.use_period_colors and config.fiscal_lookup
                 else f"month {month} color"
             )
             style_trace.emit(
@@ -957,7 +904,6 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if style_trace.enabled():
             style_trace.emit(f"day {oneday_str}", "DRAWN", f"fill={fill_color} opacity={fill_opacity}")
         tk_cell = self._tk("box:cell")
-        tk_hash = self._tk("line:hash")
         _cell_style = config.get_box_style("ec-cell")
         self._draw_rect(
             X,
@@ -981,20 +927,22 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         )
 
         # SVG pattern decoration from style_rules
-        hash_color_default = tk_hash.get("color") or config.theme_hash_line_color or hashlinecolor
+        hash_color_default = config.theme_v3.palettes.hash_lines
         if style_trace.enabled():
             if style_result is not None and style_result.pattern:
                 _traced = f"{style_result.pattern!r} from style rule"
-            elif config.theme_weekly_hash_pattern:
-                _traced = f"{config.theme_weekly_hash_pattern!r} from theme day_box.hash_pattern"
+            elif config.theme_v3.weekly.day_box.hash_pattern:
+                _traced = f"{config.theme_v3.weekly.day_box.hash_pattern!r} from theme day_box.hash_pattern"
             else:
                 _traced = "none (no style rule or theme pattern)"
             style_trace.emit(f"day {oneday_str}", "PATTERN", _traced)
         if style_result is not None and style_result.pattern:
             _color = style_result.pattern_color or hash_color_default
             self._draw_svg_pattern(config, X, Y, W, H, style_result.pattern, _color, style_result.pattern_opacity)
-        elif config.theme_weekly_hash_pattern:
-            self._draw_svg_pattern(config, X, Y, W, H, config.theme_weekly_hash_pattern, hash_color_default, None)
+        elif config.theme_v3.weekly.day_box.hash_pattern:
+            self._draw_svg_pattern(
+                config, X, Y, W, H, config.theme_v3.weekly.day_box.hash_pattern, hash_color_default, None
+            )
 
         # Day number with optional month indicator
         _ts_dn = config.get_text_style("ec-day-number")
@@ -1059,7 +1007,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         if pattern_h <= 0:
             return
 
-        effective_opacity = opacity if opacity is not None else config.hash_pattern_opacity
+        effective_opacity = opacity if opacity is not None else config.theme_v3.weekly.day_box.hash_pattern_opacity
         self._draw_rect(
             x,
             y + top_clearance,
@@ -1106,7 +1054,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         # A style rule's fill is the event's color here as in every other
         # view: the name and icon take it.  A text/icon override in the
         # same rules is more specific and still wins below.
-        ev_style = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER).evaluate_event(t)
+        ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
         if ev_style.fill_color:
             textcolor = ev_style.fill_color
             iconcolor = textcolor
@@ -1159,9 +1107,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                 icony,
                 ev_icon_size,
                 color=icon_color,
-                fallback_name=config.default_missing_icon,
-                fallback_size=config.default_missing_icon_size,
-                fallback_color=config.default_missing_icon_color,
+                fallback_name=config.theme_v3.icons.missing.name,
+                fallback_size=config.theme_v3.icons.missing.size,
+                fallback_color=config.theme_v3.icons.missing.color,
                 css_class="ec-event-icon",
                 box_token=("box:milestone" if getattr(t, "milestone", False) else "box:event"),
                 box_ctx=self._event_ctx(t),
@@ -1260,9 +1208,7 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                             notes_max_w = nWidth - (ntextx - niconx) if t.icon else nWidth
                             _ts_notes = config.get_text_style("ec-event-notes")
                             tk_notes = self._tk("text:event_notes")
-                            _ev_style = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER).evaluate_event(
-                                t
-                            )
+                            _ev_style = StyleEngine(_weekly_style_rules(config)).evaluate_event(t)
                             n_font, n_size, n_color, n_opacity = _ev_style.text_override(
                                 "event_notes",
                                 font=tk_notes.get("font") or _ts_notes.font,
@@ -1433,12 +1379,12 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
         _ts_en = config.get_text_style("ec-event-name")
         _ts_notes = config.get_text_style("ec-event-notes")
 
-        style_engine = StyleEngine(_weekly_style_rules(config), self.TOKEN_VISUALIZER)
+        style_engine = StyleEngine(_weekly_style_rules(config))
         dur_style = style_engine.evaluate_event(t)
 
         rect_kwargs = dur_style.rect_overrides(
-            fill=config.weekly_duration_fill_color,
-            stroke=config.weekly_duration_stroke_color,
+            fill=config.theme_v3.boxes.duration.fill,
+            stroke=config.theme_v3.boxes.duration.stroke,
             stroke_width=0.5,
             stroke_dasharray=_ls_dur.dasharray or None,
         )
@@ -1551,9 +1497,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     icon_baseline_y,
                     icon_size,
                     color=icon_color,
-                    fallback_name=config.default_missing_icon,
-                    fallback_size=config.default_missing_icon_size,
-                    fallback_color=config.default_missing_icon_color,
+                    fallback_name=config.theme_v3.icons.missing.name,
+                    fallback_size=config.theme_v3.icons.missing.size,
+                    fallback_color=config.theme_v3.icons.missing.color,
                     css_class="ec-duration-icon",
                     box_token="box:duration",
                     box_ctx=self._event_ctx(t),
@@ -1577,9 +1523,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     details_role="continuation_before",
                     anchor="start",
                     color=icon_color,
-                    fallback_name=config.default_missing_icon,
-                    fallback_size=config.default_missing_icon_size,
-                    fallback_color=config.default_missing_icon_color,
+                    fallback_name=config.theme_v3.icons.missing.name,
+                    fallback_size=config.theme_v3.icons.missing.size,
+                    fallback_color=config.theme_v3.icons.missing.color,
                     css_class="ec-duration-icon",
                     opacity=status_opacity,
                 )
@@ -1608,9 +1554,9 @@ class WeeklyCalendarRenderer(BaseSVGRenderer):
                     details_role="continuation_after",
                     anchor="end",
                     color=icon_color,
-                    fallback_name=config.default_missing_icon,
-                    fallback_size=config.default_missing_icon_size,
-                    fallback_color=config.default_missing_icon_color,
+                    fallback_name=config.theme_v3.icons.missing.name,
+                    fallback_size=config.theme_v3.icons.missing.size,
+                    fallback_color=config.theme_v3.icons.missing.color,
                     css_class="ec-duration-icon",
                     opacity=status_opacity,
                 )

@@ -1,0 +1,2214 @@
+# The demonstration theme: every key a version-3.0 theme can set, with its default
+# value and the values it accepts.
+#
+# GENERATED from config/theme_schema.py by tools/generate_demonstration_theme.py; edit the
+# schema, not this file.  Each key is preceded by a note from the schema (where it has one)
+# and the values it accepts in [brackets].  A key shown as `null` is unset by default; the
+# keys of an optional block are listed under it.  Any key may be left out of a theme: the
+# value shown here is what a theme that omits it gets.
+#
+# Sections: theme, fonts, text, boxes, icons, lines, palettes, timescale, today, holidays,
+# shading, week_numbers, fiscal, events, durations, continuation, overflow, watermark, layout,
+# details, style_rules, then one structure block per view.
+#
+# Timescale rows: `unit` is one of date | dow | week | month | quarter | year | fiscal_quarter |
+# fiscal_period | interval | countdown | countup | holiday | icon.  `primary` rows sit above the
+# content (right of a vertical axis), `secondary` rows below (left); every view draws them.
+# Style rules: `apply_to` is `<kind>:<role>` (kind text | box | line | icon) or a list of them;
+# `select` picks events or days by any of:
+#   all_events, any_event, color, company_holiday, date, date_overlap, event_type,
+#   federal_holiday, icon, milestone, min_match, nonworkday, notes, percent_complete,
+#   priority, priority_max, priority_min, resource_group, resource_names, rollup, task_name,
+#   value, wbs, weekend, workday.
+
+theme:
+  # Shown in the run's details document and the theme listing.
+  # [text]
+  name: Demonstration
+  # Must be '3.0'; any other version stops the run with 'not supported'.
+  # [text]
+  version: '3.0'
+  # [text]
+  description: ''
+fonts:
+  # [text]
+  family: OfficinaSans-Book
+text:
+  heading:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 10
+    # [text]
+    color: grey
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {3x5: 6, letter: 10}
+  body:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: navy
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  body_secondary:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 7
+    # [text]
+    color: darkgrey
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  label:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 7
+    # [text]
+    color: grey
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  label_bold:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 7
+    # [text]
+    color: grey
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  caption:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 6
+    # [text]
+    color: grey
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  day_number:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 18
+    # [text]
+    color: navy
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  month_title:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 18
+    # [text]
+    color: navy
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  week_number:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 9
+    # [text]
+    color: '#888888'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  band_label:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 7
+    # [text]
+    color: black
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  swimlane_label:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: black
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  fiscal_label:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: '#666666'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  event_name:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 10
+    # [text]
+    color: '#333333'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  event_notes:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 9
+    # [text]
+    color: '#666666'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  event_date:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: '#666666'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  duration_date:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: '#666666'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  holiday_title:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: '#333333'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+  today_label:
+    # [text (may be left unset)]
+    font: null
+    # [a number]
+    size: 8
+    # [text]
+    color: '#FF4444'
+    # [a number]
+    opacity: 1.0
+    # [one of: start | middle | end]
+    align: start
+    # Size overrides by paper name, e.g. ``{letter: 10, 3x5: 6}``.
+    # [a mapping]
+    size_by_paper: {}
+boxes:
+  default:
+    # [text]
+    fill: white
+    # [a number]
+    fill_opacity: 1.0
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  cell:
+    # [text]
+    fill: grey
+    # [a number]
+    fill_opacity: 0.25
+    # [text]
+    stroke: grey
+    # [a number]
+    stroke_width: 2
+    # [a number]
+    stroke_opacity: 0.25
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  day:
+    # [text]
+    fill: '#F8F8FF'
+    # [a number]
+    fill_opacity: 0.25
+    # [text]
+    stroke: '#CCCCCC'
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  header:
+    # [text]
+    fill: none
+    # [a number]
+    fill_opacity: 1.0
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  band:
+    # [text]
+    fill: none
+    # [a number]
+    fill_opacity: 1.0
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  highlight:
+    # [text]
+    fill: lightblue
+    # [a number]
+    fill_opacity: 0.3
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  callout:
+    # [text]
+    fill: white
+    # [a number]
+    fill_opacity: 0.25
+    # [text]
+    stroke: grey
+    # [a number]
+    stroke_width: 1.0
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 2.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  event:
+    # [text]
+    fill: none
+    # [a number]
+    fill_opacity: 1.0
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  milestone:
+    # [text]
+    fill: none
+    # [a number]
+    fill_opacity: 1.0
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+  duration:
+    # [text]
+    fill: '#888888'
+    # [a number]
+    fill_opacity: 0.75
+    # [text]
+    stroke: none
+    # [a number]
+    stroke_width: 0.5
+    # [a number]
+    stroke_opacity: 1.0
+    # [text (may be left unset)]
+    stroke_dasharray: null
+    # [a number]
+    corner_radius: 0.0
+    # Cycled per instance (month cells, band segments).  Beats ``fill``.
+    # [text or a list of text (may be left unset)]
+    fill_palette: null
+    # Pattern name from the database ``patterns`` table.
+    # [text (may be left unset)]
+    pattern: null
+    # [text (may be left unset)]
+    pattern_color: null
+    # [a number]
+    pattern_opacity: 0.15
+icons:
+  event:
+    # [text]
+    color: navy
+    # [a number (may be left unset)]
+    size: 10
+    # [text (may be left unset)]
+    name: circle-fill
+    # [a number (may be left unset)]
+    stroke_width: 0.5
+    # [a number (may be left unset)]
+    stroke_opacity: 0.8
+  duration:
+    # [text]
+    color: navy
+    # [a number (may be left unset)]
+    size: null
+    # [text (may be left unset)]
+    name: null
+    # [a number (may be left unset)]
+    stroke_width: null
+    # [a number (may be left unset)]
+    stroke_opacity: null
+  milestone:
+    # [text]
+    color: '#333333'
+    # [a number (may be left unset)]
+    size: 10
+    # [text (may be left unset)]
+    name: diamond-fill
+    # [a number (may be left unset)]
+    stroke_width: null
+    # [a number (may be left unset)]
+    stroke_opacity: null
+  # Drawn where an event names an icon the ``icon`` table does not have.
+  missing:
+    # [text]
+    color: red
+    # [a number (may be left unset)]
+    size: null
+    # [text (may be left unset)]
+    name: exclamation-circle
+    # [a number (may be left unset)]
+    stroke_width: null
+    # [a number (may be left unset)]
+    stroke_opacity: null
+  # Marks a box that could not hold its contents (the glyph is ``overflow.icon``).
+  overflow:
+    # [text]
+    color: red
+    # [a number (may be left unset)]
+    size: null
+    # [text (may be left unset)]
+    name: null
+    # [a number (may be left unset)]
+    stroke_width: null
+    # [a number (may be left unset)]
+    stroke_opacity: null
+lines:
+  axis:
+    # [text]
+    color: lightgrey
+    # [a number]
+    width: 3
+    # [a number]
+    opacity: 0.9
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  tick:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  grid:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 0.3
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  separator:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 0.5
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  border:
+    # [text]
+    color: lightgrey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  today:
+    # [text]
+    color: tomato
+    # [a number]
+    width: 1.0
+    # [a number]
+    opacity: 0.85
+    # [text (may be left unset)]
+    dasharray: 4,2
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  leader:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.75
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: arrow-head
+    # [a number]
+    marker_end_size: 5.0
+    # [a number]
+    start_stub: 4.0
+    # [a number]
+    end_stub: 4.0
+    # [one of: straight | curve]
+    route: curve
+  # Colour of the leaders of labels on the axis's primary / secondary side.
+  leader_primary:
+    # [text (may be left unset)]
+    color: deepskyblue
+  leader_secondary:
+    # [text (may be left unset)]
+    color: steelblue
+  connector:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: 4 2
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  dependency:
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.75
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: arrow-head
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: curve
+  duration_bar:
+    # [text]
+    color: grey
+    # [a number]
+    width: 5.0
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  progress:
+    # [text]
+    color: black
+    # [a number]
+    width: 1.5
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+palettes:
+  # [text or a list of text]
+  month: colorblind1
+  # [text or a list of text]
+  fiscal: paired
+  # [text or a list of text]
+  group: pastel1
+  # Cycled over durations that carry no colour of their own.
+  # [text or a list of text]
+  event: [lightskyblue, gold, tomato, springgreen, plum, khaki]
+  # Fills for timeline / pit callout labels.
+  # [text or a list of text]
+  label: Pastel1
+  # Explicit month number ("01"-"12") to colour; beats ``month``.
+  # [a mapping]
+  month_colors: {'01': lightblue, '02': lightgreen}
+  # Explicit fiscal period number to colour; beats ``fiscal``.
+  # [a mapping]
+  fiscal_period_colors: {'01': gold, '02': khaki}
+  # [a list of text]
+  group_colors: [steelblue, tomato]
+  # Ink for hash patterns drawn in day boxes.
+  # [text]
+  hash_lines: black
+timescale:
+  axis:
+    # [true | false]
+    show: true
+    # [one of: horizontal | vertical]
+    orientation: horizontal
+    # Gap between the axis line and its nearest row.
+    # [a number]
+    padding: 4.0
+    # Bounding size of the built-in event / milestone dot on the axis.
+    # [a number]
+    marker_size: 7.0
+  # [a list of a block]
+  primary:
+    # [one of: date | dow | week | month | quarter | year | fiscal_quarter | fiscal_period | interval | countdown | countup | holiday | icon]
+    - unit: month
+      # Show every Nth segment, merged into one cell.
+      # [a whole number]
+      every: 1
+      # Heading text for the row (table views).
+      # [text (may be left unset)]
+      label: null
+      # Segment label format: an Arrow format for date units, a template for week / fiscal units (``Week
+      # {n}``, ``Q{q}-FY{fy2}``, ``{start} - {end}``).
+      # [text (may be left unset)]
+      format: null
+      # [a number]
+      height: 12.0
+      # Cell background; unset, the row takes ``boxes.band`` (a single fill or a palette cycled per
+      # cell).
+      # [text (may be left unset)]
+      fill: null
+      # [text or a list of text (may be left unset)]
+      fill_palette: null
+      # [a number (may be left unset)]
+      fill_opacity: null
+      # Cell border; unset, the row takes the stroke of ``boxes.band``.
+      # [a block (may be left unset)]
+      border:  # unset by default; the block below shows its keys
+        # [text]
+        color: grey
+        # [a number]
+        width: 0.5
+        # [a number]
+        opacity: 1.0
+        # [text (may be left unset)]
+        dasharray: null
+        # [one of: butt | round | square]
+        linecap: round
+        # [one of: miter | round | bevel]
+        linejoin: round
+        # [text]
+        marker_start: none
+        # [a number]
+        marker_start_size: 4.0
+        # [text]
+        marker_end: none
+        # [a number]
+        marker_end_size: 6.0
+        # [a number]
+        start_stub: 0.0
+        # [a number]
+        end_stub: 0.0
+        # [one of: straight | curve]
+        route: straight
+      text:
+        # [text (may be left unset)]
+        font: null
+        # [a number (may be left unset)]
+        size: null
+        # [text (may be left unset)]
+        color: null
+        # [a number (may be left unset)]
+        opacity: null
+        # [one of: start | middle | end (may be left unset)]
+        align: null
+        # Degrees; ``None`` lets a vertical axis pick bottom-to-top.
+        # [a number (may be left unset)]
+        rotation: null
+      # [a block (may be left unset)]
+      tick:  # unset by default; the block below shows its keys
+        # [a number]
+        length: 4.0
+        # [a number (may be left unset)]
+        width: null
+        # [text (may be left unset)]
+        color: null
+        # [a number (may be left unset)]
+        opacity: null
+        # [true | false]
+        show_labels: true
+        # [one of: start | middle | end]
+        label_align: start
+        # [a number (may be left unset)]
+        label_gap: null
+        # Skip the labels when a row would carry more than this many.
+        # [a whole number (may be left unset)]
+        max_label_count: null
+      # A line drawn down the content area at every segment boundary of this row.
+      # [a block (may be left unset)]
+      vline:  # unset by default; the block below shows its keys
+        # [text]
+        color: grey
+        # [a number]
+        width: 0.5
+        # [a number]
+        opacity: 1.0
+        # [text (may be left unset)]
+        dasharray: null
+        # [one of: butt | round | square]
+        linecap: round
+        # [one of: miter | round | bevel]
+        linejoin: round
+        # [text]
+        marker_start: none
+        # [a number]
+        marker_start_size: 4.0
+        # [text]
+        marker_end: none
+        # [a number]
+        marker_end_size: 6.0
+        # [a number]
+        start_stub: 0.0
+        # [a number]
+        end_stub: 0.0
+        # [one of: straight | curve]
+        route: straight
+      # A fill down the content area under every segment of this row.
+      # [a block (may be left unset)]
+      vfill:  # unset by default; the block below shows its keys
+        # [text (may be left unset)]
+        fill: null
+        # [text or a list of text (may be left unset)]
+        fill_palette: null
+        # [a number]
+        fill_opacity: 0.3
+      holidays:
+        # True hides observances that do not close the office.
+        # [true | false]
+        nonworkdays_only: true
+      # Explicit labels cycled over the segments.
+      # [a list of text]
+      label_values: []
+      # ``fiscal_period`` rows in a grid view (weekly): a second label, in this template, on the last
+      # day of each period.  Unset draws only the start label.
+      # [text (may be left unset)]
+      end_format: null
+      # [a whole number (may be left unset)]
+      week_start: null
+      # [a whole number (may be left unset)]
+      fiscal_year_start_month: null
+      # [a whole number]
+      interval_days: 14
+      # [text]
+      prefix: ''
+      # [a whole number]
+      start_index: 1
+      # [a whole number (may be left unset)]
+      max_index: null
+      # [text (may be left unset)]
+      anchor_date: null
+      # countdown / countup: the date counted to or from.
+      # [text (may be left unset)]
+      reference_date: null
+      # [true | false]
+      skip_weekends: false
+      # [true | false]
+      skip_nonworkdays: false
+      # ``unit: icon`` rows: day-class to icon rules.
+      # [a list of a mapping]
+      icon_rules: []
+      # [a number (may be left unset)]
+      icon_height: null
+  # [a list of a block]
+  secondary:
+    # [one of: date | dow | week | month | quarter | year | fiscal_quarter | fiscal_period | interval | countdown | countup | holiday | icon]
+    - unit: month
+      # Show every Nth segment, merged into one cell.
+      # [a whole number]
+      every: 1
+      # Heading text for the row (table views).
+      # [text (may be left unset)]
+      label: null
+      # Segment label format: an Arrow format for date units, a template for week / fiscal units (``Week
+      # {n}``, ``Q{q}-FY{fy2}``, ``{start} - {end}``).
+      # [text (may be left unset)]
+      format: null
+      # [a number]
+      height: 12.0
+      # Cell background; unset, the row takes ``boxes.band`` (a single fill or a palette cycled per
+      # cell).
+      # [text (may be left unset)]
+      fill: null
+      # [text or a list of text (may be left unset)]
+      fill_palette: null
+      # [a number (may be left unset)]
+      fill_opacity: null
+      # Cell border; unset, the row takes the stroke of ``boxes.band``.
+      # [a block (may be left unset)]
+      border:  # unset by default; the block below shows its keys
+        # [text]
+        color: grey
+        # [a number]
+        width: 0.5
+        # [a number]
+        opacity: 1.0
+        # [text (may be left unset)]
+        dasharray: null
+        # [one of: butt | round | square]
+        linecap: round
+        # [one of: miter | round | bevel]
+        linejoin: round
+        # [text]
+        marker_start: none
+        # [a number]
+        marker_start_size: 4.0
+        # [text]
+        marker_end: none
+        # [a number]
+        marker_end_size: 6.0
+        # [a number]
+        start_stub: 0.0
+        # [a number]
+        end_stub: 0.0
+        # [one of: straight | curve]
+        route: straight
+      text:
+        # [text (may be left unset)]
+        font: null
+        # [a number (may be left unset)]
+        size: null
+        # [text (may be left unset)]
+        color: null
+        # [a number (may be left unset)]
+        opacity: null
+        # [one of: start | middle | end (may be left unset)]
+        align: null
+        # Degrees; ``None`` lets a vertical axis pick bottom-to-top.
+        # [a number (may be left unset)]
+        rotation: null
+      # [a block (may be left unset)]
+      tick:  # unset by default; the block below shows its keys
+        # [a number]
+        length: 4.0
+        # [a number (may be left unset)]
+        width: null
+        # [text (may be left unset)]
+        color: null
+        # [a number (may be left unset)]
+        opacity: null
+        # [true | false]
+        show_labels: true
+        # [one of: start | middle | end]
+        label_align: start
+        # [a number (may be left unset)]
+        label_gap: null
+        # Skip the labels when a row would carry more than this many.
+        # [a whole number (may be left unset)]
+        max_label_count: null
+      # A line drawn down the content area at every segment boundary of this row.
+      # [a block (may be left unset)]
+      vline:  # unset by default; the block below shows its keys
+        # [text]
+        color: grey
+        # [a number]
+        width: 0.5
+        # [a number]
+        opacity: 1.0
+        # [text (may be left unset)]
+        dasharray: null
+        # [one of: butt | round | square]
+        linecap: round
+        # [one of: miter | round | bevel]
+        linejoin: round
+        # [text]
+        marker_start: none
+        # [a number]
+        marker_start_size: 4.0
+        # [text]
+        marker_end: none
+        # [a number]
+        marker_end_size: 6.0
+        # [a number]
+        start_stub: 0.0
+        # [a number]
+        end_stub: 0.0
+        # [one of: straight | curve]
+        route: straight
+      # A fill down the content area under every segment of this row.
+      # [a block (may be left unset)]
+      vfill:  # unset by default; the block below shows its keys
+        # [text (may be left unset)]
+        fill: null
+        # [text or a list of text (may be left unset)]
+        fill_palette: null
+        # [a number]
+        fill_opacity: 0.3
+      holidays:
+        # True hides observances that do not close the office.
+        # [true | false]
+        nonworkdays_only: true
+      # Explicit labels cycled over the segments.
+      # [a list of text]
+      label_values: []
+      # ``fiscal_period`` rows in a grid view (weekly): a second label, in this template, on the last
+      # day of each period.  Unset draws only the start label.
+      # [text (may be left unset)]
+      end_format: null
+      # [a whole number (may be left unset)]
+      week_start: null
+      # [a whole number (may be left unset)]
+      fiscal_year_start_month: null
+      # [a whole number]
+      interval_days: 14
+      # [text]
+      prefix: ''
+      # [a whole number]
+      start_index: 1
+      # [a whole number (may be left unset)]
+      max_index: null
+      # [text (may be left unset)]
+      anchor_date: null
+      # countdown / countup: the date counted to or from.
+      # [text (may be left unset)]
+      reference_date: null
+      # [true | false]
+      skip_weekends: false
+      # [true | false]
+      skip_nonworkdays: false
+      # ``unit: icon`` rows: day-class to icon rules.
+      # [a list of a mapping]
+      icon_rules: []
+      # [a number (may be left unset)]
+      icon_height: null
+  # A row whose segments are narrower than this (points) is dropped.
+  # [a number]
+  min_segment_width: 3.0
+  # Alignment of the row headings in the label column.
+  # [one of: start | middle | end]
+  heading_align: end
+today:
+  # [true | false]
+  show: true
+  # YYYYMMDD to pretend it is that day; ``None`` uses the clock.
+  # [text (may be left unset)]
+  date: '20260315'
+  # [text]
+  label: Today
+  # [one of: start | middle | end]
+  label_position: end
+  # [a number]
+  label_offset: 5.0
+  # Length of the line in points; 0 = the full height of the chart area.
+  # [a number]
+  length: 0.0
+  # Which side(s) of an axis the line extends to.
+  # [one of: primary | secondary | both]
+  direction: both
+  highlight:
+    # [true | false]
+    show: false
+    # [text]
+    color: lightblue
+    # [a number]
+    opacity: 1.0
+holidays:
+  federal:
+    # [text (may be left unset)]
+    color: red
+    # [a number]
+    opacity: 0.25
+    # Icon drawn for the day; a federal holiday's country flag wins when it has one.
+    # [text (may be left unset)]
+    icon: flag-duotone
+  company:
+    # [text (may be left unset)]
+    color: green
+    # [a number]
+    opacity: 0.25
+    # Icon drawn for the day; a federal holiday's country flag wins when it has one.
+    # [text (may be left unset)]
+    icon: star
+  weekend:
+    # [text (may be left unset)]
+    color: null
+    # [a number]
+    opacity: 0.15
+    # Icon drawn for the day; a federal holiday's country flag wins when it has one.
+    # [text (may be left unset)]
+    icon: moon
+  # [true | false]
+  show_icons: true
+  # [a number]
+  icon_size: 10.0
+  # ``None`` keeps each flag's own colours.
+  # [text (may be left unset)]
+  icon_color: dimgrey
+  # [a number]
+  icon_y_offset: 4.0
+  # [true | false]
+  show_dates: true
+  # [text]
+  date_format: M/D
+  # [a number (may be left unset)]
+  date_font_size: 7
+  # [text (may be left unset)]
+  date_color: dimgrey
+shading:
+  # Strength of the per-month alternate tint (candybar, weekly).
+  # [a number]
+  month_opacity: 0.12
+week_numbers:
+  # [text]
+  label_format: W{num}
+fiscal:
+  # [text]
+  label_format: '{prefix}{period_short}'
+  # [a whole number (may be left unset)]
+  year_offset: 1
+  # [true | false]
+  use_period_colors: false
+  # Month the fiscal year starts (1-12).
+  # [a whole number]
+  year_start_month: 2
+  # First day of the week, 0 = Monday ... 6 = Sunday.
+  # [a whole number]
+  week_start: 0
+  # [a number]
+  period_opacity: 0.25
+events:
+  # Order of items within a lane / list, e.g. ``[wbs, start_date]``.
+  # [a list of text or a mapping]
+  item_placement_order: [wbs, start_date]
+  date:
+    # [true | false]
+    show: false
+    # [text]
+    format: M/D
+    # [a number (may be left unset)]
+    font_size: 8
+  marker:
+    # [a number]
+    radius: 4.0
+    # [text]
+    stroke_color: black
+    # [a number]
+    stroke_width: 1.0
+durations:
+  # Icon set (a key of the program's icon sets) used when numbering durations.
+  # [text]
+  number_duration_icons: darksquare
+  # True gives each duration one numbered icon from the set in place of the icon its event names;
+  # false uses the named icon and ignores the set.
+  # [true | false]
+  replace_icons_with_numbers: true
+  # [a number]
+  icon_size: 8.0
+  # [text (may be left unset)]
+  icon_background_color: white
+  # [text (may be left unset)]
+  icon_stroke_color: black
+  # [text (may be left unset)]
+  stroke_dasharray: 4 2
+  # Draw the duration's icon at all (timeline, blockplan).
+  # [true | false]
+  show_icons: true
+  # Ink of a duration bar's name; unset picks black or white for contrast with the bar.
+  # [text (may be left unset)]
+  name_color: black
+  # Leading WBS segments that share one colour; 0 = colour by the event's own colour / priority.
+  # [a whole number]
+  wbs_group_depth: 2
+  dates:
+    # [true | false]
+    show_start: false
+    # [true | false]
+    show_end: false
+    # [text]
+    format: M/D
+    # [a number (may be left unset)]
+    font_size: 8
+    # [text (may be left unset)]
+    color: dimgrey
+continuation:
+  # [true | false]
+  show: true
+  # [text or a list of text]
+  icon_before: arrow-left
+  # [text or a list of text]
+  icon_after: arrow-right
+  # [a number]
+  icon_height: 8.0
+  # [text (may be left unset)]
+  icon_color: black
+overflow:
+  # [text]
+  icon: warningtriangle
+watermark:
+  # [text (may be left unset)]
+  text: DRAFT
+  # [text (may be left unset)]
+  image: null
+  # [text (may be left unset)]
+  font_family: null
+  # [a whole number (may be left unset)]
+  font_size: 96
+  # [one of: fit | fill | none]
+  resize_mode: fit
+  # [a number]
+  opacity: 0.5
+  # [a number]
+  rotation_angle: 45.0
+  # [a number]
+  image_rotation_angle: 45.0
+layout:
+  margin:
+    # [a number or text]
+    top: 0
+    # [a number or text]
+    bottom: 0
+    # [a number or text]
+    left: 0
+    # [a number or text]
+    right: 0
+details:
+  markdown:
+    # [true | false]
+    enable: true
+    # [text]
+    title_text: Calendar Details
+    # [a list of text]
+    sections: [events, colors, symbols, exceptions, holidays]
+    # [text]
+    events_section_text: Events
+    # [text]
+    colors_section_text: Color Key
+    # [text]
+    symbols_section_text: Icons & Symbols
+    # [text]
+    exceptions_section_text: Exceptions
+    # [text]
+    holidays_section_text: Holidays & Special Days
+    # [text]
+    empty_exceptions_text: Every item was drawn as scheduled.
+    # [text]
+    empty_cell_text: ''
+    # [one of: file | inline | none]
+    icon_mode: file
+    # [one of: swatch | name | hex]
+    color_mode: swatch
+    # [text]
+    group_by: none
+    # [a list of text]
+    sort: [start_date, end_date, name]
+    # [a list of a mapping]
+    columns: [{align: right, field: source_id, header: ID}, {align: center, field: marker, header: Key}, {field: original_icon, header: Event Icon}, {field: name, header: Task Name, indent: true}, {field: category, header: Type}, {field: status, header: Status}, {align: right, field: priority, header: Pri}, {field: wbs, header: WBS}, {align: right, field: percent_complete, format: '{:.0%}', header: '%'}, {date_format: YYYY-MM-DD, field: start_date, header: Start}, {date_format: YYYY-MM-DD, field: end_date, header: Finish}, {field: resource_names, header: Resources}, {field: resource_group, header: Group}, {field: assigned_color, header: Color}, {field: notes, header: Notes, max_lines: 3}, {field: drawn, header: Drawn}]
+    # [a list of a mapping]
+    exception_columns: [{field: issue, header: Issue}, {field: task, header: Task}, {date_format: YYYY-MM-DD, field: date, header: Date}, {field: ref, header: Ref}, {field: detail, header: Detail}]
+    # [a list of a mapping]
+    holiday_columns: [{align: center, field: icons, header: Icon}, {field: date, header: Date}, {field: name, header: Name}, {field: kind, header: Kind}, {field: nonworkday, header: Non-work}, {field: notes, header: Notes}]
+  icons:
+    # [true | false]
+    enable: true
+    # [a number]
+    size: 16.0
+  csv:
+    # [true | false]
+    enable: true
+    # [text or a list of a mapping]
+    columns: exportdata
+    # [true | false]
+    render_columns: true
+# [a list of a block]
+style_rules:
+  # [text]
+  - name: example rule
+    # [text or a list of text]
+    apply_to: box:duration
+    # [a mapping]
+    select: {priority_max: 2, resource_group: dev}
+    # [a mapping]
+    style: {fill: steelblue, fill_opacity: 0.8, stroke: black}
+weekly:
+  day_box:
+    # [text (may be left unset)]
+    hash_pattern: null
+    # [a number]
+    hash_pattern_opacity: 0.15
+    # Pattern tiles larger than this are scaled down to it (0 = tile at native size).
+    # [a number]
+    hash_pattern_target_size: 18.0
+    # Extra multiplier on the tile size.
+    # [a number]
+    hash_pattern_scale: 1.0
+mini_calendar:
+  # [text]
+  icon_set: squares
+  # [text]
+  title_format: MMMM YYYY
+  # [true | false]
+  show_adjacent: true
+  # [text]
+  adjacent_month_color: lightgrey
+  # [a number]
+  adjacent_month_opacity: 1.0
+  # [true | false]
+  circle_milestones: false
+  # Event / holiday icons in a day cell's corners: share of the shorter cell side.
+  # [a number]
+  event_icon_scale: 0.25
+  # [a number]
+  event_icon_opacity: 0.6
+  # [true | false]
+  grid_lines: false
+  # [a block (may be left unset)]
+  month_outline:  # unset by default; the block below shows its keys
+    # [text]
+    color: grey
+    # [a number]
+    width: 0.5
+    # [a number]
+    opacity: 1.0
+    # [text (may be left unset)]
+    dasharray: null
+    # [one of: butt | round | square]
+    linecap: round
+    # [one of: miter | round | bevel]
+    linejoin: round
+    # [text]
+    marker_start: none
+    # [a number]
+    marker_start_size: 4.0
+    # [text]
+    marker_end: none
+    # [a number]
+    marker_end_size: 6.0
+    # [a number]
+    start_stub: 0.0
+    # [a number]
+    end_stub: 0.0
+    # [one of: straight | curve]
+    route: straight
+  glyphs:
+    # [text (may be left unset)]
+    day_number: day-circled
+    # [text (may be left unset)]
+    day_number_digits: digits-superscript
+text_mini:
+  # [a whole number]
+  cell_width: 2
+  # [a whole number]
+  month_gap: 4
+  glyphs:
+    # [text (may be left unset)]
+    event: text-mini-event
+    # [text (may be left unset)]
+    milestone: text-mini-milestone
+    # [text (may be left unset)]
+    duration: text-mini-duration
+    # [text (may be left unset)]
+    holiday: text-mini-holiday
+    # [text (may be left unset)]
+    nonworkday: text-mini-nonworkday
+    # [text (may be left unset)]
+    day_number_digits: digits-ascii
+    # [text (may be left unset)]
+    week_number_digits: digits-seven-segment
+    # Group holding the single glyph that fills the days of a duration.
+    # [text (may be left unset)]
+    duration_fill: duration-fill
+candybar:
+  # 0 = derive from the page.
+  # [a number]
+  row_height: 0.0
+  # [a number]
+  cell_width: 0.0
+  # [a number]
+  weeknum_col_ratio: 0.6
+  # [a number]
+  month_col_ratio: 1.6
+  # -1 = follow ``fiscal.week_start``.
+  # [a whole number]
+  week_start: -1
+  # [true | false (may be left unset)]
+  suppress_weekends: true
+  # [true | false]
+  show_week_numbers: true
+  # [a whole number]
+  max_rows_per_page: 0
+  # [true | false]
+  grid_lines: true
+  # [true | false]
+  month_shading: false
+timeline:
+  # [one of: primary | secondary | both]
+  label_side: primary
+  # [one of: primary | secondary | opposite]
+  duration_side: opposite
+  # [a number]
+  duration_offset_y: 20.0
+  # [a number]
+  duration_lane_gap_y: 8.0
+  labella:
+    # [a number]
+    layer_gap: 8.0
+    # [a number]
+    node_height: 24.0
+    # [a number]
+    density: 0.75
+    # [a number (may be left unset)]
+    min_pos: 20
+    # [a number (may be left unset)]
+    max_pos: 1000
+  events:
+    # [a number (may be left unset)]
+    box_width: 115
+    # [a number (may be left unset)]
+    box_height: 16
+    # ``packed`` stacks boxes from their start date; ``labella`` force-solves their placement.
+    # [one of: packed | labella]
+    placement: packed
+    # [a number (may be left unset)]
+    row_gap: 10
+    # [a number]
+    box_gap: 2.0
+    # [a number]
+    inner_pad: 2.0
+    # [a number]
+    icon_column_ratio: 0.15
+  durations:
+    # [a number (may be left unset)]
+    box_width: 120
+    # [a number (may be left unset)]
+    box_height: 14
+    # [a number (may be left unset)]
+    icon_column_ratio: 0.15
+pit:
+  # [one of: primary | secondary | both]
+  label_side: both
+  # [one of: start | center | end]
+  leader_label_anchor: center
+  # Distance of the date text from its label, and where it sits.
+  # [a number]
+  date_offset: 6.0
+  # [text]
+  date_placement: inline
+  labella:
+    # [a number]
+    layer_gap: 50.0
+    # [a number]
+    node_height: 24.0
+    # [a number]
+    density: 0.5
+    # [a number (may be left unset)]
+    min_pos: null
+    # [a number (may be left unset)]
+    max_pos: null
+  label:
+    # [a number]
+    padding_x: 6.0
+    # [a number]
+    padding_y: 3.0
+    # [a number (may be left unset)]
+    icon_size: 11
+    # [a number]
+    icon_gap: 4.0
+compact_plan:
+  # [a number]
+  duration_line_width: 5.0
+  # Share of a bar's width each date column takes.
+  # [a number]
+  duration_date_column_ratio: 0.04
+  # [a number]
+  lane_spacing: 6.0
+  # [a number]
+  milestone_flag_width: 7.0
+  # [a number]
+  milestone_flag_height: 9.0
+  # [true | false]
+  show_milestone_labels: true
+  # [a number (may be left unset)]
+  header_bottom_y: 40
+  # [true | false]
+  show_axis_legend: true
+  # [text]
+  legend_axis_text: timeline
+  # [text]
+  continuation_legend_text: activity continues
+  # [text]
+  continuation_before_legend_text: activity began earlier
+blockplan:
+  # [a number]
+  label_column_ratio: 0.16
+  # [a number (may be left unset)]
+  band_label_column_ratio: 0.08
+  # [true | false]
+  show_unmatched_lane: true
+  # [text]
+  unmatched_lane_name: Unmatched
+  # [one of: first | all]
+  lane_match_mode: first
+  # Lane definitions: name, match criteria, split_ratio, fill_color, label_color ...
+  # [a list of a mapping]
+  swimlanes: [{fill_color: aliceblue, label_align_h: end, label_align_v: middle, label_color: navy, match: {resource_groups: [dev]}, name: Engineering, split_ratio: 0.5, timeline_fill_color: none}]
+  # [one of: start | middle | end]
+  lane_label_align_h: start
+  # [one of: top | middle | bottom]
+  lane_label_align_v: middle
+  # [a number]
+  lane_label_rotation: 0.0
+  # [a number]
+  lane_split_ratio: 0.5
+  # [a number]
+  duration_bar_height: 8.0
+  # [a number (may be left unset)]
+  duration_row_gap: 3
+gantt:
+  # Share of the content width given to the task table.
+  # [a number]
+  table_width_ratio: 0.38
+  # [a number]
+  row_height: 14.0
+  # [a number]
+  header_row_height: 18.0
+  # [a number]
+  indent_per_level: 8.0
+  # [a number]
+  bar_height: 8.0
+  # Split the range across pages below this many points per day; 0 = never.
+  # [a number]
+  min_day_width: 4.0
+  # [a number]
+  float_opacity_scale: 0.4
+  # [true | false]
+  show_dependencies: true
+  marks:
+    # [text]
+    milestone: diamond-fill
+    # [text]
+    deadline: square-fill
+    # [text]
+    rollup: check
+    # [text]
+    milestone_flag: check
+    # [text]
+    snapped_event: arrow-left-circle
+    # [text]
+    offchart_dependency: crosssquare
+    # [a list of text]
+    link_ref_icon_families: [circle-, darkcircle-, square-]
+    # [a whole number]
+    link_ref_family_size: 100
+    # [a whole number]
+    link_ref_max_icons: 2
+  # [a list of a block]
+  columns:
+    # [text]
+    - field: link_ref
+      # [text (may be left unset)]
+      header: Ref
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.03
+      # [one of: start | middle | end (may be left unset)]
+      align: middle
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: icon
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: source_id
+      # [text (may be left unset)]
+      header: ID
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.035
+      # [one of: start | middle | end (may be left unset)]
+      align: end
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: name
+      # [text (may be left unset)]
+      header: Task Name
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.215
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: 2
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: true
+    # [text]
+    - field: status
+      # [text (may be left unset)]
+      header: Status
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.045
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: priority
+      # [text (may be left unset)]
+      header: Pri
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.025
+      # [one of: start | middle | end (may be left unset)]
+      align: end
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: wbs
+      # [text (may be left unset)]
+      header: WBS
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.05
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: rollup
+      # [text (may be left unset)]
+      header: Roll
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.02
+      # [one of: start | middle | end (may be left unset)]
+      align: middle
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: icon
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: milestone
+      # [text (may be left unset)]
+      header: MS
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.02
+      # [one of: start | middle | end (may be left unset)]
+      align: middle
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: icon
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: percent_complete
+      # [text (may be left unset)]
+      header: '%'
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.035
+      # [one of: start | middle | end (may be left unset)]
+      align: end
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: '{:.0%}'
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: effort_text
+      # [text (may be left unset)]
+      header: Effort
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.045
+      # [one of: start | middle | end (may be left unset)]
+      align: end
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: duration_text
+      # [text (may be left unset)]
+      header: Duration
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.045
+      # [one of: start | middle | end (may be left unset)]
+      align: end
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: start_date
+      # [text (may be left unset)]
+      header: Start
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.08
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: dd MM/DD/YY
+      # [true | false]
+      indent: false
+    # [text]
+    - field: end_date
+      # [text (may be left unset)]
+      header: Finish
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.08
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: dd MM/DD/YY
+      # [true | false]
+      indent: false
+    # [text]
+    - field: resource_names
+      # [text (may be left unset)]
+      header: Resources
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.065
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: 1
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: resource_group
+      # [text (may be left unset)]
+      header: Group
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.055
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: notes
+      # [text (may be left unset)]
+      header: Notes
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.075
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: 2
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: null
+      # [true | false]
+      indent: false
+    # [text]
+    - field: deadline
+      # [text (may be left unset)]
+      header: Deadline
+      # Share of the table width; unset takes the average of the columns that set one.
+      # [a number (may be left unset)]
+      width: 0.08
+      # [one of: start | middle | end (may be left unset)]
+      align: null
+      # [a whole number (may be left unset)]
+      max_lines: null
+      # [true | false]
+      wrap: false
+      # [true | false]
+      truncate: true
+      # [one of: text | icon]
+      render: text
+      # [text (may be left unset)]
+      icon: null
+      # [text (may be left unset)]
+      format: null
+      # [text (may be left unset)]
+      date_format: dd MM/DD/YY
+      # [true | false]
+      indent: false
+excelblockplan:
+  # [text]
+  font_name: Calibri
+  # [a whole number]
+  font_size: 9
+  # [a number (may be left unset)]
+  column_width: 3.2

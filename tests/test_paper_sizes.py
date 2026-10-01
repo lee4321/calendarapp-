@@ -48,7 +48,7 @@ class TestPaperSizesFromDB(unittest.TestCase):
 
 
 class TestFormulaFontSizes(unittest.TestCase):
-    """Test formula-based font sizing."""
+    """Page-chrome font sizes follow the page height; every other size is a theme role."""
 
     def test_letter_portrait_sizes_reasonable(self):
         config = create_calendar_config()
@@ -57,10 +57,9 @@ class TestFormulaFontSizes(unittest.TestCase):
         config.orientation = "portrait"
         config = setfontsizes(config)
 
-        assert config.weekly_name_text_font_size is not None
         assert config.header_left_font_size is not None
-        self.assertGreater(config.weekly_name_text_font_size, 0.0)
-        self.assertGreater(config.header_left_font_size, config.weekly_name_text_font_size)
+        assert config.footer_left_font_size is not None
+        self.assertGreater(config.header_left_font_size, config.footer_left_font_size)
 
     def test_tabloid_portrait_sizes_larger_than_letter(self):
         letter_config = create_calendar_config()
@@ -71,18 +70,9 @@ class TestFormulaFontSizes(unittest.TestCase):
         tabloid_config.pageX, tabloid_config.pageY = 792.0, 1224.0
         tabloid_config = setfontsizes(tabloid_config)
 
-        assert tabloid_config.weekly_name_text_font_size is not None
-        assert letter_config.weekly_name_text_font_size is not None
-        assert tabloid_config.watermark_font_size is not None
-        assert letter_config.watermark_font_size is not None
-        self.assertGreater(
-            tabloid_config.weekly_name_text_font_size,
-            letter_config.weekly_name_text_font_size,
-        )
-        self.assertGreater(
-            tabloid_config.watermark_font_size,
-            letter_config.watermark_font_size,
-        )
+        assert tabloid_config.header_left_font_size is not None
+        assert letter_config.header_left_font_size is not None
+        self.assertGreater(tabloid_config.header_left_font_size, letter_config.header_left_font_size)
 
     def test_tiny_paper_hits_minimum(self):
         tiny = create_calendar_config()
@@ -93,7 +83,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         tinier.pageX, tinier.pageY = 50.0, 75.0
         tinier = setfontsizes(tinier)
         # Both should settle at the configured minimum floor.
-        self.assertEqual(tiny.weekly_name_text_font_size, tinier.weekly_name_text_font_size)
+        self.assertEqual(tiny.header_left_font_size, tinier.header_left_font_size)
 
     def test_huge_paper_hits_maximum(self):
         huge = create_calendar_config()
@@ -104,7 +94,7 @@ class TestFormulaFontSizes(unittest.TestCase):
         huger.pageX, huger.pageY = 10000.0, 14000.0
         huger = setfontsizes(huger)
         # Both should settle at the configured maximum cap.
-        self.assertEqual(huge.weekly_name_text_font_size, huger.weekly_name_text_font_size)
+        self.assertEqual(huge.header_left_font_size, huger.header_left_font_size)
 
     def test_layout_percentages_set(self):
         config = create_calendar_config()
@@ -121,14 +111,6 @@ class TestFormulaFontSizes(unittest.TestCase):
         # across page sizes.
         self.assertEqual(config.margin_percent, other.margin_percent)
         self.assertEqual(config.color_key_percent, other.color_key_percent)
-
-    def test_desired_font_size_scales_event_text_size(self):
-        config = create_calendar_config()
-        config.pageX, config.pageY = 612.0, 792.0
-        config.desired_font_size = 12.0
-        config = setfontsizes(config)
-        assert config.weekly_name_text_font_size is not None
-        self.assertAlmostEqual(config.weekly_name_text_font_size, 12.0, places=2)
 
     def test_resolve_page_margins_uses_side_overrides(self):
         config = create_calendar_config()

@@ -56,13 +56,13 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from PIL import ImageColor
 
+from renderers.timescale import Plan, ScaleContext, plan_rows
 from shared.data_models import Event
-from shared.day_classifier import classify_days, day_rule_matches
-from shared.icon_band import compute_icon_band_days
+from shared.day_classifier import classify_days
 from shared.number_icons import number_duration_icons
 from shared.rule_engine import DayContext, StyleEngine
+from shared.span import Span
 from visualizers.base import filter_events
-from visualizers.blockplan.renderer import BlockPlanRenderer, _BandSegment
 
 if TYPE_CHECKING:
     from config.config import CalendarConfig
@@ -70,22 +70,10 @@ if TYPE_CHECKING:
 
 
 def _resolve_excel_token(config: CalendarConfig, token: str) -> dict:
-    """Return the unified-theme style dict for ``token`` (papersize-only ctx).
+    """The theme's style dictionary for the role ``token`` (``{}`` when the theme has no such role)."""
+    from config import role_styles
 
-    The Excel writers have no per-event ctx (they draw timeband rows, not
-    events) and no notion of paper size in the SVG sense, but ``papersize``
-    is forwarded so themes can scope rules with ``select: { papersize: ... }``
-    if needed. Returns ``{}`` when no theme is loaded or the token isn't
-    defined.
-    """
-    theme = getattr(config, "theme", None)
-    if theme is None:
-        return {}
-    ctx: dict[str, str] = {}
-    papersize = getattr(config, "papersize", None)
-    if papersize:
-        ctx["papersize"] = str(papersize)
-    return theme.resolve_token(token, ctx) or {}
+    return role_styles.token(config.theme_v3, token, config.papersize)
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -411,21 +399,6 @@ def _font_color_argb(color: str | None) -> str:
 # ── Segment helpers ───────────────────────────────────────────────────────────
 
 
-def _group_segments(segments: list[_BandSegment], show_every: int) -> list[list[_BandSegment]]:
-    """Partition *segments* into consecutive groups of size *show_every*."""
-    n = max(1, show_every)
-    groups: list[list[_BandSegment]] = []
-    buf: list[_BandSegment] = []
-    for seg in segments:
-        buf.append(seg)
-        if len(buf) >= n:
-            groups.append(buf)
-            buf = []
-    if buf:
-        groups.append(buf)
-    return groups
-
-
 def _col_for_day(day: date, visible_days: list[date], *, end: bool = False) -> int:
     """Return the 1-based Excel column index for *day*.
 
@@ -531,49 +504,16 @@ def _build_holiday_map(
 # ── Vertical-line → right-border mapping ─────────────────────────────────────
 
 
-def _build_right_border_cols(
-    vertical_lines: list[dict],
-    band_segments: dict[str, list[_BandSegment]],
-    visible_days: list[date],
-    config: CalendarConfig,
-    *,
-    default_color: str | None = None,
-    default_width: float | None = None,
-) -> dict[int, dict]:
-    """Return {excel_col: {color, style}} for each configured vertical line."""
-    tk_vline = _resolve_excel_token(config, "box:vline")
-    fallback_color = default_color or "red"
-    fallback_width = float(default_width if default_width is not None else 1.5)
+def _build_right_border_cols(plan: Plan) -> dict[int, dict]:
+    """Return {excel_col: {color, style}}: a right border at the end of every cell of a row that has a ``vline``."""
     result: dict[int, dict] = {}
-    for line in vertical_lines:
-        if not isinstance(line, dict):
+    for rp in plan.rows:
+        line = rp.row.vline
+        if line is None:
             continue
-        band_name = str(line.get("band") or line.get("band_label") or "").strip().lower()
-        value = str(line.get("value") or "").strip()
-        repeat = bool(line.get("repeat", False))
-        align = str(line.get("align", "end")).strip().lower()
-        line_color = str(line.get("color") or tk_vline.get("stroke") or fallback_color)
-        line_width = float(line.get("width") or tk_vline.get("stroke_width") or fallback_width)
-        if not band_name:
-            continue
-        segs = band_segments.get(band_name, [])
-        for seg in segs:
-            if not repeat and seg.label != value:
-                continue
-            if align == "end":
-                idx = bisect_left(visible_days, seg.end_exclusive) - 1
-            elif align == "center":
-                s_idx = bisect_left(visible_days, seg.start)
-                e_idx = bisect_left(visible_days, seg.end_exclusive)
-                idx = (s_idx + e_idx) // 2
-            else:  # "start"
-                idx = bisect_left(visible_days, seg.start)
-            if 0 <= idx < len(visible_days):
-                excel_col = FIRST_DATE_COL + idx
-                result[excel_col] = {
-                    "color": line_color,
-                    "style": "medium" if line_width > 1.5 else "thin",
-                }
+        for cell in rp.cells:
+            col = FIRST_DATE_COL + round(cell.b) - 1
+            result[col] = {"color": line.color, "style": "medium" if line.width > 1.5 else "thin"}
     return result
 
 
@@ -615,222 +555,101 @@ def _apply_overlay_fill(cell: Any, base_argb: str, overlay_color: str | None) ->
 # ── Shared sheet-builder helpers ──────────────────────────────────────────────
 
 
+_ALIGN_TO_EXCEL = {"start": "left", "middle": "center", "end": "right"}
+
+
+def _tint(color: str | None, opacity: float) -> str | None:
+    """*color* blended with white by *opacity*, as ``#rrggbb`` (Excel has no fill opacity)."""
+    argb = _to_argb(color)
+    if not argb:
+        return None
+    r, g, b = (int(argb[i : i + 2], 16) for i in (2, 4, 6))
+    mix = lambda c: round(255 - (255 - c) * opacity)  # noqa: E731
+    return f"#{mix(r):02x}{mix(g):02x}{mix(b):02x}"
+
+
 def _read_band_settings(config: CalendarConfig) -> dict:
-    """Return the workbook font, colours and band defaults (``excelblockplan_*``).
+    """Return the workbook font and the colours the sheet writers share, from the theme.
 
-    Holiday fills fall back to the global ``theme_federal_holiday_color`` /
-    ``theme_company_holiday_color`` when the theme sets no Excel-specific colour.
+    Holiday colours are the theme's ``holidays`` fills blended with white by
+    their opacity, since a cell fill cannot be translucent.
     """
-
-    def _cfg(*names: str, default: Any = None) -> Any:
-        for n in names:
-            v = getattr(config, n, None)
-            if v not in (None, ""):
-                return v
-        return default
-
+    theme = config.theme_v3
+    h = theme.holidays
     return {
-        "font_name": str(_cfg("excelblockplan_font", default="Calibri")),
-        "font_size": int(_cfg("excelblockplan_font_size", default=9)),
-        "band_row_height": float(_cfg("excelblockplan_band_row_height", default=18.0)),
-        "header_heading_fill": str(_cfg("excelblockplan_header_heading_fill_color", default="none")),
-        "header_label_color": str(_cfg("excelblockplan_header_label_color", default="black")),
-        "header_label_align_h": str(_cfg("excelblockplan_header_label_align_h", default="right")).lower(),
-        "timeband_fill_color": _cfg("excelblockplan_timeband_fill_color", default="none"),
-        "timeband_fill_palette": _cfg("excelblockplan_timeband_fill_palette", default=[]) or [],
-        "timeband_label_color": str(_cfg("excelblockplan_timeband_label_color", default="black")),
-        "federal_color": str(
-            _cfg(
-                "excelblockplan_federal_holiday_fill_color",
-                "theme_federal_holiday_color",
-                default="#FFE4E1",
-            )
-        ),
-        "company_color": str(
-            _cfg(
-                "excelblockplan_company_holiday_fill_color",
-                "theme_company_holiday_color",
-                default="#FFFACD",
-            )
-        ),
-        "weekend_color": _cfg("excelblockplan_weekend_fill_color", default=None) or None,
-        "vline_color": str(_cfg("excelblockplan_vertical_line_color", default="red")),
-        "vline_width": float(_cfg("excelblockplan_vertical_line_width", default=1.5)),
+        "font_name": theme.excelblockplan.font_name,
+        "font_size": theme.excelblockplan.font_size,
+        "header_heading_fill": theme.boxes.header.fill,
+        "header_label_color": theme.text.band_label.color,
+        "header_label_align_h": _ALIGN_TO_EXCEL[theme.timescale.heading_align],
+        "federal_color": _tint(h.federal.color, h.federal.opacity) or "#FFE4E1",
+        "company_color": _tint(h.company.color, h.company.opacity) or "#FFFACD",
+        "weekend_color": _tint(h.weekend.color, h.weekend.opacity),
     }
 
 
-def _setup_column_widths(ws: Any, visible_days: list[date]) -> None:
-    """Set widths for the label columns, the continuation column and the days."""
+def _setup_column_widths(ws: Any, visible_days: list[date], day_width: float = DAY_COL_WIDTH) -> None:
+    """Set widths for the label columns, the continuation column and the days (``day_width``, Excel units)."""
     for col_idx, (_, width) in enumerate(FIXED_COLUMNS, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-    ws.column_dimensions[get_column_letter(CONTINUATION_COL)].width = DAY_COL_WIDTH
+    ws.column_dimensions[get_column_letter(CONTINUATION_COL)].width = day_width
     for i in range(len(visible_days)):
-        ws.column_dimensions[get_column_letter(FIRST_DATE_COL + i)].width = DAY_COL_WIDTH
+        ws.column_dimensions[get_column_letter(FIRST_DATE_COL + i)].width = day_width
 
 
 def _write_timebands(
     ws: Any,
     *,
-    config: CalendarConfig,
-    db: CalendarDB,
-    top_bands: list[dict],
-    visible_days: list[date],
-    band_events: list[Event],
+    plan: Plan,
     holiday_map: dict[date, dict],
-    day_classes: dict[date, frozenset[str]],
-    band_segments: dict[str, list[_BandSegment]],
+    visible_days: list[date],
     settings: dict,
     start_row: int = 1,
 ) -> int:
-    """Write the timeband rows and return the next free row index.
+    """Write the planned timescale rows and return the next free row index.
 
-    The band heading label (``band["label"]``) is placed in the last label column
-    (rightmost label column) by merging cells A:W and aligning per
-    ``label_align_h``.  Segment cells start at FIRST_DATE_COL so the continuation column
-    (reserved for the continuation icon) stays clear.
+    The row heading is placed in the label columns (A to the last label column)
+    by merging them.  Cells start at FIRST_DATE_COL, so the continuation column
+    stays clear.  The plan is made with one unit of span per day column, so a
+    cell's ``a`` and ``b`` are its first column offset and one past its last.
     """
-    tk_heading = _resolve_excel_token(config, "text:heading")
-    tk_band_label = _resolve_excel_token(config, "text:band_label")
-    tk_box_band = _resolve_excel_token(config, "box:band")
-
-    def _classify(d: date) -> frozenset[str]:
-        return day_classes.get(d, frozenset())
-
     current_row = start_row
-    for band in top_bands:
-        band_font_name: str = str(band.get("excel_font_name") or settings["font_name"])
-        band_font_size: int = int(band.get("excel_font_size") or settings["font_size"])
+    for rp in plan.rows:
+        font_name = settings["font_name"]
+        font_size = rp.row.text.size if rp.row.text.size is not None else settings["font_size"]
+        ws.row_dimensions[current_row].height = max(12.0, rp.height * 0.75)
 
-        row_h_pts = float(band.get("row_height") or settings["band_row_height"])
-        ws.row_dimensions[current_row].height = max(12.0, row_h_pts * 0.75)
-
-        label_text = str(band.get("label", ""))
-        heading_fill_color = str(band.get("label_fill_color") or settings["header_heading_fill"] or "")
-        heading_label_color = str(band.get("label_color") or tk_heading.get("color") or settings["header_label_color"])
-        heading_align_h = str(band.get("label_align_h") or settings["header_label_align_h"]).lower()
-        excel_h_align = "right" if heading_align_h == "right" else "center" if heading_align_h == "center" else "left"
-
-        ws.merge_cells(
-            start_row=current_row,
-            start_column=1,
-            end_row=current_row,
-            end_column=LABEL_COL_END,
-        )
-        heading_cell = ws.cell(row=current_row, column=1, value=label_text)
+        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=LABEL_COL_END)
+        heading_cell = ws.cell(row=current_row, column=1, value=rp.heading or "")
         heading_cell.font = Font(
-            name=band_font_name,
-            size=band_font_size,
-            bold=True,
-            color=_font_color_argb(heading_label_color),
+            name=font_name, size=int(font_size), bold=True, color=_font_color_argb(settings["header_label_color"])
         )
-        heading_cell.alignment = Alignment(horizontal=excel_h_align, vertical="center", wrap_text=False)
-        _apply_fill(heading_cell, heading_fill_color)
-
-        # ── Icon band — one cell per visible day ─────────────────────────
-        if str(band.get("unit", "")).strip().lower() == "icon":
-            icon_rules = list(band.get("icon_rules") or [])
-            day_icon_map = compute_icon_band_days(band_events, icon_rules, visible_days, classify_fn=_classify)
-            icon_fill = str(band.get("fill_color") or "none")
-            for i, d in enumerate(visible_days):
-                col = FIRST_DATE_COL + i
-                icons = day_icon_map.get(d, [])
-                if d in holiday_map:
-                    _apply_fill(ws.cell(row=current_row, column=col), holiday_map[d]["color"])
-                elif icon_fill and icon_fill.lower() not in {"none", "transparent"}:
-                    _apply_fill(ws.cell(row=current_row, column=col), icon_fill)
-                if not icons:
-                    continue
-                _icon_name, icon_color = icons[0]
-                symbol = "●"  # ● filled circle
-                cell = ws.cell(row=current_row, column=col, value=symbol)
-                cell.font = Font(
-                    name=band_font_name,
-                    size=band_font_size,
-                    color=_font_color_argb(icon_color),
-                )
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-            current_row += 1
-            continue
-
-        segs = band_segments.get(str(band.get("label", "")).strip().lower(), [])
-
-        band_fill_raw = band.get(
-            "fill_color",
-            tk_box_band.get("fill") or settings["timeband_fill_color"],
+        heading_cell.alignment = Alignment(
+            horizontal=settings["header_label_align_h"], vertical="center", wrap_text=False
         )
-        band_palette_raw = band.get("fill_palette", settings["timeband_fill_palette"])
-        color_list = BlockPlanRenderer._resolve_color_list(band_fill_raw, band_palette_raw, db)
+        _apply_fill(heading_cell, settings["header_heading_fill"])
 
-        seg_label_color = str(band.get("font_color") or tk_band_label.get("color") or settings["timeband_label_color"])
-        show_every = max(1, int(band.get("show_every", 1)))
-        label_values: list | None = band.get("label_values")
-        band_fill_rules_raw = band.get("fill_rules")
-        band_fill_rules: list[dict] | None = band_fill_rules_raw if isinstance(band_fill_rules_raw, list) else None
-        groups = _group_segments(segs, show_every)
-
-        for gidx, group in enumerate(groups):
-            seg_start = group[0].start
-            seg_end_excl = group[-1].end_exclusive
-
-            if not visible_days or seg_start > visible_days[-1] or seg_end_excl <= visible_days[0]:
+        for cell in rp.cells:
+            col_s = FIRST_DATE_COL + round(cell.a)
+            col_e = FIRST_DATE_COL + round(cell.b) - 1
+            if col_e < col_s:
                 continue
-
-            col_s = _col_for_day(seg_start, visible_days)
-            col_e = _col_for_day(seg_end_excl, visible_days, end=True)
-
-            col_s = max(FIRST_DATE_COL, min(col_s, FIRST_DATE_COL + len(visible_days) - 1))
-            col_e = max(col_s, min(col_e, FIRST_DATE_COL + len(visible_days) - 1))
-
-            if label_values and gidx < len(label_values):
-                cell_text: str = str(label_values[gidx] or group[0].label)
-            else:
-                cell_text = group[0].label
-
-            is_single_day = col_s == col_e
-            cell_fill_color: str | None = color_list[gidx % len(color_list)] if color_list else None
-            if is_single_day:
-                day_idx = col_s - FIRST_DATE_COL
-                if 0 <= day_idx < len(visible_days):
-                    d = visible_days[day_idx]
-                    if band_fill_rules:
-                        matched = False
-                        for rule in band_fill_rules:
-                            if not isinstance(rule, dict):
-                                continue
-                            match = rule.get("match") or {}
-                            if isinstance(match, dict) and day_rule_matches(_classify(d), match):
-                                color = rule.get("color")
-                                if color:
-                                    cell_fill_color = str(color)
-                                matched = True
-                                break
-                        if not matched and d in holiday_map:
-                            cell_fill_color = holiday_map[d]["color"]
-                            if holiday_map[d]["emoji"]:
-                                cell_text = holiday_map[d]["emoji"]
-                    elif d in holiday_map:
-                        cell_fill_color = holiday_map[d]["color"]
-                        if holiday_map[d]["emoji"]:
-                            cell_text = holiday_map[d]["emoji"]
+            text = cell.label
+            if cell.icons:
+                text = "".join(_COUNTRY_FLAGS.get(i.name.lower(), "●") for i in cell.icons)
+            elif col_s == col_e and 0 <= col_s - FIRST_DATE_COL < len(visible_days):
+                held = holiday_map.get(visible_days[col_s - FIRST_DATE_COL])
+                if held and held["emoji"]:
+                    text = held["emoji"]
 
             if col_e > col_s:
-                ws.merge_cells(
-                    start_row=current_row,
-                    start_column=col_s,
-                    end_row=current_row,
-                    end_column=col_e,
-                )
-            seg_cell = ws.cell(row=current_row, column=col_s, value=cell_text)
-            seg_cell.font = Font(
-                name=band_font_name,
-                size=band_font_size,
-                color=_font_color_argb(seg_label_color),
-            )
+                ws.merge_cells(start_row=current_row, start_column=col_s, end_row=current_row, end_column=col_e)
+            seg_cell = ws.cell(row=current_row, column=col_s, value=text)
+            seg_cell.font = Font(name=font_name, size=int(font_size), color=_font_color_argb(rp.text.color))
             seg_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            _apply_fill(seg_cell, cell_fill_color)
+            _apply_fill(seg_cell, cell.fill)
 
         current_row += 1
-
     return current_row
 
 
@@ -874,11 +693,13 @@ def _write_column_header_row(
 def _prepare_sheet(
     config: CalendarConfig,
     db: CalendarDB,
-) -> tuple[Any, Any, int, list[date], dict[date, dict], dict[int, dict], list[Event], dict]:
+) -> tuple[Any, Any, int, list[date], dict[date, dict], dict[int, dict], list[Event], dict, Plan]:
     """Build a workbook, write timeband + column-header rows, return shared state.
 
     Returns (workbook, worksheet, data_start_row, visible_days, holiday_map,
-    right_border_cols, all_events_objects, settings).
+    right_border_cols, all_events_objects, settings, footer_plan).  The footer plan
+    holds the secondary timescale rows, which the caller writes after the last
+    data row.
     The data_start_row is the first row available for callers to write data
     (one row past the column-header row).  ``all_events_objects`` are the
     Event dataclasses sourced for icon-band evaluation; callers can reuse
@@ -892,9 +713,7 @@ def _prepare_sheet(
     """
     visible_days = compute_visible_days(config)
     settings = _read_band_settings(config)
-
-    top_bands: list[dict] = list(config.excelblockplan_top_time_bands or [])
-    vertical_lines: list[dict] = list(config.excelblockplan_vertical_lines or [])
+    theme = config.theme_v3
 
     holiday_map = _build_holiday_map(
         visible_days,
@@ -904,54 +723,40 @@ def _prepare_sheet(
         settings["company_color"],
         settings["weekend_color"],
     )
-    day_classes = classify_days(visible_days, db, config)
 
-    # Always source events — icon bands need them, and so do the data rows.
+    # Always source events — icon rows need them, and so do the data rows.
     # When no events exist this is a cheap call.
     range_start_str = str(config.userstart or config.adjustedstart)
     range_end_str = str(config.userend or config.adjustedend)
     raw_events = db.get_all_events_in_range(range_start_str, range_end_str)
     band_events: list[Event] = [Event.from_dict(e) if isinstance(e, dict) else e for e in raw_events]
 
-    # Segments cached for both heading rendering and vertical-line lookup.
-    _renderer = BlockPlanRenderer()
-    range_start = str(config.userstart or config.adjustedstart)
-    range_end = str(config.userend or config.adjustedend)
-    start = arrow.get(range_start, "YYYYMMDD").date()
-    end = arrow.get(range_end, "YYYYMMDD").date()
-    if end < start:
-        start, end = end, start
-    band_segments: dict[str, list[_BandSegment]] = {}
-    for band in top_bands:
-        bname = str(band.get("label", "")).strip().lower()
-        if bname and str(band.get("unit", "")).strip().lower() != "icon":
-            band_segments[bname] = _renderer._build_segments(band, start, end, config, visible_days=visible_days, db=db)
+    # One unit of span per day column; text always fits a cell and no row is too narrow,
+    # since the sheet's column widths are fixed.
+    span = Span(visible_days, 0.0, float(len(visible_days))) if visible_days else None
+    scale_ctx = ScaleContext(theme, config, db, band_events, measure=lambda *_: 0.0)
+    empty = Plan((), (), 0.0)
 
-    right_border_cols = _build_right_border_cols(
-        vertical_lines,
-        band_segments,
-        visible_days,
-        config,
-        default_color=settings["vline_color"],
-        default_width=settings["vline_width"],
-    )
+    def _plan(rows: list) -> Plan:
+        if span is None:
+            return empty
+        return plan_rows(rows, span, scale_ctx, full_days=visible_days, min_segment_width=0.0)
+
+    plan = _plan(theme.timescale.primary)
+    footer_plan = _plan(theme.timescale.secondary)
+    right_border_cols = _build_right_border_cols(plan)
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Planner"
 
-    _setup_column_widths(ws, visible_days)
+    _setup_column_widths(ws, visible_days, config.theme_v3.excelblockplan.column_width or DAY_COL_WIDTH)
 
     header_row = _write_timebands(
         ws,
-        config=config,
-        db=db,
-        top_bands=top_bands,
-        visible_days=visible_days,
-        band_events=band_events,
+        plan=plan,
         holiday_map=holiday_map,
-        day_classes=day_classes,
-        band_segments=band_segments,
+        visible_days=visible_days,
         settings=settings,
         start_row=1,
     )
@@ -968,7 +773,7 @@ def _prepare_sheet(
 
     data_start_row = header_row + 1
 
-    return wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, band_events, settings
+    return wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, band_events, settings, footer_plan
 
 
 # Map FIXED_COLUMNS field-name → events-table dict key (as returned by
@@ -1122,13 +927,10 @@ def _parse_event_date(s: str | None) -> date | None:
 
 
 def _blockplan_style_rules(config: CalendarConfig) -> list:
-    """Source the style_rules list (UnifiedTheme first, legacy fallback)."""
-    theme = getattr(config, "theme", None)
-    if theme is not None:
-        rules = theme.sections.get("style_rules")
-        if isinstance(rules, list):
-            return rules
-    return list(getattr(config, "theme_style_rules", None) or [])
+    """The theme's conditional style rules, for the StyleEngine."""
+    from config import role_styles
+
+    return role_styles.style_rules(config.theme_v3)
 
 
 def generate_excel_blockplan(
@@ -1147,8 +949,8 @@ def generate_excel_blockplan(
     if not visible_days:
         return
 
-    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, _all_events, settings = _prepare_sheet(
-        config, db
+    wb, ws, data_start_row, visible_days, holiday_map, right_border_cols, _all_events, settings, footer_plan = (
+        _prepare_sheet(config, db)
     )
 
     # Filter events / durations using the same predicate the other
@@ -1165,7 +967,7 @@ def generate_excel_blockplan(
     filtered = [p[0] for p in paired]
     events = [p[1] for p in paired]
 
-    style_engine = StyleEngine(_blockplan_style_rules(config), "excelblockplan")
+    style_engine = StyleEngine(_blockplan_style_rules(config))
 
     visible_start = visible_days[0]
     visible_end = visible_days[-1]
@@ -1282,5 +1084,16 @@ def generate_excel_blockplan(
                 if col in right_border_cols:
                     rbs = right_border_cols[col]
                     _apply_right_border(cell, rbs["style"], rbs["color"])
+
+    # ── Secondary timescale rows, after the last data row ──────────────────
+    if footer_plan.rows:
+        _write_timebands(
+            ws,
+            plan=footer_plan,
+            holiday_map=holiday_map,
+            visible_days=visible_days,
+            settings=settings,
+            start_row=max(last_row, data_start_row - 1) + 1,
+        )
 
     wb.save(str(out_path))

@@ -29,7 +29,7 @@ a composite sort-key tuple:
     always-missing field degrades to a no-op component rather than raising.
   * a ``dict`` -- a criteria token: arbitrary event-selection criteria using
     the same vocabulary and matching semantics as ``style_rules``/
-    ``swimlane_rules`` (:func:`shared.rule_engine.matches_event_fields`).
+    blockplan lane ``match:`` (:func:`shared.rule_engine.matches_event_fields`).
     Matching events sort ahead of non-matching ones.
 
 ``sort_events`` always appends an implicit final tiebreak of

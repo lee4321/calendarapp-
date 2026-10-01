@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reference SVG corpus — rendering-regression guard for consolidation work.
 #
-# Renders every SVG visualizer across three themes with fixed date ranges so
+# Renders every SVG visualizer across the default and demonstration themes with fixed date ranges so
 # refactors can be verified against a known-good baseline.
 #
 # Usage:
@@ -16,7 +16,7 @@ cd "$(dirname "$0")/.."
 
 CORPUS_DIR="output/_refcorpus"
 CHECK_DIR="output/_refcorpus_check"
-THEMES=(default dark corporate)
+THEMES=(default demonstration)
 
 render_one() {
   local viz="$1" start="$2" end="$3"

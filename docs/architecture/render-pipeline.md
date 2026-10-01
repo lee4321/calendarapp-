@@ -1,6 +1,6 @@
 # Render pipeline — one `weekly` run
 
-`PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260331 -th corporate -of out.svg`
+`PYTHONPATH=. uv run python ecalendar.py weekly 20260101 20260331 -th config/themes/default.yaml -of out.svg`
 
 Every SVG visualizer follows this sequence; only the layout/renderer pair
 differs. (The `pit` and `timeline` visualizers add a labella callout-layout
@@ -10,7 +10,7 @@ step between layout and drawing — see `shared/labella_layout.py`.)
 sequenceDiagram
     participant run as ecalendar.run()
     participant args as cli/args + config_assembly
-    participant te as ThemeEngine
+    participant te as theme_loader
     participant db as CalendarDB
     participant fact as VisualizerFactory
     participant lay as WeeklyCalendarLayout
@@ -18,16 +18,13 @@ sequenceDiagram
 
     run->>args: parse argv (@atfiles expanded)
     run->>db: _open_calendar_db(); load paper sizes
-    run->>args: _apply_args_to_config(args, config)
+    run->>te: load_run_theme -> config.theme_v3 (before any option)
+    run->>args: _apply_args_to_config(args, config)  # options beat the theme
     run->>run: calc_calendar_range()  # weekend-style week snapping
     run->>db: load_python_holidays(country, range)
     run->>run: build fiscal lookup (--fiscal)
-    run->>te: load + apply theme (pass 1)
-    Note over te: sections → config fields,<br/>style_rules → UnifiedTheme,<br/>element styles from catalog
-    run->>run: setfontsizes()  # token size > page-height heuristic
-    run->>te: re-apply theme (pass 2) + _inject_heuristic_size_tokens
-    run->>args: _reapply_post_theme_cli_overrides  # CLI beats theme
-    run->>run: _resolve_palette_overrides(config, db)
+    run->>run: setfontsizes()  # page-layout ratios
+    run->>run: resolve_theme_palettes(config, db)
     run->>fact: create("weekly")
     fact->>lay: generate_coordinates(config)
     lay-->>fact: CoordinateDict {name → (x,y,w,h), PDF coords}
@@ -40,11 +37,9 @@ sequenceDiagram
 
 Points worth knowing:
 
-- **Theme is applied twice.** Pass 1 exposes theme-declared font sizes to
-  `setfontsizes()`; pass 2 re-applies after the heuristics so precedence
-  ends up: token size → legacy field heuristic. CLI flags are re-applied
-  last (`_reapply_post_theme_cli_overrides`) so the command line always
-  wins over the theme.
+- **The theme loads first.** `load_run_theme` runs before any option is
+  applied, so a CLI option that overlaps the theme always wins
+  (`_CLI_CONFIG_OVERRIDES`).
 - **The date range the user typed is not the range rendered.**
   `calc_calendar_range()` snaps to whole weeks per the weekend style;
   `config.userstart/userend` keep the typed range (the timeline axis and

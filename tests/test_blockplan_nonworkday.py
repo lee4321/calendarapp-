@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from band_helpers import set_bands, set_fields, update_theme
 from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
@@ -58,17 +59,16 @@ def _cfg(output: Path) -> CalendarConfig:
     c.adjustedstart = "20260209"
     c.adjustedend = "20260220"
     c.outputfile = str(output)
-    c.blockplan_top_time_bands = [{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}]
-    c.blockplan_bottom_time_bands = []
-    c.blockplan_swimlanes = [{"name": "Lane", "match": {}}]
+    set_bands(c, primary=[{"label": "Day", "unit": "date", "date_format": "D", "show_every": 1}])
+    set_bands(c, secondary=[])
+    set_fields(c, blockplan_swimlanes=[{"name": "Lane", "match": {}}])
     return c
 
 
-def test_nonworkday_fill_applied_from_config_default(tmp_path):
-    """Global blockplan_federal_holiday_fill_color fills the holiday cell."""
+def test_nonworkday_fills_come_from_the_theme_holidays(tmp_path):
+    """The theme's holidays fills tint the holiday and weekend cells."""
     cfg = _cfg(tmp_path / "bp.svg")
-    cfg.blockplan_federal_holiday_fill_color = "#FF0000"
-    cfg.blockplan_weekend_fill_color = "#CCCCCC"
+    update_theme(cfg, holidays={"federal": {"color": "#FF0000"}, "weekend": {"color": "#CCCCCC"}})
     coords = BlockPlanLayout().calculate(cfg)
 
     r = _Capture()
@@ -80,34 +80,6 @@ def test_nonworkday_fill_applied_from_config_default(tmp_path):
     # Federal holiday cell should have red fill
     assert any(rc.get("fill") == "#FF0000" for rc in band_rects), (
         "expected federal holiday cell to be filled with #FF0000"
-    )
-
-
-def test_fill_rules_override_global_default(tmp_path):
-    """Band-level fill_rules take precedence over config defaults."""
-    cfg = _cfg(tmp_path / "bp2.svg")
-    cfg.blockplan_federal_holiday_fill_color = "#FF0000"
-    # Band-level rule overrides with gold for federal holiday
-    cfg.blockplan_top_time_bands = [
-        {
-            "label": "Day",
-            "unit": "date",
-            "date_format": "D",
-            "show_every": 1,
-            "fill_rules": [
-                {"match": {"federal_holiday": True}, "color": "#FFD700"},
-            ],
-        }
-    ]
-    coords = BlockPlanLayout().calculate(cfg)
-
-    r = _Capture()
-    r.render(cfg, coords, events=[], db=_NonworkDB())
-
-    band_rects = [rc for rc in r.rects if rc.get("css_class") == "ec-band-cell"]
-    assert any(rc.get("fill") == "#FFD700" for rc in band_rects), "band-level fill_rule should override config default"
-    assert not any(rc.get("fill") == "#FF0000" for rc in band_rects), (
-        "config default should not apply when fill_rules matched"
     )
 
 

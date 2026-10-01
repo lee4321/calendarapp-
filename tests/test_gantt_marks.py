@@ -6,9 +6,12 @@ primitives the renderer emitted, keyed by their `ec-*` class.
 
 from __future__ import annotations
 
+import re
 from typing import ClassVar
 
+import drawsvg
 import pytest
+from band_helpers import set_bands, set_fields, update_theme
 from fakes import FakeCalendarDB
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
@@ -72,6 +75,15 @@ class _CaptureRenderer(GanttRenderer):
         self.texts: list[dict] = []
         self.paths: list[dict] = []
         self.markers: list[dict] = []
+        self._drawing = drawsvg.Drawing(1000, 400)
+
+    def drawn_lines(self, css_class: str) -> list[dict]:
+        """Lines drawn through the shared line engine (it writes SVG, not ``_draw_line`` calls)."""
+        pattern = rf'<path d="M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)"[^>]*class="{css_class}"'
+        return [
+            dict(zip(("x1", "y1", "x2", "y2"), map(float, m), strict=True))
+            for m in re.findall(pattern, self.drawing.as_svg())
+        ]
 
     def _draw_rect(self, x, y, w, h, **kwargs):
         self.rects.append({"x": x, "y": y, "w": w, "h": h, **kwargs})
@@ -115,9 +127,14 @@ def render(events, *, start="20260202", end="20260213", weekend_style=0, db=None
     config.adjustedstart, config.adjustedend = start, end
     config.include_header = False
     config.include_footer = False
-    config.gantt_show_today_line = False
+    update_theme(config, today={"show": False})
+    band_keys = {"gantt_top_time_bands": "primary", "gantt_bottom_time_bands": "secondary"}
+    update_theme(config, **config_overrides.pop("theme_sections", {}))
     for key, value in config_overrides.items():
-        setattr(config, key, value)
+        if key in band_keys:
+            set_bands(config, **{band_keys[key]: value})
+        else:
+            set_fields(config, **{key: value})
     config = setfontsizes(config)
 
     renderer = _CaptureRenderer()
@@ -316,7 +333,7 @@ def test_a_deadline_outside_the_range_draws_nothing():
 
 def test_a_bar_past_the_end_gets_a_continuation_icon_and_a_log_entry():
     renderer = render([task(Start="20260210", End="20260601")])
-    assert any(i["icon"] == "arrow-bar-right" for i in renderer.icons)
+    assert any(i["icon"] == "arrow-right" for i in renderer.icons)
     assert [e.kind for e in renderer.exceptions] == [KIND_CLIPPED_END]
 
 
@@ -373,26 +390,26 @@ def test_holidays_on_working_days_are_shaded_not_reported():
 
 
 def test_the_today_line_draws_at_the_configured_date():
-    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20260205")
-    lines = renderer.of_class(renderer.lines, "ec-today-line")
+    renderer = render([task()], theme_sections={"today": {"show": True, "date": "20260205"}})
+    lines = renderer.drawn_lines("ec-today-line")
     assert len(lines) == 1
-    assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 3)
+    assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 3.5)  # the centre of the cell
 
 
 def test_a_today_date_outside_the_range_draws_nothing():
-    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20270101")
-    assert renderer.of_class(renderer.lines, "ec-today-line") == []
+    renderer = render([task()], theme_sections={"today": {"show": True, "date": "20270101"}})
+    assert renderer.drawn_lines("ec-today-line") == []
 
 
 def test_the_today_line_can_be_switched_off():
-    renderer = render([task()], gantt_show_today_line=False, gantt_today_date="20260205")
-    assert renderer.of_class(renderer.lines, "ec-today-line") == []
+    renderer = render([task()], theme_sections={"today": {"show": False, "date": "20260205"}})
+    assert renderer.drawn_lines("ec-today-line") == []
 
 
 def test_a_today_date_on_a_hidden_day_snaps_to_the_next_column():
-    renderer = render([task()], gantt_show_today_line=True, gantt_today_date="20260207")
-    lines = renderer.of_class(renderer.lines, "ec-today-line")
-    assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 5)
+    renderer = render([task()], theme_sections={"today": {"show": True, "date": "20260207"}})
+    lines = renderer.drawn_lines("ec-today-line")
+    assert lines[0]["x1"] == pytest.approx(renderer.chart_x + renderer.day_w * 5.5)
 
 
 # ── Icon centring ─────────────────────────────────────────────────────────
@@ -412,7 +429,7 @@ def _row_band(renderer, config, row_index: int) -> tuple[float, float]:
     """(top, height) of one task row in the chart body."""
     coords = GanttLayout().calculate(config)
     _x, table_y, _w, _h = coords["GanttTableBody"]
-    row_h = max(float(config.gantt_row_height), 1.0)
+    row_h = max(float(config.theme_v3.gantt.row_height), 1.0)
     return table_y + row_index * row_h, row_h
 
 
@@ -430,7 +447,7 @@ def test_a_deadline_glyph_is_centred_in_its_row():
     marks = [
         i
         for i in renderer.of_class(renderer.icons, "ec-event-icon")
-        if i["icon"] == renderer.config.gantt_deadline_icon
+        if i["icon"] == renderer.config.theme_v3.gantt.marks.deadline
     ]
     assert marks
 
@@ -462,20 +479,20 @@ def test_the_icon_baseline_helper_centres_the_glyph_box():
         assert (top + bottom) / 2 == pytest.approx(100.0)
 
 
-def test_box_day_rules_tint_nonworking_columns():
-    """A box:day rule sets a non-working column's fill; a workday stays unshaded."""
-    rules = [
-        {
-            "name": "weekend",
-            "apply_to": "box:day",
-            "select": {"weekend": True},
-            "style": {"fill": "gold", "fill_opacity": 0.4},
-        },
-        {"name": "holiday", "apply_to": "box:day", "select": {"federal_holiday": True}, "style": {"fill": "tomato"}},
-    ]
+def test_holidays_fills_tint_nonworking_columns():
+    """The theme's holidays fills shade non-working columns; a workday stays unshaded."""
     _DummyDB.holidays = {"20260204"}  # a Wednesday
     try:
-        r = render([], weekend_style=1, theme_style_rules=rules)
+        r = render(
+            [],
+            weekend_style=1,
+            theme_sections={
+                "holidays": {
+                    "weekend": {"color": "gold", "opacity": 0.4},
+                    "federal": {"color": "tomato", "opacity": 0.5},
+                }
+            },
+        )
     finally:
         _DummyDB.holidays = set()
     shaded = r.of_class(r.rects, "ec-cell")
@@ -483,6 +500,6 @@ def test_box_day_rules_tint_nonworking_columns():
     cols = {round(c["x"], 3): c for c in shaded if abs(c["w"] - col_w) < 1e-6}
     fills = sorted((c["fill"], c["fill_opacity"]) for c in cols.values())
     assert ("gold", 0.4) in fills
-    assert any(f == "tomato" for f, _ in fills)
+    assert ("tomato", 0.5) in fills
     # 2026-02-02..13 has 2 weekend days + 1 holiday; workdays are not shaded.
     assert len(cols) == 3

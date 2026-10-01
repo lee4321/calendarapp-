@@ -1,12 +1,11 @@
 """
-Unified rule engine for style_rules and swimlane_rules.
+Unified rule engine for style_rules.
 
 Provides:
 - DayContext: per-day state for evaluating rules
 - TextStyle: per-text-element font overrides (None = use renderer default)
 - StyleResult: accumulated style fields from matched rules (None = not set)
 - StyleEngine: evaluates style_rules; results layer additively in order
-- LaneEngine: evaluates swimlane_rules; first-match wins
 """
 
 from __future__ import annotations
@@ -479,8 +478,8 @@ def matches_event_fields(select: dict, event: Event) -> bool:
     """Public, tri-state-collapsed wrapper around :func:`_matches_event_fields`.
 
     A select dict with no recognized criteria keys is treated as a match
-    (``None`` collapses to ``True``), the same way ``StyleEngine`` and
-    ``LaneEngine`` already treat an absent criterion as non-disqualifying.
+    (``None`` collapses to ``True``), the same way ``StyleEngine``
+    already treats an absent criterion as non-disqualifying.
     """
     return _matches_event_fields(select, event) is not False
 
@@ -603,26 +602,14 @@ def _rule_result(rule: dict) -> StyleResult:
 # ── StyleEngine ───────────────────────────────────────────────────────────────
 
 
-def _view_matches(rule: dict, visualizer: str | None) -> bool:
-    """False only when ``rule`` selects a visualizer other than ``visualizer``."""
-    select = rule.get("select")
-    if visualizer is None or not isinstance(select, dict) or "visualizer" not in select:
-        return True
-    wanted = select["visualizer"]
-    return visualizer in wanted if isinstance(wanted, list) else wanted == visualizer
-
-
 class StyleEngine:
     """
     Evaluates style_rules for day boxes and events.
     Results layer additively in declaration order — None fields are not overwritten.
     """
 
-    def __init__(self, rules: list[dict], visualizer: str | None = None):
-        # Rules selected on another view are dropped up front: the per-event
-        # matchers below know nothing of views, and without this a rule
-        # meant for one visualizer would style every other one.
-        self._rules = [r for r in (rules or []) if isinstance(r, dict) and _view_matches(r, visualizer)]
+    def __init__(self, rules: list[dict]):
+        self._rules = [r for r in (rules or []) if isinstance(r, dict)]
 
     # Legacy apply_to filter strings ↔ unified-schema tokens.
     _UNIFIED_ALIASES: ClassVar[dict[str, set[str]]] = {
@@ -631,6 +618,13 @@ class StyleEngine:
         "day_box": {"box:day"},
         "vertical_line": {"box:vline"},
         "band": {"box:band"},
+    }
+
+    #: Text roles a rule may restyle for the events (or days) it selects.
+    _TEXT_TARGETS: ClassVar[dict[str, frozenset[str]]] = {
+        "event": frozenset({"text:event_name", "text:event_notes", "text:event_date", "text:duration_date"}),
+        "duration": frozenset({"text:event_name", "text:event_notes", "text:event_date", "text:duration_date"}),
+        "day_box": frozenset({"text:day_number", "text:holiday_title"}),
     }
 
     def _applicable_rules(self, apply_to_filter: str) -> list[dict]:
@@ -645,7 +639,12 @@ class StyleEngine:
                 targets = {str(x).lower() for x in raw}
             else:
                 continue
-            if apply_to_filter in targets or "all" in targets or targets & aliases:
+            if (
+                apply_to_filter in targets
+                or "all" in targets
+                or targets & aliases
+                or targets & self._TEXT_TARGETS.get(apply_to_filter, frozenset())
+            ):
                 out.append(rule)
         return out
 
@@ -891,46 +890,3 @@ def _matches_date_overlap(criterion: Any, event: Event) -> bool:
     if len(s) == 8:
         return event.start <= s <= event.end
     return False
-
-
-# ── LaneEngine ────────────────────────────────────────────────────────────────
-
-
-class LaneEngine:
-    """
-    Evaluates swimlane_rules for blockplan lane routing.
-    First-match wins. apply_to is the lane name string.
-    """
-
-    def __init__(self, rules: list[dict]):
-        self._rules = [r for r in (rules or []) if isinstance(r, dict)]
-
-    def assign(
-        self,
-        event: Event,
-        ctx: DayContext | None = None,
-    ) -> str | None:
-        """Return the lane name for the first matching rule, or None if unmatched."""
-        for rule in self._rules:
-            select = rule.get("select", {})
-            if not isinstance(select, dict):
-                continue
-
-            # Empty select: catch-all
-            if not select:
-                lane = rule.get("apply_to")
-                return str(lane) if lane is not None else None
-
-            if ctx is not None:
-                day_match = _matches_day_context(select, ctx)
-                if day_match is False:
-                    continue
-
-            event_match = _matches_event_fields(select, event)
-            if event_match is False:
-                continue
-
-            lane = rule.get("apply_to")
-            return str(lane) if lane is not None else None
-
-        return None

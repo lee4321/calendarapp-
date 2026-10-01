@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from band_helpers import set_fields
 
 from config.config import CalendarConfig
 from shared.date_utils import visible_days
@@ -72,21 +73,15 @@ def test_day_width_is_zero_without_days():
 
 
 def test_row_capacity_is_the_body_height_over_the_row_height(config):
-    config.gantt_row_height = 10.0
+    set_fields(config, gantt_row_height=10.0)
     assert GanttRenderer()._rows_that_fit(config, 105.0) == 10
 
 
 def test_a_body_shorter_than_one_row_holds_none(config):
-    config.gantt_row_height = 20.0
+    set_fields(config, gantt_row_height=20.0)
     assert GanttRenderer()._rows_that_fit(config, 5.0) == 0
 
 
 def test_a_degenerate_row_height_cannot_divide_by_zero(config):
-    config.gantt_row_height = 0.0
+    set_fields(config, gantt_row_height=0.0)
     assert GanttRenderer()._rows_that_fit(config, 100.0) == 100
-
-
-def test_each_renderer_starts_with_its_own_empty_holiday_marks():
-    first, second = GanttRenderer(), GanttRenderer()
-    assert first._holiday_days == {}
-    assert first._holiday_days is not second._holiday_days

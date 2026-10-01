@@ -10,13 +10,12 @@ the scaled def, and the config/theme plumbing that feeds it.
 from __future__ import annotations
 
 import re
-import tempfile
 
 import pytest
-import yaml
+from band_helpers import update_theme
 
-from config.config import DEFAULT_PATTERN_TARGET_SIZE, CalendarConfig, create_calendar_config
-from config.theme_engine import ThemeEngine
+from config.config import DEFAULT_PATTERN_TARGET_SIZE, CalendarConfig
+from config.theme_schema import WeeklyDayBox
 from renderers.svg_patterns import (
     normalize_tile_scale,
     parse_svg_tile_size,
@@ -122,50 +121,27 @@ class TestPatternDefXml:
         )
 
 
-class TestPatternScaleConfig:
-    """Config defaults, validation, and the theme keys that set them."""
+class TestPatternScaleTheme:
+    """The pattern tile size and scale live in ``weekly.day_box``."""
 
     def test_defaults(self):
-        config = CalendarConfig()
-        assert config.hash_pattern_target_size == DEFAULT_PATTERN_TARGET_SIZE
-        assert config.hash_pattern_scale == 1.0
+        box = CalendarConfig().theme_v3.weekly.day_box
+        assert box.hash_pattern_target_size == DEFAULT_PATTERN_TARGET_SIZE
+        assert box.hash_pattern_scale == 1.0
 
     def test_zero_target_is_allowed_as_the_disable_switch(self):
-        assert CalendarConfig(hash_pattern_target_size=0).hash_pattern_target_size == 0
+        assert WeeklyDayBox(hash_pattern_target_size=0).hash_pattern_target_size == 0
 
     def test_negative_target_is_rejected(self):
         with pytest.raises(ValueError, match="hash_pattern_target_size"):
-            CalendarConfig(hash_pattern_target_size=-1)
+            WeeklyDayBox(hash_pattern_target_size=-1)
 
     def test_non_positive_scale_is_rejected(self):
         with pytest.raises(ValueError, match="hash_pattern_scale"):
-            CalendarConfig(hash_pattern_scale=0)
+            WeeklyDayBox(hash_pattern_scale=0)
 
-    @staticmethod
-    def _apply_theme_data(theme_data: dict) -> CalendarConfig:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump(theme_data, f)
-            f.flush()
-            engine = ThemeEngine()
-            engine.load(f.name)
-            config = create_calendar_config()
-            engine.apply(config)
-        return config
-
-    def test_theme_sets_target_size(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "Pat"},
-                "weekly": {"day_box": {"hash_pattern_target_size": 12}},
-            }
-        )
-        assert config.hash_pattern_target_size == 12
-
-    def test_theme_sets_scale(self):
-        config = self._apply_theme_data(
-            {
-                "theme": {"name": "Pat"},
-                "weekly": {"day_box": {"hash_pattern_scale": 0.5}},
-            }
-        )
-        assert config.hash_pattern_scale == 0.5
+    def test_theme_sets_target_size_and_scale(self):
+        config = CalendarConfig()
+        update_theme(config, weekly={"day_box": {"hash_pattern_target_size": 12, "hash_pattern_scale": 0.5}})
+        assert config.theme_v3.weekly.day_box.hash_pattern_target_size == 12
+        assert config.theme_v3.weekly.day_box.hash_pattern_scale == 0.5

@@ -1,62 +1,64 @@
 # Theme resolution — YAML to pixels
 
-A theme YAML has three kinds of styling content, resolved through different
-paths that meet in the renderer.  Before any of that, a theme that
-`extends:` another is merged over its parent (`config/theme_inheritance.py`),
-so everything below sees one complete theme:
+A theme is one version-3.0 YAML file. There is no inheritance, no legacy
+section support and no fallback layer: the loader either returns a complete
+`Theme` or raises `ThemeError`.
 
 ```mermaid
 flowchart TD
-    Y["theme YAML"] --> S["sections<br/>(base/header/weekly/…)"]
-    Y --> R["style_rules"]
-    Y --> EO["element_overrides"]
-
-    S -->|THEME_TO_CONFIG_MAP| CF["CalendarConfig fields<br/>(geometry, formats, palettes)"]
-    R --> UT["UnifiedTheme<br/>token index + rule list"]
-    CAT["config/element_catalog.yaml<br/>ec-* → token, scope"] --> ES
-    EO --> ES["per-element styles<br/>TextStyle / BoxStyle / LineStyle"]
-    UT -->|"resolve_token(token, ctx)"| TK["renderer token cache<br/>self._tk('text:day_number')"]
-    UT -->|"find_rules(target, ctx)"| CR["content rules<br/>(per-day / per-event)"]
-    ES -->|"config.get_*_style('ec-…')"| DRAW["draw call"]
-    TK --> DRAW
+    Y["theme YAML<br/>(default.yaml or --theme path)"] -->|"theme_loader.load_theme<br/>strict, typed"| T["Theme dataclass<br/>(config/theme_schema.py)"]
+    T --> CFG["config.theme_v3<br/>(the one theme object)"]
+    CLI["CLI options"] -->|"_CLI_CONFIG_OVERRIDES<br/>theme:&lt;path&gt; targets"| CFG
+    CFG --> RS["config/role_styles.py<br/>theme_styles / token / style_rules"]
+    CAT["config/element_catalog.yaml<br/>ec-* → role"] --> RS
+    RS -->|"config.get_*_style('ec-…')"| DRAW["draw call"]
+    CFG -->|"timescale, lines, today,<br/>palettes, glyphs, holidays"| ENG["shared engines<br/>renderers/timescale.py, lines.py,<br/>today_line.py, shared/palettes.py …"]
+    ENG --> DRAW
+    RS -->|"style_rules → StyleEngine"| CR["content rules<br/>(per-day / per-event)"]
     CR --> DRAW
-    CF --> DRAW
 ```
 
-## The precedence chain at a draw site
+## Loading
 
-Most draw sites resolve each attribute through this chain (first hit wins):
+`cli/config_assembly.load_run_theme(config, name)` calls
+`config.theme_loader.load_theme(name or "default")` and stores the result in
+`config.theme_v3`. It runs **before** any option is applied, so every CLI
+option that overlaps the theme is applied afterwards and wins
+(`_CLI_CONFIG_OVERRIDES` in `cli/config_assembly.py`; a target is either a
+`CalendarConfig` field or `theme:<dotted.path>`, written with
+`config/theme_paths.set_path`).
 
-1. **Per-item override** — a matching content rule's `StyleResult`
-   (e.g. federal-holiday tint, sprint highlight) or a per-band/lane dict key.
-2. **Token** — `self._tk("text:event_name").get("size")` from the
-   per-render cache. Rules opt into contexts via `select:`
-   (`visualizer:`, `papersize:`, day-class keys, `priority_min/max` …);
-   definitions (empty `select:`) always apply, conditional rules layer
-   last-wins in declaration order.
-3. **Element style** — `config.get_text_style("ec-event-name")` etc.;
-   the element's token binding comes from the catalog, per-theme tweaks
-   from `element_overrides:`.
-4. **Legacy config field / module default** — a plain `CalendarConfig`
-   field or literal written into the draw site. Element styles have no such
-   layer: without a theme they come from `element_catalog_defaults.yaml`.
+The loader rejects a missing or other `version`, unknown keys at any depth,
+wrong types, unknown font names, malformed style rules and unknown details
+columns. A theme from an older schema raises `UnsupportedThemeError`.
+Loading is the validation; there is no separate validator.
 
-## Font sizes specifically
+## Declare once, honoured by every view
 
-`setfontsizes()` consults `theme.resolve_token(...)["size"]` per field and
-falls back to a page-height heuristic; `_inject_heuristic_size_tokens()`
-then writes the heuristic values back as synthetic token rules
-(`_HEURISTIC_TOKEN_FIELDS` in `config/config.py`) so renderers can read
-`tk.get("size")` unconditionally. Net effect: theme sizes win, heuristics
-fill every gap.
+Decoration lives at the top level of the theme, never inside a view block:
+fonts, palettes, the `text`/`boxes`/`icons`/`lines` role tables, `timescale`
+(primary and secondary rows, ticks, vlines, fills, holidays), today line,
+holidays, fiscal, glyph groups, `style_rules` and `details`. View blocks
+(`weekly:`, `mini:`, `blockplan:` …) hold structure only. Every view reads
+the same `config.theme_v3`.
 
-## Who validates what
+## Resolving a style at a draw site
 
-- `theme_engine` rejects legacy sections (old `hash_rules`,
-  `swimlanes[].match`, `apply_to: element`) with a pointer to the retired
-  converters at tag `pre-migrator-retirement` (`legacy_hint()`).
-- `config/required_keys.py` powers `tools/validate_theme.py` — missing
-  required keys are reported with example values from `basic.yaml`.
-- Unknown *sections* warn; unknown keys inside valid sections are ignored
-  silently — a misspelled key is a silent no-op, so `validate_theme` is
-  worth running on hand-edited themes.
+1. **Style rules** — `StyleEngine` rules whose `select:` matches the item
+   (day class, event fields, priority, papersize …) are layered last-wins
+   over the role's base style; the result is the per-item override.
+2. **Role** — `role_styles.token(theme, name, papersize)` and `theme_styles`
+   build `TextStyle`, `BoxStyle`, `LineStyle` and `IconStyle` from the role
+   tables. Font sizes scale with the paper size inside `role_styles`.
+3. **Element** — each `ec-*` CSS class in `config/element_catalog.yaml` is
+   bound to a role; `config.get_text_style("ec-…")` returns that role's
+   style. The catalog carries no values.
+
+There is no fourth layer: a value missing from the theme is a load error,
+not a hard-coded default at the draw site.
+
+## Palettes
+
+`shared/palettes.resolve_theme_palettes` turns the `palettes:` section into
+concrete color lists (month, fiscal, group) once per run; partial overrides
+merge over palette-derived maps.

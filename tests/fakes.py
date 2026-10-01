@@ -23,19 +23,20 @@ else:
         """
 
 
-def apply_style_rules(config, rules: list[dict]) -> None:
-    """Apply a theme holding only ``rules`` as its ``style_rules`` to ``config``.
+def seeded_glyphs(group: str) -> list[str]:
+    """The glyphs of *group* as ``tools/db/glyphs_seed.json`` seeds them."""
+    import json
+    from pathlib import Path
 
-    Element styles come from tokens, so tests that need a particular font,
-    color or line define the token the way a theme would.
-    """
-    from config.theme_engine import ThemeEngine
-
-    engine = ThemeEngine()
-    engine._theme_data = {"style_rules": rules}
-    engine.apply(config)
+    seed = json.loads((Path(__file__).parent.parent / "tools" / "db" / "glyphs_seed.json").read_text(encoding="utf-8"))
+    try:
+        return list(seed[group])
+    except KeyError:
+        raise KeyError(f"glyph group '{group}' not found; groups in the database: {', '.join(seed)}") from None
 
 
-def define(kind: str, name: str, **style) -> dict:
-    """One ``define <kind>:<name>`` rule for :func:`apply_style_rules`."""
-    return {"name": f"define {kind}:{name}", "define": kind, "as": name, "style": style}
+class GlyphsFromSeed:
+    """Mixin for fake databases: ``get_glyphs`` answers from the seed file."""
+
+    def get_glyphs(self, group: str) -> list[str]:
+        return seeded_glyphs(group)

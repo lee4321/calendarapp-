@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from config import role_styles
 from config.config import ICON_SETS
 from config.styles import LineStyle
 from renderers.svg_base import _is_none_color
@@ -37,7 +38,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
 
     def _get_day_icon_name(self, day_num: int, config: CalendarConfig) -> str | None:
         """Return the icon name for *day_num* from the configured icon set."""
-        icon_set_name = getattr(config, "mini_icon_set", "squares")
+        icon_set_name = config.theme_v3.mini_calendar.icon_set
         icon_list = ICON_SETS.get(icon_set_name, ICON_SETS["squares"])
         if 1 <= day_num <= 31 and len(icon_list) >= 31:
             return icon_list[day_num - 1]
@@ -88,7 +89,7 @@ class MiniIconRenderer(MiniCalendarRenderer):
             self._draw_mini_hash_lines(config, x, y, w, h)
 
         # 4. Grid lines
-        if config.mini_grid_lines:
+        if config.theme_v3.mini_calendar.grid_lines:
             grid = self._grid_line_style(config)
             inset = grid.width / 2
             self._draw_rect(
@@ -118,9 +119,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
         Order: milestone circle → day-number icon (with text fallback) →
         corner icons for the day's events, holidays and special days.
         """
-        ctx = {"visualizer": "mini", "papersize": config.papersize}
-        day_text = self._resolve_token(config, "text:day_number", ctx)
-        milestone_icon = self._resolve_token(config, "icon:milestone", ctx)
+        day_text = role_styles.token(config.theme_v3, "text:day_number", config.papersize)
+        milestone_icon = role_styles.token(config.theme_v3, "icon:milestone", config.papersize)
 
         default_color = self._resolve_day_number_color(config, day_text)
 
@@ -163,8 +163,8 @@ class MiniIconRenderer(MiniCalendarRenderer):
             icon_size,
             anchor="middle",
             color=text_color,
-            fallback_name=config.default_missing_icon,
-            fallback_size=config.default_missing_icon_size,
+            fallback_name=config.theme_v3.icons.missing.name,
+            fallback_size=config.theme_v3.icons.missing.size,
             fallback_color=text_color,
             details_role="day_number",
         )
@@ -174,14 +174,13 @@ class MiniIconRenderer(MiniCalendarRenderer):
         if not drawn:
             display_text = self._format_day_number(day_num, config)
             font = (
-                config.mini_cell_bold_font
+                role_styles.role_text(config, "label_bold").font
                 if style.bold
                 else (day_text.get("font") or config.get_text_style("ec-day-number").font)
             )
             token_size = day_text.get("size")
             if token_size is None:
-                assert config.mini_cell_font_size is not None, "setfontsizes() must run before mini-icon renders"
-                token_size = config.mini_cell_font_size
+                token_size = config.theme_v3.text.day_number.size
             font_size = float(token_size)
             text_y = cy + (font_size / 3)
             self._draw_text(

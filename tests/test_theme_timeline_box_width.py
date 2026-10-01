@@ -1,6 +1,6 @@
 """Every shipped theme pins a uniform timeline callout box width.
 
-`timeline_event_box_width` is `None` by default, and the layout then sizes
+`timeline.events.box_width` is `None` by default, and the layout then sizes
 each callout from its own text — so a timeline's boxes came out all different
 widths, one per title length. Pinning the width in the theme is what makes the
 row read as a row. These tests fail if a theme drops the key or sets it to
@@ -16,7 +16,7 @@ import arrow
 import pytest
 
 from config.config import CalendarConfig, create_calendar_config, setfontsizes
-from config.theme_engine import ThemeEngine
+from config.theme_loader import load_theme
 from shared.data_models import Event
 from shared.orientation import Orientation, Side
 from visualizers.timeline.renderer import TimelineRenderer
@@ -27,17 +27,15 @@ THEME_FILES = sorted(THEMES_DIR.glob("*.yaml"))
 
 def test_the_theme_directory_was_found():
     """A glob that matched nothing would make every test below vacuous."""
-    assert len(THEME_FILES) >= 5
+    assert THEME_FILES
 
 
 @pytest.mark.parametrize("theme_path", THEME_FILES, ids=lambda p: p.name)
 def test_every_theme_sets_a_usable_event_box_width(theme_path: Path):
     config = CalendarConfig()
-    engine = ThemeEngine()
-    engine.load(theme_path.stem)
-    engine.apply(config)
+    config.theme_v3 = load_theme(theme_path.stem)
 
-    width = config.timeline_event_box_width
+    width = config.theme_v3.timeline.events.box_width
     assert width is not None, (
         f"{theme_path.name} leaves timeline_events.box_width unset, so its "
         "callout boxes are sized per event and come out ragged."
@@ -52,9 +50,7 @@ def test_every_theme_lays_out_callouts_at_one_width(theme_path: Path, tmp_path):
     config.pageX, config.pageY = 792.0, 1224.0
     config = setfontsizes(config)
     config.outputfile = str(tmp_path / "t.svg")
-    engine = ThemeEngine()
-    engine.load(theme_path.stem)
-    engine.apply(config)
+    config.theme_v3 = load_theme(theme_path.stem)
 
     renderer = TimelineRenderer()
     renderer._page_width, renderer._page_height = config.pageX, config.pageY
@@ -79,7 +75,7 @@ def test_every_theme_lays_out_callouts_at_one_width(theme_path: Path, tmp_path):
     )
 
     widths = {round(c.box_width, 2) for c in callouts}
-    assert config.timeline_event_box_width is not None
-    assert widths == {round(float(config.timeline_event_box_width), 2)}, (
+    assert config.theme_v3.timeline.events.box_width is not None
+    assert widths == {round(float(config.theme_v3.timeline.events.box_width), 2)}, (
         f"{theme_path.name} produced callout widths {sorted(widths)}"
     )

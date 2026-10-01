@@ -1,17 +1,14 @@
 """CLI-over-theme precedence regression tests.
 
-The theme engine is applied twice in ecalendar.run(); the second apply used
-to silently overwrite explicit CLI values for ~30 options whenever the theme
-set the same field (docs/cli_theme_overrides.html, Section 2).  The fix
-routes every simple CLI→config assignment through _CLI_CONFIG_OVERRIDES,
-applied once up front and re-asserted by _reapply_post_theme_cli_overrides()
-after the final theme apply.
+The run's theme is loaded first and every command-line option is applied
+after it (ecalendar.run), so an explicit option always beats the theme's value
+for the same setting.  Every simple CLI assignment goes through
+_CLI_CONFIG_OVERRIDES; these tests lock that contract:
 
-These tests lock that contract:
-  * every table row survives a simulated theme overwrite,
-  * omitted options leave theme values untouched,
+  * every table row writes its target (a config field or a ``theme:`` path),
+  * options left off the command line leave the theme's values alone,
   * the table stays in sync with the real parser (dest names and the
-    argparse defaults each sentinel kind relies on) and with CalendarConfig.
+    argparse defaults each sentinel kind relies on) and with the schema.
 """
 
 from __future__ import annotations
@@ -19,48 +16,43 @@ from __future__ import annotations
 import argparse
 
 import ecalendar
-from cli.config_assembly import (
-    _CLI_CONFIG_OVERRIDES,
-    _apply_cli_config_overrides,
-    _reapply_post_theme_cli_overrides,
-)
+from cli.config_assembly import _CLI_CONFIG_OVERRIDES, _apply_cli_config_overrides, load_run_theme
 from config.config import create_calendar_config
+from config.theme_paths import get_path
 
-_THEME_SENTINEL = "THEME_VALUE"
+
+def _read(config, target):
+    return (
+        get_path(config.theme_v3, target[len("theme:") :]) if target.startswith("theme:") else getattr(config, target)
+    )
 
 
 def _cli_value_for(kind: str, arg_name: str):
-    # store_true/store_false actions can only ever be flipped by the user;
-    # "value" rows carry an arbitrary payload, so a unique string suffices
-    # to detect the assignment.
+    # store_true actions can only ever be flipped by the user; "value" rows
+    # carry an arbitrary payload, so a unique string detects the assignment.
     return True if kind in ("enable", "disable") else f"CLI_{arg_name}"
 
 
-def test_cli_value_survives_theme_overwrite():
-    for arg_name, config_attr, kind in _CLI_CONFIG_OVERRIDES:
+def test_cli_value_beats_the_themes_value():
+    for arg_name, target, kind in _CLI_CONFIG_OVERRIDES:
         config = create_calendar_config()
+        load_run_theme(config, "default")
         args = argparse.Namespace(**{arg_name: _cli_value_for(kind, arg_name)})
 
         _apply_cli_config_overrides(args, config)
-        cli_result = getattr(config, config_attr)
-        if kind != "value":
-            assert cli_result is (kind == "enable"), (arg_name, config_attr)
 
-        # Simulate the second theme.apply() clobbering the field ...
-        setattr(config, config_attr, _THEME_SENTINEL)
-        # ... the post-theme pass must restore the CLI value.
-        _reapply_post_theme_cli_overrides(args, config)
-        assert getattr(config, config_attr) == cli_result, (arg_name, config_attr)
+        expected = (kind == "enable") if kind != "value" else f"CLI_{arg_name}"
+        assert _read(config, target) == expected, (arg_name, target)
 
 
 def test_theme_value_kept_when_cli_omitted():
     config = create_calendar_config()
-    args = argparse.Namespace()  # nothing given on the command line
-    for _, config_attr, _ in _CLI_CONFIG_OVERRIDES:
-        setattr(config, config_attr, _THEME_SENTINEL)
-    _reapply_post_theme_cli_overrides(args, config)
-    for _, config_attr, _ in _CLI_CONFIG_OVERRIDES:
-        assert getattr(config, config_attr) == _THEME_SENTINEL, config_attr
+    load_run_theme(config, "default")
+    before = {target: _read(config, target) for _, target, _ in _CLI_CONFIG_OVERRIDES}
+
+    _apply_cli_config_overrides(argparse.Namespace(), config)
+
+    assert {target: _read(config, target) for _, target, _ in _CLI_CONFIG_OVERRIDES} == before
 
 
 def test_override_table_matches_parser_dests_and_defaults():
@@ -84,31 +76,36 @@ def test_override_table_matches_parser_dests_and_defaults():
         assert defaults[arg_name] == want, (arg_name, kind, defaults[arg_name])
 
 
-def test_override_table_targets_real_config_fields():
+def test_override_table_targets_real_fields():
     config = create_calendar_config()
-    missing = [attr for _, attr, _ in _CLI_CONFIG_OVERRIDES if not hasattr(config, attr)]
-    assert not missing, f"table targets unknown CalendarConfig fields: {missing}"
+    for _, target, _ in _CLI_CONFIG_OVERRIDES:
+        if target.startswith("theme:"):
+            get_path(config.theme_v3, target[len("theme:") :])  # raises AttributeError when the path is wrong
+        else:
+            assert hasattr(config, target), target
 
 
-def test_reapply_restores_header_text_over_theme():
-    """Header/footer text flows through _apply_text_options, which the
-    post-theme pass re-runs so explicit CLI text beats theme values."""
+def test_header_text_option_expands_template_variables():
+    from cli.config_assembly import _apply_text_options
+
     config = create_calendar_config()
     config.adjustedstart = "20260105"
     config.adjustedend = "20260630"
-    args = argparse.Namespace(headerleft="CLI_HDR")
 
-    config.header_left_text = "THEME_HDR"
-    _reapply_post_theme_cli_overrides(args, config)
+    _apply_text_options(argparse.Namespace(headerleft="From [startdate]"), config)
 
-    assert config.header_left_text == "CLI_HDR"
+    assert config.header_left_text == "From 20260105"
 
 
 def test_watermark_text_comes_from_the_theme_with_template_vars_expanded():
+    from band_helpers import update_theme
+
+    from cli.config_assembly import _apply_text_options
+
     config = create_calendar_config()
     config.adjustedstart = "20260105"
     config.adjustedend = "20260630"
-    config.watermark_text = "From [startdate]"
-    _reapply_post_theme_cli_overrides(argparse.Namespace(), config)
+    update_theme(config, watermark={"text": "From [startdate]"})
+    _apply_text_options(argparse.Namespace(), config)
 
-    assert config.watermark_text == "From 20260105"
+    assert config.theme_v3.watermark.text == "From 20260105"

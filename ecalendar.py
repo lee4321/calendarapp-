@@ -9,7 +9,7 @@ Creates highly customizable calendars with events from a SQLite database.
 
 from __future__ import annotations
 
-__version__ = "26.10.01.0"
+__version__ = "26.10.01.1"
 
 import logging
 import sys
@@ -55,8 +55,8 @@ from cli.config_assembly import (  # noqa: E402,F401
     _open_calendar_db,
     _parse_status_filter,
     _parse_weekend_days,
-    _reapply_post_theme_cli_overrides,
     _validate_database,
+    load_run_theme,
     replace_template_vars,
 )
 from cli.errors import CalendarError, ConfigError, DatabaseError  # noqa: E402,F401
@@ -66,10 +66,7 @@ from cli.exportdata import (  # noqa: E402,F401
     _fmt_date,
     _write_exportdata_csv,
 )
-from config.palette_resolver import (  # noqa: E402,F401
-    _resolve_palette_overrides,
-    _resolve_single_palette_ref,
-)
+from config.theme_loader import ThemeError  # noqa: E402
 from visualizers.sheets import (  # noqa: E402
     _generate_all_palettes_svg,
     _generate_colorsheet_svg,
@@ -173,10 +170,10 @@ def run(argv: list[str] | None = None) -> int:
 
     6.  Dispatch pure-listing / inspection commands (return 0 on success):
           help      → _print_subcommand_help
-          themes    → ThemeEngine.list_available_themes() + print
+          themes    → theme_loader.list_builtin_themes() + print
           fonts     → FONT_REGISTRY + print
           fontsheet → _generate_fontsheet_svg
-          papersizes, patterns, icons, colors, palettes → DB query + print
+          papersizes, patterns, glyphs, icons, colors, palettes → DB query + print
           iconsheet → _generate_iconsheet_svg
           patternsheet → _generate_patternsheet_svg
           colorsheet→ _generate_colorsheet_svg (HSV-sorted via _hsv_sort_key)
@@ -187,27 +184,22 @@ def run(argv: list[str] | None = None) -> int:
     8.  Dispatch excelblockplan and exportdata (before the full config
         pipeline — they need neither paper sizes nor the weekly layout engine):
           _open_calendar_db → create config → _apply_content_filters
-          → calc_calendar_range → load_python_holidays → apply theme
-          → _resolve_palette_overrides → generate_excel_blockplan
+          → calc_calendar_range → load_python_holidays → generate_excel_blockplan
           (exportdata: filter_events → _write_exportdata_csv)
 
     9.  For calendar visualizers (weekly / mini / mini-icon / text-mini /
         timeline / blockplan):
           a. _open_calendar_db; load paper sizes
-          b. _apply_args_to_config
+          b. load_run_theme  (the theme loads before any option, so options beat it)
+             → _apply_args_to_config
           c. calc_calendar_range  (adjusts for complete weeks)
           d. db.load_python_holidays  (live government holidays)
           e. Build fiscal lookup if --fiscal specified
-          f. Load & pre-apply theme  (pass 1: exposes size rules for setfontsizes)
-          g. _apply_text_options  (template vars have resolved date boundaries now)
-          h. setfontsizes  (auto-scale fonts to paper/page dimensions)
-          i. Re-apply theme  (pass 2: explicit theme font sizes override auto-scaling)
-          j. _reapply_post_theme_cli_overrides  (re-assert explicit CLI values
-             over theme-set fields — CLI always beats the theme)
-          k. _resolve_palette_overrides  (palette names → hex colours)
-          l. WeeklyCalendarLayout.calculate  (weekly only — pre-compute coords)
-          m. _to_output_dir_path  (confine output to output/ directory)
-          n. VisualizerFactory.create(view_type).generate(config, db)
+          f. _apply_text_options  (template vars have resolved date boundaries now)
+          g. setfontsizes  (page-layout ratios)
+          h. WeeklyCalendarLayout.calculate  (weekly only — pre-compute coords)
+          i. _to_output_dir_path  (confine output to output/ directory)
+          j. VisualizerFactory.create(view_type).generate(config, db)
 
     Error handling / exit codes
     ───────────────────────────
@@ -284,9 +276,9 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "themes":
-        from config.theme_engine import ThemeEngine
+        from config.theme_loader import list_builtin_themes
 
-        themes = ThemeEngine.list_available_themes()
+        themes = list_builtin_themes()
         print("Available themes:")
         for t in themes:
             print(f"  {t}")
@@ -380,6 +372,17 @@ def run(argv: list[str] | None = None) -> int:
                     tile += " [fixed]"
                 parts.append(f"{n:<{col_width}}{tile:<22}")
             print("  " + "  ".join(parts))
+        return 0
+
+    if args.command == "glyphs":
+        db = _open_calendar_db(args.database)
+        groups = db.list_glyph_groups()
+        print(f"Available glyph groups ({len(groups)}):")
+        print("  Use in themes:  text_mini.glyphs.<role>: <group>")
+        print()
+        for name, count in groups.items():
+            sample = "".join(db.get_glyphs(name)[:8])
+            print(f"  {name:<28} {count:>3} glyphs   {sample}")
         return 0
 
     if args.command == "icons":
@@ -611,6 +614,11 @@ def run(argv: list[str] | None = None) -> int:
 
         _ebp_db = _open_calendar_db(args.database)
         _ebp_config = create_calendar_config()
+        try:
+            load_run_theme(_ebp_config, getattr(args, "theme", None))
+        except ThemeError as e:
+            logger.error(str(e))
+            return 2
         _ebp_config.weekend_style = args.weekends
         _ebp_wd = getattr(args, "weekend_days", None)
         if _ebp_wd:
@@ -620,13 +628,6 @@ def run(argv: list[str] | None = None) -> int:
         _apply_content_filters(args, _ebp_config)
         calc_calendar_range(_ebp_config, args.begin, args.end)
         _ebp_db.load_python_holidays(_ebp_config.country, _ebp_config.adjustedstart, _ebp_config.adjustedend)
-        if getattr(args, "theme", None):
-            from config.theme_engine import ThemeEngine
-
-            _ebp_te = ThemeEngine()
-            _ebp_te.load(args.theme)
-            _ebp_te.apply(_ebp_config)
-            _resolve_palette_overrides(_ebp_config, _ebp_db)
         out_path = (
             Path(_to_output_dir_path(args.outputfile)) if args.outputfile else Path("output") / "ExcelBlockplan.xlsx"
         )
@@ -663,6 +664,9 @@ def run(argv: list[str] | None = None) -> int:
     config = create_calendar_config()
 
     try:
+        # The theme loads first, so every command-line option below beats it.
+        load_run_theme(config, getattr(args, "theme", None))
+
         # Validate database and load paper sizes
         db = _open_calendar_db(args.database)
         paper_sizes = db.get_paper_sizes()
@@ -695,31 +699,11 @@ def run(argv: list[str] | None = None) -> int:
             config.fiscal_lookup = build_fiscal_lookup(fiscal_cal, start_d, end_d)
             logger.info(f"Fiscal calendar enabled: {fiscal_cal.name}")
 
-        theme_engine = None
-        if getattr(args, "theme", None):
-            from config.theme_engine import ThemeEngine
-
-            theme_engine = ThemeEngine()
-            theme_engine.load(args.theme)
-            # Pre-apply so base.size_rule can influence setfontsizes.
-            theme_engine.apply(config)
-
         # Apply text options (after date range calculation for template vars)
         _apply_text_options(args, config)
 
-        # Optimize font sizes
         config = setfontsizes(config)
-
-        # Re-apply theme after setfontsizes so explicit theme font sizes
-        # (e.g., mini/title/timeline) still take precedence.
-        if theme_engine is not None:
-            theme_engine.apply(config)
-            _reapply_post_theme_cli_overrides(args, config)
-            logger.info(f"Applied theme: {theme_engine.theme_name}")
-
-        # Resolve any DB palette name references set by the theme into
-        # actual color dicts/lists and single hex color values.
-        _resolve_palette_overrides(config, db)
+        logger.info(f"Applied theme: {config.theme_v3.theme.name}")
 
         # Generate coordinates (weekly view uses pre-computed coords;
         # other visualizers handle layout internally in generate())
@@ -769,7 +753,7 @@ def run(argv: list[str] | None = None) -> int:
     except InvalidDateError as e:
         logger.error(str(e))
         return 1
-    except (DatabaseError, ConfigError) as e:
+    except (DatabaseError, ConfigError, ThemeError) as e:
         logger.error(str(e))
         return 2
     except Exception as e:

@@ -6,12 +6,13 @@ by the renderers to the style token (text:<name>, box:<name>, line:<name>,
 icon:<name>) that supplies its visual style.  It is the single source of
 truth for those bindings — themes no longer need to repeat them.
 
+Roles are defined only in the theme and the schema defaults (``config/theme_schema.py``);
+the catalog says which role styles which element.
+
 Two functions matter to callers:
 
 * :func:`load_catalog` returns the parsed catalog as a dict of
   :class:`CatalogEntry` records.  Cached after first call.
-* :func:`load_default_tokens` returns the fallback ``{kind: {name: dict}}``
-  used when a theme omits a token referenced by the catalog.  Cached.
 
 :func:`iter_required_tokens` answers "which tokens does a theme have to
 ``define:`` to cover a given visualizer?" — used by the validator and by
@@ -26,9 +27,22 @@ from pathlib import Path
 import yaml
 
 _CATALOG_PATH: Path = Path(__file__).resolve().parent / "element_catalog.yaml"
-_DEFAULTS_PATH: Path = Path(__file__).resolve().parent / "element_catalog_defaults.yaml"
 
 _VALID_KINDS: frozenset[str] = frozenset({"text", "box", "line", "icon"})
+
+
+def _role_names() -> dict[str, frozenset[str]]:
+    import dataclasses
+
+    from config.theme_schema import BoxRoles, IconRoles, LineRoles, TextRoles
+
+    return {
+        kind: frozenset(f.name for f in dataclasses.fields(cls))
+        for kind, cls in (("text", TextRoles), ("box", BoxRoles), ("line", LineRoles), ("icon", IconRoles))
+    }
+
+
+_ROLES = _role_names()
 
 
 @dataclass(frozen=True)
@@ -43,7 +57,6 @@ class CatalogEntry:
 
 
 _catalog_cache: dict[str, CatalogEntry] | None = None
-_defaults_cache: dict[str, dict[str, dict]] | None = None
 _modifiers_cache: tuple[str, ...] | None = None
 
 
@@ -51,8 +64,7 @@ def load_catalog() -> dict[str, CatalogEntry]:
     """Return the parsed catalog as ``{ec-class: CatalogEntry}``.
 
     Cached on first call.  Validates that every entry's ``kind`` is one of
-    text/box/line/icon and that every (kind, token) pair has a fallback
-    definition in element_catalog_defaults.yaml.
+    text/box/line/icon and that its token is a role of the schema.
     """
     global _catalog_cache, _modifiers_cache
     if _catalog_cache is not None:
@@ -63,7 +75,6 @@ def load_catalog() -> dict[str, CatalogEntry]:
     if not isinstance(elements, dict):
         raise ValueError(f"{_CATALOG_PATH}: top-level 'elements' must be a mapping")
 
-    defaults = load_default_tokens()
     catalog: dict[str, CatalogEntry] = {}
     for class_name, body in elements.items():
         if not isinstance(class_name, str) or not class_name.startswith("ec-"):
@@ -76,10 +87,9 @@ def load_catalog() -> dict[str, CatalogEntry]:
             raise ValueError(f"{_CATALOG_PATH}: {class_name}: kind must be one of {sorted(_VALID_KINDS)}, got {kind!r}")
         if not isinstance(token, str) or not token:
             raise ValueError(f"{_CATALOG_PATH}: {class_name}: token must be a non-empty string")
-        if token not in defaults.get(kind, {}):
+        if token not in _ROLES.get(kind, ()):
             raise ValueError(
-                f"{_CATALOG_PATH}: {class_name} references {kind}:{token} but no "
-                f"fallback is defined in element_catalog_defaults.yaml"
+                f"{_CATALOG_PATH}: {class_name} references {kind}:{token}, which is not a role of the schema"
             )
         scope = body.get("scope") or []
         if isinstance(scope, str):
@@ -102,27 +112,6 @@ def load_catalog() -> dict[str, CatalogEntry]:
 
     _catalog_cache = catalog
     return catalog
-
-
-def load_default_tokens() -> dict[str, dict[str, dict]]:
-    """Return fallback tokens as ``{kind: {name: style_dict}}``.  Cached."""
-    global _defaults_cache
-    if _defaults_cache is not None:
-        return _defaults_cache
-    raw = yaml.safe_load(_DEFAULTS_PATH.read_text()) or {}
-    result: dict[str, dict[str, dict]] = {}
-    for kind in _VALID_KINDS:
-        section = raw.get(kind) or {}
-        if not isinstance(section, dict):
-            raise ValueError(f"{_DEFAULTS_PATH}: section {kind!r} must be a mapping")
-        kind_tokens: dict[str, dict] = {}
-        for name, body in section.items():
-            if not isinstance(body, dict):
-                raise ValueError(f"{_DEFAULTS_PATH}: {kind}:{name}: style body must be a mapping")
-            kind_tokens[str(name)] = dict(body)
-        result[kind] = kind_tokens
-    _defaults_cache = result
-    return result
 
 
 def modifier_classes() -> tuple[str, ...]:
@@ -156,9 +145,8 @@ def entries_for_visualizer(visualizer: str | None = None) -> list[CatalogEntry]:
 
 def _reset_caches_for_testing() -> None:
     """Test hook: force the next load to re-read the YAML files."""
-    global _catalog_cache, _defaults_cache, _modifiers_cache
+    global _catalog_cache, _modifiers_cache
     _catalog_cache = None
-    _defaults_cache = None
     _modifiers_cache = None
 
 
@@ -167,6 +155,5 @@ __all__ = [
     "entries_for_visualizer",
     "iter_required_tokens",
     "load_catalog",
-    "load_default_tokens",
     "modifier_classes",
 ]

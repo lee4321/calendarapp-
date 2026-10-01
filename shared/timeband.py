@@ -8,6 +8,9 @@ be reused across visualizations.
 Supported ``unit`` values:
   - ``fiscal_quarter`` — labelled by ``label_format`` (default ``FY{fy} Q{q}``).
   - ``fiscal_period``  — labelled by the fiscal-period engine.
+  - ``quarter``        — calendar quarters; ``label_format`` placeholders
+    ``{q}``, ``{year}``, ``{yy}`` (default ``Q{q}``).
+  - ``year``           — calendar years, labelled by ``date_format`` (default ``YYYY``).
   - ``month``          — labelled by ``date_format`` (default ``MMM``).
     ``label_format`` is accepted as an alias.
   - ``week``           — labelled by ``label_format`` with placeholders
@@ -100,7 +103,7 @@ def build_segments(
         return segments
 
     if unit == "fiscal_period":
-        for seg in build_fiscal_period_segments(start, end, config):
+        for seg in build_fiscal_period_segments(start, end, config, band.get("label_format")):
             segments.append(BandSegment(start=seg.start, end_exclusive=seg.end_exclusive, label=seg.label))
         return segments
 
@@ -118,6 +121,39 @@ def build_segments(
                         label=label,
                     )
                 )
+            cursor = next_cursor
+        return [s for s in segments if s.start < s.end_exclusive]
+
+    if unit == "quarter":
+        cursor = date(start.year, 3 * ((start.month - 1) // 3) + 1, 1)
+        fmt = str(band.get("label_format") or "Q{q}")
+        while cursor <= end:
+            next_cursor = _shift_months(cursor, 3)
+            if next_cursor > start:
+                segments.append(
+                    BandSegment(
+                        start=max(cursor, start),
+                        end_exclusive=min(next_cursor, end + one_day),
+                        label=fmt.format(
+                            q=(cursor.month - 1) // 3 + 1, year=cursor.year, yy=f"{cursor.year % 100:02d}"
+                        ),
+                    )
+                )
+            cursor = next_cursor
+        return [s for s in segments if s.start < s.end_exclusive]
+
+    if unit == "year":
+        fmt = str(band.get("date_format") or band.get("label_format") or "YYYY")
+        cursor = date(start.year, 1, 1)
+        while cursor <= end:
+            next_cursor = date(cursor.year + 1, 1, 1)
+            segments.append(
+                BandSegment(
+                    start=max(cursor, start),
+                    end_exclusive=min(next_cursor, end + one_day),
+                    label=format_arrow_date(arrow.get(cursor), fmt),
+                )
+            )
             cursor = next_cursor
         return [s for s in segments if s.start < s.end_exclusive]
 

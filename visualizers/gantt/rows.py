@@ -3,7 +3,7 @@ Gantt row model: ordering and indentation.
 
 One row per imported task -- no parent rows are synthesized, so a WBS
 level only appears when the schedule actually contains that task
-(answer 6).  Ordering follows ``config.item_placement_order`` (shared
+(answer 6).  Ordering follows ``config.theme_v3.events.item_placement_order`` (shared
 across every visualizer -- see shared/item_order.py), which defaults to
 WBS-first with WBS segments comparing *numerically* so ``1.9`` precedes
 ``1.10``; tasks with no WBS form a second block ordered by start date
@@ -50,6 +50,6 @@ def build_rows(events: list[Any], config: CalendarConfig) -> list[GanttRow]:
         Rows in draw order, each carrying its indentation depth.
     """
     parsed = [ev if isinstance(ev, Event) else Event.from_dict(ev) for ev in events]
-    ordered = sort_events(parsed, config.item_placement_order)
+    ordered = sort_events(parsed, config.theme_v3.events.item_placement_order)
 
     return [GanttRow(event=event, depth=wbs_depth(event.wbs), index=index) for index, event in enumerate(ordered)]

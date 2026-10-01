@@ -6,7 +6,7 @@ Each week is one horizontal row:
     [week#] [Mon] [Tue] [Wed] [Thu] [Fri] [Sat] [Sun] [ month box ]
 
 Day cells hold the day-of-month number. The month box on the right (or left)
-is a single merged cell spanning every week row attributed to that month,
+is the timescale's month row laid down the weeks: one merged cell per month,
 mirroring the merged column-I cell in the Candybar.xlsx reference.
 
 When the date range produces more rows than ``candybar_max_rows_per_page``,
@@ -32,11 +32,6 @@ if TYPE_CHECKING:
     from config.config import CalendarConfig
 
 logger = logging.getLogger(__name__)
-
-# Column width ratios, expressed as multiples of a single day-column width.
-# Fallback column-width ratios (× day-cell width) when config omits them.
-WN_RATIO = 0.6  # week-number column
-MONTH_RATIO = 1.6  # month-name box column
 
 
 @dataclass(frozen=True)
@@ -64,7 +59,7 @@ def resolve_cell_width(config: CalendarConfig, cell_height: float) -> float:
     Defaults to ``cell_height`` so day cells are square; a positive
     ``candybar_cell_width`` (CLI / theme) overrides with a fixed point width.
     """
-    cw = getattr(config, "candybar_cell_width", 0.0) or 0.0
+    cw = config.theme_v3.candybar.cell_width or 0.0
     return float(cw) if cw > 0 else float(cell_height)
 
 
@@ -85,12 +80,12 @@ def candybar_suppress_weekends(config: CalendarConfig) -> bool:
     It intentionally does *not* inherit ``weekend_style`` so the default
     full-week strip is independent of the workweek setting.
     """
-    return bool(getattr(config, "candybar_suppress_weekends", None))
+    return bool(config.theme_v3.candybar.suppress_weekends)
 
 
 def candybar_week_starts_sunday(config: CalendarConfig) -> bool:
     """Resolve week start: candybar_week_start overrides, else weekend_style."""
-    ws = getattr(config, "candybar_week_start", -1)
+    ws = config.theme_v3.candybar.week_start
     if ws == 0:
         return True
     if ws == 1:
@@ -119,28 +114,23 @@ def compute_columns(
     suppress_weekends = candybar_suppress_weekends(config)
     weekday_order = _ordered_weekdays(week_start_sunday, suppress_weekends)
     days_per_week = len(weekday_order)
-    show_wn = bool(config.candybar_show_week_numbers)
+    show_wn = bool(config.theme_v3.candybar.show_week_numbers)
 
     labels = list(day_short)
     if len(labels) != 7:
         labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     day_labels = [labels[wd] for wd in weekday_order]
 
-    wn_ratio = float(getattr(config, "candybar_weeknum_col_ratio", WN_RATIO) or 0.0)
-    month_ratio = float(getattr(config, "candybar_month_col_ratio", MONTH_RATIO) or 0.0)
+    wn_ratio = float(config.theme_v3.candybar.weeknum_col_ratio or 0.0)
+    month_ratio = float(config.theme_v3.candybar.month_col_ratio or 0.0)
     wn_w = day_col_w * wn_ratio if show_wn else 0.0
     month_w = day_col_w * month_ratio
     strip_width = wn_w + days_per_week * day_col_w + month_w
 
-    month_on_left = getattr(config, "candybar_month_label_side", "right") == "left"
-    if month_on_left:
-        month_x = strip_x
-        wn_x = strip_x + month_w
-        day_x0 = wn_x + wn_w
-    else:
-        wn_x = strip_x
-        day_x0 = strip_x + wn_w
-        month_x = day_x0 + days_per_week * day_col_w
+    # The month row is the primary side of the timescale: the right of the strip.
+    wn_x = strip_x
+    day_x0 = strip_x + wn_w
+    month_x = day_x0 + days_per_week * day_col_w
 
     return ColumnGeometry(
         show_wn=show_wn,
@@ -167,7 +157,7 @@ class CandybarLayout(BaseLayout):
         DayHeader_C{c}_{i:02d}    — weekday header cell i for chunk c
         WeekNum_C{c}_R{r:03d}     — week-number cell (when enabled)
         Cell_YYYYMMDD             — day cell for an in-range day
-        MonthBox_C{c}_YYYYMM      — merged month box spanning a month's rows
+        MonthRow_C{c}_YYYYMMDD    — the month column's cell for the week row ending that day
 
     Also populates self.week_numbers mapping WeekNum keys to int values.
     """
@@ -215,15 +205,15 @@ class CandybarLayout(BaseLayout):
         content_top = content_bottom + content_height
 
         # Split weeks into chunks (side-by-side strips).
-        max_rows = max(0, int(config.candybar_max_rows_per_page or 0))
+        max_rows = max(0, int(config.theme_v3.candybar.max_rows_per_page or 0))
         chunk_size = max_rows if max_rows > 0 and len(weeks) > max_rows else len(weeks)
         num_chunks = math.ceil(len(weeks) / chunk_size)
 
         # Row height: fixed when configured, else fit chunk_size rows + 1 header
         # row into the available height so every strip aligns vertically.
         rows_for_height = chunk_size + 1  # +1 = header row
-        if config.candybar_row_height and config.candybar_row_height > 0:
-            row_h = float(config.candybar_row_height)
+        if config.theme_v3.candybar.row_height and config.theme_v3.candybar.row_height > 0:
+            row_h = float(config.theme_v3.candybar.row_height)
         else:
             row_h = content_height / rows_for_height
         header_h = row_h
@@ -307,9 +297,6 @@ class CandybarLayout(BaseLayout):
             cell_x = cols.day_x0 + i * cols.day_col_w
             coord[f"DayHeader_C{chunk_idx}_{i:02d}"] = (cell_x, header_y, cols.day_col_w, header_h)
 
-        # Track month -> list of row indices (within this chunk) for box spans.
-        month_rows: list[tuple[tuple[int, int], int]] = []
-
         for r, week_start in enumerate(chunk):
             row_y = content_top - header_h - (r + 1) * row_h
 
@@ -333,45 +320,11 @@ class CandybarLayout(BaseLayout):
                 anchor = self._wn_anchor(config)
                 self.week_numbers[wn_key] = get_week_number(week_start, config.mini_week_number_mode, anchor)
 
-            # Attribute the row to a month by its last visible in-range day.
+            # The month column: each row is keyed by its last visible in-range day, which
+            # is the day the month row of the timescale groups it under.
             if in_range_visible:
                 last = in_range_visible[-1]
-                month_rows.append(((last.year, last.month), r))
-
-        # Build merged month boxes from consecutive same-month rows.
-        self._emit_month_boxes(coord, chunk_idx, month_rows, cols, content_top, header_h, row_h)
-
-    def _emit_month_boxes(
-        self,
-        coord: CoordinateDict,
-        chunk_idx: int,
-        month_rows: list[tuple[tuple[int, int], int]],
-        cols: ColumnGeometry,
-        content_top: float,
-        header_h: float,
-        row_h: float,
-    ) -> None:
-        """Group consecutive rows of the same month into one merged box."""
-        if not month_rows:
-            return
-        run_month = month_rows[0][0]
-        run_first = month_rows[0][1]
-        run_last = month_rows[0][1]
-
-        def flush(ym: tuple[int, int], first_r: int, last_r: int) -> None:
-            top_y = content_top - header_h - first_r * row_h
-            height = (last_r - first_r + 1) * row_h
-            box_y = top_y - height
-            key = f"MonthBox_C{chunk_idx}_{ym[0]}{ym[1]:02d}"
-            coord[key] = (cols.month_x, box_y, cols.month_w, height)
-
-        for ym, r in month_rows[1:]:
-            if ym == run_month and r == run_last + 1:
-                run_last = r
-            else:
-                flush(run_month, run_first, run_last)
-                run_month, run_first, run_last = ym, r, r
-        flush(run_month, run_first, run_last)
+                coord[f"MonthRow_C{chunk_idx}_{last.strftime('%Y%m%d')}"] = (cols.month_x, row_y, cols.month_w, row_h)
 
     @staticmethod
     def _wn_anchor(config: CalendarConfig) -> date | None:

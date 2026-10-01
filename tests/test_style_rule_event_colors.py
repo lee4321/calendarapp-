@@ -10,6 +10,7 @@ views that once read ``colors.resource_groups`` or ignored the rule.
 
 from pathlib import Path
 
+from band_helpers import set_fields
 from fakes import FakeCalendarDB
 
 from config.config import create_calendar_config, setfontsizes
@@ -30,10 +31,9 @@ def _group_rule(group, color, name=None):
 def _config(**fields):
     config = create_calendar_config()
     config.pageX, config.pageY = 792.0, 1224.0
-    config.shade_current_day = False
+    set_fields(config, shade_current_day=False)
     config = setfontsizes(config)
-    for key, value in fields.items():
-        setattr(config, key, value)
+    set_fields(config, **fields)
     return config
 
 
@@ -98,7 +98,7 @@ def test_weekly_keeps_the_theme_color_for_an_unmatched_event():
 def test_weekly_an_event_name_text_rule_beats_the_fill():
     rules = [
         _group_rule("dev", "#aa0000"),
-        {"name": "names", "apply_to": "event", "style": {"text": {"event_name": {"font_color": "#00aa00"}}}},
+        {"name": "names", "apply_to": "text:event_name", "style": {"color": "#00aa00"}},
     ]
     config = _config(theme_style_rules=rules)
     event = Event(task_name="Build", start="20260105", end="20260105", resource_group="Dev")
@@ -141,7 +141,8 @@ def _render_pit(tmp_path: Path, rules) -> str:
     from visualizers.pit.layout import PITLayout
     from visualizers.pit.renderer import PITRenderer
 
-    config = _config(theme_style_rules=rules)
+    config = _config()
+    set_fields(config, theme_style_rules=rules)
     config.pageX, config.pageY = 792.0, 612.0
     config = setfontsizes(config)
     config.adjustedstart = config.userstart = "20260101"
@@ -159,22 +160,18 @@ def test_pit_fills_an_events_marker_by_its_rule(tmp_path):
     assert "#aa0000" not in _render_pit(tmp_path, [_group_rule("ops", "#aa0000")])
 
 
-# ── the unified theme agrees with the rule engine ───────────────────────────
+# ── a plain context agrees with the rule engine ──────────────────────────────
 
 
 def test_a_resource_group_selector_matches_the_whole_group_name():
-    """find_rules matches task names and notes by substring, but a resource
-    group of "d" must not pick up "Product"."""
-    from config.unified_theme import parse_theme
+    """Task names and notes match by substring, but a resource group of "d" must not pick up "Product"."""
+    from shared.select_match import select_matches
 
-    theme = parse_theme({"style_rules": [_group_rule("d", "grey")]})
-
-    assert theme.find_rules("box:event", {"resource_group": "Product"}) == []
-    assert len(theme.find_rules("box:event", {"resource_group": "D"})) == 1
+    assert not select_matches({"resource_group": "d"}, {"resource_group": "Product"})
+    assert select_matches({"resource_group": "d"}, {"resource_group": "D"})
 
 
 def _halo_rects(rules, box_token):
-    from config.unified_theme import parse_theme
     from visualizers.weekly.renderer import WeeklyCalendarRenderer
 
     rects = []
@@ -184,7 +181,9 @@ def _halo_rects(rules, box_token):
             rects.append(kwargs)
 
     renderer = _Capture()
-    renderer._config = _config(theme=parse_theme({"style_rules": rules}))
+    config = _config()
+    set_fields(config, theme_style_rules=rules)
+    renderer._config = config
     renderer._maybe_draw_icon_halo(box_token, {"resource_group": "dev"}, 0.0, 0.0, 10.0)
     return rects
 
@@ -199,14 +198,3 @@ def test_an_event_rule_stroke_still_outlines_its_icon():
 
     [halo] = _halo_rects([rule], "box:event")
     assert (halo["fill"], halo["stroke"]) == ("none", "crimson")
-
-
-def test_a_rule_selected_on_another_view_is_ignored():
-    rules = [
-        {"apply_to": "box:duration", "select": {"visualizer": "blockplan"}, "style": {"stroke_width": 3}},
-        {"apply_to": "box:duration", "select": {"visualizer": ["weekly", "mini"]}, "style": {"stroke_width": 5}},
-    ]
-    event = Event(task_name="t", start="20260101", end="20260105")
-    assert StyleEngine(rules, "weekly").evaluate_event(event).stroke_width == 5
-    assert StyleEngine(rules, "blockplan").evaluate_event(event).stroke_width == 3
-    assert StyleEngine(rules, "timeline").evaluate_event(event).stroke_width is None

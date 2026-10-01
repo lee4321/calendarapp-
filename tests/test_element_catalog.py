@@ -32,14 +32,20 @@ def test_catalog_loads_with_expected_kinds() -> None:
         assert entry.token, class_name
 
 
-def test_every_token_referenced_has_a_default() -> None:
-    catalog = element_catalog.load_catalog()
-    defaults = element_catalog.load_default_tokens()
-    for entry in catalog.values():
-        assert entry.token in defaults[entry.kind], (
-            f"{entry.class_name} references {entry.kind}:{entry.token} but the "
-            "fallback is not declared in element_catalog_defaults.yaml"
-        )
+def test_every_token_referenced_is_a_role_of_the_schema() -> None:
+    import dataclasses
+
+    from config import theme_schema
+
+    roles = {
+        "text": theme_schema.TextRoles,
+        "box": theme_schema.BoxRoles,
+        "line": theme_schema.LineRoles,
+        "icon": theme_schema.IconRoles,
+    }
+    for entry in element_catalog.load_catalog().values():
+        names = {f.name for f in dataclasses.fields(roles[entry.kind])}
+        assert entry.token in names, f"{entry.class_name} references {entry.kind}:{entry.token}, which is not a role"
 
 
 # Discovered ec-* classes that are modifiers, not standalone elements.

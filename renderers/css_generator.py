@@ -25,7 +25,6 @@ _INLINE_STYLED_CLASSES: frozenset[str] = frozenset(
         "ec-grid-line",
         "ec-separator",
         "ec-vline",
-        "ec-vline-fill",
         "ec-background",
         # PIT: per-event colors / patterns / strokes are set inline by the
         # renderer (resolved through the style-rule engine and palette

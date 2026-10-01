@@ -13,6 +13,7 @@ columns, cell text -- is resolved by the renderer.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -59,8 +60,14 @@ def plan_pages(
     day_count: int,
     rows_per_page: int,
     days_per_page: int,
+    day_ranges: Sequence[tuple[int, int]] | None = None,
 ) -> list[GanttPage]:
     """Split the chart into pages, row-major.
+
+    *day_ranges* are the half-open ``(start, end)`` day-index ranges of the
+    horizontal pages, as :func:`shared.span.paginate` breaks them so that no
+    timescale segment which fits a page is cut.  Without them the days divide
+    into equal blocks of *days_per_page*.
 
     All horizontal pages for the first block of rows come first, then the
     next block -- so a reader following one task's bar across the date
@@ -75,19 +82,21 @@ def plan_pages(
     days_per_page = max(1, days_per_page)
 
     row_starts = list(range(0, row_count, rows_per_page)) or [0]
-    day_starts = list(range(0, day_count, days_per_page)) or [0]
+    if day_ranges is None:
+        day_ranges = [(start, min(start + days_per_page, day_count)) for start in range(0, day_count, days_per_page)]
+    day_ranges = list(day_ranges) or [(0, 0)]
 
     pages: list[GanttPage] = []
     number = 1
     for row_start in row_starts:
-        for day_start in day_starts:
+        for day_start, day_end in day_ranges:
             pages.append(
                 GanttPage(
                     number=number,
                     row_start=row_start,
                     row_end=min(row_start + rows_per_page, row_count),
                     day_start=day_start,
-                    day_end=min(day_start + days_per_page, day_count),
+                    day_end=day_end,
                 )
             )
             number += 1
@@ -109,7 +118,7 @@ class GanttLayout(BaseLayout):
         # The table takes its configured share of the content width; the
         # chart takes the rest.  Clamped so a mis-set ratio cannot leave
         # either side with zero or negative width.
-        ratio = min(max(float(config.gantt_table_width_ratio), 0.05), 0.95)
+        ratio = min(max(float(config.theme_v3.gantt.table_width_ratio), 0.05), 0.95)
         table_w = round(content_w * ratio, 2)
 
         coord["GanttArea"] = (
@@ -138,9 +147,9 @@ class GanttLayout(BaseLayout):
         # across the table, the task body fills the middle, and the bottom
         # bands sit on the bottom edge.  Either stack may hold any number
         # of bands; the total is capped so the body always survives.
-        header_h = max(float(config.gantt_header_row_height), 0.0)
-        top_bands_h = self._bands_height(config, config.gantt_top_time_bands)
-        bottom_bands_h = self._bands_height(config, config.get_gantt_bottom_bands())
+        header_h = max(float(config.theme_v3.gantt.header_row_height), 0.0)
+        top_bands_h = self._rows_height(config.theme_v3.timescale.primary)
+        bottom_bands_h = self._rows_height(config.theme_v3.timescale.secondary)
 
         chrome_h = header_h + top_bands_h + bottom_bands_h
         max_chrome = content_h * MAX_CHROME_SHARE
@@ -191,12 +200,6 @@ class GanttLayout(BaseLayout):
         return self._to_svg_coords(coord, config.pageY)
 
     @staticmethod
-    def _bands_height(config: CalendarConfig, bands: list) -> float:
-        """Total height of a band stack of any length.
-
-        Each band may state its own ``row_height``; those that do not fall
-        back to ``gantt_band_row_height``.  Non-dict entries are ignored so
-        a malformed theme costs one band, not the page.
-        """
-        default_h = float(config.gantt_band_row_height)
-        return sum(float(band.get("row_height", default_h)) for band in (bands or []) if isinstance(band, dict))
+    def _rows_height(rows: list) -> float:
+        """Total height of a stack of timescale rows, however many there are."""
+        return sum(float(row.height) for row in rows)

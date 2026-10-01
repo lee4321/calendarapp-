@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from band_helpers import set_fields
 
 from config.config import CalendarConfig
 from shared.data_models import Event
@@ -115,14 +116,14 @@ def test_accepts_database_dicts_as_well_as_events(config):
 
 def test_an_unknown_sort_field_is_ignored(config):
     """A theme typo should degrade to a stable order, not raise."""
-    config.item_placement_order = ["wbs", "not_a_field", "start_date"]
+    set_fields(config, item_placement_order=["wbs", "not_a_field", "start_date"])
     rows = build_rows([event("b", "1.2"), event("a", "1.1")], config)
     assert [row.event.task_name for row in rows] == ["a", "b"]
 
 
 def test_sorting_tolerates_mixed_types_in_one_field(config):
     """priority is NUMERIC in SQLite, so a column can hold ints and text."""
-    config.item_placement_order = ["priority"]
+    set_fields(config, item_placement_order=["priority"])
     events = [
         Event(task_name="text", start="20260202", end="20260202", priority="high"),  # ty: ignore[invalid-argument-type]
         Event(task_name="number", start="20260202", end="20260202", priority=2),

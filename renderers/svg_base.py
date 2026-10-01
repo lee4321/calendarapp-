@@ -123,13 +123,19 @@ class BaseSVGRenderer(ABC):
     # =========================================================================
 
     def _populate_tokens(self, config: CalendarConfig) -> None:
-        """Pre-resolve every token in ``self.TOKENS`` for this render.
+        """Pre-resolve every token in ``self.TOKENS`` for this render from the theme's roles.
 
-        Draw code then reads via :py:meth:`_tk` — dict lookups, not rule
-        walks per cell.  Call at the top of ``_render_content``.
+        Draw code then reads via :py:meth:`_tk` — dict lookups per cell.  Call at the top of ``_render_content``.
         """
-        ctx = {"visualizer": self.TOKEN_VISUALIZER, "papersize": config.papersize}
-        self._tokens = {name: self._resolve_token(config, name, ctx) for name in self.TOKENS}
+        from config import role_styles
+
+        self._adopt_theme_roles(config)
+        self._tokens = {name: role_styles.token(config.theme_v3, name, config.papersize) for name in self.TOKENS}
+
+    @staticmethod
+    def _adopt_theme_roles(config: CalendarConfig) -> None:
+        """Bind every element to the role the version-3.0 theme defines for it."""
+        config._styles()
 
     def _tk(self, token: str) -> TokenStyle:
         """Return the cached token dict (``{}`` if unknown / unresolved)."""
@@ -210,32 +216,15 @@ class BaseSVGRenderer(ABC):
         if pat_id in self._registered_pattern_ids:
             return pat_id
 
-        target_size = getattr(config, "hash_pattern_target_size", DEFAULT_PATTERN_TARGET_SIZE)
-        extra_scale = getattr(config, "hash_pattern_scale", 1.0)
+        target_size = (
+            config.theme_v3.weekly.day_box.hash_pattern_target_size
+            if config is not None
+            else DEFAULT_PATTERN_TARGET_SIZE
+        )
+        extra_scale = config.theme_v3.weekly.day_box.hash_pattern_scale if config is not None else 1.0
         self.drawing.append_def(drawsvg.Raw(pattern_def_xml(pat_id, raw_svg, color, target_size, extra_scale)))
         self._registered_pattern_ids.add(pat_id)
         return pat_id
-
-    # =========================================================================
-    # Unified-theme token resolution
-    # =========================================================================
-
-    @staticmethod
-    def _resolve_token(
-        config: CalendarConfig,
-        token: str,
-        ctx: dict | None = None,
-    ) -> TokenStyle:
-        """Resolve a UnifiedTheme token; returns ``{}`` when no theme is loaded.
-
-        The returned dict carries the merged style bag for ``token`` (e.g.
-        ``"text:day_number"``).  Callers read individual properties with
-        ``.get("color")`` etc. and supply their own legacy-field fallback.
-        """
-        theme = getattr(config, "theme", None)
-        if theme is None:
-            return {}
-        return theme.resolve_token(token, ctx or {})
 
     # =========================================================================
     # Drawing helper methods
@@ -665,6 +654,7 @@ class BaseSVGRenderer(ABC):
         self._drawing = self._create_drawing(config)
         self._content_bbox_svg = None
         self._config = config
+        self._adopt_theme_roles(config)
 
         # Add metadata
         self._add_desc(config)
@@ -676,9 +666,9 @@ class BaseSVGRenderer(ABC):
             self._shrink_drawing_to_content(coordinates)
 
         # Render watermarks (under content)
-        if config.watermark_text:
+        if config.theme_v3.watermark.text:
             self._render_text_watermark(config)
-        if config.watermark_image:
+        if config.theme_v3.watermark.image:
             self._render_image_watermark(config)
 
         # Render common elements (headers, footers)
@@ -878,19 +868,19 @@ class BaseSVGRenderer(ABC):
         Args:
             config: Calendar configuration with watermark settings
         """
-        if not config.watermark_text:
+        if not config.theme_v3.watermark.text:
             return
 
         from config.config import get_font_path
 
-        font_path = get_font_path(config.watermark_font)
+        font_path = get_font_path(config.theme_v3.watermark.font_family or config.theme_v3.fonts.family)
 
         from renderers.glyph_cache import get_font_metrics
 
-        resize_mode = str(getattr(config, "watermark_resize_mode", "fit") or "fit").strip().lower()
+        resize_mode = str(config.theme_v3.watermark.resize_mode or "fit").strip().lower()
 
         # Use paper-size-scaled setfontsizes value unless explicitly overridden.
-        base_size = float(config.watermark_font_size or 256)
+        base_size = float(config.theme_v3.watermark.font_size or 256)
         base_size = max(1.0, base_size)
         left, top, span_w, span_h = self._watermark_bounds(config)
         waterX = left + (span_w / 2)
@@ -901,7 +891,7 @@ class BaseSVGRenderer(ABC):
         transform_parts: list[str] = []
 
         if resize_mode == "stretch":
-            text_width = string_width(config.watermark_text, font_path, base_size)
+            text_width = string_width(config.theme_v3.watermark.text, font_path, base_size)
             upm, ascender, descender = get_font_metrics(font_path)
             text_height = max(1.0, (ascender - descender) * (base_size / upm))
             if text_width <= 0:
@@ -928,14 +918,14 @@ class BaseSVGRenderer(ABC):
             # fit mode: keep glyph proportions and fit width using base_size as
             # the ceiling (paper-size aware via setfontsizes/config).
             font_size = shrinktext(
-                config.watermark_text,
+                config.theme_v3.watermark.text,
                 span_w * 0.98,
                 font_path,
                 base_size,
             )
             waterY = center_y - (font_size / 3)
 
-        angle = float(getattr(config, "watermark_rotation_angle", 0.0) or 0.0)
+        angle = float(config.theme_v3.watermark.rotation_angle or 0.0)
         if angle:
             transform_parts.insert(0, f"rotate({angle} {center_x_svg} {center_y_svg})")
         transform = " ".join(transform_parts) or None
@@ -944,11 +934,11 @@ class BaseSVGRenderer(ABC):
         self._draw_text(
             waterX,
             waterY,
-            config.watermark_text,
+            config.theme_v3.watermark.text,
             _wm_ts.font,
             font_size,
             fill=_wm_ts.color,
-            fill_opacity=config.watermark_opacity,
+            fill_opacity=config.theme_v3.watermark.opacity,
             anchor="middle",
             transform=transform,
             css_class="ec-watermark",
@@ -967,21 +957,21 @@ class BaseSVGRenderer(ABC):
         Args:
             config: Calendar configuration with watermark image settings
         """
-        if not config.watermark_image:
+        if not config.theme_v3.watermark.image:
             return
 
         # Calculate center position in SVG coordinates
         left, top, span_w, span_h = self._watermark_bounds(config)
         waterX = left + (span_w / 2) - (config.watermark_image_width / 2)
         waterY = top + (span_h / 2) - (config.watermark_image_height / 2)
-        angle = float(getattr(config, "watermark_image_rotation_angle", 0.0) or 0.0)
+        angle = float(config.theme_v3.watermark.image_rotation_angle or 0.0)
         center_x = waterX + (config.watermark_image_width / 2)
         center_y_svg = waterY + (config.watermark_image_height / 2)
         transform = f"rotate({angle} {center_x} {center_y_svg})" if angle else None
 
-        if self._is_svg(config.watermark_image):
+        if self._is_svg(config.theme_v3.watermark.image):
             self._draw_svg_watermark(
-                config.watermark_image,
+                config.theme_v3.watermark.image,
                 waterX,
                 waterY,
                 config.watermark_image_width,
@@ -994,7 +984,7 @@ class BaseSVGRenderer(ABC):
                 waterY,
                 config.watermark_image_width,
                 config.watermark_image_height,
-                config.watermark_image,
+                config.theme_v3.watermark.image,
                 transform=transform,
             )
 
@@ -1149,19 +1139,19 @@ class BaseSVGRenderer(ABC):
         if not box_token:
             return
         config = getattr(self, "_config", None)
-        theme = getattr(config, "theme", None) if config else None
-        if theme is None:
+        if config is None:
             return
+        from config import role_styles
+        from shared.select_match import select_matches
+
         ctx = dict(box_ctx or {})
-        if config and getattr(config, "papersize", None):
-            ctx.setdefault("papersize", str(config.papersize))
-        rules = theme.find_rules(box_token, ctx)
-        if not rules:
-            return
-        merged: dict = {}
-        for r in rules:
-            sty = getattr(r, "style", None) or {}
-            merged.update(sty)
+        merged: dict = {
+            k: v for k, v in role_styles.token(config.theme_v3, box_token, config.papersize).items() if v is not None
+        }
+        for rule in config.theme_v3.style_rules:
+            targets = [rule.apply_to] if isinstance(rule.apply_to, str) else rule.apply_to
+            if box_token in targets and select_matches(rule.select, ctx):
+                merged.update(rule.style)
         if not merged:
             return
         fill = None if box_token in _EVENT_COLOR_TOKENS else merged.get("fill")
@@ -1272,14 +1262,14 @@ class BaseSVGRenderer(ABC):
         # carry a details role (continuation arrows) are not the badge.
         stroke_ink = None
         if css_class == "ec-duration-icon" and details_role is None:
-            config = getattr(self, "_config", None)
-            background = getattr(config, "duration_icon_background_color", None)
+            config = self._config
+            background = config.theme_v3.durations.icon_background_color
             if self._is_drawable_color(background):
                 pad = size * 0.1
                 self._draw_rect(
                     draw_x - pad, draw_y - pad, size + 2 * pad, size + 2 * pad, fill=str(background), stroke="none"
                 )
-            stroke_ink = getattr(config, "duration_icon_stroke_color", None)
+            stroke_ink = config.theme_v3.durations.icon_stroke_color
 
         # Extract the icon's original viewBox before stripping the wrapper so
         # the nested <svg> preserves the icon's own coordinate space.  width
@@ -1622,7 +1612,7 @@ class BaseSVGRenderer(ABC):
                     Y + (height * 0.7),
                     key,
                     _lbl_ts.font,
-                    config.day_name_font_size or _lbl_ts.size,
+                    _lbl_ts.size,
                     fill=_lbl_ts.color,
                     fill_opacity=_lbl_ts.opacity,
                     anchor="middle",
