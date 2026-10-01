@@ -121,8 +121,8 @@ _DURATIONS_OPTIN_COMMANDS = frozenset({"mini", "mini-icon", "text-mini", "candyb
 #
 # kind:
 #   "value"   — argparse default is None; assign when the user passed a value.
-#               store_true/store_false actions whose default is None (e.g.
-#               --candybar-suppress-weekends) also use this kind: the attribute is non-None only when given.
+#               store_true/store_false actions whose default is None also use
+#               this kind: the attribute is non-None only when given.
 #   "enable"  — store_true with default False; set the config field True.
 #   "disable" — store_true with default False; set the config field False.
 #
@@ -147,7 +147,6 @@ _CLI_CONFIG_OVERRIDES: tuple[tuple[str, str, str], ...] = (
     ("candybar_row_height", "candybar_row_height", "value"),
     ("candybar_cell_width", "candybar_cell_width", "value"),
     ("candybar_max_rows_per_page", "candybar_max_rows_per_page", "value"),
-    ("candybar_suppress_weekends", "candybar_suppress_weekends", "value"),
     # Timeline
     ("timeline_direction", "timeline_orientation", "value"),
     # PIT

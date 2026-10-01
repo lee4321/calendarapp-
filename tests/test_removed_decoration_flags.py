@@ -25,6 +25,7 @@ _REMOVED = {
         "--candybar-month-shading",
         "--candybar-month-side",
         "--candybar-no-week-numbers",
+        "--candybar-suppress-weekends",
     ],
     "timeline": [
         "--today-line-length",
@@ -65,7 +66,6 @@ _ALLOWED = frozenset(
         "--candybar-cell-width",
         "--candybar-max-rows-per-page",
         "--candybar-row-height",
-        "--candybar-suppress-weekends",
         "--color",
         "--columns",
         "--country",

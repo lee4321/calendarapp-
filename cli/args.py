@@ -1163,12 +1163,6 @@ def _create_argument_parser(default_output: str) -> argparse.ArgumentParser:
         metavar="N",
         help="Split into side-by-side strips after N week rows (0 = single strip)",
     )
-    candybar_group.add_argument(
-        "--candybar-suppress-weekends",
-        action="store_true",
-        default=None,
-        help="Drop Sat/Sun columns (default: weekends are shown)",
-    )
 
     # Week number options (weekly, mini, mini-icon, text-mini)
     for view_parser in (weekly, mini, mini_icon, text_mini):

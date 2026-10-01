@@ -144,8 +144,8 @@ PYTHONPATH=. uv run python ecalendar.py mini-icon 20260101 20261231 --mini-colum
 # Candybar vertical year-strip for a full year
 PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 -th corporate -of candybar.svg
 
-# Candybar with weekends suppressed (rotate month names with candybar.month.rotation in the theme)
-PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 --candybar-suppress-weekends -of candybar.svg
+# Candybar (suppress weekends with candybar.suppress_weekends and rotate month names with candybar.month.rotation in the theme)
+PYTHONPATH=. uv run python ecalendar.py candybar 20260101 20261231 -of candybar.svg
 
 # Timeline with custom today-line styling
 PYTHONPATH=. uv run python ecalendar.py timeline 20260101 20261231 -tll 120 -tld below -of timeline.svg
@@ -202,7 +202,6 @@ table by hand.
 | `--candybar-cell-width` | `POINTS` | `candybar` | Fixed day-cell width in points (default: 0 = square, width == row height) |  |
 | `--candybar-max-rows-per-page` | `N` | `candybar` | Split into side-by-side strips after N week rows (0 = single strip) |  |
 | `--candybar-row-height` | `POINTS` | `candybar` | Fixed week-row height in points (default: 0 = auto-fit to page) |  |
-| `--candybar-suppress-weekends` |  | `candybar` | Drop Sat/Sun columns (default: weekends are shown) |  |
 | `--color`, `-c` | `COLOR` | `fontsheet`, `iconsheet`, `patternsheet` | Glyph color (default: #222222) (`iconsheet`: Stroke color for icons (default: #333333)) (`patternsheet`: Fill color for pattern tiles (default: #333333)) | `fontsheet`: default `#222222`; `iconsheet`, `patternsheet`: default `#333333` |
 | `--columns`, `-cols` | `N` | `colorsheet`, `fontsheet`, `iconsheet`, `palettesheet` | Swatch columns per page (requires --paginate; default: 8) (`fontsheet`: Font columns per page (requires --paginate; default: 2). Ignored with --fullset, which is always a single column.) (`iconsheet`: Icon columns per page (requires --paginate; default: 8)) (`palettesheet`: Swatch columns per page (requires --paginate; default: 12)) |  |
 | `--country`, `-cc` | `CODE` | `blockplan`, `candybar`, `compactplan`, `excelblockplan`, `exportdata`, `gantt`, `mini`, `mini-icon`, `pit`, `text-mini`, `timeline`, `weekly` | ISO 3166-1 alpha-2 country code(s) for government holidays. Accepts a single code (e.g. US) or a comma-separated list (e.g. US,CA,GB) to include holidays from multiple countries. If omitted, US and CA holidays are loaded by default. |  |
@@ -478,7 +477,7 @@ The number of rows is derived from the start/end dates — a full year produces 
 
 The `corporate` theme ships with both enabled as a demonstration.
 
-**Weekend suppression.** Candybar **shows weekends by default** (7-column Mon–Sun strip), independent of the `--weekends` / `weekend_style` setting. Pass `--candybar-suppress-weekends` (or set `candybar.suppress_weekends: true` in a theme) to drop the Sat/Sun columns for a 5-column Mon–Fri strip.
+**Weekend suppression.** Candybar **shows weekends by default** (7-column Mon–Sun strip), independent of the `--weekends` / `weekend_style` setting. Set `candybar.suppress_weekends: true` in a theme to drop the Sat/Sun columns for a 5-column Mon–Fri strip.
 
 **Candybar-specific options:**
 
@@ -487,7 +486,6 @@ The `corporate` theme ships with both enabled as a demonstration.
 | `--candybar-row-height` | `POINTS` | Fixed week-row height (default: 0 = auto-fit to page). |
 | `--candybar-cell-width` | `POINTS` | Fixed day-cell width (default: 0 = square, width == row height). |
 | `--candybar-max-rows-per-page` | `N` | Split into side-by-side strips after N rows (0 = single strip). |
-| `--candybar-suppress-weekends` |  | Drop Sat/Sun columns (default: weekends are shown). |
 
 Candybar also accepts the shared `mini` options (`--weeknumbers` mode/anchor via `--week-number-mode` / `--week1-start`, `--theme`, `--papersize`, `--orientation`, `--margin`, `--header`, `--footer`, `--watermark`, `--fiscal`, and the event filter flags `--noevents`, `--durations`, `--milestones`, `--WBS`, `--status`, `--empty`). Like the other mini views, candybar shows single-day events and milestones only unless `--durations` is passed.
 

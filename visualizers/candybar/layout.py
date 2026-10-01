@@ -80,8 +80,8 @@ def candybar_suppress_weekends(config: CalendarConfig) -> bool:
     """Resolve weekend suppression.
 
     Candybar shows weekends by default; Sat/Sun are dropped only when
-    ``candybar_suppress_weekends`` is explicitly set (CLI
-    ``--candybar-suppress-weekends`` or a theme's ``candybar.suppress_weekends``).
+    ``candybar_suppress_weekends`` is explicitly set (a theme's
+    ``candybar.suppress_weekends``).
     It intentionally does *not* inherit ``weekend_style`` so the default
     full-week strip is independent of the workweek setting.
     """
