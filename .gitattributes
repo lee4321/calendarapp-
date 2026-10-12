@@ -1,0 +1,2 @@
+# Python source is always LF, regardless of platform or core.autocrlf.
+*.py text eol=lf
