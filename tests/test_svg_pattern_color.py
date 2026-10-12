@@ -206,3 +206,29 @@ class TestPatternIsRecolorable:
     def test_no_test_tile_is_raster(self, patterns):
         raster = sorted(n for n, svg in patterns.items() if not pattern_is_recolorable(svg))
         assert raster == []
+
+
+class TestIconStyleRoot:
+    """Stroke-art tiles (the ``icon`` table) keep their root fill/stroke."""
+
+    ICON = (
+        '<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">'
+        '<path d="M3 3h18v18H3z"/></svg>'
+    )
+
+    def test_fill_none_and_stroke_survive(self):
+        xml = pattern_def_xml("pat-i", self.ICON, "red", target_size=0)
+        wrapper = re.search(r"<g [^>]*>", xml)
+        assert wrapper, xml
+        assert 'fill="none"' in wrapper.group(0)
+        assert 'stroke="red"' in wrapper.group(0)
+        assert 'stroke-width="1.5"' in wrapper.group(0)
+
+    def test_stagger_doubles_height_and_offsets_second_row(self):
+        xml = pattern_def_xml("pat-i", self.ICON, "red", target_size=0, pad=4, stagger=True)
+        assert 'width="32"' in xml
+        assert 'height="64"' in xml
+        assert xml.count("<use ") == 2
+        assert xml.count('id="pat-i-art"') == 1
+        assert 'x="-16"' in xml
+        assert 'x="16"' in xml

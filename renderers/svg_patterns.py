@@ -11,6 +11,7 @@ owns the string surgery those defs need:
 * `extract_pattern_inner` — strip prolog/wrapper/Inkscape metadata,
 * `scope_pattern_ids`     — prefix a tile's own ids so two cannot collide,
 * `pattern_def_id`        — stable `pat-{name}-{color}` def id,
+* `root_paint_attrs`     — root fill/stroke carried onto the tile wrapper,
 * `pattern_def_xml`       — the complete `<pattern>` element.
 
 Native tile sizes in the table span 16 pt to 1920 pt, so tiling every
@@ -50,6 +51,7 @@ __all__ = [
     "pattern_def_id",
     "pattern_def_xml",
     "pattern_is_recolorable",
+    "root_paint_attrs",
     "scope_pattern_ids",
 ]
 
@@ -273,12 +275,58 @@ def pattern_def_id(pattern_name: str, color: str | None) -> str:
     return f"pat-{safe_name}-{safe_color}"
 
 
+#: The opening ``<svg …>`` tag of a tile.
+_ROOT_TAG_RE = re.compile(r"<svg\b[^>]*>", re.IGNORECASE)
+
+#: Root stroke geometry that outline art relies on and that is lost with the root.
+_ROOT_STROKE_ATTRS = ("stroke-width", "stroke-linecap", "stroke-linejoin")
+
+
+def _root_attr(root: str, name: str) -> str | None:
+    m = re.search(rf'(?<![\w-]){re.escape(name)}="([^"]*)"', root)
+    return m.group(1).strip() if m else None
+
+
+def root_paint_attrs(raw_svg: str, color: str | None) -> list[str]:
+    """
+    Paint attributes to carry from a tile's root ``<svg>`` onto its wrapper.
+
+    :func:`extract_pattern_inner` drops the root element, and with it the
+    inheritable paint children rely on.  Stroke-art icons (the ``icon``
+    table) declare ``fill="none"`` and ``stroke="currentColor"`` once on
+    the root, so without this they would be filled solid.
+
+    * root ``fill="none"`` -> ``fill="none"``; otherwise ``fill`` is the color;
+    * a root ``stroke`` that paints (``currentColor`` included) ->
+      ``stroke`` is the color, with the root's stroke width / cap / join.
+    """
+    m = _ROOT_TAG_RE.search(raw_svg)
+    root = m.group(0) if m else ""
+    attrs: list[str] = []
+    fill = _root_attr(root, "fill")
+    if fill is not None and fill.lower() == "none":
+        attrs.append('fill="none"')
+    elif color:
+        attrs.append(f'fill="{color}"')
+    stroke = _root_attr(root, "stroke")
+    if stroke is not None and stroke.lower() not in _UNPAINTED and color:
+        attrs.append(f'stroke="{color}"')
+        for name in _ROOT_STROKE_ATTRS:
+            value = _root_attr(root, name)
+            if value is not None:
+                attrs.append(f'{name}="{value}"')
+    return attrs
+
+
 def pattern_def_xml(
     pat_id: str,
     raw_svg: str,
     color: str | None,
     target_size: float | None = DEFAULT_PATTERN_TARGET_SIZE,
     extra_scale: float = 1.0,
+    *,
+    pad: float = 0.0,
+    stagger: bool = False,
 ) -> str:
     """Build the complete ``<pattern>`` element for an SVG ``<defs>`` block.
 
@@ -293,15 +341,16 @@ def pattern_def_xml(
     a single document — one pattern name resolves to one scale per
     drawing.  Pass distinct ids if that ever stops holding.
 
-    The artwork is wrapped in a ``<g>`` carrying ``fill`` as well as the
-    scale.  ``extract_pattern_inner`` drops the source ``<svg>`` element,
-    and with it any paint declared there — 25 tiles carry only a root
-    ``fill="currentColor"`` — so the wrapper restores an inheritable
-    color for content that declares none of its own.  It sets ``fill``
-    but deliberately not ``stroke``: an unset ``fill`` defaults to black
-    and so wants overriding, whereas an unset ``stroke`` defaults to
-    ``none``, and setting it would outline shapes that were never
-    stroked.
+    The artwork is wrapped in a ``<g>`` carrying the paint that
+    ``extract_pattern_inner`` strips with the root ``<svg>``; see
+    :func:`root_paint_attrs` (``fill="none"`` and a root stroke are kept
+    so outline icons are not filled solid).
+
+    *pad* adds that much empty margin on every side of the artwork, so
+    tiles that are drawn edge to edge do not touch.  *stagger* doubles
+    the tile height and offsets the second row by half a tile width
+    (brick layout); the artwork is defined once and ``<use>``d, so its
+    ids stay unique.
 
     The tile's own ids are scoped to *pat_id* first, so two tiles that
     were authored with the same id do not collide once both are inlined
@@ -313,16 +362,35 @@ def pattern_def_xml(
     # for the tile's own ids once they land in a shared <defs>.
     inner = scope_pattern_ids(inner, pat_id)
 
+    attrs = root_paint_attrs(raw_svg, color)
+    cell_w = tile_w + 2 * pad
+    cell_h = tile_h + 2 * pad
+    if stagger:
+        art_id = f"{pat_id}-art"
+        art_attrs = [f'id="{art_id}"', f'transform="translate({pad:.6g} {pad:.6g})"', *attrs]
+        half = cell_w / 2
+        inner = (
+            f"<g {' '.join(art_attrs)}>{inner}</g>"
+            f'<use href="#{art_id}" x="{-half:.6g}" y="{cell_h:.6g}"/>'
+            f'<use href="#{art_id}" x="{half:.6g}" y="{cell_h:.6g}"/>'
+        )
+        tile_w, tile_h = cell_w, 2 * cell_h
+        attrs = []
+    elif pad:
+        attrs = [f'transform="translate({pad:.6g} {pad:.6g})"', *attrs]
+        tile_w, tile_h = cell_w, cell_h
+
     scale = normalize_tile_scale(tile_w, tile_h, target_size, extra_scale)
-    wrapper: list[str] = []
     if scale != 1.0:
-        wrapper.append(f'transform="scale({scale:.6g})"')
+        # Merge into the single wrapper unless it already carries a transform.
+        if any(a.startswith("transform=") for a in attrs) or stagger:
+            inner = f'<g transform="scale({scale:.6g})">{inner}</g>'
+        else:
+            attrs.insert(0, f'transform="scale({scale:.6g})"')
         tile_w *= scale
         tile_h *= scale
-    if color:
-        wrapper.append(f'fill="{color}"')
-    if wrapper:
-        inner = f"<g {' '.join(wrapper)}>{inner}</g>"
+    if attrs:
+        inner = f"<g {' '.join(attrs)}>{inner}</g>"
 
     return (
         f'<pattern id="{pat_id}" x="0" y="0" '
