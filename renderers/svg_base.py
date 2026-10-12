@@ -11,7 +11,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Generator, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
@@ -1328,7 +1328,7 @@ class BaseSVGRenderer(ABC):
         return record.note_for(event) if record is not None and event is not None else None
 
     @contextmanager
-    def _event_scope(self, event: Any) -> Iterator[EventNote | None]:
+    def _event_scope(self, event: Any) -> Generator[EventNote | None]:
         """Attribute every icon and mark drawn inside to *event*."""
         note = self._details_note(event)
         if note is None:
@@ -1342,7 +1342,7 @@ class BaseSVGRenderer(ABC):
             owners.pop()
 
     @contextmanager
-    def _holiday_scope(self, name: str | None) -> Iterator[None]:
+    def _holiday_scope(self, name: str | None) -> Generator[None]:
         """Attribute every icon drawn inside to the holiday *name*."""
         if self._details is None or not name:
             yield None

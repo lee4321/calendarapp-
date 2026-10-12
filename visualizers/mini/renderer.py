@@ -416,7 +416,7 @@ class MiniCalendarRenderer(BaseSVGRenderer):
         4. Grid line (if enabled)
         """
 
-        style.trace_drawn(getattr(self, "DETAILS_VISUALIZER", None) or self.TOKEN_VISUALIZER)
+        style.trace_drawn(self._details_visualizer())
 
         # 1. Background shade
         if style.shade_color and not _is_none_color(style.shade_color):

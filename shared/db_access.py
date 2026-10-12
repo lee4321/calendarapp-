@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 
@@ -220,7 +220,7 @@ class CalendarDB:
         return self._conn
 
     @contextmanager
-    def _get_connection(self) -> Iterator[sqlite3.Connection]:
+    def _get_connection(self) -> Generator[sqlite3.Connection]:
         """Context manager yielding this instance's shared connection.
 
         The connection is opened lazily on first use and then reused for the
