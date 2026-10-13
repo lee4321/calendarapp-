@@ -298,7 +298,8 @@ def root_paint_attrs(raw_svg: str, color: str | None) -> list[str]:
 
     * root ``fill="none"`` -> ``fill="none"``; otherwise ``fill`` is the color;
     * a root ``stroke`` that paints (``currentColor`` included) ->
-      ``stroke`` is the color, with the root's stroke width / cap / join.
+      ``stroke`` is the color (the root's own value when no color is
+      requested), with the root's stroke width / cap / join.
     """
     m = _ROOT_TAG_RE.search(raw_svg)
     root = m.group(0) if m else ""
@@ -309,8 +310,8 @@ def root_paint_attrs(raw_svg: str, color: str | None) -> list[str]:
     elif color:
         attrs.append(f'fill="{color}"')
     stroke = _root_attr(root, "stroke")
-    if stroke is not None and stroke.lower() not in _UNPAINTED and color:
-        attrs.append(f'stroke="{color}"')
+    if stroke is not None and stroke.lower() not in _UNPAINTED:
+        attrs.append(f'stroke="{color or stroke}"')
         for name in _ROOT_STROKE_ATTRS:
             value = _root_attr(root, name)
             if value is not None:

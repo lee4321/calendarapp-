@@ -232,3 +232,11 @@ class TestIconStyleRoot:
         assert xml.count('id="pat-i-art"') == 1
         assert 'x="-16"' in xml
         assert 'x="16"' in xml
+
+    def test_no_color_keeps_the_roots_own_stroke(self):
+        xml = pattern_def_xml("pat-i", self.ICON, None, target_size=0)
+        wrapper = re.search(r"<g [^>]*>", xml)
+        assert wrapper, xml
+        assert 'fill="none"' in wrapper.group(0)
+        assert 'stroke="currentColor"' in wrapper.group(0)
+        assert 'stroke-width="1.5"' in wrapper.group(0)
